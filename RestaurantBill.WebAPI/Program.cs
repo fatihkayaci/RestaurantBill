@@ -1,0 +1,25 @@
+using RestaurantBill.Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+// builder.Services.AddEndpointsApiExplorer();
+// builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
+var app = builder.Build();
+app.UseHttpsRedirection();
+app.MapControllers();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi(); // JSON'ı üretir
+    app.MapScalarApiReference();
+}
+app.Run();
