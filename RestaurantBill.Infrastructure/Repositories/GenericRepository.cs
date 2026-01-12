@@ -41,13 +41,14 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         return await query.ToListAsync();
     }
 
-    public Task<T> GetByIdAsync(int id)
+    public async Task<T?> GetByIdAsync(int id)
     {
-        throw new NotImplementedException();
+        return await _table.FindAsync(id);
     }
 
-    public void Update(T entity)
+    public async Task UpdateAsync(T entity)
     {
-        throw new NotImplementedException();
+        _table.Update(entity);
+        await _context.SaveChangesAsync();
     }
 }
