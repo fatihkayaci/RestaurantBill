@@ -18,6 +18,7 @@ builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
 });
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddAutoMapper(typeof(RestaurantBill.Business.Mappings.MappingProfile));
 var app = builder.Build();
 app.UseHttpsRedirection();
 app.MapControllers();
