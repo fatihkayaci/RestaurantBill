@@ -19,7 +19,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RestaurantBill.Business\RestaurantBill.Business.csproj" />
-    <ProjectReference Include="..\RestaurantBill.Infrastructure\RestaurantBill.Infrastructure.csproj" />
+    <ProjectReference Include="..\RestaurantBill.Core\RestaurantBill.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Controllers\" />
   </ItemGroup>
 
 </Project>

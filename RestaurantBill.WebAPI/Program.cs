@@ -17,7 +17,7 @@ builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-builder.Services.AddScoped(typeof(IGenericService<>), typeof(GenericService<>));
+builder.Services.AddScoped<IProductService, ProductService>();
 var app = builder.Build();
 app.UseHttpsRedirection();
 app.MapControllers();
