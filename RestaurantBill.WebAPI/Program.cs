@@ -4,6 +4,7 @@ using Scalar.AspNetCore;
 using RestaurantBill.Core.Interfaces;
 using RestaurantBill.Infrastructure.Repositories;
 using RestaurantBill.Business.Services;
+using RestaurantBill.Business.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +19,7 @@ builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
 });
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddAutoMapper(typeof(RestaurantBill.Business.Mappings.MappingProfile));
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 var app = builder.Build();
 app.UseHttpsRedirection();
 app.MapControllers();

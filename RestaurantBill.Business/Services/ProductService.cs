@@ -2,37 +2,30 @@ using System.Linq;
 using RestaurantBill.Core;
 using RestaurantBill.Core.Interfaces;
 using RestaurantBill.Core.DTOs;
+using AutoMapper;
 
 namespace RestaurantBill.Business.Services;
 
 public class ProductService : IProductService
 {
     private readonly IGenericRepository<Product> _repository;
-    public ProductService(IGenericRepository<Product> repository)
+    private readonly IMapper _mapper;
+    public ProductService(IGenericRepository<Product> repository, IMapper mapper)
     {
         _repository = repository;
+        _mapper = mapper;
     }
 
     public async Task AddAsync(CreateProductDto dto)
     {
-        Product productEntity = new Product();
-        productEntity.Name = dto.Name;
-        productEntity.Price = dto.Price;
-        productEntity.IsActive = dto.IsActive;
-        productEntity.CategoryId = dto.CategoryId;
-        await _repository.AddAsync(productEntity);
+        var product = _mapper.Map<Product>(dto);
+        product.IsActive = true;
+        await _repository.AddAsync(product);
     }
 
     public async Task<List<ProductResponse>> GetAllAsync()
     {
         var entities = await _repository.GetAllAsync();
-        var dtos = entities.Select(p => new ProductResponse 
-        {
-            Id = p.Id,
-            Name = p.Name,
-            Price = p.Price
-        }).ToList();
-        
-        return dtos;
+        return _mapper.Map<List<ProductResponse>>(entities);
     }
 }
