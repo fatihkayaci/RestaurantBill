@@ -2,22 +2,28 @@ using System.Linq;
 using RestaurantBill.Core;
 using RestaurantBill.Core.Interfaces;
 using RestaurantBill.Core.DTOs;
+using AutoMapper;
 
 namespace RestaurantBill.Business.Services;
 
 public class CategoryService : ICategoryService
 {
     private readonly IGenericRepository<Category> _repository;
-    public CategoryService(IGenericRepository<Category> repository)
+    private readonly IMapper _mapper;
+    public CategoryService(IGenericRepository<Category> repository, IMapper mapper)
     {
         _repository = repository;
+        _mapper = mapper;
     }
-    public Task AddAsync(CreateCategoryDto dto)
+    public async Task AddAsync(CreateCategoryDto dto)
     {
-        throw new NotImplementedException();
+        var category = _mapper.Map<Category>(dto);
+        await _repository.AddAsync(category);
     }
-    Task<List<ResponseCategoryDto>> ICategoryService.GetAllAsync()
+    
+    async Task<List<ResponseCategoryDto>> ICategoryService.GetAllAsync()
     {
-        throw new NotImplementedException();
+        var entities = await _repository.GetAllAsync();
+        return _mapper.Map<List<ResponseCategoryDto>>(entities);
     }
 }
