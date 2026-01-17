@@ -5,6 +5,7 @@ using RestaurantBill.Core.Interfaces;
 using RestaurantBill.Infrastructure.Repositories;
 using RestaurantBill.Business.Services;
 using RestaurantBill.Business.Mappings;
+using RestaurantBill.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,7 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderItemService, OrderItemService>();
 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddAutoMapper(typeof(MappingProfile));
