@@ -24,6 +24,12 @@ public class OrderItemService : IOrderItemService
     }
     public async Task AddAsync(CreateOrderItemDto dto)
     {
+        var order = await _orderRepository.GetByIdAsync(dto.OrderId);
+        if (order == null) 
+            throw new Exception("Sipariş bulunamadı!");
+        if (order.Status == OrderStatus.Paid)
+            throw new Exception("Ödenmiş siparişe ekleme yapılamaz!");
+
         var product = await _productRepository.GetByIdAsync(dto.ProductId);
         if (product == null) 
             throw new Exception("Böyle bir ürün bulunamadı!");
@@ -32,17 +38,11 @@ public class OrderItemService : IOrderItemService
         orderItem.Price = product.Price;
         await _repository.AddAsync(orderItem);
         
-        /*
-        var order = await _orderRepository.GetByIdAsync(dto.OrderId);
         if(order != null) 
         {
-            // Matematiği yap: (Ürün Fiyatı * Adet) kadar ekle
             order.TotalPrice += (orderItem.Price * orderItem.Quantity);
-            
-            // Siparişi güncelle (Update metodun varsa kullan, yoksa SaveChanges yeterli olabilir ama Update garanti)
-            _orderRepository.Update(order); 
+            await _orderRepository.UpdateAsync(order); 
         }
-        */
         
     }
 
