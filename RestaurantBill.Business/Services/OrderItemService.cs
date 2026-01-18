@@ -8,16 +8,42 @@ namespace RestaurantBill.Business.Services;
 public class OrderItemService : IOrderItemService
 {
     private readonly IGenericRepository<OrderItem> _repository;
+    private readonly IGenericRepository<Order> _orderRepository;
+    private readonly IGenericRepository<Product> _productRepository;
     private readonly IMapper _mapper;
-    public OrderItemService(IGenericRepository<OrderItem> repository, IMapper mapper)
+    public OrderItemService(
+        IGenericRepository<OrderItem> repository,
+        IGenericRepository<Order> orderRepository, 
+        IGenericRepository<Product> productRepository, 
+        IMapper mapper)
     {
         _repository = repository;
+        _orderRepository = orderRepository;
+        _productRepository = productRepository;
         _mapper = mapper;
     }
     public async Task AddAsync(CreateOrderItemDto dto)
     {
+        var product = await _productRepository.GetByIdAsync(dto.ProductId);
+        if (product == null) 
+            throw new Exception("Böyle bir ürün bulunamadı!");
+        
         var orderItem = _mapper.Map<OrderItem>(dto);
+        orderItem.Price = product.Price;
         await _repository.AddAsync(orderItem);
+        
+        /*
+        var order = await _orderRepository.GetByIdAsync(dto.OrderId);
+        if(order != null) 
+        {
+            // Matematiği yap: (Ürün Fiyatı * Adet) kadar ekle
+            order.TotalPrice += (orderItem.Price * orderItem.Quantity);
+            
+            // Siparişi güncelle (Update metodun varsa kullan, yoksa SaveChanges yeterli olabilir ama Update garanti)
+            _orderRepository.Update(order); 
+        }
+        */
+        
     }
 
     public async Task<List<OrderItemResponse>> GetAllAsync()

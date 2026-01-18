@@ -4,5 +4,6 @@ namespace RestaurantBill.Core.Interfaces;
 public interface IOrderService
 {
     Task AddAsync(CreateOrderDto dto); 
-    Task<List<OrderResponse>> GetAllAsync();
+    Task <List<OrderResponse>> GetAllAsync();
+    Task <OrderResponse> GetOrderDetailsAsync(int id);
 }

@@ -7,22 +7,30 @@ namespace RestaurantBill.Business.Services;
 
 public class OrderService : IOrderService
 {
-    private readonly IGenericRepository<Order> _repository;
+    private readonly IOrderRepository _orderRepository;
     private readonly IMapper _mapper;
-    public OrderService(IGenericRepository<Order> repository, IMapper mapper)
+    public OrderService(
+        IOrderRepository orderRepository, 
+        IMapper mapper)
     {
-        _repository = repository;
+        _orderRepository = orderRepository;
         _mapper = mapper;
     }
     public async  Task AddAsync(CreateOrderDto dto)
     {
         var order = _mapper.Map<Order>(dto);
-        
-        await _repository.AddAsync(order);
+        await _orderRepository.AddAsync(order);
     }
-    async Task<List<OrderResponse>> IOrderService.GetAllAsync()
+
+    public async Task<List<OrderResponse>> GetAllAsync()
     {
-        var entities = await _repository.GetAllAsync();
+        var entities = await _orderRepository.GetAllAsync();
         return _mapper.Map<List<OrderResponse>>(entities);
+    }
+    public async Task<OrderResponse> GetOrderDetailsAsync(int id)
+    {
+        var order = await _orderRepository.GetOrderWithDetailsAsync(id);
+        if (order == null) throw new Exception("Sipariş bulunamadı");
+        return _mapper.Map<OrderResponse>(order);
     }
 }
