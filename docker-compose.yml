@@ -5,7 +5,6 @@ services:
     image: postgres:16-alpine
     container_name: restaurant_postgres_db
     environment:
-      # Dolar işareti ve süslü parantez ile .env dosyasından okuyoruz
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
@@ -13,3 +12,14 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_MAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
+    ports:
+      - "5050:80"
+    depends_on:
+      - database # <--- DÜZELTİLDİ: Yukarıdaki servis ismini aynen yazdık.

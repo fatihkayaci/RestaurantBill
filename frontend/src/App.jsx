@@ -1,8 +1,19 @@
-import { Button, Card, Result } from 'antd'; // Ant Design'dan parçaları çağırdık
-
+import { Routes, Route } from 'react-router-dom';
+import Tables from './pages/Tables.jsx';
+import Menus from './pages/Menus.jsx';
+import Sidebar from './components/Sidebar.jsx';
+import './App.css'
 function App() {
   return (
-    <div style={{ padding: '50px' }}>
+    <div className='container'>
+      <Sidebar/>
+      <div className="content">
+        <Routes>
+          {/* <Route path="/" element={<Tables />} /> */}
+          <Route path="/tables" element={<Tables/>} />
+          <Route path="/menus" element={<Menus/>} />
+        </Routes>
+      </div>
     </div>
   );
 }

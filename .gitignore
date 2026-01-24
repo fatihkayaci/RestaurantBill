@@ -511,3 +511,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+/postgres-data

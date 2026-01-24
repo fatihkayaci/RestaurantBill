@@ -28,7 +28,20 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("IzinVer",
+        builder =>
+        {
+            builder.AllowAnyOrigin()  // Her yerden gelen isteğe izin ver
+                   .AllowAnyMethod()  // GET, POST, PUT, DELETE hepsine izin ver
+                   .AllowAnyHeader(); // Tüm başlıklara izin ver
+        });
+});
+
 var app = builder.Build();
+app.UseCors("IzinVer");
 app.UseHttpsRedirection();
 app.MapControllers();
 if (app.Environment.IsDevelopment())

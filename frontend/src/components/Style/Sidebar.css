@@ -1,0 +1,68 @@
+.sidebar-container {
+    background-color: #1F1D2B;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+}
+
+/* Logo Bölümü */
+.logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+    color: #EA7C69; /* Turuncu logo rengi */
+}
+
+.logo-picture {
+    width: 50px;
+    height: 50px;
+    background-color: rgba(234, 124, 105, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    margin-bottom: 5px;
+}
+
+/* Menü Elemanları (Genel) */
+.home, .menu {
+    width: 100%;
+    height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #EA7C69; /* Pasif ikon rengi */
+    transition: all 0.3s ease;
+    margin: 10px 0;
+    position: relative;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Hover veya Aktif Durum (Görseldeki o özel efekt) */
+.home:hover, .menu:hover, .active-link {
+    background-color: #252836; /* İçerik alanıyla aynı renk */
+    color: #ffffff;
+    border-top-left-radius: 15px;
+    border-bottom-left-radius: 15px;
+    margin-left: 20px; /* İçeri doğru çekilme efekti */
+}
+
+/* Aktif olanın sağındaki o beyaz vurgu çizgisi (opsiyonel) */
+.home:hover::before, .menu:hover::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 40px;
+    background-color: #EA7C69;
+    border-radius: 5px 0 0 5px;
+}

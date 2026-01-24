@@ -1,42 +1,49 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* Tüm sayfa yapısı */
+body, html {
+    margin: 0;
+    padding: 0;
+    background-color: #1F1D2B;
+    overflow: hidden;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.container {
+    display: grid;
+    grid-template-columns: 150px 1fr; /* Sol bar genişliği sabit */
+    height: 100vh;
+    background-color: #1F1D2B; /* Sol barın da üzerinde durduğu ana zemin */
+    color: #ffffff;
+    font-family: 'Segoe UI', sans-serif;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Masaların olduğu sağ tarafın arka planı */
+.content {
+    /* Görseldeki gibi içeriği ana zeminden ayırmak için biraz daha açık bir ton */
+    background-color: #252836; 
+    
+    /* Modern bir bitiş için sol köşeleri yuvarlatıyoruz */
+    border-top-left-radius: 24px; 
+    border-bottom-left-radius: 24px;
+    
+    /* İçeriğin Sidebar'a yapışmaması için hafif bir boşluk */
+    margin-top: 10px;
+    margin-bottom: 10px;
+    
+    /* Kendi içinde kaydırma özelliği */
+    overflow-y: auto;
+    
+    /* İçerik ile kenarlar arasında nefes alacak alan */
+    padding: 20px;
+
+    /* Hafif bir iç gölge ile derinlik hissi */
+    box-shadow: inset 10px 0px 20px rgba(0, 0, 0, 0.1);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* Kaydırma çubuğunu arka plana uydurma */
+.content::-webkit-scrollbar {
+    width: 5px;
 }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+.content::-webkit-scrollbar-thumb {
+    background: #393C49;
+    border-radius: 10px;
 }

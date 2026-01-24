@@ -1,0 +1,53 @@
+.table-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* Kartlar arasındaki hem yatay hem dikey boşluk */
+    padding: 20px;
+    background-color: #1F1D2B;
+    
+    /* ÖNEMLİ: Kartları yukarıda toplar, aşağıya yayılmalarını engeller */
+    align-content: flex-start; 
+    
+    /* Eğer container tüm sayfayı kaplıyorsa */
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.table-button {
+    flex-grow: 1;
+    /* Satırda kaç tane görüneceğini belirler (örneğin %20 ile yaklaşık 5 tane) */
+    flex-basis: calc(20% - 20px); 
+    min-width: 180px; 
+    
+    /* Yüksekliği biraz düşürebilirsin eğer çok kaba duruyorsa */
+    height: 120px; 
+    
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    outline: none;
+}
+
+/* Renk Durumları */
+.table-empty {
+    background-color: #252836;
+    color: #ABBBC2;
+    border: 1px solid #393C49;
+}
+
+.table-full {
+    background-color: #1F1D2B;
+    color: #EA7C69;
+    border: 2px solid #EA7C69;
+}
+
+/* Hover Efekti */
+.table-button:hover {
+    transform: translateY(-3px);
+    background-color: #2d303e;
+}
