@@ -11,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
 
   pgadmin:
     image: dpage/pgadmin4
@@ -22,4 +22,7 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      - database # <--- DÜZELTİLDİ: Yukarıdaki servis ismini aynen yazdık.
+      - database
+
+volumes:
+  pg_data:
