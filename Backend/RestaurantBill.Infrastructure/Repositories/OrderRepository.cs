@@ -11,7 +11,15 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
     public OrderRepository(RestaurantBillDbContext context) : base(context)
     {
         _context = context;
-    }   
+    }
+
+    public async Task<Order?> GetActiveOrderByTableId(int tableId)
+    {
+        return await _context.Orders
+            .Include(x => x.Table)
+            .Include(x => x.OrderItems).ThenInclude(y => y.Product)
+            .FirstOrDefaultAsync(x => x.TableId == tableId);
+    }
 
     public async Task<Order?> GetOrderWithDetailsAsync(int id)
     {

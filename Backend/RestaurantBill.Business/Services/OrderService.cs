@@ -67,4 +67,12 @@ public class OrderService : IOrderService
         await _orderRepository.UpdateAsync(order);
 
     }
+    public async Task<OrderResponse> GetActiveOrderByTableIdAsync(int tableId)
+    {
+        var table = await _tableRepository.GetByIdAsync(tableId);
+        if (table == null) throw new Exception("Masa bulunamadı");
+
+        var order = await _orderRepository.GetActiveOrderByTableId(tableId);
+        return _mapper.Map<OrderResponse>(order);
+    }
 }

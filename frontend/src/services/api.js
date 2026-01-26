@@ -8,5 +8,6 @@ const apiClient = axios.create({
 export const getTables = () => apiClient.get('/Table');
 export const getProducts = () => apiClient.get('/Product');
 export const getCategories = () => apiClient.get('/Category');
+export const getActiveOrder = (tableId) => apiClient.get(`/Order/table/${tableId}`);
 
 export default apiClient;

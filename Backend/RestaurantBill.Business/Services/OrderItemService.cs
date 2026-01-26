@@ -38,11 +38,8 @@ public class OrderItemService : IOrderItemService
         orderItem.Price = product.Price;
         await _repository.AddAsync(orderItem);
         
-        if(order != null) 
-        {
-            order.TotalPrice += (orderItem.Price * orderItem.Quantity);
-            await _orderRepository.UpdateAsync(order); 
-        }
+        order.TotalPrice += (orderItem.Price * orderItem.Quantity);
+        await _orderRepository.UpdateAsync(order); 
         
     }
 
