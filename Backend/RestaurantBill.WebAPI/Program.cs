@@ -8,6 +8,9 @@ using RestaurantBill.Business.Mappings;
 using RestaurantBill.Core;
 
 var builder = WebApplication.CreateBuilder(args);
+// Jwt settings first step.
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["SecretKey"];
 
 builder.Services.AddControllers();
 // builder.Services.AddEndpointsApiExplorer();
@@ -40,9 +43,33 @@ builder.Services.AddCors(options =>
         });
 });
 
+// Authentication service added.
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+            System.Text.Encoding.UTF8.GetBytes(secretKey!))
+    };
+});
+
 var app = builder.Build();
 app.UseCors("IzinVer");
 app.UseHttpsRedirection();
+// for Authentication
+app.UseAuthentication(); // <-- first "who are you?" (id control)
+app.UseAuthorization();  // <-- second "are you have authority?" (authority control)
 app.MapControllers();
 if (app.Environment.IsDevelopment())
 {
