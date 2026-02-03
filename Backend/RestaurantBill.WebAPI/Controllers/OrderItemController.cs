@@ -25,5 +25,12 @@ namespace RestaurantBill.WebAPI.Controllers
             await _orderItemService.AddAsync(orderItemDto);
             return Ok("Order Item başarıyla eklendi");
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            await _orderItemService.DeleteAsync(id);
+            return Ok("Order Item başarıyla Silindi...");
+        }
     }
 }

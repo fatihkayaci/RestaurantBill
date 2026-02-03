@@ -48,4 +48,9 @@ public class OrderItemService : IOrderItemService
         var entities = await _repository.GetAllAsync();
         return _mapper.Map<List<OrderItemResponse>>(entities);
     }
+
+    public async Task DeleteAsync(int id)
+    {
+        await _repository.DeleteAsync(id);
+    }
 }

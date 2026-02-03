@@ -48,7 +48,7 @@
 .product-grid {
     display: grid;
     /* Ekran sığdığı kadar yan yana dizersin, min 160px */
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 20px;
     overflow-y: auto; /* Çok ürün olursa aşağı kaydır */
     padding-right: 5px;
@@ -173,4 +173,24 @@
 
 .pay-btn:hover {
     background-color: #d46350;
+}
+
+/* delete button */
+.delete-btn {
+    background: transparent;
+    border: none;
+    color: #ff4d4f;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border-radius: 50%;
+}
+
+.delete-btn:hover {
+    color: #cf1322;
+    background-color: #fff1f0;
+    transform: scale(1.1);
 }

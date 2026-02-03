@@ -13,4 +13,7 @@ export const getActiveOrder = (tableId) => apiClient.get(`/Order/table/${tableId
 // insert functions =>
 export const addOrderItem = (data) => apiClient.post('/OrderItem', data);
 
+//delete functions =>
+export const deleteOrderItem = (orderItemId) => apiClient.delete(`/OrderItem/${orderItemId}`);
+
 export default apiClient;
