@@ -1,14 +1,13 @@
-﻿namespace RestaurantBill.Core;
+namespace RestaurantBill.Domain;
 
-public class OrderItem
+public class OrderItem : BaseEntity
 {
-    public int Id { get; set; }
-    public int Quantity { get; set; }
-    public decimal Price { get; set; }
-    public string? Note { get; set; }
-
-    public int ProductId { get; set; }
-    public Product Product { get; set; } = default!;
     public int OrderId { get; set; }
-    public Order Order { get; set; } = default!;
+    public int ProductId { get; set; }
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+
+    // RelationShip
+    public virtual Order Order { get; set; }
+    public virtual Product Product { get; set; }
 }
