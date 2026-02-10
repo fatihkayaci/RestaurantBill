@@ -1,4 +1,4 @@
-namespace RestaurantBill.Core.DTOs;
+namespace RestaurantBill.Application.DTOs;
 public class TableResponse
 {
     public int Id { get; set; }

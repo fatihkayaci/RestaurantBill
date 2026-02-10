@@ -1,5 +1,6 @@
-using RestaurantBill.Core.DTOs;
-namespace RestaurantBill.Core.Interfaces;
+using RestaurantBill.Application.DTOs;
+
+namespace RestaurantBill.Application.Interfaces;
 
 public interface IProductService
 {

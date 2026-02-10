@@ -1,6 +1,6 @@
-using System.Linq.Expressions;
+namespace RestaurantBill.Application.Interfaces;
 
-namespace RestaurantBill.Core.Interfaces;
+using System.Linq.Expressions;
 
 public interface IGenericRepository<T> where T : class
 {

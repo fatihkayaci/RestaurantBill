@@ -1,4 +1,4 @@
-namespace RestaurantBill.Core.DTOs;
+namespace RestaurantBill.Application.DTOs;
 public class UpdateCategoryDto
 {
     public int Id { get; set; }

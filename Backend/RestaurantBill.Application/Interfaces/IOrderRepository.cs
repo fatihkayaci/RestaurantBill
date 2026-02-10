@@ -1,6 +1,7 @@
-using RestaurantBill.Core;
+namespace RestaurantBill.Application.Interfaces;
 
-namespace RestaurantBill.Core.Interfaces;
+using RestaurantBill.Domain;
+
 public interface IOrderRepository : IGenericRepository<Order>
 {
     Task<Order?> GetOrderWithDetailsAsync(int id);

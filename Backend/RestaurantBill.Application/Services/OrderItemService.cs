@@ -1,9 +1,10 @@
-using RestaurantBill.Core;
-using RestaurantBill.Core.Interfaces;
-using RestaurantBill.Core.DTOs;
+using RestaurantBill.Domain;
+using RestaurantBill.Application.Interfaces;
 using AutoMapper;
 
-namespace RestaurantBill.Business.Services;
+using RestaurantBill.Application.DTOs;
+
+namespace RestaurantBill.Application.Services;
 
 public class OrderItemService : IOrderItemService
 {
@@ -34,11 +35,11 @@ public class OrderItemService : IOrderItemService
         if (product == null) 
             throw new Exception("Böyle bir ürün bulunamadı!");
         
-        var orderItem = _mapper.Map<OrderItem>(dto);
-        orderItem.Price = product.Price;
-        await _repository.AddAsync(orderItem);
+        // var orderItem = _mapper.Map<OrderItem>(dto);
+        // orderItem.Price = product.Price;
+        // await _repository.AddAsync(orderItem);
         
-        order.TotalPrice += (orderItem.Price * orderItem.Quantity);
+        // order.TotalPrice += (orderItem.Price * orderItem.Quantity);
         await _orderRepository.UpdateAsync(order); 
         
     }

@@ -1,6 +1,6 @@
 using AutoMapper;
-using RestaurantBill.Core;
-using RestaurantBill.Core.DTOs;
+using RestaurantBill.Application.DTOs;
+using RestaurantBill.Domain;
 
 namespace RestaurantBill.Business.Mappings;
 
@@ -10,12 +10,6 @@ public class MappingProfile : Profile
     {
         CreateMap<CreateProductDto, Product>();
         CreateMap<Product, ProductResponse>();
-        
-        CreateMap<CreateCategoryDto, Category>();
-        CreateMap<Category, ResponseCategoryDto>();
-        
-        CreateMap<CreateTableDto, Table>();
-        CreateMap<Table, TableResponse>();
 
         CreateMap<CreateOrderDto, Order>();
         CreateMap<Order, OrderResponse>();
@@ -23,7 +17,14 @@ public class MappingProfile : Profile
         CreateMap<CreateOrderItemDto, OrderItem>();
         CreateMap<OrderItem, OrderItemResponse>();
 
-        CreateMap<CreateUserDto, User>();
-        CreateMap<User, UserResponse>();
+        // CreateMap<CreateCategoryDto, Category>();
+        // CreateMap<Category, ResponseCategoryDto>();
+        
+        // CreateMap<CreateTableDto, Table>();
+        // CreateMap<Table, TableResponse>();
+
+
+        // CreateMap<CreateUserDto, User>();
+        // CreateMap<User, UserResponse>();
     }
 }

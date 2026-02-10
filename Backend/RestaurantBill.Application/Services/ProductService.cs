@@ -1,7 +1,6 @@
-using System.Linq;
-using RestaurantBill.Core;
-using RestaurantBill.Core.Interfaces;
-using RestaurantBill.Core.DTOs;
+using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.DTOs;
+using RestaurantBill.Domain;
 using AutoMapper;
 
 namespace RestaurantBill.Business.Services;
@@ -19,7 +18,7 @@ public class ProductService : IProductService
     public async Task AddAsync(CreateProductDto dto)
     {
         var product = _mapper.Map<Product>(dto);
-        product.IsActive = true;
+        // product.IsActive = true;
         await _repository.AddAsync(product);
     }
 
