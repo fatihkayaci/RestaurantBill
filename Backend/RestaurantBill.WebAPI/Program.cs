@@ -1,11 +1,11 @@
 using RestaurantBill.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
-using RestaurantBill.Core.Interfaces;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Infrastructure.Repositories;
 using RestaurantBill.Business.Services;
 using RestaurantBill.Business.Mappings;
-using RestaurantBill.Core;
+using RestaurantBill.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 // Jwt settings first step.
@@ -22,14 +22,15 @@ builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<ITableService, TableService>();
+// builder.Services.AddScoped<ICategoryService, CategoryService>();
+// builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+                                              
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
-builder.Services.AddScoped<IUserService, UserService>();
+// builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+// builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Services.AddCors(options =>
