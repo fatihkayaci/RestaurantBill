@@ -1,4 +1,4 @@
-namespace RestaurantBill.Domain;
+namespace RestaurantBill.Domain.Entities;
 
 public abstract class BaseEntity
 {

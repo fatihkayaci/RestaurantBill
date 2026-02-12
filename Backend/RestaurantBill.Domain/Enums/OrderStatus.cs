@@ -1,4 +1,4 @@
-﻿namespace RestaurantBill.Domain;
+﻿namespace RestaurantBill.Domain.Enums;
 public enum OrderStatus
 {
     Pending = 1,     // Sipariş alındı, onay bekliyor (Henüz mutfağa gitmedi)

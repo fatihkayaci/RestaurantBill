@@ -1,11 +1,13 @@
-﻿namespace RestaurantBill.Domain;
-public class Order : BaseEntity
+using RestaurantBill.Domain.Enums;
+namespace RestaurantBill.Domain.Entities
 {
-    public string TableNumber { get; set; } = string.Empty;
-    public DateTime OrderDate { get; set; } = DateTime.UtcNow;
-    public OrderStatus Status { get; set; } = OrderStatus.Pending;
-    public decimal TotalPrice { get; set; }
-    
-    //RelationShip
-    public virtual ICollection<OrderItem> OrderItems { get; set; }
+    public class Order : BaseEntity
+    {
+        public string Note { get; set; } = string.Empty;
+        public decimal TotalPrice { get; set; }
+        public OrderStatus Status { get; set; }
+        public int TableId { get; set; }
+        public Table Table { get; set; } = default!;
+        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    }
 }

@@ -1,4 +1,4 @@
-namespace RestaurantBill.Core;
+namespace RestaurantBill.Domain.Enums;
 
 public enum UserRole
 {
