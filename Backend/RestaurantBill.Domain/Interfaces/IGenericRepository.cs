@@ -1,4 +1,4 @@
-namespace RestaurantBill.Application.Interfaces;
+namespace RestaurantBill.Domain.Interfaces;
 
 using System.Linq.Expressions;
 

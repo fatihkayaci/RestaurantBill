@@ -1,6 +1,6 @@
-namespace RestaurantBill.Application.Interfaces;
+namespace RestaurantBill.Domain.Interfaces;
 
-using RestaurantBill.Domain;
+using RestaurantBill.Domain.Entities;
 
 public interface IOrderRepository : IGenericRepository<Order>
 {
