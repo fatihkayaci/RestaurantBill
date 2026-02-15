@@ -1,14 +1,13 @@
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using RestaurantBill.Core.Interfaces;
+using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Infrastructure.Context;
 
-namespace RestaurantBill.Infrastructure.Repositories;
+namespace RestaurantBill.Persistence.Repositories;
 
 public class GenericRepository<T> : IGenericRepository<T> where T : class
 {
-    private readonly RestaurantBillDbContext _context;
+    protected readonly RestaurantBillDbContext _context;
     private readonly DbSet<T> _table;
     public GenericRepository(RestaurantBillDbContext context)
     {

@@ -1,0 +1,14 @@
+using System.Linq.Expressions;
+using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Infrastructure.Context;
+
+namespace RestaurantBill.Persistence.Repositories
+{
+    public class OrderItemRepository : GenericRepository<OrderItem>, IOrderItemRepository
+    {
+        public OrderItemRepository(RestaurantBillDbContext context) : base(context)
+        {   
+        }
+    }
+}
