@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Entities;
 
-namespace RestaurantBill.Infrastructure.Context;
+namespace RestaurantBill.Persistence.Context;
 
 public class RestaurantBillDbContext : DbContext
 {

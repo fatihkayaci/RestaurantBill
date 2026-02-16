@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Infrastructure.Context;
+using RestaurantBill.Persistence.Context;
 
 namespace RestaurantBill.Persistence.Repositories;
 public class OrderRepository : GenericRepository<Order>, IOrderRepository

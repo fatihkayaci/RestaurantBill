@@ -1,5 +1,5 @@
 using RestaurantBill.Domain.Interfaces;
-using RestaurantBill.Infrastructure.Context;
+using RestaurantBill.Persistence.Context;
 
 namespace RestaurantBill.Persistence.Repositories;
 
