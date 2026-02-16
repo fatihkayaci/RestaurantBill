@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Persistence.Repositories;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Business.Mappings;
-using AutoMapper;
+
 var builder = WebApplication.CreateBuilder(args);
+
 // Jwt settings first step.
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
@@ -45,16 +46,20 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("IzinVer",
-        builder =>
-        {
-            builder.AllowAnyOrigin()  // Her yerden gelen isteğe izin ver
-                   .AllowAnyMethod()  // GET, POST, PUT, DELETE hepsine izin ver
-                   .AllowAnyHeader(); // Tüm başlıklara izin ver
-        });
-});
+#region Cors Settings
+/*
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("IzinVer",
+            builder =>
+            {
+                builder.AllowAnyOrigin()  // Her yerden gelen isteğe izin ver
+                    .AllowAnyMethod()  // GET, POST, PUT, DELETE hepsine izin ver
+                    .AllowAnyHeader(); // Tüm başlıklara izin ver
+            });
+    });
+*/  
+#endregion
 
 // Authentication service added.
 builder.Services.AddAuthentication(options =>
