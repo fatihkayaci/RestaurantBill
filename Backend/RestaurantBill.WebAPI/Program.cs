@@ -1,36 +1,48 @@
-using RestaurantBill.Infrastructure.Context;
-using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
-using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Infrastructure.Repositories;
-using RestaurantBill.Business.Services;
+using RestaurantBill.Persistence.Context;
+using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Persistence.Repositories;
+using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Business.Mappings;
-using RestaurantBill.Application.Services;
-
+using AutoMapper;
 var builder = WebApplication.CreateBuilder(args);
 // Jwt settings first step.
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 
 builder.Services.AddControllers();
-// builder.Services.AddEndpointsApiExplorer();
-// builder.Services.AddSwaggerGen();
+/*swagger*/
+    // builder.Services.AddEndpointsApiExplorer();
+    // builder.Services.AddSwaggerGen();
+/*swagger*/
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
-builder.Services.AddScoped<IProductService, ProductService>();
-// builder.Services.AddScoped<ICategoryService, CategoryService>();
-// builder.Services.AddScoped<ITableService, TableService>();
-builder.Services.AddScoped<IOrderService, OrderService>();
-                                              
-builder.Services.AddScoped<IOrderItemService, OrderItemService>();
-// builder.Services.AddScoped<IUserService, UserService>();
+#region Configuration for service
+    // builder.Services.AddScoped<ICategoryService, CategoryService>();
+    // builder.Services.AddScoped<ITableService, TableService>();
+    //builder.Services.AddScoped<IProductService, ProductService>();
+    //builder.Services.AddScoped<IOrderService, OrderService>();
+    //builder.Services.AddScoped<IOrderItemService, OrderItemService>();
+    // builder.Services.AddScoped<IUserService, UserService>();    
+#endregion
 
+#region configuration for repository
+// typeof used because I don't know type. If I know type so builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-// builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IRestaurantRepository, RestaurantRepository>();
+builder.Services.AddScoped<ITableRepository, TableRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+#endregion
+
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Services.AddCors(options =>
@@ -85,7 +97,7 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<RestaurantBillDbContext>();
         context.Database.Migrate();
-        RestaurantBill.Infrastructure.Seeds.DefaultData.Seed(context);
+        // RestaurantBill.Infrastructure.Seeds.DefaultData.Seed(context);
     }
     catch (Exception ex)
     {

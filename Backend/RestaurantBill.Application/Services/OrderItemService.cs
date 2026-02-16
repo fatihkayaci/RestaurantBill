@@ -1,8 +1,7 @@
-using RestaurantBill.Domain;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Interfaces;
-using AutoMapper;
-
 using RestaurantBill.Application.DTOs;
+using AutoMapper;
 
 namespace RestaurantBill.Application.Services;
 
