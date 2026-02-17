@@ -5,5 +5,8 @@ namespace RestaurantBill.Domain.Entities
         public decimal UnitPrice { get; set; }
         public int Quantity { get; set; }
         public int ProductId { get; set; }
+
+        //RelationShip
+        public int OrderId { get; set; }
     }
 }
