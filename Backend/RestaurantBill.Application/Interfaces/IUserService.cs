@@ -5,5 +5,5 @@ namespace RestaurantBill.Application.Interfaces;
 public interface IUserService
 {
     Task AddAsync(CreateUserDto dto); 
-    Task<List<UserResponse>> GetAllAsync();
+    Task<List<UserDto>> GetAllAsync();
 }
