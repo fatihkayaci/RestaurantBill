@@ -4,6 +4,6 @@ namespace RestaurantBill.Application.Interfaces;
 
 public interface ICategoryService
 {
-    Task AddAsync(CreateCategoryDto dto); 
+    Task CreateAsync(CreateCategoryDto dto); 
     Task<List<CategoryDto>> GetAllAsync();
 }

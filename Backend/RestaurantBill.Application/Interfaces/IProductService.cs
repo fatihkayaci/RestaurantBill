@@ -4,6 +4,6 @@ namespace RestaurantBill.Application.Interfaces;
 
 public interface IProductService
 {
-    Task AddAsync(CreateProductDto dto); 
+    Task CreateAsync(CreateProductDto dto); 
     Task<List<ProductDto>> GetAllAsync();
 }
