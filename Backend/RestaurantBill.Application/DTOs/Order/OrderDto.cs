@@ -1,7 +1,7 @@
 using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.DTOs;
-public class OrderResponse
+public class OrderDto
 {
     public int Id { get; set; }
     public string Note { get; set; } = string.Empty;
