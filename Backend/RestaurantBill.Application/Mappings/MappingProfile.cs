@@ -1,6 +1,6 @@
 using AutoMapper;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Domain;
+using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Business.Mappings;
 
@@ -8,23 +8,39 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
-        CreateMap<CreateProductDto, Product>();
-        CreateMap<Product, ProductResponse>();
+        // Product
+        CreateMap<ProductDto, Product>().ReverseMap();
+        CreateMap<CreateProductDto, Product>().ReverseMap();
+        CreateMap<UpdateProductDto, Product>().ReverseMap();
 
-        CreateMap<CreateOrderDto, Order>();
-        CreateMap<Order, OrderResponse>();
+        // Order
+        CreateMap<OrderDto, Order>().ReverseMap();
+        CreateMap<CreateOrderDto, Order>().ReverseMap();
+        CreateMap<UpdateOrderDto, Order>().ReverseMap();
 
-        CreateMap<CreateOrderItemDto, OrderItem>();
-        CreateMap<OrderItem, OrderItemResponse>();
+        // OrderItem (En kritik yer burası)
+        CreateMap<OrderItemDto, OrderItem>().ReverseMap();
+        CreateMap<CreateOrderItemDto, OrderItem>().ReverseMap();
+        CreateMap<UpdateOrderItemDto, OrderItem>().ReverseMap();
 
-        // CreateMap<CreateCategoryDto, Category>();
-        // CreateMap<Category, ResponseCategoryDto>();
-        
-        // CreateMap<CreateTableDto, Table>();
-        // CreateMap<Table, TableResponse>();
+        // Category
+        CreateMap<CategoryDto, Category>().ReverseMap();
+        CreateMap<CreateCategoryDto, Category>().ReverseMap();
+        CreateMap<UpdateCategoryDto, Category>().ReverseMap();
 
+        // Table
+        CreateMap<TableDto, Table>().ReverseMap();
+        CreateMap<CreateTableDto, Table>().ReverseMap();
+        CreateMap<UpdateTableDto, Table>().ReverseMap();
 
-        // CreateMap<CreateUserDto, User>();
-        // CreateMap<User, UserResponse>();
+        // User
+        CreateMap<UserDto, User>().ReverseMap();
+        CreateMap<CreateUserDto, User>().ReverseMap();
+        CreateMap<UpdateUserDto, User>().ReverseMap();
+
+        // Restaurant
+        CreateMap<RestaurantDto, Restaurant>().ReverseMap();
+        CreateMap<CreateRestaurantDto, Restaurant>().ReverseMap();
+        CreateMap<UpdateRestaurantDto, Restaurant>().ReverseMap();
     }
 }
