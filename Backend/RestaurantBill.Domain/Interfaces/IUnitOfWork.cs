@@ -2,10 +2,10 @@ namespace RestaurantBill.Domain.Interfaces;
 
 public interface IUnitOfWork : IDisposable
 {
-    IProductRepository Products { get; }
-    IOrderRepository Orders { get; }
+    IProductRepository Product { get; }
+    IOrderRepository Order { get; }
     ICategoryRepository Category { get; }
-    ITableRepository Tables { get; }
+    ITableRepository Table { get; }
     IOrderItemRepository OrderItem { get; }
     IRestaurantRepository Restaurant { get; }
     IUserRepository User { get; }

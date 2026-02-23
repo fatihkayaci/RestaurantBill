@@ -20,10 +20,10 @@ public class UnitOfWork : IUnitOfWork
     private IUserRepository? _userRepository;
 
 
-    public IProductRepository Products => _productRepository ??= new ProductRepository(_context);
-    public IOrderRepository Orders => _orderRepository ??= new OrderRepository(_context);
+    public IProductRepository Product => _productRepository ??= new ProductRepository(_context);
+    public IOrderRepository Order => _orderRepository ??= new OrderRepository(_context);
     public ICategoryRepository Category => _categoryRepository ??= new CategoryRepository(_context);
-    public ITableRepository Tables => _tableRepository ??= new TableRepository(_context);
+    public ITableRepository Table => _tableRepository ??= new TableRepository(_context);
     public IOrderItemRepository OrderItem => _orderItemRepository ??= new OrderItemRepository(_context);
     public IRestaurantRepository Restaurant => _restaurantRepository ??= new RestaurantRepository(_context);
     public IUserRepository User => _userRepository ??= new UserRepository(_context);
