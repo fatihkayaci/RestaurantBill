@@ -4,6 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Persistence.Repositories;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Business.Mappings;
+using RestaurantBill.WebAPI.Middlewares;
+using FluentValidation.AspNetCore;
+using FluentValidation;
+using RestaurantBill.Application.Validators;
+using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,13 +28,15 @@ builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+
 #region Configuration for service
-    // builder.Services.AddScoped<ICategoryService, CategoryService>();
-    // builder.Services.AddScoped<ITableService, TableService>();
-    //builder.Services.AddScoped<IProductService, ProductService>();
-    //builder.Services.AddScoped<IOrderService, OrderService>();
-    //builder.Services.AddScoped<IOrderItemService, OrderItemService>();
-    // builder.Services.AddScoped<IUserService, UserService>();    
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IOrderItemService, OrderItemService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IRestaurantService, RestaurantService>();
+builder.Services.AddScoped<ITableService, TableService>();
+builder.Services.AddScoped<IUserService, UserService>();    
 #endregion
 
 #region configuration for repository
@@ -45,6 +53,9 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 #endregion
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+/* fluent validation */
+builder.Services.AddFluentValidationAutoValidation(); 
+builder.Services.AddValidatorsFromAssemblyContaining<RemoveOrderItemDtoValidator>();
 
 #region Cors Settings
 /*
@@ -61,31 +72,38 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 */  
 #endregion
 
-// Authentication service added.
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+#region Authentication service added.
+    /*
+    builder.Services.AddAuthentication(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-            System.Text.Encoding.UTF8.GetBytes(secretKey!))
-    };
-});
+        options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+                System.Text.Encoding.UTF8.GetBytes(secretKey!))
+        };
+    });
+    */
+#endregion 
+
 
 var app = builder.Build();
 app.UseCors("IzinVer");
 app.UseHttpsRedirection();
+// MiddleWares
+app.UseMiddleware<ExceptionMiddleware>();
 // for Authentication
+
 app.UseAuthentication(); // <-- first "who are you?" (id control)
 app.UseAuthorization();  // <-- second "are you have authority?" (authority control)
 app.MapControllers();
