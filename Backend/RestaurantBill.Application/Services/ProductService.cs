@@ -5,8 +5,6 @@ namespace RestaurantBill.Application.Services;
 
 public class ProductService : IProductService
 {
-    
-
     public Task CreateAsync(CreateProductDto dto)
     {
         throw new NotImplementedException();

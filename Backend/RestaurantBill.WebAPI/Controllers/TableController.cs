@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Core.Interfaces;
-using RestaurantBill.Core.DTOs;
-
+using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Interfaces;
 namespace RestaurantBill.WebAPI.Controllers
 {
     [Route("api/[controller]")]
@@ -22,7 +21,7 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Add(CreateTableDto tableDto)
         {
-            await _tableService.AddAsync(tableDto);
+            await _tableService.CreateAsync(tableDto);
             return Ok("masa başarıyla eklendi");
         }
     }

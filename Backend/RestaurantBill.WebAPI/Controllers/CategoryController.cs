@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Core.Interfaces;
-using RestaurantBill.Core.DTOs;
+using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
@@ -22,7 +22,7 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Add(CreateCategoryDto categoryDto)
         {
-            await _categoryService.AddAsync(categoryDto);
+            await _categoryService.CreateAsync(categoryDto);
             return Ok("Ürün başarıyla eklendi");
         }
     }

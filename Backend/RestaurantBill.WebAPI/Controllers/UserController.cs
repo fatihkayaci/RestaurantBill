@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Core.Interfaces;
-using RestaurantBill.Core.DTOs;
+using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
@@ -24,7 +24,7 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Add(CreateUserDto userDto)
         {
-            await _userService.AddAsync(userDto);
+            await _userService.CreateAsync(userDto);
             return Ok("User başarıyla eklendi");
         }
     }
