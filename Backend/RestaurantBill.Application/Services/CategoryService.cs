@@ -1,29 +1,92 @@
-using RestaurantBill.Application;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.DTOs;
-
+using RestaurantBill.Domain.Interfaces;
 using AutoMapper;
+using RestaurantBill.Domain.Entities;
+using RestaurantBill.Application.Exceptions;
 
-namespace RestaurantBill.Business.Services;
+namespace RestaurantBill.Application.Services;
 
-public class CategoryService //: ICategoryService
+public class CategoryService : ICategoryService
 {
-    // private readonly IGenericRepository<Category> _repository;
-    // private readonly IMapper _mapper;
-    // public CategoryService(IGenericRepository<Category> repository, IMapper mapper)
-    // {
-    //     _repository = repository;
-    //     _mapper = mapper;
-    // }
-    // public async Task AddAsync(CreateCategoryDto dto)
-    // {
-    //     var category = _mapper.Map<Category>(dto);
-    //     await _repository.AddAsync(category);
-    // }
+    private readonly IMapper _mapper;
+    private readonly IUnitOfWork _uow;
+    public CategoryService(IMapper mapper, IUnitOfWork uow)
+    {
+        _mapper = mapper;
+        _uow = uow;
+    }
 
-    // public async Task<List<ResponseCategoryDto>> GetAllAsync()
-    // {
-    //     var entities = await _repository.GetAllAsync();
-    //     return _mapper.Map<List<ResponseCategoryDto>>(entities);
-    // }
+    /// <summary>
+    /// Maps the provided DTO to a category entity and saves it to the database.
+    /// </summary>
+    /// <param name="dto">The data transfer object containing category details.</param>
+    public async Task CreateAsync(CreateCategoryDto dto)
+    {
+        var category = _mapper.Map<Category>(dto);
+        await _uow.Category.AddAsync(category);
+        await _uow.SaveChangesAsync();
+    }
+    
+    /// <summary>
+    /// Deletes a category by its ID.
+    /// Throws BusinessException if the ID is invalid.
+    /// Throws NotFoundException if the category does not exist in the database.
+    /// </summary>    
+    public async Task DeleteAsync(int id)
+    {
+        if (id <= 0) throw new BusinessException("Kategori ID değeri 0 veya negatif olamaz.");
+        var category = await _uow.Category.GetByIdAsync(id);
+        if (category == null) throw new NotFoundException($"Kategori bulunamadı. (ID: {id})");
+        
+        _uow.Category.Delete(category);
+        await _uow.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Retrieves all categories from the database and maps them to DTOs.
+    /// </summary>
+    /// <returns>A list of category data transfer objects.</returns>
+    public async Task<List<CategoryDto>> GetAllAsync()
+    {
+        var entities = await _uow.Category.GetAllAsync();
+        return _mapper.Map<List<CategoryDto>>(entities);
+    }
+
+    /// <summary>
+    /// Retrieves a category by its ID.
+    /// Throws BusinessException if ID is invalid.
+    /// Throws NotFoundException if category does not exist.
+    /// </summary>
+    public async Task<CategoryDto> GetByIdAsync(int id)
+    {
+        if(id <= 0) throw new BusinessException("Kategori ID değeri 0 veya negatif olamaz.");
+        var category = await _uow.Category.GetByIdAsync(id);
+        if (category == null) throw new NotFoundException($"Kategori bulunamadı. (ID: {id})");
+        return _mapper.Map<CategoryDto>(category);
+    }
+
+    /// <summary>
+    /// Updates an existing category with the provided DTO data.
+    /// Throws BusinessException if the DTO is null or the ID is invalid.
+    /// Throws NotFoundException if the category does not exist in the database.
+    /// </summary>
+    public async Task UpdateAsync(UpdateCategoryDto dto)
+    {
+        if (dto == null)
+            throw new BusinessException("Güncellenecek veri boş olamaz.");
+
+        if (dto.Id <= 0)
+            throw new BusinessException("Güncellenecek ID 0 veya negatif olamaz.");
+            
+        var category = await _uow.Category.GetByIdAsync(dto.Id, true);
+
+        if (category == null)
+            throw new NotFoundException($"Güncellenecek kategori bulunamadı. (ID: {dto.Id})");
+
+        _mapper.Map(dto, category); 
+
+        await _uow.Category.UpdateAsync(category);
+        await _uow.SaveChangesAsync();
+    }
 }

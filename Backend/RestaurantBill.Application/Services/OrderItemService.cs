@@ -1,13 +1,36 @@
-using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.DTOs;
-using AutoMapper;
 
 namespace RestaurantBill.Application.Services;
 
 public class OrderItemService : IOrderItemService
 {
-    private readonly IGenericRepository<OrderItem> _repository;
+    public Task CreateAsync(CreateOrderItemDto dto)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task DeleteAsync(int id)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<List<OrderItemDto>> GetAllAsync()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<OrderItemDto> GetByIdAsync(int id)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task UpdateAsync(UpdateOrderItemDto dto)
+    {
+        throw new NotImplementedException();
+    }
+    #region old code
+    /* private readonly IGenericRepository<OrderItem> _repository;
     private readonly IGenericRepository<Order> _orderRepository;
     private readonly IGenericRepository<Product> _productRepository;
     private readonly IMapper _mapper;
@@ -33,14 +56,14 @@ public class OrderItemService : IOrderItemService
         var product = await _productRepository.GetByIdAsync(dto.ProductId);
         if (product == null) 
             throw new Exception("Böyle bir ürün bulunamadı!");
-        
+
         // var orderItem = _mapper.Map<OrderItem>(dto);
         // orderItem.Price = product.Price;
         // await _repository.AddAsync(orderItem);
-        
+
         // order.TotalPrice += (orderItem.Price * orderItem.Quantity);
         await _orderRepository.UpdateAsync(order); 
-        
+
     }
 
     public async Task<List<OrderItemResponse>> GetAllAsync()
@@ -52,5 +75,8 @@ public class OrderItemService : IOrderItemService
     public async Task DeleteAsync(int id)
     {
         await _repository.DeleteAsync(id);
-    }
+    }*/
+    #endregion
+
+
 }

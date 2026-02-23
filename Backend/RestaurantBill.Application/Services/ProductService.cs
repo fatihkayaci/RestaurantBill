@@ -1,30 +1,57 @@
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Domain;
-using AutoMapper;
 
-namespace RestaurantBill.Business.Services;
+namespace RestaurantBill.Application.Services;
 
 public class ProductService : IProductService
 {
-    private readonly IGenericRepository<Product> _repository;
-    private readonly IMapper _mapper;
-    public ProductService(IGenericRepository<Product> repository, IMapper mapper)
+    
+
+    public Task CreateAsync(CreateProductDto dto)
     {
-        _repository = repository;
-        _mapper = mapper;
+        throw new NotImplementedException();
     }
 
-    public async Task AddAsync(CreateProductDto dto)
+    public Task DeleteAsync(int id)
     {
-        var product = _mapper.Map<Product>(dto);
-        // product.IsActive = true;
-        await _repository.AddAsync(product);
+        throw new NotImplementedException();
     }
 
-    public async Task<List<ProductResponse>> GetAllAsync()
+    public Task<List<ProductDto>> GetAllAsync()
     {
-        var entities = await _repository.GetAllAsync();
-        return _mapper.Map<List<ProductResponse>>(entities);
+        throw new NotImplementedException();
     }
+
+    public Task<ProductDto> GetByIdAsync(int id)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task UpdateAsync(UpdateProductDto dto)
+    {
+        throw new NotImplementedException();
+    }
+    #region old code
+    /*private readonly IGenericRepository<Product> _repository;
+     private readonly IMapper _mapper;
+     public ProductService(IGenericRepository<Product> repository, IMapper mapper)
+     {
+         _repository = repository;
+         _mapper = mapper;
+     }
+
+     public async Task AddAsync(CreateProductDto dto)
+     {
+         var product = _mapper.Map<Product>(dto);
+         // product.IsActive = true;
+         await _repository.AddAsync(product);
+     }
+
+     public async Task<List<ProductResponse>> GetAllAsync()
+     {
+         var entities = await _repository.GetAllAsync();
+         return _mapper.Map<List<ProductResponse>>(entities);
+     }*/
+    #endregion
+
 }
