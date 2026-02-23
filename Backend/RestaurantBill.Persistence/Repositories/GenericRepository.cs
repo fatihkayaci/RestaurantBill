@@ -29,15 +29,24 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         return await query.ToListAsync();
     }
 
-    public async Task<T?> GetByIdAsync(int id, bool trackChanges = false)
+    public async Task<T?> GetByIdAsync(int id, bool trackChanges = false, params Expression<Func<T, object>>[] includes)
     {
+        IQueryable<T> query = _table;
+
         if (!trackChanges)
-            return await _table.AsNoTracking()
-                               .FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
+        {
+            query = query.AsNoTracking();
+        }
 
-        return await _table.FindAsync(id);
+        if (includes != null && includes.Length > 0)
+        {
+            foreach (var include in includes)
+            {
+                query = query.Include(include);
+            }
+        }
+        return await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
     }
-
     public async Task AddAsync(T entity)
     {
         await _table.AddAsync(entity);
@@ -49,12 +58,8 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         await Task.CompletedTask;
     }
 
-    public async Task DeleteAsync(int id)
+    public void Delete(T entity)
     {
-        var entity = await _table.FindAsync(id);
-        if (entity != null)
-        {
-            _table.Remove(entity);
-        }
+        _table.Remove(entity);
     }
 }
