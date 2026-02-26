@@ -32,7 +32,7 @@ namespace RestaurantBill.WebAPI.Controllers
             
             return Ok(new { Message = "Sipariş başarıyla açıldı", OrderId = orderId });
         }
-
+    /*
         [HttpPost("{orderId}/items")]
         public async Task<IActionResult> AddProductToOrder(int orderId, [FromBody] CreateOrderItemDto dto)
         {
@@ -46,7 +46,7 @@ namespace RestaurantBill.WebAPI.Controllers
             await _mediator.Send(command);
 
             return Ok(new { Message = "Ürün siparişe eklendi." });
-        }
+        }*/
         #region old code
         /*
             [HttpGet]
