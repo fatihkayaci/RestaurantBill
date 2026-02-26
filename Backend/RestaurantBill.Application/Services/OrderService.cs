@@ -19,34 +19,11 @@ public class OrderService //: IOrderService
         _mapper = mapper;
         _uow = uow;
     }
-
-    public async Task CreateAsync(CreateOrderDto dto)
-    {
-        if (dto == null)
-            throw new BusinessException("Eklenecek veri boş olamaz");
-        if (dto.TableId <= 0)
-            throw new BusinessException("Table Id 0 veya daha küçük bir şey olamaz");
-        
-        var table = await _uow.Table.GetByIdAsync(dto.TableId, true);
-        
-        Guard.AgainstNull(table, "Böyle bir Masa bulunamadı.");
-
-        if (table.Status != TableStatus.Available)
-            throw new BusinessException("Bu masa dolu yeni sipariş oluşturulamıyor");
-        
-        var order = _mapper.Map<Order>(dto);
-        await _uow.Order.AddAsync(order);
-        table.Status = TableStatus.Occupied;
-
-        await _uow.SaveChangesAsync();
-    }
-
     public async Task<List<OrderDto>> GetAllAsync()
     {
         var entities = await _uow.Order.GetAllAsync();
         return _mapper.Map<List<OrderDto>>(entities);
     }
-
     public async Task<OrderDto> GetByIdAsync(int id)
     {
         if (id <= 0)
@@ -58,70 +35,10 @@ public class OrderService //: IOrderService
         return _mapper.Map<OrderDto>(order);
     }
     
-    public async Task CancelOrderAsync(int orderId)
-    {
-        if (orderId <= 0)
-            throw new BusinessException("id 0 dan küçük veya eşit olamaz");
-        
-        var order = await _uow.Order.GetByIdAsync(orderId, true);
-        Guard.AgainstNull(order, "Böyle bir Ürün bulunamadı.");
 
-        order.Status = OrderStatus.Cancelled;
-        await _uow.SaveChangesAsync();
-    }
 
-    public async Task CloseOrderAsync(int orderId)
-    {
-        if (orderId <= 0)
-            throw new BusinessException("id 0 dan küçük veya eşit olamaz");
-        
-        var order = await _uow.Order.GetByIdAsync(orderId, true);
-        Guard.AgainstNull(order, "Böyle bir Ürün bulunamadı.");
-        
-        order.Status = OrderStatus.Paid;
 
-        var table = await _uow.Table.GetByIdAsync(order.TableId, true);
-        if (table != null)
-            table.Status = TableStatus.Available;
-
-        await _uow.SaveChangesAsync();
-    }
-
-    public async Task MoveOrderToTableAsync(int orderId, int newTableId)
-    {
-        if (orderId <= 0 || newTableId <= 0) throw new BusinessException("id 0 dan küçük veya eşit olamaz");
-        
-        var order = await _uow.Order.GetByIdAsync(orderId, true);
-        Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
-
-        var newTable = await _uow.Table.GetByIdAsync(newTableId, true);
-        Guard.AgainstNull(newTable, "Böyle bir Masa bulunamadı.");
-        
-        if (newTable.Status != TableStatus.Available) throw new BusinessException("Hedef masa şu an dolu, sipariş taşınamaz!");
-
-        var oldTable = await _uow.Table.GetByIdAsync(order.TableId, true);
-        if (oldTable != null)
-            oldTable.Status = TableStatus.Available;
-
-        order.TableId = newTableId;
-        newTable.Status = TableStatus.Occupied;
-        await _uow.SaveChangesAsync();
-    }
-
-    public async Task UpdateOrderStatusAsync(int orderId, OrderStatus newStatus)
-    {
-
-        if (orderId <= 0)
-            throw new BusinessException("id 0 dan küçük veya eşit olamaz");
-
-        var order = await _uow.Order.GetByIdAsync(orderId, true);
-        Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
-        
-        order.Status = newStatus;
-
-        await _uow.SaveChangesAsync();
-    }
-
+    /*bitenler*/
     public async Task AddProductToOrderAsync(int orderId, CreateOrderItemDto dto)
     {
         if (dto.Quantity <= 0) throw new BusinessException("Miktar 0'dan büyük olmalı!");
@@ -146,7 +63,73 @@ public class OrderService //: IOrderService
         order.TotalPrice = order.OrderItems.Sum(item => item.UnitPrice * item.Quantity);
         await _uow.SaveChangesAsync();
     }
+    public async Task CreateAsync(CreateOrderDto dto)
+    {
+        if (dto == null)
+            throw new BusinessException("Eklenecek veri boş olamaz");
+        if (dto.TableId <= 0)
+            throw new BusinessException("Table Id 0 veya daha küçük bir şey olamaz");
+        
+        var table = await _uow.Table.GetByIdAsync(dto.TableId, true);
+        
+        Guard.AgainstNull(table, "Böyle bir Masa bulunamadı.");
 
+        if (table.Status != TableStatus.Available)
+            throw new BusinessException("Bu masa dolu yeni sipariş oluşturulamıyor");
+        
+        var order = _mapper.Map<Order>(dto);
+        await _uow.Order.AddAsync(order);
+        table.Status = TableStatus.Occupied;
+
+        await _uow.SaveChangesAsync();
+    }
+    public async Task MoveOrderToTableAsync(int orderId, int newTableId)
+    {
+        if (orderId <= 0 || newTableId <= 0) throw new BusinessException("id 0 dan küçük veya eşit olamaz");
+        
+        var order = await _uow.Order.GetByIdAsync(orderId, true);
+        Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
+
+        var newTable = await _uow.Table.GetByIdAsync(newTableId, true);
+        Guard.AgainstNull(newTable, "Böyle bir Masa bulunamadı.");
+        
+        if (newTable.Status != TableStatus.Available) throw new BusinessException("Hedef masa şu an dolu, sipariş taşınamaz!");
+
+        var oldTable = await _uow.Table.GetByIdAsync(order.TableId, true);
+        if (oldTable != null)
+            oldTable.Status = TableStatus.Available;
+
+        order.TableId = newTableId;
+        newTable.Status = TableStatus.Occupied;
+        await _uow.SaveChangesAsync();
+    }
+    public async Task CancelOrderAsync(int orderId)
+    {
+        if (orderId <= 0)
+            throw new BusinessException("id 0 dan küçük veya eşit olamaz");
+        
+        var order = await _uow.Order.GetByIdAsync(orderId, true);
+        Guard.AgainstNull(order, "Böyle bir Ürün bulunamadı.");
+
+        order.Status = OrderStatus.Cancelled;
+        await _uow.SaveChangesAsync();
+    }
+    public async Task CloseOrderAsync(int orderId)
+    {
+        if (orderId <= 0)
+            throw new BusinessException("id 0 dan küçük veya eşit olamaz");
+        
+        var order = await _uow.Order.GetByIdAsync(orderId, true);
+        Guard.AgainstNull(order, "Böyle bir Ürün bulunamadı.");
+        
+        order.Status = OrderStatus.Paid;
+
+        var table = await _uow.Table.GetByIdAsync(order.TableId, true);
+        if (table != null)
+            table.Status = TableStatus.Available;
+
+        await _uow.SaveChangesAsync();
+    }
     public async Task RemoveProductFromOrderAsync(int orderId, RemoveOrderItemDto dto)
     {
         var order = await _uow.Order.GetByIdAsync(orderId, true, o => o.OrderItems);
@@ -159,6 +142,19 @@ public class OrderService //: IOrderService
         else existingItem.Quantity -= dto.QuantityToRemove;
 
         order.TotalPrice = order.OrderItems.Sum(item => item.UnitPrice * item.Quantity);
+
+        await _uow.SaveChangesAsync();
+    }
+    public async Task UpdateOrderStatusAsync(int orderId, OrderStatus newStatus)
+    {
+
+        if (orderId <= 0)
+            throw new BusinessException("id 0 dan küçük veya eşit olamaz");
+
+        var order = await _uow.Order.GetByIdAsync(orderId, true);
+        Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
+        
+        order.Status = newStatus;
 
         await _uow.SaveChangesAsync();
     }

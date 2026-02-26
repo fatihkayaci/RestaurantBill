@@ -1,10 +1,7 @@
-
-
 using MediatR;
 
-namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
+namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 {
-    // Artık IRequest<Guid> değil, IRequest<int> yapıyoruz!
     public class AddProductToOrderCommand : IRequest
     {
         public int OrderId { get; set; }

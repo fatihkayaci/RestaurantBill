@@ -3,7 +3,6 @@ using MediatR;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
-// using RestaurantBill.Application.Repositories; // Kendi yolunu eklersin
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
 {

@@ -6,7 +6,7 @@ using RestaurantBill.Application.Common;
 using AutoMapper;
 using MediatR;
 
-namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
+namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 {
     public class AddProductToOrderCommandHandler : IRequestHandler<AddProductToOrderCommand>
     {
