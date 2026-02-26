@@ -29,9 +29,9 @@ public class UnitOfWork : IUnitOfWork
     public IUserRepository User => _userRepository ??= new UserRepository(_context);
 
 
-    public async Task<int> SaveChangesAsync()
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.SaveChangesAsync();
+        return await _context.SaveChangesAsync(cancellationToken);
     }
 
     public void Dispose()
