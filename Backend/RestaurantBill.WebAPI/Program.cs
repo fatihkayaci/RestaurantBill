@@ -32,7 +32,7 @@ builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
 #region Configuration for service
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
-builder.Services.AddScoped<IOrderService, OrderService>();
+// builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 builder.Services.AddScoped<ITableService, TableService>();
@@ -57,6 +57,11 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddFluentValidationAutoValidation(); 
 builder.Services.AddValidatorsFromAssemblyContaining<RemoveOrderItemDtoValidator>();
 
+/* MediatR Service Configuration*/
+builder.Services.AddMediatR(cfg => {
+    // Burada Application katmanından herhangi bir sınıfı referans gösteriyoruz ki o katmanı tarasın
+    cfg.RegisterServicesFromAssembly(typeof(RestaurantBill.Application.AssemblyReference).Assembly); 
+});
 #region Cors Settings
 /*
     builder.Services.AddCors(options =>

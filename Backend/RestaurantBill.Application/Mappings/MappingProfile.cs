@@ -1,5 +1,6 @@
 using AutoMapper;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Business.Mappings;
@@ -17,6 +18,19 @@ public class MappingProfile : Profile
         CreateMap<OrderDto, Order>().ReverseMap();
         CreateMap<CreateOrderDto, Order>().ReverseMap();
         CreateMap<UpdateOrderDto, Order>().ReverseMap();
+        CreateMap<CreateOrderCommand, Order>().ReverseMap();
+        
+        #region if database column name different than createOrderCommand use this way.
+        /*
+            dest (Destination) for order
+            src (source) for command
+
+            CreateMap<CreateOrderCommand, Order>()
+            .ForMember(dest => dest.TableId, opt => opt.MapFrom(src => src.MasaNo))
+            .ForMember(dest => dest.Note, opt => opt.MapFrom(src => src.MusteriNotu))
+            .ReverseMap(); 
+        */
+        #endregion
 
         // OrderItem (En kritik yer burası)
         CreateMap<OrderItemDto, OrderItem>().ReverseMap();
@@ -42,5 +56,7 @@ public class MappingProfile : Profile
         CreateMap<RestaurantDto, Restaurant>().ReverseMap();
         CreateMap<CreateRestaurantDto, Restaurant>().ReverseMap();
         CreateMap<UpdateRestaurantDto, Restaurant>().ReverseMap();
+
+        
     }
 }

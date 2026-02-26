@@ -9,7 +9,7 @@ using RestaurantBill.Application.Common;
 
 namespace RestaurantBill.Application.Services;
 
-public class OrderService : IOrderService
+public class OrderService //: IOrderService
 {
     private readonly IMapper _mapper;
     private readonly IUnitOfWork _uow;

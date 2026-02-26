@@ -24,28 +24,24 @@ public class RestaurantBillDbContext : DbContext
 
         base.OnModelCreating(modelBuilder);
     }
-}
-
-
-/*
-for saveChangesAsync method
-public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-{
-    var datas = ChangeTracker.Entries<BaseEntity>();
-
-    foreach (var data in datas)
+    
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        switch (data.State)
-        {
-            case EntityState.Added:
-                data.Entity.CreatedAt = DateTime.UtcNow;
-                break;
-            case EntityState.Modified:
-                data.Entity.UpdatedAt = DateTime.UtcNow;
-                break;
-        }
-    }
+        var datas = ChangeTracker.Entries<BaseEntity>();
 
-    return base.SaveChangesAsync(cancellationToken);
+        foreach (var data in datas)
+        {
+            switch (data.State)
+            {
+                case EntityState.Added:
+                    data.Entity.CreatedAt = DateTime.UtcNow;
+                    break;
+                case EntityState.Modified:
+                    data.Entity.UpdatedAt = DateTime.UtcNow;
+                    break;
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
 }
-*/

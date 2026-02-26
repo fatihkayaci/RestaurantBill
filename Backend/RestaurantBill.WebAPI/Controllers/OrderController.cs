@@ -1,5 +1,7 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.WebAPI.Controllers
@@ -8,31 +10,63 @@ namespace RestaurantBill.WebAPI.Controllers
     [ApiController]
     public class OrderController : ControllerBase
     {
-        private readonly IOrderService _orderService;
-        public OrderController(IOrderService orderService)
+        private readonly IMediator _mediator;
+
+        public OrderController(IMediator mediator)
         {
-            _orderService = orderService;
+            _mediator = mediator;
         }
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var values = await _orderService.GetAllAsync();
-            return Ok(values);
-        }
+
         [HttpPost]
-        public async Task<IActionResult> Add(CreateOrderDto orderDto)
+        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto)
         {
-            await _orderService.CreateAsync(orderDto);
-            return Ok("Order başarıyla eklendi");
+            // DTO'dan Command'a dönüştür (Mapping)
+            var command = new CreateOrderCommand 
+            {
+                TableId = dto.TableId,
+                Note = dto.Note
+            };
+
+            // MediatR'a yolla, Handler çalışsın, ID geri gelsin!
+            var orderId = await _mediator.Send(command);
+            
+            return Ok(new { Message = "Sipariş başarıyla açıldı", OrderId = orderId });
         }
-        [HttpPost("close-order/{id}")]
-        public async Task<IActionResult> CloseOrder(int id)
+
+        [HttpPost("{orderId}/items")]
+        public async Task<IActionResult> AddProductToOrder(int orderId, [FromBody] CreateOrderItemDto dto)
         {
-            await _orderService.CloseOrderAsync(id);
-            return Ok("işlem başarıyla tamamlandı.");
+            var command = new AddProductToOrderCommand
+            {
+                OrderId = orderId,
+                ProductId = dto.ProductId,
+                Quantity = dto.Quantity
+            };
+
+            await _mediator.Send(command);
+
+            return Ok(new { Message = "Ürün siparişe eklendi." });
         }
         #region old code
         /*
+            [HttpGet]
+            public async Task<IActionResult> GetAll()
+            {
+                var values = await _orderService.GetAllAsync();
+                return Ok(values);
+            }
+            [HttpPost]
+            public async Task<IActionResult> Add(CreateOrderDto orderDto)
+            {
+                await _orderService.CreateAsync(orderDto);
+                return Ok("Order başarıyla eklendi");
+            }
+            [HttpPost("close-order/{id}")]
+            public async Task<IActionResult> CloseOrder(int id)
+            {
+                await _orderService.CloseOrderAsync(id);
+                return Ok("işlem başarıyla tamamlandı.");
+            }
             [HttpGet("details/{id}")]
             public async Task<IActionResult> GetOrderDetails(int id)
             {
