@@ -4,9 +4,9 @@ namespace RestaurantBill.Application.Interfaces;
 
 public interface ITableService
 {
-    Task CreateAsync(CreateTableDto dto); 
+    Task CreateAsync(CreateTableDto dto, CancellationToken cancellationToken); 
     Task<List<TableDto>> GetAllAsync();
-    Task UpdateAsync(UpdateTableDto dto);
+    Task UpdateAsync(UpdateTableDto dto, CancellationToken cancellationToken);
     Task<TableDto> GetByIdAsync(int id);
-    Task DeleteAsync(int id);
+    Task DeleteAsync(int id, CancellationToken cancellationToken);
 }

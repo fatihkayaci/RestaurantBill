@@ -4,6 +4,7 @@ using RestaurantBill.Domain.Interfaces;
 using AutoMapper;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Application.Common;
 
 namespace RestaurantBill.Application.Services;
 
@@ -21,11 +22,11 @@ public class CategoryService : ICategoryService
     /// Maps the provided DTO to a category entity and saves it to the database.
     /// </summary>
     /// <param name="dto">The data transfer object containing category details.</param>
-    public async Task CreateAsync(CreateCategoryDto dto)
+    public async Task CreateAsync(CreateCategoryDto dto, CancellationToken cancellationToken)
     {
         var category = _mapper.Map<Category>(dto);
         await _uow.Category.AddAsync(category);
-        await _uow.SaveChangesAsync();
+        await _uow.SaveChangesAsync(cancellationToken);
     }
     
     /// <summary>
@@ -33,14 +34,14 @@ public class CategoryService : ICategoryService
     /// Throws BusinessException if the ID is invalid.
     /// Throws NotFoundException if the category does not exist in the database.
     /// </summary>    
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken)
     {
         if (id <= 0) throw new BusinessException("Kategori ID değeri 0 veya negatif olamaz.");
         var category = await _uow.Category.GetByIdAsync(id);
-        if (category == null) throw new NotFoundException($"Kategori bulunamadı. (ID: {id})");
+        Guard.AgainstNull(category, "Böyle bir kategori bulunamadı");
         
         _uow.Category.Delete(category);
-        await _uow.SaveChangesAsync();
+        await _uow.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -62,7 +63,7 @@ public class CategoryService : ICategoryService
     {
         if(id <= 0) throw new BusinessException("Kategori ID değeri 0 veya negatif olamaz.");
         var category = await _uow.Category.GetByIdAsync(id);
-        if (category == null) throw new NotFoundException($"Kategori bulunamadı. (ID: {id})");
+        Guard.AgainstNull(category, "Böyle bir kategori bulunamadı");
         return _mapper.Map<CategoryDto>(category);
     }
 
@@ -71,7 +72,7 @@ public class CategoryService : ICategoryService
     /// Throws BusinessException if the DTO is null or the ID is invalid.
     /// Throws NotFoundException if the category does not exist in the database.
     /// </summary>
-    public async Task UpdateAsync(UpdateCategoryDto dto)
+    public async Task UpdateAsync(UpdateCategoryDto dto, CancellationToken cancellationToken)
     {
         if (dto == null)
             throw new BusinessException("Güncellenecek veri boş olamaz.");
@@ -80,13 +81,11 @@ public class CategoryService : ICategoryService
             throw new BusinessException("Güncellenecek ID 0 veya negatif olamaz.");
             
         var category = await _uow.Category.GetByIdAsync(dto.Id, true);
-
-        if (category == null)
-            throw new NotFoundException($"Güncellenecek kategori bulunamadı. (ID: {dto.Id})");
+        Guard.AgainstNull(category, "Böyle bir kategori bulunamadı");
 
         _mapper.Map(dto, category); 
 
         await _uow.Category.UpdateAsync(category);
-        await _uow.SaveChangesAsync();
+        await _uow.SaveChangesAsync(cancellationToken);
     }
 }

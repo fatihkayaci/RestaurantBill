@@ -17,15 +17,33 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var values = await _userService.GetAllAsync();
-            return Ok(values);
+            var users = await _userService.GetAllAsync();
+            return Ok(users);
+        }
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetUserById([FromRoute]int id)
+        {
+            var user = await _userService.GetByIdAsync(id);
+            return Ok(user);
+        }
+        [HttpPost("create-user")]
+        public async Task<IActionResult> CreateUser([FromBody]CreateUserDto dto, CancellationToken cancellationToken)
+        {
+            await _userService.CreateAsync(dto, cancellationToken);
+            return Ok("Kullanıcı başarıyla oluşturuldu");
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Add(CreateUserDto userDto)
+        [HttpPut("update-user")]
+        public async Task<IActionResult> UpdateUser([FromBody]UpdateUserDto dto, CancellationToken cancellationToken)
         {
-            await _userService.CreateAsync(userDto);
-            return Ok("User başarıyla eklendi");
+            await _userService.UpdateAsync(dto, cancellationToken);
+            return Ok("Kullanıcı başarıyla güncellendi");
+        }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteUser([FromRoute]int id, CancellationToken cancellationToken)
+        {
+            await _userService.DeleteAsync(id, cancellationToken);
+            return Ok("Kullanıcı başarıyla silindi");
         }
     }
 }

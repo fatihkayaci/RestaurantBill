@@ -18,11 +18,30 @@ namespace RestaurantBill.WebAPI.Controllers
             var values = await _tableService.GetAllAsync();
             return Ok(values);
         }
-        [HttpPost]
-        public async Task<IActionResult> Add(CreateTableDto tableDto)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetTableById([FromRoute]int id)
         {
-            await _tableService.CreateAsync(tableDto);
-            return Ok("masa başarıyla eklendi");
+            var table = await _tableService.GetByIdAsync(id);
+            return Ok(table);
+        }
+        [HttpPost("create-table")]
+        public async Task<IActionResult> CreateTable([FromBody]CreateTableDto dto, CancellationToken cancellationToken)
+        {
+            await _tableService.CreateAsync(dto, cancellationToken);
+            return Ok("Masa başarıyla oluşturuldu");
+        }
+
+        [HttpPut("update-Table")]
+        public async Task<IActionResult> UpdateTable([FromBody]UpdateTableDto dto, CancellationToken cancellationToken)
+        {
+            await _tableService.UpdateAsync(dto, cancellationToken);
+            return Ok("Masa başarıyla güncellendi");
+        }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTable([FromRoute]int id, CancellationToken cancellationToken)
+        {
+            await _tableService.DeleteAsync(id, cancellationToken);
+            return Ok("Masa başarıyla silindi");
         }
     }
 }

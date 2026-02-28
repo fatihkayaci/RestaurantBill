@@ -1,55 +1,67 @@
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Domain.Entities;
+using AutoMapper;
+using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Application.Common;
 
 namespace RestaurantBill.Application.Services;
 
 public class ProductService : IProductService
 {
-    public Task CreateAsync(CreateProductDto dto)
+    private readonly IMapper _mapper;
+    private readonly IUnitOfWork _uow;
+    
+    public ProductService(IMapper mapper, IUnitOfWork uow)
     {
-        throw new NotImplementedException();
+        _mapper = mapper;
+        _uow = uow;
+    }
+    public async Task CreateAsync(CreateProductDto dto, CancellationToken cancellationToken)
+    {
+        var product = _mapper.Map<Product>(dto);
+        await _uow.Product.AddAsync(product);
+        await _uow.SaveChangesAsync(cancellationToken);
     }
 
-    public Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        if (id <= 0) throw new BusinessException("Product ID değeri 0 veya negatif olamaz.");
+        var product = await _uow.Product.GetByIdAsync(id);
+        Guard.AgainstNull(product, "Böyle bir ürün bulunamadı.");
+        
+        _uow.Product.Delete(product);
+        await _uow.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<List<ProductDto>> GetAllAsync()
+    public async Task<List<ProductDto>> GetAllAsync()
     {
-        throw new NotImplementedException();
+        var entities = await _uow.Product.GetAllAsync();
+        return _mapper.Map<List<ProductDto>>(entities);
     }
 
-    public Task<ProductDto> GetByIdAsync(int id)
+    public async Task<ProductDto> GetByIdAsync(int id)
     {
-        throw new NotImplementedException();
+        if(id <= 0) throw new BusinessException("product ID değeri 0 veya negatif olamaz.");
+        var product = await _uow.Product.GetByIdAsync(id);
+        Guard.AgainstNull(product, "Böyle bir ürün bulunamadı");
+        return _mapper.Map<ProductDto>(product);
     }
 
-    public Task UpdateAsync(UpdateProductDto dto)
+    public async Task UpdateAsync(UpdateProductDto dto, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        if (dto == null)
+            throw new BusinessException("Güncellenecek veri boş olamaz.");
+
+        if (dto.Id <= 0)
+            throw new BusinessException("id 0 dan küçük veya eşit olamaz");
+
+        var product = await _uow.Product.GetByIdAsync(dto.Id, true);
+        Guard.AgainstNull(product, "Böyle bir ürün bulunamadı.");
+
+        _mapper.Map(dto, product);
+        await _uow.SaveChangesAsync(cancellationToken);
     }
-    #region old code
-    /*private readonly IGenericRepository<Product> _repository;
-     private readonly IMapper _mapper;
-     public ProductService(IGenericRepository<Product> repository, IMapper mapper)
-     {
-         _repository = repository;
-         _mapper = mapper;
-     }
-
-     public async Task AddAsync(CreateProductDto dto)
-     {
-         var product = _mapper.Map<Product>(dto);
-         // product.IsActive = true;
-         await _repository.AddAsync(product);
-     }
-
-     public async Task<List<ProductResponse>> GetAllAsync()
-     {
-         var entities = await _repository.GetAllAsync();
-         return _mapper.Map<List<ProductResponse>>(entities);
-     }*/
-    #endregion
-
+    
 }
