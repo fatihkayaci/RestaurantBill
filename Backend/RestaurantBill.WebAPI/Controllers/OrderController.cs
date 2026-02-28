@@ -1,8 +1,17 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Application.DTOs;
+
+#region commands and queries
+using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
+using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
+using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
-using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Features.Orders.Commands.MoveOrderToTable;
+using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
+using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
+using RestaurantBill.Application.Features.Orders.Queries.GetAllOrders;
+using RestaurantBill.Application.Features.Orders.Queries.GetOrderById;
+#endregion
 
 namespace RestaurantBill.WebAPI.Controllers
 {
@@ -16,77 +25,89 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             _mediator = mediator;
         }
-
-        [HttpPost]
-        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto)
+        #region methods for get
+        [HttpGet]
+        public async Task<IActionResult> GetAllOrders()
         {
-            // DTO'dan Command'a dönüştür (Mapping)
-            var command = new CreateOrderCommand 
-            {
-                TableId = dto.TableId,
-                Note = dto.Note
-            };
-
-            // MediatR'a yolla, Handler çalışsın, ID geri gelsin!
-            var orderId = await _mediator.Send(command);
-            
-            return Ok(new { Message = "Sipariş başarıyla açıldı", OrderId = orderId });
+            var query = new GetAllOrdersQuery();
+            var result = await _mediator.Send(query);
+            return Ok(result);
         }
-    /*
-        [HttpPost("{orderId}/items")]
-        public async Task<IActionResult> AddProductToOrder(int orderId, [FromBody] CreateOrderItemDto dto)
+        
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetOrderById([FromRoute]int id)
         {
-            var command = new AddProductToOrderCommand
+            var query = new GetOrderByIdQuery
             {
-                OrderId = orderId,
-                ProductId = dto.ProductId,
-                Quantity = dto.Quantity
+                OrderId = id
             };
-
+            var result = await _mediator.Send(query);
+            return Ok(result);
+        }
+        #endregion
+        
+        #region methods for post
+        [HttpPost("create-order")]
+        public async Task<IActionResult> CreateOrder([FromBody]CreateOrderCommand command)
+        {
             await _mediator.Send(command);
+            return Created("", new { Message = "Sipariş başarıyla oluşturuldu." });
+        }
+        #endregion
 
-            return Ok(new { Message = "Ürün siparişe eklendi." });
+        #region method for put
+        [HttpPut("update-order")]
+        public async Task<IActionResult> UpdateOrder([FromBody]UpdateOrderStatusCommand command)
+        {
+            await _mediator.Send(command);
+            return Ok(new { Message = "Siparişiniz güncellendi." });
+        }
+
+        [HttpPut("remove-product")]
+        public async Task<IActionResult> RemoveProduct([FromBody]RemoveProductFromOrderCommand command)
+        {
+            await _mediator.Send(command);
+            return Ok(new { Message = "Siparişinizden ürün çıkarıldı." });
+        }
+
+        [HttpPut("cancel-order")]
+        public async Task<IActionResult> CancelOrder([FromBody]CancelOrderCommand command)
+        {
+            await _mediator.Send(command);
+            return Ok(new { Message = "Siparişiniz iptal oldu." });
+        }
+        [HttpPut("close-order")]
+        public async Task<IActionResult> CloseOrder([FromBody]CloseOrderCommand command)
+        {
+            await _mediator.Send(command);
+            return Ok(new { Message = "Siparişiniz kapatıldı." });
+        }
+        [HttpPut("add-product")]
+        public async Task<IActionResult> AddProductToOrder([FromBody] AddProductToOrderCommand command)
+        {
+            await _mediator.Send(command);
+            return Ok(new { Message = "Siparişinize yeni ürün eklendi." });
+        }
+        [HttpPut("move-table")]
+        public async Task<IActionResult> MoveOrderToTable([FromBody] MoveOrderToTableCommand command)
+        {
+            await _mediator.Send(command);
+            return Ok(new { Message = "Sipariş yeni masaya başarıyla taşındı!" });
+        }
+        
+        /*extra use for Move Table
+        [HttpPut("{orderId}/move/{newTableId}")]
+        public async Task<IActionResult> MoveOrderToTable([FromRoute]int orderId, [FromRoute]int newTableId)
+        {
+            var command = new MoveOrderToTableCommand 
+            { 
+                OrderId = orderId, 
+                TableId = newTableId 
+            };
+            await _mediator.Send(command);
+            return Ok(new { Message = "Sipariş başarıyla yeni masaya taşındı." });
         }*/
-        #region old code
-        /*
-            [HttpGet]
-            public async Task<IActionResult> GetAll()
-            {
-                var values = await _orderService.GetAllAsync();
-                return Ok(values);
-            }
-            [HttpPost]
-            public async Task<IActionResult> Add(CreateOrderDto orderDto)
-            {
-                await _orderService.CreateAsync(orderDto);
-                return Ok("Order başarıyla eklendi");
-            }
-            [HttpPost("close-order/{id}")]
-            public async Task<IActionResult> CloseOrder(int id)
-            {
-                await _orderService.CloseOrderAsync(id);
-                return Ok("işlem başarıyla tamamlandı.");
-            }
-            [HttpGet("details/{id}")]
-            public async Task<IActionResult> GetOrderDetails(int id)
-            {
-                var response = await _orderService.GetOrderDetailsAsync(id);
-                return Ok(response);
-            }
-            [HttpDelete]
-            public async Task<IActionResult> DeleteOrderItem(int id)
-            {
-                await _orderService.DeleteOrderDetailAsync(id);
-                return Ok("Order item başarıyla silindi");
-            }
-            
-            [HttpGet("table/{tableId}")]
-            public async Task<IActionResult> GetActiveOrderByTableId(int tableId)
-            {
-                var response = await _orderService.GetActiveOrderByTableIdAsync(tableId);
-                return Ok(response);
-            }
-        */  
+        
         #endregion
     }
 }
