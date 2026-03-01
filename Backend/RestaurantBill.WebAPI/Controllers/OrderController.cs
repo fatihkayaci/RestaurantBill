@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 #region commands and queries
@@ -15,6 +16,7 @@ using RestaurantBill.Application.Features.Orders.Queries.GetOrderById;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class OrderController : ControllerBase

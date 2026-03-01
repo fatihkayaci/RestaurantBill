@@ -1,4 +1,3 @@
-using Scalar.AspNetCore;
 using RestaurantBill.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Persistence.Repositories;
@@ -10,6 +9,12 @@ using FluentValidation;
 using RestaurantBill.Application.Validators;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Services;
+using RestaurantBill.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,11 +23,42 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 
 builder.Services.AddControllers();
-/*swagger*/
-    // builder.Services.AddEndpointsApiExplorer();
-    // builder.Services.AddSwaggerGen();
-/*swagger*/
-builder.Services.AddOpenApi();
+
+#region swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "RestaurantBill API", Version = "v1" });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Lütfen token'ınızı girerken başına 'Bearer ' yazmayı unutmayın.\r\n\r\nÖrnek: \"Bearer eyJhbGciOiJIUzI1...\""
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+    
+#endregion
+
+// builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
 {
@@ -37,6 +73,7 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IUserService, UserService>();    
+builder.Services.AddScoped<IAuthService, AuthService>();    
 #endregion
 
 #region configuration for repository
@@ -78,27 +115,35 @@ builder.Services.AddMediatR(cfg => {
 #endregion
 
 #region Authentication service added.
-    /*
+    builder.Services.AddIdentity<User, AppRole>(options =>
+    {
+        options.Password.RequireDigit = false;
+        options.Password.RequiredLength = 6;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireLowercase = false;
+    })
+    .AddEntityFrameworkStores<RestaurantBillDbContext>()
+    .AddDefaultTokenProviders();
+
     builder.Services.AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     })
     .AddJwtBearer(options =>
     {
-        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings["Issuer"],
-            ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                System.Text.Encoding.UTF8.GetBytes(secretKey!))
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+            ValidAudience = builder.Configuration["JwtSettings:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!))
         };
     });
-    */
 #endregion 
 
 
@@ -114,8 +159,12 @@ app.UseAuthorization();  // <-- second "are you have authority?" (authority cont
 app.MapControllers();
 if (app.Environment.IsDevelopment())
 {
+    /*scalar
     app.MapOpenApi(); // JSON'ı üretir
     app.MapScalarApiReference();
+    */
+    app.UseSwagger();
+    app.UseSwaggerUI(); 
 }
 
 using (var scope = app.Services.CreateScope())
@@ -125,12 +174,16 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<RestaurantBillDbContext>();
         context.Database.Migrate();
-        // RestaurantBill.Infrastructure.Seeds.DefaultData.Seed(context);
+        
+        var userManager = services.GetRequiredService<UserManager<User>>();
+        var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
+        
+        await RestaurantBill.Persistence.Seeds.DefaultData.SeedAsync(roleManager, userManager);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Veritabanı migration işlemi sırasında bir hata oluştu.");
+        logger.LogError(ex, "Veritabanı migration veya seed işlemi sırasında bir hata oluştu.");
     }
 }
 app.Run();

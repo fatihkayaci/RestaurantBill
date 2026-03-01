@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Persistence.Context;
 
-public class RestaurantBillDbContext : DbContext
+public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, int>
 {
     public RestaurantBillDbContext(DbContextOptions<RestaurantBillDbContext> options) 
     : base(options)
@@ -16,13 +17,12 @@ public class RestaurantBillDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<Restaurant> Restaurants { get; set; }
     public DbSet<Table> Tables { get; set; }
-    public DbSet<User> Users { get; set; }
     // db configurations =>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(RestaurantBillDbContext).Assembly);
-
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(RestaurantBillDbContext).Assembly);
     }
     
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
