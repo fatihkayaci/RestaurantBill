@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestaurantBill.Infrastructu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestaurantBill.Persistence", "RestaurantBill.Persistence\RestaurantBill.Persistence.csproj", "{7EC4BAFA-18D0-43EF-9AE1-7500F5B74219}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestaurantBill.Application.Tests", "RestaurantBill.Application.Tests\RestaurantBill.Application.Tests.csproj", "{0E6E4CC1-A196-4109-B61C-26FE2CA674B8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{7EC4BAFA-18D0-43EF-9AE1-7500F5B74219}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7EC4BAFA-18D0-43EF-9AE1-7500F5B74219}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7EC4BAFA-18D0-43EF-9AE1-7500F5B74219}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E6E4CC1-A196-4109-B61C-26FE2CA674B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E6E4CC1-A196-4109-B61C-26FE2CA674B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E6E4CC1-A196-4109-B61C-26FE2CA674B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E6E4CC1-A196-4109-B61C-26FE2CA674B8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
