@@ -6,7 +6,6 @@ using RestaurantBill.Business.Mappings;
 using RestaurantBill.WebAPI.Middlewares;
 using FluentValidation.AspNetCore;
 using FluentValidation;
-using RestaurantBill.Application.Validators;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Services;
 using RestaurantBill.Domain.Entities;
@@ -15,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using RestaurantBill.Application.Validators.OrderItem;
 
 var builder = WebApplication.CreateBuilder(args);
 
