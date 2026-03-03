@@ -1,5 +1,6 @@
 using AutoMapper;
 using MediatR;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
@@ -19,11 +20,31 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
 
         public async Task<int> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
         {
-            var order = _mapper.Map<Order>(request);
-            order.Status = OrderStatus.Pending;
-            order.TotalPrice = 0;
+            var order = new Order
+            {
+                TableId = request.TableId,
+                Status = OrderStatus.Pending,
+                OrderItems = new List<OrderItem>()
+            };
+
+            foreach (var item in request.OrderItems)
+            {
+                var product = await _uow.Product.GetByIdAsync(item.ProductId);
+                Guard.AgainstNull(product, "Ürün bulunamadı!"); 
+
+                var orderItem = new OrderItem
+                {
+                    ProductId = product.Id,
+                    Quantity = item.Quantity,
+                    UnitPrice = product.Price
+                };
+
+                order.OrderItems.Add(orderItem);
+            }
+
             await _uow.Order.AddAsync(order);
             await _uow.SaveChangesAsync(cancellationToken);
+
             return order.Id;
         }
     }

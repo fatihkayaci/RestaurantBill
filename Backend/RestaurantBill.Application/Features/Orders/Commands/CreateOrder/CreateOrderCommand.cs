@@ -1,4 +1,5 @@
 using MediatR;
+using RestaurantBill.Application.DTOs;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
 {
@@ -7,5 +8,6 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
     {
         public int TableId { get; set; }
         public string Note { get; set; } = string.Empty;
+        public List<OrderItemDto> OrderItems { get; set; } = new();
     }
 }

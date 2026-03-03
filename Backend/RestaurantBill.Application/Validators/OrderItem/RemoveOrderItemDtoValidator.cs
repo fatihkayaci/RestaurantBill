@@ -1,7 +1,7 @@
 using FluentValidation;
 using RestaurantBill.Application.DTOs;
 
-namespace RestaurantBill.Application.Validators;
+namespace RestaurantBill.Application.Validators.OrderItem;
 
 public class RemoveOrderItemDtoValidator : AbstractValidator<RemoveOrderItemDto>
 {
