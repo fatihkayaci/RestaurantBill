@@ -25,45 +25,125 @@ public class ProductServiceTests
         _productService = new ProductService(_mockMapper.Object, _mockUow.Object);
     }
 
+    #region CreateAsync
+
     [Fact]
-    public async Task GetByIdAsync_WhenProductDoesNotExist_ShouldThrowNotFoundException()
+    public async Task CreateAsync_WhenValidDto_ShouldAddProductAndSaveChanges()
     {
-        int fakeProductId = 999;
-        
-        _mockProductRepo.Setup(repo => repo.GetByIdAsync(
-                fakeProductId, 
-                It.IsAny<bool>(), 
+        var dto = new CreateProductDto { Name = "Lahmacun", Price = 120, CategoryId = 1 };
+        var entity = new Product { Name = "Lahmacun", Price = 120 };
+
+        _mockMapper.Setup(m => m.Map<Product>(dto)).Returns(entity);
+
+        await _productService.CreateAsync(dto, CancellationToken.None);
+
+        _mockProductRepo.Verify(r => r.AddAsync(entity), Times.Once);
+        _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    #endregion
+
+    #region UpdateAsync
+
+    [Fact]
+    public async Task UpdateAsync_WhenDtoIsNull_ShouldThrowBusinessException()
+    {
+        await Assert.ThrowsAsync<BusinessException>(() =>
+            _productService.UpdateAsync(null!, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenIdIsZeroOrNegative_ShouldThrowBusinessException()
+    {
+        var dto = new UpdateProductDto { Id = 0, Name = "Test", Price = 100 };
+
+        await Assert.ThrowsAsync<BusinessException>(() =>
+            _productService.UpdateAsync(dto, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenProductNotFound_ShouldThrowNotFoundException()
+    {
+        var dto = new UpdateProductDto { Id = 99, Name = "Yok", Price = 100 };
+
+        _mockProductRepo.Setup(r => r.GetByIdAsync(
+                dto.Id,
+                It.IsAny<bool>(),
                 It.IsAny<Expression<Func<Product, object>>[]>()
             ))
             .ReturnsAsync((Product?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => 
-            await _productService.GetByIdAsync(fakeProductId));
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            _productService.UpdateAsync(dto, CancellationToken.None));
     }
-    [Fact]
-    public async Task GetByIdAsync_WhenProductExists_ShouldReturnProductDto()
-    {
-        int validProductId = 1;
-        var existingProduct = new Product 
-        { 
-            Id = validProductId, 
-            Name = "İskender", 
-            Price = 300 
-        };
-        var expectedDto = new ProductDto 
-        { 
-            Id = validProductId, 
-            Name = "İskender", 
-            Price = 300 
-        };
-        _mockProductRepo.Setup(repo => repo.GetByIdAsync(validProductId, It.IsAny<bool>(), It.IsAny<Expression<Func<Product, object>>[]>()))
-                        .ReturnsAsync(existingProduct);
-        _mockMapper.Setup(m => m.Map<ProductDto>(existingProduct))
-                .Returns(expectedDto);
-        var result = await _productService.GetByIdAsync(validProductId);
-        Assert.NotNull(result);
 
-        Assert.Equal(expectedDto.Id, result.Id);
-        Assert.Equal(expectedDto.Name, result.Name);
+    [Fact]
+    public async Task UpdateAsync_WhenValidDto_ShouldMapAndSaveChanges()
+    {
+        var dto = new UpdateProductDto { Id = 1, Name = "Güncellendi", Price = 350 };
+        var existingProduct = new Product { Id = 1, Name = "Eski İsim", Price = 200 };
+
+        _mockProductRepo.Setup(r => r.GetByIdAsync(
+                dto.Id,
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Product, object>>[]>()
+            ))
+            .ReturnsAsync(existingProduct);
+
+        await _productService.UpdateAsync(dto, CancellationToken.None);
+
+        _mockMapper.Verify(m => m.Map(dto, existingProduct), Times.Once);
+        _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    #endregion
+
+    #region DeleteAsync
+
+    [Fact]
+    public async Task DeleteAsync_WhenIdIsZeroOrNegative_ShouldThrowBusinessException()
+    {
+        await Assert.ThrowsAsync<BusinessException>(() =>
+            _productService.DeleteAsync(0, CancellationToken.None));
+
+        await Assert.ThrowsAsync<BusinessException>(() =>
+            _productService.DeleteAsync(-1, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenProductNotFound_ShouldThrowNotFoundException()
+    {
+        int fakeId = 999;
+
+        _mockProductRepo.Setup(r => r.GetByIdAsync(
+                fakeId,
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Product, object>>[]>()
+            ))
+            .ReturnsAsync((Product?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            _productService.DeleteAsync(fakeId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenProductExists_ShouldDeleteAndSaveChanges()
+    {
+        int validId = 1;
+        var existingProduct = new Product { Id = validId, Name = "Silinecek Ürün", Price = 100 };
+
+        _mockProductRepo.Setup(r => r.GetByIdAsync(
+                validId,
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Product, object>>[]>()
+            ))
+            .ReturnsAsync(existingProduct);
+
+        await _productService.DeleteAsync(validId, CancellationToken.None);
+
+        _mockProductRepo.Verify(r => r.Delete(existingProduct), Times.Once);
+        _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    #endregion
 }
