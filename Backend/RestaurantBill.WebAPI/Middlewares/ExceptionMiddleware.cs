@@ -29,11 +29,9 @@ public class ExceptionMiddleware
     {
         context.Response.ContentType = "application/json";
         
-        // Varsayılan olarak 500 (Sunucu Hatası) kabul ediyoruz
         int statusCode = (int)HttpStatusCode.InternalServerError;
         string message = "Internal Server Error from the custom middleware.";
 
-        // Eğer fırlatılan hata bizim yazdığımız BaseException türündeyse
         if (exception is BaseException baseEx)
         {
             statusCode = baseEx.StatusCode;
@@ -42,7 +40,6 @@ public class ExceptionMiddleware
 
         context.Response.StatusCode = statusCode;
 
-        // Kullanıcıya dönecek JSON formatını belirliyoruz
         var result = JsonSerializer.Serialize(new 
         {
             StatusCode = statusCode,

@@ -15,6 +15,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
 using RestaurantBill.Application.Validators.OrderItem;
+using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
+using MediatR;
+using RestaurantBill.Application.Behaviors;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,9 +93,6 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 #endregion
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
-/* fluent validation */
-builder.Services.AddFluentValidationAutoValidation(); 
-builder.Services.AddValidatorsFromAssemblyContaining<RemoveOrderItemDtoValidator>();
 
 /* MediatR Service Configuration*/
 builder.Services.AddMediatR(cfg => {
@@ -147,6 +147,16 @@ builder.Services.AddMediatR(cfg => {
 #endregion 
 
 
+/* fluent validation for service */
+builder.Services.AddFluentValidationAutoValidation(); 
+builder.Services.AddValidatorsFromAssemblyContaining<RemoveOrderItemDtoValidator>();
+
+/* fluent validation for CQRS pattern */
+builder.Services.AddMediatR(cfg => 
+{
+    cfg.RegisterServicesFromAssemblyContaining<CreateOrderCommand>();
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+});
 var app = builder.Build();
 app.UseCors("IzinVer");
 app.UseHttpsRedirection();
