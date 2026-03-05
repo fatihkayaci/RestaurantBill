@@ -94,11 +94,6 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-/* MediatR Service Configuration*/
-builder.Services.AddMediatR(cfg => {
-    // Burada Application katmanından herhangi bir sınıfı referans gösteriyoruz ki o katmanı tarasın
-    cfg.RegisterServicesFromAssembly(typeof(RestaurantBill.Application.AssemblyReference).Assembly); 
-});
 #region Cors Settings
 /*
     builder.Services.AddCors(options =>
