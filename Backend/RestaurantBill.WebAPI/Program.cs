@@ -16,8 +16,9 @@ using System.Text;
 using Microsoft.OpenApi.Models;
 using RestaurantBill.Application.Validators.OrderItem;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
-using MediatR;
 using RestaurantBill.Application.Behaviors;
+using MediatR;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,14 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 
 builder.Services.AddControllers();
+
+// Serilog Settings
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 #region swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -151,10 +160,13 @@ builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssemblyContaining<CreateOrderCommand>();
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 });
 var app = builder.Build();
 app.UseCors("IzinVer");
 app.UseHttpsRedirection();
+
+app.UseSerilogRequestLogging();
 // MiddleWares
 app.UseMiddleware<ExceptionMiddleware>();
 // for Authentication
