@@ -31,6 +31,7 @@ public class AuthService : IAuthService
     {
         // 1. Yeni kullanıcı nesnemizi oluşturuyoruz
         // _mapper.Map(User, dto);
+        // usercode will be automatic
         var user = new User
         {
             FullName = dto.FullName,

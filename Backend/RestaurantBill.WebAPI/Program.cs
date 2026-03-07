@@ -19,6 +19,8 @@ using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Behaviors;
 using MediatR;
 using Serilog;
+using RestaurantBill.Infrastructure.MessageBrokers;
+using RestaurantBill.Infrastructure.Consumers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,12 +82,16 @@ builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
 #region Configuration for service
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
-// builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IUserService, UserService>();    
-builder.Services.AddScoped<IAuthService, AuthService>();    
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IMessageProducer, RabbitMqProducer>();
+#endregion
+
+#region consumers for rabbitMQ
+builder.Services.AddHostedService<OrderConsumer>();
 #endregion
 
 #region configuration for repository
