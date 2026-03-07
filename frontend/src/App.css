@@ -1,35 +1,42 @@
-body, html {
-    margin: 0;
-    padding: 0;
-    background-color: #1F1D2B;
-    overflow: hidden;
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
 }
 
-.container {
-    display: grid;
-    grid-template-rows:100px 1fr;
-    height: 100vh;
-    background-color: #1F1D2B;
-    color: #ffffff;
-    font-family: 'Segoe UI', sans-serif;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-.content {
-    background-color: #252836; 
-    border-top-left-radius: 24px; 
-    border-bottom-left-radius: 24px;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    overflow-y: auto;
-    padding: 20px;
-    box-shadow: inset 10px 0px 20px rgba(0, 0, 0, 0.1);
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.content::-webkit-scrollbar {
-    width: 5px;
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
 }
 
-.content::-webkit-scrollbar-thumb {
-    background: #393C49;
-    border-radius: 10px;
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
 }
