@@ -110,18 +110,16 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 #region Cors Settings
-/*
-    builder.Services.AddCors(options =>
-    {
-        options.AddPolicy("IzinVer",
-            builder =>
-            {
-                builder.AllowAnyOrigin()  // Her yerden gelen isteğe izin ver
-                    .AllowAnyMethod()  // GET, POST, PUT, DELETE hepsine izin ver
-                    .AllowAnyHeader(); // Tüm başlıklara izin ver
-            });
-    });
-*/  
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Allow",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
 #endregion
 
 #region Authentication service added.
@@ -169,7 +167,9 @@ builder.Services.AddMediatR(cfg =>
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 });
 var app = builder.Build();
-app.UseCors("IzinVer");
+
+app.UseCors("Allow");
+
 app.UseHttpsRedirection();
 
 app.UseSerilogRequestLogging();
