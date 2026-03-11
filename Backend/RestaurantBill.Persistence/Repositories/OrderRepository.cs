@@ -9,13 +9,16 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
     public OrderRepository(RestaurantBillDbContext context) : base(context)
     {
     }
-    public async Task<Order?> GetActiveOrderByTableId(int tableId)
+    public async Task<Order?> GetActiveOrderByTableId(int tableId, bool trackChanges = false)
     {
-        return null;
-    }
+        IQueryable<Order> query = _context.Set<Order>();
 
-    public async Task<Order?> GetOrderWithDetailsAsync(int id)
-    {
-        return null;
+        if (!trackChanges) 
+            query = query.AsNoTracking();
+
+        return await query
+            .Include(o => o.OrderItems)
+            .ThenInclude(i => i.Product)
+            .FirstOrDefaultAsync(o => o.TableId == tableId);
     }
 }

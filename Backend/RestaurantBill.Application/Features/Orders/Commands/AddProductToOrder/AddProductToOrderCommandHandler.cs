@@ -38,9 +38,14 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             }
             else
             {
-                var newItem = _mapper.Map<OrderItem>(request); 
-                newItem.UnitPrice = product.Price; 
-                order.OrderItems.Add(newItem); 
+                var newItem = new OrderItem
+                {
+                    ProductId = request.ProductId,
+                    Quantity = request.Quantity,
+                    UnitPrice = product.Price
+                }; 
+                
+                order.OrderItems.Add(newItem);
             }
             order.TotalPrice = order.OrderItems.Sum(item => item.UnitPrice * item.Quantity);
 

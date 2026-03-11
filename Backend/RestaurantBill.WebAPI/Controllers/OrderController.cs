@@ -10,13 +10,14 @@ using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Orders.Commands.MoveOrderToTable;
 using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
+using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrders;
 using RestaurantBill.Application.Features.Orders.Queries.GetOrderById;
 #endregion
 
 namespace RestaurantBill.WebAPI.Controllers
 {
-    [Authorize]
+    // [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class OrderController : ControllerBase
@@ -43,6 +44,13 @@ namespace RestaurantBill.WebAPI.Controllers
             {
                 OrderId = id
             };
+            var result = await _mediator.Send(query, cancellationToken);
+            return Ok(result);
+        }
+        [HttpGet("table/{tableId:int}")]
+        public async Task<IActionResult> GetActiveOrderByTableId([FromRoute]int tableId, CancellationToken cancellationToken)
+        {
+            var query = new GetActiveOrderByTableIdQuery{TableId = tableId};
             var result = await _mediator.Send(query, cancellationToken);
             return Ok(result);
         }

@@ -16,15 +16,21 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         _table = _context.Set<T>();
     }
 
-    public async Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool trackChanges = false)
+    public async Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool trackChanges = false, string? includeProperties = null)
     {
         IQueryable<T> query = _table;
 
-        if (!trackChanges)
-            query = query.AsNoTracking();
+        if (!trackChanges) query = query.AsNoTracking();
 
-        if (filter != null)
-            query = query.Where(filter);
+        if (filter != null) query = query.Where(filter);
+
+        if (!string.IsNullOrWhiteSpace(includeProperties))
+        {
+            foreach (var includeProperty in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                query = query.Include(includeProperty);
+            }
+        }
 
         return await query.ToListAsync();
     }

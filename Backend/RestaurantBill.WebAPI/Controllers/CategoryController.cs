@@ -5,7 +5,7 @@ using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
-    [Authorize]//[Authorize(Roles = "Admin")]
+    //[Authorize]//[Authorize(Roles = "Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class CategoryController : ControllerBase
