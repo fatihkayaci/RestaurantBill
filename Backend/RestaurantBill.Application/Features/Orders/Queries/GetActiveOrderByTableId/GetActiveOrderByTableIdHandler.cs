@@ -20,7 +20,6 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTab
         public async Task<OrderDto> Handle(GetActiveOrderByTableIdQuery request, CancellationToken cancellationToken)
         {
             var order = await _uow.Order.GetActiveOrderByTableId(request.TableId, false);
-            Guard.AgainstNull(order, "Sipariş bulunamadı.");
             var orderDto = _mapper.Map<OrderDto>(order);
             return orderDto;
         }
