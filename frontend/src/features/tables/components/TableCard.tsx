@@ -7,19 +7,18 @@ interface TableCardProps {
 
 export default function TableCard({ table }: TableCardProps) {
     
-    // Sadece arka planı değil, yazı rengini ve kenarlıkları da duruma göre ayarlayan gelişmiş fonksiyon
     const getStyles = (status: number) => {
         switch (status) {
-            case 1: // BOŞ - Davetkâr, ferah, beyaz ağırlıklı ama yeşil detaylı
+            case 1:
                 return "bg-white border-green-400 text-green-600 hover:bg-green-50 shadow-sm hover:shadow-green-100/50";
             
-            case 2: // DOLU - Dikkat çekici, solid kırmızı
+            case 2:
                 return "bg-red-500 border-red-600 text-white hover:bg-red-600 shadow-md shadow-red-200";
             
-            case 3: // REZERVE - Beklemede olduğunu hissettiren turuncu/sarı tonları
+            case 3:
                 return "bg-amber-400 border-amber-500 text-amber-950 hover:bg-amber-500 shadow-md shadow-amber-200";
             
-            default: // BİLİNMEYEN
+            default:
                 return "bg-slate-200 border-slate-300 text-slate-500";
         }
     };
