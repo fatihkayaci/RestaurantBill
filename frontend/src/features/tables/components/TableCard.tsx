@@ -33,7 +33,7 @@ export default function TableCard({ table }: TableCardProps) {
 
     return (
         <Link 
-            to={`/table/${table.id}`} // URL yapın pos/id ise burayı `/pos/${table.id}` olarak güncelleyebilirsin
+            to={`/table/${table.id}`}
             className={`
                 relative flex flex-col items-center justify-center 
                 h-32 sm:h-36 rounded-2xl border-2 
@@ -42,17 +42,14 @@ export default function TableCard({ table }: TableCardProps) {
                 ${getStyles(table.status)}
             `}
         >
-            {/* Masa Adı / Numarası */}
             <span className="text-4xl font-extrabold tracking-tight mb-1">
                 {table.name}
             </span>
             
-            {/* Alt Bilgi (Müsait, Dolu, Rezerve) */}
             <span className="text-sm font-bold uppercase tracking-widest opacity-90">
                 {getStatusText(table.status)}
             </span>
 
-            {/* Dolu veya Rezerve ise sağ üstte yanan ufak bir bildirim ışığı (Animasyonlu) */}
             {(table.status === 2 || table.status === 3) && (
                 <span className="absolute top-3 right-3 flex h-3 w-3">
                     <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${table.status === 2 ? 'bg-white' : 'bg-amber-100'}`}></span>
