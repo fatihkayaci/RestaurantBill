@@ -57,7 +57,7 @@ namespace RestaurantBill.WebAPI.Controllers
         #endregion
         
         #region methods for post
-        [HttpPost("create-order")]
+        [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody]CreateOrderCommand command, CancellationToken cancellationToken)
         {
             await _mediator.Send(command, cancellationToken);

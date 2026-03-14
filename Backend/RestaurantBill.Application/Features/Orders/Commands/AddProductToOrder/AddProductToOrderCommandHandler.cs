@@ -5,18 +5,19 @@ using RestaurantBill.Application.Common;
 
 using AutoMapper;
 using MediatR;
+using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 {
     public class AddProductToOrderCommandHandler : IRequestHandler<AddProductToOrderCommand>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMapper _mapper;
+        private readonly IMessageProducer _messageProducer;
 
-        public AddProductToOrderCommandHandler(IUnitOfWork uow, IMapper mapper)
+        public AddProductToOrderCommandHandler(IUnitOfWork uow, IMessageProducer messageProducer)
         {
             _uow = uow;
-            _mapper = mapper;
+            _messageProducer = messageProducer;
         }
 
         public async Task Handle(AddProductToOrderCommand request, CancellationToken cancellationToken)
@@ -49,6 +50,12 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             }
             order.TotalPrice = order.OrderItems.Sum(item => item.UnitPrice * item.Quantity);
 
+            var orderMessage = new 
+            { 
+                OrderId = order.Id,
+                Message = "Mutfak dikkat, yeni sipariş geldi usta!" 
+            };
+            await _messageProducer.SendMessageAsync(orderMessage, "order_queue");
             await _uow.SaveChangesAsync(cancellationToken);
         }
     }

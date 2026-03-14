@@ -9,4 +9,5 @@ public interface ITableService
     Task UpdateAsync(UpdateTableDto dto, CancellationToken cancellationToken);
     Task<TableDto> GetByIdAsync(int id);
     Task DeleteAsync(int id, CancellationToken cancellationToken);
+    Task ChangeTableStatus(int tableId, ChangeTableStatusDto statusDto, CancellationToken cancellationToken);
 }

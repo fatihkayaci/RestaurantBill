@@ -19,9 +19,9 @@ export default function PosPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
-    const [table, setTable] = useState<Table>([]);
+    const [table, setTable] = useState<Table>();
     const [activeOrder, setActiveOrder] = useState<Order>({
-        id: 0,
+        tableId: 0,
         note: "",
         totalPrice: 0,
         status: 0,
@@ -64,12 +64,87 @@ export default function PosPage() {
 
     const handleSubmitOrder = async () => {
         try {
-            await orderService.createMultiplerOrderItems(activeOrder.id, activeOrder.id);   
+            // await orderService.createMultiplerOrderItems(activeOrder.tableId);   
             navigate("/");
-        } catch (error) {
-            console.log("Sipariş onaylanırken hata oluştu:", error);
+        } catch (error: any) {
+            console.log(error.response.data);
         }
     }
+    /* changes status methods */
+    const handleOpenTable = async () => {
+        try {
+            if (!tableId) return;
+            await tableService.changeTableStatus(tableId, 2);
+            const updatedTable = await tableService.getTableById(tableId);
+            setTable(updatedTable);
+
+        } catch (error: any) {
+            console.log(error.response.data);
+        }
+    }
+    const handleReservation = async () => {
+        try {
+            if (!tableId) return;
+            await tableService.changeTableStatus(tableId, 3);
+
+            const updatedTable = await tableService.getTableById(tableId);
+            setTable(updatedTable);
+            
+        } catch (error: any) {
+            console.log(error.response.data);
+        }
+    }
+    const handleCancelReservation = async () => {
+        try {
+            if (!tableId)
+                return;
+            await tableService.changeTableStatus(tableId, 1);
+            const updatedTable = await tableService.getTableById(tableId);
+            setTable(updatedTable);
+            
+        } catch (error: any) {
+            console.log(error.response.data);
+        }
+    }
+    /* will look these methods
+        Todo: close method for take balance
+        Todo: cancel method for cancel
+    */
+    const handleCloseTable = async () => {
+        try {
+            if (!tableId)
+                return;
+            await tableService.changeTableStatus(tableId, 1);
+            const updatedTable = await tableService.getTableById(tableId);
+            setTable(updatedTable);
+        } catch (error: any) {
+            console.log(error.response.data);
+        }
+    }
+    const handleCancelAction = async () => {
+        try {
+            if (!tableId)
+                return;
+            await tableService.changeTableStatus(tableId, 1);
+            const updatedTable = await tableService.getTableById(tableId);
+            setTable(updatedTable);
+        } catch (error: any) {
+            console.log(error.response.data);
+        }
+    }
+    /* changes status methods */
+    /* methods for order */
+    const handleCreateOrder = async () => {
+        try {
+            if (!tableId)
+                return;
+            
+            await orderService.createOrder(tableId);
+        } catch (error: any) {
+            console.log(error.response.data);
+        }
+    }
+    
     const addOrderItem = (productId: number) => {
         try {
             const clickedProduct = products.find(p => p.id === productId);
@@ -103,6 +178,7 @@ export default function PosPage() {
             console.error("Ürün eklenirken bir hata oluştu:", error);
         }
     };
+    
     if (!table) return <div>Masa bulunamadı!</div>;
     
     // for Available
@@ -122,9 +198,10 @@ export default function PosPage() {
 
                     <div className="w-full flex flex-col gap-4">
                         
-                        <button 
+                        <button
                             // TODO: onClick={handleOpenTable}
                             className="w-full bg-green-500 hover:bg-green-600 active:scale-95 text-white font-bold py-4 rounded-xl shadow-md transition-all text-xl"
+                            onClick={handleOpenTable}
                         >
                             Masayı Aç
                         </button>
@@ -132,6 +209,7 @@ export default function PosPage() {
                         <button 
                             // TODO: onClick={handleReservation}
                             className="w-full bg-white hover:bg-slate-50 active:scale-95 text-blue-600 font-bold py-3 rounded-xl border-2 border-blue-100 transition-all text-lg"
+                            onClick={handleReservation}
                         >
                             Rezerve Et
                         </button>
@@ -184,6 +262,7 @@ export default function PosPage() {
                         <button 
                             // TODO: onClick={handleCustomerArrived}
                             className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-4 rounded-xl shadow-md transition-all text-xl"
+                            onClick={handleOpenTable}
                         >
                             Müşteri Geldi (Adisyon Aç)
                         </button>
@@ -191,6 +270,7 @@ export default function PosPage() {
                         <button 
                             // TODO: onClick={handleCancelReservation}
                             className="w-full bg-white hover:bg-red-50 active:scale-95 text-red-500 font-bold py-3 rounded-xl border-2 border-red-100 transition-all text-lg"
+                            onClick={handleCancelReservation}
                         >
                             Rezervasyonu İptal Et
                         </button>
@@ -255,12 +335,43 @@ export default function PosPage() {
                             </div>
                         </div>
                         
-                        <button 
-                            onClick={handleSubmitOrder}
-                            className="w-full bg-green-500 hover:bg-green-600 active:scale-95 transition-all text-white text-xl font-bold py-5 rounded-2xl shadow-lg shadow-green-200 flex justify-center items-center gap-2"
-                        >
-                            Siparişi Onayla
-                        </button>
+                        <div className="flex flex-col gap-3">
+                            {activeOrder.tableId === 0 || activeOrder.status === 0 ? (
+                            <button 
+                                className="w-full bg-blue-500 hover:bg-blue-600 active:scale-95 transition-all text-white text-xl font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 flex justify-center items-center gap-2"
+                                onClick={handleCreateOrder}
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Siparişi Aç (Başlat)
+                            </button>
+                            ) : (
+                                <button 
+                                    onClick={handleSubmitOrder}
+                                    className="w-full bg-green-500 hover:bg-green-600 active:scale-95 transition-all text-white text-xl font-bold py-4 rounded-2xl shadow-lg shadow-green-200 flex justify-center items-center gap-2"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Siparişi Onayla
+                                </button>
+                            )}
+
+                            <button 
+                                className="w-full bg-red-50 hover:bg-red-100 active:scale-95 transition-all text-red-600 border border-red-200 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2"
+                                onClick={handleCloseTable}
+                            >
+                                Masayı Kapat (Hesabı Al)
+                            </button>
+
+                            <button 
+                                className="w-full bg-white hover:bg-slate-50 active:scale-95 transition-all text-slate-500 border border-slate-300 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2 shadow-sm"
+                                onClick={handleCancelAction}
+                            >
+                                İptal Et
+                            </button>
+                        </div>
                         
                         <Link to="/" className="text-slate-400 hover:text-slate-600 font-semibold transition-colors text-center block mt-5">
                             Kapat ve Masalara Dön
