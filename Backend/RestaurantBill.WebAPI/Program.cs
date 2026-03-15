@@ -154,18 +154,21 @@ builder.Services.AddCors(options =>
     });
 #endregion 
 
-
+#region fluent validation rules
 /* fluent validation for service */
 builder.Services.AddFluentValidationAutoValidation(); 
 builder.Services.AddValidatorsFromAssemblyContaining<RemoveOrderItemDtoValidator>();
 
-/* fluent validation for CQRS pattern */
+/* fluent validation and configure mediatr for CQRS pattern  */
 builder.Services.AddMediatR(cfg => 
 {
     cfg.RegisterServicesFromAssemblyContaining<CreateOrderCommand>();
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 });
+    
+#endregion
+
 var app = builder.Build();
 
 app.UseCors("Allow");

@@ -25,7 +25,6 @@ public class TableService : ITableService
         var entities = await _uow.Table.GetAllAsync();
         return _mapper.Map<List<TableDto>>(entities);
     }
-
     public async Task<TableDto> GetByIdAsync(int id)
     {
         if(id <= 0) throw new BusinessException("Masa ID değeri 0 veya negatif olamaz.");
@@ -33,6 +32,7 @@ public class TableService : ITableService
         Guard.AgainstNull(table, "Böyle bir masa bulunamadı");
         return _mapper.Map<TableDto>(table);
     }
+    
     public async Task ChangeTableStatus(int tableId, ChangeTableStatusDto statusDto, CancellationToken cancellationToken)
     {
         if (statusDto == null)
@@ -47,9 +47,7 @@ public class TableService : ITableService
         if (statusDto.Status == TableStatus.Available)
         {
             var order = await _uow.Order.GetActiveOrderByTableId(tableId);
-            if (order == null)
-                return;
-            if (order.Status == OrderStatus.Pending)
+            if (order != null)
                 throw new BusinessException("bu masaya sipariş açıldığı için iptal edilemiyor. Hesabı al butonu ile deneyebilirsiniz.");
         }
 

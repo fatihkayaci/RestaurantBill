@@ -74,10 +74,10 @@ export default function PosPage() {
     const handleOpenTable = async () => {
         try {
             if (!tableId) return;
-            await tableService.changeTableStatus(tableId, 2);
+            await tableService.openTable(tableId);
             const updatedTable = await tableService.getTableById(tableId);
             setTable(updatedTable);
-
+            
         } catch (error: any) {
             console.log(error.response.data);
         }

@@ -10,6 +10,11 @@ export const tableService = {
         const response = await api.get<Table>(`/table/${tableId}`); 
         return response.data;
     },
+    openTable: async (tableId: string) => {
+        const response = await api.post(`/table/${tableId}/open`); 
+        return response.data;
+    },
+    //will delete
     changeTableStatus: async (tableId: string, status: number) => {
         const response = await api.patch(`/table/${tableId}`, { 
             status: status 
