@@ -60,8 +60,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody]CreateOrderCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Created("", new { Message = "Sipariş başarıyla oluşturuldu." });
+            var newOrder = await _mediator.Send(command, cancellationToken);
+            return Created("", newOrder);
         }
         #endregion
 

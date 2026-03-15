@@ -85,7 +85,7 @@ export default function PosPage() {
     const handleReservation = async () => {
         try {
             if (!tableId) return;
-            await tableService.changeTableStatus(tableId, 3);
+            await tableService.reservationTable(tableId);
 
             const updatedTable = await tableService.getTableById(tableId);
             setTable(updatedTable);
@@ -98,7 +98,7 @@ export default function PosPage() {
         try {
             if (!tableId)
                 return;
-            await tableService.changeTableStatus(tableId, 1);
+            await tableService.cancelReservation(tableId);
             const updatedTable = await tableService.getTableById(tableId);
             setTable(updatedTable);
             
@@ -106,6 +106,7 @@ export default function PosPage() {
             console.log(error.response.data);
         }
     }
+    
     /* will look these methods
         Todo: close method for take balance
         Todo: cancel method for cancel
@@ -139,7 +140,15 @@ export default function PosPage() {
             if (!tableId)
                 return;
             
-            await orderService.createOrder(tableId);
+            const response = await orderService.createOrder(tableId);
+            console.log(response);
+            setActiveOrder({
+                tableId: response.tableId,
+                note: response.note,
+                totalPrice: 0,
+                status: response.status,
+                orderItems: []
+            });
         } catch (error: any) {
             console.log(error.response.data);
         }

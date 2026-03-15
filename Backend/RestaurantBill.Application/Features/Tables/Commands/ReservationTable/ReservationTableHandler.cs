@@ -1,24 +1,25 @@
 using RestaurantBill.Domain.Interfaces;
+
 using MediatR;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Enums;
 
-namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservation
+namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
 {
-    public class CancelReservationHandler : IRequestHandler<CancelReservationCommand>
+    public class ReservationTableHandler : IRequestHandler<ReservationTableCommand>
     {
         private readonly IUnitOfWork _uow;
         private readonly IMessageProducer _messageProducer;
 
-        public CancelReservationHandler(IUnitOfWork uow, IMessageProducer messageProducer)
+        public ReservationTableHandler(IUnitOfWork uow, IMessageProducer messageProducer)
         {
             _uow = uow;
             _messageProducer = messageProducer;
         }
 
-        public async Task Handle(CancelReservationCommand request, CancellationToken cancellationToken)
+        public async Task Handle(ReservationTableCommand request, CancellationToken cancellationToken)
         {
             
             if (request.TableId <= 0)
@@ -27,7 +28,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservation
             var table = await _uow.Table.GetByIdAsync(request.TableId, true);
             Guard.AgainstNull(table, "Böyle bir masa bulunamadı.");
             
-            table.Status = TableStatus.Available;
+            table.Status = TableStatus.Reserved;
             await _uow.SaveChangesAsync(cancellationToken);
         }
     }
