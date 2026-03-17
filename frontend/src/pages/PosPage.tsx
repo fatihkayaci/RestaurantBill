@@ -17,10 +17,12 @@ export default function PosPage() {
     const navigate = useNavigate();
     
     const [isLoading, setIsLoading] = useState(true);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [table, setTable] = useState<Table>();
     const [activeOrder, setActiveOrder] = useState<Order>({
+        id: 0,
         tableId: 0,
         note: "",
         totalPrice: 0,
@@ -51,7 +53,7 @@ export default function PosPage() {
                 if (orderData) {
                     setActiveOrder(orderData);
                 }
-
+                console.log(orderData);
             } catch (error) {
                 console.error("Veriler çekilirken hata:", error);
             } finally {
@@ -77,11 +79,16 @@ export default function PosPage() {
             await tableService.openTable(tableId);
             const updatedTable = await tableService.getTableById(tableId);
             setTable(updatedTable);
-            
+
+            const newOrderData = await orderService.getOrderByTableId(tableId);
+            if (newOrderData) {
+                setActiveOrder(newOrderData);
+            }
         } catch (error: any) {
             console.log(error.response.data);
         }
     }
+
     const handleReservation = async () => {
         try {
             if (!tableId) return;
@@ -96,8 +103,7 @@ export default function PosPage() {
     }
     const handleCancelReservation = async () => {
         try {
-            if (!tableId)
-                return;
+            if (!tableId) return;
             await tableService.cancelReservation(tableId);
             const updatedTable = await tableService.getTableById(tableId);
             setTable(updatedTable);
@@ -106,54 +112,44 @@ export default function PosPage() {
             console.log(error.response.data);
         }
     }
-    
-    /* will look these methods
-        Todo: close method for take balance
-        Todo: cancel method for cancel
-    */
-    const handleCloseTable = async () => {
-        try {
-            if (!tableId)
-                return;
-            await tableService.changeTableStatus(tableId, 1);
-            const updatedTable = await tableService.getTableById(tableId);
-            setTable(updatedTable);
-        } catch (error: any) {
-            console.log(error.response.data);
-        }
-    }
-    const handleCancelAction = async () => {
-        try {
-            if (!tableId)
-                return;
-            await tableService.changeTableStatus(tableId, 1);
-            const updatedTable = await tableService.getTableById(tableId);
-            setTable(updatedTable);
-        } catch (error: any) {
-            console.log(error.response.data);
-        }
-    }
     /* changes status methods */
     /* methods for order */
-    const handleCreateOrder = async () => {
+    
+    /* To be looked at later.
+    const handlePayment = async () => {
         try {
+            // console.log(`Ödeme alındı: ${paymentMethod}`);
             if (!tableId)
                 return;
+            await orderService.closeOrder(tableId);
             
-            const response = await orderService.createOrder(tableId);
-            console.log(response);
-            setActiveOrder({
-                tableId: response.tableId,
-                note: response.note,
-                totalPrice: 0,
-                status: response.status,
-                orderItems: []
-            });
+            const updatedTable = await tableService.getTableById(tableId);
+            setTable(updatedTable);
+            
+            // İşlem bitince Pop-up'ı kapat
+            setIsPaymentModalOpen(false); 
+            
         } catch (error: any) {
-            console.log(error.response.data);
+            console.log(error.response?.data);
+        }
+    }*/
+
+    const handleCancelOrder = async () => {
+        try {
+            if (!tableId || !activeOrder) return;
+
+            const isConfirmed = window.confirm("Dikkat: İçerisinde ürün bulunan bu sipariş tamamen iptal edilecek ve masa boşaltılacaktır. Emin misiniz?"); 
+            console.log(isConfirmed);
+            console.log(activeOrder);
+            if (isConfirmed) {
+                await orderService.cancelOrder(activeOrder.id); 
+                const updatedTable = await tableService.getTableById(tableId);
+                setTable(updatedTable);
+            }
+        } catch (error: any) {
+            console.log(error.response?.data);
         }
     }
-    
     const addOrderItem = (productId: number) => {
         try {
             const clickedProduct = products.find(p => p.id === productId);
@@ -187,9 +183,9 @@ export default function PosPage() {
             console.error("Ürün eklenirken bir hata oluştu:", error);
         }
     };
-    
+
     if (!table) return <div>Masa bulunamadı!</div>;
-    
+
     // for Available
     if (table.status === 1) {
         return (
@@ -345,38 +341,27 @@ export default function PosPage() {
                         </div>
                         
                         <div className="flex flex-col gap-3">
-                            {activeOrder.tableId === 0 || activeOrder.status === 0 ? (
+                           
                             <button 
-                                className="w-full bg-blue-500 hover:bg-blue-600 active:scale-95 transition-all text-white text-xl font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 flex justify-center items-center gap-2"
-                                onClick={handleCreateOrder}
+                                onClick={handleSubmitOrder}
+                                className="w-full bg-green-500 hover:bg-green-600 active:scale-95 transition-all text-white text-xl font-bold py-4 rounded-2xl shadow-lg shadow-green-200 flex justify-center items-center gap-2"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                Siparişi Aç (Başlat)
+                                Siparişi Onayla
                             </button>
-                            ) : (
-                                <button 
-                                    onClick={handleSubmitOrder}
-                                    className="w-full bg-green-500 hover:bg-green-600 active:scale-95 transition-all text-white text-xl font-bold py-4 rounded-2xl shadow-lg shadow-green-200 flex justify-center items-center gap-2"
-                                >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    Siparişi Onayla
-                                </button>
-                            )}
 
                             <button 
                                 className="w-full bg-red-50 hover:bg-red-100 active:scale-95 transition-all text-red-600 border border-red-200 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2"
-                                onClick={handleCloseTable}
+                                onClick={() => setIsPaymentModalOpen(true)}
                             >
                                 Masayı Kapat (Hesabı Al)
                             </button>
 
                             <button 
                                 className="w-full bg-white hover:bg-slate-50 active:scale-95 transition-all text-slate-500 border border-slate-300 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2 shadow-sm"
-                                onClick={handleCancelAction}
+                                onClick={handleCancelOrder}
                             >
                                 İptal Et
                             </button>
@@ -388,6 +373,44 @@ export default function PosPage() {
                     </div>
 
                 </div>
+
+                {/* open modal for "masayı kapat" popup */}
+                {isPaymentModalOpen && (
+                    <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm transition-all">
+                        <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl transform transition-all">
+                            
+                            <div className="text-center mb-8">
+                                <h3 className="text-2xl font-bold text-gray-800">Ödeme Al</h3>
+                                <p className="text-gray-500 mt-2">Lütfen ödeme yöntemini seçin</p>
+                            </div>
+
+                            <div className="flex flex-col gap-4">
+                                <button 
+                                    // onClick={() => handlePayment('Kredi Kartı')}
+                                    className="w-full bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-md transition-all flex justify-center items-center gap-2"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                                    Kredi Kartı
+                                </button>
+
+                                <button 
+                                    // onClick={() => handlePayment('Nakit')}
+                                    className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-md transition-all flex justify-center items-center gap-2"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                    Nakit
+                                </button>
+                            </div>
+
+                            <button 
+                                onClick={() => setIsPaymentModalOpen(false)}
+                                className="mt-6 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all"
+                            >
+                                Vazgeç
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }

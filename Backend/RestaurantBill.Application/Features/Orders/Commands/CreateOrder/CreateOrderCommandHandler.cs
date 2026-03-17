@@ -24,8 +24,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
         {
             var order = new Order
             {
-                TableId = request.TableId,
-                Status = OrderStatus.Pending,
+                TableId = request.TableId
             };
             
             await _uow.Order.AddAsync(order);

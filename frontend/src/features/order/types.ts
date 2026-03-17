@@ -5,6 +5,7 @@ export interface OrderItem{
     quantity: number;
 }
 export interface Order {
+    id: number;
     tableId: number;
     note: string;
     totalPrice: number;

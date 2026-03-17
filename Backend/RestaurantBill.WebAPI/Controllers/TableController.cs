@@ -54,6 +54,14 @@ namespace RestaurantBill.WebAPI.Controllers
             var command = new OpenTableCommand { TableId = id };
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
+        }
+        // bakılacak şimdi
+        [HttpPost("{id}/close")]
+        public async Task<IActionResult> CloseTable([FromRoute]int id, CancellationToken cancellationToken)
+        {
+            var command = new OpenTableCommand { TableId = id };
+            await _mediator.Send(command, cancellationToken);
+            return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
         }      
 
         [HttpPost("{id}/reservation")]

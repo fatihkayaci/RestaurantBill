@@ -22,10 +22,17 @@ export const orderService = {
         })
         return response.data;
     },
+
     createOrder: async (tableId: string) => {
         const response = await api.post(`/order`, { 
             tableId: tableId
         }); 
         return response.data;
     },
+    cancelOrder: async (orderId: number) => {
+        const response = await api.post(`/order/cancel`,{
+            OrderId: orderId
+        }); 
+        return response.data;
+    }
 };
