@@ -57,17 +57,27 @@ namespace RestaurantBill.WebAPI.Controllers
         #endregion
         
         #region methods for post
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody]CreateOrderCommand command, CancellationToken cancellationToken)
+
+        [HttpPost("add-product")]
+        public async Task<IActionResult> AddProducts([FromBody] AddProductToOrderCommand command, CancellationToken cancellationToken)
         {
-            var newOrder = await _mediator.Send(command, cancellationToken);
-            return Created("", newOrder);
+            await _mediator.Send(command, cancellationToken);
+            return Ok(new { Message = "Masaya ürünler eklendi veya güncellendi." });
         }
+
         [HttpPost("cancel")]
         public async Task<IActionResult> Cancel([FromBody]CancelOrderCommand command, CancellationToken cancellationToken)
         {
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
+        }
+        
+        /* maybe deleted this method;*/
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody]CreateOrderCommand command, CancellationToken cancellationToken)
+        {
+            var newOrder = await _mediator.Send(command, cancellationToken);
+            return Created("", newOrder);
         }
         #endregion
     }

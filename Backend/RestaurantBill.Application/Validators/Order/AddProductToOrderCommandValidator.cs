@@ -10,10 +10,10 @@ public class AddProductToOrderCommandValidator : AbstractValidator<AddProductToO
         RuleFor(x => x.OrderId)
             .GreaterThan(0).WithMessage("Geçerli bir sipariş seçilmelidir.");
 
-        RuleFor(x => x.ProductId)
-            .GreaterThan(0).WithMessage("Geçerli bir ürün seçilmelidir.");
+        // RuleFor(x => x.ProductId)
+        //     .GreaterThan(0).WithMessage("Geçerli bir ürün seçilmelidir.");
 
-        RuleFor(x => x.Quantity)
-            .GreaterThan(0).WithMessage("Ürün miktarı 0'dan büyük olmalıdır.");
+        // RuleFor(x => x.Quantity)
+        //     .GreaterThan(0).WithMessage("Ürün miktarı 0'dan büyük olmalıdır.");
     }
 }

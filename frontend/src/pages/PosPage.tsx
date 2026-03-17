@@ -17,6 +17,7 @@ export default function PosPage() {
     const navigate = useNavigate();
     
     const [isLoading, setIsLoading] = useState(true);
+    const [updateOrder, setUpdateOrder] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -66,10 +67,13 @@ export default function PosPage() {
 
     const handleSubmitOrder = async () => {
         try {
-            // await orderService.createMultiplerOrderItems(activeOrder.tableId);   
-            navigate("/");
+            setIsLoading(true);
+            await orderService.addOrderItems(activeOrder);
+            navigate(`/table/${tableId}`);
         } catch (error: any) {
             console.log(error.response.data);
+        } finally{
+            setIsLoading(false);
         }
     }
     /* changes status methods */
@@ -88,7 +92,6 @@ export default function PosPage() {
             console.log(error.response.data);
         }
     }
-
     const handleReservation = async () => {
         try {
             if (!tableId) return;
@@ -342,14 +345,31 @@ export default function PosPage() {
                         
                         <div className="flex flex-col gap-3">
                            
-                            <button 
+                           <button 
                                 onClick={handleSubmitOrder}
-                                className="w-full bg-green-500 hover:bg-green-600 active:scale-95 transition-all text-white text-xl font-bold py-4 rounded-2xl shadow-lg shadow-green-200 flex justify-center items-center gap-2"
+                                disabled={isLoading} 
+                                className={`w-full active:scale-95 transition-all text-white text-xl font-bold py-4 rounded-2xl shadow-lg flex justify-center items-center gap-2
+                                    ${isLoading 
+                                        ? "bg-gray-400 cursor-not-allowed shadow-none"
+                                        : (updateOrder ? "bg-blue-500 hover:bg-blue-600 shadow-blue-200" : "bg-green-500 hover:bg-green-600 shadow-green-200")
+                                    }`}
                             >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Siparişi Onayla
+                                {isLoading ? (
+                                    <svg className="animate-spin -ml-1 mr-3 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                ) : updateOrder ? (
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                )}
+                                
+                                {isLoading ? "İşleniyor..." : (updateOrder ? "Siparişi Güncelle" : "Siparişi Onayla")}
                             </button>
 
                             <button 

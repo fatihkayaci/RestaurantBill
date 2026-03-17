@@ -6,23 +6,14 @@ export const orderService = {
         const response = await api.get<Order>(`/order/table/${tableId}`); 
         return response.data;
     },
-    createOrderItem: async (productId: number, orderId : number) => {
-        const response = await api.put<{ message: string }>(`/order/add-product`,{
-            productId: productId,
-            orderId: orderId,
-            quantity: 1,
-        })
+    addOrderItems: async (activeOrder: Order) => {
+        const response = await api.post<{ message: string }>(`/order/add-product`,{
+            orderId: activeOrder.id,
+            note: activeOrder.note, 
+            orderItems: activeOrder.orderItems
+        });
         return response.data;
     },
-    createMultiplerOrderItems: async (productId: number, orderId : number) => {
-        const response = await api.put<{ message: string }>(`/order/add-product`,{
-            productId: productId,
-            orderId: orderId,
-            quantity: 1,
-        })
-        return response.data;
-    },
-
     createOrder: async (tableId: string) => {
         const response = await api.post(`/order`, { 
             tableId: tableId
@@ -34,5 +25,6 @@ export const orderService = {
             OrderId: orderId
         }); 
         return response.data;
-    }
+    },
+    
 };
