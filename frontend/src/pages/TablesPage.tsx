@@ -21,12 +21,12 @@ export default function TablesPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-50 p-6 md:p-8">
-                <div className="h-10 w-48 bg-slate-200 rounded-lg animate-pulse mb-8"></div>
+            <div className="min-h-screen bg-slate-900 p-6 md:p-8">
+                <div className="h-10 w-48 bg-slate-800 rounded-lg animate-pulse mb-8"></div>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5 md:gap-6">
                     {[...Array(12)].map((_, i) => (
-                        <div key={i} className="bg-slate-200 rounded-2xl h-32 animate-pulse shadow-sm"></div>
+                        <div key={i} className="bg-slate-800 rounded-2xl h-32 animate-pulse shadow-md border border-slate-700/50"></div>
                     ))}
                 </div>
             </div>
@@ -34,30 +34,30 @@ export default function TablesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6 md:p-8">
+        <div className="min-h-screen bg-slate-900 p-6 md:p-8">
             
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 border-b border-slate-200 pb-5 gap-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 border-b border-slate-800 pb-5 gap-4">
                 <div>
-                    <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+                    <h1 className="text-4xl font-extrabold text-white tracking-tight drop-shadow-sm">
                         Salon Görünümü
                     </h1>
-                    <p className="text-slate-500 font-medium mt-1">
+                    <p className="text-slate-400 font-medium mt-2">
                         Masaların anlık durumunu buradan takip edebilirsiniz.
                     </p>
                 </div>
                 
                 <div className="flex flex-wrap gap-3 text-sm font-semibold">
-                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-100">
-                        <span className="w-3 h-3 rounded-full bg-green-500 shadow-sm shadow-green-200"></span>
-                        <span className="text-slate-600">Boş</span>
+                    <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-full shadow-lg border border-slate-700 text-slate-200">
+                        <span className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                        <span>Boş</span>
                     </div>
-                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-100">
-                        <span className="w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-200"></span>
-                        <span className="text-slate-600">Dolu</span>
+                    <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-full shadow-lg border border-slate-700 text-slate-200">
+                        <span className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
+                        <span>Dolu</span>
                     </div>
-                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-100">
-                        <span className="w-3 h-3 rounded-full bg-amber-500 shadow-sm shadow-amber-200"></span>
-                        <span className="text-slate-600">Rezerve</span>
+                    <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-full shadow-lg border border-slate-700 text-slate-200">
+                        <span className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
+                        <span>Rezerve</span>
                     </div>
                 </div>
             </div>

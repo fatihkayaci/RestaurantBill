@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { Table } from '../types'; // Kendi yoluna göre ayarla
+import type { Table } from '../types';
 
 interface TableCardProps {
     table: Table;
@@ -10,16 +10,16 @@ export default function TableCard({ table }: TableCardProps) {
     const getStyles = (status: number) => {
         switch (status) {
             case 1:
-                return "bg-white border-green-400 text-green-600 hover:bg-green-50 shadow-sm hover:shadow-green-100/50";
+                return "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700/80 hover:border-green-500/50 hover:text-green-400 hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]";
             
             case 2:
-                return "bg-red-500 border-red-600 text-white hover:bg-red-600 shadow-md shadow-red-200";
+                return "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 hover:shadow-[0_0_20px_rgba(239,68,68,0.25)]";
             
             case 3:
-                return "bg-amber-400 border-amber-500 text-amber-950 hover:bg-amber-500 shadow-md shadow-amber-200";
+                return "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/60 hover:shadow-[0_0_20px_rgba(245,158,11,0.25)]";
             
             default:
-                return "bg-slate-200 border-slate-300 text-slate-500";
+                return "bg-slate-800 border-slate-700 text-slate-500";
         }
     };
 
@@ -35,24 +35,24 @@ export default function TableCard({ table }: TableCardProps) {
             to={`/table/${table.id}`}
             className={`
                 relative flex flex-col items-center justify-center 
-                h-32 sm:h-36 rounded-2xl border-2 
-                transition-all duration-200 ease-out 
+                h-32 sm:h-36 rounded-2xl border 
+                transition-all duration-300 ease-out 
                 hover:-translate-y-1 active:scale-95 
                 ${getStyles(table.status)}
             `}
         >
-            <span className="text-4xl font-extrabold tracking-tight mb-1">
+            <span className="text-4xl font-black tracking-tight mb-1 drop-shadow-md">
                 {table.name}
             </span>
             
-            <span className="text-sm font-bold uppercase tracking-widest opacity-90">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] opacity-80">
                 {getStatusText(table.status)}
             </span>
 
             {(table.status === 2 || table.status === 3) && (
-                <span className="absolute top-3 right-3 flex h-3 w-3">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${table.status === 2 ? 'bg-white' : 'bg-amber-100'}`}></span>
-                    <span className={`relative inline-flex rounded-full h-3 w-3 ${table.status === 2 ? 'bg-white' : 'bg-amber-100'}`}></span>
+                <span className="absolute top-4 right-4 flex h-3 w-3">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${table.status === 2 ? 'bg-red-500' : 'bg-amber-500'}`}></span>
+                    <span className={`relative inline-flex rounded-full h-3 w-3 shadow-[0_0_8px_currentColor] ${table.status === 2 ? 'bg-red-500' : 'bg-amber-500'}`}></span>
                 </span>
             )}
         </Link>

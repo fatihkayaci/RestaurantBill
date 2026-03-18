@@ -195,42 +195,37 @@ export default function PosPage() {
     // for Available
     if (table.status === 1) {
         return (
-            <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-                <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full flex flex-col items-center">
-                    <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                        <div className="w-12 h-12 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-200"></div>
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+                <div className="bg-slate-800 rounded-3xl shadow-2xl shadow-slate-900/50 p-8 max-w-sm w-full flex flex-col items-center border border-slate-700">
+                    <div className="w-24 h-24 bg-slate-700/50 rounded-full flex items-center justify-center mb-6">
+                        <div className="w-12 h-12 bg-green-500 rounded-full animate-pulse shadow-[0_0_20px_rgba(34,197,94,0.6)]"></div>
                     </div>
-                    <h2 className="text-3xl font-extrabold text-slate-800 mb-2">
+                    <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight">
                         Masa {tableId}
                     </h2>
-                    <p className="text-slate-500 mb-8 text-center font-medium">
+                    <p className="text-slate-400 mb-8 text-center font-medium">
                         Bu masa şu anda boş. Yeni bir adisyon açabilir veya rezerve edebilirsiniz.
                     </p>
 
                     <div className="w-full flex flex-col gap-4">
-                        
                         <button
-                            // TODO: onClick={handleOpenTable}
-                            className="w-full bg-green-500 hover:bg-green-600 active:scale-95 text-white font-bold py-4 rounded-xl shadow-md transition-all text-xl"
                             onClick={handleOpenTable}
+                            className="w-full bg-green-500 hover:bg-green-600 active:scale-95 text-white font-bold py-4 rounded-xl shadow-[0_4px_14px_0_rgba(34,197,94,0.39)] transition-all text-xl"
                         >
                             Masayı Aç
                         </button>
                         
                         <button 
-                            // TODO: onClick={handleReservation}
-                            className="w-full bg-white hover:bg-slate-50 active:scale-95 text-blue-600 font-bold py-3 rounded-xl border-2 border-blue-100 transition-all text-lg"
                             onClick={handleReservation}
+                            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-blue-400 font-bold py-3 rounded-xl border-2 border-slate-700 hover:border-blue-500/50 transition-all text-lg"
                         >
                             Rezerve Et
                         </button>
-
                     </div>
 
-                    <Link to="/" className="mt-8 text-slate-400 hover:text-slate-600 font-semibold underline transition-colors">
+                    <Link to="/" className="mt-8 text-slate-500 hover:text-slate-300 font-semibold underline transition-colors">
                         Vazgeç ve Masalara Dön
                     </Link>
-
                 </div>
             </div>
         );
@@ -238,33 +233,34 @@ export default function PosPage() {
     // for reservation
     if (table.status === 3) {
         return (
-            <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
                 
-                <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full flex flex-col items-center">
+                <div className="bg-slate-800 rounded-3xl shadow-2xl shadow-slate-900/50 p-8 max-w-sm w-full flex flex-col items-center border border-slate-700">
                     
-                    <div className="w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center mb-6">
-                        <div className="w-12 h-12 bg-amber-500 rounded-full animate-pulse shadow-lg shadow-amber-200"></div>
+                    <div className="w-24 h-24 bg-slate-700/50 rounded-full flex items-center justify-center mb-6">
+                        <div className="w-12 h-12 bg-amber-500 rounded-full animate-pulse shadow-[0_0_20px_rgba(245,158,11,0.6)]"></div>
                     </div>
 
-                    <h2 className="text-3xl font-extrabold text-slate-800 mb-2">
+                    <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight">
                         Masa {tableId}
                     </h2>
-                    <p className="text-amber-500 mb-6 text-center font-bold tracking-wide uppercase text-sm">
+                    <p className="text-amber-500 mb-6 text-center font-bold tracking-wide uppercase text-sm drop-shadow-sm">
                         REZERVE EDİLMİŞTİR
                     </p>
+                    
                      {/* // TODO: will come data to api */}
-                    <div className="w-full bg-slate-50 rounded-2xl p-5 mb-8 border border-slate-200 shadow-inner">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-3">
-                            <span className="text-slate-500 font-medium text-sm">Müşteri:</span>
-                            <span className="text-slate-800 font-bold text-lg">Ahmet Yılmaz</span>
+                    <div className="w-full bg-slate-900/50 rounded-2xl p-5 mb-8 border border-slate-700 shadow-inner">
+                        <div className="flex justify-between items-center border-b border-slate-700 pb-3 mb-3">
+                            <span className="text-slate-400 font-medium text-sm">Müşteri:</span>
+                            <span className="text-slate-200 font-bold text-lg">Ahmet Yılmaz</span>
                         </div>
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-3">
-                            <span className="text-slate-500 font-medium text-sm">Saat:</span>
-                            <span className="text-amber-600 font-extrabold text-xl">19:30</span>
+                        <div className="flex justify-between items-center border-b border-slate-700 pb-3 mb-3">
+                            <span className="text-slate-400 font-medium text-sm">Saat:</span>
+                            <span className="text-amber-500 font-extrabold text-xl">19:30</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-slate-500 font-medium text-sm">Kişi Sayısı:</span>
-                            <span className="text-slate-800 font-bold text-lg">4 Kişi</span>
+                            <span className="text-slate-400 font-medium text-sm">Kişi Sayısı:</span>
+                            <span className="text-slate-200 font-bold text-lg">4 Kişi</span>
                         </div>
                     </div>
 
@@ -272,7 +268,7 @@ export default function PosPage() {
                         
                         <button 
                             // TODO: onClick={handleCustomerArrived}
-                            className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-4 rounded-xl shadow-md transition-all text-xl"
+                            className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-4 rounded-xl shadow-[0_4px_14px_0_rgba(245,158,11,0.39)] transition-all text-xl"
                             onClick={handleOpenTable}
                         >
                             Müşteri Geldi (Adisyon Aç)
@@ -280,7 +276,7 @@ export default function PosPage() {
                         
                         <button 
                             // TODO: onClick={handleCancelReservation}
-                            className="w-full bg-white hover:bg-red-50 active:scale-95 text-red-500 font-bold py-3 rounded-xl border-2 border-red-100 transition-all text-lg"
+                            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-red-400 font-bold py-3 rounded-xl border-2 border-slate-700 hover:border-red-500/50 transition-all text-lg"
                             onClick={handleCancelReservation}
                         >
                             Rezervasyonu İptal Et
@@ -288,7 +284,7 @@ export default function PosPage() {
 
                     </div>
 
-                    <Link to="/" className="mt-6 text-slate-400 hover:text-slate-600 font-semibold underline transition-colors">
+                    <Link to="/" className="mt-6 text-slate-500 hover:text-slate-300 font-semibold underline transition-colors">
                         Vazgeç ve Masalara Dön
                     </Link>
 
@@ -299,17 +295,17 @@ export default function PosPage() {
     // for Occupied
     if (table.status === 2) {
         return (
-            <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-800">
+            <div className="flex h-screen bg-slate-900 overflow-hidden text-slate-200">
                 
                 <div className="w-2/3 flex flex-col h-screen relative">
                     
-                    <div className="bg-white px-6 py-4 shadow-sm flex items-center gap-4 overflow-x-auto z-10 sticky top-0 border-b border-slate-200">
+                    <div className="bg-slate-900 px-6 py-4 shadow-sm flex items-center gap-4 overflow-x-auto z-10 sticky top-0 border-b border-slate-800">
                         <button 
                             onClick={() => setSelectedCategoryId(null)}
                             className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all shadow-md active:scale-95
                                 ${selectedCategoryId === null 
-                                    ? "bg-orange-500 text-white shadow-orange-300 scale-105" 
-                                    : "bg-white text-gray-600 hover:bg-gray-50"
+                                    ? "bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)] scale-105" 
+                                    : "bg-slate-800 text-slate-400 hover:bg-slate-700"
                                 }`}
                         >
                             Tümü
@@ -332,30 +328,30 @@ export default function PosPage() {
                     </div>
                 </div>
 
-                <div className="w-1/3 bg-white shadow-[-10px_0_20px_-5px_rgba(0,0,0,0.05)] z-20 flex flex-col relative border-l border-slate-200">
+                <div className="w-1/3 bg-slate-800 shadow-[-10px_0_30px_-5px_rgba(0,0,0,0.5)] z-20 flex flex-col relative border-l border-slate-700">
                     
-                    <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white">
-                        <h2 className="text-2xl font-extrabold text-slate-800">
+                    <div className="px-6 py-5 border-b border-slate-700 flex justify-between items-center bg-slate-800">
+                        <h2 className="text-2xl font-extrabold text-white">
                             Masa {tableId}
                         </h2>
-                        <span className="bg-red-50 text-red-500 px-3 py-1 rounded-full text-xs font-bold border border-red-100 animate-pulse">
+                        <span className="bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-bold border border-red-500/20 animate-pulse">
                             Aktif Sipariş
                         </span>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-900/50">
                         {activeOrder.orderItems.map(item => (
                             <OrderCard key={item.productId} item={item} />
                         ))}
                     </div>
                     
-                    <div className="p-6 bg-white border-t border-slate-200 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.03)]">
+                    <div className="p-6 bg-slate-800 border-t border-slate-700 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.2)]">
                         
                         <div className="flex justify-between items-end mb-6">
-                            <span className="text-slate-500 font-medium text-lg mb-1">Ara Toplam</span>
+                            <span className="text-slate-400 font-medium text-lg mb-1">Ara Toplam</span>
                             <div className="text-right">
-                                <span className="text-4xl font-black text-green-500 tracking-tight">
-                                    {activeOrder.totalPrice} <span className="text-2xl text-green-400">₺</span>
+                                <span className="text-4xl font-black text-green-400 tracking-tight">
+                                    {activeOrder.totalPrice} <span className="text-2xl text-green-500">₺</span>
                                 </span>
                             </div>
                         </div>
@@ -367,8 +363,8 @@ export default function PosPage() {
                                 disabled={isLoading} 
                                 className={`w-full active:scale-95 transition-all text-white text-xl font-bold py-4 rounded-2xl shadow-lg flex justify-center items-center gap-2
                                     ${isLoading 
-                                        ? "bg-gray-400 cursor-not-allowed shadow-none"
-                                        : (updateOrder ? "bg-blue-500 hover:bg-blue-600 shadow-blue-200" : "bg-green-500 hover:bg-green-600 shadow-green-200")
+                                        ? "bg-slate-600 cursor-not-allowed shadow-none"
+                                        : (updateOrder ? "bg-blue-500 hover:bg-blue-600 shadow-[0_4px_14px_0_rgba(59,130,246,0.39)]" : "bg-green-500 hover:bg-green-600 shadow-[0_4px_14px_0_rgba(34,197,94,0.39)]")
                                     }`}
                             >
                                 {isLoading ? (
@@ -390,41 +386,40 @@ export default function PosPage() {
                             </button>
 
                             <button 
-                                className="w-full bg-red-50 hover:bg-red-100 active:scale-95 transition-all text-red-600 border border-red-200 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2"
+                                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all text-red-400 border border-slate-700 hover:border-red-500/50 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2"
                                 onClick={() => setIsPaymentModalOpen(true)}
                             >
                                 Masayı Kapat (Hesabı Al)
                             </button>
 
                             <button 
-                                className="w-full bg-white hover:bg-slate-50 active:scale-95 transition-all text-slate-500 border border-slate-300 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2 shadow-sm"
+                                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all text-slate-400 border border-slate-700 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2 shadow-sm"
                                 onClick={handleCancelOrder}
                             >
                                 İptal Et
                             </button>
                         </div>
                         
-                        <Link to="/" className="text-slate-400 hover:text-slate-600 font-semibold transition-colors text-center block mt-5">
+                        <Link to="/" className="text-slate-500 hover:text-slate-300 font-semibold transition-colors text-center block mt-5">
                             Kapat ve Masalara Dön
                         </Link>
                     </div>
 
                 </div>
 
-                {/* open modal for "masayı kapat" popup */}
                 {isPaymentModalOpen && (
-                    <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm transition-all">
-                        <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl transform transition-all">
+                    <div className="fixed inset-0 flex items-center justify-center z-50 bg-slate-900/80 backdrop-blur-sm transition-all">
+                        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-8 w-full max-w-md shadow-2xl transform transition-all">
                             
                             <div className="text-center mb-8">
-                                <h3 className="text-2xl font-bold text-gray-800">Ödeme Al</h3>
-                                <p className="text-gray-500 mt-2">Lütfen ödeme yöntemini seçin</p>
+                                <h3 className="text-2xl font-bold text-white">Ödeme Al</h3>
+                                <p className="text-slate-400 mt-2">Lütfen ödeme yöntemini seçin</p>
                             </div>
 
                             <div className="flex flex-col gap-4">
                                 <button 
                                     // onClick={() => handlePayment('Kredi Kartı')}
-                                    className="w-full bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-md transition-all flex justify-center items-center gap-2"
+                                    className="w-full bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(59,130,246,0.39)] transition-all flex justify-center items-center gap-2"
                                 >
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
                                     Kredi Kartı
@@ -432,7 +427,7 @@ export default function PosPage() {
 
                                 <button 
                                     // onClick={() => handlePayment('Nakit')}
-                                    className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-md transition-all flex justify-center items-center gap-2"
+                                    className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] transition-all flex justify-center items-center gap-2"
                                 >
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                     Nakit
@@ -441,7 +436,7 @@ export default function PosPage() {
 
                             <button 
                                 onClick={() => setIsPaymentModalOpen(false)}
-                                className="mt-6 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all"
+                                className="mt-6 w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-3 rounded-xl transition-all"
                             >
                                 Vazgeç
                             </button>
