@@ -18,6 +18,7 @@ export default function PosPage() {
     
     const [isLoading, setIsLoading] = useState(true);
     const [updateOrder, setUpdateOrder] = useState(false);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -186,7 +187,9 @@ export default function PosPage() {
             console.error("Ürün eklenirken bir hata oluştu:", error);
         }
     };
-
+    const filteredProducts = selectedCategoryId 
+        ? products.filter(product => product.categoryId === selectedCategoryId) 
+        : products;
     if (!table) return <div>Masa bulunamadı!</div>;
 
     // for Available
@@ -301,14 +304,28 @@ export default function PosPage() {
                 <div className="w-2/3 flex flex-col h-screen relative">
                     
                     <div className="bg-white px-6 py-4 shadow-sm flex items-center gap-4 overflow-x-auto z-10 sticky top-0 border-b border-slate-200">
+                        <button 
+                            onClick={() => setSelectedCategoryId(null)}
+                            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all shadow-md active:scale-95
+                                ${selectedCategoryId === null 
+                                    ? "bg-orange-500 text-white shadow-orange-300 scale-105" 
+                                    : "bg-white text-gray-600 hover:bg-gray-50"
+                                }`}
+                        >
+                            Tümü
+                        </button>
                         {categories.map(category => (
-                            <CategoryCard key={category.id} category={category} />
+                            <CategoryCard 
+                            key={category.id} 
+                            category={category} 
+                            isSelected={selectedCategoryId === category.id}
+                            onClick={() => setSelectedCategoryId(category.id)}/>
                         ))}
                     </div>
                     
                     <div className="flex-1 overflow-y-auto p-6">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {products.map(product => (
+                            {filteredProducts.map(product => (
                                 <ProductCard key={product.id} product={product} onAdd={addOrderItem} />
                             ))}
                         </div>
