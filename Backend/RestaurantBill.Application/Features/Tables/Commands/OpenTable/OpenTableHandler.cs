@@ -28,8 +28,8 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
             var table = await _uow.Table.GetByIdAsync(request.TableId, true);
             Guard.AgainstNull(table, "Böyle bir masa bulunamadı.");
             
-            if (table.Status != TableStatus.Available)
-                throw new BusinessException("Bu masa zaten dolu veya rezerve!");
+            if (table.Status == TableStatus.Occupied)
+                throw new BusinessException("Bu masa zaten dolu!");
 
             table.Status = TableStatus.Occupied;
             
