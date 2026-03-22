@@ -1,3 +1,5 @@
+using RestaurantBill.Domain.Enums;
+
 namespace RestaurantBill.Application.DTOs;
 
 public class OrderItemDto
@@ -6,4 +8,5 @@ public class OrderItemDto
     public required string ProductName { get; set; } 
     public decimal UnitPrice { get; set; }
     public int Quantity { get; set; }
+    public OrderItemStatus Status { get; set; }
 }

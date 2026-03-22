@@ -18,6 +18,7 @@ export default function PosPage() {
     
     const [isLoading, setIsLoading] = useState(true);
     const [updateOrder, setUpdateOrder] = useState(false);
+    const [orderTab, setOrderTab] = useState<number>(0);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
@@ -53,7 +54,13 @@ export default function PosPage() {
                 setCategories(categoriesData);
                 setTable(tableData);
                 if (orderData) {
-                    setActiveOrder(orderData);
+                    setActiveOrder({
+                        ...orderData,
+                        orderItems: orderData.orderItems.map(item => ({
+                            ...item,
+                            is_load: true
+                        }))
+                    });
                 }
                 console.log(orderData);
             } catch (error) {
@@ -66,14 +73,41 @@ export default function PosPage() {
         fetchAllData();
     }, [tableId, navigate]);
 
-    const handleSubmitOrder = async () => {
+    const handleSubmitOrder = async (e: any) => {
+        e.preventDefault();
         try {
+            
             setIsLoading(true);
-            await orderService.addOrderItems(activeOrder);
-            navigate(`/table/${tableId}`);
+
+            const onlyNewItems = activeOrder.orderItems.filter(item => item.is_load === false);
+
+            if (onlyNewItems.length === 0) {
+                alert("Siparişe eklenmiş yeni bir ürün bulunmuyor.");
+                setIsLoading(false);
+                return;
+            }
+
+            const payload = {
+                ...activeOrder,
+                orderItems: onlyNewItems
+            };
+
+            await orderService.addOrderItems(payload);
+
+            const refreshedOrder = await orderService.getOrderByTableId(tableId!);
+            if (refreshedOrder) {
+                setActiveOrder({
+                    ...refreshedOrder,
+                    orderItems: refreshedOrder.orderItems.map(item => ({
+                        ...item,
+                        is_load: true
+                    }))
+                });
+            }
+            
         } catch (error: any) {
-            console.log(error.response.data);
-        } finally{
+            console.log(error.response?.data || "Bilinmeyen bir hata oluştu");
+        } finally {
             setIsLoading(false);
         }
     }
@@ -119,24 +153,23 @@ export default function PosPage() {
     /* changes status methods */
     /* methods for order */
     
-    /* To be looked at later.
     const handlePayment = async () => {
         try {
-            // console.log(`Ödeme alındı: ${paymentMethod}`);
-            if (!tableId)
+
+            const orderId = activeOrder.id;
+            if (!orderId || !tableId)
                 return;
-            await orderService.closeOrder(tableId);
             
-            const updatedTable = await tableService.getTableById(tableId);
+            await orderService.closeOrder(orderId);
+            let updatedTable = await tableService.getTableById(tableId)
+            
             setTable(updatedTable);
-            
-            // İşlem bitince Pop-up'ı kapat
             setIsPaymentModalOpen(false); 
             
         } catch (error: any) {
             console.log(error.response?.data);
         }
-    }*/
+    }
 
     const handleCancelOrder = async () => {
         try {
@@ -154,43 +187,120 @@ export default function PosPage() {
             console.log(error.response?.data);
         }
     }
-    const addOrderItem = (productId: number) => {
-        try {
-            const clickedProduct = products.find(p => p.id === productId);
-            if (!clickedProduct) return;
+    
+    const increaseQuantity = (productId: number) => {
+        const clickedProduct = products.find(p => p.id === productId);
+        if (!clickedProduct) return;
 
-            setActiveOrder((prevOrder) => {
-                const existingItem = prevOrder.orderItems.find(item => item.productId === productId);
+        setActiveOrder((prevOrder) => {
+            const existingNewItem = prevOrder.orderItems.find(item => 
+                item.productId === productId && item.is_load === false
+            );
 
-                let updatedItems;
-                if (existingItem) {
-                    updatedItems = prevOrder.orderItems.map(item => 
-                        item.productId === productId 
-                            ? { ...item, quantity: item.quantity + 1 }
-                            : item
-                    );
-                } else {
-                    updatedItems = [...prevOrder.orderItems, { 
-                        productId: clickedProduct.id, 
-                        productName: clickedProduct.name, 
-                        unitPrice: clickedProduct.price, 
-                        quantity: 1 
-                    }];
-                }
+            let updatedItems;
+            if (existingNewItem) {
+                updatedItems = prevOrder.orderItems.map(item =>
+                    (item.productId === productId && item.is_load === false)
+                        ? { ...item, quantity: item.quantity + 1 }
+                        : item
+                );
+            } else {
+                updatedItems = [...prevOrder.orderItems, { 
+                    productId: clickedProduct.id, 
+                    productName: clickedProduct.name, 
+                    unitPrice: clickedProduct.price, 
+                    quantity: 1,
+                    status: 1,
+                    is_load: false,
+                }];
+            }
 
-                const newTotal = updatedItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
+            const newTotal = updatedItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
+            return { ...prevOrder, orderItems: updatedItems, totalPrice: newTotal };
+        });
+    };
+    
+    const decreaseQuantity = (productId: number) => {
+        setActiveOrder((prevOrder) => {
+            const itemIndex = prevOrder.orderItems.findIndex(
+                item => item.productId === productId && item.is_load === false
+            );
 
-                return { ...prevOrder, orderItems: updatedItems, totalPrice: newTotal };
-            });
+            if (itemIndex === -1) return prevOrder;
 
-        } catch (error) {
-            console.error("Ürün eklenirken bir hata oluştu:", error);
-        }
+            let updatedItems = [...prevOrder.orderItems];
+            const targetItem = updatedItems[itemIndex];
+
+            if (targetItem.quantity > 1) {
+                updatedItems[itemIndex] = { ...targetItem, quantity: targetItem.quantity - 1 };
+            } else {
+                updatedItems.splice(itemIndex, 1);
+            }
+
+            const newTotal = updatedItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
+            return { ...prevOrder, orderItems: updatedItems, totalPrice: newTotal };
+        });
     };
     const filteredProducts = selectedCategoryId 
         ? products.filter(product => product.categoryId === selectedCategoryId) 
         : products;
-    if (!table) return <div>Masa bulunamadı!</div>;
+
+    const filteredOrderItems = 
+    orderTab === 0 ? activeOrder.orderItems :
+    orderTab === 1 ? activeOrder.orderItems.filter(item => item.is_load === false) :
+    orderTab === 2 ? activeOrder.orderItems.filter(item => item.is_load === true) :
+    orderTab === 3 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 2) :
+    orderTab === 4 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 3) :
+    [];
+
+    if (isLoading) {
+        return (
+            <div className="flex h-screen bg-slate-900 overflow-hidden">
+                {/* Sol Taraf İskeleti (Kategoriler ve Ürünler) */}
+                <div className="w-2/3 flex flex-col h-screen p-6">
+                    <div className="flex gap-4 mb-8">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-12 w-28 bg-slate-800 rounded-xl animate-pulse border border-slate-700/50"></div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                            <div key={i} className="h-32 bg-slate-800 rounded-2xl animate-pulse border border-slate-700/50"></div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Sağ Taraf İskeleti (Adisyon Paneli) */}
+                <div className="w-1/3 bg-slate-800 border-l border-slate-700 flex flex-col">
+                    <div className="h-20 border-b border-slate-700 p-6 flex items-center justify-between">
+                        <div className="h-8 w-32 bg-slate-700 rounded-lg animate-pulse"></div>
+                        <div className="h-6 w-24 bg-slate-700 rounded-full animate-pulse"></div>
+                    </div>
+                    <div className="flex-1 p-4 space-y-4">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="h-20 bg-slate-700/50 rounded-xl animate-pulse"></div>
+                        ))}
+                    </div>
+                    <div className="h-64 border-t border-slate-700 p-6 flex flex-col gap-4">
+                        <div className="h-8 w-full bg-slate-700 rounded-lg animate-pulse mb-2"></div>
+                        <div className="h-14 w-full bg-slate-700 rounded-2xl animate-pulse"></div>
+                        <div className="h-12 w-full bg-slate-700 rounded-2xl animate-pulse"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!table) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-200">
+                <svg className="w-20 h-20 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <h2 className="text-2xl font-bold">Masa Bulunamadı</h2>
+                <p className="text-slate-400 mt-2">Aradığınız masa sistemde kayıtlı değil veya silinmiş olabilir.</p>
+            </div>
+        );
+    }
+
 
     // for Available
     if (table.status === 1) {
@@ -322,7 +432,7 @@ export default function PosPage() {
                     <div className="flex-1 overflow-y-auto p-6">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             {filteredProducts.map(product => (
-                                <ProductCard key={product.id} product={product} onAdd={addOrderItem} />
+                                <ProductCard key={product.id} product={product} onAdd={increaseQuantity} />
                             ))}
                         </div>
                     </div>
@@ -338,11 +448,45 @@ export default function PosPage() {
                             Aktif Sipariş
                         </span>
                     </div>
-
+                    <div className="px-4 pt-4 pb-2 bg-slate-800">
+                        <div className="flex gap-2 p-1 bg-slate-900/80 rounded-xl overflow-x-auto scrollbar-hide border border-slate-700/50">
+                            {[
+                                { id: 0, label: "Tümü" },
+                                { id: 1, label: "Yeni" },
+                                { id: 2, label: "Onaylı" },
+                                { id: 3, label: "Mutfakta" },
+                                { id: 4, label: "Hazır" }
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setOrderTab(tab.id)}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all
+                                        ${orderTab === tab.id
+                                            ? "bg-slate-700 text-white shadow-md shadow-slate-900/50"
+                                            : "text-slate-400 hover:text-slate-300 hover:bg-slate-700/50"
+                                        }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-900/50">
-                        {activeOrder.orderItems.map(item => (
-                            <OrderCard key={item.productId} item={item} />
-                        ))}
+                        {filteredOrderItems.length === 0 ? (
+                            <div className="text-center text-slate-500 mt-10 font-medium flex flex-col items-center gap-3">
+                                <svg className="w-12 h-12 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                Bu statüde ürün bulunmuyor.
+                            </div>
+                        ) : (
+                            filteredOrderItems.map(item => (
+                                <OrderCard 
+                                key={`${item.productId}-${item.is_load}`}
+                                item={item}
+                                decreaseQuantity={decreaseQuantity} 
+                                increaseQuantity={increaseQuantity}
+                                />
+                            ))
+                        )}
                     </div>
                     
                     <div className="p-6 bg-slate-800 border-t border-slate-700 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.2)]">
@@ -356,49 +500,56 @@ export default function PosPage() {
                             </div>
                         </div>
                         
-                        <div className="flex flex-col gap-3">
-                           
-                           <button 
-                                onClick={handleSubmitOrder}
-                                disabled={isLoading} 
-                                className={`w-full active:scale-95 transition-all text-white text-xl font-bold py-4 rounded-2xl shadow-lg flex justify-center items-center gap-2
-                                    ${isLoading 
-                                        ? "bg-slate-600 cursor-not-allowed shadow-none"
-                                        : (updateOrder ? "bg-blue-500 hover:bg-blue-600 shadow-[0_4px_14px_0_rgba(59,130,246,0.39)]" : "bg-green-500 hover:bg-green-600 shadow-[0_4px_14px_0_rgba(34,197,94,0.39)]")
-                                    }`}
-                            >
-                                {isLoading ? (
-                                    <svg className="animate-spin -ml-1 mr-3 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                ) : updateOrder ? (
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                ) : (
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                )}
-                                
-                                {isLoading ? "İşleniyor..." : (updateOrder ? "Siparişi Güncelle" : "Siparişi Onayla")}
-                            </button>
+                        <div className="border-t border-slate-700 p-4 bg-slate-800 flex items-center gap-2">
+    
+                                <button 
+                                    type="button"
+                                    title="İptal Et"
+                                    onClick={handleCancelOrder}
+                                    className="p-3.5 rounded-xl bg-slate-700/50 text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 border border-transparent transition-all active:scale-95 flex-shrink-0"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
 
-                            <button 
-                                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all text-red-400 border border-slate-700 hover:border-red-500/50 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2"
-                                onClick={() => setIsPaymentModalOpen(true)}
-                            >
-                                Masayı Kapat (Hesabı Al)
-                            </button>
+                                <button 
+                                    type="button"
+                                    title="Masayı Kapat (Hesabı Al)"
+                                    onClick={() => setIsPaymentModalOpen(true)}
+                                    className="p-3.5 rounded-xl bg-slate-700/50 text-slate-400 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/30 border border-transparent transition-all active:scale-95 flex-shrink-0"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                </button>
 
-                            <button 
-                                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all text-slate-400 border border-slate-700 text-lg font-bold py-3 rounded-2xl flex justify-center items-center gap-2 shadow-sm"
-                                onClick={handleCancelOrder}
-                            >
-                                İptal Et
-                            </button>
-                        </div>
+                                <button 
+                                    type="button"
+                                    onClick={(e) => handleSubmitOrder(e)}
+                                    disabled={isLoading} 
+                                    className={`flex-1 active:scale-95 transition-all text-white font-bold py-3.5 px-4 rounded-xl flex justify-center items-center gap-2
+                                        ${isLoading 
+                                            ? "bg-slate-600 cursor-not-allowed shadow-none"
+                                            : (updateOrder ? "bg-blue-600 hover:bg-blue-500" : "bg-emerald-600 hover:bg-emerald-500")
+                                        }`}
+                                >
+                                    {isLoading ? (
+                                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    ) : updateOrder ? (
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    )}
+                                    
+                                    <span className="text-sm tracking-wide">
+                                        {isLoading ? "İşleniyor..." : (updateOrder ? "Güncelle" : "Siparişi Onayla")}
+                                    </span>
+                                </button>
+                            </div>
                         
                         <Link to="/" className="text-slate-500 hover:text-slate-300 font-semibold transition-colors text-center block mt-5">
                             Kapat ve Masalara Dön
@@ -418,7 +569,7 @@ export default function PosPage() {
 
                             <div className="flex flex-col gap-4">
                                 <button 
-                                    // onClick={() => handlePayment('Kredi Kartı')}
+                                    onClick={() => handlePayment()}
                                     className="w-full bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(59,130,246,0.39)] transition-all flex justify-center items-center gap-2"
                                 >
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
@@ -426,7 +577,7 @@ export default function PosPage() {
                                 </button>
 
                                 <button 
-                                    // onClick={() => handlePayment('Nakit')}
+                                    onClick={() => handlePayment()}
                                     className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] transition-all flex justify-center items-center gap-2"
                                 >
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>

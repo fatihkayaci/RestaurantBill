@@ -3,6 +3,8 @@ export interface OrderItem{
     productName: string;
     unitPrice: number;
     quantity: number;
+    status: number;
+    is_load: boolean;
 }
 export interface Order {
     id: number;

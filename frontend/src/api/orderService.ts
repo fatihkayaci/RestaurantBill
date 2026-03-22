@@ -26,5 +26,11 @@ export const orderService = {
         }); 
         return response.data;
     },
+    closeOrder: async(orderId: number) =>{
+        const response = await api.post(`/order/close`,{
+            orderId: orderId
+        }); 
+        return response.data;
+    }
     
 };

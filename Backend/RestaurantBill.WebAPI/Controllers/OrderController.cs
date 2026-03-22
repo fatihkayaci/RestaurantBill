@@ -71,6 +71,12 @@ namespace RestaurantBill.WebAPI.Controllers
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
         }
+        [HttpPost("close")]
+        public async Task<IActionResult> Close([FromBody]CloseOrderCommand command, CancellationToken cancellationToken)
+        {
+            await _mediator.Send(command, cancellationToken);
+            return Ok(new { Message = "Masa başarılı bir şekilde kapatıldı." });
+        }
         
         /* maybe deleted this method;*/
         [HttpPost]
