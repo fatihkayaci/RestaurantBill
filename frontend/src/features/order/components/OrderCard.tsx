@@ -2,12 +2,13 @@ import type { OrderItem } from '../types';
 
 interface OrderCardProps {
     item: OrderItem;
-    increaseQuantity: (productId:number) => void,
-    decreaseQuantity: (productId:number) => void,
-} 
+    increaseQuantity: (productId: number) => void;
+    decreaseQuantity: (productId: number) => void;
+    onUpdateQuantity: (productId: number, quantity: number) => void;
+}
 
-export default function OrderCard({ item, increaseQuantity, decreaseQuantity }: OrderCardProps) {
-    
+export default function OrderCard({ item, increaseQuantity, decreaseQuantity, onUpdateQuantity }: OrderCardProps) {
+
     const getStatusBadge = (status: number) => {
         switch (status) {
             case 1:
@@ -18,6 +19,28 @@ export default function OrderCard({ item, increaseQuantity, decreaseQuantity }: 
                 return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/30 shadow-[0_0_8px_rgba(34,197,94,0.2)]">HAZIR</span>;
             default:
                 return null;
+        }
+    };
+    
+    const isLocalItem = item.is_load === false;
+    const isPendingApproved = item.is_load === true && item.status === 1;
+    const isLocked = item.is_load === true && item.status !== 1;
+
+    const handleDecrease = () => {
+        if (isLocalItem) {
+            decreaseQuantity(item.productId);
+        } else if (isPendingApproved) {
+            if (item.quantity > 1) {
+                onUpdateQuantity(item.productId, item.quantity - 1);
+            }
+        }
+    };
+
+    const handleIncrease = () => {
+        if (isLocalItem) {
+            increaseQuantity(item.productId);
+        } else if (isPendingApproved) {
+            onUpdateQuantity(item.productId, item.quantity + 1);
         }
     };
 
@@ -34,13 +57,25 @@ export default function OrderCard({ item, increaseQuantity, decreaseQuantity }: 
             </div>
 
             <div className="flex items-center gap-3">
-                <button 
-                onClick={() => decreaseQuantity(item.productId)}
-                className="bg-slate-700/50 text-red-400 border border-slate-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xl hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95">-</button>
+                <button
+                    onClick={handleDecrease}
+                    disabled={isLocked}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xl border transition-all active:scale-95
+                        ${isLocked
+                            ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed'
+                            : 'bg-slate-700/50 text-red-400 border-slate-600 hover:bg-red-500 hover:text-white hover:border-red-500'
+                        }`}
+                >-</button>
                 <span className="font-bold text-lg w-6 text-center text-slate-200">{item.quantity}</span>
-                <button 
-                onClick={() => increaseQuantity(item.productId)}
-                className="bg-slate-700/50 text-blue-400 border border-slate-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xl hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all active:scale-95">+</button>
+                <button
+                    onClick={handleIncrease}
+                    disabled={isLocked}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xl border transition-all active:scale-95
+                        ${isLocked
+                            ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed'
+                            : 'bg-slate-700/50 text-blue-400 border-slate-600 hover:bg-blue-500 hover:text-white hover:border-blue-500'
+                        }`}
+                >+</button>
             </div>
         </div>
     );

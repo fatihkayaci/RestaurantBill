@@ -17,8 +17,7 @@ export default function PosPage() {
     const navigate = useNavigate();
     
     const [isLoading, setIsLoading] = useState(true);
-    const [updateOrder, setUpdateOrder] = useState(false);
-    const [orderTab, setOrderTab] = useState<number>(0);
+    const [orderTab, setOrderTab] = useState<number>(1);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
@@ -241,17 +240,61 @@ export default function PosPage() {
             return { ...prevOrder, orderItems: updatedItems, totalPrice: newTotal };
         });
     };
+    const handleUpdateQuantity = (productId: number, quantity: number) => {
+        setActiveOrder((prevOrder) => {
+            const updatedItems = prevOrder.orderItems.map(item =>
+                (item.productId === productId && item.is_load === true && item.status === 1)
+                    ? { ...item, quantity }
+                    : item
+            );
+            const newTotal = updatedItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
+            return { ...prevOrder, orderItems: updatedItems, totalPrice: newTotal };
+        });
+    };
+
+    const handleSubmitUpdate = async (e: any) => {
+        e.preventDefault();
+        try {
+            setIsLoading(true);
+            const pendingItems = activeOrder.orderItems.filter(item => item.is_load === true && item.status === 1);
+
+            if (pendingItems.length === 0) {
+                alert("Güncellenecek ürün bulunmuyor.");
+                setIsLoading(false);
+                return;
+            }
+
+            for (const item of pendingItems) {
+                await orderService.updateOrderItemQuantity(activeOrder.id, item.productId, item.quantity);
+            }
+
+            const refreshedOrder = await orderService.getOrderByTableId(tableId!);
+            if (refreshedOrder) {
+                setActiveOrder({
+                    ...refreshedOrder,
+                    orderItems: refreshedOrder.orderItems.map(item => ({
+                        ...item,
+                        is_load: true
+                    }))
+                });
+            }
+        } catch (error: any) {
+            console.log(error.response?.data || "Bilinmeyen bir hata oluştu");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const filteredProducts = selectedCategoryId 
         ? products.filter(product => product.categoryId === selectedCategoryId) 
         : products;
 
-    const filteredOrderItems = 
-    orderTab === 0 ? activeOrder.orderItems :
-    orderTab === 1 ? activeOrder.orderItems.filter(item => item.is_load === false) :
-    orderTab === 2 ? activeOrder.orderItems.filter(item => item.is_load === true) :
-    orderTab === 3 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 2) :
-    orderTab === 4 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 3) :
-    [];
+    const filteredOrderItems =
+        orderTab === 1 ? activeOrder.orderItems.filter(item => item.is_load === false) :
+        orderTab === 2 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 1) :
+        orderTab === 3 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 2) :
+        orderTab === 4 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 3) :
+        [];
 
     if (isLoading) {
         return (
@@ -451,7 +494,6 @@ export default function PosPage() {
                     <div className="px-4 pt-4 pb-2 bg-slate-800">
                         <div className="flex gap-2 p-1 bg-slate-900/80 rounded-xl overflow-x-auto scrollbar-hide border border-slate-700/50">
                             {[
-                                { id: 0, label: "Tümü" },
                                 { id: 1, label: "Yeni" },
                                 { id: 2, label: "Onaylı" },
                                 { id: 3, label: "Mutfakta" },
@@ -479,11 +521,12 @@ export default function PosPage() {
                             </div>
                         ) : (
                             filteredOrderItems.map(item => (
-                                <OrderCard 
+                                <OrderCard
                                 key={`${item.productId}-${item.is_load}`}
                                 item={item}
-                                decreaseQuantity={decreaseQuantity} 
+                                decreaseQuantity={decreaseQuantity}
                                 increaseQuantity={increaseQuantity}
+                                onUpdateQuantity={handleUpdateQuantity}
                                 />
                             ))
                         )}
@@ -520,14 +563,14 @@ export default function PosPage() {
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                 </button>
 
-                                <button 
+                                <button
                                     type="button"
-                                    onClick={(e) => handleSubmitOrder(e)}
-                                    disabled={isLoading} 
+                                    onClick={(e) => orderTab === 2 ? handleSubmitUpdate(e) : handleSubmitOrder(e)}
+                                    disabled={isLoading}
                                     className={`flex-1 active:scale-95 transition-all text-white font-bold py-3.5 px-4 rounded-xl flex justify-center items-center gap-2
-                                        ${isLoading 
+                                        ${isLoading
                                             ? "bg-slate-600 cursor-not-allowed shadow-none"
-                                            : (updateOrder ? "bg-blue-600 hover:bg-blue-500" : "bg-emerald-600 hover:bg-emerald-500")
+                                            : (orderTab === 2 ? "bg-blue-600 hover:bg-blue-500" : "bg-emerald-600 hover:bg-emerald-500")
                                         }`}
                                 >
                                     {isLoading ? (
@@ -535,7 +578,7 @@ export default function PosPage() {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                    ) : updateOrder ? (
+                                    ) : orderTab === 2 ? (
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                         </svg>
@@ -546,7 +589,7 @@ export default function PosPage() {
                                     )}
                                     
                                     <span className="text-sm tracking-wide">
-                                        {isLoading ? "İşleniyor..." : (updateOrder ? "Güncelle" : "Siparişi Onayla")}
+                                        {isLoading ? "İşleniyor..." : (orderTab === 2 ? "Güncelle" : "Siparişi Onayla")}
                                     </span>
                                 </button>
                             </div>

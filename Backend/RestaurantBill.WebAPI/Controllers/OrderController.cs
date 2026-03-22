@@ -9,6 +9,7 @@ using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Orders.Commands.MoveOrderToTable;
 using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
+using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
 using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrders;
@@ -64,7 +65,6 @@ namespace RestaurantBill.WebAPI.Controllers
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Masaya ürünler eklendi veya güncellendi." });
         }
-
         [HttpPost("cancel")]
         public async Task<IActionResult> Cancel([FromBody]CancelOrderCommand command, CancellationToken cancellationToken)
         {
@@ -77,14 +77,19 @@ namespace RestaurantBill.WebAPI.Controllers
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Masa başarılı bir şekilde kapatıldı." });
         }
-        
-        /* maybe deleted this method;*/
         [HttpPost]
         public async Task<IActionResult> Create([FromBody]CreateOrderCommand command, CancellationToken cancellationToken)
         {
             var newOrder = await _mediator.Send(command, cancellationToken);
             return Created("", newOrder);
         }
+        [HttpPost("item/quantity")]
+        public async Task<IActionResult> UpdateOrderItemQuantity([FromBody]UpdateOrderItemQuantityCommand command, CancellationToken cancellationToken)
+        {
+            await _mediator.Send(command, cancellationToken);
+            return Ok(new { Message = "Ürün başarıyla güncellendi."});
+        }
+        
         #endregion
     }
 }
