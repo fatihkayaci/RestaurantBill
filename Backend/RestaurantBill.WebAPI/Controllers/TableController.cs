@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Application.Features.Orders.Queries.GetAllOrders;
 using RestaurantBill.Application.Features.Tables.Commands.CancelReservation;
 using RestaurantBill.Application.Features.Tables.Commands.CreateTable;
 using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
@@ -21,6 +20,9 @@ namespace RestaurantBill.WebAPI.Controllers
         }
 
         #region get methods
+        /// <summary>
+        /// Returns all tables.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -28,6 +30,10 @@ namespace RestaurantBill.WebAPI.Controllers
             var values = await _mediator.Send(query);
             return Ok(values);
         }
+        /// <summary>
+        /// Returns a table by its ID.
+        /// </summary>
+        /// <param name="id">TableId</param>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTableById([FromRoute]int id)
         {
@@ -41,80 +47,50 @@ namespace RestaurantBill.WebAPI.Controllers
         #endregion
 
         #region post methods
+        /// <summary>
+        /// Creates a new table.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="cancellationToken"></param>
         [HttpPost("create")]
         public async Task<IActionResult> CreateTable([FromBody]CreateTableCommand command, CancellationToken cancellationToken)
         {
             await _mediator.Send(command, cancellationToken);
             return Ok("Masa başarıyla oluşturuldu");
         }
-
-        [HttpPost("{id}/open")]
-        public async Task<IActionResult> OpenTable([FromRoute]int id, CancellationToken cancellationToken)
+        /// <summary>
+        /// Opens the table when a customer arrives. Sets status to Occupied and creates an empty order.
+        /// </summary>
+        /// <param name="command">TableId</param>
+        /// <param name="cancellationToken"></param>
+        [HttpPost("open")]
+        public async Task<IActionResult> OpenTable([FromBody]OpenTableCommand command, CancellationToken cancellationToken)
         {
-            var command = new OpenTableCommand { TableId = id };
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
         }
-        // bakılacak şimdi
-        [HttpPost("{id}/close")]
-        public async Task<IActionResult> CloseTable([FromRoute]int id, CancellationToken cancellationToken)
+        /// <summary>
+        /// Reserves the table. Sets status to Reserved.
+        /// </summary>
+        /// <param name="command">TableId</param>
+        /// <param name="cancellationToken"></param>
+        [HttpPost("reservation")]
+        public async Task<IActionResult> ReservationTable([FromBody]ReservationTableCommand command, CancellationToken cancellationToken)
         {
-            var command = new OpenTableCommand { TableId = id };
+            await _mediator.Send(command, cancellationToken);
+            return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
+        }
+        /// <summary>
+        /// Cancels the reservation and sets the table status back to Available.
+        /// </summary>
+        /// <param name="command">TableId</param>
+        /// <param name="cancellationToken"></param>
+        [HttpPost("cancel-reservation")]
+        public async Task<IActionResult> CancelReservationTable([FromBody]CancelReservationCommand command, CancellationToken cancellationToken)
+        {
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
         }      
-
-        [HttpPost("{id}/reservation")]
-        public async Task<IActionResult> ReservationTable([FromRoute]int id, CancellationToken cancellationToken)
-        {
-            var command = new ReservationTableCommand { TableId = id };
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
-        }    
-        [HttpPost("{id}/cancel-reservation")]
-        public async Task<IActionResult> CancelReservationTable([FromRoute]int id, CancellationToken cancellationToken)
-        {
-            var command = new CancelReservationCommand { TableId = id };
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
-        }      
         #endregion
-
-        #region patch methods
-        
-        #endregion
-
-        #region put methods
-                  
-        #endregion
-
-        /* old code. will be clean up
-            #region post
-            
-                
-            #endregion
-        
-            
-            #region patch methods
-            [HttpPatch("{tableId}")]
-            public async Task<IActionResult> ChangeStatus([FromRoute]int tableId, [FromBody] ChangeTableStatusDto statusDto, CancellationToken cancellationToken)
-            {
-                await _tableService.ChangeTableStatus(tableId, statusDto, cancellationToken);
-                return Ok("masanın durumu değiştirildi.");
-            }
-            #endregion
-
-            #region delete methods
-            [HttpDelete("{id}")]
-            public async Task<IActionResult> DeleteTable([FromRoute]int id, CancellationToken cancellationToken)
-            {
-                await _tableService.DeleteAsync(id, cancellationToken);
-                return Ok("Masa başarıyla silindi");
-            }
-                
-            #endregion
-        
-        */
-
     }
 }

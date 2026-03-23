@@ -20,6 +20,11 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
             _messageProducer = messageProducer;
         }
 
+        /// <summary>
+        /// Opens the table, sets status to Occupied and creates a new empty order.
+        /// Returns the newly created order ID.
+        /// </summary>
+        /// <exception cref="BusinessException">Thrown if table ID is invalid, table is not found, or table is already occupied.</exception>
         public async Task<int> Handle(OpenTableCommand request, CancellationToken cancellationToken)
         {
             if (request.TableId <= 0)

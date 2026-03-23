@@ -11,19 +11,28 @@ export const tableService = {
         return response.data;
     },
     openTable: async (tableId: string) => {
-        const response = await api.post(`/table/${tableId}/open`); 
+        const response = await api.post(`/table/open`,{
+            TableId: tableId
+        }); 
         return response.data;
     },
     closeTable: async (tableId: string) => {
-        const response = await api.post(`/table/${tableId}/close`); 
+        const response = await api.post(`/table/close`, {
+            TableId: tableId
+        }); 
         return response.data;
     },
     reservationTable: async (tableId: string) => {
-        const response = await api.post(`/table/${tableId}/reservation`); 
+        const response = await api.post(`/table/reservation`, {
+            TableId: tableId
+        }); 
         return response.data;
     },
     cancelReservation: async (tableId: string) => {
-        const response = await api.post(`/table/${tableId}/cancel-reservation`); 
+        const response = await api.post(`/table/cancel-reservation`,{
+                TableId: tableId
+            }
+        ); 
         return response.data;
     },
 };

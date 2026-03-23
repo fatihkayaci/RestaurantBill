@@ -17,7 +17,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservation
             _uow = uow;
             _messageProducer = messageProducer;
         }
-
+        /// <summary>
+        /// Cancels the reservation and sets the table status back to Available.
+        /// </summary>
+        /// <exception cref="BusinessException">Thrown if table ID is zero or less, or if the table is not found.</exception>
         public async Task Handle(CancelReservationCommand request, CancellationToken cancellationToken)
         {
             

@@ -19,6 +19,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
             _messageProducer = messageProducer;
         }
 
+        /// <summary>
+        /// Reserves the table and sets its status to Reserved.
+        /// </summary>
+        /// <exception cref="BusinessException">Thrown if table ID is invalid or table is not found.</exception>
         public async Task Handle(ReservationTableCommand request, CancellationToken cancellationToken)
         {
             

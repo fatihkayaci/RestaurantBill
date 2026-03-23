@@ -17,6 +17,9 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
             _messageProducer = messageProducer;
         }
 
+        /// <summary>
+        /// Creates a new table with the given name.
+        /// </summary>
         public async Task Handle(CreateTableCommand request, CancellationToken cancellationToken)
         {
             var table = new Table

@@ -17,6 +17,10 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetTableById
             _mapper = mapper;
         }
 
+        /// <summary>
+        /// Returns a single table by its ID.
+        /// </summary>
+        /// <exception cref="BusinessException">Thrown if the table is not found.</exception>
         public async Task<TableDto> Handle(GetTableByIdQuery request, CancellationToken cancellationToken)
         {
             var table = await _uow.Table.GetByIdAsync(request.TableId, false);

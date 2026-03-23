@@ -15,6 +15,9 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAll
             _mapper = mapper;
         }
 
+        /// <summary>
+        /// Returns all tables.
+        /// </summary>
         public async Task<List<TableDto>> Handle(GetAllTableQuery request, CancellationToken cancellationToken)
         {
             var entities = await _uow.Table.GetAllAsync();
