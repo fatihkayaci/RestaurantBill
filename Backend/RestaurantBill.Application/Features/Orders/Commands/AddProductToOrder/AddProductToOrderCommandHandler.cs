@@ -19,7 +19,12 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             _uow = uow;
             _messageProducer = messageProducer;
         }
-
+        /// <summary>
+        /// Adds one or more products to an existing order.
+        /// If the product already exists in the order, its quantity is incremented.
+        /// After saving, publishes a message to RabbitMQ to notify the kitchen.
+        /// </summary>
+        /// <exception cref="BusinessException">Thrown if quantity is zero or less, or if the order/product is not found.</exception>
         public async Task Handle(AddProductToOrderCommand request, CancellationToken cancellationToken)
         {
             var order = await _uow.Order.GetByIdAsync(request.OrderId, true, o => o.OrderItems);

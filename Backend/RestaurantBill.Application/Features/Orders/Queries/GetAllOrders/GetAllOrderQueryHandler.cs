@@ -14,7 +14,9 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrders
             _uow = uow;
             _mapper = mapper;
         }
-
+        /// <summary>
+        /// Returns all orders including their items and product details.
+        /// </summary>
         public async Task<List<OrderDto>> Handle(GetAllOrdersQuery request, CancellationToken cancellationToken)
         {
             var entities = await _uow.Order.GetAllAsync(null, false, "OrderItems,OrderItems.Product");

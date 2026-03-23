@@ -14,7 +14,10 @@ namespace RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromO
         {
             _uow = uow;
         }
-
+        /// <summary>
+        /// Removes a specific product from the order and recalculates the total price.
+        /// </summary>
+        /// <exception cref="BusinessException">Thrown if the order or the product within the order is not found.</exception>
         public async Task Handle(RemoveProductFromOrderCommand request, CancellationToken cancellationToken)
         { 
             var order = await _uow.Order.GetByIdAsync(request.OrderId, true, o => o.OrderItems);

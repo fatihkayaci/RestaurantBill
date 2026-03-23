@@ -16,7 +16,9 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetOrderById
             _uow = uow;
             _mapper = mapper;
         }
-
+        /// <summary>
+        /// Returns a single order by its ID.
+        /// </summary>
         public async Task<OrderDto> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
         {
             var order = await _uow.Order.GetByIdAsync(request.OrderId, false);

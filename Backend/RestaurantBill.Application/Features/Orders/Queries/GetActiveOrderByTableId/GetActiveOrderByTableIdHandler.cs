@@ -2,7 +2,6 @@ using MediatR;
 using AutoMapper;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Common;
 
 namespace RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId
 {
@@ -16,7 +15,9 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTab
             _uow = uow;
             _mapper = mapper;
         }
-
+        /// <summary>
+        /// Returns the active order for the given table, including its items and product details.
+        /// </summary>
         public async Task<OrderDto> Handle(GetActiveOrderByTableIdQuery request, CancellationToken cancellationToken)
         {
             var order = await _uow.Order.GetActiveOrderByTableId(request.TableId, false);

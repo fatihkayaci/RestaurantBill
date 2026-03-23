@@ -19,7 +19,9 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
             _uow = uow;
             _mapper = mapper;
         }
-
+        /// <summary>
+        /// Creates a new empty order for the given table. Called when a table is opened.
+        /// </summary>
         public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
         {
             var order = new Order

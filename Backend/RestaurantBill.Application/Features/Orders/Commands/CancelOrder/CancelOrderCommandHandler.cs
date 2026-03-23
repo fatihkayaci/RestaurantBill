@@ -15,7 +15,10 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CancelOrder
         {
             _uow = uow;
         }
-
+        /// <summary>
+        /// Cancels the order and sets the table status to Available.
+        /// </summary>
+        /// <exception cref="BusinessException">Thrown if order ID is zero or less, or if the order/table is not found.</exception>
         public async Task Handle(CancelOrderCommand request, CancellationToken cancellationToken)
         {
             if (request.OrderId <= 0)

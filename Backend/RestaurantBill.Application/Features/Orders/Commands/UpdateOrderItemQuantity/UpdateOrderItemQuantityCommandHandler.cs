@@ -14,7 +14,11 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQua
         {
             _uow = uow;
         }
-
+        /// <summary>
+        /// Updates the quantity of a specific item in the order and recalculates the total price.
+        /// Only items with Pending status can be updated.
+        /// </summary>
+        /// <exception cref="BusinessException">Thrown if quantity is zero or less, order/item is not found, or item status is not Pending.</exception>
         public async Task Handle(UpdateOrderItemQuantityCommand request, CancellationToken cancellationToken)
         {
             if (request.Quantity <= 0)
