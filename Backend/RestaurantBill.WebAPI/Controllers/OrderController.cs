@@ -90,6 +90,13 @@ namespace RestaurantBill.WebAPI.Controllers
             return Ok(new { Message = "Ürün başarıyla güncellendi."});
         }
         
+        [HttpPost("item/remove")]
+        public async Task<IActionResult> RemoveProductFromOrder([FromBody]RemoveProductFromOrderCommand command, CancellationToken cancellationToken)
+        {
+            await _mediator.Send(command, cancellationToken);
+            return Ok(new { Message = "Masa başarılı bir şekilde kapatıldı." });
+        }
+        
         #endregion
     }
 }

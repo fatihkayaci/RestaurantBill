@@ -168,15 +168,13 @@ export default function PosPage() {
         } catch (error: any) {
             console.log(error.response?.data);
         }
-    }
+    };
 
     const handleCancelOrder = async () => {
         try {
             if (!tableId || !activeOrder) return;
 
-            const isConfirmed = window.confirm("Dikkat: İçerisinde ürün bulunan bu sipariş tamamen iptal edilecek ve masa boşaltılacaktır. Emin misiniz?"); 
-            console.log(isConfirmed);
-            console.log(activeOrder);
+            const isConfirmed = window.confirm("Dikkat: İçerisinde ürün bulunan bu sipariş tamamen iptal edilecek ve masa boşaltılacaktır Emin misiniz?"); 
             if (isConfirmed) {
                 await orderService.cancelOrder(activeOrder.id); 
                 const updatedTable = await tableService.getTableById(tableId);
@@ -185,7 +183,7 @@ export default function PosPage() {
         } catch (error: any) {
             console.log(error.response?.data);
         }
-    }
+    };
     
     const increaseQuantity = (productId: number) => {
         const clickedProduct = products.find(p => p.id === productId);
@@ -215,10 +213,11 @@ export default function PosPage() {
             }
 
             const newTotal = updatedItems.reduce((total, item) => total + (item.quantity * item.unitPrice), 0);
+            setOrderTab(1);
             return { ...prevOrder, orderItems: updatedItems, totalPrice: newTotal };
         });
     };
-    
+
     const decreaseQuantity = (productId: number) => {
         setActiveOrder((prevOrder) => {
             const itemIndex = prevOrder.orderItems.findIndex(
@@ -240,6 +239,31 @@ export default function PosPage() {
             return { ...prevOrder, orderItems: updatedItems, totalPrice: newTotal };
         });
     };
+    const handleRemoveItem = async (productId: number) => {
+        try {
+            const orderId = activeOrder.id;
+            if (!tableId || !productId || !orderId)
+                return;
+
+            const isConfirmed = window.confirm("Dikkat: Bu ürünü silmek istediğinize Emin misiniz?");
+            if (isConfirmed) {
+                await orderService.removeOrderItem(productId, orderId);
+                const newOrderData = await orderService.getOrderByTableId(tableId);
+                if (newOrderData) {
+                    setActiveOrder({
+                        ...newOrderData,
+                        orderItems: newOrderData.orderItems.map(item => ({
+                            ...item,
+                            is_load: true
+                        }))
+                    });
+                }
+            }
+        } catch (error: any) {
+            console.log(error.response?.data);
+        }
+        
+    }
     const handleUpdateQuantity = (productId: number, quantity: number) => {
         setActiveOrder((prevOrder) => {
             const updatedItems = prevOrder.orderItems.map(item =>
@@ -285,6 +309,7 @@ export default function PosPage() {
         }
     };
 
+
     const filteredProducts = selectedCategoryId 
         ? products.filter(product => product.categoryId === selectedCategoryId) 
         : products;
@@ -299,7 +324,6 @@ export default function PosPage() {
     if (isLoading) {
         return (
             <div className="flex h-screen bg-slate-900 overflow-hidden">
-                {/* Sol Taraf İskeleti (Kategoriler ve Ürünler) */}
                 <div className="w-2/3 flex flex-col h-screen p-6">
                     <div className="flex gap-4 mb-8">
                         {[1, 2, 3, 4].map(i => (
@@ -313,7 +337,6 @@ export default function PosPage() {
                     </div>
                 </div>
 
-                {/* Sağ Taraf İskeleti (Adisyon Paneli) */}
                 <div className="w-1/3 bg-slate-800 border-l border-slate-700 flex flex-col">
                     <div className="h-20 border-b border-slate-700 p-6 flex items-center justify-between">
                         <div className="h-8 w-32 bg-slate-700 rounded-lg animate-pulse"></div>
@@ -419,16 +442,14 @@ export default function PosPage() {
 
                     <div className="w-full flex flex-col gap-4">
                         
-                        <button 
-                            // TODO: onClick={handleCustomerArrived}
+                        <button
                             className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-4 rounded-xl shadow-[0_4px_14px_0_rgba(245,158,11,0.39)] transition-all text-xl"
                             onClick={handleOpenTable}
                         >
                             Müşteri Geldi (Adisyon Aç)
                         </button>
                         
-                        <button 
-                            // TODO: onClick={handleCancelReservation}
+                        <button
                             className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-red-400 font-bold py-3 rounded-xl border-2 border-slate-700 hover:border-red-500/50 transition-all text-lg"
                             onClick={handleCancelReservation}
                         >
@@ -527,6 +548,7 @@ export default function PosPage() {
                                 decreaseQuantity={decreaseQuantity}
                                 increaseQuantity={increaseQuantity}
                                 onUpdateQuantity={handleUpdateQuantity}
+                                removeItem={handleRemoveItem}
                                 />
                             ))
                         )}

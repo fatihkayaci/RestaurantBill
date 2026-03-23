@@ -32,6 +32,14 @@ export const orderService = {
         });
         return response.data;
     },
+    removeOrderItem: async (productId: number, orderId: number) => {
+        const response = await api.post(`/order/item/remove`,{
+            ProductId: productId,
+            OrderId: orderId
+        }); 
+        return response.data;
+    },
+    
     updateOrderItemQuantity: async (orderId: number, productId: number, quantity: number) => {
         const response = await api.post(`/order/item/quantity`, {
             orderId,

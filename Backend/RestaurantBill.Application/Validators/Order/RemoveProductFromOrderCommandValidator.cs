@@ -13,7 +13,5 @@ public class RemoveProductFromOrderCommandValidator : AbstractValidator<RemovePr
         RuleFor(x => x.ProductId)
             .GreaterThan(0).WithMessage("Geçerli bir ürün seçilmelidir.");
 
-        RuleFor(x => x.QuantityToRemove)
-            .GreaterThan(0).WithMessage("Kaldırılacak miktar 0'dan büyük olmalıdır.");
     }
 }

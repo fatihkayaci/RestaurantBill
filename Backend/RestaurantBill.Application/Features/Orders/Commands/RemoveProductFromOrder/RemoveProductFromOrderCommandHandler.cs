@@ -22,10 +22,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromO
 
             var existingItem = order.OrderItems.FirstOrDefault(x => x.ProductId == request.ProductId);
             Guard.AgainstNull(existingItem, "İptal etmek istediğiniz ürün zaten bu siparişte yok!");
-
-            if (request.QuantityToRemove >= existingItem.Quantity) order.OrderItems.Remove(existingItem);
-            else existingItem.Quantity -= request.QuantityToRemove;
-
+            order.OrderItems.Remove(existingItem);
             order.TotalPrice = order.OrderItems.Sum(item => item.UnitPrice * item.Quantity);
 
             await _uow.SaveChangesAsync(cancellationToken);
