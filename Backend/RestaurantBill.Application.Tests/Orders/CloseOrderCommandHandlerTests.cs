@@ -68,7 +68,7 @@ public class CloseOrderCommandHandlerTests
         _mockUow.Setup(o => o.Order.GetByIdAsync(999, true))
         .ReturnsAsync((Order?)null);
 
-        var exception = await Assert.ThrowsAsync<Exception>(() => 
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => 
         _handler.Handle(command, CancellationToken.None));
         
         Assert.Equal("Böyle bir sipariş bulunamadı.", exception.Message);
@@ -87,7 +87,7 @@ public class CloseOrderCommandHandlerTests
         _mockUow.Setup(u => u.Table.GetByIdAsync(tableId, true))
                 .ReturnsAsync((Table?)null);
 
-        var exception = await Assert.ThrowsAsync<Exception>(() =>
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
 
         Assert.Equal("Böyle bir Masa bulunamadı.", exception.Message);
