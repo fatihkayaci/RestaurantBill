@@ -24,13 +24,12 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
                 throw new BusinessException("id 0 dan küçük veya eşit olamaz");
             
             var order = await _uow.Order.GetByIdAsync(request.OrderId, true);
-            Guard.AgainstNull(order, "Böyle bir Ürün bulunamadı.");
+            Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
+            var table = await _uow.Table.GetByIdAsync(order.TableId, true);
+            Guard.AgainstNull(table, "Böyle bir Masa bulunamadı.");
             
             order.Status = OrderStatus.Paid;
-
-            var table = await _uow.Table.GetByIdAsync(order.TableId, true);
-            if (table != null)
-                table.Status = TableStatus.Available;
+            table.Status = TableStatus.Available;
 
             await _uow.SaveChangesAsync(cancellationToken);
         }
