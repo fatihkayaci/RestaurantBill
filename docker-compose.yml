@@ -24,5 +24,18 @@ services:
     depends_on:
       - database
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: restaurant_rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest} 
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
 volumes:
   pg_data:
+  rabbitmq_data:

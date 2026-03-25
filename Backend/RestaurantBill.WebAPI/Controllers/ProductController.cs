@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Core.Interfaces;
-using RestaurantBill.Core.DTOs;
+using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
+    // [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ProductController : ControllerBase
@@ -19,11 +21,30 @@ namespace RestaurantBill.WebAPI.Controllers
             var values = await _productService.GetAllAsync();
             return Ok(values);
         }
-        [HttpPost]
-        public async Task<IActionResult> Add(CreateProductDto productDto)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetProductById([FromRoute]int id)
         {
-            await _productService.AddAsync(productDto);
-            return Ok("Ürün başarıyla eklendi");
+            var product = await _productService.GetByIdAsync(id);
+            return Ok(product);
+        }
+        [HttpPost("create-product")]
+        public async Task<IActionResult> CreateProduct([FromBody]CreateProductDto dto, CancellationToken cancellationToken)
+        {
+            await _productService.CreateAsync(dto, cancellationToken);
+            return Ok("Ürün başarıyla oluşturuldu");
+        }
+
+        [HttpPut("update-product")]
+        public async Task<IActionResult> UpdateProduct([FromBody]UpdateProductDto dto, CancellationToken cancellationToken)
+        {
+            await _productService.UpdateAsync(dto, cancellationToken);
+            return Ok("Ürün başarıyla güncellendi");
+        }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCategory([FromRoute]int id, CancellationToken cancellationToken)
+        {
+            await _productService.DeleteAsync(id, cancellationToken);
+            return Ok("kategori başarıyla silindi");
         }
     }
 }
