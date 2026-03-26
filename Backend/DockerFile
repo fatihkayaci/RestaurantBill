@@ -1,0 +1,27 @@
+# 1. SDK Aşaması: Kodları derlemek için (Aşçı bölümü)
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Proje dosyalarını (.csproj) kopyalıyoruz (Önce bunları kopyalamak hızı artırır)
+COPY ["RestaurantBill.WebAPI/RestaurantBill.WebAPI.csproj", "RestaurantBill.WebAPI/"]
+COPY ["RestaurantBill.Application/RestaurantBill.Application.csproj", "RestaurantBill.Application/"]
+COPY ["RestaurantBill.Domain/RestaurantBill.Domain.csproj", "RestaurantBill.Domain/"]
+COPY ["RestaurantBill.Infrastructure/RestaurantBill.Infrastructure.csproj", "RestaurantBill.Infrastructure/"]
+COPY ["RestaurantBill.Persistence/RestaurantBill.Persistence.csproj", "RestaurantBill.Persistence/"]
+
+# Kütüphaneleri indir
+RUN dotnet restore "RestaurantBill.WebAPI/RestaurantBill.WebAPI.csproj"
+
+# Geri kalan her şeyi kopyala ve derle
+COPY . .
+WORKDIR "/src/RestaurantBill.WebAPI"
+RUN dotnet publish -c Release -o /app/publish
+
+# 2. Runtime Aşaması: Sadece çalıştırmak için (Servis bölümü)
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+
+# Uygulamanın çalışacağı port
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "RestaurantBill.WebAPI.dll"]

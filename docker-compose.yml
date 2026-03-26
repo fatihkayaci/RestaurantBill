@@ -1,6 +1,20 @@
 version: '3.8'
 
 services:
+  api:
+    build:
+      context: ./Backend
+      dockerfile: DockerFile
+    container_name: restaurant_api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+      - rabbitmq
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=database;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
+      - RabbitMqSettings__Host=rabbitmq
+      - ASPNETCORE_ENVIRONMENT=Production
   database:
     image: postgres:16-alpine
     container_name: restaurant_postgres_db
