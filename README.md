@@ -100,6 +100,7 @@ RestaurantBill/
 | **JWT Bearer** | Stateless authentication |
 | **Serilog** | Structured logging |
 | **Swagger + Scalar** | API documentation |
+| **xUnit + Moq** | Unit testing framework & mocking |
 
 ### Frontend
 | Technology | Purpose |
@@ -260,6 +261,7 @@ All entities extend `BaseEntity` which provides:
 - [x] RabbitMQ integration
 - [x] Docker Compose infrastructure
 - [x] Dark mode POS UI with category filtering
+- [x] Unit tests for all CQRS command/query handlers (xUnit + Moq)
 
 **Planned:**
 - [ ] Payment processing flow
