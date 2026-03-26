@@ -1,9 +1,8 @@
 name: .NET Backend CI
 
-# Bu robot ne zaman çalışsın?
 on:
   push:
-    branches: [ "development/version0.0.1" ] # Main veya master dalına kod atıldığında
+    branches: [ "development/version0.0.1" ]
   pull_request:
     branches: [ "main" ]
 
