@@ -44,11 +44,8 @@ public class AddProductToOrderCommandHandlerTests
             It.IsAny<Expression<Func<Order, object>>[]>()))
                 .ReturnsAsync(order);
 
-        _mockUow.Setup(u => u.Product.GetByIdAsync(
-            productId, 
-            true,
-            It.IsAny<Expression<Func<Product, object>>[]>()
-            )).ReturnsAsync(product);
+        _mockUow.Setup(u => u.Product.GetByIdAsync(productId, false, It.IsAny<Expression<Func<Product, object>>[]>()))
+                .ReturnsAsync(product);
             
         
         // --- ACT ---
@@ -114,7 +111,7 @@ public class AddProductToOrderCommandHandlerTests
             
         _mockUow.Setup(u => u.Product.GetByIdAsync(999, false))
                     .ReturnsAsync((Product)null!);
-        var exception = await Assert.ThrowsAsync<Exception>(() => 
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => 
                         _handler.Handle(command, CancellationToken.None));
 
         Assert.Equal("Böyle bir ürün bulunamadı.", exception.Message);
@@ -131,7 +128,7 @@ public class AddProductToOrderCommandHandlerTests
             It.IsAny<Expression<Func<Order, object>>[]>()
         )).ReturnsAsync((Order)null!);
 
-        var exception = await Assert.ThrowsAsync<Exception>(() => 
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => 
             _handler.Handle(command, CancellationToken.None));
 
         Assert.Equal("Böyle bir sipariş bulunamadı.", exception.Message);

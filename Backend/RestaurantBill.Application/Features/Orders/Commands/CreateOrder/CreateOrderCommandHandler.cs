@@ -25,13 +25,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
         public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
         {
             if (request.TableId <= 0)
-                throw new BusinessException("Geçerli bir masa numarası girmelisiniz.");
+                throw new BusinessException("Masa Id'si 0 veya daha küçük olduğundan işlem yapılamıyor.");
 
             var table = await _uow.Table.GetByIdAsync(request.TableId, true);
-            Guard.AgainstNull(table, "Masa bulunamadı.");
+            Guard.AgainstNull(table, "Böyle bir Masa bulunamadı.");
 
             if (table.Status != TableStatus.Available)
-                throw new BusinessException("Seçilen masa şu an hizmet veremez durumda.");
+                throw new BusinessException("Seçilen masa şu an hizmet dışı veya dolu durumda.");
             
             var order = new Order { TableId = request.TableId, Status = OrderStatus.Active };
             
