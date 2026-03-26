@@ -8,6 +8,6 @@ public class CloseOrderCommandValidator : AbstractValidator<CloseOrderCommand>
     public CloseOrderCommandValidator()
     {
         RuleFor(x => x.OrderId)
-            .GreaterThan(0).WithMessage("Geçerli bir sipariş seçilmelidir.");
+            .GreaterThan(0).WithMessage("Geçerli bir sipariş numarası girmelisiniz.");
     }
 }
