@@ -30,11 +30,13 @@ var secretKey = jwtSettings["SecretKey"];
 
 builder.Services.AddControllers();
 
-// Serilog Settings
+#region Serilog Settings
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.Console()
-    .CreateLogger();
+    .WriteTo.File("logs/restaurant-log-.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();    
+#endregion
 
 builder.Host.UseSerilog();
 
@@ -166,8 +168,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<RemoveOrderItemDtoValidator
 builder.Services.AddMediatR(cfg => 
 {
     cfg.RegisterServicesFromAssemblyContaining<CreateOrderCommand>();
-    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 });
     
 #endregion
@@ -179,17 +181,21 @@ app.UseCors("Allow");
 app.UseHttpsRedirection();
 
 app.UseSerilogRequestLogging();
-// MiddleWares
-app.UseMiddleware<ExceptionMiddleware>();
-// for Authentication
 
+#region middlewares
+app.UseMiddleware<ExceptionMiddleware>();    
+#endregion
+
+
+// for Authentication
 app.UseAuthentication(); // <-- first "who are you?" (id control)
 app.UseAuthorization();  // <-- second "are you have authority?" (authority control)
 app.MapControllers();
+
 if (app.Environment.IsDevelopment())
 {
     /*scalar
-    app.MapOpenApi(); // JSON'ı üretir
+    app.MapOpenApi();
     app.MapScalarApiReference();
     */
     app.UseSwagger();

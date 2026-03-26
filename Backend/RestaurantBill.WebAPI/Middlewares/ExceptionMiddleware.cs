@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using RestaurantBill.Application.Exceptions;
-
+using FluentValidation;
 namespace RestaurantBill.WebAPI.Middlewares;
 
 public class ExceptionMiddleware
@@ -33,9 +33,19 @@ public class ExceptionMiddleware
         context.Response.ContentType = "application/json";
         
         int statusCode = (int)HttpStatusCode.InternalServerError;
-        string message = "Internal Server Error from the custom middleware.";
-
-        if (exception is BaseException baseEx)
+        string message = "Sunucu tarafında beklenmeyen bir hata oluştu.";
+        object? errors = null;
+        
+        if (exception is FluentValidation.ValidationException validationEx)
+        {
+            statusCode = (int)HttpStatusCode.BadRequest; 
+            message = "Bir veya daha fazla doğrulama hatası oluştu.";
+            
+            errors = validationEx.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+        }
+        else if (exception is BaseException baseEx)
         {
             statusCode = baseEx.StatusCode;
             message = baseEx.Message;
@@ -43,11 +53,20 @@ public class ExceptionMiddleware
 
         context.Response.StatusCode = statusCode;
 
-        var result = JsonSerializer.Serialize(new 
+        var responseModel = new 
         {
             StatusCode = statusCode,
-            Message = message
-        });
+            Message = message,
+            Errors = errors
+        };
+
+        var options = new JsonSerializerOptions 
+        { 
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull 
+        };
+
+        var result = JsonSerializer.Serialize(responseModel, options);
 
         return context.Response.WriteAsync(result);
     }
