@@ -1,6 +1,7 @@
 using AutoMapper;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
+using RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaurant;
 using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Business.Mappings;
@@ -56,6 +57,7 @@ public class MappingProfile : Profile
         CreateMap<RestaurantDto, Restaurant>().ReverseMap();
         CreateMap<CreateRestaurantDto, Restaurant>().ReverseMap();
         CreateMap<UpdateRestaurantDto, Restaurant>().ReverseMap();
+        CreateMap<CreateRestaurantCommand, Restaurant>().ReverseMap();
 
         
     }

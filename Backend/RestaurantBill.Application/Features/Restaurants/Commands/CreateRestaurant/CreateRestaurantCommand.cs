@@ -1,8 +1,10 @@
-namespace RestaurantBill.Domain.Entities
+using MediatR;
+
+namespace RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaurant
 {
-    public class Restaurant : BaseEntity
+    public class CreateRestaurantCommand: IRequest
     {
-        public string UserId { get; set; } = string.Empty;
+        
         public string Name { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string MobilePhoneNumber { get; set; } = string.Empty;
