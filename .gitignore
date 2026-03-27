@@ -5,6 +5,7 @@
 
 # dotenv files
 appsettings.Development.json
+appsettings.Production.json
 .env
 
 # User-specific files
