@@ -7,6 +7,6 @@ namespace RestaurantBill.Domain.Entities
     {
         public required string FullName { get; set; }
         public required string UserCode { get; set; }
-        public UserRole Role { get; set; } = UserRole.Waiter; 
+        public UserRole Role { get; set; } = UserRole.Admin; 
     }
 }
