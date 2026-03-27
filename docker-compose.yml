@@ -15,6 +15,18 @@ services:
       - ConnectionStrings__DefaultConnection=Host=database;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
       - RabbitMqSettings__Host=rabbitmq
       - ASPNETCORE_ENVIRONMENT=Production
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://${SERVER_IP}:8080/api
+    container_name: restaurant_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
   database:
     image: postgres:16-alpine
     container_name: restaurant_postgres_db
