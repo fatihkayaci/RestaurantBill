@@ -191,16 +191,14 @@ app.UseMiddleware<ExceptionMiddleware>();
 app.UseAuthentication(); // <-- first "who are you?" (id control)
 app.UseAuthorization();  // <-- second "are you have authority?" (authority control)
 app.MapControllers();
-
+/* for is development
 if (app.Environment.IsDevelopment())
-{
-    /*scalar
+{scalar
     app.MapOpenApi();
     app.MapScalarApiReference();
-    */
+}*/
     app.UseSwagger();
     app.UseSwaggerUI(); 
-}
 
 using (var scope = app.Services.CreateScope())
 {
