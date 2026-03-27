@@ -20,6 +20,8 @@ public class OrderConsumer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        try
+        {
         var factory = new ConnectionFactory
         {
             HostName = _configuration["RabbitMQ:Host"] ?? "localhost",
@@ -54,5 +56,10 @@ public class OrderConsumer : BackgroundService
                                         cancellationToken: stoppingToken);
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "RabbitMQ consumer başlatılamadı. Uygulama çalışmaya devam ediyor.");
+        }
     }
 }
