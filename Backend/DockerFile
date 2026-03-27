@@ -15,7 +15,7 @@ RUN dotnet restore "RestaurantBill.WebAPI/RestaurantBill.WebAPI.csproj"
 # Geri kalan her şeyi kopyala ve derle
 COPY . .
 WORKDIR "/src/RestaurantBill.WebAPI"
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet publish -c Release -o /app/publish /p:UseSharedCompilation=false
 
 # 2. Runtime Aşaması: Sadece çalıştırmak için (Servis bölümü)
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
