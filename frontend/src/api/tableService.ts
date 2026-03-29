@@ -13,6 +13,12 @@ export const tableService = {
     deleteTable: async (id: number) => {
         await api.delete(`/table/${id}`); 
     },
+    createTable: async (name: string) => {
+        const response = await api.post(`/table/create`,{
+            Name: name
+        }); 
+        return response.data;
+    },
     openTable: async (tableId: string) => {
         const response = await api.post(`/table/open`,{
             TableId: tableId
