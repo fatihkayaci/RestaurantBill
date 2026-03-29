@@ -10,6 +10,9 @@ export const tableService = {
         const response = await api.get<Table>(`/table/${tableId}`); 
         return response.data;
     },
+    deleteTable: async (id: number) => {
+        await api.delete(`/table/${id}`); 
+    },
     openTable: async (tableId: string) => {
         const response = await api.post(`/table/open`,{
             TableId: tableId

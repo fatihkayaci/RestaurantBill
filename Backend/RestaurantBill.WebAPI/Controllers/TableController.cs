@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Tables.Commands.CancelReservation;
 using RestaurantBill.Application.Features.Tables.Commands.CreateTable;
+using RestaurantBill.Application.Features.Tables.Commands.Delete;
 using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
 using RestaurantBill.Application.Features.Tables.Commands.ReservationTable;
 using RestaurantBill.Application.Features.Tables.Queries.GetAll;
@@ -91,6 +92,19 @@ namespace RestaurantBill.WebAPI.Controllers
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
         }      
+        #endregion
+
+        #region delete methods
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken cancellationToken)
+        {
+            var command = new DeleteCommand
+            {
+                TableId = id
+            };
+            await _mediator.Send(command, cancellationToken);
+            return Ok(new {message="Masa başarıyla silindi"});
+        }
         #endregion
     }
 }

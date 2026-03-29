@@ -12,7 +12,7 @@ export default function RestaurantSetupForm() {
         district: ''
     });
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: any) => {
         e.preventDefault();
         try {
             await restaurantService.create(form);
