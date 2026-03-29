@@ -2,7 +2,7 @@ name: .NET Backend CI
 
 on:
   push:
-    branches: [ "development/version0.0.1" ]
+    branches: [ "development/version0.0.2" ]
   pull_request:
     branches: [ "main" ]
 
