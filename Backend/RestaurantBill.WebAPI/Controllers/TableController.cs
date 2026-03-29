@@ -5,6 +5,7 @@ using RestaurantBill.Application.Features.Tables.Commands.CreateTable;
 using RestaurantBill.Application.Features.Tables.Commands.Delete;
 using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
 using RestaurantBill.Application.Features.Tables.Commands.ReservationTable;
+using RestaurantBill.Application.Features.Tables.Commands.Update;
 using RestaurantBill.Application.Features.Tables.Queries.GetAll;
 using RestaurantBill.Application.Features.Tables.Queries.GetTableById;
 namespace RestaurantBill.WebAPI.Controllers
@@ -58,6 +59,12 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             await _mediator.Send(command, cancellationToken);
             return Ok("Masa başarıyla oluşturuldu");
+        }
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdateTable([FromBody]UpdateCommand command, CancellationToken cancellationToken)
+        {
+            await _mediator.Send(command, cancellationToken);
+            return Ok("Masa başarıyla Güncellendi");
         }
         /// <summary>
         /// Opens the table when a customer arrives. Sets status to Occupied and creates an empty order.

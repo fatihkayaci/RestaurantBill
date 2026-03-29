@@ -3,8 +3,9 @@ import type { Table } from '../types';
 interface TableCardProps {
     table: Table;
     onDelete: (id: number) => void;
+    onUpdate: (table: Table) => void;
 }
-export default function TableCard({ table, onDelete }: TableCardProps) {
+export default function TableCard({ table, onDelete, onUpdate }: TableCardProps) {
     return (
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center justify-between">
             <div>
@@ -13,7 +14,7 @@ export default function TableCard({ table, onDelete }: TableCardProps) {
             </div>
             <div className="flex gap-2">
                 <button onClick={() => onDelete(table.id)} className="text-red-400 hover:text-red-300 text-xs">Sil</button>
-                <button className="text-indigo-400 hover:text-indigo-300 text-xs">Düzenle</button>
+                <button onClick={() => onUpdate(table)} className="text-indigo-400 hover:text-indigo-300 text-xs">Düzenle</button>
             </div>
         </div>
     );

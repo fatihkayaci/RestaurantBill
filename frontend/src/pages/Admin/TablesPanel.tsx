@@ -7,6 +7,19 @@ export default function TablesPanel() {
     const [tables, setTables] = useState<Table[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newTableName, setNewTableName] = useState('');
+    const [editTable, setEditTable] = useState<Table | null>(null);
+
+    const openCreateModal = () => {
+        setEditTable(null);
+        setNewTableName('');
+        setIsModalOpen(true);
+    };
+    const openEditModal = (table: Table) => {
+        setEditTable(table);
+        setNewTableName(table.name);
+        setIsModalOpen(true);
+    };
+
 
     useEffect(() => {
         tableService.getTables()
@@ -22,38 +35,45 @@ export default function TablesPanel() {
         await tableService.deleteTable(id);
         setTables(tables.filter(t => t.id !== id));
     };
-    const handleCreate = async (e: React.FormEvent) => {
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newTableName) return;
-        await tableService.createTable( newTableName );
+        
+        if (editTable) {
+            await tableService.updateTable(editTable.id, newTableName);
+        } else {
+            await tableService.createTable(newTableName);
+        }
+        
         const updated = await tableService.getTables();
         setTables(updated);
         setNewTableName('');
+        setEditTable(null);
         setIsModalOpen(false);
     };
 
-    
     return (
         <div>
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Masalar</h2>
-                <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">
+                <button onClick={openCreateModal} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">
                     + Yeni Masa
                 </button>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {tables.map(table => (
-                    <TableCard key={table.id} table={table} onDelete={handleDelete}/>
+                    <TableCard key={table.id} table={table} onDelete={handleDelete} onUpdate={openEditModal}/>
                 ))}
             </div>
             {/* popup */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
                     <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 w-96">
-                        <h2 className="text-white text-lg font-bold mb-6">Yeni Masa Ekle</h2>
+                        <h2>{editTable ? 'Masayı Düzenle' : 'Yeni Masa Ekle'}</h2>
                         
-                        <form onSubmit={handleCreate}>
+                        <form onSubmit={handleSubmit}>
                             <div className="mb-4">
                                 <label className="block text-gray-400 text-sm mb-2">Masa Adı</label>
                                 

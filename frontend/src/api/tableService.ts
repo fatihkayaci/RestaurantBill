@@ -19,6 +19,13 @@ export const tableService = {
         }); 
         return response.data;
     },
+    updateTable: async (id: number, name: string) => {
+        const response = await api.post(`/table/update`,{
+            Id: id,
+            Name: name
+        });
+        return response.data;
+    },
     openTable: async (tableId: string) => {
         const response = await api.post(`/table/open`,{
             TableId: tableId
