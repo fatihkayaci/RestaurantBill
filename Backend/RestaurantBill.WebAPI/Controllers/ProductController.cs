@@ -31,6 +31,7 @@ namespace RestaurantBill.WebAPI.Controllers
             await _mediator.Send(command, cancellationToken);
             return Ok("Ürün başarıyla oluşturuldu");
         }
+
         [HttpPost("update")]
         public async Task<IActionResult> UpdateProduct([FromBody]UpdateProductCommand command, CancellationToken cancellationToken)
         {

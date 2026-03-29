@@ -1,5 +1,7 @@
 using AutoMapper;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Features.Categories.Commands.CreateCategory;
+using RestaurantBill.Application.Features.Categories.Commands.UpdateCategory;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
 using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
@@ -46,6 +48,8 @@ public class MappingProfile : Profile
         CreateMap<CategoryDto, Category>().ReverseMap();
         CreateMap<CreateCategoryDto, Category>().ReverseMap();
         CreateMap<UpdateCategoryDto, Category>().ReverseMap();
+        CreateMap<CreateCategoryCommand, Category>().ReverseMap();
+        CreateMap<UpdateCategoryCommand, Category>().ReverseMap();
 
         // Table
         CreateMap<TableDto, Table>().ReverseMap();
