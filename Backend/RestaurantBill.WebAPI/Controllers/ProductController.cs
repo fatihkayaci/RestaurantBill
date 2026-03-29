@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
+using RestaurantBill.Application.Features.Products.Queries.GetAllProduct;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
@@ -10,17 +10,25 @@ namespace RestaurantBill.WebAPI.Controllers
     [ApiController]
     public class ProductController : ControllerBase
     {
-        private readonly IProductService _productService;
-        public ProductController(IProductService productService)
+        private readonly IMediator _mediator;
+        public ProductController(IMediator mediator)
         {
-            _productService = productService;
+            _mediator = mediator;
         }
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var values = await _productService.GetAllAsync();
-            return Ok(values);
+            var query = new GetAllProductQuery();
+            var products = await _mediator.Send(query);
+            return Ok(products);
         }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCategory([FromRoute]int id, CancellationToken cancellationToken)
+        {
+            await _mediator.Send(new DeleteProductCommand{Id = id});
+            return Ok("Ürün başarıyla silindi");
+        }
+        /*
         [HttpGet("{id}")]
         public async Task<IActionResult> GetProductById([FromRoute]int id)
         {
@@ -39,12 +47,7 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             await _productService.UpdateAsync(dto, cancellationToken);
             return Ok("Ürün başarıyla güncellendi");
-        }
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCategory([FromRoute]int id, CancellationToken cancellationToken)
-        {
-            await _productService.DeleteAsync(id, cancellationToken);
-            return Ok("kategori başarıyla silindi");
-        }
+        }*/
+        
     }
 }

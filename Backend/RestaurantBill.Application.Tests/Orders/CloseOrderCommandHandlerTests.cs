@@ -28,7 +28,7 @@ public class CloseOrderCommandHandlerTests
     {
         var orderId = 1;
         var tableId = 1;
-        var command = new CloseOrderCommand{ OrderId = orderId};
+        var command = new DeleteCommand{ OrderId = orderId};
         
         var order = new Order {Id = orderId, TableId = tableId, Status = OrderStatus.Active};
         var table = new Table { Id = tableId, Status = TableStatus.Occupied };
@@ -54,7 +54,7 @@ public class CloseOrderCommandHandlerTests
     [InlineData(-1)]
     public async Task Handle_WhenOrderIdIsInvalid_ShouldThrowBusinessException(int invalidId)
     {
-        var command = new CloseOrderCommand { OrderId = invalidId };
+        var command = new DeleteCommand { OrderId = invalidId };
 
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _handler.Handle(command, default));
@@ -64,7 +64,7 @@ public class CloseOrderCommandHandlerTests
     [Fact]
     public async Task Handle_WhenOrderNotFound_ShouldThrowException()
     {
-        var command = new CloseOrderCommand { OrderId = 999 };
+        var command = new DeleteCommand { OrderId = 999 };
         _mockUow.Setup(o => o.Order.GetByIdAsync(999, true))
         .ReturnsAsync((Order?)null);
 
@@ -78,7 +78,7 @@ public class CloseOrderCommandHandlerTests
     {
         var orderId = 999;
         var tableId = 99;
-        var command = new CloseOrderCommand { OrderId = orderId };
+        var command = new DeleteCommand { OrderId = orderId };
         var order = new Order{Id = orderId, TableId = tableId};
 
         _mockUow.Setup(u => u.Order.GetByIdAsync(orderId, true))

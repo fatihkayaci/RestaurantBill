@@ -2,17 +2,16 @@ using RestaurantBill.Domain.Interfaces;
 
 using MediatR;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Common;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.Update
 {
-    public class UpdateHandler : IRequestHandler<UpdateCommand>
+    public class UpdateCommandHandler : IRequestHandler<UpdateCommand>
     {
         private readonly IUnitOfWork _uow;
         private readonly IMessageProducer _messageProducer;
 
-        public UpdateHandler(IUnitOfWork uow, IMessageProducer messageProducer)
+        public UpdateCommandHandler(IUnitOfWork uow, IMessageProducer messageProducer)
         {
             _uow = uow;
             _messageProducer = messageProducer;

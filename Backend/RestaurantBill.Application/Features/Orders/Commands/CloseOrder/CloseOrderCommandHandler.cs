@@ -6,7 +6,7 @@ using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
 {
-    public class CloseOrderCommandHandler : IRequestHandler<CloseOrderCommand>
+    public class CloseOrderCommandHandler : IRequestHandler<DeleteCommand>
     {
         private readonly IUnitOfWork _uow;
 
@@ -18,7 +18,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
         /// Closes the order, marks it as Paid and sets the table status to Available.
         /// </summary>
         /// <exception cref="BusinessException">Thrown if order ID is zero or less, or if the order is not found.</exception>
-        public async Task Handle(CloseOrderCommand request, CancellationToken cancellationToken)
+        public async Task Handle(DeleteCommand request, CancellationToken cancellationToken)
         {         
             if (request.OrderId <= 0)
                 throw new BusinessException("id 0 dan küçük veya eşit olamaz");

@@ -86,7 +86,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
         [HttpPost("close")]
-        public async Task<IActionResult> Close([FromBody]CloseOrderCommand command, CancellationToken cancellationToken)
+        public async Task<IActionResult> Close([FromBody]DeleteCommand command, CancellationToken cancellationToken)
         {
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Masa başarılı bir şekilde kapatıldı." });

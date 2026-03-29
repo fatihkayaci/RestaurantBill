@@ -1,4 +1,24 @@
+import { useEffect, useState } from "react";
+import { productService } from "../../api/productService";
+import type { Product } from "../../features/products/types";
+import ProductCard from "../../features/Admin/ProductionPanel/components/ProductionCard";
+
 export default function ProductsPanel() {
+    const [products, setProducts] = useState<Product[]>([]);
+    useEffect(() => {
+        productService.getProducts()
+            .then((data) => {
+                setProducts(data);
+            })
+            .catch((error) => {
+                console.error("Masalar çekilirken hata oluştu:", error);
+            });
+    }, []);
+    
+    const handleDelete = async (id: number) => {
+        await productService.deleteProduct(id);
+        setProducts(products.filter(p => p.id !== id));
+    };
     return (
         <div>
             <div className="flex items-center justify-between mb-6">
@@ -8,27 +28,10 @@ export default function ProductsPanel() {
                 </button>
             </div>
 
-            <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="border-b border-gray-700 text-gray-400">
-                            <th className="text-left px-4 py-3">Ürün Adı</th>
-                            <th className="text-left px-4 py-3">Kategori</th>
-                            <th className="text-left px-4 py-3">Fiyat</th>
-                            <th className="text-left px-4 py-3">İşlem</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr className="border-b border-gray-700 text-gray-300">
-                            <td className="px-4 py-3">Örnek Ürün</td>
-                            <td className="px-4 py-3">Kategori</td>
-                            <td className="px-4 py-3">50₺</td>
-                            <td className="px-4 py-3">
-                                <button className="text-red-400 hover:text-red-300 text-xs">Sil</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {products.map(product => (
+                    <ProductCard product={product} onDelete={handleDelete}/>
+                ))}
             </div>
         </div>
     );

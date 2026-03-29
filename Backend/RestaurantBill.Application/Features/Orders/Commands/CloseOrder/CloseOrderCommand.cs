@@ -2,7 +2,7 @@ using MediatR;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
 {
-    public class CloseOrderCommand : IRequest
+    public class DeleteCommand : IRequest
     {
         public int OrderId { get; set; }
     }

@@ -3,7 +3,7 @@ using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 
 namespace RestaurantBill.Application.Validators.Order;
 
-public class CloseOrderCommandValidator : AbstractValidator<CloseOrderCommand>
+public class CloseOrderCommandValidator : AbstractValidator<DeleteCommand>
 {
     public CloseOrderCommandValidator()
     {
