@@ -20,7 +20,7 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
         /// </summary>
         public async Task<List<ProductDto>> Handle(GetAllProductQuery request, CancellationToken cancellationToken)
         {
-            var entities = await _uow.Product.GetAllAsync();
+            var entities = await _uow.Product.GetAllAsync(includeProperties: "Category");
             
             return _mapper.Map<List<ProductDto>>(entities);
         }
