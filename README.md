@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/fatiihkayaci/RestaurantBill/actions/workflows/dotnet-ci.yml">
-    <img src="https://github.com/fatiihkayaci/RestaurantBill/actions/workflows/dotnet-ci.yml/badge.svg" alt="CI"/>
+    <img src="https://github.com/fatiihkayaci/RestaurantBill/actions/workflows/dotnet-ci.yml/badge.svg?branch=main" alt="CI"/>
   </a>
 </p>
 
