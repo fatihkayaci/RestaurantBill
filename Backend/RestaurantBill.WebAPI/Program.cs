@@ -215,7 +215,7 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<User>>();
         var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
         
-        await RestaurantBill.Persistence.Seeds.DefaultData.SeedAsync(roleManager, userManager);
+        await RestaurantBill.Persistence.Seeds.DefaultData.SeedAsync(roleManager, userManager, context);
     }
     catch (Exception ex)
     {

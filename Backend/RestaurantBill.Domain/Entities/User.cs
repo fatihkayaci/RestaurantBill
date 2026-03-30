@@ -5,8 +5,9 @@ namespace RestaurantBill.Domain.Entities
 {
     public class User : IdentityUser<int>
     {
+        public int RestaurantId { get; set; }
         public required string FullName { get; set; }
         public required string UserCode { get; set; }
-        public UserRole Role { get; set; } = UserRole.Admin; 
+        public UserRole Role { get; set; } = UserRole.Admin;
     }
 }

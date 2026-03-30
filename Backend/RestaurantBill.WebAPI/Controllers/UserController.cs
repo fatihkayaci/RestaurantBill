@@ -1,7 +1,9 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Features.Users.Commands.CreateUser;
+using RestaurantBill.Application.Features.Users.Commands.DeleteUser;
+using RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantId;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
@@ -10,12 +12,35 @@ namespace RestaurantBill.WebAPI.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        private readonly IUserService _userService;
-        public UserController(IUserService userService)
+        private readonly IMediator _mediator;
+        public UserController(IMediator mediator)
         {
-            _userService = userService;
+            _mediator = mediator;
         }
-
+        [HttpGet]
+        public async Task<IActionResult> GetUserByRestaurantId()
+        {
+            var query = new GetUserByRestaurantIdCommand();
+            var users = await _mediator.Send(query);
+            return Ok(users);
+        }
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateUser([FromBody]CreateUserCommand command, CancellationToken cancellationToken)
+        {
+            await _mediator.Send(command, cancellationToken);
+            return Ok("Kullanıcı başarıyla oluşturuldu");
+        }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteUser([FromRoute]int id, CancellationToken cancellationToken)
+        {
+            var command = new DeleteUserCommand
+            {
+                UserId = id
+            };
+            await _mediator.Send(command, cancellationToken);
+            return Ok("Kullanıcı başarıyla silindi");
+        }
+    /*
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -28,12 +53,7 @@ namespace RestaurantBill.WebAPI.Controllers
             var user = await _userService.GetByIdAsync(id);
             return Ok(user);
         }
-        [HttpPost("create-user")]
-        public async Task<IActionResult> CreateUser([FromBody]CreateUserDto dto, CancellationToken cancellationToken)
-        {
-            await _userService.CreateAsync(dto, cancellationToken);
-            return Ok("Kullanıcı başarıyla oluşturuldu");
-        }
+        
 
         [HttpPut("update-user")]
         public async Task<IActionResult> UpdateUser([FromBody]UpdateUserDto dto, CancellationToken cancellationToken)
@@ -41,11 +61,6 @@ namespace RestaurantBill.WebAPI.Controllers
             await _userService.UpdateAsync(dto, cancellationToken);
             return Ok("Kullanıcı başarıyla güncellendi");
         }
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser([FromRoute]int id, CancellationToken cancellationToken)
-        {
-            await _userService.DeleteAsync(id, cancellationToken);
-            return Ok("Kullanıcı başarıyla silindi");
-        }
+        */
     }
 }
