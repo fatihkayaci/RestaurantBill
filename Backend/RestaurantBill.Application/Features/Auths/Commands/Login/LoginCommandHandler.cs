@@ -37,8 +37,12 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             if (!isPasswordCorrect)
                 throw new BusinessException("Kullanıcı adı veya şifre hatalı!");
 
-            var restaurants = await _uow.Restaurant.GetAllAsync(x => x.UserId == user.Id.ToString(), false);
-            var restaurantId = restaurants.FirstOrDefault()?.Id ?? 0;
+            int restaurantId = user.RestaurantId;
+            if (restaurantId == 0)
+            {
+                var restaurants = await _uow.Restaurant.GetAllAsync(x => x.UserId == user.Id.ToString(), false);
+                restaurantId = restaurants.FirstOrDefault()?.Id ?? 0;
+            }
 
             return GenerateJwtToken(user, restaurantId);
         }

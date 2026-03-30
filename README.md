@@ -12,7 +12,24 @@
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white"/>
   <img src="https://img.shields.io/badge/RabbitMQ-3-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white"/>
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Tests-15%2B%20Unit%20Tests-brightgreen?style=for-the-badge&logo=xunit"/>
 </p>
+
+<p align="center">
+  <a href="https://github.com/fatiihkayaci/RestaurantBill/actions/workflows/dotnet-ci.yml">
+    <img src="https://github.com/fatiihkayaci/RestaurantBill/actions/workflows/dotnet-ci.yml/badge.svg" alt="CI"/>
+  </a>
+</p>
+
+---
+
+## 📸 Screenshots & Demo
+
+### Table Management
+![Tables](docs/screenshots/tables.gif)
+
+### POS Order Flow
+![POS](docs/screenshots/pos.gif)
 
 ---
 
@@ -59,6 +76,15 @@ RestaurantBill/
 
 ---
 
+## 🧠 Key Design Decisions
+
+- **Why Clean Architecture?** The Domain layer has zero framework dependencies — business logic is portable and testable in complete isolation, regardless of whether the persistence layer uses EF Core, Dapper, or anything else.
+- **Why CQRS?** Read and write operations on orders have very different complexity profiles. Separating them via MediatR pipelines allowed adding validation and logging as cross-cutting concerns (Pipeline Behaviors) without touching any business logic.
+- **Why RabbitMQ over WebSockets for kitchen notifications?** If the Kitchen Display System is temporarily offline, orders must not be lost. RabbitMQ's durable, persistent queue guarantees delivery — a guarantee WebSockets fundamentally cannot provide.
+- **Why Repository + Unit of Work over raw EF Core?** Abstracting persistence behind interfaces allows the entire Application layer to be tested with Moq-mocked repositories — no real database, no migrations, no test containers required. This is directly visible in the 15+ unit test suites.
+
+---
+
 ## ✨ Features
 
 ### Table Management
@@ -81,6 +107,26 @@ RestaurantBill/
 - JWT Bearer token authentication
 - Role-based access: `Admin`, `Waiter`, `Cashier`, `Kitchen`
 - ASP.NET Core Identity with custom User/Role entities
+
+---
+
+## 🧪 Testing
+
+Unit tests cover all CQRS command and query handlers using **xUnit + Moq**. The Application layer is tested in complete isolation — no database, no HTTP server, no RabbitMQ required.
+
+| Suite | Covered Handlers |
+|-------|-----------------|
+| **Order Commands** | CreateOrder, AddProductToOrder, CancelOrder, CloseOrder, RemoveProductFromOrder, UpdateOrderItemQuantity |
+| **Order Queries** | GetAllOrders, GetOrderById, GetActiveOrderByTableId |
+| **Table Commands** | CreateTable, OpenTable, ReservationTable, CancelReservation |
+| **Table Queries** | GetAllTables, GetTableById |
+| **Services** | ProductService |
+
+```bash
+# Run all tests
+cd Backend
+dotnet test
+```
 
 ---
 
@@ -118,6 +164,21 @@ RestaurantBill/
 | **Docker Compose** | Orchestrates PostgreSQL, PgAdmin, RabbitMQ |
 | **RabbitMQ** | Decoupled kitchen notification system |
 | **PgAdmin 4** | Database management UI |
+
+---
+
+## 🔑 Demo Credentials
+
+After running `docker-compose up` and starting the API, the following demo accounts are seeded automatically:
+
+| Role | Username | Password |
+|------|----------|----------|
+| **Admin** | `admin` | `Admin123*` |
+| **Waiter** | `waiter` | `Waiter123*` |
+| **Kitchen** | `kitchen` | `Kitchen123*` |
+| **Cashier** | `cashier` | `Cashier123*` |
+
+> The demo restaurant comes pre-loaded with 8 tables, 3 categories, and 12 products.
 
 ---
 
