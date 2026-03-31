@@ -37,10 +37,10 @@ public static class DefaultData
     {
         var demoUsers = new[]
         {
-            new { UserName = "admin",   Email = "admin@demo.com",   FullName = "Sistem Yöneticisi", UserCode = "0000", Password = "Admin123*",   Role = UserRole.Admin   },
-            new { UserName = "waiter",  Email = "waiter@demo.com",  FullName = "Demo Garson",        UserCode = "1001", Password = "Waiter123*",  Role = UserRole.Waiter  },
-            new { UserName = "kitchen", Email = "kitchen@demo.com", FullName = "Demo Mutfak",        UserCode = "1002", Password = "Kitchen123*", Role = UserRole.Kitchen },
-            new { UserName = "cashier", Email = "cashier@demo.com", FullName = "Demo Kasiyer",       UserCode = "1003", Password = "Cashier123*", Role = UserRole.Cashier },
+            new { UserName = "admin",   Email = "admin@demo.com",   FullName = "System Administrator", UserCode = "0000", Password = "Admin123*",   Role = UserRole.Admin   },
+            new { UserName = "waiter",  Email = "waiter@demo.com",  FullName = "Demo Waiter",          UserCode = "1001", Password = "Waiter123*",  Role = UserRole.Waiter  },
+            new { UserName = "kitchen", Email = "kitchen@demo.com", FullName = "Demo Kitchen",         UserCode = "1002", Password = "Kitchen123*", Role = UserRole.Kitchen },
+            new { UserName = "cashier", Email = "cashier@demo.com", FullName = "Demo Cashier",         UserCode = "1003", Password = "Cashier123*", Role = UserRole.Cashier },
         };
 
         foreach (var u in demoUsers)
@@ -77,11 +77,23 @@ public static class DefaultData
                 PhoneNumber = "0212 000 00 00",
                 MobilePhoneNumber = "0532 000 00 00",
                 Email = "info@demorestaurant.com",
-                City = "İstanbul",
-                District = "Kadıköy"
+                City = "Istanbul",
+                District = "Kadikoy"
             };
             await context.Restaurants.AddAsync(restaurant);
             await context.SaveChangesAsync();
+        }
+
+        // Link all non-admin users to the restaurant
+        var demoRestaurant = await context.Restaurants.FirstAsync();
+        foreach (var userName in new[] { "waiter", "kitchen", "cashier" })
+        {
+            var user = await userManager.FindByNameAsync(userName);
+            if (user != null && user.RestaurantId == 0)
+            {
+                user.RestaurantId = demoRestaurant.Id;
+                await userManager.UpdateAsync(user);
+            }
         }
 
         // Categories
@@ -89,9 +101,9 @@ public static class DefaultData
         {
             var categories = new[]
             {
-                new Category { Name = "Başlangıçlar" },
-                new Category { Name = "Ana Yemekler" },
-                new Category { Name = "İçecekler" },
+                new Category { Name = "Starters" },
+                new Category { Name = "Main Course" },
+                new Category { Name = "Beverages" },
             };
             await context.Categories.AddRangeAsync(categories);
             await context.SaveChangesAsync();
@@ -100,24 +112,24 @@ public static class DefaultData
         // Products
         if (!await context.Products.AnyAsync())
         {
-            var starter  = await context.Categories.FirstAsync(c => c.Name == "Başlangıçlar");
-            var main     = await context.Categories.FirstAsync(c => c.Name == "Ana Yemekler");
-            var drink    = await context.Categories.FirstAsync(c => c.Name == "İçecekler");
+            var starter = await context.Categories.FirstAsync(c => c.Name == "Starters");
+            var main    = await context.Categories.FirstAsync(c => c.Name == "Main Course");
+            var drink   = await context.Categories.FirstAsync(c => c.Name == "Beverages");
 
             var products = new[]
             {
-                new Product { Name = "Çoban Salatası",     Price = 85m,  IsActive = true, CategoryId = starter.Id },
-                new Product { Name = "Mercimek Çorbası",   Price = 75m,  IsActive = true, CategoryId = starter.Id },
-                new Product { Name = "Humus",              Price = 90m,  IsActive = true, CategoryId = starter.Id },
-                new Product { Name = "Beyti Sarma",        Price = 220m, IsActive = true, CategoryId = main.Id    },
-                new Product { Name = "Adana Kebap",        Price = 240m, IsActive = true, CategoryId = main.Id    },
-                new Product { Name = "Izgara Köfte",       Price = 200m, IsActive = true, CategoryId = main.Id    },
-                new Product { Name = "Tavuk Şiş",          Price = 180m, IsActive = true, CategoryId = main.Id    },
-                new Product { Name = "Karışık Pide",       Price = 160m, IsActive = true, CategoryId = main.Id    },
-                new Product { Name = "Su (500ml)",         Price = 20m,  IsActive = true, CategoryId = drink.Id   },
-                new Product { Name = "Ayran",              Price = 35m,  IsActive = true, CategoryId = drink.Id   },
-                new Product { Name = "Kola",               Price = 55m,  IsActive = true, CategoryId = drink.Id   },
-                new Product { Name = "Türk Kahvesi",       Price = 65m,  IsActive = true, CategoryId = drink.Id   },
+                new Product { Name = "Garden Salad",      Price = 85m,  IsActive = true, CategoryId = starter.Id },
+                new Product { Name = "Lentil Soup",       Price = 75m,  IsActive = true, CategoryId = starter.Id },
+                new Product { Name = "Hummus",            Price = 90m,  IsActive = true, CategoryId = starter.Id },
+                new Product { Name = "Beyti Wrap",        Price = 220m, IsActive = true, CategoryId = main.Id    },
+                new Product { Name = "Adana Kebab",       Price = 240m, IsActive = true, CategoryId = main.Id    },
+                new Product { Name = "Grilled Meatballs", Price = 200m, IsActive = true, CategoryId = main.Id    },
+                new Product { Name = "Chicken Skewer",    Price = 180m, IsActive = true, CategoryId = main.Id    },
+                new Product { Name = "Mixed Pide",        Price = 160m, IsActive = true, CategoryId = main.Id    },
+                new Product { Name = "Water (500ml)",     Price = 20m,  IsActive = true, CategoryId = drink.Id   },
+                new Product { Name = "Ayran",             Price = 35m,  IsActive = true, CategoryId = drink.Id   },
+                new Product { Name = "Cola",              Price = 55m,  IsActive = true, CategoryId = drink.Id   },
+                new Product { Name = "Turkish Coffee",    Price = 65m,  IsActive = true, CategoryId = drink.Id   },
             };
             await context.Products.AddRangeAsync(products);
             await context.SaveChangesAsync();
@@ -126,12 +138,11 @@ public static class DefaultData
         // Tables
         if (!await context.Tables.AnyAsync())
         {
-            var restaurant = await context.Restaurants.FirstAsync();
             var tables = Enumerable.Range(1, 8).Select(i => new Table
             {
-                Name = $"Masa {i}",
+                Name = $"Table {i}",
                 Status = TableStatus.Available,
-                RestaurantId = restaurant.Id
+                RestaurantId = demoRestaurant.Id
             }).ToList();
 
             await context.Tables.AddRangeAsync(tables);
