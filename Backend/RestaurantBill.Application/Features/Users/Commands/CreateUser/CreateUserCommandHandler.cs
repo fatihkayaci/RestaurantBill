@@ -22,6 +22,13 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
         }
+        /// <summary>
+        /// Creates a new user in the system using the provided command details.
+        /// Dynamically extracts the restaurant ID from the current HTTP context claims and associates it with the newly created user.
+        /// </summary>
+        /// <param name="request">The command containing the details and password for the new user.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <exception cref="BusinessException">Thrown when the extracted restaurant ID from the claims is zero or negative.</exception>
         public async Task Handle(CreateUserCommand request, CancellationToken cancellationToken)
         {
             var user = _mapper.Map<User>(request);

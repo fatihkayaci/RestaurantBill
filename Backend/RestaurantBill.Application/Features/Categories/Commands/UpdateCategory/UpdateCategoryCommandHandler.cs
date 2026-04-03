@@ -16,7 +16,14 @@ namespace RestaurantBill.Application.Features.Categories.Commands.UpdateCategory
             _uow = uow;
             _mapper = mapper;
         }
-        
+        /// <summary>
+        /// Updates an existing category in the database using the provided command details.
+        /// Validates the command payload and ID, ensures the category exists, and applies the updated values.
+        /// </summary>
+        /// <param name="command">The command containing the updated details for the category.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <exception cref="BusinessException">Thrown when the command is null or the category ID is zero or negative.</exception>
+        /// <exception cref="Exception">Thrown when the specified category cannot be found.</exception>
         public async Task Handle(UpdateCategoryCommand command, CancellationToken cancellationToken)
         {
             if (command == null)

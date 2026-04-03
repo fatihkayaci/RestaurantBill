@@ -18,9 +18,13 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
             _mapper = mapper;
         }
         /// <summary>
-        /// Closes the order, marks it as Paid and sets the table status to Available.
+        /// Updates an existing product in the database using the provided command details.
+        /// Validates the command payload and ID, ensures the product exists, and applies the updated values.
         /// </summary>
-        /// <exception cref="BusinessException">Thrown if order ID is zero or less, or if the order is not found.</exception>
+        /// <param name="request">The command containing the updated details for the product.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <exception cref="BusinessException">Thrown when the command is null or the product ID is zero or negative.</exception>
+        /// <exception cref="Exception">Thrown when the specified product cannot be found.</exception>
         public async Task Handle(UpdateProductCommand request, CancellationToken cancellationToken)
         {
             if (request == null)

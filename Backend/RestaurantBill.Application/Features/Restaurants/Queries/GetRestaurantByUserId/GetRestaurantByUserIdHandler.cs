@@ -20,8 +20,12 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantB
             _httpContextAccessor = httpContextAccessor;
         }
         /// <summary>
-        /// Returns the active order for the given table, including its items and product details.
+        /// Retrieves all restaurants associated with the currently authenticated user asynchronously. 
+        /// The user ID is dynamically extracted from the HTTP context claims, and the results are mapped to DTOs.
         /// </summary>
+        /// <param name="request">The query request to retrieve the user's restaurants.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>An enumerable collection of <see cref="RestaurantDto"/> representing the user's restaurants.</returns>
         public async Task<IEnumerable<RestaurantDto>> Handle(GetRestaurantByUserIdQuery request, CancellationToken cancellationToken)
         {
             var userId = _httpContextAccessor.HttpContext!.User

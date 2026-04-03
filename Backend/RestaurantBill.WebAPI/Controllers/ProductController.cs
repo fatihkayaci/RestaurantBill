@@ -17,6 +17,11 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             _mediator = mediator;
         }
+        #region get methods
+        /// <summary>
+        /// returns all Products
+        /// </summary>
+        /// <returns>200 OK with Products data on success.</returns>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -24,7 +29,16 @@ namespace RestaurantBill.WebAPI.Controllers
             var products = await _mediator.Send(query);
             return Ok(products);
         }
+            
+        #endregion
+        #region post methods
         
+        /// <summary>
+        /// Product create
+        /// </summary>
+        /// <param name="command">Product create credentials containing CategoryId, Name, Price, IsActive and ImageUrl </param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with string message on success.</returns>
         [HttpPost]
         public async Task<IActionResult> CreateProduct([FromBody]CreateProductCommand command, CancellationToken cancellationToken)
         {
@@ -32,25 +46,34 @@ namespace RestaurantBill.WebAPI.Controllers
             return Ok("Ürün başarıyla oluşturuldu");
         }
 
+        /// <summary>
+        /// Product update
+        /// </summary>
+        /// <param name="command">Product update credentials containing Id, CategoryId, Name, Price and IsActive </param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with string message on success.</returns>
         [HttpPost("update")]
         public async Task<IActionResult> UpdateProduct([FromBody]UpdateProductCommand command, CancellationToken cancellationToken)
         {
             await _mediator.Send(command, cancellationToken);
             return Ok("Ürün başarıyla güncellendi");
         }
+            
+        #endregion
+
+        #region delete methods
+        /// <summary>
+        /// Product delete with product id
+        /// </summary>
+        /// <param name="id">Product Id need for product delete</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with string message on success.</returns>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory([FromRoute]int id, CancellationToken cancellationToken)
         {
-            await _mediator.Send(new DeleteProductCommand{Id = id});
+            await _mediator.Send(new DeleteProductCommand{Id = id}, cancellationToken);
             return Ok("Ürün başarıyla silindi");
-        }
-        /*
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetProductById([FromRoute]int id)
-        {
-            var product = await _productService.GetByIdAsync(id);
-            return Ok(product);
-        }*/
-        
+        }    
+        #endregion
     }
 }

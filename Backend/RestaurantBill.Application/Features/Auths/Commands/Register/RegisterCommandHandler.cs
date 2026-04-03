@@ -22,8 +22,12 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             _configuration = configuration;
         }
         /// <summary>
-        /// will write
+        /// Registers a new user in the system using the provided request details and assigns them the 'Admin' role by default.
+        /// Throws a business exception containing aggregated identity validation errors if the creation fails.
         /// </summary>
+        /// <param name="request">The command containing the user's registration details.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <exception cref="BusinessException">Thrown when user creation fails due to validation errors (e.g., weak password, duplicate user).</exception>
         public async Task Handle(RegisterCommand request, CancellationToken cancellationToken)
         {
             // TODO: usercode will be automatic.

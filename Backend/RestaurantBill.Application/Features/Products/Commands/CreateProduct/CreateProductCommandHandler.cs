@@ -17,9 +17,10 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
             _mapper = mapper;
         }
         /// <summary>
-        /// Closes the order, marks it as Paid and sets the table status to Available.
+        /// Adds a new product to the database based on the provided command.
         /// </summary>
-        /// <exception cref="BusinessException">Thrown if order ID is zero or less, or if the order is not found.</exception>
+        /// <param name="request">The command containing the details for the new product.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
         public async Task Handle(CreateProductCommand request, CancellationToken cancellationToken)
         {
             var product = _mapper.Map<Product>(request);

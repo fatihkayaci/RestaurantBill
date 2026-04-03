@@ -1,5 +1,4 @@
 using MediatR;
-using RestaurantBill.Application.DTOs;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.Login
 {

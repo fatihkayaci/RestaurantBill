@@ -14,10 +14,15 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
         {
             _uow = uow;
         }
+       
         /// <summary>
-        /// Closes the order, marks it as Paid and sets the table status to Available.
+        /// Deletes a product from the database based on the specified ID in the command.
+        /// Validates the ID and ensures the product exists before performing the deletion.
         /// </summary>
-        /// <exception cref="BusinessException">Thrown if order ID is zero or less, or if the order is not found.</exception>
+        /// <param name="request">The command containing the ID of the product to delete.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <exception cref="BusinessException">Thrown when the product ID is zero or negative.</exception>
+        /// <exception cref="Exception">Thrown when the specified product cannot be found.</exception>
         public async Task Handle(DeleteProductCommand request, CancellationToken cancellationToken)
         {         
             if (request.Id <= 0) throw new BusinessException("Ürün'ün ID değeri 0 veya negatif olamaz.");

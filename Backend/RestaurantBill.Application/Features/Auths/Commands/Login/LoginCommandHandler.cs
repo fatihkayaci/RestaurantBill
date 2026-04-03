@@ -24,8 +24,13 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             _configuration = configuration;
         }
         /// <summary>
-        /// will write
+        /// Authenticates the user credentials and generates a JWT upon successful login. 
+        /// Resolves the associated restaurant ID for the user and includes it in the token.
         /// </summary>
+        /// <param name="request">The login request containing the username and password.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>The generated JSON Web Token (JWT) as a string.</returns>
+        /// <exception cref="BusinessException">Thrown when the username or password is incorrect.</exception>
         public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
             var user = await _userManager.FindByNameAsync(request.UserName);
@@ -46,6 +51,12 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
             return GenerateJwtToken(user, restaurantId);
         }
+        /// <summary>
+        /// Generates a JWT containing the necessary authorization claims based on the authenticated user details and restaurant ID.
+        /// </summary>
+        /// <param name="user">The authenticated user entity.</param>
+        /// <param name="restaurantId">The ID of the restaurant associated with the user.</param>
+        /// <returns>The signed JWT string.</returns>
         private string GenerateJwtToken(User user, int restaurantId)
         {
             

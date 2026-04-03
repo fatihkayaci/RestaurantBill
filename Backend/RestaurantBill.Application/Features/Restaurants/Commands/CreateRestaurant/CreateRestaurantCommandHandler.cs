@@ -20,8 +20,11 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaur
             _httpContextAccessor = httpContextAccessor;
         }
         /// <summary>
-        /// will write
+        /// Creates a new restaurant in the database and associates it with the currently authenticated user.
+        /// The user ID is dynamically extracted from the current HTTP context claims.
         /// </summary>
+        /// <param name="request">The command containing the details for the new restaurant.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
         public async Task Handle(CreateRestaurantCommand request, CancellationToken cancellationToken)
         {
             var userId = _httpContextAccessor.HttpContext!.User

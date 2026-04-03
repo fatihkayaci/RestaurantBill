@@ -17,6 +17,11 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             _mediator = mediator;
         }
+        #region get methods
+        /// <summary>
+        /// return the restaurant's users
+        /// </summary>
+        /// <returns>200 OK with Products data on success.</returns>
         [HttpGet]
         public async Task<IActionResult> GetUserByRestaurantId()
         {
@@ -24,12 +29,30 @@ namespace RestaurantBill.WebAPI.Controllers
             var users = await _mediator.Send(query);
             return Ok(users);
         }
+            
+        #endregion
+        #region post methods
+        /// <summary>
+        /// User create
+        /// </summary>
+        /// <param name="command">User create credentials containing RestaurantId, FullName, UserName, Email, PhoneNumber, PasswordHash, UserCode and Role </param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with string message on success.</returns>
         [HttpPost("create")]
         public async Task<IActionResult> CreateUser([FromBody]CreateUserCommand command, CancellationToken cancellationToken)
         {
             await _mediator.Send(command, cancellationToken);
             return Ok("Kullanıcı başarıyla oluşturuldu");
         }
+            
+        #endregion
+        #region delete methods
+        /// <summary>
+        /// User delete with user id
+        /// </summary>
+        /// <param name="id">User Id need for user delete</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with string message on success.</returns>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser([FromRoute]int id, CancellationToken cancellationToken)
         {
@@ -40,6 +63,7 @@ namespace RestaurantBill.WebAPI.Controllers
             await _mediator.Send(command, cancellationToken);
             return Ok("Kullanıcı başarıyla silindi");
         }
+        #endregion
     /*
         [HttpGet]
         public async Task<IActionResult> GetAll()
