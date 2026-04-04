@@ -19,9 +19,11 @@ namespace RestaurantBill.WebAPI.Controllers
         }
         #region get methods
         /// <summary>
-        /// return the restaurant's users
+        /// Returns all users belonging to the authenticated user's restaurant.
         /// </summary>
-        /// <returns>200 OK with Products data on success.</returns>
+        /// <returns>200 OK with user list on success.</returns>
+        
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetUserByRestaurantId()
         {
@@ -33,11 +35,13 @@ namespace RestaurantBill.WebAPI.Controllers
         #endregion
         #region post methods
         /// <summary>
-        /// User create
+        /// Creates a new user and associates them with the authenticated user's restaurant.
         /// </summary>
-        /// <param name="command">User create credentials containing RestaurantId, FullName, UserName, Email, PhoneNumber, PasswordHash, UserCode and Role </param>
+        /// <param name="command">User creation details containing FullName, UserName, Email, PhoneNumber, PasswordHash, UserCode and Role.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-        /// <returns>200 OK with string message on success.</returns>
+        /// <returns>200 OK with success message on creation.</returns>
+        
+        [Authorize(Roles = "Admin")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateUser([FromBody]CreateUserCommand command, CancellationToken cancellationToken)
         {
@@ -48,11 +52,13 @@ namespace RestaurantBill.WebAPI.Controllers
         #endregion
         #region delete methods
         /// <summary>
-        /// User delete with user id
+        /// Deletes a user by their ID.
         /// </summary>
-        /// <param name="id">User Id need for user delete</param>
+        /// <param name="id">The ID of the user to delete.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-        /// <returns>200 OK with string message on success.</returns>
+        /// <returns>200 OK with success message on deletion.</returns>
+        
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser([FromRoute]int id, CancellationToken cancellationToken)
         {

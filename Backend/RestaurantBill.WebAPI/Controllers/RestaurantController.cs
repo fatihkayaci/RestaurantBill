@@ -1,10 +1,12 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaurant;
 using RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantByUserId;
 
 namespace RestaurantBill.WebAPI.Controllers;
 
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class RestaurantController : ControllerBase
@@ -16,9 +18,10 @@ public class RestaurantController : ControllerBase
     }
     #region get methods
     /// <summary>
-    /// returns all Restaurants with user id
+    /// Returns all restaurants associated with the authenticated user. Only accessible by Admin.
     /// </summary>
-    /// <returns>200 OK with Restaurants data on success.</returns>
+    /// <returns>200 OK with restaurant list on success.</returns>
+    [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<IActionResult> GetByUserId(CancellationToken cancellationToken)
     {
@@ -29,11 +32,12 @@ public class RestaurantController : ControllerBase
     #endregion
     #region post methods
     /// <summary>
-    /// Restaurant create
+    /// Creates a new restaurant and associates it with the authenticated user. Only accessible by Admin.
     /// </summary>
-    /// <param name="command">Restaurant create credentials containing Name, PhoneNumber, MobilePhoneNumber, Email, City and District </param>
+    /// <param name="command">Restaurant creation details containing Name, PhoneNumber, MobilePhoneNumber, Email, City and District.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-    /// <returns>200 OK with string message on success.</returns>
+    /// <returns>200 OK with success message on creation.</returns>
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> CreateRestaurant([FromBody] CreateRestaurantCommand command, CancellationToken cancellationToken)
     {

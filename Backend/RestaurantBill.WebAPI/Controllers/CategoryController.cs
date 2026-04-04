@@ -1,15 +1,14 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Features.Categories.Commands.CreateCategory;
 using RestaurantBill.Application.Features.Categories.Commands.DeleteCategory;
 using RestaurantBill.Application.Features.Categories.Commands.UpdateCategory;
 using RestaurantBill.Application.Features.Categories.Queries.GetAllCategories;
-using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
-    //[Authorize]//[Authorize(Roles = "Admin")]
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class CategoryController : ControllerBase
@@ -21,9 +20,10 @@ namespace RestaurantBill.WebAPI.Controllers
         }
         #region get methods
         /// <summary>
-        /// returns all categories
+        /// Returns all categories.
         /// </summary>
-        /// <returns>200 OK with categories data on success.</returns>
+        /// <returns>200 OK with category list on success.</returns>
+        [Authorize(Roles = "Admin,Waiter,Kitchen")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -35,11 +35,13 @@ namespace RestaurantBill.WebAPI.Controllers
         #region post methods
 
         /// <summary>
-        /// Category create with command
+        /// Creates a new category. Only accessible by Admin.
         /// </summary>
-        /// <param name="command">Category create credentials containing Name</param>
+        /// <param name="command">Category creation details containing Name.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-        /// <returns>200 OK with string message on success.</returns>
+        /// <returns>200 OK with success message on creation.</returns>
+        
+        [Authorize(Roles = "Admin")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateCategory([FromBody]CreateCategoryCommand command, CancellationToken cancellationToken)
         {
@@ -48,11 +50,13 @@ namespace RestaurantBill.WebAPI.Controllers
         }
         
         /// <summary>
-        /// Category update with command
+        /// Updates an existing category. Only accessible by Admin.
         /// </summary>
-        /// <param name="command">Category update credentials containing Id and Name</param>
+        /// <param name="command">Category update details containing Id and Name.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-        /// <returns>200 OK with string message on success.</returns>
+        /// <returns>200 OK with success message on update.</returns>
+        
+        [Authorize(Roles = "Admin")]
         [HttpPost("update")]
         public async Task<IActionResult> UpdateCategory([FromBody]UpdateCategoryCommand command, CancellationToken cancellationToken)
         {
@@ -64,11 +68,13 @@ namespace RestaurantBill.WebAPI.Controllers
         #region delete methods
         
         /// <summary>
-        /// category delete with id
+        /// Deletes a category by its ID. Only accessible by Admin.
         /// </summary>
-        /// <param name="id">Category Id need for category delete</param>
+        /// <param name="id">The ID of the category to delete.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-        /// <returns>200 OK with string message on success.</returns>
+        /// <returns>200 OK with success message on deletion.</returns>
+        
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory([FromRoute]int id, CancellationToken cancellationToken)
         {

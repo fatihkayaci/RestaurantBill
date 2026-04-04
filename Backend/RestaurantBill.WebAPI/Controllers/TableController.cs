@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Tables.Commands.CancelReservation;
 using RestaurantBill.Application.Features.Tables.Commands.CreateTable;
@@ -10,11 +11,12 @@ using RestaurantBill.Application.Features.Tables.Queries.GetAll;
 using RestaurantBill.Application.Features.Tables.Queries.GetTableById;
 namespace RestaurantBill.WebAPI.Controllers
 {
+    
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class TableController : ControllerBase
     {
-        
         private readonly IMediator _mediator;
         public TableController(IMediator mediator)
         {
@@ -25,6 +27,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary>
         /// Returns all tables.
         /// </summary>
+        [Authorize(Roles = "Admin,Waiter,Kitchen")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -36,6 +39,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// Returns a table by its ID.
         /// </summary>
         /// <param name="id">TableId</param>
+        [Authorize(Roles = "Admin,Waiter,Kitchen")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTableById([FromRoute]int id)
         {
@@ -50,16 +54,25 @@ namespace RestaurantBill.WebAPI.Controllers
 
         #region post methods
         /// <summary>
-        /// Creates a new table.
+        /// Creates a new table. Only accessible by Admin.
         /// </summary>
-        /// <param name="command"></param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="command">Table creation details containing capacity and table number.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with success message on creation.</returns>
+        [Authorize(Roles = "Admin")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateTable([FromBody]CreateTableCommand command, CancellationToken cancellationToken)
         {
             await _mediator.Send(command, cancellationToken);
             return Ok("Masa başarıyla oluşturuldu");
         }
+        /// <summary>
+        /// Updates an existing table. Only accessible by Admin.
+        /// </summary>
+        /// <param name="command">Table update details containing Id and updated fields.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with success message on update.</returns>
+        [Authorize(Roles = "Admin")]
         [HttpPost("update")]
         public async Task<IActionResult> UpdateTable([FromBody]UpdateCommand command, CancellationToken cancellationToken)
         {
@@ -71,6 +84,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// </summary>
         /// <param name="command">TableId</param>
         /// <param name="cancellationToken"></param>
+        [Authorize(Roles = "Admin,Waiter")]
         [HttpPost("open")]
         public async Task<IActionResult> OpenTable([FromBody]OpenTableCommand command, CancellationToken cancellationToken)
         {
@@ -82,6 +96,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// </summary>
         /// <param name="command">TableId</param>
         /// <param name="cancellationToken"></param>
+        [Authorize(Roles = "Admin,Waiter")]
         [HttpPost("reservation")]
         public async Task<IActionResult> ReservationTable([FromBody]ReservationTableCommand command, CancellationToken cancellationToken)
         {
@@ -93,6 +108,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// </summary>
         /// <param name="command">TableId</param>
         /// <param name="cancellationToken"></param>
+        [Authorize(Roles = "Admin,Waiter")]
         [HttpPost("cancel-reservation")]
         public async Task<IActionResult> CancelReservationTable([FromBody]CancelReservationCommand command, CancellationToken cancellationToken)
         {
@@ -102,6 +118,13 @@ namespace RestaurantBill.WebAPI.Controllers
         #endregion
 
         #region delete methods
+        /// <summary>
+        /// Deletes a table by its ID. Only accessible by Admin.
+        /// </summary>
+        /// <param name="id">The ID of the table to delete.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with success message on deletion.</returns>
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken cancellationToken)
         {
