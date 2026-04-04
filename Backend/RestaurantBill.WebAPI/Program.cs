@@ -7,7 +7,6 @@ using RestaurantBill.WebAPI.Middlewares;
 using FluentValidation.AspNetCore;
 using FluentValidation;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Application.Services;
 using RestaurantBill.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -86,13 +85,6 @@ builder.Services.AddDbContext<RestaurantBillDbContext>(options =>
 });
 
 #region Configuration for service
-builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IOrderItemService, OrderItemService>();
-builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<IRestaurantService, RestaurantService>();
-builder.Services.AddScoped<ITableService, TableService>();
-builder.Services.AddScoped<IUserService, UserService>();    
-builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMessageProducer, RabbitMqProducer>();
 #endregion
 
