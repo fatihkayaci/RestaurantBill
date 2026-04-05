@@ -12,7 +12,8 @@ public static class CorsExtensions
                           "http://localhost:5173",
                           "http://localhost",
                           "http://165.245.222.71",
-                          "http://64.226.125.22"
+                          "http://64.226.125.22",
+                          "https://bill.fatihkayaci.com"
                       )
                       .AllowAnyHeader()
                       .AllowAnyMethod();
