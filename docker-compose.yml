@@ -23,7 +23,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=https://api.bill.fatihkayaci.com/api
+        - VITE_API_URL=${VITE_API_URL}
     container_name: restaurant_frontend
     ports:
       - "3000:80"
