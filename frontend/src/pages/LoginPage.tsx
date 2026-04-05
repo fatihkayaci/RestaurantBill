@@ -19,6 +19,7 @@ export default function LoginPage() {
             const role = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
 
             if (role === 'Admin') navigate('/admin');
+            else if(role === 'Kitchen') navigate('/kitchen')
             else navigate('/');
             
         } catch (error: any) {
