@@ -190,10 +190,33 @@ After running `docker-compose up` and starting the API, the following demo accou
 - [Node.js 20+](https://nodejs.org)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop)
 
-### 1. Start Infrastructure Services
+### 1. Environment Setup
+
+Create a `.env` file in the root directory:
+
+```env
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+DB_NAME=RestaurantDb
+
+RABBITMQ_USER=admin
+RABBITMQ_PASS=admin_password
+```
+
+Then configure sensitive values (JWT secret, DB connection string, RabbitMQ credentials) via .NET User Secrets:
 
 ```bash
-docker-compose up -d
+cd Backend/RestaurantBill.WebAPI
+dotnet user-secrets set "JwtSettings:SecretKey" "your_secret_key"
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=RestaurantDb;Username=your_db_user;Password=your_db_password"
+dotnet user-secrets set "RabbitMQ:Username" "admin"
+dotnet user-secrets set "RabbitMQ:Password" "admin_password"
+```
+
+### 2. Start Infrastructure Services
+
+```bash
+docker compose up -d database rabbitmq pgadmin
 ```
 
 This starts:
@@ -201,18 +224,18 @@ This starts:
 - **PgAdmin** on `localhost:5050`
 - **RabbitMQ** on `localhost:5672` (Management UI: `localhost:15672`)
 
-### 2. Run the Backend
+### 3. Run the Backend
 
 ```bash
 cd Backend/RestaurantBill.WebAPI
 dotnet ef database update
-dotnet run
+dotnet watch
 ```
 
-API will be available at `http://localhost:5077`
+API will be available at `http://localhost:5077`  
 Swagger docs: `http://localhost:5077/swagger`
 
-### 3. Run the Frontend
+### 4. Run the Frontend
 
 ```bash
 cd frontend
@@ -311,7 +334,7 @@ All entities extend `BaseEntity` which provides:
 
 ## 📦 Project Status
 
-> Current version: `0.0.1-development`
+> Current version: `0.0.3-development`
 
 **Completed:**
 - [x] Clean Architecture + CQRS setup

@@ -17,6 +17,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=database;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
       - RabbitMqSettings__Host=rabbitmq
       - ASPNETCORE_ENVIRONMENT=Production
+      
   frontend:
     build:
       context: ./frontend
@@ -45,17 +46,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin_container
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_MAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
-    ports:
-      - "5050:80"
-    depends_on:
-      - database
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
