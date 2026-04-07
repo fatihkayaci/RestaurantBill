@@ -17,6 +17,7 @@ export default function PosPage() {
     const navigate = useNavigate();
     
     const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderTab, setOrderTab] = useState<number>(1);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -75,14 +76,12 @@ export default function PosPage() {
     const handleSubmitOrder = async (e: any) => {
         e.preventDefault();
         try {
-            
-            setIsLoading(true);
+            setIsSubmitting(true);
 
             const onlyNewItems = activeOrder.orderItems.filter(item => item.is_load === false);
 
             if (onlyNewItems.length === 0) {
                 alert("Siparişe eklenmiş yeni bir ürün bulunmuyor.");
-                setIsLoading(false);
                 return;
             }
 
@@ -103,11 +102,11 @@ export default function PosPage() {
                     }))
                 });
             }
-            
+
         } catch (error: any) {
             console.log(error.response?.data || "Bilinmeyen bir hata oluştu");
         } finally {
-            setIsLoading(false);
+            setIsSubmitting(false);
         }
     }
     /* changes status methods */
@@ -279,12 +278,11 @@ export default function PosPage() {
     const handleSubmitUpdate = async (e: any) => {
         e.preventDefault();
         try {
-            setIsLoading(true);
+            setIsSubmitting(true);
             const pendingItems = activeOrder.orderItems.filter(item => item.is_load === true && item.status === 1);
 
             if (pendingItems.length === 0) {
                 alert("Güncellenecek ürün bulunmuyor.");
-                setIsLoading(false);
                 return;
             }
 
@@ -305,7 +303,7 @@ export default function PosPage() {
         } catch (error: any) {
             console.log(error.response?.data || "Bilinmeyen bir hata oluştu");
         } finally {
-            setIsLoading(false);
+            setIsSubmitting(false);
         }
     };
 
@@ -588,14 +586,14 @@ export default function PosPage() {
                                 <button
                                     type="button"
                                     onClick={(e) => orderTab === 2 ? handleSubmitUpdate(e) : handleSubmitOrder(e)}
-                                    disabled={isLoading}
+                                    disabled={isSubmitting}
                                     className={`flex-1 active:scale-95 transition-all text-white font-bold py-3.5 px-4 rounded-xl flex justify-center items-center gap-2
-                                        ${isLoading
+                                        ${isSubmitting
                                             ? "bg-slate-600 cursor-not-allowed shadow-none"
                                             : (orderTab === 2 ? "bg-blue-600 hover:bg-blue-500" : "bg-emerald-600 hover:bg-emerald-500")
                                         }`}
                                 >
-                                    {isLoading ? (
+                                    {isSubmitting ? (
                                         <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -609,9 +607,9 @@ export default function PosPage() {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                                         </svg>
                                     )}
-                                    
+
                                     <span className="text-sm tracking-wide">
-                                        {isLoading ? "İşleniyor..." : (orderTab === 2 ? "Güncelle" : "Siparişi Onayla")}
+                                        {isSubmitting ? "İşleniyor..." : (orderTab === 2 ? "Güncelle" : "Siparişi Onayla")}
                                     </span>
                                 </button>
                             </div>

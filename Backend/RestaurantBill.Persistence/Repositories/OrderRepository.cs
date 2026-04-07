@@ -27,6 +27,10 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
             .Include(o => o.OrderItems)
             .ThenInclude(i => i.Product)
             .OrderByDescending(o => o.Id)
-            .FirstOrDefaultAsync(o => o.TableId == tableId && o.Status == OrderStatus.Active);
+            .FirstOrDefaultAsync(o => o.TableId == tableId &&
+                (o.Status == OrderStatus.Active ||
+                 o.Status == OrderStatus.Pending ||
+                 o.Status == OrderStatus.Preparing ||
+                 o.Status == OrderStatus.Ready));
     }
 }

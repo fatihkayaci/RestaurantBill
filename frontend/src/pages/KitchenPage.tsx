@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { orderService } from '../api/orderService';
-import type { Order } from '../features/order/types';
-
-// OrderStatus enum — backend ile eşleşiyor
+import { useEffect, useState } from "react";
+import type { Order } from "../features/order/types";
+import { orderService } from "../api/orderService";
 const OrderStatus = {
   Active: 1,
   Pending: 2,
@@ -13,41 +10,55 @@ const OrderStatus = {
   Paid: 6,
   Cancelled: 7,
 } as const;
-
-// Mutfağın görmesi gereken siparişler
-const KITCHEN_STATUSES: number[] = [OrderStatus.Pending, OrderStatus.Preparing, OrderStatus.Ready];
-
-const statusConfig: Record<number, { label: string; border: string; badge: string; dot: string }> = {
-  [OrderStatus.Pending]: {
-    label: "Bekliyor",
-    border: "border-red-500",
-    badge: "bg-red-500/20 text-red-400 border border-red-500/40",
-    dot: "bg-red-400 animate-pulse",
-  },
-  [OrderStatus.Preparing]: {
-    label: "Hazırlanıyor",
-    border: "border-yellow-400",
-    badge: "bg-yellow-400/20 text-yellow-300 border border-yellow-400/40",
-    dot: "bg-yellow-400 animate-pulse",
-  },
-  [OrderStatus.Ready]: {
-    label: "Hazır",
-    border: "border-green-500",
-    badge: "bg-green-500/20 text-green-400 border border-green-500/40",
-    dot: "bg-green-400",
-  },
-};
-
 export default function KitchenPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  
+  const statusConfig: Record<number, { label: string; border: string; badge: string; dot: string }> = {
+    [OrderStatus.Active]: {
+      label: "Aktif / Yeni",
+      border: "border-blue-500",
+      badge: "bg-blue-500/20 text-blue-400 border border-blue-500/40",
+      dot: "bg-blue-400 animate-pulse",
+    },
+    [OrderStatus.Pending]: {
+      label: "Bekliyor",
+      border: "border-red-500",
+      badge: "bg-red-500/20 text-red-400 border border-red-500/40",
+      dot: "bg-red-400 animate-pulse",
+    },
+    [OrderStatus.Preparing]: {
+      label: "Hazırlanıyor",
+      border: "border-yellow-400",
+      badge: "bg-yellow-400/20 text-yellow-300 border border-yellow-400/40",
+      dot: "bg-yellow-400 animate-pulse",
+    },
+    [OrderStatus.Ready]: {
+      label: "Hazır",
+      border: "border-green-500",
+      badge: "bg-green-500/20 text-green-400 border border-green-500/40",
+      dot: "bg-green-400",
+    },
+  };
+
+  const handleStatusUpdate = async (orderId: number, newStatus: number) => {
+    try {
+      await orderService.updateOrderStatus(orderId, newStatus);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+      );
+    } catch {
+      setError("Durum güncellenemedi.");
+    }
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const all = await orderService.getAllOrders();
-        setOrders(all.filter((o: Order) => KITCHEN_STATUSES.includes(o.status)));
+        const all = await orderService.getAllOrdersToKitchen();
+        console.log(all);
+        setOrders(all);
       } catch {
         setError("Siparişler yüklenemedi.");
       } finally {
@@ -56,13 +67,6 @@ export default function KitchenPage() {
     };
     fetchOrders();
   }, []);
-
-  const counts = {
-    [OrderStatus.Pending]: orders.filter((o) => o.status === OrderStatus.Pending).length,
-    [OrderStatus.Preparing]: orders.filter((o) => o.status === OrderStatus.Preparing).length,
-    [OrderStatus.Ready]: orders.filter((o) => o.status === OrderStatus.Ready).length,
-  };
-
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100" style={{ fontFamily: "'Inter', sans-serif" }}>
 
@@ -81,24 +85,17 @@ export default function KitchenPage() {
         <div className="hidden md:flex items-center gap-3">
           <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 px-3 py-1.5 rounded-lg">
             <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
-            <span className="text-sm text-red-300">{counts[OrderStatus.Pending]} Bekliyor</span>
+            <span className="text-sm text-red-300">Bekliyor</span>
           </div>
           <div className="flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 px-3 py-1.5 rounded-lg">
             <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
-            <span className="text-sm text-yellow-300">{counts[OrderStatus.Preparing]} Hazırlanıyor</span>
+            <span className="text-sm text-yellow-300">Hazırlanıyor</span>
           </div>
           <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 px-3 py-1.5 rounded-lg">
             <span className="w-2 h-2 rounded-full bg-green-400"></span>
-            <span className="text-sm text-green-300">{counts[OrderStatus.Ready]} Hazır</span>
+            <span className="text-sm text-green-300">Hazır</span>
           </div>
         </div>
-
-        <Link
-          to="/"
-          className="text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg transition-colors"
-        >
-          ← Masalara Dön
-        </Link>
       </header>
 
       {/* ── Content ── */}
@@ -108,7 +105,7 @@ export default function KitchenPage() {
             Yükleniyor...
           </div>
         )}
-
+      
         {error && (
           <div className="flex items-center justify-center h-64 text-red-400 text-lg">
             {error}
@@ -121,7 +118,7 @@ export default function KitchenPage() {
           </div>
         )}
 
-        {!loading && !error && orders.length > 0 && (
+       {!loading && !error && orders.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {orders.map((order) => {
               const cfg = statusConfig[order.status];
@@ -166,12 +163,18 @@ export default function KitchenPage() {
                   {/* Action Button */}
                   <div className="p-4">
                     {order.status === OrderStatus.Pending && (
-                      <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-blue-900/40">
+                      <button
+                        onClick={() => handleStatusUpdate(order.id, OrderStatus.Preparing)}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-blue-900/40"
+                      >
                         Hazırlamaya Başla
                       </button>
                     )}
                     {order.status === OrderStatus.Preparing && (
-                      <button className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-green-900/40">
+                      <button
+                        onClick={() => handleStatusUpdate(order.id, OrderStatus.Ready)}
+                        className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-green-900/40"
+                      >
                         ✓ Hazır — Teslim Et
                       </button>
                     )}

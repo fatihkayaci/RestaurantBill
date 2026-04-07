@@ -5,6 +5,10 @@ export const orderService = {
     getAllOrders: async () => {
         const response = await api.get<Order[]>(`/order`);
         return response.data;
+    }, 
+    getAllOrdersToKitchen: async () => {
+        const response = await api.get<Order[]>(`/order/kitchen`);
+        return response.data;
     },
     getOrderByTableId: async (tableId: string) => {
         const response = await api.get<Order>(`/order/table/${tableId}`); 
@@ -44,6 +48,11 @@ export const orderService = {
         return response.data;
     },
     
+    updateOrderStatus: async (orderId: number, status: number) => {
+        const response = await api.post(`/order/${orderId}/status`, { status });
+        return response.data;
+    },
+
     updateOrderItemQuantity: async (orderId: number, productId: number, quantity: number) => {
         const response = await api.post(`/order/item/quantity`, {
             orderId,

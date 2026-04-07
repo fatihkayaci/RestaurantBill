@@ -8,8 +8,10 @@ using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
+using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
 using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrders;
+using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitchen;
 using RestaurantBill.Application.Features.Orders.Queries.GetOrderById;
 
 namespace RestaurantBill.WebAPI.Controllers
@@ -37,6 +39,16 @@ namespace RestaurantBill.WebAPI.Controllers
             return Ok(result);
         }
         
+        /// <summary> Returns all active orders for kitchen (excludes Paid and Cancelled). </summary>
+        [Authorize(Roles = "Admin,Kitchen")]
+        [HttpGet("kitchen")]
+        public async Task<IActionResult> GetAllOrdersToKitchen(CancellationToken cancellationToken)
+        {
+            var query = new GetAllOrdersToKitchenQuery();
+            var result = await _mediator.Send(query, cancellationToken);
+            return Ok(result);
+        }
+
         /// <summary> Returns an order by its ID. </summary>
         /// <param name="id">Order ID</param>
         /// <param name="cancellationToken"></param>
@@ -127,6 +139,19 @@ namespace RestaurantBill.WebAPI.Controllers
             return Ok(new { Message = "siparişten ürün başarıyla kaldırıldi." });
         }
         
+        /// <summary> Updates the status of an order (Kitchen use). </summary>
+        /// <param name="id">Order ID</param>
+        /// <param name="command"></param>
+        /// <param name="cancellationToken"></param>
+        [Authorize(Roles = "Admin,Kitchen")]
+        [HttpPost("{id}/status")]
+        public async Task<IActionResult> UpdateStatus([FromRoute] int id, [FromBody] UpdateOrderStatusCommand command, CancellationToken cancellationToken)
+        {
+            command.OrderId = id;
+            await _mediator.Send(command, cancellationToken);
+            return Ok(new { Message = "Sipariş durumu güncellendi." });
+        }
+
         #endregion
     }
 }
