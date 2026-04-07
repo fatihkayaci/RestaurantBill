@@ -1,6 +1,5 @@
 using Moq;
 using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
 using System.Linq.Expressions;
@@ -11,16 +10,13 @@ namespace RestaurantBill.Application.Tests.Orders;
 
 public class AddProductToOrderCommandHandlerTests
 {
-    
     private readonly Mock<IUnitOfWork> _mockUow;
-    private readonly Mock<IMessageProducer> _mockMessageProducer;
     private readonly AddProductToOrderCommandHandler _handler;
 
     public AddProductToOrderCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _mockMessageProducer = new Mock<IMessageProducer>();
-        _handler = new AddProductToOrderCommandHandler(_mockUow.Object, _mockMessageProducer.Object);
+        _handler = new AddProductToOrderCommandHandler(_mockUow.Object);
     }
     #region happy paths
     [Fact]
@@ -56,10 +52,6 @@ public class AddProductToOrderCommandHandlerTests
         Assert.Equal(100, order.TotalPrice);    
 
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _mockMessageProducer.Verify(m => m.SendMessageAsync(
-            It.IsAny<object>(),
-            "order_queue"
-        ), Times.Once);
     }
     [Fact]
     public async Task Handle_WhenProductAlreadyInOrder_ShouldIncreaseQuantity()
