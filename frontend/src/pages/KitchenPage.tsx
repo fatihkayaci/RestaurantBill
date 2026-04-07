@@ -10,6 +10,13 @@ const OrderStatus = {
   Paid: 6,
   Cancelled: 7,
 } as const;
+
+const ItemStatusConfig: Record<number, { label: string; dot: string; text: string }> = {
+  1: { label: "Bekliyor",     dot: "bg-red-400 animate-pulse",    text: "text-red-400" },
+  2: { label: "Hazırlanıyor", dot: "bg-yellow-400 animate-pulse", text: "text-yellow-400" },
+  3: { label: "Hazır",        dot: "bg-green-400",                text: "text-green-400" },
+  4: { label: "Teslim Edildi",dot: "bg-gray-400",                 text: "text-gray-400" },
+};
 export default function KitchenPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,11 +49,23 @@ export default function KitchenPage() {
     },
   };
 
+  const itemStatusMap: Record<number, { from: number; to: number }> = {
+    [OrderStatus.Preparing]: { from: 1, to: 2 },
+    [OrderStatus.Ready]:     { from: 2, to: 3 },
+  };
+
   const handleStatusUpdate = async (orderId: number, newStatus: number) => {
     try {
       await orderService.updateOrderStatus(orderId, newStatus);
       setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+        prev.map((o) => {
+          if (o.id !== orderId) return o;
+          const map = itemStatusMap[newStatus];
+          const updatedItems = map
+            ? o.orderItems.map(i => i.status === map.from ? { ...i, status: map.to } : i)
+            : o.orderItems;
+          return { ...o, status: newStatus, orderItems: updatedItems };
+        })
       );
     } catch {
       setError("Durum güncellenemedi.");
@@ -143,16 +162,23 @@ export default function KitchenPage() {
 
                   {/* Order Items */}
                   <div className="px-4 py-3 flex-1 space-y-2.5">
-                    {order.orderItems.map((item, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <span className="w-8 h-8 shrink-0 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center text-base font-black text-white">
-                          {item.quantity}
-                        </span>
-                        <p className="text-base font-semibold text-gray-100 leading-tight mt-1">
-                          {item.productName}
-                        </p>
-                      </div>
-                    ))}
+                    {order.orderItems.map((item, i) => {
+                      const itemCfg = ItemStatusConfig[item.status] ?? ItemStatusConfig[1];
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="w-8 h-8 shrink-0 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center text-base font-black text-white">
+                            {item.quantity}
+                          </span>
+                          <p className="text-base font-semibold text-gray-100 leading-tight flex-1">
+                            {item.productName}
+                          </p>
+                          <span className={`flex items-center gap-1 text-xs font-semibold ${itemCfg.text}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${itemCfg.dot}`}></span>
+                            {itemCfg.label}
+                          </span>
+                        </div>
+                      );
+                    })}
                     {order.note && (
                       <p className="text-xs text-amber-400/80 pt-1">📝 {order.note}</p>
                     )}
@@ -161,8 +187,8 @@ export default function KitchenPage() {
                   <div className="mx-4 border-t border-gray-800"></div>
 
                   {/* Action Button */}
-                  <div className="p-4">
-                    {order.status === OrderStatus.Pending && (
+                  <div className="p-4 space-y-2">
+                    {order.orderItems.some(i => i.status === 1) && (
                       <button
                         onClick={() => handleStatusUpdate(order.id, OrderStatus.Preparing)}
                         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-blue-900/40"
@@ -170,7 +196,7 @@ export default function KitchenPage() {
                         Hazırlamaya Başla
                       </button>
                     )}
-                    {order.status === OrderStatus.Preparing && (
+                    {order.orderItems.some(i => i.status === 2) && (
                       <button
                         onClick={() => handleStatusUpdate(order.id, OrderStatus.Ready)}
                         className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-green-900/40"
@@ -178,7 +204,7 @@ export default function KitchenPage() {
                         ✓ Hazır — Teslim Et
                       </button>
                     )}
-                    {order.status === OrderStatus.Ready && (
+                    {order.orderItems.every(i => i.status === 3) && (
                       <div className="w-full bg-gray-800 text-gray-500 font-bold py-2.5 rounded-xl text-sm text-center cursor-default">
                         Servis Bekleniyor
                       </div>

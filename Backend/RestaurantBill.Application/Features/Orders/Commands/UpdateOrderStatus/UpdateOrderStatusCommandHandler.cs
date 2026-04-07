@@ -30,19 +30,18 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus
 
             order.Status = newOrderStatus;
 
-            // OrderItem statüslerini de güncelle
-            OrderItemStatus? newItemStatus = newOrderStatus switch
+            var (fromItemStatus, toItemStatus) = newOrderStatus switch
             {
-                OrderStatus.Preparing => OrderItemStatus.Preparing,
-                OrderStatus.Ready     => OrderItemStatus.Ready,
-                OrderStatus.Served    => OrderItemStatus.Delivered,
-                _                     => null
+                OrderStatus.Preparing => (OrderItemStatus.Pending,   OrderItemStatus.Preparing),
+                OrderStatus.Ready     => (OrderItemStatus.Preparing, OrderItemStatus.Ready),
+                OrderStatus.Served    => (OrderItemStatus.Ready,     OrderItemStatus.Delivered),
+                _                     => ((OrderItemStatus?)null,    (OrderItemStatus?)null)
             };
 
-            if (newItemStatus.HasValue)
+            if (fromItemStatus.HasValue && toItemStatus.HasValue)
             {
-                foreach (var item in order.OrderItems)
-                    item.Status = newItemStatus.Value;
+                foreach (var item in order.OrderItems.Where(i => i.Status == fromItemStatus.Value))
+                    item.Status = toItemStatus.Value;
             }
 
             await _uow.SaveChangesAsync(cancellationToken);
