@@ -1,7 +1,4 @@
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Business.Mappings;
-using RestaurantBill.Infrastructure.Consumers;
-using RestaurantBill.Infrastructure.MessageBrokers;
 using RestaurantBill.WebAPI.Extensions;
 using RestaurantBill.WebAPI.Middlewares;
 using Serilog;
@@ -24,8 +21,6 @@ builder.Services.AddRepositories();
 builder.Services.AddCorsPolicy();
 builder.Services.AddMediatRWithBehaviors();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
-builder.Services.AddScoped<IMessageProducer, RabbitMqProducer>();
-builder.Services.AddHostedService<OrderConsumer>();
 
 var app = builder.Build();
 

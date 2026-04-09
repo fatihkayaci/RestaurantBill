@@ -1,7 +1,6 @@
 using RestaurantBill.Domain.Interfaces;
 
 using MediatR;
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Enums;
@@ -11,12 +10,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
     public class ReservationTableHandler : IRequestHandler<ReservationTableCommand>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMessageProducer _messageProducer;
 
-        public ReservationTableHandler(IUnitOfWork uow, IMessageProducer messageProducer)
+        public ReservationTableHandler(IUnitOfWork uow)
         {
             _uow = uow;
-            _messageProducer = messageProducer;
         }
 
         /// <summary>

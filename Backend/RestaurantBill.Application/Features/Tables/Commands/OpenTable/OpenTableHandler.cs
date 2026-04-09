@@ -1,7 +1,6 @@
 using RestaurantBill.Domain.Interfaces;
 
 using MediatR;
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Enums;
@@ -12,12 +11,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
     public class OpenTableHandler : IRequestHandler<OpenTableCommand, int>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMessageProducer _messageProducer;
 
-        public OpenTableHandler(IUnitOfWork uow, IMessageProducer messageProducer)
+        public OpenTableHandler(IUnitOfWork uow)
         {
             _uow = uow;
-            _messageProducer = messageProducer;
         }
 
         /// <summary>

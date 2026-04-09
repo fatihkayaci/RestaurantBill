@@ -1,7 +1,6 @@
 using RestaurantBill.Domain.Interfaces;
 
 using MediatR;
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Common;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.Update
@@ -9,12 +8,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.Update
     public class UpdateCommandHandler : IRequestHandler<UpdateCommand>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMessageProducer _messageProducer;
 
-        public UpdateCommandHandler(IUnitOfWork uow, IMessageProducer messageProducer)
+        public UpdateCommandHandler(IUnitOfWork uow)
         {
             _uow = uow;
-            _messageProducer = messageProducer;
         }
 
         /// <summary>

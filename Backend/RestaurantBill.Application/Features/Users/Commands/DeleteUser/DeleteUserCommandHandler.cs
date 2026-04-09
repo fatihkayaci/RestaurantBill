@@ -1,8 +1,6 @@
 using RestaurantBill.Domain.Interfaces;
 
 using MediatR;
-using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Common;
 
 namespace RestaurantBill.Application.Features.Users.Commands.DeleteUser

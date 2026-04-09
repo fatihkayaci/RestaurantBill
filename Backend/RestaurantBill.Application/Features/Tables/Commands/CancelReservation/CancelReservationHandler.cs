@@ -1,6 +1,5 @@
 using RestaurantBill.Domain.Interfaces;
 using MediatR;
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Enums;
@@ -10,12 +9,11 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservation
     public class CancelReservationHandler : IRequestHandler<CancelReservationCommand>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMessageProducer _messageProducer;
 
-        public CancelReservationHandler(IUnitOfWork uow, IMessageProducer messageProducer)
+
+        public CancelReservationHandler(IUnitOfWork uow)
         {
             _uow = uow;
-            _messageProducer = messageProducer;
         }
         /// <summary>
         /// Cancels the reservation and sets the table status back to Available.

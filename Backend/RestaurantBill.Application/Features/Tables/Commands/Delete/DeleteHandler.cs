@@ -1,7 +1,6 @@
 using RestaurantBill.Domain.Interfaces;
 
 using MediatR;
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Common;
 
@@ -10,12 +9,11 @@ namespace RestaurantBill.Application.Features.Tables.Commands.Delete
     public class DeleteHandler : IRequestHandler<DeleteCommand>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMessageProducer _messageProducer;
 
-        public DeleteHandler(IUnitOfWork uow, IMessageProducer messageProducer)
+
+        public DeleteHandler(IUnitOfWork uow)
         {
             _uow = uow;
-            _messageProducer = messageProducer;
         }
 
         /// <summary>
