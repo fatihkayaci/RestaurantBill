@@ -1,4 +1,5 @@
 using RestaurantBill.Business.Mappings;
+using RestaurantBill.Infrastructure.Extensions;
 using RestaurantBill.WebAPI.Extensions;
 using RestaurantBill.WebAPI.Middlewares;
 using Serilog;
@@ -21,6 +22,7 @@ builder.Services.AddRepositories();
 builder.Services.AddCorsPolicy();
 builder.Services.AddMediatRWithBehaviors();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+await builder.Services.AddRabbitMQAsync(builder.Configuration);
 
 var app = builder.Build();
 
