@@ -1,19 +1,23 @@
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Common;
 
 using MediatR;
+using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 {
     public class AddProductToOrderCommandHandler : IRequestHandler<AddProductToOrderCommand>
     {
         private readonly IUnitOfWork _uow;
+        private readonly IOrderMessagePublisher _publisher;
 
-        public AddProductToOrderCommandHandler(IUnitOfWork uow)
+        public AddProductToOrderCommandHandler(IUnitOfWork uow, IOrderMessagePublisher publisher)
         {
             _uow = uow;
+            _publisher = publisher;
         }
         /// <summary>
         /// Adds one or more products to an existing order.
@@ -49,9 +53,11 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             }
 
             order.TotalPrice = order.OrderItems.Sum(item => item.UnitPrice * item.Quantity);
-            order.Status = RestaurantBill.Domain.Enums.OrderStatus.Pending;
+            order.Status = OrderStatus.Pending;
 
             await _uow.SaveChangesAsync(cancellationToken);
+
+            await _publisher.PublishOrderCreatedAsync(order.Id, order.TableId, cancellationToken);
         }
     }
 }

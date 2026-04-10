@@ -5,6 +5,8 @@ using RabbitMQ.Client.Events;
 using RestaurantBill.Infrastructure.Messaging.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.SignalR;
+using RestaurantBill.Infrastructure.Hubs;
 
 namespace RestaurantBill.Infrastructure.Messaging
 {
@@ -12,15 +14,17 @@ namespace RestaurantBill.Infrastructure.Messaging
     {
         private readonly IConnectionFactory _factory;
         private readonly ILogger<KitchenOrderConsumer> _logger;
+        private readonly IHubContext<KitchenHub> _hubContext;
         private const string QueueName = "kitchen.orders";
 
         private IConnection? _connection;
         private IChannel? _channel;
 
-        public KitchenOrderConsumer(IConnectionFactory factory, ILogger<KitchenOrderConsumer> logger)
+        public KitchenOrderConsumer(IConnectionFactory factory, ILogger<KitchenOrderConsumer> logger, IHubContext<KitchenHub> hubContext)
         {
             _factory = factory;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         public override async Task StartAsync(CancellationToken cancellationToken)
@@ -53,7 +57,7 @@ namespace RestaurantBill.Infrastructure.Messaging
                         "Kitchen received order. OrderId: {OrderId}, TableId: {TableId}, At: {CreatedAt}",
                         message.OrderId, message.TableId, message.CreatedAt);
 
-                    // TODO: notify kitchen via SignalR or update DB status
+                    await _hubContext.Clients.All.SendAsync("ReceiveNewOrder", message);
                 }
 
                 await _channel!.BasicAckAsync(args.DeliveryTag, multiple: false);

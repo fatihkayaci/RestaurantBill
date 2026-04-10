@@ -2,6 +2,7 @@ using RestaurantBill.Business.Mappings;
 using RestaurantBill.Infrastructure.Extensions;
 using RestaurantBill.WebAPI.Extensions;
 using RestaurantBill.WebAPI.Middlewares;
+using RestaurantBill.Infrastructure.Hubs;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +23,7 @@ builder.Services.AddRepositories();
 builder.Services.AddCorsPolicy();
 builder.Services.AddMediatRWithBehaviors();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+builder.Services.AddSignalR();
 await builder.Services.AddRabbitMQAsync(builder.Configuration);
 
 var app = builder.Build();
@@ -35,6 +37,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.UseSwagger();
 app.UseSwaggerUI();
+app.MapHub<KitchenHub>("/kitchen-hub");
 
 await app.MigrateAndSeedAsync();
 

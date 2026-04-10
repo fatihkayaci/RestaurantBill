@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Order } from "../features/order/types";
+import * as signalR from "@microsoft/signalr";
 import { orderService } from "../api/orderService";
 const OrderStatus = {
   Active: 1,
@@ -85,6 +86,36 @@ export default function KitchenPage() {
       }
     };
     fetchOrders();
+  }, []);
+  useEffect(() => {
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl("http://localhost:5077/kitchen-hub") 
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on("ReceiveNewOrder", (newOrder: Order) => {
+      console.log("🔥 CANLI SİPARİŞ DÜŞTÜ:", newOrder);
+      const formattedOrder: Order = {
+        id: newOrder.id,
+        tableId: newOrder.tableId,
+        note: newOrder.note || "Yeni Sipariş",
+        totalPrice: newOrder.totalPrice || 0,
+        status: 1,
+        orderItems: newOrder.orderItems || []
+      };
+      setOrders((prevOrders) => {
+        if (prevOrders.some(o => o.id === newOrder.id)) return prevOrders;
+        return [formattedOrder, ...prevOrders];
+      });
+    });
+
+    connection.start()
+      .then(() => console.log("🟢 SignalR: Mutfak sistemine canlı bağlanıldı!"))
+      .catch((err) => console.error("🔴 SignalR Bağlantı Hatası:", err));
+
+    return () => {
+      connection.stop();
+    };
   }, []);
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100" style={{ fontFamily: "'Inter', sans-serif" }}>

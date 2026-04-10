@@ -16,7 +16,8 @@ public static class CorsExtensions
                           "https://bill.fatihkayaci.com"
                       )
                       .AllowAnyHeader()
-                      .AllowAnyMethod();
+                      .AllowAnyMethod()
+                      .AllowCredentials();
             });
         });
 
