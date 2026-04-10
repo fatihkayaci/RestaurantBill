@@ -151,6 +151,7 @@ dotnet test
 | **ASP.NET Core Identity** | User/role management |
 | **JWT Bearer** | Stateless authentication |
 | **Serilog** | Structured logging |
+| **SignalR** | Real-time push notifications to Kitchen Display |
 | **Swagger + Scalar** | API documentation |
 | **xUnit + Moq** | Unit testing framework & mocking |
 
@@ -163,6 +164,7 @@ dotnet test
 | **React Router v7** | Client-side routing |
 | **Tailwind CSS 4** | Utility-first styling |
 | **Axios** | HTTP client |
+| **SignalR Client** | Real-time WebSocket connection |
 
 ### Infrastructure
 | Technology | Purpose |
@@ -295,18 +297,23 @@ App will be available at `http://localhost:5173`
 ## 🔄 Order Flow
 
 ```
-Waiter (POS)                Backend                 Kitchen (KDS)
-    │                          │                          │
-    ├─── Add items to order ──►│                          │
-    │                          │                          │
-    ├─── Confirm order ───────►│                          │
-    │                          ├── Publish to RabbitMQ ──►│
-    │                          │      order_queue         │
-    │                          │                          ├── Receive notification
-    │                          │                          ├── Update status: Preparing
-    │                          │                          ├── Update status: Ready
-    │                          │                          │
-    ◄── See status update ─────┤◄── Status propagates ───┤
+Waiter (POS)                Backend                    Kitchen (KDS)
+    │                          │                             │
+    ├─── Add items to order ──►│                             │
+    │                          │                             │
+    ├─── Confirm order ───────►│                             │
+    │                          ├── Publish to RabbitMQ ─────►│
+    │                          │      kitchen.orders         │
+    │                          │                             │
+    │                          │◄── KitchenOrderConsumer ───►│
+    │                          │    (BackgroundService)      │
+    │                          │                             │
+    │                          ├── SignalR (KitchenHub) ────►│
+    │                          │   "ReceiveNewOrder"         ├── Real-time notification
+    │                          │                             ├── Update status: Preparing
+    │                          │                             ├── Update status: Ready
+    │                          │                             │
+    ◄── See status update ─────┤◄── Status propagates ──────┤
 ```
 
 ---
@@ -348,7 +355,8 @@ All entities extend `BaseEntity` which provides:
 - [x] Full order management
 - [x] OrderItem status tracking
 - [x] JWT authentication & roles
-- [x] RabbitMQ integration
+- [x] RabbitMQ integration (Producer + BackgroundService Consumer)
+- [x] SignalR real-time kitchen notifications
 - [x] Docker Compose infrastructure
 - [x] Dark mode POS UI with category filtering
 - [x] Unit tests for all CQRS command/query handlers (xUnit + Moq)
@@ -356,7 +364,6 @@ All entities extend `BaseEntity` which provides:
 **Planned:**
 - [ ] Payment processing flow
 - [ ] Reservation detail management (customer name, time, party size)
-- [ ] Real-time WebSocket updates to frontend
 - [ ] Reporting & analytics dashboard
 - [ ] Mobile-responsive KDS view
 

@@ -1,5 +1,6 @@
 using Moq;
 using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
 using System.Linq.Expressions;
@@ -11,12 +12,14 @@ namespace RestaurantBill.Application.Tests.Orders;
 public class AddProductToOrderCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
+    private readonly Mock<IOrderMessagePublisher> _mockPublisher;
     private readonly AddProductToOrderCommandHandler _handler;
 
     public AddProductToOrderCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _handler = new AddProductToOrderCommandHandler(_mockUow.Object);
+        _mockPublisher = new Mock<IOrderMessagePublisher>();
+        _handler = new AddProductToOrderCommandHandler(_mockUow.Object, _mockPublisher.Object);
     }
     #region happy paths
     [Fact]
