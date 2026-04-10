@@ -94,7 +94,6 @@ export default function KitchenPage() {
       .build();
 
     connection.on("ReceiveNewOrder", (newOrder: Order) => {
-      console.log("🔥 CANLI SİPARİŞ DÜŞTÜ:", newOrder);
       const formattedOrder: Order = {
         id: newOrder.id,
         tableId: newOrder.tableId,

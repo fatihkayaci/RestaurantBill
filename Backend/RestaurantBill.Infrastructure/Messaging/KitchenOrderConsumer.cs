@@ -54,8 +54,8 @@ namespace RestaurantBill.Infrastructure.Messaging
                 if (message is not null)
                 {
                     _logger.LogInformation(
-                        "Kitchen received order. OrderId: {OrderId}, TableId: {TableId}, At: {CreatedAt}",
-                        message.OrderId, message.TableId, message.CreatedAt);
+                        "Kitchen received order. OrderId: {OrderId}, TableId: {TableId}",
+                        message.Id, message.TableId);
 
                     await _hubContext.Clients.All.SendAsync("ReceiveNewOrder", message);
                 }

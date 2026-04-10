@@ -39,14 +39,19 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 
                 var existingItem = order.OrderItems.FirstOrDefault(x => x.ProductId == item.ProductId);
 
-                if (existingItem != null) existingItem.Quantity += item.Quantity;
+                if (existingItem != null)
+                {
+                    existingItem.Quantity += item.Quantity;
+                    existingItem.Product = product;
+                }
                 else
                 {
                     var newItem = new OrderItem
                     {
                         ProductId = item.ProductId,
                         Quantity = item.Quantity,
-                        UnitPrice = product.Price
+                        UnitPrice = product.Price,
+                        Product = product
                     };
                     order.OrderItems.Add(newItem);
                 }
@@ -57,7 +62,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _publisher.PublishOrderCreatedAsync(order.Id, order.TableId, cancellationToken);
+            await _publisher.PublishOrderCreatedAsync(order, cancellationToken);
         }
     }
 }

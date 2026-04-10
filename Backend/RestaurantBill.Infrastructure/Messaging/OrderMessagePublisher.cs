@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Infrastructure.Messaging.Models;
 
 namespace RestaurantBill.Infrastructure.Messaging
@@ -32,12 +33,23 @@ namespace RestaurantBill.Infrastructure.Messaging
             return new OrderMessagePublisher(connection, channel);
         }
 
-        public async Task PublishOrderCreatedAsync(int orderId, int tableId, CancellationToken cancellationToken = default)
+        public async Task PublishOrderCreatedAsync(Order order, CancellationToken cancellationToken = default)
         {
             KitchenOrderMessage message = new KitchenOrderMessage
             {
-                OrderId = orderId,
-                TableId = tableId
+                Id = order.Id,
+                TableId = order.TableId,
+                Note = order.Note,
+                TotalPrice = order.TotalPrice,
+                Status = (int)order.Status,
+                OrderItems = order.OrderItems.Select(i => new KitchenOrderItemMessage
+                {
+                    ProductId = i.ProductId,
+                    ProductName = i.Product?.Name ?? string.Empty,
+                    UnitPrice = i.UnitPrice,
+                    Quantity = i.Quantity,
+                    Status = (int)i.Status
+                }).ToList()
             };
 
             string json = JsonSerializer.Serialize(message);

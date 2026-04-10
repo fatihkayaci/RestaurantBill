@@ -1,7 +1,9 @@
+using RestaurantBill.Domain.Entities;
+
 namespace RestaurantBill.Application.Interfaces
 {
     public interface IOrderMessagePublisher
     {
-        Task PublishOrderCreatedAsync(int orderId, int tableId, CancellationToken cancellationToken = default);
+        Task PublishOrderCreatedAsync(Order order, CancellationToken cancellationToken = default);
     }
 }
