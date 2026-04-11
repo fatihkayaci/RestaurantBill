@@ -1,6 +1,7 @@
 using Moq;
 using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
 using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -11,12 +12,14 @@ namespace RestaurantBill.Application.Tests.Orders;
 public class CancelOrderCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
+    private readonly Mock<ITableNotificationService> _mockNotificationService;
     private readonly CancelOrderCommandHandler _handler;
 
     public CancelOrderCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _handler = new CancelOrderCommandHandler(_mockUow.Object);
+        _mockNotificationService = new Mock<ITableNotificationService>();
+        _handler = new CancelOrderCommandHandler(_mockUow.Object, _mockNotificationService.Object);
     }
 
     #region happy paths

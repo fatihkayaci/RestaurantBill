@@ -6,20 +6,23 @@ using System.Linq.Expressions;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.Tests.Orders;
 
 public class CloseOrderCommandHandlerTests
 {
-    
+
     private readonly Mock<IUnitOfWork> _mockUow;
+    private readonly Mock<ITableNotificationService> _mockNotificationService;
     private readonly CloseOrderCommandHandler _handler;
 
     public CloseOrderCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _handler = new CloseOrderCommandHandler(_mockUow.Object);
+        _mockNotificationService = new Mock<ITableNotificationService>();
+        _handler = new CloseOrderCommandHandler(_mockUow.Object, _mockNotificationService.Object);
     }
     #region happy paths
     [Fact]
