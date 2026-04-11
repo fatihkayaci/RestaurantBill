@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import * as signalR from "@microsoft/signalr";
 import TableCard from '../features/tables/components/TableCard';
 import { tableService } from '../api/tableService';
 import type { Table } from '../features/tables/types';
@@ -17,6 +18,26 @@ export default function TablesPage() {
                 console.error("Masalar çekilirken hata oluştu:", error);
                 setLoading(false);
             });
+    }, []);
+
+    useEffect(() => {
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/kitchen-hub`)
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("TableStatusChanged", (tableId: number, status: number) => {
+            setTables((prev) =>
+                prev.map((t) => t.id === tableId ? { ...t, status } : t)
+            );
+        });
+
+        connection.start()
+        .catch((err) => console.error("SignalR Connection Error:", err));
+
+        return () => {
+            connection.stop();
+        };
     }, []);
 
     if (loading) {

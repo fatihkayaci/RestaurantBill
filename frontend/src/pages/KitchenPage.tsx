@@ -77,7 +77,6 @@ export default function KitchenPage() {
     const fetchOrders = async () => {
       try {
         const all = await orderService.getAllOrdersToKitchen();
-        console.log(all);
         setOrders(all);
       } catch {
         setError("Siparişler yüklenemedi.");
@@ -89,7 +88,7 @@ export default function KitchenPage() {
   }, []);
   useEffect(() => {
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:5077/kitchen-hub") 
+      .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/kitchen-hub`)
       .withAutomaticReconnect()
       .build();
 
@@ -109,8 +108,7 @@ export default function KitchenPage() {
     });
 
     connection.start()
-      .then(() => console.log("🟢 SignalR: Mutfak sistemine canlı bağlanıldı!"))
-      .catch((err) => console.error("🔴 SignalR Bağlantı Hatası:", err));
+      .catch((err) => console.error("🔴 SignalR Connection Error:", err));
 
     return () => {
       connection.stop();

@@ -1,6 +1,7 @@
 using Moq;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
@@ -10,12 +11,17 @@ namespace RestaurantBill.Application.Tests.Tables;
 public class OpenTableHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
+    private readonly Mock<ITableNotificationService> _mockTableNotificationService;
     private readonly OpenTableHandler _handler;
 
     public OpenTableHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _handler = new OpenTableHandler(_mockUow.Object);
+        _mockTableNotificationService = new Mock<ITableNotificationService>();
+        _mockTableNotificationService
+            .Setup(s => s.SendTableStatusChangedAsync(It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
+        _handler = new OpenTableHandler(_mockUow.Object, _mockTableNotificationService.Object);
     }
 
     #region happy paths

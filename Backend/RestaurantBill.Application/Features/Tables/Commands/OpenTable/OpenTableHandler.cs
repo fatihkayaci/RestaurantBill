@@ -5,16 +5,19 @@ using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
 {
     public class OpenTableHandler : IRequestHandler<OpenTableCommand, int>
     {
         private readonly IUnitOfWork _uow;
+        private readonly ITableNotificationService _tableNotificationService;
 
-        public OpenTableHandler(IUnitOfWork uow)
+        public OpenTableHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService)
         {
             _uow = uow;
+            _tableNotificationService = tableNotificationService;
         }
 
         /// <summary>
@@ -42,8 +45,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
             
             await _uow.Order.AddAsync(order);
             await _uow.SaveChangesAsync(cancellationToken);
-            
-            return order.Id; 
+
+            await _tableNotificationService.SendTableStatusChangedAsync(table.Id, (int)table.Status);
+
+            return order.Id;
         }
     }
 }
