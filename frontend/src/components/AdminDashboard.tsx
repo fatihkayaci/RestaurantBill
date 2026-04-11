@@ -1,12 +1,20 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import TablesPanel from "../pages/Admin/TablesPanel";
 import ProductsPanel from "../pages/Admin/ProductsPanel";
 import CategoriesPanel from "../pages/Admin/CategoriesPanel";
 import UsersPanel from "../pages/Admin/UsersPanel";
+import { authService } from "../api/authService";
 
 
 export default function AdminDashboard() {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('overview');
+
+    const handleLogout = () => {
+        authService.logout();
+        navigate('/login');
+    };
     {activeTab === 'overview' && <p>Genel Bakış</p>}
     {activeTab === 'tables' && <TablesPanel />}
     {activeTab === 'products' && <ProductsPanel />}
@@ -25,6 +33,15 @@ export default function AdminDashboard() {
                     <button onClick={() => setActiveTab("categories")} className="text-left px-4 py-2 rounded-lg hover:bg-gray-800 text-gray-400 text-sm">Kategoriler</button>
                     <button onClick={() => setActiveTab("users")} className="text-left px-4 py-2 rounded-lg hover:bg-gray-800 text-gray-400 text-sm">Kullanıcılar</button>
                 </nav>
+                <div className="mt-auto pt-6 border-t border-gray-800">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-colors text-sm font-semibold"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        Çıkış Yap
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 p-8">

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Order } from "../features/order/types";
 import * as signalR from "@microsoft/signalr";
 import { orderService } from "../api/orderService";
+import { authService } from "../api/authService";
 const OrderStatus = {
   Active: 1,
   Pending: 2,
@@ -19,9 +21,15 @@ const ItemStatusConfig: Record<number, { label: string; dot: string; text: strin
   4: { label: "Teslim Edildi",dot: "bg-gray-400",                 text: "text-gray-400" },
 };
 export default function KitchenPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate('/login');
+  };
   
   const statusConfig: Record<number, { label: string; border: string; badge: string; dot: string }> = {
     [OrderStatus.Active]: {
@@ -171,6 +179,13 @@ export default function KitchenPage() {
             <span className="w-2 h-2 rounded-full bg-green-400"></span>
             <span className="text-sm text-green-300">Hazır</span>
           </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-3 py-1.5 rounded-lg transition-colors text-sm font-semibold"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            Çıkış
+          </button>
         </div>
       </header>
 
