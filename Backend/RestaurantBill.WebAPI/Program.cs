@@ -24,6 +24,7 @@ builder.Services.AddCorsPolicy();
 builder.Services.AddMediatRWithBehaviors();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddSignalR();
+builder.Services.AddInfrastructureServices();
 await builder.Services.AddRabbitMQAsync(builder.Configuration);
 
 var app = builder.Build();
