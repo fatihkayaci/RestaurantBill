@@ -11,6 +11,7 @@ import { orderService } from '../api/orderService';
 import type { Order } from '../features/order/types';
 import type { Table } from '../features/tables/types';
 import { tableService } from '../api/tableService';
+import * as signalR from "@microsoft/signalr";
 
 export default function PosPage() {
     const { tableId } = useParams();
@@ -62,7 +63,6 @@ export default function PosPage() {
                         }))
                     });
                 }
-                console.log(orderData);
             } catch (error) {
                 console.error("Veriler çekilirken hata:", error);
             } finally {
@@ -72,7 +72,50 @@ export default function PosPage() {
         
         fetchAllData();
     }, [tableId, navigate]);
+    
+    useEffect(() => {
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`)
+            .withAutomaticReconnect()
+            .configureLogging({
+                log(logLevel: signalR.LogLevel, message: string) {
+                    if (message.includes("stopped during negotiation")) return;
+                    if (logLevel >= signalR.LogLevel.Error) console.error(message);
+                }
+            })
+            .build();
 
+        connection.on("TableStatusChanged", (changedTableId: number, status: number) => {
+            if (changedTableId === Number(tableId)) {
+                setTable((prev) => prev ? { ...prev, status } : prev);
+            }
+        });
+
+        connection.on("OrderUpdated", (changedTableId: number) => {
+            console.log("OrderUpdated geldi:", changedTableId, "bu masa:", tableId);
+            if (changedTableId === Number(tableId)) {
+                orderService.getOrderByTableId(tableId!).then((data) => {
+                    if (data) {
+                        setActiveOrder({
+                            ...data,
+                            orderItems: data.orderItems.map(item => ({ ...item, is_load: true }))
+                        });
+                    }
+                });
+            }
+        });
+
+        connection.start().catch((err: Error) => {
+            if (!err.message.includes("stopped during negotiation")) {
+                console.error("SignalR Connection Error:", err);
+            }
+        });
+
+        return () => {
+            connection.stop();
+        };
+    }, [tableId]);
+    
     const handleSubmitOrder = async (e: any) => {
         e.preventDefault();
         try {
@@ -569,7 +612,7 @@ export default function PosPage() {
                                     type="button"
                                     title="İptal Et"
                                     onClick={handleCancelOrder}
-                                    className="p-3.5 rounded-xl bg-slate-700/50 text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 border border-transparent transition-all active:scale-95 flex-shrink-0"
+                                    className="p-3.5 rounded-xl bg-slate-700/50 text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 border border-transparent transition-all active:scale-95"
                                 >
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                 </button>
@@ -578,7 +621,7 @@ export default function PosPage() {
                                     type="button"
                                     title="Masayı Kapat (Hesabı Al)"
                                     onClick={() => setIsPaymentModalOpen(true)}
-                                    className="p-3.5 rounded-xl bg-slate-700/50 text-slate-400 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/30 border border-transparent transition-all active:scale-95 flex-shrink-0"
+                                    className="p-3.5 rounded-xl bg-slate-700/50 text-slate-400 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/30 border border-transparent transition-all active:scale-95"
                                 >
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                 </button>

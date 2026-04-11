@@ -22,8 +22,14 @@ export default function TablesPage() {
 
     useEffect(() => {
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/kitchen-hub`)
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`)
             .withAutomaticReconnect()
+            .configureLogging({
+                log(logLevel: signalR.LogLevel, message: string) {
+                    if (message.includes("stopped during negotiation")) return;
+                    if (logLevel >= signalR.LogLevel.Error) console.error(message);
+                }
+            })
             .build();
 
         connection.on("TableStatusChanged", (tableId: number, status: number) => {
@@ -32,10 +38,13 @@ export default function TablesPage() {
             );
         });
 
+        let isCancelled = false;
+
         connection.start()
-        .catch((err) => console.error("SignalR Connection Error:", err));
+            .catch((err) => { if (!isCancelled) console.error("SignalR Connection Error:", err); });
 
         return () => {
+            isCancelled = true;
             connection.stop();
         };
     }, []);
