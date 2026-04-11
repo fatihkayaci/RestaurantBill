@@ -15,7 +15,9 @@ services:
         condition: service_healthy
     environment:
       - ConnectionStrings__DefaultConnection=Host=database;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
-      - RabbitMqSettings__Host=rabbitmq
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASS}
       - ASPNETCORE_ENVIRONMENT=Production
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
       
