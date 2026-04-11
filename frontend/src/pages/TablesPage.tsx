@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as signalR from "@microsoft/signalr";
 import TableCard from '../features/tables/components/TableCard';
 import { tableService } from '../api/tableService';
+import { authService } from '../api/authService';
 import type { Table } from '../features/tables/types';
 
 export default function TablesPage() {
+    const navigate = useNavigate();
     const [tables, setTables] = useState<Table[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const handleLogout = () => {
+        authService.logout();
+        navigate('/login');
+    };
 
     useEffect(() => {
         tableService.getTables()
@@ -22,8 +30,14 @@ export default function TablesPage() {
 
     useEffect(() => {
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/kitchen-hub`)
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`)
             .withAutomaticReconnect()
+            .configureLogging({
+                log(logLevel: signalR.LogLevel, message: string) {
+                    if (message.includes("stopped during negotiation")) return;
+                    if (logLevel >= signalR.LogLevel.Error) console.error(message);
+                }
+            })
             .build();
 
         connection.on("TableStatusChanged", (tableId: number, status: number) => {
@@ -32,10 +46,13 @@ export default function TablesPage() {
             );
         });
 
+        let isCancelled = false;
+
         connection.start()
-        .catch((err) => console.error("SignalR Connection Error:", err));
+            .catch((err) => { if (!isCancelled) console.error("SignalR Connection Error:", err); });
 
         return () => {
+            isCancelled = true;
             connection.stop();
         };
     }, []);
@@ -67,7 +84,7 @@ export default function TablesPage() {
                     </p>
                 </div>
                 
-                <div className="flex flex-wrap gap-3 text-sm font-semibold">
+                <div className="flex flex-wrap gap-3 text-sm font-semibold items-center">
                     <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-full shadow-lg border border-slate-700 text-slate-200">
                         <span className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
                         <span>Boş</span>
@@ -80,6 +97,13 @@ export default function TablesPage() {
                         <span className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
                         <span>Rezerve</span>
                     </div>
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-2 rounded-full transition-colors font-semibold"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        Çıkış
+                    </button>
                 </div>
             </div>
             

@@ -6,9 +6,9 @@ namespace RestaurantBill.Infrastructure.Services
 {
     public class TableNotificationService : ITableNotificationService
     {
-        private readonly IHubContext<KitchenHub> _hubContext;
+        private readonly IHubContext<TableHub> _hubContext;
 
-        public TableNotificationService(IHubContext<KitchenHub> hubContext)
+        public TableNotificationService(IHubContext<TableHub> hubContext)
         {
             _hubContext = hubContext;
         }
@@ -16,6 +16,16 @@ namespace RestaurantBill.Infrastructure.Services
         public async Task SendTableStatusChangedAsync(int tableId, int status)
         {
             await _hubContext.Clients.All.SendAsync("TableStatusChanged", tableId, status);
+        }
+
+        public async Task SendOrderUpdatedAsync(int tableId)
+        {
+            await _hubContext.Clients.All.SendAsync("OrderUpdated", tableId);
+        }
+
+        public async Task SendOrderClosedAsync(int tableId, int orderId)
+        {
+            await _hubContext.Clients.All.SendAsync("OrderClosed", tableId, orderId);
         }
     }
 }

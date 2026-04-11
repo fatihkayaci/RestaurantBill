@@ -3,16 +3,19 @@ using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Common;
 using MediatR;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
 {
     public class CloseOrderCommandHandler : IRequestHandler<DeleteCommand>
     {
         private readonly IUnitOfWork _uow;
+        private readonly ITableNotificationService _tableNotificationService;
 
-        public CloseOrderCommandHandler(IUnitOfWork uow)
+        public CloseOrderCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService)
         {
             _uow = uow;
+            _tableNotificationService = tableNotificationService;
         }
         /// <summary>
         /// Closes the order, marks it as Paid and sets the table status to Available.
@@ -32,6 +35,9 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
             table.Status = TableStatus.Available;
 
             await _uow.SaveChangesAsync(cancellationToken);
+
+            await _tableNotificationService.SendTableStatusChangedAsync(table.Id, (int)table.Status);
+            await _tableNotificationService.SendOrderClosedAsync(table.Id, order.Id);
         }
     }
 }

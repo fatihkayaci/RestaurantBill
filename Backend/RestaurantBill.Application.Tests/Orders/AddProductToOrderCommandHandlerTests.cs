@@ -13,13 +13,15 @@ public class AddProductToOrderCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<IOrderMessagePublisher> _mockPublisher;
+    private readonly Mock<ITableNotificationService> _mockNotificationService;
     private readonly AddProductToOrderCommandHandler _handler;
 
     public AddProductToOrderCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
         _mockPublisher = new Mock<IOrderMessagePublisher>();
-        _handler = new AddProductToOrderCommandHandler(_mockUow.Object, _mockPublisher.Object);
+        _mockNotificationService = new Mock<ITableNotificationService>();
+        _handler = new AddProductToOrderCommandHandler(_mockUow.Object, _mockPublisher.Object, _mockNotificationService.Object);
     }
     #region happy paths
     [Fact]

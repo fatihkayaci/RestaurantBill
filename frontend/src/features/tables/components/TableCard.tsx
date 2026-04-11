@@ -10,7 +10,7 @@ export default function TableCard({ table }: TableCardProps) {
     const getStyles = (status: number) => {
         switch (status) {
             case 1:
-                return "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700/80 hover:border-green-500/50 hover:text-green-400 hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]";
+                return "bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 hover:border-green-500/60 hover:shadow-[0_0_20px_rgba(34,197,94,0.25)]";
             
             case 2:
                 return "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 hover:shadow-[0_0_20px_rgba(239,68,68,0.25)]";

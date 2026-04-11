@@ -39,6 +39,7 @@ app.MapControllers();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.MapHub<KitchenHub>("/kitchen-hub");
+app.MapHub<TableHub>("/table-hub");
 
 await app.MigrateAndSeedAsync();
 

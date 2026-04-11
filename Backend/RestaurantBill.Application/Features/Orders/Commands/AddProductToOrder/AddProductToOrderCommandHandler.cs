@@ -13,11 +13,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
     {
         private readonly IUnitOfWork _uow;
         private readonly IOrderMessagePublisher _publisher;
+        private readonly ITableNotificationService _tableNotificationService;
 
-        public AddProductToOrderCommandHandler(IUnitOfWork uow, IOrderMessagePublisher publisher)
+        public AddProductToOrderCommandHandler(IUnitOfWork uow, IOrderMessagePublisher publisher, ITableNotificationService tableNotificationService)
         {
             _uow = uow;
             _publisher = publisher;
+            _tableNotificationService = tableNotificationService;
         }
         /// <summary>
         /// Adds one or more products to an existing order.
@@ -63,6 +65,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _publisher.PublishOrderCreatedAsync(order, cancellationToken);
+            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId);
         }
     }
 }

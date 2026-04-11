@@ -2,6 +2,9 @@ import { type Register } from './../features/auths/types';
 import { api } from './axiosInstance';
 
 export const authService = {
+    logout: () => {
+        localStorage.removeItem('token');
+    },
     login: async (userName: string, password: string) => {
         const response = await api.post<string>(`/auth/login`, {
             UserName: userName,
