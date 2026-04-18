@@ -23,6 +23,7 @@ public static class MediatRExtensions
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(IdempotencyBehavior<,>));
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(RequestPostProcessorBehavior<,>));
             cfg.AddBehavior(typeof(IRequestPostProcessor<,>), typeof(CacheInvalidationPostProcessor<,>));
         });
         return services;
