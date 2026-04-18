@@ -1,6 +1,7 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MediatR;
+using MediatR.Pipeline;
 using RestaurantBill.Application.Behaviors;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Validators.OrderItem;
@@ -19,8 +20,9 @@ public static class MediatRExtensions
             cfg.RegisterServicesFromAssemblyContaining<CreateOrderCommand>();
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
+            cfg.AddBehavior(typeof(IRequestPostProcessor<,>), typeof(CacheInvalidationPostProcessor<,>));
         });
-
         return services;
     }
 }

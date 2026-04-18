@@ -16,15 +16,16 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 builder.Services.AddControllers();
-builder.Services.AddSwaggerWithJwt();
-builder.Services.AddDatabase(builder.Configuration);
-builder.Services.AddIdentityWithJwt(builder.Configuration);
-builder.Services.AddRepositories();
-builder.Services.AddCorsPolicy();
-builder.Services.AddMediatRWithBehaviors();
-builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddSignalR();
-builder.Services.AddInfrastructureServices();
+builder.Services.AddMemoryCache();
+builder.Services.AddSwaggerWithJwt()
+                .AddDatabase(builder.Configuration)
+                .AddIdentityWithJwt(builder.Configuration)
+                .AddRepositories()
+                .AddCorsPolicy()
+                .AddMediatRWithBehaviors()
+                .AddAutoMapper(typeof(MappingProfile))
+                .AddInfrastructureServices();
 await builder.Services.AddRabbitMQAsync(builder.Configuration);
 
 var app = builder.Build();
