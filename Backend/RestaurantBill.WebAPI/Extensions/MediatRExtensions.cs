@@ -19,6 +19,7 @@ public static class MediatRExtensions
         {
             cfg.RegisterServicesFromAssemblyContaining<CreateOrderCommand>();
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(PerformanceBehavior<,>));
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
             cfg.AddBehavior(typeof(IRequestPostProcessor<,>), typeof(CacheInvalidationPostProcessor<,>));
