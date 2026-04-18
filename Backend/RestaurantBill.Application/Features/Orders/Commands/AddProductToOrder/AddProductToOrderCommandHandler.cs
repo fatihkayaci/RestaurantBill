@@ -1,25 +1,23 @@
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.Exceptions;
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Common;
 
 using MediatR;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Application.Notification;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 {
     public class AddProductToOrderCommandHandler : IRequestHandler<AddProductToOrderCommand>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IOrderMessagePublisher _publisher;
-        private readonly ITableNotificationService _tableNotificationService;
+        private readonly IMediator _mediator;
 
-        public AddProductToOrderCommandHandler(IUnitOfWork uow, IOrderMessagePublisher publisher, ITableNotificationService tableNotificationService)
+        public AddProductToOrderCommandHandler(IUnitOfWork uow, IMediator mediator)
         {
             _uow = uow;
-            _publisher = publisher;
-            _tableNotificationService = tableNotificationService;
+            _mediator = mediator;
         }
         /// <summary>
         /// Adds one or more products to an existing order.
@@ -64,8 +62,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _publisher.PublishOrderCreatedAsync(order, cancellationToken);
-            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId);
+            await _mediator.Publish(new OrderUpdatedNotification(order), cancellationToken);
         }
     }
 }
