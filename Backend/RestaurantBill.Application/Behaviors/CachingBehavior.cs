@@ -3,7 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using RestaurantBill.Application.Interfaces;
 namespace RestaurantBill.Application.Behaviors;
 public class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest<TResponse>
+    where TRequest : notnull
 {
     private readonly IMemoryCache _cache;
 
