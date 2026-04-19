@@ -49,6 +49,7 @@ RestaurantBill is a production-ready Point of Sale (POS) application designed fo
 - **CQRS with MediatR** — Commands and Queries are fully decoupled for scalability and testability
 - **Real-time Kitchen Notifications** — order updates are published to RabbitMQ and consumed by a background service
 - **Role-Based Authorization** — JWT authentication with Admin, Waiter, Cashier, and Kitchen roles
+- **MediatR Pipeline Behaviors** — Caching, idempotency, and performance monitoring as cross-cutting concerns
 - **Modern Dark UI** — responsive React frontend with Tailwind CSS featuring a neon/dark aesthetic
 
 ---
@@ -87,6 +88,7 @@ RestaurantBill/
 - **Why Clean Architecture?** The Domain layer has zero framework dependencies — business logic is portable and testable in complete isolation, regardless of whether the persistence layer uses EF Core, Dapper, or anything else.
 - **Why CQRS?** Read and write operations on orders have very different complexity profiles. Separating them via MediatR pipelines allowed adding validation and logging as cross-cutting concerns (Pipeline Behaviors) without touching any business logic.
 - **Why RabbitMQ over WebSockets for kitchen notifications?** If the Kitchen Display System is temporarily offline, orders must not be lost. RabbitMQ's durable, persistent queue guarantees delivery — a guarantee WebSockets fundamentally cannot provide.
+- **Why Pipeline Behaviors over Decorators?** Cross-cutting concerns like caching and idempotency are handled in the MediatR pipeline — handlers stay focused on business logic only.
 - **Why Repository + Unit of Work over raw EF Core?** Abstracting persistence behind interfaces allows the entire Application layer to be tested with Moq-mocked repositories — no real database, no migrations, no test containers required. This is directly visible in the 15+ unit test suites.
 
 ---
@@ -360,6 +362,7 @@ All entities extend `BaseEntity` which provides:
 - [x] Docker Compose infrastructure
 - [x] Dark mode POS UI with category filtering
 - [x] Unit tests for all CQRS command/query handlers (xUnit + Moq)
+- [x] MediatR Pipeline Behaviors (Caching, Idempotency, Performance)
 
 **Planned:**
 - [ ] Payment processing flow
