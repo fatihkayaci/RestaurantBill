@@ -1,6 +1,6 @@
+using MediatR;
 using Moq;
 using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
 using System.Linq.Expressions;
@@ -12,16 +12,14 @@ namespace RestaurantBill.Application.Tests.Orders;
 public class AddProductToOrderCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
-    private readonly Mock<IOrderMessagePublisher> _mockPublisher;
-    private readonly Mock<ITableNotificationService> _mockNotificationService;
+    private readonly Mock<IMediator> _mockMediator;
     private readonly AddProductToOrderCommandHandler _handler;
 
     public AddProductToOrderCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _mockPublisher = new Mock<IOrderMessagePublisher>();
-        _mockNotificationService = new Mock<ITableNotificationService>();
-        _handler = new AddProductToOrderCommandHandler(_mockUow.Object, _mockPublisher.Object, _mockNotificationService.Object);
+        _mockMediator = new Mock<IMediator>();
+        _handler = new AddProductToOrderCommandHandler(_mockUow.Object, _mockMediator.Object);
     }
     #region happy paths
     [Fact]
