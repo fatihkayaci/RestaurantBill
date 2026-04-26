@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { userService } from "../../api/userService";
 import type { User, CreateUser } from "../../features/auths/userTypes";
-import UserCard from "../../features/Admin/UserPanel/components/UserCard";
+import { Button } from "@/components/ui/button";
+import { Badge, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-export default function UsersPanel() {
+export default function Staff() {
     const [users, setUsers] = useState<User[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editUser, setEditUser] = useState<User | null>(null);
@@ -46,6 +49,54 @@ export default function UsersPanel() {
     };
 
     return (
+        <>
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Staff Members</h2>
+                <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Staff
+                </Button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {users.map(user => (
+                <Card key={user.id}>
+                    <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg">
+                            {user.fullName.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div>
+                            <p className="font-semibold">{user.fullName}</p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                        </div>
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="gap-2">
+                            <Pencil className="h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2 text-destructive">
+                            <Trash2 className="h-4 w-4" /> Remove
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                    <div className="mt-3">
+                        <Badge className="capitalize">{user.role}</Badge>
+                    </div>
+                    </CardContent>
+                </Card>
+                ))}
+            </div>
+          </>
+        /*
         <div>
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Kullanıcılar</h2>
@@ -112,6 +163,6 @@ export default function UsersPanel() {
                     </div>
                 </div>
             )}
-        </div>
+        </div>*/
     );
 }

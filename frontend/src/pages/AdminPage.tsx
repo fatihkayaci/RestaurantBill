@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+
 import type { Restaurant } from "../features/Restaurants/types";
 import { restaurantService } from "../api/restaurantService";
 import RestaurantSetupForm from "../components/RestaurantSetupForm";
-import AdminDashboard from "../components/AdminDashboard";
+import AdminDashboard from "./Admin/AdminDashboard";
 import { jwtDecode } from "jwt-decode";
 
 export default function AdminPage() {
