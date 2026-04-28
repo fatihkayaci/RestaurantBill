@@ -12,6 +12,17 @@ import type { Order } from '../features/order/types';
 import type { Table } from '../features/tables/types';
 import { tableService } from '../api/tableService';
 import * as signalR from "@microsoft/signalr";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogDescription 
+} from "@/components/ui/dialog";
+import { CreditCard, Banknote, X, Check, Utensils, AlertCircle } from "lucide-react";
 
 export default function PosPage() {
     const { tableId } = useParams();
@@ -362,179 +373,182 @@ export default function PosPage() {
         orderTab === 4 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 3) :
         [];
 
+    // --- YÜKLENİYOR (LOADING) DURUMU ---
     if (isLoading) {
         return (
-            <div className="flex h-screen bg-slate-900 overflow-hidden">
+            <div className="flex h-screen bg-background overflow-hidden">
                 <div className="w-2/3 flex flex-col h-screen p-6">
-                    <div className="flex gap-4 mb-8">
+                    <div className="flex gap-4 mb-8 overflow-x-hidden">
                         {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="h-12 w-28 bg-slate-800 rounded-xl animate-pulse border border-slate-700/50"></div>
+                            <Skeleton key={i} className="h-12 w-28 rounded-xl shrink-0" />
                         ))}
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                            <div key={i} className="h-32 bg-slate-800 rounded-2xl animate-pulse border border-slate-700/50"></div>
+                            <Skeleton key={i} className="h-32 rounded-2xl" />
                         ))}
                     </div>
                 </div>
 
-                <div className="w-1/3 bg-slate-800 border-l border-slate-700 flex flex-col">
-                    <div className="h-20 border-b border-slate-700 p-6 flex items-center justify-between">
-                        <div className="h-8 w-32 bg-slate-700 rounded-lg animate-pulse"></div>
-                        <div className="h-6 w-24 bg-slate-700 rounded-full animate-pulse"></div>
+                <div className="w-1/3 bg-card border-l flex flex-col">
+                    <div className="h-20 border-b p-6 flex items-center justify-between">
+                        <Skeleton className="h-8 w-32 rounded-lg" />
+                        <Skeleton className="h-6 w-24 rounded-full" />
                     </div>
                     <div className="flex-1 p-4 space-y-4">
                         {[1, 2, 3].map(i => (
-                            <div key={i} className="h-20 bg-slate-700/50 rounded-xl animate-pulse"></div>
+                            <Skeleton key={i} className="h-20 rounded-xl" />
                         ))}
                     </div>
-                    <div className="h-64 border-t border-slate-700 p-6 flex flex-col gap-4">
-                        <div className="h-8 w-full bg-slate-700 rounded-lg animate-pulse mb-2"></div>
-                        <div className="h-14 w-full bg-slate-700 rounded-2xl animate-pulse"></div>
-                        <div className="h-12 w-full bg-slate-700 rounded-2xl animate-pulse"></div>
+                    <div className="h-64 border-t p-6 flex flex-col gap-4">
+                        <Skeleton className="h-8 w-full rounded-lg mb-2" />
+                        <Skeleton className="h-14 w-full rounded-2xl" />
+                        <Skeleton className="h-12 w-full rounded-2xl" />
                     </div>
                 </div>
             </div>
         );
     }
 
+    // --- MASA BULUNAMADI ---
     if (!table) {
         return (
-            <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-200">
-                <svg className="w-20 h-20 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div className="h-screen flex flex-col items-center justify-center bg-background text-foreground">
+                <AlertCircle className="w-20 h-20 text-muted-foreground mb-4" />
                 <h2 className="text-2xl font-bold">Masa Bulunamadı</h2>
-                <p className="text-slate-400 mt-2">Aradığınız masa sistemde kayıtlı değil veya silinmiş olabilir.</p>
+                <p className="text-muted-foreground mt-2">Aradığınız masa sistemde kayıtlı değil veya silinmiş olabilir.</p>
             </div>
         );
     }
 
-
-    // for Available
+    // --- MASA MÜSAİT (BOŞ) DURUMU ---
     if (table.status === 1) {
         return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-                <div className="bg-slate-800 rounded-3xl shadow-2xl shadow-slate-900/50 p-8 max-w-sm w-full flex flex-col items-center border border-slate-700">
-                    <div className="w-24 h-24 bg-slate-700/50 rounded-full flex items-center justify-center mb-6">
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <div className="bg-card rounded-3xl shadow-xl p-8 max-w-sm w-full flex flex-col items-center border">
+                    <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mb-6">
                         <div className="w-12 h-12 bg-green-500 rounded-full animate-pulse shadow-[0_0_20px_rgba(34,197,94,0.6)]"></div>
                     </div>
-                    <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight">
+                    <h2 className="text-3xl font-extrabold mb-2 tracking-tight">
                         Masa {tableId}
                     </h2>
-                    <p className="text-slate-400 mb-8 text-center font-medium">
+                    <p className="text-muted-foreground mb-8 text-center font-medium">
                         Bu masa şu anda boş. Yeni bir adisyon açabilir veya rezerve edebilirsiniz.
                     </p>
 
                     <div className="w-full flex flex-col gap-4">
-                        <button
+                        <Button 
+                            size="lg" 
+                            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-6 text-xl shadow-[0_4px_14px_0_rgba(34,197,94,0.39)]"
                             onClick={handleOpenTable}
-                            className="w-full bg-green-500 hover:bg-green-600 active:scale-95 text-white font-bold py-4 rounded-xl shadow-[0_4px_14px_0_rgba(34,197,94,0.39)] transition-all text-xl"
                         >
                             Masayı Aç
-                        </button>
+                        </Button>
                         
-                        <button 
+                        <Button 
+                            variant="outline" 
+                            size="lg" 
+                            className="w-full font-bold py-6 text-lg border-2 text-blue-500 hover:text-blue-600"
                             onClick={handleReservation}
-                            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-blue-400 font-bold py-3 rounded-xl border-2 border-slate-700 hover:border-blue-500/50 transition-all text-lg"
                         >
                             Rezerve Et
-                        </button>
+                        </Button>
                     </div>
 
-                    <Link to="/" className="mt-8 text-slate-500 hover:text-slate-300 font-semibold underline transition-colors">
+                    <Link to="/" className="mt-8 text-muted-foreground hover:text-foreground font-semibold underline transition-colors">
                         Vazgeç ve Masalara Dön
                     </Link>
                 </div>
             </div>
         );
     }
-    // for reservation
+
+    // --- MASA REZERVE DURUMU ---
     if (table.status === 3) {
         return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-                
-                <div className="bg-slate-800 rounded-3xl shadow-2xl shadow-slate-900/50 p-8 max-w-sm w-full flex flex-col items-center border border-slate-700">
-                    
-                    <div className="w-24 h-24 bg-slate-700/50 rounded-full flex items-center justify-center mb-6">
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <div className="bg-card rounded-3xl shadow-xl p-8 max-w-sm w-full flex flex-col items-center border">
+                    <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
                         <div className="w-12 h-12 bg-amber-500 rounded-full animate-pulse shadow-[0_0_20px_rgba(245,158,11,0.6)]"></div>
                     </div>
 
-                    <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight">
+                    <h2 className="text-3xl font-extrabold mb-2 tracking-tight">
                         Masa {tableId}
                     </h2>
-                    <p className="text-amber-500 mb-6 text-center font-bold tracking-wide uppercase text-sm drop-shadow-sm">
+                    <p className="text-amber-500 mb-6 text-center font-bold tracking-wide uppercase text-sm">
                         REZERVE EDİLMİŞTİR
                     </p>
                     
-                     {/* // TODO: will come data to api */}
-                    <div className="w-full bg-slate-900/50 rounded-2xl p-5 mb-8 border border-slate-700 shadow-inner">
-                        <div className="flex justify-between items-center border-b border-slate-700 pb-3 mb-3">
-                            <span className="text-slate-400 font-medium text-sm">Müşteri:</span>
-                            <span className="text-slate-200 font-bold text-lg">Ahmet Yılmaz</span>
+                    {/* TODO: API'den gerçek veriler gelecek */}
+                    <div className="w-full bg-muted/50 rounded-2xl p-5 mb-8 border shadow-inner">
+                        <div className="flex justify-between items-center border-b pb-3 mb-3">
+                            <span className="text-muted-foreground font-medium text-sm">Müşteri:</span>
+                            <span className="font-bold text-lg">Ahmet Yılmaz</span>
                         </div>
-                        <div className="flex justify-between items-center border-b border-slate-700 pb-3 mb-3">
-                            <span className="text-slate-400 font-medium text-sm">Saat:</span>
+                        <div className="flex justify-between items-center border-b pb-3 mb-3">
+                            <span className="text-muted-foreground font-medium text-sm">Saat:</span>
                             <span className="text-amber-500 font-extrabold text-xl">19:30</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-slate-400 font-medium text-sm">Kişi Sayısı:</span>
-                            <span className="text-slate-200 font-bold text-lg">4 Kişi</span>
+                            <span className="text-muted-foreground font-medium text-sm">Kişi Sayısı:</span>
+                            <span className="font-bold text-lg">4 Kişi</span>
                         </div>
                     </div>
 
                     <div className="w-full flex flex-col gap-4">
-                        
-                        <button
-                            className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-4 rounded-xl shadow-[0_4px_14px_0_rgba(245,158,11,0.39)] transition-all text-xl"
+                        <Button 
+                            size="lg" 
+                            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-6 text-lg shadow-[0_4px_14px_0_rgba(245,158,11,0.39)]"
                             onClick={handleOpenTable}
                         >
-                            Müşteri Geldi (Adisyon Aç)
-                        </button>
+                            Müşteri Geldi (Masayı Aç)
+                        </Button>
                         
-                        <button
-                            className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-red-400 font-bold py-3 rounded-xl border-2 border-slate-700 hover:border-red-500/50 transition-all text-lg"
+                        <Button 
+                            variant="outline" 
+                            size="lg" 
+                            className="w-full font-bold py-6 text-lg border-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={handleCancelReservation}
                         >
                             Rezervasyonu İptal Et
-                        </button>
-
+                        </Button>
                     </div>
 
-                    <Link to="/" className="mt-6 text-slate-500 hover:text-slate-300 font-semibold underline transition-colors">
+                    <Link to="/" className="mt-6 text-muted-foreground hover:text-foreground font-semibold underline transition-colors">
                         Vazgeç ve Masalara Dön
                     </Link>
-
                 </div>
             </div>
         );
     }
-    // for Occupied
+
+    // --- MASA DOLU (AKTİF SİPARİŞ) DURUMU ---
     if (table.status === 2) {
         return (
-            <div className="flex h-screen bg-slate-900 overflow-hidden text-slate-200">
+            <div className="flex h-screen bg-background overflow-hidden text-foreground">
                 
+                {/* SOL TARAF: Menü ve Kategoriler */}
                 <div className="w-2/3 flex flex-col h-screen relative">
-                    
-                    <div className="bg-slate-900 px-6 py-4 shadow-sm flex items-center gap-4 overflow-x-auto z-10 sticky top-0 border-b border-slate-800">
-                        <button 
+                    <div className="bg-card px-6 py-4 shadow-sm flex items-center gap-4 overflow-x-auto z-10 sticky top-0 border-b">
+                        <Button 
+                            variant={selectedCategoryId === null ? "default" : "secondary"}
+                            size="lg"
+                            className={`rounded-xl font-bold transition-all shadow-md active:scale-95 ${selectedCategoryId === null ? "bg-orange-500 hover:bg-orange-600 shadow-[0_0_15px_rgba(249,115,22,0.5)] scale-105" : ""}`}
                             onClick={() => setSelectedCategoryId(null)}
-                            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all shadow-md active:scale-95
-                                ${selectedCategoryId === null 
-                                    ? "bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)] scale-105" 
-                                    : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                                }`}
                         >
                             Tümü
-                        </button>
+                        </Button>
                         {categories.map(category => (
                             <CategoryCard 
-                            key={category.id} 
-                            category={category} 
-                            isSelected={selectedCategoryId === category.id}
-                            onClick={() => setSelectedCategoryId(category.id)}/>
+                                key={category.id} 
+                                category={category} 
+                                isSelected={selectedCategoryId === category.id}
+                                onClick={() => setSelectedCategoryId(category.id)}
+                            />
                         ))}
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex-1 overflow-y-auto p-6 bg-muted/20">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             {filteredProducts.map(product => (
                                 <ProductCard key={product.id} product={product} onAdd={increaseQuantity} />
@@ -543,165 +557,152 @@ export default function PosPage() {
                     </div>
                 </div>
 
-                <div className="w-1/3 bg-slate-800 shadow-[-10px_0_30px_-5px_rgba(0,0,0,0.5)] z-20 flex flex-col relative border-l border-slate-700">
+                {/* SAĞ TARAF: Adisyon ve Ödeme Alanı */}
+                <div className="w-1/3 bg-card shadow-[-10px_0_30px_-5px_rgba(0,0,0,0.1)] z-20 flex flex-col relative border-l">
                     
-                    <div className="px-6 py-5 border-b border-slate-700 flex justify-between items-center bg-slate-800">
-                        <h2 className="text-2xl font-extrabold text-white">
-                            Masa {tableId}
-                        </h2>
-                        <span className="bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-bold border border-red-500/20 animate-pulse">
-                            Aktif Sipariş
-                        </span>
+                    <div className="px-6 py-5 border-b flex justify-between items-center bg-card">
+                        <h2 className="text-2xl font-extrabold">Masa {tableId}</h2>
+                        <Badge variant="destructive" className="animate-pulse">Aktif Sipariş</Badge>
                     </div>
-                    <div className="px-4 pt-4 pb-2 bg-slate-800">
-                        <div className="flex gap-2 p-1 bg-slate-900/80 rounded-xl overflow-x-auto scrollbar-hide border border-slate-700/50">
+                    
+                    <div className="px-4 pt-4 pb-2 bg-card">
+                        <div className="flex gap-2 p-1 bg-muted rounded-xl overflow-x-auto scrollbar-hide border">
                             {[
                                 { id: 1, label: "Yeni" },
                                 { id: 2, label: "Onaylı" },
                                 { id: 3, label: "Mutfakta" },
                                 { id: 4, label: "Hazır" }
                             ].map(tab => (
-                                <button
+                                <Button
                                     key={tab.id}
+                                    variant={orderTab === tab.id ? "default" : "ghost"}
+                                    size="sm"
                                     onClick={() => setOrderTab(tab.id)}
-                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all
-                                        ${orderTab === tab.id
-                                            ? "bg-slate-700 text-white shadow-md shadow-slate-900/50"
-                                            : "text-slate-400 hover:text-slate-300 hover:bg-slate-700/50"
-                                        }`}
+                                    className={`flex-1 rounded-lg font-bold ${orderTab === tab.id ? "shadow-md" : "text-muted-foreground"}`}
                                 >
                                     {tab.label}
-                                </button>
+                                </Button>
                             ))}
                         </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-900/50">
+                    
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/10">
                         {filteredOrderItems.length === 0 ? (
-                            <div className="text-center text-slate-500 mt-10 font-medium flex flex-col items-center gap-3">
-                                <svg className="w-12 h-12 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            <div className="text-center text-muted-foreground mt-10 font-medium flex flex-col items-center gap-3">
+                                <Utensils className="w-12 h-12 opacity-20" />
                                 Bu statüde ürün bulunmuyor.
                             </div>
                         ) : (
                             filteredOrderItems.map(item => (
                                 <OrderCard
-                                key={`${item.productId}-${item.is_load}`}
-                                item={item}
-                                decreaseQuantity={decreaseQuantity}
-                                increaseQuantity={increaseQuantity}
-                                onUpdateQuantity={handleUpdateQuantity}
-                                removeItem={handleRemoveItem}
+                                    key={`${item.productId}-${item.is_load}`}
+                                    item={item}
+                                    decreaseQuantity={decreaseQuantity}
+                                    increaseQuantity={increaseQuantity}
+                                    onUpdateQuantity={handleUpdateQuantity}
+                                    removeItem={handleRemoveItem}
                                 />
                             ))
                         )}
                     </div>
                     
-                    <div className="p-6 bg-slate-800 border-t border-slate-700 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.2)]">
-                        
+                    {/* Alt Kısım: Ara Toplam ve Butonlar */}
+                    <div className="p-6 bg-card border-t shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
                         <div className="flex justify-between items-end mb-6">
-                            <span className="text-slate-400 font-medium text-lg mb-1">Ara Toplam</span>
+                            <span className="text-muted-foreground font-medium text-lg mb-1">Ara Toplam</span>
                             <div className="text-right">
-                                <span className="text-4xl font-black text-green-400 tracking-tight">
-                                    {activeOrder.totalPrice} <span className="text-2xl text-green-500">₺</span>
+                                <span className="text-4xl font-black text-green-500 tracking-tight">
+                                    {activeOrder.totalPrice} <span className="text-2xl">₺</span>
                                 </span>
                             </div>
                         </div>
                         
-                        <div className="border-t border-slate-700 p-4 bg-slate-800 flex items-center gap-2">
-    
-                                <button 
-                                    type="button"
-                                    title="İptal Et"
-                                    onClick={handleCancelOrder}
-                                    className="p-3.5 rounded-xl bg-slate-700/50 text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 border border-transparent transition-all active:scale-95"
-                                >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                </button>
+                        <div className="border-t pt-4 flex items-center gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="icon"
+                                className="h-14 w-14 shrink-0 rounded-xl text-destructive hover:bg-destructive hover:text-white border-destructive/30"
+                                onClick={handleCancelOrder}
+                                title="İptal Et"
+                            >
+                                <X className="w-6 h-6" />
+                            </Button>
 
-                                <button 
-                                    type="button"
-                                    title="Masayı Kapat (Hesabı Al)"
-                                    onClick={() => setIsPaymentModalOpen(true)}
-                                    className="p-3.5 rounded-xl bg-slate-700/50 text-slate-400 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/30 border border-transparent transition-all active:scale-95"
-                                >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                </button>
+                            <Button 
+                                variant="outline"
+                                size="icon"
+                                className="h-14 w-14 shrink-0 rounded-xl text-amber-500 hover:bg-amber-500 hover:text-white border-amber-500/30"
+                                onClick={() => setIsPaymentModalOpen(true)}
+                                title="Masayı Kapat (Hesabı Al)"
+                            >
+                                <Banknote className="w-6 h-6" />
+                            </Button>
 
-                                <button
-                                    type="button"
-                                    onClick={(e) => orderTab === 2 ? handleSubmitUpdate(e) : handleSubmitOrder(e)}
-                                    disabled={isSubmitting}
-                                    className={`flex-1 active:scale-95 transition-all text-white font-bold py-3.5 px-4 rounded-xl flex justify-center items-center gap-2
-                                        ${isSubmitting
-                                            ? "bg-slate-600 cursor-not-allowed shadow-none"
-                                            : (orderTab === 2 ? "bg-blue-600 hover:bg-blue-500" : "bg-emerald-600 hover:bg-emerald-500")
-                                        }`}
-                                >
-                                    {isSubmitting ? (
-                                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    ) : orderTab === 2 ? (
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
-                                    ) : (
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                    )}
-
-                                    <span className="text-sm tracking-wide">
-                                        {isSubmitting ? "İşleniyor..." : (orderTab === 2 ? "Güncelle" : "Siparişi Onayla")}
-                                    </span>
-                                </button>
-                            </div>
+                            <Button
+                                disabled={isSubmitting}
+                                onClick={(e) => orderTab === 2 ? handleSubmitUpdate(e) : handleSubmitOrder(e)}
+                                className={`flex-1 h-14 rounded-xl text-lg font-bold gap-2 ${orderTab === 2 ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"}`}
+                            >
+                                {isSubmitting ? (
+                                    <span>İşleniyor...</span>
+                                ) : (
+                                    <>
+                                        <Check className="w-5 h-5" strokeWidth={3} />
+                                        {orderTab === 2 ? "Güncelle" : "Siparişi Onayla"}
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                         
-                        <Link to="/" className="text-slate-500 hover:text-slate-300 font-semibold transition-colors text-center block mt-5">
+                        <Link to="/" className="text-muted-foreground hover:text-foreground font-semibold transition-colors text-center block mt-5">
                             Kapat ve Masalara Dön
                         </Link>
                     </div>
-
                 </div>
 
-                {isPaymentModalOpen && (
-                    <div className="fixed inset-0 flex items-center justify-center z-50 bg-slate-900/80 backdrop-blur-sm transition-all">
-                        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-8 w-full max-w-md shadow-2xl transform transition-all">
-                            
-                            <div className="text-center mb-8">
-                                <h3 className="text-2xl font-bold text-white">Ödeme Al</h3>
-                                <p className="text-slate-400 mt-2">Lütfen ödeme yöntemini seçin</p>
-                            </div>
+                {/* --- ÖDEME MODALI (SHADCN DIALOG) --- */}
+                <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+                    <DialogContent className="sm:max-w-md border-none shadow-2xl p-0 overflow-hidden rounded-3xl bg-card">
+                        <div className="p-8">
+                            <DialogHeader className="text-center mb-8">
+                                <DialogTitle className="text-3xl font-bold text-center">Ödeme Al</DialogTitle>
+                                <DialogDescription className="text-center text-base mt-2">
+                                    Lütfen ödeme yöntemini seçin
+                                </DialogDescription>
+                            </DialogHeader>
 
                             <div className="flex flex-col gap-4">
-                                <button 
+                                <Button 
+                                    size="lg"
                                     onClick={() => handlePayment()}
-                                    className="w-full bg-blue-500 hover:bg-blue-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(59,130,246,0.39)] transition-all flex justify-center items-center gap-2"
+                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-8 rounded-2xl shadow-[0_4px_14px_0_rgba(59,130,246,0.39)] gap-3"
                                 >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                                    <CreditCard className="w-7 h-7" />
                                     Kredi Kartı
-                                </button>
+                                </Button>
 
-                                <button 
+                                <Button 
+                                    size="lg"
                                     onClick={() => handlePayment()}
-                                    className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-xl font-bold py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] transition-all flex justify-center items-center gap-2"
+                                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xl font-bold py-8 rounded-2xl shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] gap-3"
                                 >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                    <Banknote className="w-7 h-7" />
                                     Nakit
-                                </button>
+                                </Button>
                             </div>
 
-                            <button 
+                            <Button 
+                                variant="ghost"
                                 onClick={() => setIsPaymentModalOpen(false)}
-                                className="mt-6 w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-3 rounded-xl transition-all"
+                                className="mt-6 w-full text-muted-foreground font-semibold py-6 rounded-2xl text-lg hover:bg-muted"
                             >
                                 Vazgeç
-                            </button>
+                            </Button>
                         </div>
-                    </div>
-                )}
+                    </DialogContent>
+                </Dialog>
+
             </div>
         );
     }
-    
 }

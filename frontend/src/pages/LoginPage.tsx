@@ -3,10 +3,23 @@ import { authService } from "../api/authService";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from 'jwt-decode';
 
+// shadcn/ui bileşenleri
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+    Card, 
+    CardContent, 
+    CardDescription, 
+    CardFooter, 
+    CardHeader, 
+    CardTitle 
+} from "@/components/ui/card";
+
 export default function LoginPage() {
 
-    const [userName, setUserName] = useState<string>();
-    const [password, setPassword] = useState<string>();
+    const [userName, setUserName] = useState<string>("");
+    const [password, setPassword] = useState<string>("");
     const navigate = useNavigate();
 
     const handleSubmitUser = async (e: any) => {
@@ -14,7 +27,7 @@ export default function LoginPage() {
         try {
             if (!userName || !password) return;
             const result = await authService.login(userName, password);
-            localStorage.setItem("token",result);
+            localStorage.setItem("token", result);
             const decoded: any = jwtDecode(result);
             const role = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
 
@@ -28,51 +41,61 @@ export default function LoginPage() {
     }
     
     return (
-        <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-10 w-96">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <Card className="w-full max-w-md">
+                <CardHeader className="space-y-2 text-center">
+                    <CardTitle className="text-3xl font-bold tracking-tight">
+                        RestaurantBill
+                    </CardTitle>
+                    <CardDescription>
+                        Sisteme giriş yapın
+                    </CardDescription>
+                </CardHeader>
                 
-                <h1 className="text-white text-2xl font-bold mb-1">RestaurantBill</h1>
-                <p className="text-gray-500 text-sm mb-8">Sisteme giriş yapın</p>
+                <CardContent>
+                    <form onSubmit={handleSubmitUser} className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="username">Kullanıcı Adı</Label>
+                            <Input
+                                id="username"
+                                value={userName}
+                                onChange={(e) => setUserName(e.target.value)}
+                                type="text"
+                                placeholder="kullanici_adi"
+                                required
+                            />
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Şifre</Label>
+                            <Input
+                                id="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                type="password"
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
 
-                <form>
-                    <div className="mb-4">
-                        <label className="block text-gray-400 text-sm mb-2">Kullanıcı Adı</label>
-                        <input
-                        value={userName}
-                        onChange={(e) => setUserName(e.target.value)}
-                        type="text"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                        placeholder="kullanici_adi"
-                        />
-                    </div>
+                        <Button type="submit" className="w-full">
+                            Giriş Yap
+                        </Button>
+                    </form>
+                </CardContent>
 
-                    <div className="mb-6">
-                        <label className="block text-gray-400 text-sm mb-2">Şifre</label>
-                        <input
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        type="password"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                        placeholder="••••••••"
-                        />
-                    </div>
-
-                    <button
-                        onClick={handleSubmitUser}
-                        type="submit"
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium"
-                    >
-                        Giriş Yap
-                    </button>
-                    <p className="text-center text-gray-500 text-sm mt-4">
+                <CardFooter className="flex justify-center">
+                    <p className="text-sm text-muted-foreground">
                         Hesabın yok mu?{' '}
-                        <span onClick={() => navigate('/register')} className="text-indigo-400 cursor-pointer hover:underline">
-                        Kayıt Ol
+                        <span 
+                            onClick={() => navigate('/register')} 
+                            className="text-primary cursor-pointer hover:underline font-medium"
+                        >
+                            Kayıt Ol
                         </span>
                     </p>
-                </form>
-
-            </div>
+                </CardFooter>
+            </Card>
         </div>
     );
 }

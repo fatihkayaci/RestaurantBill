@@ -4,6 +4,19 @@ import type { Order } from "../features/order/types";
 import * as signalR from "@microsoft/signalr";
 import { orderService } from "../api/orderService";
 import { authService } from "../api/authService";
+
+// shadcn/ui & Icons
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Card, 
+  CardContent, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { ChefHat, Check, Play } from "lucide-react";
+
 const OrderStatus = {
   Active: 1,
   Pending: 2,
@@ -15,46 +28,42 @@ const OrderStatus = {
 } as const;
 
 const ItemStatusConfig: Record<number, { label: string; dot: string; text: string }> = {
-  1: { label: "Bekliyor",     dot: "bg-red-400 animate-pulse",    text: "text-red-400" },
-  2: { label: "Hazırlanıyor", dot: "bg-yellow-400 animate-pulse", text: "text-yellow-400" },
-  3: { label: "Hazır",        dot: "bg-green-400",                text: "text-green-400" },
-  4: { label: "Teslim Edildi",dot: "bg-gray-400",                 text: "text-gray-400" },
+  1: { label: "Bekliyor",     dot: "bg-red-500 animate-pulse",    text: "text-red-500" },
+  2: { label: "Hazırlanıyor", dot: "bg-yellow-500 animate-pulse", text: "text-yellow-500" },
+  3: { label: "Hazır",        dot: "bg-green-500",                text: "text-green-500" },
+  4: { label: "Teslim Edildi",dot: "bg-gray-500",                 text: "text-gray-500" },
 };
+
 export default function KitchenPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-
-  const handleLogout = () => {
-    authService.logout();
-    navigate('/login');
-  };
   
-  const statusConfig: Record<number, { label: string; border: string; badge: string; dot: string }> = {
+  const statusConfig: Record<number, { label: string; border: string; variant: "default" | "secondary" | "destructive" | "outline"; dot: string }> = {
     [OrderStatus.Active]: {
-      label: "Aktif / Yeni",
-      border: "border-blue-500",
-      badge: "bg-blue-500/20 text-blue-400 border border-blue-500/40",
-      dot: "bg-blue-400 animate-pulse",
+      label: "Yeni",
+      border: "border-t-blue-500",
+      variant: "default",
+      dot: "bg-blue-500 animate-pulse",
     },
     [OrderStatus.Pending]: {
       label: "Bekliyor",
-      border: "border-red-500",
-      badge: "bg-red-500/20 text-red-400 border border-red-500/40",
-      dot: "bg-red-400 animate-pulse",
+      border: "border-t-red-500",
+      variant: "destructive",
+      dot: "bg-red-100 animate-pulse", // Kırmızı badge içinde beyaz kalsın diye
     },
     [OrderStatus.Preparing]: {
       label: "Hazırlanıyor",
-      border: "border-yellow-400",
-      badge: "bg-yellow-400/20 text-yellow-300 border border-yellow-400/40",
-      dot: "bg-yellow-400 animate-pulse",
+      border: "border-t-yellow-500",
+      variant: "secondary",
+      dot: "bg-yellow-500 animate-pulse",
     },
     [OrderStatus.Ready]: {
       label: "Hazır",
-      border: "border-green-500",
-      badge: "bg-green-500/20 text-green-400 border border-green-500/40",
-      dot: "bg-green-400",
+      border: "border-t-green-500",
+      variant: "outline",
+      dot: "bg-green-500",
     },
   };
 
@@ -83,6 +92,7 @@ export default function KitchenPage() {
     }
   };
 
+  // --- USE EFFECT VE SIGNALR MANTIĞI AYNEN KORUNDU ---
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -96,6 +106,7 @@ export default function KitchenPage() {
     };
     fetchOrders();
   }, []);
+
   useEffect(() => {
     const kitchenConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/kitchen-hub`)
@@ -151,138 +162,144 @@ export default function KitchenPage() {
       tableConnection.stop();
     };
   }, []);
+  // ---------------------------------------------------
+
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
 
       {/* ── Top Bar ── */}
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-xl">
-            🍳
+      <header className="bg-card border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500">
+            <ChefHat className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white leading-none">Mutfak Ekranı</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Kitchen Display System</p>
+            <h1 className="text-xl font-bold leading-none">Mutfak Ekranı</h1>
+            <p className="text-xs text-muted-foreground mt-1">Kitchen Display System</p>
           </div>
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 px-3 py-1.5 rounded-lg">
-            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
-            <span className="text-sm text-red-300">Bekliyor</span>
+        <div className="hidden md:flex items-center gap-4">
+          <div className="flex gap-3 mr-4">
+            <Badge variant="destructive" className="gap-2 px-3 py-1">
+              <span className="w-2 h-2 rounded-full bg-red-100 animate-pulse"></span> Bekliyor
+            </Badge>
+            <Badge variant="secondary" className="gap-2 px-3 py-1">
+              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span> Hazırlanıyor
+            </Badge>
+            <Badge variant="outline" className="gap-2 px-3 py-1 border-green-500/30 text-green-600">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span> Hazır
+            </Badge>
           </div>
-          <div className="flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 px-3 py-1.5 rounded-lg">
-            <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
-            <span className="text-sm text-yellow-300">Hazırlanıyor</span>
-          </div>
-          <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 px-3 py-1.5 rounded-lg">
-            <span className="w-2 h-2 rounded-full bg-green-400"></span>
-            <span className="text-sm text-green-300">Hazır</span>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-3 py-1.5 rounded-lg transition-colors text-sm font-semibold"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            Çıkış
-          </button>
         </div>
       </header>
 
       {/* ── Content ── */}
       <main className="p-6">
         {loading && (
-          <div className="flex items-center justify-center h-64 text-gray-500 text-lg">
-            Yükleniyor...
+          <div className="flex items-center justify-center h-64 text-muted-foreground text-lg">
+            Siparişler yükleniyor...
           </div>
         )}
       
         {error && (
-          <div className="flex items-center justify-center h-64 text-red-400 text-lg">
+          <div className="flex items-center justify-center h-64 text-destructive text-lg font-medium">
             {error}
           </div>
         )}
 
         {!loading && !error && orders.length === 0 && (
-          <div className="flex items-center justify-center h-64 text-gray-500 text-lg">
-            Aktif sipariş yok.
+          <div className="flex items-center justify-center h-64 text-muted-foreground text-lg border-2 border-dashed rounded-xl m-8">
+            Aktif sipariş bulunmuyor. Şef dinlenebilir! ☕
           </div>
         )}
 
        {!loading && !error && orders.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {orders.map((order) => {
-              const cfg = statusConfig[order.status];
+              const cfg = statusConfig[order.status] || statusConfig[OrderStatus.Pending];
+              
               return (
-                <div
-                  key={order.id}
-                  className={`bg-gray-900 rounded-2xl border-t-4 ${cfg.border} flex flex-col shadow-xl overflow-hidden`}
+                <Card 
+                  key={order.id} 
+                  className={`border-t-4 shadow-md flex flex-col overflow-hidden ${cfg.border}`}
                 >
-                  {/* Card Header */}
-                  <div className="px-4 pt-4 pb-3 flex items-center justify-between">
+                  <CardHeader className="pb-3 flex flex-row items-start justify-between space-y-0 bg-muted/30">
                     <div>
-                      <span className="text-2xl font-extrabold text-white">Masa {order.tableId}</span>
-                      <p className="text-xs text-gray-500 mt-0.5">#{order.id}</p>
+                      <CardTitle className="text-2xl font-extrabold">Masa {order.tableId}</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">Sipariş #{order.id}</p>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1.5 ${cfg.badge}`}>
+                    <Badge variant={cfg.variant} className="gap-1.5 px-2.5 py-1">
                       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}></span>
                       {cfg.label}
-                    </span>
-                  </div>
+                    </Badge>
+                  </CardHeader>
 
-                  <div className="mx-4 border-t border-gray-800"></div>
-
-                  {/* Order Items */}
-                  <div className="px-4 py-3 flex-1 space-y-2.5">
+                  <CardContent className="pt-4 flex-1 space-y-4">
                     {order.orderItems.map((item, i) => {
                       const itemCfg = ItemStatusConfig[item.status] ?? ItemStatusConfig[1];
                       return (
-                        <div key={i} className="flex items-center gap-3">
-                          <span className="w-8 h-8 shrink-0 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center text-base font-black text-white">
+                        <div key={i} className="flex items-start gap-3">
+                          <Badge variant="secondary" className="w-8 h-8 shrink-0 flex items-center justify-center rounded-md text-base font-bold">
                             {item.quantity}
-                          </span>
-                          <p className="text-base font-semibold text-gray-100 leading-tight flex-1">
-                            {item.productName}
-                          </p>
-                          <span className={`flex items-center gap-1 text-xs font-semibold ${itemCfg.text}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${itemCfg.dot}`}></span>
-                            {itemCfg.label}
-                          </span>
+                          </Badge>
+                          <div className="flex-1 space-y-1">
+                            <p className="text-base font-semibold leading-tight">
+                              {item.productName}
+                            </p>
+                            <div className={`flex items-center gap-1.5 text-xs font-medium ${itemCfg.text}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${itemCfg.dot}`}></span>
+                              {itemCfg.label}
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
+                    
                     {order.note && (
-                      <p className="text-xs text-amber-400/80 pt-1">📝 {order.note}</p>
-                    )}
-                  </div>
-
-                  <div className="mx-4 border-t border-gray-800"></div>
-
-                  {/* Action Button */}
-                  <div className="p-4 space-y-2">
-                    {order.orderItems.some(i => i.status === 1) && (
-                      <button
-                        onClick={() => handleStatusUpdate(order.id, OrderStatus.Preparing)}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-blue-900/40"
-                      >
-                        Hazırlamaya Başla
-                      </button>
-                    )}
-                    {order.orderItems.some(i => i.status === 2) && (
-                      <button
-                        onClick={() => handleStatusUpdate(order.id, OrderStatus.Ready)}
-                        className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-green-900/40"
-                      >
-                        ✓ Hazır — Teslim Et
-                      </button>
-                    )}
-                    {order.orderItems.every(i => i.status === 3) && (
-                      <div className="w-full bg-gray-800 text-gray-500 font-bold py-2.5 rounded-xl text-sm text-center cursor-default">
-                        Servis Bekleniyor
+                      <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                        <p className="text-sm text-amber-600 dark:text-amber-400 font-medium flex gap-2 items-start">
+                          <span className="text-base">📝</span> {order.note}
+                        </p>
                       </div>
                     )}
-                  </div>
-                </div>
+                  </CardContent>
+
+                  <CardFooter className="p-4 bg-muted/10 border-t">
+                    {order.orderItems.some(i => i.status === 1) && (
+                      <Button 
+                        onClick={() => handleStatusUpdate(order.id, OrderStatus.Preparing)}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                        size="lg"
+                      >
+                        <Play className="w-4 h-4 fill-current" />
+                        Hazırlamaya Başla
+                      </Button>
+                    )}
+                    
+                    {order.orderItems.some(i => i.status === 2) && (
+                      <Button 
+                        onClick={() => handleStatusUpdate(order.id, OrderStatus.Ready)}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white gap-2"
+                        size="lg"
+                      >
+                        <Check className="w-4 h-4" strokeWidth={3} />
+                        Hazır — Teslim Et
+                      </Button>
+                    )}
+                    
+                    {order.orderItems.every(i => i.status === 3) && (
+                      <Button 
+                        variant="secondary"
+                        disabled
+                        className="w-full opacity-70"
+                        size="lg"
+                      >
+                        Servis Bekleniyor
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
               );
             })}
           </div>

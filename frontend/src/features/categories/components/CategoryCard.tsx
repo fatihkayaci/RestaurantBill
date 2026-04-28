@@ -1,4 +1,5 @@
 import type { Category } from '../types';
+import { Button } from '@/components/ui/button';
 
 interface CategoryCardProps {
     category: Category;
@@ -8,15 +9,17 @@ interface CategoryCardProps {
 
 export default function CategoryCard({ category, isSelected, onClick }: CategoryCardProps) {
     return (
-        <button
+        <Button
+            variant={isSelected ? "default" : "secondary"}
+            size="lg"
             onClick={onClick}
-            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all shadow-md active:scale-95
+            className={`rounded-xl font-bold whitespace-nowrap transition-all shadow-md active:scale-95
                 ${isSelected 
-                    ? "bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)] scale-105"
-                    : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                    ? "bg-orange-500 hover:bg-orange-600 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)] scale-105"
+                    : "text-muted-foreground"
                 }`}
         >
             {category.name}
-        </button>
+        </Button>
     );
 }

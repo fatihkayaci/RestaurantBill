@@ -3,6 +3,19 @@ import { authService } from "../api/authService";
 import { useNavigate } from "react-router-dom";
 import type { Register } from "../features/auths/types";
 
+// shadcn/ui bileşenleri
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+    Card, 
+    CardContent, 
+    CardDescription, 
+    CardFooter, 
+    CardHeader, 
+    CardTitle 
+} from "@/components/ui/card";
+
 export default function RegisterPage() {
     
     const navigate = useNavigate();
@@ -15,94 +28,110 @@ export default function RegisterPage() {
     });
 
     const handleSubmit = async (e: any) => {
-            e.preventDefault();
-            try {
-                await authService.register(form);
-                navigate("/login");
-            } catch (error: any) {
-                console.log(error.response?.data || "Bilinmeyen bir hata oluştu");
-            }
+        e.preventDefault();
+        try {
+            await authService.register(form);
+            navigate("/login");
+        } catch (error: any) {
+            console.log(error.response?.data || "Bilinmeyen bir hata oluştu");
         }
+    }
         
     return(
-        <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-10 w-96">
-
-                <h1 className="text-white text-2xl font-bold mb-1">Kayıt Ol</h1>
-                <p className="text-gray-500 text-sm mb-8">Yeni hesap oluşturun</p>
-
-                <form onSubmit={handleSubmit}> 
-                    <div className="mb-4">
-                        <label className="block text-gray-400 text-sm mb-2">Ad Soyad</label>
-                        <input
-                        type="text"
-                        value={form.fullName}
-                        onChange={(e) => setForm({...form, fullName: e.target.value})}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                        placeholder="Ad Soyad"
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-gray-400 text-sm mb-2">Kullanıcı Adı</label>
-                        <input
-                        type="text"
-                        value={form.userName}
-                        onChange={(e) => setForm({...form, userName: e.target.value})}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                        placeholder="kullanici_adi"
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-gray-400 text-sm mb-2">Email</label>
-                        <input
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => setForm({...form, email: e.target.value})}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                        placeholder="ornek@mail.com"
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-gray-400 text-sm mb-2">Kullanıcı Kodu</label>
-                        <input
-                        type="text"
-                        value={form.userCode}
-                        onChange={(e) => setForm({...form, userCode: e.target.value})}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                        placeholder="USR001"
-                        />
-                    </div>
-
-                    <div className="mb-6">
-                        <label className="block text-gray-400 text-sm mb-2">Şifre</label>
-                        <input
-                        type="password"
-                        value={form.password}
-                        onChange={(e) => setForm({...form, password: e.target.value})}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                        placeholder="••••••••"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium"
-                    >
+        <div className="min-h-screen bg-background flex items-center justify-center p-4 py-10">
+            <Card className="w-full max-w-md">
+                
+                <CardHeader className="space-y-2 text-center">
+                    <CardTitle className="text-3xl font-bold tracking-tight">
                         Kayıt Ol
-                    </button>
+                    </CardTitle>
+                    <CardDescription>
+                        Yeni hesap oluşturun
+                    </CardDescription>
+                </CardHeader>
 
-                    <p className="text-center text-gray-500 text-sm mt-4">
+                <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-5"> 
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="fullName">Ad Soyad</Label>
+                            <Input
+                                id="fullName"
+                                type="text"
+                                value={form.fullName}
+                                onChange={(e) => setForm({...form, fullName: e.target.value})}
+                                placeholder="Ad Soyad"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="userName">Kullanıcı Adı</Label>
+                            <Input
+                                id="userName"
+                                type="text"
+                                value={form.userName}
+                                onChange={(e) => setForm({...form, userName: e.target.value})}
+                                placeholder="kullanici_adi"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={form.email}
+                                onChange={(e) => setForm({...form, email: e.target.value})}
+                                placeholder="ornek@mail.com"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="userCode">Kullanıcı Kodu</Label>
+                            <Input
+                                id="userCode"
+                                type="text"
+                                value={form.userCode}
+                                onChange={(e) => setForm({...form, userCode: e.target.value})}
+                                placeholder="USR001"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Şifre</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={form.password}
+                                onChange={(e) => setForm({...form, password: e.target.value})}
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
+
+                        <Button type="submit" className="w-full mt-2">
+                            Kayıt Ol
+                        </Button>
+                    </form>
+                </CardContent>
+
+                <CardFooter className="flex justify-center border-t pt-6">
+                    <p className="text-sm text-muted-foreground">
                         Hesabın var mı?{' '}
-                        <span onClick={() => navigate('/login')} className="text-indigo-400 cursor-pointer hover:underline">
-                        Giriş Yap
+                        <span 
+                            onClick={() => navigate('/login')} 
+                            className="text-primary cursor-pointer hover:underline font-medium"
+                        >
+                            Giriş Yap
                         </span>
                     </p>
-                </form>
+                </CardFooter>
 
-            </div>
-            </div>
+            </Card>
+        </div>
     )
 }

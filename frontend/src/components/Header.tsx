@@ -1,14 +1,16 @@
-
 import { Button } from '@/components/ui/button'
 import { UtensilsCrossed, Bell } from 'lucide-react'
-
+import { authService } from "../api/authService";
+import { useNavigate } from "react-router-dom";
+import { LogOut } from 'lucide-react'
 
 export default function Header() {
-
-    // const handleLogout = () => {
-    //     authService.logout();
-    //     navigate('/login');
-    // };
+    
+    const navigate = useNavigate();
+    const handleLogout = () => {
+        authService.logout();
+        navigate('/login');
+    };
     return (
         
         <header className="sticky top-0 z-50 w-full border-b bg-card">
@@ -29,6 +31,14 @@ export default function Header() {
                     <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-white">
                     3
                     </span>
+                </Button>
+                <Button 
+                    variant="destructive" 
+                    className="gap-2 font-semibold" 
+                    onClick={handleLogout}
+                >
+                    <LogOut className="w-4 h-4" />
+                    Çıkış Yap
                 </Button>
                 </div>
             </div>
