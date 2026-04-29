@@ -6,33 +6,27 @@ import type { Category } from "../../features/categories/types";
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { 
-  Plus,
-  Pencil,
-  Trash2,
-  Search,
-  MoreHorizontal
-} from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Plus, Pencil, Trash2, Search, MoreHorizontal } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 export default function Menu() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editProduct, setEditProduct] = useState<Product | null>(null);
-    const [form, setForm] = useState({ name: '', price: 0, categoryId: 0, isActive: true, id: 0, categoryName: '' });
+    const [form, setForm] = useState({ name: '', price: 0, categoryId: 0, isActive: true, id: 0});
+
+    const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
     const [menuSearch, setMenuSearch] = useState('')
+    const [formError, setFormError] = useState('')
     
     const filteredMenuItems = products.filter(item => {
-        // const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory
         const matchesSearch = item.name.toLowerCase().includes(menuSearch.toLowerCase())
-        return matchesSearch
+        const matchesCategory = selectedCategory === 'all' || item.categoryId === Number(selectedCategory)
+        return matchesSearch && matchesCategory
     })
 
     useEffect(() => {
@@ -42,13 +36,15 @@ export default function Menu() {
 
     const openCreateModal = () => {
         setEditProduct(null);
-        setForm({ name: '', price: 0, categoryId: 0, isActive: true, id: 0, categoryName: '' });
+        setForm({ name: '', price: 0, categoryId: 0, isActive: true, id: 0});
+        setFormError('');
         setIsModalOpen(true);
     };
 
     const openEditModal = (product: Product) => {
         setEditProduct(product);
-        setForm({ name: product.name, price: product.price, categoryId: product.categoryId, isActive: product.isActive, id: product.id, categoryName: product.categoryName });
+        setForm({ name: product.name, price: product.price, categoryId: product.categoryId, isActive: product.isActive, id: product.id });
+        setFormError('');
         setIsModalOpen(true);
     };
 
@@ -59,8 +55,11 @@ export default function Menu() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.name || !form.categoryId) return;
-
+        if (!form.name || !form.categoryId) {
+            setFormError(!form.name ? 'Product name is required.' : 'Please select a category.');
+            return;
+        }
+        setFormError('');
         if (editProduct) {
             await productService.updateProduct(form);
         } else {
@@ -75,169 +74,133 @@ export default function Menu() {
     return (
         <>
             <div className="flex flex-col sm:flex-row justify-between gap-4">
-                <div className="flex flex-col sm:flex-row justify-between gap-4">
-                    <div className="flex gap-2 flex-1">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                            placeholder="Search menu items..." 
+                <div className="flex gap-2 flex-1">
+                    <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search menu items..."
                             className="pl-9"
                             value={menuSearch}
                             onChange={(e) => setMenuSearch(e.target.value)}
-                            />
-                        </div>
-                        {/* TODO: will add select for category */}
-                        {/* <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                            <SelectTrigger className="w-40">
+                        />
+                    </div>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className="w-40">
                             <SelectValue placeholder="Category" />
-                            </SelectTrigger>
-                            <SelectContent>
+                        </SelectTrigger>
+                        <SelectContent>
                             <SelectItem value="all">All Categories</SelectItem>
-                            {menuCategories.map(cat => (
-                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                            {categories.map(cat => (
+                                <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
                             ))}
-                            </SelectContent>
-                        </Select> */}
-                    </div>
-                    <Button className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add Item
-                    </Button>
+                        </SelectContent>
+                    </Select>
                 </div>
-            </div>
-            <Card>
-                <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                    <thead>
-                        <tr className="border-b bg-muted/50">
-                        <th className="text-left p-4 font-medium">Item</th>
-                        <th className="text-left p-4 font-medium">Category</th>
-                        <th className="text-left p-4 font-medium">Price</th>
-                        <th className="text-left p-4 font-medium">Status</th>
-                        <th className="text-right p-4 font-medium">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredMenuItems.map(item => (
-                        <tr key={item.id} className="border-b last:border-0 hover:bg-muted/50">
-                            <td className="p-4">
-                            <div>
-                                <p className="font-medium">{item.name}</p>
-                                <p className="text-sm text-muted-foreground line-clamp-1">{item.description}</p>
-                            </div>
-                            </td>
-                            <td className="p-4">
-                                a
-                            {/*<Badge variant="outline">
-                                {menuCategories.find(c => c.id === item.category)?.name}
-                            </Badge>*/}
-                            </td> 
-                            <td className="p-4 font-medium">${item.price.toFixed(2)}</td>
-                            <td className="p-4">b
-                            {/*<Badge variant={item.available ? 'default' : 'secondary'}>
-                                {item.available ? 'Available' : 'Unavailable'}
-                            </Badge>*/}
-                            </td> 
-                            <td className="p-4 text-right">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                <DropdownMenuItem className="gap-2">
-                                    <Pencil className="h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="gap-2 text-destructive">
-                                    <Trash2 className="h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                            </td>
-                        </tr>
-                        ))}
-                    </tbody>
-                    </table>
-                </div>
-                </CardContent>
-            </Card>
-        </>
-        /*
-        <div>
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Ürünler</h2>
-                <button onClick={openCreateModal} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">
-                    + Yeni Ürün
-                </button>
+                <Button className="gap-2" onClick={openCreateModal}>
+                    <Plus className="h-4 w-4" />
+                    Add Item
+                </Button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {products.map(product => (
-                    <ProductCard key={product.id} product={product} onDelete={handleDelete} onUpdate={openEditModal} />
-                ))}
-            </div>
-
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 w-96">
-                        <h2 className="text-white text-lg font-bold mb-6">
-                            {editProduct ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}
-                        </h2>
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-4">
-                                <label className="block text-gray-400 text-sm mb-2">Ürün Adı</label>
-                                <input
-                                    type="text"
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                                    placeholder="Ürün adı"
-                                />
-                            </div>
-                            <div className="mb-4">
-                                <label className="block text-gray-400 text-sm mb-2">Fiyat</label>
-                                <input
-                                    type="number"
-                                    value={form.price}
-                                    onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                                    placeholder="0"
-                                />
-                            </div>
-                            <div className="mb-6">
-                                <label className="block text-gray-400 text-sm mb-2">Kategori</label>
-                                <select
-                                    value={form.categoryId}
-                                    onChange={(e) => setForm({ ...form, categoryId: Number(e.target.value) })}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                                >
-                                    <option value={0}>Kategori seç</option>
-                                    {categories.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm"
-                                >
-                                    İptal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm"
-                                >
-                                    Kaydet
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+            {filteredMenuItems.length === 0 ? (
+                <p className="text-center text-muted-foreground py-16">No menu items found.</p>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredMenuItems.map(item => (
+                        <Card key={item.id} className="flex flex-col">
+                            <CardContent className="flex flex-col flex-1 p-4 gap-3">
+                                <div className="flex items-start justify-between gap-2">
+                                    <p className="font-semibold leading-tight">{item.name}</p>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="shrink-0 -mt-1 -mr-2">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem className="gap-2" onClick={() => openEditModal(item)}>
+                                                <Pencil className="h-4 w-4" /> Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleDelete(item.id)}>
+                                                <Trash2 className="h-4 w-4" /> Delete
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                                <div className="flex items-center justify-between mt-auto">
+                                    <span className="text-sm text-muted-foreground">{item.categoryName}</span>
+                                    <span className="font-bold">₺{item.price.toFixed(2)}</span>
+                                </div>
+                                <div>
+                                    {item.isActive ? (
+                                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600">
+                                            <span className="h-2 w-2 rounded-full bg-green-500" /> Active
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                            <span className="h-2 w-2 rounded-full bg-gray-400" /> Inactive
+                                        </span>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
             )}
-        </div>*/
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{editProduct ? 'Edit Item' : 'Add Item'}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="name">Product Name</Label>
+                            <Input
+                                id="name"
+                                value={form.name}
+                                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                placeholder="Product name"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="price">Price</Label>
+                            <Input
+                                id="price"
+                                type="number"
+                                value={form.price}
+                                onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                                placeholder="0"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="category">Category</Label>
+                            <select
+                                id="category"
+                                value={form.categoryId}
+                                onChange={(e) => setForm({ ...form, categoryId: Number(e.target.value) })}
+                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                            >
+                                <option value={0}>Select category</option>
+                                {categories.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {formError && (
+                            <p className="text-sm text-destructive">{formError}</p>
+                        )}
+                        <div className="flex gap-3 pt-2">
+                            <Button type="button" variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" className="flex-1">
+                                Save
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

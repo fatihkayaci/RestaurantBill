@@ -8,7 +8,8 @@ export const categoryService = {
     },
     createCategory: async (name: string) => {
         await api.post('/category/create', { 
-            Name: name 
+            Name: name,
+            IdempotencyKey: crypto.randomUUID()
         });
     },
     updateCategory: async (data: Category) => {

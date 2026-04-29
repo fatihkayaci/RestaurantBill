@@ -1,19 +1,20 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { BarChart3, LayoutDashboard, LayoutGrid, Users, UtensilsCrossed } from "lucide-react";
+import { BarChart3, LayoutDashboard, LayoutGrid, Users, UtensilsCrossed, Tag } from "lucide-react";
 
 import OverView from "./OverView";
 import Menu from "./Menu";
 import Staff from "./Staff";
 import Tables from "./Tables";
+import CategoriesPanel from "./CategoriesPanel";
 
 export default function AdminDashboard() {
-    type AdminTab = 'overview' | 'menu' | 'users' | 'tables' | 'reports'
+    type AdminTab = 'overview' | 'menu' | 'categories' | 'users' | 'tables' | 'reports'
     const [activeTab, setActiveTab] = useState<AdminTab>('overview');
     return (
         <div className="flex flex-col gap-6">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AdminTab)}>
-                <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+                <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
                     <TabsTrigger value="overview" className="gap-2">
                         <LayoutDashboard className="h-4 w-4" />
                         <span className="hidden sm:inline">Overview</span>
@@ -21,6 +22,10 @@ export default function AdminDashboard() {
                     <TabsTrigger value="menu" className="gap-2">
                         <UtensilsCrossed className="h-4 w-4" />
                         <span className="hidden sm:inline">Menu</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="categories" className="gap-2">
+                        <Tag className="h-4 w-4" />
+                        <span className="hidden sm:inline">Categories</span>
                     </TabsTrigger>
                     <TabsTrigger value="users" className="gap-2">
                         <Users className="h-4 w-4" />
@@ -42,6 +47,10 @@ export default function AdminDashboard() {
 
                 <TabsContent value="menu" className="space-y-6 mt-6">
                     <Menu />
+                </TabsContent>
+
+                <TabsContent value="categories" className="space-y-6 mt-6">
+                    <CategoriesPanel />
                 </TabsContent>
 
                 <TabsContent value="users" className="space-y-6 mt-6">

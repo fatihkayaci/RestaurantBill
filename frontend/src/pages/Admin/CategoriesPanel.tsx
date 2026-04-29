@@ -1,13 +1,30 @@
 import { useEffect, useState } from "react";
 import { categoryService } from "../../api/categoryService";
 import type { Category } from "../../features/categories/types";
-import CategoryCard from "../../features/Admin/CategoryPanel/components/CategoryCard";
+
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Plus, Pencil, Trash2, Search, MoreHorizontal } from 'lucide-react'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 export default function CategoriesPanel() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editCategory, setEditCategory] = useState<Category | null>(null);
     const [name, setName] = useState('');
+    const [search, setSearch] = useState('');
+
+    const filteredCategories = categories.filter(c =>
+        c.name.toLowerCase().includes(search.toLowerCase())
+    );
 
     useEffect(() => {
         categoryService.getCategories().then(setCategories).catch(console.error);
@@ -48,56 +65,78 @@ export default function CategoriesPanel() {
     };
 
     return (
-        <div>
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Kategoriler</h2>
-                <button onClick={openCreateModal} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">
-                    + Yeni Kategori
-                </button>
+        <>
+            <div className="flex flex-col sm:flex-row justify-between gap-4">
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search categories..."
+                        className="pl-9"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+                <Button className="gap-2" onClick={openCreateModal}>
+                    <Plus className="h-4 w-4" />
+                    Add Category
+                </Button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {categories.map(category => (
-                    <CategoryCard key={category.id} category={category} onDelete={handleDelete} onUpdate={openEditModal} />
-                ))}
-            </div>
-
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 w-96">
-                        <h2 className="text-white text-lg font-bold mb-6">
-                            {editCategory ? 'Kategoriyi Düzenle' : 'Yeni Kategori Ekle'}
-                        </h2>
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-6">
-                                <label className="block text-gray-400 text-sm mb-2">Kategori Adı</label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm"
-                                    placeholder="Kategori adı"
-                                />
-                            </div>
-                            <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm"
-                                >
-                                    İptal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm"
-                                >
-                                    Kaydet
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+            {filteredCategories.length === 0 ? (
+                <p className="text-center text-muted-foreground py-16">No categories found.</p>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredCategories.map(category => (
+                        <Card key={category.id} className="flex flex-col">
+                            <CardContent className="flex items-center justify-between p-4">
+                                <p className="font-semibold">{category.name}</p>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem className="gap-2" onClick={() => openEditModal(category)}>
+                                            <Pencil className="h-4 w-4" /> Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleDelete(category.id)}>
+                                            <Trash2 className="h-4 w-4" /> Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
             )}
-        </div>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{editCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="name">Category Name</Label>
+                            <Input
+                                id="name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Category name"
+                            />
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <Button type="button" variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" className="flex-1">
+                                Save
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

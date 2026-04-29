@@ -1,5 +1,5 @@
 import { api } from './axiosInstance';
-import type { CreateProduct, Product } from '../features/products/types';
+import type { CreateProduct, UpdateProduct, Product } from '../features/products/types';
 
 export const productService = {
     getProducts: async () => {
@@ -11,11 +11,12 @@ export const productService = {
             Name: form.name,
             Price: form.price,
             IsActive: form.isActive,
-            CategoryId: form.categoryId
+            CategoryId: form.categoryId,
+            IdempotencyKey: crypto.randomUUID()
         });
         return response.data;
     },
-    updateProduct: async (form: Product) => {
+    updateProduct: async (form: UpdateProduct) => {
         await api.post('/product/update', {
             Id: form.id,
             Name: form.name,
