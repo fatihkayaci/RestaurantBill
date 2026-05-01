@@ -22,6 +22,8 @@ namespace RestaurantBill.Application.Features.Tables.Commands.Update
             var table = await _uow.Table.GetByIdAsync(request.Id, true);
             Guard.AgainstNull(table, "Böyle bir masa bulunamadı");
             table.Name = request.Name;
+            if (request.Status.HasValue)
+                table.Status = request.Status.Value;
             await _uow.Table.UpdateAsync(table);
             await _uow.SaveChangesAsync(cancellationToken);
         }

@@ -19,10 +19,11 @@ export const tableService = {
         }); 
         return response.data;
     },
-    updateTable: async (id: number, name: string) => {
+    updateTable: async (id: number, name: string, status?: number) => {
         const response = await api.post(`/table/update`,{
             Id: id,
-            Name: name
+            Name: name,
+            Status: status
         });
         return response.data;
     },

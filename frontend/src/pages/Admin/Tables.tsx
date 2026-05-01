@@ -19,6 +19,7 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
@@ -76,7 +77,7 @@ export default function Tables() {
         if (!newTableName) return;
         
         if (editTable) {
-            await tableService.updateTable(editTable.id, newTableName);
+            await tableService.updateTable(editTable.id, newTableName, newTableStatus);
         } else {
             await tableService.createTable(newTableName);
         }
@@ -162,6 +163,7 @@ export default function Tables() {
                     <DialogTitle>
                         {editTable ? 'Masayı Düzenle' : 'Yeni Masa Ekle'}
                     </DialogTitle>
+                        <DialogDescription aria-describedby={undefined} />
                 </DialogHeader>
                 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4">
@@ -174,23 +176,25 @@ export default function Tables() {
                       />
                   </div>
                   
-                  <div className="flex flex-col gap-2">
-                      <Label>Masa Durumu</Label>
-                      <Select 
-                          value={newTableStatus.toString()} 
-                          onValueChange={(value) => setNewTableStatus(Number(value))}
-                      >
-                          <SelectTrigger>
-                              <SelectValue placeholder="Durum seçin" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="1">Müsait</SelectItem>
-                              <SelectItem value="2">Dolu</SelectItem>
-                              <SelectItem value="3">Rezerve</SelectItem>
-                              <SelectItem value="4">Servis Dışı</SelectItem>
-                          </SelectContent>
-                      </Select>
-                  </div>
+                  {editTable && (
+                    <div className="flex flex-col gap-2">
+                        <Label>Masa Durumu</Label>
+                        <Select
+                            value={newTableStatus.toString()}
+                            onValueChange={(value) => setNewTableStatus(Number(value))}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Durum seçin" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">Müsait</SelectItem>
+                                <SelectItem value="2">Dolu</SelectItem>
+                                <SelectItem value="3">Rezerve</SelectItem>
+                                <SelectItem value="4">Servis Dışı</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                  )}
                   
                   {/* ... DialogFooter kısmı aynı ... */}
                   <DialogFooter className="mt-4">

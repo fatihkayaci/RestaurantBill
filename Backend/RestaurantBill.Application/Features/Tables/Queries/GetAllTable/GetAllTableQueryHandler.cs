@@ -22,7 +22,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAll
         {
             var entities = await _uow.Table.GetAllAsync();
             
-            return _mapper.Map<List<TableDto>>(entities);
+            return _mapper.Map<List<TableDto>>(entities.OrderBy(t => t.Name));
         }
     }
 }
