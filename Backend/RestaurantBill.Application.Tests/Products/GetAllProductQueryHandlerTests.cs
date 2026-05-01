@@ -39,7 +39,7 @@ public class GetAllProductQueryHandlerTests
 
         _mockUow.Setup(u => u.Product.GetAllAsync(null, false, "Category"))
                 .ReturnsAsync(products);
-        _mockMapper.Setup(m => m.Map<List<ProductDto>>(products))
+        _mockMapper.Setup(m => m.Map<List<ProductDto>>(It.IsAny<object>()))
                    .Returns(expectedDtos);
 
         // --- ACT ---

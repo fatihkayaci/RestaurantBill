@@ -29,7 +29,7 @@ public class GetAllTableQueryHandlerTests
         _mockUow.Setup(u => u.Table.GetAllAsync(null, false, null))
                 .ReturnsAsync(tables);
 
-        _mockMapper.Setup(m => m.Map<List<TableDto>>(tables))
+        _mockMapper.Setup(m => m.Map<List<TableDto>>(It.IsAny<object>()))
                    .Returns(tableDtos);
 
         var result = await _handler.Handle(new GetAllTableQuery(), CancellationToken.None);
@@ -43,7 +43,7 @@ public class GetAllTableQueryHandlerTests
         _mockUow.Setup(u => u.Table.GetAllAsync(null, false, null))
                 .ReturnsAsync(new List<Table>());
 
-        _mockMapper.Setup(m => m.Map<List<TableDto>>(It.IsAny<List<Table>>()))
+        _mockMapper.Setup(m => m.Map<List<TableDto>>(It.IsAny<object>()))
                    .Returns(new List<TableDto>());
 
         var result = await _handler.Handle(new GetAllTableQuery(), CancellationToken.None);
