@@ -1,26 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import * as signalR from "@microsoft/signalr";
 import TableCard from '../features/tables/components/TableCard';
 import { tableService } from '../api/tableService';
-import { authService } from '../api/authService';
 import type { Table } from '../features/tables/types';
 
 // shadcn/ui & Icons
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LogOut } from "lucide-react";
 
 export default function TablesPage() {
-    const navigate = useNavigate();
     const [tables, setTables] = useState<Table[]>([]);
     const [loading, setLoading] = useState(true);
-
-    const handleLogout = () => {
-        authService.logout();
-        navigate('/login');
-    };
 
     useEffect(() => {
         tableService.getTables()

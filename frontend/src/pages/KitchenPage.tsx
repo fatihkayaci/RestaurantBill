@@ -20,67 +20,67 @@ const OrderStatus = {
   Cancelled: 7,
 } as const;
 
-const ItemStatusConfig: Record<
-  number,
-  { label: string; dot: string; text: string }
-> = {
-  1: {
-    label: "Bekliyor",
-    dot: "bg-red-500 animate-pulse",
-    text: "text-red-500",
-  },
-  2: {
-    label: "Hazırlanıyor",
-    dot: "bg-yellow-500 animate-pulse",
-    text: "text-yellow-500",
-  },
-  3: { label: "Hazır", dot: "bg-green-500", text: "text-green-500" },
-  4: { label: "Teslim Edildi", dot: "bg-gray-500", text: "text-gray-500" },
-};
+// const ItemStatusConfig: Record<
+//   number,
+//   { label: string; dot: string; text: string }
+// > = {
+//   1: {
+//     label: "Bekliyor",
+//     dot: "bg-red-500 animate-pulse",
+//     text: "text-red-500",
+//   },
+//   2: {
+//     label: "Hazırlanıyor",
+//     dot: "bg-yellow-500 animate-pulse",
+//     text: "text-yellow-500",
+//   },
+//   3: { label: "Hazır", dot: "bg-green-500", text: "text-green-500" },
+//   4: { label: "Teslim Edildi", dot: "bg-gray-500", text: "text-gray-500" },
+// };
 
 export default function KitchenPage() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // const [loading, setLoading] = useState(false);
+  // const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
 
   const pendingOrders = orders.filter(o => o.status === 1 || o.status === 2)
   const preparingOrders = orders.filter(o => o.status === 3)
   const readyOrders = orders.filter(o => o.status === 4)
 
-  const statusConfig: Record<
-    number,
-    {
-      label: string;
-      border: string;
-      variant: "default" | "secondary" | "destructive" | "outline";
-      dot: string;
-    }
-  > = {
-    [OrderStatus.Active]: {
-      label: "Yeni",
-      border: "border-t-blue-500",
-      variant: "default",
-      dot: "bg-blue-500 animate-pulse",
-    },
-    [OrderStatus.Pending]: {
-      label: "Bekliyor",
-      border: "border-t-red-500",
-      variant: "destructive",
-      dot: "bg-red-100 animate-pulse", // Kırmızı badge içinde beyaz kalsın diye
-    },
-    [OrderStatus.Preparing]: {
-      label: "Hazırlanıyor",
-      border: "border-t-yellow-500",
-      variant: "secondary",
-      dot: "bg-yellow-500 animate-pulse",
-    },
-    [OrderStatus.Ready]: {
-      label: "Hazır",
-      border: "border-t-green-500",
-      variant: "outline",
-      dot: "bg-green-500",
-    },
-  };
+  // const statusConfig: Record<
+  //   number,
+  //   {
+  //     label: string;
+  //     border: string;
+  //     variant: "default" | "secondary" | "destructive" | "outline";
+  //     dot: string;
+  //   }
+  // > = {
+  //   [OrderStatus.Active]: {
+  //     label: "Yeni",
+  //     border: "border-t-blue-500",
+  //     variant: "default",
+  //     dot: "bg-blue-500 animate-pulse",
+  //   },
+  //   [OrderStatus.Pending]: {
+  //     label: "Bekliyor",
+  //     border: "border-t-red-500",
+  //     variant: "destructive",
+  //     dot: "bg-red-100 animate-pulse", // Kırmızı badge içinde beyaz kalsın diye
+  //   },
+  //   [OrderStatus.Preparing]: {
+  //     label: "Hazırlanıyor",
+  //     border: "border-t-yellow-500",
+  //     variant: "secondary",
+  //     dot: "bg-yellow-500 animate-pulse",
+  //   },
+  //   [OrderStatus.Ready]: {
+  //     label: "Hazır",
+  //     border: "border-t-green-500",
+  //     variant: "outline",
+  //     dot: "bg-green-500",
+  //   },
+  // };
 
   const itemStatusMap: Record<number, { from: number; to: number }> = {
     [OrderStatus.Preparing]: { from: 1, to: 2 },
@@ -104,7 +104,7 @@ export default function KitchenPage() {
       );
     } catch (err) {
       console.error("handleStatusUpdate error:", err);
-      setError("Durum güncellenemedi.");
+      // setError("Durum güncellenemedi.");
     }
   };
 
@@ -116,10 +116,11 @@ export default function KitchenPage() {
         setOrders(all);
       } catch (err) {
         console.error("fetchOrders error:", err);
-        setError("Siparişler yüklenemedi.");
-      } finally {
-        setLoading(false);
-      }
+        // setError("Siparişler yüklenemedi.");
+      } 
+      // finally {
+      //   setLoading(false);
+      // }
     };
     fetchOrders();
   }, []);
