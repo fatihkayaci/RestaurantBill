@@ -1,18 +1,19 @@
-# 📋 Yapılacaklar (TODO)
+# 📋 Yapılacaklar Listesi
 
-## 🏷️ Kategori Yönetimi (Category Management)
-- [ ] **UI:** Herhangi bir silme işlemi tetiklendiğinde ekranda kullanıcıdan onay (Confirmation Dialog) alınacak.
-- [ ] **Backend:** Kategori silme endpoint'inde ilişkili ürün (product) kontrolü yapılacak (Foreign Key validasyonu).
-- [ ] **UI/UX:** Kategoriye bağlı ürün(ler) varsa silme işlemi engellenecek ve ekranda "Bu kategoriye bağlı ürünler bulunmaktadır. Lütfen silmeden önce ilgili ürünlerin kategorisini güncelleyin." uyarısı gösterilecek.
+## 🏷️ Kategori Yönetimi
+- [ ] **UI:** Herhangi bir silme işlemi tetiklendiğinde kullanıcıdan onay (Confirmation Dialog) alınacak.
+- [ ] **Backend:** Kategori silme endpoint'inde ilişkili ürün (Product) kontrolü yapılacak (Foreign Key validasyonu).
+- [ ] **UI/UX:** Kategoriye bağlı ürün(ler) varsa silme işlemi engellenecek ve ekranda *"Bu kategoriye bağlı ürünler bulunmaktadır. Lütfen silmeden önce ilgili ürünlerin kategorisini güncelleyin."* uyarısı gösterilecek.
 
-### 🎨 Frontend (React)
-- [ ] **UI:** staff içerisindeki popup düzeltilecek sayfaya tam sığmama gibi bir şansı var hem edit için olan hem ekleme için olan popupdan bahsediliyor.
-- [ ] **UI:** hiç bir sayfada errorlar gözükmüyor errorları gösterelim.
-- [ ] **UI:** email kısmı eklenecek user popuplarına
-### Backend (.net)
-- [ ] **kayıt:** user kaydedilirken otomatik usercode oluşturma yapılacak. kullanıcı belirlemeye devam edebilecek sadece biz önerimizi yapacağız.
-- [ ] **user:** alınan dtolara bakılacak
-- [x] **user:** update method eksik.
+## 🎨 Frontend (React)
+- [ ] **UI/UX:** Personel (Staff) sayfasındaki ekleme ve düzenleme pop-up'larının (modal) ekrana sığmama (overflow) sorunları giderilecek.
+- [ ] **UI:** Hiçbir sayfada görünmeyen hata mesajları (Error Handling) için global bir hata gösterim mekanizması eklenecek.
+- [ ] **UI:** Kullanıcı (User) ekleme ve düzenleme pop-up'larına Email alanı dahil edilecek.
+
+## ⚙️ Backend (.NET)
+- [ ] **Feature:** Kullanıcı kaydı sırasında otomatik bir `UserCode` üretilecek. Sistem bir kod önerecek ancak kullanıcı dilerse bunu değiştirebilecek.
+- [ ] **Refactor:** Kullanıcı işlemleri için içeri alınan DTO'lar (Data Transfer Objects) gözden geçirilecek ve optimize edilecek.
+- [x] **Feature:** Kullanıcı (User) güncelleme (Update) metodu yazılacak.
 
 <!-- 
 ## 🏃‍♂️ Aktif Sprint (Üzerinde Çalışılanlar)
