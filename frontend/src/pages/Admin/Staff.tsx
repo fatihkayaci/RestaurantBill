@@ -50,7 +50,7 @@ export default function Staff() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (editUser) {
-            await userService.updateUser({ id: editUser.id, ...form });
+            await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash });
         } else {
             await userService.createUser(form);
         }
@@ -161,11 +161,11 @@ export default function Staff() {
                             
                             <div className="flex flex-col gap-2">
                                 <Label>Şifre</Label>
-                                <Input 
-                                    type="password" 
-                                    value={form.passwordHash} 
+                                <Input
+                                    type="text"
+                                    value={form.passwordHash}
                                     onChange={e => setForm({ ...form, passwordHash: e.target.value })}
-                                    placeholder="••••••••" 
+                                    placeholder={editUser ? "Değiştirmek için yeni şifre girin" : "Şifre"}
                                 />
                             </div>
                             

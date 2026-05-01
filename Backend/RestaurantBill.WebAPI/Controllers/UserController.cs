@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Users.Commands.CreateUser;
 using RestaurantBill.Application.Features.Users.Commands.DeleteUser;
+using RestaurantBill.Application.Features.Users.Commands.UpdateUser;
 using RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantId;
 
 namespace RestaurantBill.WebAPI.Controllers
@@ -48,6 +49,20 @@ namespace RestaurantBill.WebAPI.Controllers
             await _mediator.Send(command, cancellationToken);
             return Ok("Kullanıcı başarıyla oluşturuldu");
         }
+        /// <summary>
+        /// Creates a new user and associates them with the authenticated user's restaurant.
+        /// </summary>
+        /// <param name="command">User creation details containing FullName, UserName, Email, PhoneNumber, PasswordHash, UserCode and Role.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with success message on creation.</returns>
+        
+        [Authorize(Roles = "Admin")]
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdateUser([FromBody]UpdateUserCommand command, CancellationToken cancellationToken)
+        {
+            await _mediator.Send(command, cancellationToken);
+            return Ok("Kullanıcı başarıyla oluşturuldu");
+        }
             
         #endregion
         #region delete methods
@@ -70,27 +85,5 @@ namespace RestaurantBill.WebAPI.Controllers
             return Ok("Kullanıcı başarıyla silindi");
         }
         #endregion
-    /*
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var users = await _userService.GetAllAsync();
-            return Ok(users);
-        }
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetUserById([FromRoute]int id)
-        {
-            var user = await _userService.GetByIdAsync(id);
-            return Ok(user);
-        }
-        
-
-        [HttpPut("update-user")]
-        public async Task<IActionResult> UpdateUser([FromBody]UpdateUserDto dto, CancellationToken cancellationToken)
-        {
-            await _userService.UpdateAsync(dto, cancellationToken);
-            return Ok("Kullanıcı başarıyla güncellendi");
-        }
-        */
     }
 }

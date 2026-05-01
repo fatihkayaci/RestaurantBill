@@ -187,6 +187,18 @@ export default function Menu() {
                                 ))}
                             </select>
                         </div>
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="status">Status</Label>
+                            <select
+                                id="status"
+                                value={form.isActive ? 'true' : 'false'}
+                                onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}
+                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                            >
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
                         {formError && (
                             <p className="text-sm text-destructive">{formError}</p>
                         )}

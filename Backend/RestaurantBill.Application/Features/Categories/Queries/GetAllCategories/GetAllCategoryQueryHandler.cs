@@ -21,7 +21,7 @@ namespace RestaurantBill.Application.Features.Categories.Queries.GetAllCategorie
         {
             var entities = await _uow.Category.GetAllAsync(null, false, null);
             
-            return _mapper.Map<List<CategoryDto>>(entities);
+            return _mapper.Map<List<CategoryDto>>(entities.OrderBy(c => c.Name));
         }
     }
 }

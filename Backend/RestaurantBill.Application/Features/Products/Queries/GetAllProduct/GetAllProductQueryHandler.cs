@@ -25,8 +25,8 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
         public async Task<List<ProductDto>> Handle(GetAllProductQuery request, CancellationToken cancellationToken)
         {
             var entities = await _uow.Product.GetAllAsync(includeProperties: "Category");
-            
-            return _mapper.Map<List<ProductDto>>(entities);
+
+            return _mapper.Map<List<ProductDto>>(entities.OrderBy(p => p.Name));
         }
     }
 }

@@ -1,5 +1,5 @@
 import { api } from './axiosInstance';
-import type { User, CreateUser } from '../features/auths/userTypes';
+import type { User, CreateUser, UpdateUser } from '../features/auths/userTypes';
 
 export const userService = {
     getUsersByRestaurantId: async () => {
@@ -17,13 +17,14 @@ export const userService = {
             Role: data.role
         });
     },
-    updateUser: async (data: User & { passwordHash?: string }) => {
-        await api.put('/user/update-user', {
-            Id: data.id,
+    updateUser: async (data: UpdateUser) => {
+        await api.post('/user/update', {
+            UserId: data.id,
             FullName: data.fullName,
             UserName: data.userName,
             Email: data.email,
             PhoneNumber: data.phoneNumber,
+            Password: data.password,
             UserCode: data.userCode,
             Role: data.role
         });
