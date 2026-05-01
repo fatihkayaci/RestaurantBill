@@ -20,6 +20,7 @@ jobs:
           cd /root/RestaurantBill
           git pull origin main
           docker compose down
+          docker system prune -f
           docker compose build --no-cache api
           docker compose build --no-cache frontend
           docker compose up -d
