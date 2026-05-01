@@ -1,0 +1,23 @@
+name: Deploy to Digital Ocean
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    needs: []
+
+    steps:
+    - name: Deploy to Droplet
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.DO_HOST }}
+        username: ${{ secrets.DO_USER }}
+        key: ${{ secrets.DO_SSH_KEY }}
+        script: |
+          cd /root/RestaurantBill
+          git pull origin main
+          docker compose down
+          docker compose up -d --build
