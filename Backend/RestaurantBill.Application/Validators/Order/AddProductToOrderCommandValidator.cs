@@ -1,5 +1,6 @@
 using FluentValidation;
 using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
+using RestaurantBill.Application.Validators.OrderItem;
 
 namespace RestaurantBill.Application.Validators.Order;
 
