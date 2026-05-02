@@ -17,15 +17,11 @@ public class MappingProfile : Profile
     {
         // Product
         CreateMap<ProductDto, Product>().ReverseMap();
-        CreateMap<CreateProductDto, Product>().ReverseMap();
-        CreateMap<UpdateProductDto, Product>().ReverseMap();
         CreateMap<CreateProductCommand, Product>().ReverseMap();
         CreateMap<UpdateProductCommand, Product>().ReverseMap();
 
         // Order
         CreateMap<OrderDto, Order>().ReverseMap();
-        CreateMap<CreateOrderDto, Order>().ReverseMap();
-        CreateMap<UpdateOrderDto, Order>().ReverseMap();
         CreateMap<CreateOrderCommand, Order>().ReverseMap();
         
         #region if database column name different than createOrderCommand use this way.
@@ -43,19 +39,14 @@ public class MappingProfile : Profile
         // OrderItem (En kritik yer burası)
         CreateMap<OrderItemDto, OrderItem>().ReverseMap();
         CreateMap<CreateOrderItemDto, OrderItem>().ReverseMap();
-        CreateMap<UpdateOrderItemDto, OrderItem>().ReverseMap();
 
         // Category
         CreateMap<CategoryDto, Category>().ReverseMap();
-        CreateMap<CreateCategoryDto, Category>().ReverseMap();
-        CreateMap<UpdateCategoryDto, Category>().ReverseMap();
         CreateMap<CreateCategoryCommand, Category>().ReverseMap();
         CreateMap<UpdateCategoryCommand, Category>().ReverseMap();
 
         // Table
         CreateMap<TableDto, Table>().ReverseMap();
-        CreateMap<CreateTableDto, Table>().ReverseMap();
-        CreateMap<UpdateTableDto, Table>().ReverseMap();
 
         // User
         CreateMap<UserDto, User>().ReverseMap();
@@ -65,8 +56,6 @@ public class MappingProfile : Profile
 
         // Restaurant
         CreateMap<RestaurantDto, Restaurant>().ReverseMap();
-        CreateMap<CreateRestaurantDto, Restaurant>().ReverseMap();
-        CreateMap<UpdateRestaurantDto, Restaurant>().ReverseMap();
         CreateMap<CreateRestaurantCommand, Restaurant>().ReverseMap();
 
         

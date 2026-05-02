@@ -59,14 +59,15 @@ export default function Menu() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.name || !form.categoryId) {
-            setFormError(!form.name ? 'Product name is required.' : 'Please select a category.');
-            return;
-        }
+        // if (!form.name || !form.categoryId) {
+        //     setFormError(!form.name ? 'Product name is required.' : 'Please select a category.');
+        //     return;
+        // }
         setFormError('');
         if (editProduct) {
             await productService.updateProduct(form);
         } else {
+            console.log(form);
             await productService.createProduct(form);
         }
 

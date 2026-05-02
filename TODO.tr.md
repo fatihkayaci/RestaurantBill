@@ -2,18 +2,19 @@
 
 ## 🏷️ Kategori Yönetimi
 
-- [ ] **Backend:** Kategori silme endpoint'inde ilişkili ürün (Product) kontrolü yapılacak (Foreign Key validasyonu).
-- [ ] **UI/UX:** Kategoriye bağlı ürün(ler) varsa silme işlemi engellenecek ve ekranda *"Bu kategoriye bağlı ürünler bulunmaktadır. Lütfen silmeden önce ilgili ürünlerin kategorisini güncelleyin."* uyarısı gösterilecek.
+- [x] **Backend:** Kategori silme endpoint'inde ilişkili ürün (Product) kontrolü yapılacak (Foreign Key validasyonu).
+- [x] **UI/UX:** Kategoriye bağlı ürün(ler) varsa silme işlemi engellenecek ve ekranda *"Bu kategoriye bağlı ürünler bulunmaktadır. Lütfen silmeden önce ilgili ürünlerin kategorisini güncelleyin."* uyarısı gösterilecek.
 
 ## 🎨 Frontend (React)
-- [ ] **UI/UX:** Personel (Staff) sayfasındaki ekleme ve düzenleme pop-up'larının (modal) ekrana sığmama (overflow) sorunları giderilecek.
-- [ ] **UI:** Hiçbir sayfada görünmeyen hata mesajları (Error Handling) için global bir hata gösterim mekanizması eklenecek.
-- [ ] **UI:** Kullanıcı (User) ekleme ve düzenleme pop-up'larına Email alanı dahil edilecek.
+- [x] **UI/UX:** Personel (Staff) sayfasındaki ekleme ve düzenleme pop-up'larının (modal) ekrana sığmama (overflow) sorunları giderilecek.
+- [x] **UI:** Kullanıcı (User) ekleme ve düzenleme pop-up'larına Email alanı dahil edilecek.
 - [x] **UI:** Herhangi bir silme işlemi tetiklendiğinde kullanıcıdan onay (Confirmation Dialog) alınacak.
+- [x] **Feature:** popup açıldığında otomatik bir tane usercode gösterilsin isterse değiştirebilsin.
+- [ ] **Validasyon** şu an validasyon kontrolü yok gönderiyor backendde patlıyor. frontende validasyon eklenecek.
+- [ ] **UI:** Hiçbir sayfada görünmeyen hata mesajları (Error Handling) için global bir hata gösterim mekanizması eklenecek.
 ## ⚙️ Backend (.NET)
-- [ ] **Feature:** Kullanıcı kaydı sırasında otomatik bir `UserCode` üretilecek. Sistem bir kod önerecek ancak kullanıcı dilerse bunu değiştirebilecek.
-- [ ] **Refactor:** Kullanıcı işlemleri için içeri alınan DTO'lar (Data Transfer Objects) gözden geçirilecek ve optimize edilecek.
 - [x] **Feature:** Kullanıcı (User) güncelleme (Update) metodu yazılacak.
+- [ ] **Refactor:** Kullanıcı işlemleri için içeri alınan DTO'lar (Data Transfer Objects) gözden geçirilecek ve optimize edilecek.
 
 <!-- 
 ## 🏃‍♂️ Aktif Sprint (Üzerinde Çalışılanlar)

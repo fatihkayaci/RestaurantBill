@@ -4,7 +4,7 @@ using MediatR;
 using MediatR.Pipeline;
 using RestaurantBill.Application.Behaviors;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
-using RestaurantBill.Application.Validators.OrderItem;
+using RestaurantBill.Application.Validators.Product;
 
 namespace RestaurantBill.WebAPI.Extensions;
 
@@ -13,7 +13,7 @@ public static class MediatRExtensions
     public static IServiceCollection AddMediatRWithBehaviors(this IServiceCollection services)
     {
         services.AddFluentValidationAutoValidation();
-        services.AddValidatorsFromAssemblyContaining<RemoveOrderItemDtoValidator>();
+        services.AddValidatorsFromAssemblyContaining<CreateProductCommandValidator>();
 
         services.AddMediatR(cfg =>
         {

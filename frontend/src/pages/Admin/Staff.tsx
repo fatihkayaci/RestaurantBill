@@ -31,9 +31,17 @@ export default function Staff() {
         userService.getUsersByRestaurantId().then(setUsers).catch(console.error);
     }, []);
 
+    const generateUserCode = () => {
+        const numbers = users
+            .map(u => parseInt(u.userCode.replace(/\D/g, ''), 10))
+            .filter(n => !isNaN(n));
+        const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+        return `USR-${String(next).padStart(3, '0')}`;
+    };
+
     const openCreateModal = () => {
         setEditUser(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: '', userCode: '', role: 2 });
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: '', userCode: generateUserCode(), role: 2 });
         setIsModalOpen(true);
     };
 
@@ -120,15 +128,15 @@ export default function Staff() {
                 ))}
 
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogContent>
+                    <DialogContent className="flex flex-col max-h-[90vh]">
                         <DialogHeader>
                             <DialogTitle>
                                 {editUser ? 'Kullanıcıyı Düzenle' : 'Yeni Kullanıcı Ekle'}
                             </DialogTitle>
                             <DialogDescription aria-describedby={undefined} />
                         </DialogHeader>
-                        
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4">
+
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4 overflow-y-auto">
                             <div className="flex flex-col gap-2">
                                 <Label>Ad Soyad</Label>
                                 <Input 
@@ -147,6 +155,16 @@ export default function Staff() {
                                 />
                             </div>
                             
+                            <div className="flex flex-col gap-2">
+                                <Label>Email</Label>
+                                <Input
+                                    type="email"
+                                    value={form.email}
+                                    onChange={e => setForm({ ...form, email: e.target.value })}
+                                    placeholder="ornek@mail.com"
+                                />
+                            </div>
+
                             <div className="flex flex-col gap-2">
                                 <Label>Telefon</Label>
                                 <Input 
