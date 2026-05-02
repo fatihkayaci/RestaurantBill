@@ -29,6 +29,8 @@ public class DeleteCategoryCommandHandlerTests
 
         _mockUow.Setup(u => u.Category.GetByIdAsync(command.Id, false))
                 .ReturnsAsync(category);
+        _mockUow.Setup(u => u.Product.GetAllAsync(It.IsAny<Expression<Func<Product, bool>>>(), It.IsAny<bool>(), It.IsAny<string?>()))
+                .ReturnsAsync(new List<Product>());
 
         // --- ACT ---
         await _handler.Handle(command, CancellationToken.None);
@@ -36,6 +38,26 @@ public class DeleteCategoryCommandHandlerTests
         // --- ASSERT ---
         _mockUow.Verify(u => u.Category.Delete(category), Times.Once);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCategoryHasProducts_ShouldThrowBusinessException()
+    {
+        // --- ARRANGE ---
+        var command = new DeleteCategoryCommand { Id = 1 };
+        var category = new Category { Id = 1, Name = "İçecekler" };
+        var linkedProducts = new List<Product> { new Product { Id = 1, CategoryId = 1 } };
+
+        _mockUow.Setup(u => u.Category.GetByIdAsync(command.Id, false))
+                .ReturnsAsync(category);
+        _mockUow.Setup(u => u.Product.GetAllAsync(It.IsAny<Expression<Func<Product, bool>>>(), It.IsAny<bool>(), It.IsAny<string?>()))
+                .ReturnsAsync(linkedProducts);
+
+        // --- ACT & ASSERT ---
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _handler.Handle(command, CancellationToken.None));
+
+        Assert.Equal("Bu kategoriye bağlı ürünler bulunmaktadır. Lütfen silmeden önce ilgili ürünlerin kategorisini güncelleyin.", exception.Message);
     }
 
     #endregion
