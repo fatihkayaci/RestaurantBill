@@ -1,6 +1,5 @@
 using Moq;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Auths.Commands.Register;
 using RestaurantBill.Domain.Entities;
@@ -11,17 +10,13 @@ namespace RestaurantBill.Application.Tests.Auths;
 public class RegisterCommandHandlerTests
 {
     private readonly Mock<UserManager<User>> _mockUserManager;
-    private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly RegisterCommandHandler _handler;
 
     public RegisterCommandHandlerTests()
     {
         var store = new Mock<IUserStore<User>>();
         _mockUserManager = new Mock<UserManager<User>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
-
-        _mockConfiguration = new Mock<IConfiguration>();
-
-        _handler = new RegisterCommandHandler(_mockUserManager.Object, _mockConfiguration.Object);
+        _handler = new RegisterCommandHandler(_mockUserManager.Object);
     }
 
     #region happy paths
@@ -35,7 +30,6 @@ public class RegisterCommandHandlerTests
             FullName = "Test User",
             UserName = "testuser",
             Email = "test@example.com",
-            UserCode = "USR001",
             Password = "Test123!"
         };
 
@@ -51,7 +45,7 @@ public class RegisterCommandHandlerTests
                 u.FullName == command.FullName &&
                 u.UserName == command.UserName &&
                 u.Email == command.Email &&
-                u.UserCode == command.UserCode &&
+                u.UserCode.StartsWith("USR-") &&
                 u.Role == UserRole.Admin
             ),
             command.Password
@@ -71,7 +65,6 @@ public class RegisterCommandHandlerTests
             FullName = "Test User",
             UserName = "testuser",
             Email = "test@example.com",
-            UserCode = "USR001",
             Password = "weak"
         };
 
@@ -102,7 +95,6 @@ public class RegisterCommandHandlerTests
             FullName = "Test User",
             UserName = "existinguser",
             Email = "test@example.com",
-            UserCode = "USR001",
             Password = "Test123!"
         };
 

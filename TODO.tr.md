@@ -10,12 +10,21 @@
 - [x] **UI:** Kullanıcı (User) ekleme ve düzenleme pop-up'larına Email alanı dahil edilecek.
 - [x] **UI:** Herhangi bir silme işlemi tetiklendiğinde kullanıcıdan onay (Confirmation Dialog) alınacak.
 - [x] **Feature:** popup açıldığında otomatik bir tane usercode gösterilsin isterse değiştirebilsin.
+- [ ] **UI:** kayıt olup ilk girişte restaurant oluşturma tasarımıda şu an kullanılan tasarıma geçirilecek.
 - [ ] **Validasyon** şu an validasyon kontrolü yok gönderiyor backendde patlıyor. frontende validasyon eklenecek.
 - [ ] **UI:** Hiçbir sayfada görünmeyen hata mesajları (Error Handling) için global bir hata gösterim mekanizması eklenecek.
 ## ⚙️ Backend (.NET)
 - [x] **Feature:** Kullanıcı (User) güncelleme (Update) metodu yazılacak.
 - [ ] **Refactor:** Kullanıcı işlemleri için içeri alınan DTO'lar (Data Transfer Objects) gözden geçirilecek ve optimize edilecek.
+- [ ] **Refactor:** backend tarafındaki validasyonlara bakılacak
+- [ ] **Refactor:** validasyon yapılırken feauter da eksik olan şeylerede bakılacak.
 
+## Backend(auth) => application feature
+- [x] **Refactor:** kullanıcı auth işlemlerinde sadece username ve password alıyor email ile de giriş yapılabilecek hale getirilecek hem command hemde handler ı ona göre düzenle
+- [ ] **Refactor:** Registerda usercode kaldırılacak kayıt olurken gerek yok. yada illa verilecek ise backend tarafında rastgele oluşturulup kayıt yaptırılabilir.
+  
+## deleteCategory
+- [] **Refactor:** deleteCategoryCommandHandler a bak 
 <!-- 
 ## 🏃‍♂️ Aktif Sprint (Üzerinde Çalışılanlar)
 - [ ] **Backend:** Sipariş modülü için RabbitMQ event'lerinin implementasyonu

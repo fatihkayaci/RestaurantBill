@@ -145,7 +145,7 @@ public class LoginCommandHandlerTests
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Kullanıcı adı veya şifre hatalı!", exception.Message);
+        Assert.Equal("Kullanıcı adı, email veya şifre hatalı!", exception.Message);
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class LoginCommandHandlerTests
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Kullanıcı adı veya şifre hatalı!", exception.Message);
+        Assert.Equal("Kullanıcı adı, email veya şifre hatalı!", exception.Message);
     }
 
     #endregion

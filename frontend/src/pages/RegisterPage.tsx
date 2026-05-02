@@ -90,18 +90,6 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="userCode">Kullanıcı Kodu</Label>
-                            <Input
-                                id="userCode"
-                                type="text"
-                                value={form.userCode}
-                                onChange={(e) => setForm({...form, userCode: e.target.value})}
-                                placeholder="USR001"
-                                required
-                            />
-                        </div>
-
-                        <div className="space-y-2">
                             <Label htmlFor="password">Şifre</Label>
                             <Input
                                 id="password"

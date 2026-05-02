@@ -33,14 +33,17 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
         /// <exception cref="BusinessException">Thrown when the username or password is incorrect.</exception>
         public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
-            var user = await _userManager.FindByNameAsync(request.UserName);
+            User? user = !string.IsNullOrEmpty(request.UserName)
+            ? await _userManager.FindByNameAsync(request.UserName)
+            : await _userManager.FindByEmailAsync(request.Email!);
+
             if (user == null)
-                throw new BusinessException("Kullanıcı adı veya şifre hatalı!");
+                throw new BusinessException("Kullanıcı adı, email veya şifre hatalı!");
 
             var isPasswordCorrect = await _userManager.CheckPasswordAsync(user, request.Password);
             
             if (!isPasswordCorrect)
-                throw new BusinessException("Kullanıcı adı veya şifre hatalı!");
+                throw new BusinessException("Kullanıcı adı, email veya şifre hatalı!");
 
             int restaurantId = user.RestaurantId;
             if (restaurantId == 0)
