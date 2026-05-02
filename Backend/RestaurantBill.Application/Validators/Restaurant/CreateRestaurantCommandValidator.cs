@@ -1,0 +1,34 @@
+using FluentValidation;
+using RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaurant;
+
+namespace RestaurantBill.Application.Validators.Restaurant;
+
+public class CreateRestaurantCommandValidator : AbstractValidator<CreateRestaurantCommand>
+{
+    public CreateRestaurantCommandValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("Restoran adı boş bırakılamaz.")
+            .MaximumLength(100).WithMessage("Restoran adı en fazla 100 karakter olabilir.");
+
+        RuleFor(x => x.PhoneNumber)
+            .NotEmpty().WithMessage("Telefon numarası boş bırakılamaz.")
+            .MaximumLength(20).WithMessage("Telefon numarası en fazla 20 karakter olabilir.");
+
+        RuleFor(x => x.MobilePhoneNumber)
+            .MaximumLength(20).WithMessage("Cep telefonu en fazla 20 karakter olabilir.")
+            .When(x => !string.IsNullOrEmpty(x.MobilePhoneNumber));
+
+        RuleFor(x => x.Email)
+            .EmailAddress().WithMessage("Geçerli bir e-posta adresi giriniz.")
+            .When(x => !string.IsNullOrEmpty(x.Email));
+
+        RuleFor(x => x.City)
+            .NotEmpty().WithMessage("Şehir boş bırakılamaz.")
+            .MaximumLength(50).WithMessage("Şehir en fazla 50 karakter olabilir.");
+
+        RuleFor(x => x.District)
+            .NotEmpty().WithMessage("İlçe boş bırakılamaz.")
+            .MaximumLength(50).WithMessage("İlçe en fazla 50 karakter olabilir.");
+    }
+}

@@ -1,12 +1,15 @@
 using FluentValidation;
-using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Features.Users.Commands.UpdateUser;
 
 namespace RestaurantBill.Application.Validators.User;
 
-public class CreateUserDtoValidator : AbstractValidator<CreateUserDto>
+public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
 {
-    public CreateUserDtoValidator()
+    public UpdateUserCommandValidator()
     {
+        RuleFor(x => x.UserId)
+            .GreaterThan(0).WithMessage("Geçersiz bir kullanıcı seçtiniz.");
+
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage("Ad soyad boş bırakılamaz.")
             .MaximumLength(100).WithMessage("Ad soyad en fazla 100 karakter olabilir.");
@@ -20,16 +23,12 @@ public class CreateUserDtoValidator : AbstractValidator<CreateUserDto>
             .When(x => !string.IsNullOrEmpty(x.Email));
 
         RuleFor(x => x.PhoneNumber)
-            .NotEmpty().WithMessage("Telefon numarası boş bırakılamaz.")
-            .MaximumLength(20).WithMessage("Telefon numarası en fazla 20 karakter olabilir.");
+            .MaximumLength(20).WithMessage("Telefon numarası en fazla 20 karakter olabilir.")
+            .When(x => !string.IsNullOrEmpty(x.PhoneNumber));
 
-        RuleFor(x => x.PasswordHash)
-            .NotEmpty().WithMessage("Şifre boş bırakılamaz.")
-            .MinimumLength(6).WithMessage("Şifre en az 6 karakter olmalıdır.");
-
-        RuleFor(x => x.UserCode)
-            .NotEmpty().WithMessage("Kullanıcı kodu boş bırakılamaz.")
-            .MaximumLength(20).WithMessage("Kullanıcı kodu en fazla 20 karakter olabilir.");
+        RuleFor(x => x.Password)
+            .MinimumLength(6).WithMessage("Şifre en az 6 karakter olmalıdır.")
+            .When(x => !string.IsNullOrEmpty(x.Password));
 
         RuleFor(x => x.Role)
             .IsInEnum().WithMessage("Geçerli bir kullanıcı rolü seçilmelidir.");

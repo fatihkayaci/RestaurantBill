@@ -1,50 +1,22 @@
 # 📋 Yapılacaklar Listesi
-
-## 🏷️ Kategori Yönetimi
-
-- [x] **Backend:** Kategori silme endpoint'inde ilişkili ürün (Product) kontrolü yapılacak (Foreign Key validasyonu).
-- [x] **UI/UX:** Kategoriye bağlı ürün(ler) varsa silme işlemi engellenecek ve ekranda *"Bu kategoriye bağlı ürünler bulunmaktadır. Lütfen silmeden önce ilgili ürünlerin kategorisini güncelleyin."* uyarısı gösterilecek.
+> **Son Güncelleme:** Mayıs 2026
+> *Bu dosya, projenin devam eden geliştirme sürecini ve gelecekteki yol haritasını takip etmek amacıyla aktif olarak güncellenmektedir.*
 
 ## 🎨 Frontend (React)
-- [x] **UI/UX:** Personel (Staff) sayfasındaki ekleme ve düzenleme pop-up'larının (modal) ekrana sığmama (overflow) sorunları giderilecek.
-- [x] **UI:** Kullanıcı (User) ekleme ve düzenleme pop-up'larına Email alanı dahil edilecek.
-- [x] **UI:** Herhangi bir silme işlemi tetiklendiğinde kullanıcıdan onay (Confirmation Dialog) alınacak.
-- [x] **Feature:** popup açıldığında otomatik bir tane usercode gösterilsin isterse değiştirebilsin.
-- [ ] **UI:** kayıt olup ilk girişte restaurant oluşturma tasarımıda şu an kullanılan tasarıma geçirilecek.
-- [ ] **Validasyon** şu an validasyon kontrolü yok gönderiyor backendde patlıyor. frontende validasyon eklenecek.
-- [ ] **UI:** Hiçbir sayfada görünmeyen hata mesajları (Error Handling) için global bir hata gösterim mekanizması eklenecek.
-## ⚙️ Backend (.NET)
-- [x] **Feature:** Kullanıcı (User) güncelleme (Update) metodu yazılacak.
-- [ ] **Refactor:** Kullanıcı işlemleri için içeri alınan DTO'lar (Data Transfer Objects) gözden geçirilecek ve optimize edilecek.
-- [ ] **Refactor:** backend tarafındaki validasyonlara bakılacak
-- [ ] **Refactor:** validasyon yapılırken feauter da eksik olan şeylerede bakılacak.
+- [x] **UI/UX:** Personel (Staff) sayfasındaki ekleme ve düzenleme Modal'larının ekrana sığmama (overflow) sorunları giderildi.
+- [x] **UI:** Kullanıcı (User) ekleme ve düzenleme Modal'larına Email alanı dahil edildi.
+- [x] **UI:** Silme işlemleri tetiklendiğinde kullanıcıdan onay (Confirmation Dialog) alınması sağlandı.
+- [x] **Feature:** Kullanıcı Modal'ı açıldığında sistemin otomatik bir `UserCode` önermesi sağlandı (kullanıcı dilerse değiştirebilir).
+- [ ] **UI/UX:** İlk kayıt sonrası (Onboarding) restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
+- [ ] **Validation:** Frontend formlarına istemci taraflı (client-side) doğrulama eklenecek, hatalı verilerin backend'e gidip hata fırlatmasının önüne geçilecek.
+- [ ] **UI:** API'den dönen hata mesajlarının (Error Handling) tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
 
-## Backend(auth) => application feature
-- [x] **Refactor:** kullanıcı auth işlemlerinde sadece username ve password alıyor email ile de giriş yapılabilecek hale getirilecek hem command hemde handler ı ona göre düzenle
-- [ ] **Refactor:** Registerda usercode kaldırılacak kayıt olurken gerek yok. yada illa verilecek ise backend tarafında rastgele oluşturulup kayıt yaptırılabilir.
-  
-## deleteCategory
-- [] **Refactor:** deleteCategoryCommandHandler a bak 
-<!-- 
-## 🏃‍♂️ Aktif Sprint (Üzerinde Çalışılanlar)
-- [ ] **Backend:** Sipariş modülü için RabbitMQ event'lerinin implementasyonu
-- [ ] **Frontend:** React tarafında sepet UI optimizasyonları
-
-## 📋 Bekleyenler (Backlog)
-### ⚙️ Backend (.NET Core / Web API)
-- [ ] CQRS pattern ile raporlama endpoint'lerinin ayrılması
-- [ ] Rate limiting ve caching (Redis) entegrasyonu
-- [ ] Unit test coverage'ın %80 üzerine çıkarılması
-
-### 🎨 Frontend (React)
-- [ ] Ant Design ile karanlık mod (dark mode) entegrasyonu
-- [ ] Component'lerin lazy loading ile optimize edilmesi
-
-### 🚀 DevOps & Altyapı
-- [ ] Docker Compose konfigürasyonuna metrik/loglama servislerinin (Prometheus/Grafana) eklenmesi
-- [ ] Nginx load balancer ayarlarının test edilmesi
-
-## ✅ Tamamlananlar (Geçmiş)
-- [x] Veritabanı modellemesi ve Entity Framework Core entegrasyonu (25.03.2026)
-- [x] JWT tabanlı kimlik doğrulama
-- [x] İlk sürümün Linux VPS üzerine deploy edilmesi -->
+## ⚙️ Backend (.NET Core)
+- [x] **Feature [Category]:** Kategori silme endpoint'inde ilişkili ürün (Product) kontrolü yapıldı; bağlı ürün varsa silme işlemi engellendi.
+- [x] **Feature [User]:** Kullanıcı (User) güncelleme (Update) metodu yazıldı.
+- [x] **Refactor [Auth]:** Giriş (Login) işlemi yalnızca Username ile değil, Email ile de yapılabilecek şekilde CQRS Command ve Handler yapıları güncellendi.
+- [ ] **Refactor [Auth]:** Kayıt (Register) aşamasında kullanıcıdan `UserCode` alma zorunluluğu kaldırılacak; bu kod backend tarafında otomatik oluşturulacak.
+- [ ] **Validation:** Backend tarafındaki mevcut validasyon kuralları gözden geçirilecek ve eksik olan iş kuralları (business rules) tamamlanacak.
+- [ ] **Refactor:** Dışarıdan alınan DTO'lar (Data Transfer Objects) ve nesne eşleme (Mapping) konfigürasyonları kontrol edilip optimize edilecek.
+- [ ] **Refactor:** Table işlemleri içerisindeki genel `Update` metodunun ismi, standartlara uygun şekilde `UpdateTable` olarak değiştirilecek.
+- [ ] **Refactor [Category]:** `DeleteCategoryCommandHandler` içerisindeki iş mantığı gözden geçirilip optimize edilecek.

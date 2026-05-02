@@ -1,7 +1,6 @@
 using System.Net;
 using System.Text.Json;
 using RestaurantBill.Application.Exceptions;
-using FluentValidation;
 namespace RestaurantBill.WebAPI.Middlewares;
 
 public class ExceptionMiddleware
@@ -36,16 +35,7 @@ public class ExceptionMiddleware
         string message = "Sunucu tarafında beklenmeyen bir hata oluştu.";
         object? errors = null;
         
-        if (exception is FluentValidation.ValidationException validationEx)
-        {
-            statusCode = (int)HttpStatusCode.BadRequest; 
-            message = "Bir veya daha fazla doğrulama hatası oluştu.";
-            
-            errors = validationEx.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-        }
-        else if (exception is BaseException baseEx)
+        if (exception is BaseException baseEx)
         {
             statusCode = baseEx.StatusCode;
             message = baseEx.Message;
