@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Pencil, Trash2, MoreHorizontal} from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent,DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter} from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
@@ -42,9 +43,13 @@ export default function Staff() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: number) => {
-        await userService.deleteUser(id);
-        setUsers(users.filter(u => u.id !== id));
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
+    const handleDelete = async () => {
+        if (deleteTargetId === null) return;
+        await userService.deleteUser(deleteTargetId);
+        setUsers(users.filter(u => u.id !== deleteTargetId));
+        setDeleteTargetId(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -99,7 +104,7 @@ export default function Staff() {
                                         
                                         <DropdownMenuItem 
                                             className="gap-2 text-destructive cursor-pointer" 
-                                            onClick={() => handleDelete(user.id)}
+                                            onClick={() => setDeleteTargetId(user.id)}
                                         >
                                             <Trash2 className="h-4 w-4" /> Remove
                                         </DropdownMenuItem>
@@ -199,6 +204,21 @@ export default function Staff() {
                         </form>
                     </DialogContent>
                 </Dialog>
+
+                <AlertDialog open={deleteTargetId !== null} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Personeli sil</AlertDialogTitle>
+                            <AlertDialogDescription>Bu personeli silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>İptal</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Sil
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
           </>
     );

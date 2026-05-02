@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Plus, Pencil, Trash2, Search, MoreHorizontal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -17,6 +18,7 @@ export default function Menu() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editProduct, setEditProduct] = useState<Product | null>(null);
     const [form, setForm] = useState({ name: '', price: 0, categoryId: 0, isActive: true, id: 0});
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
@@ -48,9 +50,11 @@ export default function Menu() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: number) => {
-        await productService.deleteProduct(id);
-        setProducts(products.filter(p => p.id !== id));
+    const handleDelete = async () => {
+        if (deleteTargetId === null) return;
+        await productService.deleteProduct(deleteTargetId);
+        setProducts(products.filter(p => p.id !== deleteTargetId));
+        setDeleteTargetId(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -121,7 +125,7 @@ export default function Menu() {
                                             <DropdownMenuItem className="gap-2" onClick={() => openEditModal(item)}>
                                                 <Pencil className="h-4 w-4" /> Edit
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleDelete(item.id)}>
+                                            <DropdownMenuItem className="gap-2 text-destructive" onClick={() => setDeleteTargetId(item.id)}>
                                                 <Trash2 className="h-4 w-4" /> Delete
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -214,6 +218,21 @@ export default function Menu() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Ürünü sil</AlertDialogTitle>
+                        <AlertDialogDescription>Bu ürünü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Sil
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

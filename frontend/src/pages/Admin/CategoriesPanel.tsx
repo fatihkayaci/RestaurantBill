@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Plus, Pencil, Trash2, Search, MoreHorizontal } from 'lucide-react'
 import {
     DropdownMenu,
@@ -42,9 +43,25 @@ export default function CategoriesPanel() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: number) => {
-        await categoryService.deleteCategory(id);
-        setCategories(categories.filter(c => c.id !== id));
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    const handleDelete = async () => {
+        if (deleteTargetId === null) return;
+        try {
+            await categoryService.deleteCategory(deleteTargetId);
+            setCategories(categories.filter(c => c.id !== deleteTargetId));
+            setDeleteTargetId(null);
+        } catch (err: unknown) {
+            const axiosError = err as { response?: { data?: { message?: string } } };
+            const message = axiosError.response?.data?.message ?? "Kategori silinemedi.";
+            setDeleteError(message);
+        }
+    };
+
+    const closeDeleteDialog = () => {
+        setDeleteTargetId(null);
+        setDeleteError(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -100,7 +117,7 @@ export default function CategoriesPanel() {
                                         <DropdownMenuItem className="gap-2" onClick={() => openEditModal(category)}>
                                             <Pencil className="h-4 w-4" /> Edit
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleDelete(category.id)}>
+                                        <DropdownMenuItem className="gap-2 text-destructive" onClick={() => setDeleteTargetId(category.id)}>
                                             <Trash2 className="h-4 w-4" /> Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -138,6 +155,25 @@ export default function CategoriesPanel() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={(open) => !open && closeDeleteDialog()}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Kategoriyi sil</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {deleteError ?? "Bu kategoriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        {!deleteError && (
+                            <Button variant="destructive" onClick={handleDelete}>
+                                Sil
+                            </Button>
+                        )}
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

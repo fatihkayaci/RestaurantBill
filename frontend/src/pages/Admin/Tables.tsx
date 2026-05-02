@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 
 export default function Tables() {
     const [tables, setTables] = useState<Table[]>([]);
@@ -67,9 +68,13 @@ export default function Tables() {
             });
     }, []);
     
-    const handleDelete = async (id: number) => {
-        await tableService.deleteTable(id);
-        setTables(tables.filter(t => t.id !== id));
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
+    const handleDelete = async () => {
+        if (deleteTargetId === null) return;
+        await tableService.deleteTable(deleteTargetId);
+        setTables(tables.filter(t => t.id !== deleteTargetId));
+        setDeleteTargetId(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -129,7 +134,7 @@ export default function Tables() {
                         
                         <DropdownMenuItem 
                             className="gap-2 text-destructive cursor-pointer" 
-                            onClick={() => handleDelete(table.id)}
+                            onClick={() => setDeleteTargetId(table.id)}
                         >
                             <Trash2 className="h-4 w-4" /> Remove
                         </DropdownMenuItem>
@@ -212,6 +217,21 @@ export default function Tables() {
               </form>
             </DialogContent>
           </Dialog>
+
+          <AlertDialog open={deleteTargetId !== null} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle>Masayı sil</AlertDialogTitle>
+                      <AlertDialogDescription>Bu masayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel>İptal</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Sil
+                      </AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
         </>
     );
 }
