@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 import type { CreateUser, User } from "@/features/auths/userTypes";
+import axios from "axios";
 
 export default function Staff() {
     const roleMap: Record<number, string> = {
@@ -26,6 +27,7 @@ export default function Staff() {
         fullName: '', userName: '', email: '', phoneNumber: '',
         passwordHash: '', userCode: '', role: 2
     });
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         userService.getUsersByRestaurantId().then(setUsers).catch(console.error);
@@ -42,12 +44,14 @@ export default function Staff() {
     const openCreateModal = () => {
         setEditUser(null);
         setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: '', userCode: generateUserCode(), role: 2 });
+        setFieldErrors({});
         setIsModalOpen(true);
     };
 
     const openEditModal = (user: User) => {
         setEditUser(user);
         setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', userCode: user.userCode, role: user.role });
+        setFieldErrors({});
         setIsModalOpen(true);
     };
 
@@ -62,14 +66,57 @@ export default function Staff() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editUser) {
-            await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash });
-        } else {
-            await userService.createUser(form);
+
+        const errors: Record<string, string> = {};
+        if (!form.fullName.trim()) errors.fullName = 'Ad soyad boş bırakılamaz.';
+        else if (form.fullName.length > 100) errors.fullName = 'Ad soyad en fazla 100 karakter olabilir.';
+
+        if (!form.userName.trim()) errors.userName = 'Kullanıcı adı boş bırakılamaz.';
+        else if (form.userName.length > 50) errors.userName = 'Kullanıcı adı en fazla 50 karakter olabilir.';
+
+        if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+            errors.email = 'Geçerli bir e-posta adresi giriniz.';
         }
-        const updated = await userService.getUsersByRestaurantId();
-        setUsers(updated);
-        setIsModalOpen(false);
+
+        if (form.phoneNumber && form.phoneNumber.length > 20) {
+            errors.phoneNumber = 'Telefon numarası en fazla 20 karakter olabilir.';
+        }
+
+        if (!editUser) {
+            if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
+            else if (form.passwordHash.length < 6) errors.passwordHash = 'Şifre en az 6 karakter olmalıdır.';
+            if (!form.userCode.trim()) errors.userCode = 'Kullanıcı kodu boş bırakılamaz.';
+        } else if (form.passwordHash && form.passwordHash.length < 6) {
+            errors.passwordHash = 'Şifre en az 6 karakter olmalıdır.';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
+        }
+
+        setFieldErrors({});
+        try {
+            if (editUser) {
+                await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash });
+            } else {
+                await userService.createUser(form);
+            }
+            const updated = await userService.getUsersByRestaurantId();
+            setUsers(updated);
+            setIsModalOpen(false);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const backendErrors = err.response?.data?.errors as Record<string, string[]> | undefined;
+                if (backendErrors) {
+                    const mapped: Record<string, string> = {};
+                    for (const key in backendErrors) {
+                        mapped[key.charAt(0).toLowerCase() + key.slice(1)] = backendErrors[key][0];
+                    }
+                    setFieldErrors(mapped);
+                }
+            }
+        }
     };
 
     return (
@@ -139,22 +186,24 @@ export default function Staff() {
                         <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4 overflow-y-auto">
                             <div className="flex flex-col gap-2">
                                 <Label>Ad Soyad</Label>
-                                <Input 
-                                    value={form.fullName} 
+                                <Input
+                                    value={form.fullName}
                                     onChange={e => setForm({ ...form, fullName: e.target.value })}
-                                    placeholder="Ad Soyad" 
+                                    placeholder="Ad Soyad"
                                 />
+                                {fieldErrors.fullName && <p className="text-sm text-destructive">{fieldErrors.fullName}</p>}
                             </div>
-                            
+
                             <div className="flex flex-col gap-2">
                                 <Label>Kullanıcı Adı</Label>
-                                <Input 
-                                    value={form.userName} 
+                                <Input
+                                    value={form.userName}
                                     onChange={e => setForm({ ...form, userName: e.target.value })}
-                                    placeholder="kullanici_adi" 
+                                    placeholder="kullanici_adi"
                                 />
+                                {fieldErrors.userName && <p className="text-sm text-destructive">{fieldErrors.userName}</p>}
                             </div>
-                            
+
                             <div className="flex flex-col gap-2">
                                 <Label>Email</Label>
                                 <Input
@@ -163,26 +212,29 @@ export default function Staff() {
                                     onChange={e => setForm({ ...form, email: e.target.value })}
                                     placeholder="ornek@mail.com"
                                 />
+                                {fieldErrors.email && <p className="text-sm text-destructive">{fieldErrors.email}</p>}
                             </div>
 
                             <div className="flex flex-col gap-2">
                                 <Label>Telefon</Label>
-                                <Input 
-                                    value={form.phoneNumber} 
+                                <Input
+                                    value={form.phoneNumber}
                                     onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
-                                    placeholder="0532 000 00 00" 
+                                    placeholder="0532 000 00 00"
                                 />
+                                {fieldErrors.phoneNumber && <p className="text-sm text-destructive">{fieldErrors.phoneNumber}</p>}
                             </div>
-                            
+
                             <div className="flex flex-col gap-2">
                                 <Label>Kullanıcı Kodu</Label>
-                                <Input 
-                                    value={form.userCode} 
+                                <Input
+                                    value={form.userCode}
                                     onChange={e => setForm({ ...form, userCode: e.target.value })}
-                                    placeholder="USR001" 
+                                    placeholder="USR001"
                                 />
+                                {fieldErrors.userCode && <p className="text-sm text-destructive">{fieldErrors.userCode}</p>}
                             </div>
-                            
+
                             <div className="flex flex-col gap-2">
                                 <Label>Şifre</Label>
                                 <Input
@@ -191,6 +243,7 @@ export default function Staff() {
                                     onChange={e => setForm({ ...form, passwordHash: e.target.value })}
                                     placeholder={editUser ? "Değiştirmek için yeni şifre girin" : "Şifre"}
                                 />
+                                {fieldErrors.passwordHash && <p className="text-sm text-destructive">{fieldErrors.passwordHash}</p>}
                             </div>
                             
                             <div className="flex flex-col gap-2">

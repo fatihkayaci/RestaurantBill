@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import axios from "axios";
 
 export default function Tables() {
     const [tables, setTables] = useState<Table[]>([]);
@@ -41,6 +42,7 @@ export default function Tables() {
     const [newTableName, setNewTableName] = useState('');
     const [editTable, setEditTable] = useState<Table | null>(null);
     const [newTableStatus, setNewTableStatus] = useState<number>(1);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const tableStatusMap: Record<number, string> = {
         1: "available",
         2: "occupied",
@@ -50,12 +52,14 @@ export default function Tables() {
     const openCreateModal = () => {
         setEditTable(null);
         setNewTableName('');
+        setFieldErrors({});
         setIsModalOpen(true);
     };
     const openEditModal = (table: Table) => {
         setEditTable(table);
         setNewTableName(table.name);
         setNewTableStatus(table.status);
+        setFieldErrors({});
         setIsModalOpen(true);
     };
     useEffect(() => {
@@ -79,19 +83,41 @@ export default function Tables() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newTableName) return;
-        
-        if (editTable) {
-            await tableService.updateTable(editTable.id, newTableName, newTableStatus);
-        } else {
-            await tableService.createTable(newTableName);
+
+        const errors: Record<string, string> = {};
+        if (!newTableName.trim()) errors.name = 'Masa adı boş olamaz.';
+        else if (newTableName.length > 50) errors.name = 'Masa adı en fazla 50 karakter olabilir.';
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
         }
-        
-        const updated = await tableService.getTables();
-        setTables(updated);
-        setNewTableName('');
-        setEditTable(null);
-        setIsModalOpen(false);
+
+        setFieldErrors({});
+        try {
+            if (editTable) {
+                await tableService.updateTable(editTable.id, newTableName, newTableStatus);
+            } else {
+                await tableService.createTable(newTableName);
+            }
+
+            const updated = await tableService.getTables();
+            setTables(updated);
+            setNewTableName('');
+            setEditTable(null);
+            setIsModalOpen(false);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const backendErrors = err.response?.data?.errors as Record<string, string[]> | undefined;
+                if (backendErrors) {
+                    const mapped: Record<string, string> = {};
+                    for (const key in backendErrors) {
+                        mapped[key.charAt(0).toLowerCase() + key.slice(1)] = backendErrors[key][0];
+                    }
+                    setFieldErrors(mapped);
+                }
+            }
+        }
     };
 
     return (
@@ -176,9 +202,10 @@ export default function Tables() {
                       <Label>Masa Adı</Label>
                       <Input
                           value={newTableName}
-                          onChange={(e) => setNewTableName(e.target.value)} 
+                          onChange={(e) => setNewTableName(e.target.value)}
                           placeholder="Masa 1"
                       />
+                      {fieldErrors.name && <p className="text-sm text-destructive">{fieldErrors.name}</p>}
                   </div>
                   
                   {editTable && (

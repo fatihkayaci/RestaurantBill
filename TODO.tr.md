@@ -7,9 +7,10 @@
 - [x] **UI:** Kullanıcı (User) ekleme ve düzenleme Modal'larına Email alanı dahil edildi.
 - [x] **UI:** Silme işlemleri tetiklendiğinde kullanıcıdan onay (Confirmation Dialog) alınması sağlandı.
 - [x] **Feature:** Kullanıcı Modal'ı açıldığında sistemin otomatik bir `UserCode` önermesi sağlandı (kullanıcı dilerse değiştirebilir).
-- [ ] **UI/UX:** İlk kayıt sonrası (Onboarding) restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
 - [ ] **Validation:** Frontend formlarına istemci taraflı (client-side) doğrulama eklenecek, hatalı verilerin backend'e gidip hata fırlatmasının önüne geçilecek.
+- [ ] **UI/UX:** İlk kayıt sonrası (Onboarding) restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
 - [ ] **UI:** API'den dönen hata mesajlarının (Error Handling) tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
+- [ ] **profile kısmı:** profil kısmı eksik profil kısmı eklenecek
 
 ## ⚙️ Backend (.NET Core)
 - [x] **Feature [Category]:** Kategori silme endpoint'inde ilişkili ürün (Product) kontrolü yapıldı; bağlı ürün varsa silme işlemi engellendi.

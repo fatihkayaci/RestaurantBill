@@ -15,6 +15,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import axios from "axios";
 
 export default function CategoriesPanel() {
     const [categories, setCategories] = useState<Category[]>([]);
@@ -23,6 +24,7 @@ export default function CategoriesPanel() {
     const [name, setName] = useState('');
     const [search, setSearch] = useState('');
 
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
     const filteredCategories = categories.filter(c =>
         c.name.toLowerCase().includes(search.toLowerCase())
     );
@@ -34,12 +36,14 @@ export default function CategoriesPanel() {
     const openCreateModal = () => {
         setEditCategory(null);
         setName('');
+        setFieldErrors({});
         setIsModalOpen(true);
     };
 
     const openEditModal = (category: Category) => {
         setEditCategory(category);
         setName(category.name);
+        setFieldErrors({});
         setIsModalOpen(true);
     };
 
@@ -66,19 +70,42 @@ export default function CategoriesPanel() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name) return;
 
-        if (editCategory) {
-            await categoryService.updateCategory({ id: editCategory.id, name });
-        } else {
-            await categoryService.createCategory(name);
+        const errors: Record<string, string> = {};
+        if (!name.trim()) errors.name = 'Kategori adı boş olamaz.';
+        else if (name.length > 50) errors.name = 'Kategori adı en fazla 50 karakter olabilir.';
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
         }
 
-        const updated = await categoryService.getCategories();
-        setCategories(updated);
-        setName('');
-        setEditCategory(null);
-        setIsModalOpen(false);
+        setFieldErrors({});
+        try {
+            if (editCategory) {
+                await categoryService.updateCategory({ id: editCategory.id, name });
+            } else {
+                await categoryService.createCategory(name);
+            }
+
+            const updated = await categoryService.getCategories();
+            setCategories(updated);
+            setName('');
+            setEditCategory(null);
+            setIsModalOpen(false);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const errors = err.response?.data?.errors as Record<string, string[]> | undefined;
+                if (errors) {
+                    const mapped: Record<string, string> = {};
+                    for (const key in errors) {
+                        mapped[key.charAt(0).toLowerCase() + key.slice(1)] = errors[key][0];
+                    }
+                    setFieldErrors(mapped);
+                }
+            }
+        }
+        
     };
 
     return (
@@ -143,6 +170,7 @@ export default function CategoriesPanel() {
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="Category name"
                             />
+                            {fieldErrors.name && <p className="text-sm text-destructive">{fieldErrors.name}</p>}
                         </div>
                         <div className="flex gap-3 pt-2">
                             <Button type="button" variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>

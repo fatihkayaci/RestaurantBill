@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Pencil, Trash2, Search, MoreHorizontal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import axios from "axios";
 export default function Menu() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -23,7 +24,7 @@ export default function Menu() {
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
     const [menuSearch, setMenuSearch] = useState('')
-    const [formError, setFormError] = useState('')
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
     
     const filteredMenuItems = products.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(menuSearch.toLowerCase())
@@ -39,14 +40,14 @@ export default function Menu() {
     const openCreateModal = () => {
         setEditProduct(null);
         setForm({ name: '', price: 0, categoryId: 0, isActive: true, id: 0});
-        setFormError('');
+        setFieldErrors({});
         setIsModalOpen(true);
     };
 
     const openEditModal = (product: Product) => {
         setEditProduct(product);
         setForm({ name: product.name, price: product.price, categoryId: product.categoryId, isActive: product.isActive, id: product.id });
-        setFormError('');
+        setFieldErrors({});
         setIsModalOpen(true);
     };
 
@@ -59,21 +60,39 @@ export default function Menu() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // if (!form.name || !form.categoryId) {
-        //     setFormError(!form.name ? 'Product name is required.' : 'Please select a category.');
-        //     return;
-        // }
-        setFormError('');
-        if (editProduct) {
-            await productService.updateProduct(form);
-        } else {
-            console.log(form);
-            await productService.createProduct(form);
+    
+        const errors: Record<string, string> = {};
+        if (!form.name.trim()) errors.name = 'Ürün ismi boş bırakılamaz.';
+        if (form.price <= 0) errors.price = "Fiyat 0'dan büyük olmalıdır.";
+        if (form.categoryId <= 0) errors.categoryId = 'Geçersiz bir kategori seçtiniz.';
+        
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
         }
-
-        const updated = await productService.getProducts();
-        setProducts(updated);
-        setIsModalOpen(false);
+        
+        setFieldErrors({});
+        try {
+            if (editProduct) {
+                await productService.updateProduct(form);
+            } else {
+                await productService.createProduct(form);
+            }
+            const updated = await productService.getProducts();
+            setProducts(updated);
+            setIsModalOpen(false);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const errors = err.response?.data?.errors as Record<string, string[]> | undefined;
+                if (errors) {
+                    const mapped: Record<string, string> = {};
+                    for (const key in errors) {
+                        mapped[key.charAt(0).toLowerCase() + key.slice(1)] = errors[key][0];
+                    }
+                    setFieldErrors(mapped);
+                }
+            }
+        }
     };
 
     return (
@@ -168,6 +187,7 @@ export default function Menu() {
                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                                 placeholder="Product name"
                             />
+                            {fieldErrors.name && <p className="text-sm text-destructive">{fieldErrors.name}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <Label htmlFor="price">Price</Label>
@@ -178,6 +198,7 @@ export default function Menu() {
                                 onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
                                 placeholder="0"
                             />
+                            {fieldErrors.price && <p className="text-sm text-destructive">{fieldErrors.price}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <Label htmlFor="category">Category</Label>
@@ -192,6 +213,7 @@ export default function Menu() {
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>
+                            {fieldErrors.categoryId && <p className="text-sm text-destructive">{fieldErrors.categoryId}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
                             <Label htmlFor="status">Status</Label>
@@ -205,9 +227,6 @@ export default function Menu() {
                                 <option value="false">Inactive</option>
                             </select>
                         </div>
-                        {formError && (
-                            <p className="text-sm text-destructive">{formError}</p>
-                        )}
                         <div className="flex gap-3 pt-2">
                             <Button type="button" variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
                                 Cancel
