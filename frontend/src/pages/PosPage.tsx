@@ -15,13 +15,7 @@ import * as signalR from "@microsoft/signalr";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { 
-    Dialog, 
-    DialogContent, 
-    DialogHeader, 
-    DialogTitle, 
-    DialogDescription 
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CreditCard, Banknote, X, Check, Utensils, AlertCircle } from "lucide-react";
 
 export default function PosPage() {
@@ -176,7 +170,7 @@ export default function PosPage() {
                 setActiveOrder(newOrderData);
             }
         } catch (error: any) {
-            console.log(error.response.data);
+            console.log(error.response?.data);
         }
     }
     const handleReservation = async () => {
