@@ -15,8 +15,7 @@ import * as signalR from "@microsoft/signalr";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { /*CreditCard, Banknote, */X, Check, Utensils, AlertCircle, ShoppingCart } from "lucide-react";
+import { X, Check, Utensils, AlertCircle, ShoppingCart } from "lucide-react";
 
 export default function PosPage() {
     const { tableId } = useParams();
@@ -27,7 +26,6 @@ export default function PosPage() {
     const [orderTab, setOrderTab] = useState<number>(1);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-    // const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [table, setTable] = useState<Table>();
@@ -197,27 +195,6 @@ export default function PosPage() {
             console.log(error.response.data);
         }
     }
-    /* changes status methods */
-    /* methods for order */
-    /*Pay method 
-    const handlePayment = async () => {
-        try {
-
-            const orderId = activeOrder.id;
-            if (!orderId || !tableId)
-                return;
-            
-            await orderService.closeOrder(orderId);
-            let updatedTable = await tableService.getTableById(tableId)
-            
-            setTable(updatedTable);
-            setIsPaymentModalOpen(false); 
-            
-        } catch (error: any) {
-            console.log(error.response?.data);
-        }
-    };
-    */
     
     const handleCancelOrder = async () => {
         try {
@@ -369,7 +346,7 @@ export default function PosPage() {
         orderTab === 4 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 3) :
         [];
 
-    // --- YÜKLENİYOR (LOADING) DURUMU ---
+    // --- LOADING---
     if (isLoading) {
         return (
             <div className="flex flex-col lg:flex-row h-screen bg-background overflow-hidden">
@@ -406,7 +383,7 @@ export default function PosPage() {
         );
     }
 
-    // --- MASA BULUNAMADI ---
+    // --- not found table ---
     if (!table) {
         return (
             <div className="h-screen flex flex-col items-center justify-center bg-background text-foreground">
@@ -417,7 +394,7 @@ export default function PosPage() {
         );
     }
 
-    // --- MASA MÜSAİT (BOŞ) DURUMU ---
+    // --- Table Available ---
     if (table.status === 1) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -459,7 +436,7 @@ export default function PosPage() {
         );
     }
 
-    // --- MASA REZERVE DURUMU ---
+    // --- Table Reservation ---
     if (table.status === 3) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -475,7 +452,7 @@ export default function PosPage() {
                         REZERVE EDİLMİŞTİR
                     </p>
                     
-                    {/* TODO: API'den gerçek veriler gelecek */}
+                    {/* TODO: real data will come from database */}
                     <div className="w-full bg-muted/50 rounded-2xl p-5 mb-8 border shadow-inner">
                         <div className="flex justify-between items-center border-b pb-3 mb-3">
                             <span className="text-muted-foreground font-medium text-sm">Müşteri:</span>
@@ -518,12 +495,11 @@ export default function PosPage() {
         );
     }
 
-    // --- MASA DOLU (AKTİF SİPARİŞ) DURUMU ---
+    // --- table full (active order situation) ---
     if (table.status === 2) {
         return (
             <div className="flex h-screen bg-background overflow-hidden text-foreground">
                 
-                {/* SOL TARAF: Menü ve Kategoriler */}
                 <div className="w-full lg:w-2/3 flex flex-col h-screen relative">
                     <div className="bg-card px-4 lg:px-6 py-3 lg:py-4 shadow-sm flex items-center gap-3 lg:gap-4 overflow-x-auto z-10 sticky top-0 border-b">
                         <Button 
@@ -553,7 +529,7 @@ export default function PosPage() {
                     </div>
                 </div>
 
-                {/* Mobil: Floating Sepet Butonu */}
+                {/* Mobil: Floating basket button */}
                 <button
                     onClick={() => setIsCartOpen(true)}
                     className="lg:hidden fixed bottom-4 right-4 z-30 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-2xl px-5 py-4 flex items-center gap-3 active:scale-95 transition-transform"
@@ -573,7 +549,7 @@ export default function PosPage() {
                     />
                 )}
 
-                {/* SAĞ TARAF: Adisyon ve Ödeme Alanı */}
+                {/* right side: bill and order */}
                 <div className={`bg-card shadow-[-10px_0_30px_-5px_rgba(0,0,0,0.1)] flex flex-col border-l
                     fixed inset-x-0 bottom-0 top-0 z-50 transition-transform duration-300
                     ${isCartOpen ? 'translate-y-0' : 'translate-y-full'}
@@ -635,7 +611,7 @@ export default function PosPage() {
                         )}
                     </div>
                     
-                    {/* Alt Kısım: Ara Toplam ve Butonlar */}
+                    {/* bottom side */}
                     <div className="p-3 lg:p-4 bg-card border-t flex items-center gap-2">
                         <Button
                             variant="ghost"
@@ -678,49 +654,6 @@ export default function PosPage() {
                         </Button>
                     </div>
                 </div>
-
-                {/* --- PAY MODALI (SHADCN DIALOG) --- */}
-                {/* <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
-                    <DialogContent className="sm:max-w-md border-none shadow-2xl p-0 overflow-hidden rounded-3xl bg-card">
-                        <div className="p-8">
-                            <DialogHeader className="text-center mb-8">
-                                <DialogTitle className="text-3xl font-bold text-center">Ödeme Al</DialogTitle>
-                                <DialogDescription className="text-center text-base mt-2">
-                                    Lütfen ödeme yöntemini seçin
-                                </DialogDescription>
-                            </DialogHeader>
-
-                            <div className="flex flex-col gap-4">
-                                <Button 
-                                    size="lg"
-                                    onClick={() => handlePayment()}
-                                    className="w-full bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-8 rounded-2xl shadow-[0_4px_14px_0_rgba(59,130,246,0.39)] gap-3"
-                                >
-                                    <CreditCard className="w-7 h-7" />
-                                    Kredi Kartı
-                                </Button>
-
-                                <Button 
-                                    size="lg"
-                                    onClick={() => handlePayment()}
-                                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xl font-bold py-8 rounded-2xl shadow-[0_4px_14px_0_rgba(16,185,129,0.39)] gap-3"
-                                >
-                                    <Banknote className="w-7 h-7" />
-                                    Nakit
-                                </Button>
-                            </div>
-
-                            <Button 
-                                variant="ghost"
-                                onClick={() => setIsPaymentModalOpen(false)}
-                                className="mt-6 w-full text-muted-foreground font-semibold py-6 rounded-2xl text-lg hover:bg-muted"
-                            >
-                                Vazgeç
-                            </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog> */}
-
             </div>
         );
     }
