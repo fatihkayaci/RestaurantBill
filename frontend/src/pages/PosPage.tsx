@@ -15,8 +15,8 @@ import * as signalR from "@microsoft/signalr";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { CreditCard, Banknote, X, Check, Utensils, AlertCircle } from "lucide-react";
+// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { /*CreditCard, Banknote, */X, Check, Utensils, AlertCircle, ShoppingCart } from "lucide-react";
 
 export default function PosPage() {
     const { tableId } = useParams();
@@ -25,8 +25,9 @@ export default function PosPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderTab, setOrderTab] = useState<number>(1);
+    const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    // const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [table, setTable] = useState<Table>();
@@ -198,7 +199,7 @@ export default function PosPage() {
     }
     /* changes status methods */
     /* methods for order */
-    
+    /*Pay method 
     const handlePayment = async () => {
         try {
 
@@ -216,7 +217,8 @@ export default function PosPage() {
             console.log(error.response?.data);
         }
     };
-
+    */
+    
     const handleCancelOrder = async () => {
         try {
             if (!tableId || !activeOrder) return;
@@ -370,21 +372,21 @@ export default function PosPage() {
     // --- YÜKLENİYOR (LOADING) DURUMU ---
     if (isLoading) {
         return (
-            <div className="flex h-screen bg-background overflow-hidden">
-                <div className="w-2/3 flex flex-col h-screen p-6">
-                    <div className="flex gap-4 mb-8 overflow-x-hidden">
+            <div className="flex flex-col lg:flex-row h-screen bg-background overflow-hidden">
+                <div className="w-full lg:w-2/3 flex flex-col p-4 lg:p-6">
+                    <div className="flex gap-4 mb-6 lg:mb-8 overflow-x-hidden">
                         {[1, 2, 3, 4].map(i => (
                             <Skeleton key={i} className="h-12 w-28 rounded-xl shrink-0" />
                         ))}
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
                         {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                             <Skeleton key={i} className="h-32 rounded-2xl" />
                         ))}
                     </div>
                 </div>
 
-                <div className="w-1/3 bg-card border-l flex flex-col">
+                <div className="hidden lg:flex w-1/3 bg-card border-l flex-col">
                     <div className="h-20 border-b p-6 flex items-center justify-between">
                         <Skeleton className="h-8 w-32 rounded-lg" />
                         <Skeleton className="h-6 w-24 rounded-full" />
@@ -522,8 +524,8 @@ export default function PosPage() {
             <div className="flex h-screen bg-background overflow-hidden text-foreground">
                 
                 {/* SOL TARAF: Menü ve Kategoriler */}
-                <div className="w-2/3 flex flex-col h-screen relative">
-                    <div className="bg-card px-6 py-4 shadow-sm flex items-center gap-4 overflow-x-auto z-10 sticky top-0 border-b">
+                <div className="w-full lg:w-2/3 flex flex-col h-screen relative">
+                    <div className="bg-card px-4 lg:px-6 py-3 lg:py-4 shadow-sm flex items-center gap-3 lg:gap-4 overflow-x-auto z-10 sticky top-0 border-b">
                         <Button 
                             variant={selectedCategoryId === null ? "default" : "secondary"}
                             size="lg"
@@ -542,8 +544,8 @@ export default function PosPage() {
                         ))}
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-6 bg-muted/20">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <div className="flex-1 overflow-y-auto p-2 lg:p-6 bg-muted/20 pb-28 lg:pb-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-6">
                             {filteredProducts.map(product => (
                                 <ProductCard key={product.id} product={product} onAdd={increaseQuantity} />
                             ))}
@@ -551,12 +553,45 @@ export default function PosPage() {
                     </div>
                 </div>
 
+                {/* Mobil: Floating Sepet Butonu */}
+                <button
+                    onClick={() => setIsCartOpen(true)}
+                    className="lg:hidden fixed bottom-4 right-4 z-30 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-2xl px-5 py-4 flex items-center gap-3 active:scale-95 transition-transform"
+                >
+                    <ShoppingCart className="w-6 h-6" />
+                    <div className="flex flex-col items-start leading-tight">
+                        <span className="text-xs font-medium opacity-90">{activeOrder.orderItems.length} ürün</span>
+                        <span className="text-base font-extrabold">{activeOrder.totalPrice} ₺</span>
+                    </div>
+                </button>
+
+                {/* Mobil: Backdrop */}
+                {isCartOpen && (
+                    <div
+                        onClick={() => setIsCartOpen(false)}
+                        className="lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
+                    />
+                )}
+
                 {/* SAĞ TARAF: Adisyon ve Ödeme Alanı */}
-                <div className="w-1/3 bg-card shadow-[-10px_0_30px_-5px_rgba(0,0,0,0.1)] z-20 flex flex-col relative border-l">
-                    
-                    <div className="px-6 py-5 border-b flex justify-between items-center bg-card">
-                        <h2 className="text-2xl font-extrabold">Masa {tableId}</h2>
-                        <Badge variant="destructive" className="animate-pulse">Aktif Sipariş</Badge>
+                <div className={`bg-card shadow-[-10px_0_30px_-5px_rgba(0,0,0,0.1)] flex flex-col border-l
+                    fixed inset-x-0 bottom-0 top-0 z-50 transition-transform duration-300
+                    ${isCartOpen ? 'translate-y-0' : 'translate-y-full'}
+                    lg:static lg:translate-y-0 lg:w-1/3 lg:z-20`}>
+
+                    <div className="px-3 lg:px-6 py-2 lg:py-4 border-b flex justify-between items-center bg-card">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-base lg:text-xl font-extrabold">Masa {tableId}</h2>
+                            <Badge variant="destructive" className="animate-pulse text-[10px] lg:text-xs px-1.5 py-0">Aktif</Badge>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="lg:hidden h-8 w-8"
+                            onClick={() => setIsCartOpen(false)}
+                        >
+                            <X className="w-4 h-4" />
+                        </Button>
                     </div>
                     
                     <div className="px-4 pt-4 pb-2 bg-card">
@@ -601,61 +636,51 @@ export default function PosPage() {
                     </div>
                     
                     {/* Alt Kısım: Ara Toplam ve Butonlar */}
-                    <div className="p-6 bg-card border-t shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
-                        <div className="flex justify-between items-end mb-6">
-                            <span className="text-muted-foreground font-medium text-lg mb-1">Ara Toplam</span>
-                            <div className="text-right">
-                                <span className="text-4xl font-black text-green-500 tracking-tight">
-                                    {activeOrder.totalPrice} <span className="text-2xl">₺</span>
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div className="border-t pt-4 flex items-center gap-2">
-                            <Button 
-                                variant="outline" 
-                                size="icon"
-                                className="h-14 w-14 shrink-0 rounded-xl text-destructive hover:bg-destructive hover:text-white border-destructive/30"
-                                onClick={handleCancelOrder}
-                                title="İptal Et"
-                            >
-                                <X className="w-6 h-6" />
-                            </Button>
+                    <div className="p-3 lg:p-4 bg-card border-t flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-12 w-12 shrink-0 rounded-xl text-destructive hover:bg-destructive/10"
+                            onClick={handleCancelOrder}
+                            title="İptal Et"
+                        >
+                            <X className="w-5 h-5" />
+                        </Button>
 
-                            <Button 
-                                variant="outline"
-                                size="icon"
-                                className="h-14 w-14 shrink-0 rounded-xl text-amber-500 hover:bg-amber-500 hover:text-white border-amber-500/30"
-                                onClick={() => setIsPaymentModalOpen(true)}
-                                title="Masayı Kapat (Hesabı Al)"
-                            >
-                                <Banknote className="w-6 h-6" />
-                            </Button>
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size="icon"
+                            className="h-12 w-12 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
+                            title="Masalara Dön"
+                        >
+                            <Link to="/"><Utensils className="w-5 h-5" /></Link>
+                        </Button>
 
-                            <Button
-                                disabled={isSubmitting}
-                                onClick={(e) => orderTab === 2 ? handleSubmitUpdate(e) : handleSubmitOrder(e)}
-                                className={`flex-1 h-14 rounded-xl text-lg font-bold gap-2 ${orderTab === 2 ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"}`}
-                            >
-                                {isSubmitting ? (
-                                    <span>İşleniyor...</span>
-                                ) : (
-                                    <>
+                        <Button
+                            disabled={isSubmitting}
+                            onClick={(e) => orderTab === 2 ? handleSubmitUpdate(e) : handleSubmitOrder(e)}
+                            className={`flex-1 h-12 rounded-xl font-bold flex items-center justify-between px-4 ${orderTab === 2 ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"}`}
+                        >
+                            {isSubmitting ? (
+                                <span className="mx-auto">İşleniyor...</span>
+                            ) : (
+                                <>
+                                    <span className="flex items-center gap-2 text-base">
                                         <Check className="w-5 h-5" strokeWidth={3} />
-                                        {orderTab === 2 ? "Güncelle" : "Siparişi Onayla"}
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                        
-                        <Link to="/" className="text-muted-foreground hover:text-foreground font-semibold transition-colors text-center block mt-5">
-                            Kapat ve Masalara Dön
-                        </Link>
+                                        {orderTab === 2 ? "Güncelle" : "Onayla"}
+                                    </span>
+                                    <span className="text-base font-black tracking-tight">
+                                        {activeOrder.totalPrice} ₺
+                                    </span>
+                                </>
+                            )}
+                        </Button>
                     </div>
                 </div>
 
-                {/* --- ÖDEME MODALI (SHADCN DIALOG) --- */}
-                <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+                {/* --- PAY MODALI (SHADCN DIALOG) --- */}
+                {/* <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
                     <DialogContent className="sm:max-w-md border-none shadow-2xl p-0 overflow-hidden rounded-3xl bg-card">
                         <div className="p-8">
                             <DialogHeader className="text-center mb-8">
@@ -694,7 +719,7 @@ export default function PosPage() {
                             </Button>
                         </div>
                     </DialogContent>
-                </Dialog>
+                </Dialog> */}
 
             </div>
         );

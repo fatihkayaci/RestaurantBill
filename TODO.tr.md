@@ -13,6 +13,10 @@
 - [ ] **profile kısmı:** profil kısmı eksik profil kısmı eklenecek
 - [ ] **kasa kısmı:** kasaya ait hiç bir şey yok
 - [ ] **reports kısmı:** reports içerisi doldurulacak
+- [ ] **pospage:** sayfadaki ücret alma kaldırılacak ve kasiyer sayfası yapılacak
+- [ ] **pospage:** ui telefona uygun değil response sayfa yapılacak.
+- [ ] **pospage:** siparişler içindeki yeni sekmesindeki çöp ikonu çalışmıyor.
+- [ ] **pospage:** masalara dön ikonu saçma bir yerde bakılacak.
  
 ## ⚙️ Backend (.NET Core)
 - [x] **Feature [Category]:** Kategori silme endpoint'inde ilişkili ürün (Product) kontrolü yapıldı; bağlı ürün varsa silme işlemi engellendi.
