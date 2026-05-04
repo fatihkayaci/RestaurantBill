@@ -7,6 +7,7 @@
 - [x] **UI:** Kullanıcı (User) ekleme ve düzenleme Modal'larına Email alanı dahil edildi.
 - [x] **UI:** Silme işlemleri tetiklendiğinde kullanıcıdan onay (Confirmation Dialog) alınması sağlandı.
 - [x] **Feature:** Kullanıcı Modal'ı açıldığında sistemin otomatik bir `UserCode` önermesi sağlandı (kullanıcı dilerse değiştirebilir).
+- [x] **kasiyer:** kasiyer sayfası yapılan tasarım uygulanacak
 - [ ] **Validation:** Frontend formlarına istemci taraflı (client-side) doğrulama eklenecek, hatalı verilerin backend'e gidip hata fırlatmasının önüne geçilecek.(bitenler => admin tarafındaki{ menu, categories, staff, tables, reports })
 - [ ] **UI/UX:** İlk kayıt sonrası (Onboarding) restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
 - [ ] **UI:** API'den dönen hata mesajlarının (Error Handling) tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
@@ -28,3 +29,5 @@
 - [ ] **Refactor:** Table işlemleri içerisindeki genel `Update` metodunun ismi, standartlara uygun şekilde `UpdateTable` olarak değiştirilecek.
 - [ ] **Refactor [Category]:** `DeleteCategoryCommandHandler` içerisindeki iş mantığı gözden geçirilip optimize edilecek.
 - [ ] **Refactor:** admin tarafına önbellekleme yapılacak ürünler, categories, staff ve tables için
+- [ ] **create:** kasiyer sayfası için backend tarafı yazılacak. şu an mock data mevcut tasarımda
+- [ ] 

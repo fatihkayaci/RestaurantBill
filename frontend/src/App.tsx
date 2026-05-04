@@ -7,6 +7,7 @@ import KitchenPage from './pages/KitchenPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
+import CashierPage from './pages/CashierPage';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/table/:tableId" element={<PrivateRoute><PosPage /></PrivateRoute>} />
         <Route path="/kitchen" element={<PrivateRoute><KitchenPage /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+        <Route path="/cashier" element={<PrivateRoute><CashierPage /></PrivateRoute>} />
       </Route>
 
       <Route path="/login" element={<LoginPage />} />
