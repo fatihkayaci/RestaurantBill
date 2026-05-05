@@ -8,5 +8,7 @@ public interface IUnitOfWork : IDisposable
     ITableRepository Table { get; }
     IRestaurantRepository Restaurant { get; }
     IUserRepository User { get; }
+    ICashRegisterRepository CashRegister { get; }
+    ICashTransactionRepository CashTransaction { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

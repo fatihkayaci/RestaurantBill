@@ -135,6 +135,18 @@ public static class DefaultData
             await context.SaveChangesAsync();
         }
 
+        // Cash Registers
+        if (!await context.CashRegisters.AnyAsync())
+        {
+            var cashRegisters = new[]
+            {
+                new CashRegister { Name = "Cash", Balance = 0m, Status = CashRegisterStatus.Open, RestaurantId = demoRestaurant.Id },
+                new CashRegister { Name = "Card", Balance = 0m, Status = CashRegisterStatus.Open, RestaurantId = demoRestaurant.Id },
+            };
+            await context.CashRegisters.AddRangeAsync(cashRegisters);
+            await context.SaveChangesAsync();
+        }
+
         // Tables
         if (!await context.Tables.AnyAsync())
         {

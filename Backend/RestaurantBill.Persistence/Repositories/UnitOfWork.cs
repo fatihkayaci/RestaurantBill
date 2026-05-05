@@ -17,6 +17,8 @@ public class UnitOfWork : IUnitOfWork
     private ITableRepository? _tableRepository;
     private IRestaurantRepository? _restaurantRepository;
     private IUserRepository? _userRepository;
+    private ICashRegisterRepository? _cashRegisterRepository;
+    private ICashTransactionRepository? _cashTransactionRepository;
 
 
     public IProductRepository Product => _productRepository ??= new ProductRepository(_context);
@@ -25,6 +27,8 @@ public class UnitOfWork : IUnitOfWork
     public ITableRepository Table => _tableRepository ??= new TableRepository(_context);
     public IRestaurantRepository Restaurant => _restaurantRepository ??= new RestaurantRepository(_context);
     public IUserRepository User => _userRepository ??= new UserRepository(_context);
+    public ICashRegisterRepository CashRegister => _cashRegisterRepository ??= new CashRegisterRepository(_context);
+    public ICashTransactionRepository CashTransaction => _cashTransactionRepository ??= new CashTransactionRepository(_context);
 
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

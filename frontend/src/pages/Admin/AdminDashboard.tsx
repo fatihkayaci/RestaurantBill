@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { BarChart3, LayoutDashboard, LayoutGrid, Users, UtensilsCrossed, Tag } from "lucide-react";
+import { BarChart3, LayoutDashboard, LayoutGrid, Users, UtensilsCrossed, Tag, Wallet } from "lucide-react";
 
 import OverView from "./OverView";
 import Menu from "./Menu";
 import Staff from "./Staff";
 import Tables from "./Tables";
 import CategoriesPanel from "./CategoriesPanel";
+import CashRegisters from "./CashRegisters";
 
 export default function AdminDashboard() {
-    type AdminTab = 'overview' | 'menu' | 'categories' | 'users' | 'tables' | 'reports'
+    type AdminTab = 'overview' | 'menu' | 'categories' | 'users' | 'tables' | 'cashRegisters' | 'reports'
     const [activeTab, setActiveTab] = useState<AdminTab>('overview');
     return (
         <div className="flex flex-col gap-6">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AdminTab)}>
-                <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+                <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
                     <TabsTrigger value="overview" className="gap-2">
                         <LayoutDashboard className="h-4 w-4" />
                         <span className="hidden sm:inline">Overview</span>
@@ -34,6 +35,10 @@ export default function AdminDashboard() {
                     <TabsTrigger value="tables" className="gap-2">
                         <LayoutGrid className="h-4 w-4" />
                         <span className="hidden sm:inline">Tables</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="cashRegisters" className="gap-2">
+                        <Wallet className="h-4 w-4" />
+                        <span className="hidden sm:inline">Cash Registers</span>
                     </TabsTrigger>
                     <TabsTrigger value="reports" className="gap-2">
                         <BarChart3 className="h-4 w-4" />
@@ -59,6 +64,10 @@ export default function AdminDashboard() {
 
                 <TabsContent value="tables" className="space-y-6 mt-6">
                     <Tables />
+                </TabsContent>
+
+                <TabsContent value="cashRegisters" className="space-y-6 mt-6">
+                    <CashRegisters />
                 </TabsContent>
                 {/* Todo: will add reports */}
             </Tabs>

@@ -17,6 +17,8 @@ public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, int>
     public DbSet<Category> Categories { get; set; }
     public DbSet<Restaurant> Restaurants { get; set; }
     public DbSet<Table> Tables { get; set; }
+    public DbSet<CashRegister> CashRegisters { get; set; }
+    public DbSet<CashTransaction> CashTransactions { get; set; }
     // db configurations =>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

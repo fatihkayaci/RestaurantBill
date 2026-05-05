@@ -18,6 +18,7 @@
 - [ ] **PosPage:** UI telefona uygun değil; responsive sayfa yapılacak.
 - [ ] **PosPage:** Siparişler içindeki "Yeni" sekmesindeki çöp ikonu çalışmıyor, düzeltilecek.
 - [ ] **PosPage:** "Masalara dön" ikonu uygunsuz bir konumda, yeri gözden geçirilecek.
+- [ ] **ürün:** order içerisindeki ürün bazlı status değişimi yapılacak.
 
 ## ⚙️ Backend (.NET Core)
 - [x] **Feature [Category]:** Kategori silme endpoint'inde ilişkili ürün (Product) kontrolü yapıldı; bağlı ürün varsa silme işlemi engellendi.
@@ -30,3 +31,4 @@
 - [ ] **Refactor [Category]:** `DeleteCategoryCommandHandler` içerisindeki iş mantığı gözden geçirilip optimize edilecek.
 - [ ] **Refactor:** Admin tarafına önbellekleme (cache) eklenecek: products, categories, staff ve tables için.
 - [ ] **Create:** Kasiyer sayfası için backend tarafı yazılacak (şu an tasarımda mock data mevcut).
+- [ ] **ürün:** ürün bazlı status değişimine backend de kontrol edilecek

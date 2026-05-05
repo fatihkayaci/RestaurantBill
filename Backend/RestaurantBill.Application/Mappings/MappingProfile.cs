@@ -48,6 +48,9 @@ public class MappingProfile : Profile
         // Table
         CreateMap<TableDto, Table>().ReverseMap();
 
+        // CashRegister
+        CreateMap<CashRegisterDto, CashRegister>().ReverseMap();
+
         // User
         CreateMap<UserDto, User>().ReverseMap();
         CreateMap<CreateUserDto, User>().ReverseMap();
