@@ -4,7 +4,8 @@ using MediatR;
 using MediatR.Pipeline;
 using RestaurantBill.Application.Behaviors;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
-using RestaurantBill.Application.Validators.Product;
+using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
+
 
 namespace RestaurantBill.WebAPI.Extensions;
 
