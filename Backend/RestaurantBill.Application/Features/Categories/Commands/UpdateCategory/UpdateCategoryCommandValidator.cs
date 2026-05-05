@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Categories.Commands.UpdateCategory;
-
-namespace RestaurantBill.Application.Validators.Category;
+namespace RestaurantBill.Application.Features.Categories.Commands.UpdateCategory;
 
 public class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategoryCommand>
 {

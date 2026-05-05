@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Users.Commands.CreateUser;
-
-namespace RestaurantBill.Application.Validators.User;
+namespace RestaurantBill.Application.Features.Users.Commands.CreateUser;
 
 public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
 {

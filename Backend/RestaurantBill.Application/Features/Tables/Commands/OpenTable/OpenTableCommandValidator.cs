@@ -1,8 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
-
-namespace RestaurantBill.Application.Validators.Table;
-
+namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable;
 public class OpenTableCommandValidator : AbstractValidator<OpenTableCommand>
 {
     public OpenTableCommandValidator()

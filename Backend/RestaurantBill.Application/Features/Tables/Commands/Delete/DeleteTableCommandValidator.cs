@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Tables.Commands.Delete;
-
-namespace RestaurantBill.Application.Validators.Table;
+namespace RestaurantBill.Application.Features.Tables.Commands.Delete;
 
 public class DeleteTableCommandValidator : AbstractValidator<DeleteCommand>
 {

@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
-
-namespace RestaurantBill.Application.Validators.Order;
+namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
 
 public class UpdateOrderItemQuantityCommandValidator : AbstractValidator<UpdateOrderItemQuantityCommand>
 {

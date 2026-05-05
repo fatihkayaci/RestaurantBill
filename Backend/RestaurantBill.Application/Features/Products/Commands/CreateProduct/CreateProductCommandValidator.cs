@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
-
-namespace RestaurantBill.Application.Validators.Product;
+namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct;
 
 public class CreateProductCommandValidator : AbstractValidator<CreateProductCommand>
 {

@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
-
-namespace RestaurantBill.Application.Validators.Order;
+namespace RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
 
 public class RemoveProductFromOrderCommandValidator : AbstractValidator<RemoveProductFromOrderCommand>
 {

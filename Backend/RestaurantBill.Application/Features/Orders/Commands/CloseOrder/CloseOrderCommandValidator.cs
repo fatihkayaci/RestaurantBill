@@ -1,7 +1,6 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 
-namespace RestaurantBill.Application.Validators.Order;
+namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 
 public class CloseOrderCommandValidator : AbstractValidator<DeleteCommand>
 {

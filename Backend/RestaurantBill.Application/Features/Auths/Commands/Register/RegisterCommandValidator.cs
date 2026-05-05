@@ -1,7 +1,6 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Auths.Commands.Register;
 
-namespace RestaurantBill.Application.Validators.Auth;
+namespace RestaurantBill.Application.Features.Auths.Commands.Register;
 
 public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 {

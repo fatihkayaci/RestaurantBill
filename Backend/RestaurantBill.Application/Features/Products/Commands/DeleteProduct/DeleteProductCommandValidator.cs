@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
-
-namespace RestaurantBill.Application.Validators.Product;
+namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
 
 public class DeleteProductCommandValidator : AbstractValidator<DeleteProductCommand>
 {

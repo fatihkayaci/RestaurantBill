@@ -1,7 +1,7 @@
 using FluentValidation;
 using RestaurantBill.Application.DTOs;
 
-namespace RestaurantBill.Application.Validators.OrderItem;
+namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
 
 public class CreateOrderItemDtoValidator : AbstractValidator<CreateOrderItemDto>
 {

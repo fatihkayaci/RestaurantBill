@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Tables.Commands.CancelReservation;
-
-namespace RestaurantBill.Application.Validators.Table;
+namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservation;
 
 public class CancelReservationCommandValidator : AbstractValidator<CancelReservationCommand>
 {

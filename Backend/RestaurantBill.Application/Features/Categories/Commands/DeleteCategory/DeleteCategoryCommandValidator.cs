@@ -1,7 +1,6 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Categories.Commands.DeleteCategory;
 
-namespace RestaurantBill.Application.Validators.Category;
+namespace RestaurantBill.Application.Features.Categories.Commands.DeleteCategory;
 
 public class DeleteCategoryCommandValidator : AbstractValidator<DeleteCategoryCommand>
 {

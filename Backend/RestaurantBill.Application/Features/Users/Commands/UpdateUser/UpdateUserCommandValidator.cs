@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Users.Commands.UpdateUser;
-
-namespace RestaurantBill.Application.Validators.User;
+namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser;
 
 public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
 {

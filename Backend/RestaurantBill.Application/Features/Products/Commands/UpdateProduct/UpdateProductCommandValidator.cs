@@ -1,7 +1,5 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
-
-namespace RestaurantBill.Application.Validators.Product;
+namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
 
 public class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
 {

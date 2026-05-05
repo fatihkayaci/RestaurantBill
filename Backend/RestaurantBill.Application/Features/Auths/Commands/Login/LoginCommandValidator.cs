@@ -1,7 +1,6 @@
 using FluentValidation;
-using RestaurantBill.Application.Features.Auths.Commands.Login;
 
-namespace RestaurantBill.Application.Validators.Auth;
+namespace RestaurantBill.Application.Features.Auths.Commands.Login;
 
 public class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
