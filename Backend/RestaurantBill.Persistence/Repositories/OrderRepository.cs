@@ -31,6 +31,7 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
                 (o.Status == OrderStatus.Active ||
                  o.Status == OrderStatus.Pending ||
                  o.Status == OrderStatus.Preparing ||
-                 o.Status == OrderStatus.Ready));
+                 o.Status == OrderStatus.Ready ||
+                 o.Status == OrderStatus.Served));
     }
 }

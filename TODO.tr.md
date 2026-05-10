@@ -8,6 +8,9 @@
 - [x] **UI:** Silme işlemleri tetiklendiğinde kullanıcıdan onay (Confirmation Dialog) alınması sağlandı.
 - [x] **Feature:** Kullanıcı Modal'ı açıldığında sistemin otomatik bir `UserCode` önermesi sağlandı (kullanıcı dilerse değiştirebilir).
 - [x] **Kasiyer:** Kasiyer sayfasının tasarımı uygulandı.
+- [ ] **Kasiyer:** sayfada signalR yok eklenecek
+- [x] **Garson:** sayfada servis işlemi eklenecek
+- [x] **Garson:** sayfada servis sekmesi eklenecek
 - [ ] **Validation:** Frontend formlarına istemci taraflı (client-side) doğrulama eklenecek; hatalı verilerin backend'e gidip hata fırlatmasının önüne geçilecek. (Tamamlananlar => admin tarafındaki { menu, categories, staff, tables, reports })
 - [ ] **UI/UX:** İlk kayıt sonrası (Onboarding) restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
 - [ ] **UI:** API'den dönen hata mesajlarının (Error Handling) tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
@@ -32,3 +35,4 @@
 - [ ] **Refactor:** Admin tarafına önbellekleme (cache) eklenecek: products, categories, staff ve tables için.
 - [ ] **Create:** Kasiyer sayfası için backend tarafı yazılacak (şu an tasarımda mock data mevcut).
 - [ ] **ürün:** ürün bazlı status değişimine backend de kontrol edilecek
+- [ ] **kasiyer:** sayfada ödeme alma kısmı eklenecek.

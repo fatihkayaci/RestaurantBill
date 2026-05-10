@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
 using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
@@ -11,6 +10,7 @@ using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantit
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
 using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrders;
+using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashierQuery;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitchen;
 using RestaurantBill.Application.Features.Orders.Queries.GetOrderById;
 
@@ -48,7 +48,14 @@ namespace RestaurantBill.WebAPI.Controllers
             var result = await _mediator.Send(query, cancellationToken);
             return Ok(result);
         }
-
+        [Authorize(Roles = "Cashier")]
+        [HttpGet("cashier")]
+        public async Task<IActionResult> GetAllOrdersToCashier(CancellationToken cancellationToken)
+        {
+            var query = new GetAllOrdersToCashierQuery();
+            var result = await _mediator.Send(query, cancellationToken);
+            return Ok(result);
+        }
         /// <summary> Returns an order by its ID. </summary>
         /// <param name="id">Order ID</param>
         /// <param name="cancellationToken"></param>
@@ -143,7 +150,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="id">Order ID</param>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Kitchen")]
+        [Authorize(Roles = "Admin, Kitchen, Waiter")]
         [HttpPost("{id}/status")]
         public async Task<IActionResult> UpdateStatus([FromRoute] int id, [FromBody] UpdateOrderStatusCommand command, CancellationToken cancellationToken)
         {

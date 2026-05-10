@@ -10,6 +10,10 @@ export const orderService = {
         const response = await api.get<Order[]>(`/order/kitchen`);
         return response.data;
     },
+    getAllOrdersToCashier: async () => {
+        const response = await api.get<Order[]>(`/order/cashier`);
+        return response.data;
+    },
     getOrderByTableId: async (tableId: string) => {
         const response = await api.get<Order>(`/order/table/${tableId}`); 
         return response.data;
