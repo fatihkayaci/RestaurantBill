@@ -107,7 +107,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Closes the order, marks it as paid and sets the table to available. </summary>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Admin, Waiter, Cashier")]
         [HttpPost("close")]
         public async Task<IActionResult> Close([FromBody]DeleteCommand command, CancellationToken cancellationToken)
         {

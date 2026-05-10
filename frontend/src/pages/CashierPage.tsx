@@ -4,32 +4,34 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { CreditCard, Banknote, Receipt, DollarSign, TrendingUp, Clock, CheckCircle, Printer, X } from 'lucide-react';
+import { Receipt, DollarSign, TrendingUp, Clock, CheckCircle, Printer, X, Landmark } from 'lucide-react';
 import type { Order } from '@/features/order/types';
+import type { CashRegister, CashTransaction } from '@/features/cashRegisters/types';
 import { orderService } from '@/api/orderService';
-
-interface MockTransaction {
-    id: string;
-    table: number;
-    amount: number;
-    time: string;
-    method: 'Kart' | 'Nakit';
-}
+import { cashRegisterService } from '@/api/cashRegisterService';
 
 const TAX_RATE = 0.08;
 
-const transactions: MockTransaction[] = [];
-
 export default function CashierPage() {
     const [servedOrders, setServedOrders] = useState<Order[]>([]);
+    const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
+    const [transactions, setTransactions] = useState<CashTransaction[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [tip, setTip] = useState<number>(0);
-    const [paymentMethod, setPaymentMethod] = useState<'kart' | 'nakit' | null>(null);
+    const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>('');
 
     useEffect(() => {
         orderService.getAllOrdersToCashier()
             .then(setServedOrders)
             .catch((error) => console.error('Kasiyer siparişleri çekilirken hata:', error));
+
+        cashRegisterService.getCashRegisters()
+            .then((data) => setCashRegisters(data.filter(r => r.status === 1)))
+            .catch((error) => console.error('Kasalar çekilirken hata:', error));
+
+        cashRegisterService.getTransactions()
+            .then(data => setTransactions(data.slice(0, 5)))
+            .catch((error) => console.error('İşlemler çekilirken hata:', error));
     }, []);
 
     const todayRevenue = servedOrders.reduce((sum, o) => sum + o.totalPrice, 0);
@@ -51,7 +53,20 @@ export default function CashierPage() {
     const closeDialog = () => {
         setSelectedOrder(null);
         setTip(0);
-        setPaymentMethod(null);
+        setSelectedCashRegisterId('');
+    };
+
+    const handleCompletePayment = async () => {
+        if (!selectedOrder || !selectedCashRegisterId) return;
+        try {
+            await cashRegisterService.addTransaction(Number(selectedCashRegisterId), 1, calculateTotal());
+            await orderService.closeOrder(selectedOrder.id);
+            setServedOrders(prev => prev.filter(o => o.id !== selectedOrder.id));
+            cashRegisterService.getTransactions().then(data => setTransactions(data.slice(0, 5))).catch(() => {});
+            closeDialog();
+        } catch (error) {
+            console.error('Ödeme tamamlanırken hata:', error);
+        }
     };
 
     return (
@@ -126,7 +141,7 @@ export default function CashierPage() {
                                     onClick={() => {
                                         setSelectedOrder(order);
                                         setTip(0);
-                                        setPaymentMethod(null);
+                                        setSelectedCashRegisterId('');
                                     }}
                                 >
                                     <div className="flex items-center justify-between mb-2">
@@ -171,27 +186,21 @@ export default function CashierPage() {
                         ) : (
                             <div className="space-y-3">
                                 {transactions.map(txn => (
-                                    <div
-                                        key={txn.id}
-                                        className="flex items-center justify-between p-3 rounded-lg border"
-                                    >
+                                    <div key={txn.id} className="flex items-center justify-between p-3 rounded-lg border">
                                         <div className="flex items-center gap-3">
-                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/10">
-                                                {txn.method === 'Kart' ? (
-                                                    <CreditCard className="h-4 w-4 text-green-600" />
-                                                ) : (
-                                                    <Banknote className="h-4 w-4 text-green-600" />
-                                                )}
+                                            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${txn.type === 1 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                                                <Landmark className={`h-4 w-4 ${txn.type === 1 ? 'text-green-600' : 'text-red-600'}`} />
                                             </div>
                                             <div>
-                                                <p className="font-medium">Masa {txn.table}</p>
-                                                <p className="text-xs text-muted-foreground">{txn.time}</p>
+                                                <p className="font-medium text-sm">Kasa #{txn.cashRegisterId}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {new Date(txn.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="font-semibold text-green-600">+{txn.amount.toFixed(2)} ₺</p>
-                                            <Badge variant="outline" className="text-xs">{txn.method}</Badge>
-                                        </div>
+                                        <p className={`font-semibold ${txn.type === 1 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {txn.type === 1 ? '+' : '-'}{txn.amount.toFixed(2)} ₺
+                                        </p>
                                     </div>
                                 ))}
                             </div>
@@ -202,23 +211,18 @@ export default function CashierPage() {
 
             {/* Ödeme Dialogu */}
             <Dialog open={selectedOrder !== null} onOpenChange={(open) => !open && closeDialog()}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center justify-between">
                             <span>Ödeme Al — Masa {selectedOrder?.tableId}</span>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={closeDialog}
-                            >
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={closeDialog}>
                                 <X className="h-4 w-4" />
                             </Button>
                         </DialogTitle>
                     </DialogHeader>
 
                     {selectedOrder && (
-                        <div className="space-y-4">
+                        <div className="space-y-4 overflow-y-auto flex-1 pr-1">
                             {/* Sipariş Ürünleri */}
                             <div className="space-y-2 max-h-48 overflow-y-auto">
                                 {selectedOrder.orderItems.map((item, idx) => (
@@ -245,7 +249,7 @@ export default function CashierPage() {
                                 <div className="pt-2">
                                     <p className="text-sm text-muted-foreground mb-2">Bahşiş Ekle</p>
                                     <div className="grid grid-cols-4 gap-2">
-                                        {[5, 10, 15, 20].map(pct => (
+                                        {[0, 5, 10, 15].map(pct => (
                                             <Button
                                                 key={pct}
                                                 variant={tip === selectedOrder.totalPrice * (pct / 100) ? 'default' : 'outline'}
@@ -282,24 +286,37 @@ export default function CashierPage() {
                                 </div>
                             </div>
 
-                            {/* Ödeme Yöntemi */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <Button
-                                    variant={paymentMethod === 'kart' ? 'default' : 'outline'}
-                                    className="h-16 flex-col gap-1"
-                                    onClick={() => setPaymentMethod('kart')}
-                                >
-                                    <CreditCard className="h-5 w-5" />
-                                    <span>Kart</span>
-                                </Button>
-                                <Button
-                                    variant={paymentMethod === 'nakit' ? 'default' : 'outline'}
-                                    className="h-16 flex-col gap-1"
-                                    onClick={() => setPaymentMethod('nakit')}
-                                >
-                                    <Banknote className="h-5 w-5" />
-                                    <span>Nakit</span>
-                                </Button>
+                            {/* Kasa Seçimi */}
+                            <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground">Kasa Seç</p>
+                                {cashRegisters.length === 0 ? (
+                                    <p className="text-sm text-destructive">Açık kasa bulunamadı.</p>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {cashRegisters.map(register => {
+                                            const isSelected = selectedCashRegisterId === String(register.id);
+                                            return (
+                                                <button
+                                                    key={register.id}
+                                                    onClick={() => setSelectedCashRegisterId(String(register.id))}
+                                                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                                                        isSelected
+                                                            ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                                                            : 'border-border bg-card hover:bg-muted/50'
+                                                    }`}
+                                                >
+                                                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                                        <Landmark className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-primary' : ''}`}>{register.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{register.balance.toFixed(2)} ₺</p>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -308,7 +325,8 @@ export default function CashierPage() {
                         <Button
                             className="w-full gap-2"
                             size="lg"
-                            disabled={!paymentMethod}
+                            disabled={!selectedCashRegisterId}
+                            onClick={handleCompletePayment}
                         >
                             <CheckCircle className="h-4 w-4" />
                             Ödemeyi Tamamla

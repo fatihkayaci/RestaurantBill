@@ -1,5 +1,5 @@
 import { api } from './axiosInstance';
-import type { CashRegister, CashRegisterStatus, CashTransactionType } from '../features/cashRegisters/types';
+import type { CashRegister, CashRegisterStatus, CashTransaction, CashTransactionType } from '../features/cashRegisters/types';
 
 export const cashRegisterService = {
     getCashRegisters: async () => {
@@ -36,6 +36,10 @@ export const cashRegisterService = {
             Type: type,
             Amount: amount,
         });
+        return response.data;
+    },
+    getTransactions: async () => {
+        const response = await api.get<CashTransaction[]>('/cashregister/transactions');
         return response.data;
     },
 };

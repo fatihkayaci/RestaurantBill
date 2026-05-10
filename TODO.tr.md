@@ -8,9 +8,10 @@
 - [x] **UI:** Silme işlemleri tetiklendiğinde kullanıcıdan onay (Confirmation Dialog) alınması sağlandı.
 - [x] **Feature:** Kullanıcı Modal'ı açıldığında sistemin otomatik bir `UserCode` önermesi sağlandı (kullanıcı dilerse değiştirebilir).
 - [x] **Kasiyer:** Kasiyer sayfasının tasarımı uygulandı.
-- [ ] **Kasiyer:** sayfada signalR yok eklenecek
 - [x] **Garson:** sayfada servis işlemi eklenecek
 - [x] **Garson:** sayfada servis sekmesi eklenecek
+- [ ] **Kasiyer:** sayfada signalR yok eklenecek
+- [ ] **kasiyer:** sayfaya detaylı işlemleri görebileceği bir yer ekleyeceğiz.
 - [ ] **Validation:** Frontend formlarına istemci taraflı (client-side) doğrulama eklenecek; hatalı verilerin backend'e gidip hata fırlatmasının önüne geçilecek. (Tamamlananlar => admin tarafındaki { menu, categories, staff, tables, reports })
 - [ ] **UI/UX:** İlk kayıt sonrası (Onboarding) restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
 - [ ] **UI:** API'den dönen hata mesajlarının (Error Handling) tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
@@ -22,6 +23,7 @@
 - [ ] **PosPage:** Siparişler içindeki "Yeni" sekmesindeki çöp ikonu çalışmıyor, düzeltilecek.
 - [ ] **PosPage:** "Masalara dön" ikonu uygunsuz bir konumda, yeri gözden geçirilecek.
 - [ ] **ürün:** order içerisindeki ürün bazlı status değişimi yapılacak.
+- [ ] **KDV:** ayarlaması yapılacak bir yer ekle.
 
 ## ⚙️ Backend (.NET Core)
 - [x] **Feature [Category]:** Kategori silme endpoint'inde ilişkili ürün (Product) kontrolü yapıldı; bağlı ürün varsa silme işlemi engellendi.
@@ -36,3 +38,5 @@
 - [ ] **Create:** Kasiyer sayfası için backend tarafı yazılacak (şu an tasarımda mock data mevcut).
 - [ ] **ürün:** ürün bazlı status değişimine backend de kontrol edilecek
 - [ ] **kasiyer:** sayfada ödeme alma kısmı eklenecek.
+- [ ] **kasiyer:** transaction için bahşiş kısmını ayırmak lazım.
+- [ ] ****
