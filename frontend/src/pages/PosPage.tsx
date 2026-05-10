@@ -302,6 +302,25 @@ export default function PosPage() {
         });
     };
 
+    const handleServeOrder = async () => {
+        try {
+            setIsSubmitting(true);
+            await orderService.updateOrderStatus(activeOrder.id, 5);
+            setActiveOrder(prev => ({
+                ...prev,
+                status: 5,
+                orderItems: prev.orderItems.map(item =>
+                    item.status === 3 ? { ...item, status: 4 } : item
+                )
+            }));
+            setOrderTab(5);
+        } catch (error: any) {
+            console.log(error.response?.data || "Bilinmeyen bir hata oluştu");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const handleSubmitUpdate = async (e: any) => {
         e.preventDefault();
         try {
@@ -344,6 +363,7 @@ export default function PosPage() {
         orderTab === 2 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 1) :
         orderTab === 3 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 2) :
         orderTab === 4 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 3) :
+        orderTab === 5 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 4) :
         [];
 
     // --- LOADING---
@@ -576,7 +596,8 @@ export default function PosPage() {
                                 { id: 1, label: "Yeni" },
                                 { id: 2, label: "Onaylı" },
                                 { id: 3, label: "Mutfakta" },
-                                { id: 4, label: "Hazır" }
+                                { id: 4, label: "Hazır" },
+                                { id: 5, label: "Servis" }
                             ].map(tab => (
                                 <Button
                                     key={tab.id}
@@ -635,8 +656,8 @@ export default function PosPage() {
 
                         <Button
                             disabled={isSubmitting}
-                            onClick={(e) => orderTab === 2 ? handleSubmitUpdate(e) : handleSubmitOrder(e)}
-                            className={`flex-1 h-12 rounded-xl font-bold flex items-center justify-between px-4 ${orderTab === 2 ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"}`}
+                            onClick={(e) => orderTab === 2 ? handleSubmitUpdate(e) : orderTab === 4 ? handleServeOrder() : handleSubmitOrder(e)}
+                            className={`flex-1 h-12 rounded-xl font-bold flex items-center justify-between px-4 ${orderTab === 2 ? "bg-blue-600 hover:bg-blue-700" : orderTab === 4 ? "bg-purple-600 hover:bg-purple-700" : "bg-emerald-600 hover:bg-emerald-700"}`}
                         >
                             {isSubmitting ? (
                                 <span className="mx-auto">İşleniyor...</span>
@@ -644,7 +665,7 @@ export default function PosPage() {
                                 <>
                                     <span className="flex items-center gap-2 text-base">
                                         <Check className="w-5 h-5" strokeWidth={3} />
-                                        {orderTab === 2 ? "Güncelle" : "Onayla"}
+                                        {orderTab === 2 ? "Güncelle" : orderTab === 4 ? "Servis Et" : "Onayla"}
                                     </span>
                                     <span className="text-base font-black tracking-tight">
                                         {activeOrder.totalPrice} ₺

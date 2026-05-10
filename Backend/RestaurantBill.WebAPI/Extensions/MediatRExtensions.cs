@@ -1,5 +1,4 @@
 using FluentValidation;
-using FluentValidation.AspNetCore;
 using MediatR;
 using MediatR.Pipeline;
 using RestaurantBill.Application.Behaviors;
@@ -13,7 +12,6 @@ public static class MediatRExtensions
 {
     public static IServiceCollection AddMediatRWithBehaviors(this IServiceCollection services)
     {
-        services.AddFluentValidationAutoValidation();
         services.AddValidatorsFromAssemblyContaining<CreateProductCommandValidator>();
 
         services.AddMediatR(cfg =>

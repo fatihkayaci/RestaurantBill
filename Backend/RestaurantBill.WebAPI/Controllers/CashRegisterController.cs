@@ -7,6 +7,7 @@ using RestaurantBill.Application.Features.CashRegisters.Commands.Delete;
 using RestaurantBill.Application.Features.CashRegisters.Commands.Update;
 using RestaurantBill.Application.Features.CashRegisters.Queries.GetAll;
 using RestaurantBill.Application.Features.CashRegisters.Queries.GetById;
+using RestaurantBill.Application.Features.CashRegisters.Queries.GetTransactions;
 
 namespace RestaurantBill.WebAPI.Controllers;
 
@@ -48,6 +49,17 @@ public class CashRegisterController : ControllerBase
         };
         var register = await _mediator.Send(query);
         return Ok(register);
+    }
+    /// <summary>
+    /// Returns the last 50 cash transactions ordered by date.
+    /// </summary>
+    [Authorize(Roles = "Admin,Cashier")]
+    [HttpGet("transactions")]
+    public async Task<IActionResult> GetTransactions(CancellationToken cancellationToken)
+    {
+        var query = new GetCashTransactionsQuery();
+        var result = await _mediator.Send(query, cancellationToken);
+        return Ok(result);
     }
     #endregion
 
