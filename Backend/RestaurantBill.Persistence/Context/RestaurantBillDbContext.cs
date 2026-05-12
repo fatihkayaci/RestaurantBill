@@ -4,7 +4,7 @@ using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Persistence.Context;
 
-public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, int>
+public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, string>
 {
     public RestaurantBillDbContext(DbContextOptions<RestaurantBillDbContext> options) 
     : base(options)

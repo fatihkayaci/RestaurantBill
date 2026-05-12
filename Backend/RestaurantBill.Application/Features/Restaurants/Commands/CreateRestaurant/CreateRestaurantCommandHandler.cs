@@ -2,8 +2,10 @@ using RestaurantBill.Domain.Entities;
 using MediatR;
 using RestaurantBill.Domain.Interfaces;
 using AutoMapper;
-using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
+using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaurant
 {
@@ -11,30 +13,37 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaur
     {
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ICurrentUserService _currentUser;
+        private readonly UserManager<User> _userManager;
 
-        public CreateRestaurantCommandHandler(IUnitOfWork uow, IMapper mapper, IHttpContextAccessor httpContextAccessor)
+        public CreateRestaurantCommandHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser, UserManager<User> userManager)
         {
             _uow = uow;
             _mapper = mapper;
-            _httpContextAccessor = httpContextAccessor;
+            _currentUser = currentUser;
+            _userManager = userManager;
         }
         /// <summary>
-        /// Creates a new restaurant in the database and associates it with the currently authenticated user.
-        /// The user ID is dynamically extracted from the current HTTP context claims.
+        /// Creates a new restaurant in the database, associates it with the authenticated user,
+        /// and updates the user's RestaurantId so subsequent JWT tokens carry the correct value.
         /// </summary>
         /// <param name="request">The command containing the details for the new restaurant.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         public async Task Handle(CreateRestaurantCommand request, CancellationToken cancellationToken)
         {
-            var userId = _httpContextAccessor.HttpContext!.User
-            .FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            string userId = _currentUser.UserId;
 
-            var restaurant = _mapper.Map<Restaurant>(request);
+            Restaurant restaurant = _mapper.Map<Restaurant>(request);
             restaurant.UserId = userId;
 
             await _uow.Restaurant.AddAsync(restaurant);
             await _uow.SaveChangesAsync();
+
+            User user = await _userManager.FindByIdAsync(userId)
+                ?? throw new NotFoundException("Kullanıcı bulunamadı.");
+
+            user.RestaurantId = restaurant.Id;
+            await _userManager.UpdateAsync(user);
         }
     }
 }

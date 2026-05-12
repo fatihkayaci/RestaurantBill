@@ -1,39 +1,29 @@
-using Microsoft.AspNetCore.Http;
 using Moq;
 using RestaurantBill.Application.Features.CashRegisters.Commands.Create;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
-using System.Security.Claims;
 
 namespace RestaurantBill.Application.Tests.CashRegisters;
 
 public class CreateCashRegisterHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
-    private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
+    private readonly Mock<ICurrentUserService> _mockCurrentUser;
     private readonly CreateCashRegisterHandler _handler;
 
     public CreateCashRegisterHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        _handler = new CreateCashRegisterHandler(_mockUow.Object, _mockHttpContextAccessor.Object);
-    }
-
-    private void SetupHttpContext(string restaurantId)
-    {
-        var claims = new List<Claim> { new("RestaurantId", restaurantId) };
-        var identity = new ClaimsIdentity(claims);
-        var principal = new ClaimsPrincipal(identity);
-        var httpContext = new DefaultHttpContext { User = principal };
-        _mockHttpContextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+        _mockCurrentUser = new Mock<ICurrentUserService>();
+        _mockCurrentUser.Setup(s => s.RestaurantId).Returns(7);
+        _handler = new CreateCashRegisterHandler(_mockUow.Object, _mockCurrentUser.Object);
     }
 
     [Fact]
     public async Task Handle_WhenValidRequest_ShouldAddCashRegisterAndSaveChanges()
     {
-        SetupHttpContext("7");
         var command = new CreateCashRegisterCommand
         {
             Name = "Cash",

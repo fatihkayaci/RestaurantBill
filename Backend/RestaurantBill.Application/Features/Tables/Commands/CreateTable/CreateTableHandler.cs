@@ -1,17 +1,20 @@
-using RestaurantBill.Domain.Interfaces;
-
 using MediatR;
+using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Exceptions;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
 {
     public class CreateTableHandler : IRequestHandler<CreateTableCommand>
     {
         private readonly IUnitOfWork _uow;
+        private readonly ICurrentUserService _currentUser;
 
-        public CreateTableHandler(IUnitOfWork uow)
+        public CreateTableHandler(IUnitOfWork uow, ICurrentUserService currentUser)
         {
             _uow = uow;
+            _currentUser = currentUser;
         }
 
         /// <summary>
@@ -19,9 +22,12 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
         /// </summary>
         public async Task Handle(CreateTableCommand request, CancellationToken cancellationToken)
         {
+            var restaurantId = _currentUser.RestaurantId;
+            if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
             var table = new Table
             {
-                Name = request.Name
+                Name = request.Name,
+                RestaurantId = restaurantId
             };
             await _uow.Table.AddAsync(table);
             await _uow.SaveChangesAsync(cancellationToken);

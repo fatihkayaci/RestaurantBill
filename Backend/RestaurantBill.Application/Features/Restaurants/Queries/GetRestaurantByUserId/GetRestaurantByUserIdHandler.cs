@@ -2,8 +2,9 @@ using MediatR;
 using AutoMapper;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
-using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Exceptions;
 
 namespace RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantByUserId
 {
@@ -11,13 +12,13 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantB
     {
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ICurrentUserService _currentUser;
 
-        public GetRestaurantByUserIdHandler(IUnitOfWork uow, IMapper mapper, IHttpContextAccessor httpContextAccessor)
+        public GetRestaurantByUserIdHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser)
         {
             _uow = uow;
             _mapper = mapper;
-            _httpContextAccessor = httpContextAccessor;
+            _currentUser = currentUser;
         }
         /// <summary>
         /// Retrieves all restaurants associated with the currently authenticated user asynchronously. 
@@ -28,8 +29,8 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantB
         /// <returns>An enumerable collection of <see cref="RestaurantDto"/> representing the user's restaurants.</returns>
         public async Task<IEnumerable<RestaurantDto>> Handle(GetRestaurantByUserIdQuery request, CancellationToken cancellationToken)
         {
-            var userId = _httpContextAccessor.HttpContext!.User
-                .FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            var userId = _currentUser.UserId;
+            if (string.IsNullOrEmpty(userId)) throw new BusinessException("Kullanıcı kimliği geçersiz.");
             var restaurants = await _uow.Restaurant.GetAllAsync(x => x.UserId == userId, false);
             return _mapper.Map<IEnumerable<RestaurantDto>>(restaurants);
         }

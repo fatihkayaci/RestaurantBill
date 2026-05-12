@@ -1,6 +1,7 @@
 using Moq;
 using AutoMapper;
 using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
 
@@ -10,13 +11,16 @@ public class CreateProductCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<IMapper> _mockMapper;
+    private readonly Mock<ICurrentUserService> _mockCurrentUser;
     private readonly CreateProductCommandHandler _handler;
 
     public CreateProductCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
         _mockMapper = new Mock<IMapper>();
-        _handler = new CreateProductCommandHandler(_mockUow.Object, _mockMapper.Object);
+        _mockCurrentUser = new Mock<ICurrentUserService>();
+        _mockCurrentUser.Setup(s => s.RestaurantId).Returns(1);
+        _handler = new CreateProductCommandHandler(_mockUow.Object, _mockMapper.Object, _mockCurrentUser.Object);
     }
 
     #region happy paths

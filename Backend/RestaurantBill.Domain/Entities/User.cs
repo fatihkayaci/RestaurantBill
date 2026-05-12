@@ -3,7 +3,7 @@ using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Domain.Entities
 {
-    public class User : IdentityUser<int>
+    public class User : IdentityUser
     {
         public int RestaurantId { get; set; }
         public required string FullName { get; set; }

@@ -9,11 +9,8 @@ using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
 using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
-using RestaurantBill.Application.Features.Orders.Queries.GetAllOrders;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashierQuery;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitchen;
-using RestaurantBill.Application.Features.Orders.Queries.GetOrderById;
-
 namespace RestaurantBill.WebAPI.Controllers
 {
     [Authorize]
@@ -29,16 +26,6 @@ namespace RestaurantBill.WebAPI.Controllers
         }
         #region methods for get
 
-        /// <summary> Returns all orders.</summary>
-        [Authorize(Roles = "Admin,Waiter,Kitchen")]
-        [HttpGet]
-        public async Task<IActionResult> GetAllOrders()
-        {
-            var query = new GetAllOrdersQuery();
-            var result = await _mediator.Send(query);
-            return Ok(result);
-        }
-        
         /// <summary> Returns all active orders for kitchen (excludes Paid and Cancelled). </summary>
         [Authorize(Roles = "Admin,Kitchen")]
         [HttpGet("kitchen")]
@@ -53,20 +40,6 @@ namespace RestaurantBill.WebAPI.Controllers
         public async Task<IActionResult> GetAllOrdersToCashier(CancellationToken cancellationToken)
         {
             var query = new GetAllOrdersToCashierQuery();
-            var result = await _mediator.Send(query, cancellationToken);
-            return Ok(result);
-        }
-        /// <summary> Returns an order by its ID. </summary>
-        /// <param name="id">Order ID</param>
-        /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter,Kitchen")]
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetOrderById([FromRoute]int id, CancellationToken cancellationToken)
-        {
-            var query = new GetOrderByIdQuery
-            {
-                OrderId = id
-            };
             var result = await _mediator.Send(query, cancellationToken);
             return Ok(result);
         }

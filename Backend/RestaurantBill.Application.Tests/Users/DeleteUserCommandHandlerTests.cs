@@ -1,4 +1,5 @@
 using Moq;
+using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Users.Commands.DeleteUser;
 using RestaurantBill.Domain.Entities;
@@ -9,12 +10,15 @@ namespace RestaurantBill.Application.Tests.Users;
 public class DeleteUserCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
+    private readonly Mock<UserManager<User>> _mockUserManager;
     private readonly DeleteUserCommandHandler _handler;
 
     public DeleteUserCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _handler = new DeleteUserCommandHandler(_mockUow.Object);
+        var store = new Mock<IUserStore<User>>();
+        _mockUserManager = new Mock<UserManager<User>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        _handler = new DeleteUserCommandHandler(_mockUow.Object, _mockUserManager.Object);
     }
 
     #region happy paths
@@ -22,17 +26,13 @@ public class DeleteUserCommandHandlerTests
     [Fact]
     public async Task Handle_WhenUserExists_ShouldDeleteAndSaveChanges()
     {
-        // --- ARRANGE ---
-        var command = new DeleteUserCommand { UserId = 1 };
-        var user = new User { Id = 1, FullName = "Garson Ali", UserName = "garsonali", UserCode = "WTR001" };
+        var command = new DeleteUserCommand { UserId = "guid-001" };
+        var user = new User { Id = "guid-001", FullName = "Garson Ali", UserName = "garsonali", UserCode = "WTR001" };
 
-        _mockUow.Setup(u => u.User.GetByIdAsync(command.UserId, true))
-                .ReturnsAsync(user);
+        _mockUserManager.Setup(um => um.FindByIdAsync(command.UserId)).ReturnsAsync(user);
 
-        // --- ACT ---
         await _handler.Handle(command, CancellationToken.None);
 
-        // --- ASSERT ---
         _mockUow.Verify(u => u.User.Delete(user), Times.Once);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -44,13 +44,10 @@ public class DeleteUserCommandHandlerTests
     [Fact]
     public async Task Handle_WhenUserNotFound_ShouldThrowNotFoundException()
     {
-        // --- ARRANGE ---
-        var command = new DeleteUserCommand { UserId = 999 };
+        var command = new DeleteUserCommand { UserId = "guid-999" };
 
-        _mockUow.Setup(u => u.User.GetByIdAsync(command.UserId, true))
-                .ReturnsAsync((User?)null);
+        _mockUserManager.Setup(um => um.FindByIdAsync(command.UserId)).ReturnsAsync((User?)null);
 
-        // --- ACT & ASSERT ---
         var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
 

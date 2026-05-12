@@ -21,9 +21,10 @@ export default function AdminPage() {
             .finally(() => setIsLoading(false));
     }, []);
 
+    if (restaurantIdFromToken > 0) return <AdminDashboard />;
+
     if (isLoading) return null;
 
-    if (restaurants.length === 0 && restaurantIdFromToken > 0) return <AdminDashboard />;
     if (restaurants.length === 0) return <RestaurantSetupForm />;
     return <AdminDashboard />;
 }

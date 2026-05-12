@@ -2,6 +2,7 @@ using AutoMapper;
 using Moq;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Features.CashRegisters.Queries.GetAll;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
 using System.Linq.Expressions;
@@ -12,13 +13,16 @@ public class GetAllCashRegisterHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<IMapper> _mockMapper;
+    private readonly Mock<ICurrentUserService> _mockCurrentUser;
     private readonly GetAllCashRegisterHandler _handler;
 
     public GetAllCashRegisterHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
         _mockMapper = new Mock<IMapper>();
-        _handler = new GetAllCashRegisterHandler(_mockUow.Object, _mockMapper.Object);
+        _mockCurrentUser = new Mock<ICurrentUserService>();
+        _mockCurrentUser.Setup(u => u.RestaurantId).Returns(1);
+        _handler = new GetAllCashRegisterHandler(_mockUow.Object, _mockMapper.Object, _mockCurrentUser.Object);
     }
 
     [Fact]

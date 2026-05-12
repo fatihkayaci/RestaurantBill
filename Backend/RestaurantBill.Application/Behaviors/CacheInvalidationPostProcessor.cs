@@ -10,11 +10,13 @@ public class CacheInvalidationPostProcessor<TRequest, TResponse>
 {
     private readonly IMemoryCache _cache;
     private readonly ILogger<CacheInvalidationPostProcessor<TRequest, TResponse>> _logger;
+    private readonly ICurrentUserService _currentUser;
 
-    public CacheInvalidationPostProcessor(IMemoryCache cache, ILogger<CacheInvalidationPostProcessor<TRequest, TResponse>> logger)
+    public CacheInvalidationPostProcessor(IMemoryCache cache, ILogger<CacheInvalidationPostProcessor<TRequest, TResponse>> logger, ICurrentUserService currentUser)
     {
         _cache = cache;
         _logger = logger;
+        _currentUser = currentUser;
     }
 
     public Task Process(TRequest request, TResponse response, CancellationToken ct)
@@ -22,8 +24,9 @@ public class CacheInvalidationPostProcessor<TRequest, TResponse>
         if (request is IInvalidatesCache invalidator)
             foreach (string key in invalidator.CacheKeysToInvalidate)
             {
-                _cache.Remove(key);
-                _logger.LogInformation("[Cache INVALIDATED] Key: {Key}", key);
+                string fullKey = $"{key}:{_currentUser.RestaurantId}";
+                _cache.Remove(fullKey);
+                _logger.LogInformation("[Cache INVALIDATED] Key: {Key}", fullKey);
             }
 
         return Task.CompletedTask;

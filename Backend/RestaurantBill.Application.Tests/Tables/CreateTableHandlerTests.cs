@@ -1,5 +1,6 @@
 using Moq;
 using RestaurantBill.Application.Features.Tables.Commands.CreateTable;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
 
@@ -8,12 +9,15 @@ namespace RestaurantBill.Application.Tests.Tables;
 public class CreateTableHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
+    private readonly Mock<ICurrentUserService> _mockCurrentUser;
     private readonly CreateTableHandler _handler;
 
     public CreateTableHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _handler = new CreateTableHandler(_mockUow.Object);
+        _mockCurrentUser = new Mock<ICurrentUserService>();
+        _mockCurrentUser.Setup(s => s.RestaurantId).Returns(1);
+        _handler = new CreateTableHandler(_mockUow.Object, _mockCurrentUser.Object);
     }
 
     #region happy paths

@@ -1,5 +1,6 @@
 using MediatR;
-using Microsoft.AspNetCore.Http;
+using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
 
@@ -8,19 +9,19 @@ namespace RestaurantBill.Application.Features.CashRegisters.Commands.Create;
 public class CreateCashRegisterHandler : IRequestHandler<CreateCashRegisterCommand>
 {
     private readonly IUnitOfWork _uow;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserService _currentUser;
 
-    public CreateCashRegisterHandler(IUnitOfWork uow, IHttpContextAccessor httpContextAccessor)
+    public CreateCashRegisterHandler(IUnitOfWork uow, ICurrentUserService currentUser)
     {
         _uow = uow;
-        _httpContextAccessor = httpContextAccessor;
+        _currentUser = currentUser;
     }
 
     public async Task Handle(CreateCashRegisterCommand request, CancellationToken cancellationToken)
     {
-        int restaurantId = int.Parse(
-            _httpContextAccessor.HttpContext!.User.FindFirst("RestaurantId")!.Value);
-
+        int restaurantId = _currentUser.RestaurantId;
+        if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
+        
         CashRegister register = new CashRegister
         {
             Name = request.Name,

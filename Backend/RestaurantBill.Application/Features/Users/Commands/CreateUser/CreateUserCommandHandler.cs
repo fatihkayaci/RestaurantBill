@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
 
@@ -13,14 +14,14 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly UserManager<User> _userManager;
-        public CreateUserCommandHandler(IUnitOfWork uow, IMapper mapper, IHttpContextAccessor httpContextAccessor, UserManager<User> userManager)
+        private readonly ICurrentUserService _currentUser;
+        public CreateUserCommandHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser, UserManager<User> userManager)
         {
             _uow = uow;
             _mapper = mapper;
             _userManager = userManager;
-            _httpContextAccessor = httpContextAccessor;
+            _currentUser = currentUser;
         }
         /// <summary>
         /// Creates a new user in the system using the provided command details.
@@ -31,10 +32,10 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         /// <exception cref="BusinessException">Thrown when the extracted restaurant ID from the claims is zero or negative.</exception>
         public async Task Handle(CreateUserCommand request, CancellationToken cancellationToken)
         {
-            var user = _mapper.Map<User>(request);
-            var restaurantId = int.Parse(_httpContextAccessor.HttpContext!.User
-            .FindFirst("RestaurantId")!.Value);
+            var restaurantId = _currentUser.RestaurantId;
             if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
+
+            var user = _mapper.Map<User>(request);
             user.RestaurantId = restaurantId;
             await _userManager.CreateAsync(user, request.PasswordHash);
             await _uow.SaveChangesAsync(cancellationToken);

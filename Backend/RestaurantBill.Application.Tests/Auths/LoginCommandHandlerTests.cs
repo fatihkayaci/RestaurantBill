@@ -26,7 +26,6 @@ public class LoginCommandHandlerTests
 
         _mockConfiguration = new Mock<IConfiguration>();
 
-        // JWT ayarları
         _mockConfiguration.Setup(c => c["JwtSettings:SecretKey"]).Returns("super-secret-key-that-is-long-enough-32chars!");
         _mockConfiguration.Setup(c => c["JwtSettings:Issuer"]).Returns("TestIssuer");
         _mockConfiguration.Setup(c => c["JwtSettings:Audience"]).Returns("TestAudience");
@@ -39,11 +38,10 @@ public class LoginCommandHandlerTests
     [Fact]
     public async Task Handle_WhenValidCredentialsAndRestaurantIdSet_ShouldReturnJwtToken()
     {
-        // --- ARRANGE ---
         var command = new LoginCommand { UserName = "testuser", Password = "Test123!" };
         var user = new User
         {
-            Id = 1,
+            Id = "guid-001",
             UserName = "testuser",
             FullName = "Test User",
             UserCode = "USR001",
@@ -51,48 +49,38 @@ public class LoginCommandHandlerTests
             Role = UserRole.Admin
         };
 
-        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName))
-                        .ReturnsAsync(user);
-        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password))
-                        .ReturnsAsync(true);
+        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName)).ReturnsAsync(user);
+        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password)).ReturnsAsync(true);
 
-        // --- ACT ---
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // --- ASSERT ---
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        // JWT token 3 parçadan oluşur (header.payload.signature)
         Assert.Equal(3, result.Split('.').Length);
     }
 
     [Fact]
     public async Task Handle_WhenRestaurantIdIsZero_ShouldFetchFromRepositoryAndReturnToken()
     {
-        // --- ARRANGE ---
         var command = new LoginCommand { UserName = "testuser", Password = "Test123!" };
         var user = new User
         {
-            Id = 2,
+            Id = "guid-002",
             UserName = "testuser",
             FullName = "Test User",
             UserCode = "USR002",
-            RestaurantId = 0,  // RestaurantId set değil
+            RestaurantId = 0,
             Role = UserRole.Admin
         };
-        var restaurant = new Restaurant { Id = 10, UserId = user.Id.ToString(), Name = "Test Restaurant" };
+        var restaurant = new Restaurant { Id = 10, UserId = user.Id, Name = "Test Restaurant" };
 
-        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName))
-                        .ReturnsAsync(user);
-        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password))
-                        .ReturnsAsync(true);
+        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName)).ReturnsAsync(user);
+        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password)).ReturnsAsync(true);
         _mockUow.Setup(u => u.Restaurant.GetAllAsync(It.IsAny<Expression<Func<Restaurant, bool>>>(), false, null))
                 .ReturnsAsync(new List<Restaurant> { restaurant });
 
-        // --- ACT ---
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // --- ASSERT ---
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         _mockUow.Verify(u => u.Restaurant.GetAllAsync(It.IsAny<Expression<Func<Restaurant, bool>>>(), false, null), Times.Once);
@@ -101,11 +89,10 @@ public class LoginCommandHandlerTests
     [Fact]
     public async Task Handle_WhenRestaurantIdIsZeroAndNoRestaurantFound_ShouldReturnTokenWithRestaurantIdZero()
     {
-        // --- ARRANGE ---
         var command = new LoginCommand { UserName = "testuser", Password = "Test123!" };
         var user = new User
         {
-            Id = 3,
+            Id = "guid-003",
             UserName = "testuser",
             FullName = "Test User",
             UserCode = "USR003",
@@ -113,17 +100,13 @@ public class LoginCommandHandlerTests
             Role = UserRole.Admin
         };
 
-        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName))
-                        .ReturnsAsync(user);
-        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password))
-                        .ReturnsAsync(true);
+        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName)).ReturnsAsync(user);
+        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password)).ReturnsAsync(true);
         _mockUow.Setup(u => u.Restaurant.GetAllAsync(It.IsAny<Expression<Func<Restaurant, bool>>>(), false, null))
                 .ReturnsAsync(new List<Restaurant>());
 
-        // --- ACT ---
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // --- ASSERT ---
         Assert.NotNull(result);
         Assert.NotEmpty(result);
     }
@@ -135,13 +118,10 @@ public class LoginCommandHandlerTests
     [Fact]
     public async Task Handle_WhenUserNotFound_ShouldThrowBusinessException()
     {
-        // --- ARRANGE ---
         var command = new LoginCommand { UserName = "nonexistent", Password = "Test123!" };
 
-        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName))
-                        .ReturnsAsync((User?)null);
+        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName)).ReturnsAsync((User?)null);
 
-        // --- ACT & ASSERT ---
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _handler.Handle(command, CancellationToken.None));
 
@@ -151,11 +131,10 @@ public class LoginCommandHandlerTests
     [Fact]
     public async Task Handle_WhenPasswordIsWrong_ShouldThrowBusinessException()
     {
-        // --- ARRANGE ---
         var command = new LoginCommand { UserName = "testuser", Password = "WrongPassword!" };
         var user = new User
         {
-            Id = 1,
+            Id = "guid-001",
             UserName = "testuser",
             FullName = "Test User",
             UserCode = "USR001",
@@ -163,12 +142,9 @@ public class LoginCommandHandlerTests
             Role = UserRole.Admin
         };
 
-        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName))
-                        .ReturnsAsync(user);
-        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password))
-                        .ReturnsAsync(false);
+        _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName)).ReturnsAsync(user);
+        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password)).ReturnsAsync(false);
 
-        // --- ACT & ASSERT ---
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _handler.Handle(command, CancellationToken.None));
 

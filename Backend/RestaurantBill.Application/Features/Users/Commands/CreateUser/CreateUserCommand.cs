@@ -5,7 +5,6 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
 {
     public class CreateUserCommand : IRequest
     {
-        public int RestaurantId { get; set; }
         public required string FullName { get; set; }
         public required string UserName { get; set; }
         public string? Email { get; set; }

@@ -48,7 +48,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             int restaurantId = user.RestaurantId;
             if (restaurantId == 0)
             {
-                var restaurants = await _uow.Restaurant.GetAllAsync(x => x.UserId == user.Id.ToString(), false);
+                var restaurants = await _uow.Restaurant.GetAllAsync(x => x.UserId == user.Id, false);
                 restaurantId = restaurants.FirstOrDefault()?.Id ?? 0;
             }
 
@@ -65,7 +65,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Name, user.UserName!),
                 new Claim("FullName", user.FullName),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),

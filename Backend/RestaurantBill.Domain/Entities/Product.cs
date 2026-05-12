@@ -8,6 +8,7 @@ namespace RestaurantBill.Domain.Entities
         public string ImageUrl { get; set; } = string.Empty;
 
         //RelationShip
+        public int RestaurantId { get; set; }
         public int CategoryId { get; set; }
         public Category Category { get; set; } = default!;
     }

@@ -28,7 +28,8 @@
 - [ ] **PosPage:** "Masalara dön" ikonu uygunsuz bir konumda, yeri gözden geçirilecek.
 - [ ] **Ürün:** Sipariş içerisindeki ürün bazlı durum değişimi yapılacak.
 - [ ] **KDV:** Ayarlaması yapılabilecek bir alan eklenecek.
-
+- [ ] **Status:** status olan yerlerde 2 tane olduğu için on off şeklinde slider'lı yapılacak.
+ 
 ## ⚙️ Backend (.NET Core)
 - [x] **Özellik [Kategori]:** Kategori silme endpoint'inde ilişkili ürün kontrolü yapıldı; bağlı ürün varsa silme işlemi engellendi.
 - [x] **Özellik [Kullanıcı]:** Kullanıcı güncelleme metodu yazıldı.
@@ -36,6 +37,7 @@
 - [x] **Özellik [Kasiyer]:** Kasiyer sayfası için backend yazıldı; ödeme alma ve transaction listeleme endpoint'leri eklendi.
 - [x] **Refactor [Doğrulama]:** `AddFluentValidationAutoValidation` kaldırıldı; doğrulama yalnızca MediatR pipeline üzerinden çalışıyor.
 - [ ] **Refactor [Auth]:** Kayıt aşamasında kullanıcıdan `UserCode` alma zorunluluğu kaldırılacak; bu kod backend tarafında otomatik oluşturulacak.
+- [ ] **Refactor:** şu an güncellemelerde, eklemelerde, silmelerde hepsinde restaurantId kontrolü yapılsın başka bir restauranttakilere etki etmesin
 - [ ] **Doğrulama:** Backend tarafındaki mevcut doğrulama kuralları gözden geçirilecek ve eksik iş kuralları tamamlanacak.
 - [ ] **Refactor:** Gelen DTO'lar ve nesne eşleme konfigürasyonları kontrol edilip optimize edilecek.
 - [ ] **Refactor:** Table işlemleri içerisindeki genel `Update` metodunun ismi `UpdateTable` olarak değiştirilecek.
@@ -43,3 +45,5 @@
 - [ ] **Refactor:** Admin tarafına önbellekleme eklenecek: ürünler, kategoriler, personel ve masalar için.
 - [ ] **Kasiyer:** Transaction için bahşiş kısmı ayrı bir alan olarak ele alınacak.
 - [ ] **Ürün:** Ürün bazlı durum değişimi backend tarafında da kontrol edilecek.
+- [ ] **Refactor:** application katmanı feautre içerisindeki isimlendirmeler değişecek
+- [ ] **Refactor:** cachlemeye bakılacak.

@@ -1,23 +1,22 @@
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
-using System.Security.Claims;
 
 namespace RestaurantBill.Application.Features.CashRegisters.Commands.AddTransaction;
 
 public class AddCashTransactionHandler : IRequestHandler<AddCashTransactionCommand>
 {
     private readonly IUnitOfWork _uow;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserService _currentUser;
 
-    public AddCashTransactionHandler(IUnitOfWork uow, IHttpContextAccessor httpContextAccessor)
+    public AddCashTransactionHandler(IUnitOfWork uow, ICurrentUserService currentUser)
     {
         _uow = uow;
-        _httpContextAccessor = httpContextAccessor;
+        _currentUser = currentUser;
     }
 
     public async Task Handle(AddCashTransactionCommand request, CancellationToken cancellationToken)
@@ -31,15 +30,12 @@ public class AddCashTransactionHandler : IRequestHandler<AddCashTransactionComma
         if (request.Type == CashTransactionType.Out && register.Balance < request.Amount)
             throw new BusinessException("Kasa bakiyesi bu çıkışı karşılamak için yetersiz.");
 
-        int userId = int.Parse(
-            _httpContextAccessor.HttpContext!.User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
         CashTransaction transaction = new CashTransaction
         {
             CashRegisterId = request.CashRegisterId,
             Type = request.Type,
             Amount = request.Amount,
-            UserId = userId
+            UserId = _currentUser.UserId
         };
 
         register.Balance += request.Type == CashTransactionType.In

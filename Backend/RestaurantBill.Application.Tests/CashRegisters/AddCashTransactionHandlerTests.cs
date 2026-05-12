@@ -1,46 +1,31 @@
-using Microsoft.AspNetCore.Http;
 using Moq;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.CashRegisters.Commands.AddTransaction;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
-using System.Security.Claims;
 
 namespace RestaurantBill.Application.Tests.CashRegisters;
 
 public class AddCashTransactionHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
-    private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
+    private readonly Mock<ICurrentUserService> _mockCurrentUser;
     private readonly AddCashTransactionHandler _handler;
 
     public AddCashTransactionHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork> { DefaultValue = DefaultValue.Mock };
-        _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        _handler = new AddCashTransactionHandler(_mockUow.Object, _mockHttpContextAccessor.Object);
-    }
-
-    private void SetupHttpContext(string userId)
-    {
-        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId) };
-        var identity = new ClaimsIdentity(claims);
-        var principal = new ClaimsPrincipal(identity);
-        var httpContext = new DefaultHttpContext { User = principal };
-        _mockHttpContextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+        _mockCurrentUser = new Mock<ICurrentUserService>();
+        _mockCurrentUser.Setup(u => u.UserId).Returns("guid-005");
+        _handler = new AddCashTransactionHandler(_mockUow.Object, _mockCurrentUser.Object);
     }
 
     [Fact]
     public async Task Handle_WhenInTransaction_ShouldIncreaseBalanceAndPersist()
     {
-        SetupHttpContext("5");
-        var register = new CashRegister
-        {
-            Id = 1,
-            Balance = 100m,
-            Status = CashRegisterStatus.Open
-        };
+        var register = new CashRegister { Id = 1, Balance = 100m, Status = CashRegisterStatus.Open };
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
         var command = new AddCashTransactionCommand
@@ -57,7 +42,7 @@ public class AddCashTransactionHandlerTests
             t.CashRegisterId == 1 &&
             t.Type == CashTransactionType.In &&
             t.Amount == 50m &&
-            t.UserId == 5)), Times.Once);
+            t.UserId == "guid-005")), Times.Once);
         _mockUow.Verify(u => u.CashRegister.UpdateAsync(register), Times.Once);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -65,13 +50,7 @@ public class AddCashTransactionHandlerTests
     [Fact]
     public async Task Handle_WhenOutTransaction_ShouldDecreaseBalance()
     {
-        SetupHttpContext("5");
-        var register = new CashRegister
-        {
-            Id = 1,
-            Balance = 100m,
-            Status = CashRegisterStatus.Open
-        };
+        var register = new CashRegister { Id = 1, Balance = 100m, Status = CashRegisterStatus.Open };
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
         var command = new AddCashTransactionCommand
@@ -89,13 +68,7 @@ public class AddCashTransactionHandlerTests
     [Fact]
     public async Task Handle_WhenRegisterClosed_ShouldThrowBusinessException()
     {
-        SetupHttpContext("5");
-        var register = new CashRegister
-        {
-            Id = 1,
-            Balance = 100m,
-            Status = CashRegisterStatus.Closed
-        };
+        var register = new CashRegister { Id = 1, Balance = 100m, Status = CashRegisterStatus.Closed };
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
         var command = new AddCashTransactionCommand
@@ -115,13 +88,7 @@ public class AddCashTransactionHandlerTests
     [Fact]
     public async Task Handle_WhenInsufficientBalanceForOut_ShouldThrowBusinessException()
     {
-        SetupHttpContext("5");
-        var register = new CashRegister
-        {
-            Id = 1,
-            Balance = 20m,
-            Status = CashRegisterStatus.Open
-        };
+        var register = new CashRegister { Id = 1, Balance = 20m, Status = CashRegisterStatus.Open };
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
         var command = new AddCashTransactionCommand
@@ -141,7 +108,6 @@ public class AddCashTransactionHandlerTests
     [Fact]
     public async Task Handle_WhenRegisterNotFound_ShouldThrowNotFoundException()
     {
-        SetupHttpContext("5");
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(999, true)).ReturnsAsync((CashRegister?)null);
 
         var command = new AddCashTransactionCommand

@@ -2,10 +2,6 @@ import type { Order } from '../features/order/types';
 import { api } from './axiosInstance';
 
 export const orderService = {
-    getAllOrders: async () => {
-        const response = await api.get<Order[]>(`/order`);
-        return response.data;
-    }, 
     getAllOrdersToKitchen: async () => {
         const response = await api.get<Order[]>(`/order/kitchen`);
         return response.data;

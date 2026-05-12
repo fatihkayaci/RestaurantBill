@@ -1,5 +1,7 @@
 using MediatR;
 using RestaurantBill.Application.DTOs.Stats;
+using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Features.Stats.Queries.GetOverviewStats
@@ -7,16 +9,20 @@ namespace RestaurantBill.Application.Features.Stats.Queries.GetOverviewStats
     public class GetOverviewStatsQueryHandler : IRequestHandler<GetOverviewStatsQuery, OverviewStatsDto>
     {
         private readonly IUnitOfWork _uow;
+        private readonly ICurrentUserService _currentUser;
 
-        public GetOverviewStatsQueryHandler(IUnitOfWork uow)
+        public GetOverviewStatsQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
         {
             _uow = uow;
+            _currentUser = currentUser;
         }
 
         public async Task<OverviewStatsDto> Handle(GetOverviewStatsQuery request, CancellationToken cancellationToken)
         {
-            var orders = await _uow.Order.GetAllAsync(null, false, "OrderItems,OrderItems.Product");
-            var tables = await _uow.Table.GetAllAsync();
+            int restaurantId = _currentUser.RestaurantId;
+            if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
+            var orders = await _uow.Order.GetAllAsync(o => o.Table.RestaurantId == restaurantId, false, "OrderItems,OrderItems.Product");
+            var tables = await _uow.Table.GetAllAsync(t => t.RestaurantId == restaurantId);
 
             decimal totalRevenue = orders.Sum(o => o.TotalPrice);
             int totalOrders = orders.Count();

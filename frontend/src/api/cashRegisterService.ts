@@ -10,6 +10,10 @@ export const cashRegisterService = {
         const response = await api.get<CashRegister>(`/cashregister/${id}`);
         return response.data;
     },
+    getTransactions: async () => {
+        const response = await api.get<CashTransaction[]>('/cashregister/transactions');
+        return response.data;
+    },
     createCashRegister: async (name: string, openingBalance: number, status: CashRegisterStatus) => {
         const response = await api.post('/cashregister/create', {
             Name: name,
@@ -36,10 +40,6 @@ export const cashRegisterService = {
             Type: type,
             Amount: amount,
         });
-        return response.data;
-    },
-    getTransactions: async () => {
-        const response = await api.get<CashTransaction[]>('/cashregister/transactions');
         return response.data;
     },
 };
