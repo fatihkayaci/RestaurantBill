@@ -10,12 +10,16 @@ namespace RestaurantBill.Application.Tests.Users;
 public class DeleteUserCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
+    private readonly Mock<IUserRepository> _mockUserRepo;
     private readonly Mock<UserManager<User>> _mockUserManager;
     private readonly DeleteUserCommandHandler _handler;
 
     public DeleteUserCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
+        _mockUserRepo = new Mock<IUserRepository>();
+        _mockUow.Setup(u => u.User).Returns(_mockUserRepo.Object);
+
         var store = new Mock<IUserStore<User>>();
         _mockUserManager = new Mock<UserManager<User>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
         _handler = new DeleteUserCommandHandler(_mockUow.Object, _mockUserManager.Object);
@@ -33,7 +37,7 @@ public class DeleteUserCommandHandlerTests
 
         await _handler.Handle(command, CancellationToken.None);
 
-        _mockUow.Verify(u => u.User.Delete(user), Times.Once);
+        _mockUserRepo.Verify(u => u.Delete(user), Times.Once);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
