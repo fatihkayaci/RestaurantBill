@@ -4,7 +4,11 @@ import { authService } from "../api/authService";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from 'lucide-react'
 
-export default function Header() {
+interface Props {
+    restaurantName: string;
+}
+
+export default function Header({ restaurantName }: Props) {
     
     const navigate = useNavigate();
     const handleLogout = () => {
@@ -20,7 +24,7 @@ export default function Header() {
                     <UtensilsCrossed className="h-5 w-5" />
                 </div>
                 <div>
-                    <h1 className="text-lg font-semibold">La Bella Cucina</h1>
+                    <h1 className="text-lg font-semibold">{restaurantName}</h1>
                     <p className="text-xs text-muted-foreground">Restaurant Management</p>
                 </div>
                 </div>

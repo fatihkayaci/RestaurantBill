@@ -8,7 +8,7 @@ using RestaurantBill.Application.Exceptions;
 
 namespace RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantByUserId
 {
-    public class GetRestaurantByUserIdHandler : IRequestHandler<GetRestaurantByUserIdQuery, IEnumerable<RestaurantDto>>
+    public class GetRestaurantByUserIdHandler : IRequestHandler<GetRestaurantByUserIdQuery, RestaurantDto>
     {
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
@@ -27,12 +27,14 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantB
         /// <param name="request">The query request to retrieve the user's restaurants.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>An enumerable collection of <see cref="RestaurantDto"/> representing the user's restaurants.</returns>
-        public async Task<IEnumerable<RestaurantDto>> Handle(GetRestaurantByUserIdQuery request, CancellationToken cancellationToken)
+        public async Task<RestaurantDto> Handle(GetRestaurantByUserIdQuery request, CancellationToken cancellationToken)
         {
-            var userId = _currentUser.UserId;
+            string userId = _currentUser.UserId;
             if (string.IsNullOrEmpty(userId)) throw new BusinessException("Kullanıcı kimliği geçersiz.");
-            var restaurants = await _uow.Restaurant.GetAllAsync(x => x.UserId == userId, false);
-            return _mapper.Map<IEnumerable<RestaurantDto>>(restaurants);
+            IEnumerable<Domain.Entities.Restaurant> restaurants = await _uow.Restaurant.GetAllAsync(x => x.UserId == userId, false);
+            Domain.Entities.Restaurant restaurant = restaurants.FirstOrDefault()
+                ?? throw new NotFoundException("Restoran bulunamadı.");
+            return _mapper.Map<RestaurantDto>(restaurant);
         }
     }
 }

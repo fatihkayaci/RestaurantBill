@@ -3,16 +3,19 @@ using RestaurantBill.Application.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.Register
 {
     public class RegisterCommandHandler : IRequestHandler<RegisterCommand>
     {
         private readonly UserManager<User> _userManager;
+        private readonly IUnitOfWork _uow;
 
-        public RegisterCommandHandler(UserManager<User> userManager)
+        public RegisterCommandHandler(UserManager<User> userManager, IUnitOfWork uow)
         {
             _userManager = userManager;
+            _uow = uow;
         }
         /// <summary>
         /// Registers a new user in the system using the provided request details and assigns them the 'Admin' role by default.
@@ -39,6 +42,23 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 throw new BusinessException($"Kayıt başarısız: {errors}");
             }
+            var restaurant = new Restaurant
+            {
+                UserId = user.Id,
+                Name = "",
+                PhoneNumber = "",
+                MobilePhoneNumber = "",
+                Email = "",
+                City = "",
+                District = "",
+            };
+            
+            await _uow.Restaurant.AddAsync(restaurant);
+            await _uow.SaveChangesAsync(cancellationToken);
+            
+            user.RestaurantId = restaurant.Id;
+            await _userManager.UpdateAsync(user);
+            
         }
     }
 }

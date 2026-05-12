@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaurant;
+using RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant;
 using RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantByUserId;
 
 namespace RestaurantBill.WebAPI.Controllers;
@@ -23,9 +23,9 @@ public class RestaurantController : ControllerBase
     /// <returns>200 OK with restaurant list on success.</returns>
     [Authorize(Roles = "Admin")]
     [HttpGet]
-    public async Task<IActionResult> GetByUserId(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyRestaurant(CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetRestaurantByUserIdQuery(), cancellationToken);
+        RestaurantBill.Application.DTOs.RestaurantDto result = await _mediator.Send(new GetRestaurantByUserIdQuery(), cancellationToken);
         return Ok(result);
     }
         
@@ -39,7 +39,7 @@ public class RestaurantController : ControllerBase
     /// <returns>200 OK with success message on creation.</returns>
     [Authorize(Roles = "Admin")]
     [HttpPost]
-    public async Task<IActionResult> CreateRestaurant([FromBody] CreateRestaurantCommand command, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateRestaurant([FromBody] UpdateRestaurantCommand command, CancellationToken cancellationToken)
     {
         await _mediator.Send(command, cancellationToken);
         return Ok(new { Message = "Restaurant oluşturuldu." });

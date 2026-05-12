@@ -29,6 +29,7 @@
 - [ ] **Ürün:** Sipariş içerisindeki ürün bazlı durum değişimi yapılacak.
 - [ ] **KDV:** Ayarlaması yapılabilecek bir alan eklenecek.
 - [ ] **Status:** status olan yerlerde 2 tane olduğu için on off şeklinde slider'lı yapılacak.
+- [ ] **Dosyalama:** şu an frontend tarafında adminpage tek satır diğer kitchen filan fazla sayfa onlara bi bakarız.
  
 ## ⚙️ Backend (.NET Core)
 - [x] **Özellik [Kategori]:** Kategori silme endpoint'inde ilişkili ürün kontrolü yapıldı; bağlı ürün varsa silme işlemi engellendi.
@@ -47,4 +48,4 @@
 - [ ] **Ürün:** Ürün bazlı durum değişimi backend tarafında da kontrol edilecek.
 - [ ] **Refactor:** application katmanı feautre içerisindeki isimlendirmeler değişecek
 - [ ] **Refactor:** cachlemeye bakılacak.
-- [ ] **Refactor:** kayıt olurken restaurantId atanacak sonra bir daha problem çıkmayacak şu an restaurant tanımlandıktan sonra restaurantId geldiği için problemli çalışıyor
+- [x] **Refactor:** kayıt olurken restaurantId atanacak sonra bir daha problem çıkmayacak şu an restaurant tanımlandıktan sonra restaurantId geldiği için problemli çalışıyor

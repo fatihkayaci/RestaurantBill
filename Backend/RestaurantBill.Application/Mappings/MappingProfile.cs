@@ -5,7 +5,7 @@ using RestaurantBill.Application.Features.Categories.Commands.UpdateCategory;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
 using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
-using RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaurant;
+using RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant;
 using RestaurantBill.Application.Features.Users.Commands.CreateUser;
 using RestaurantBill.Domain.Entities;
 
@@ -60,7 +60,7 @@ public class MappingProfile : Profile
 
         // Restaurant
         CreateMap<RestaurantDto, Restaurant>().ReverseMap();
-        CreateMap<CreateRestaurantCommand, Restaurant>().ReverseMap();
+        CreateMap<UpdateRestaurantCommand, Restaurant>().ReverseMap();
 
         
     }

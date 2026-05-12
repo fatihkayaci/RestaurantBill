@@ -1,6 +1,7 @@
 using Moq;
 using AutoMapper;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantByUserId;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -28,42 +29,34 @@ public class GetRestaurantByUserIdHandlerTests
     #region happy paths
 
     [Fact]
-    public async Task Handle_WhenRestaurantsExist_ShouldReturnMappedDtos()
+    public async Task Handle_WhenRestaurantExists_ShouldReturnMappedDto()
     {
-        var restaurants = new List<Restaurant>
-        {
-            new() { Id = 1, Name = "Restoran A", UserId = "guid-042" },
-            new() { Id = 2, Name = "Restoran B", UserId = "guid-042" }
-        };
-        var expectedDtos = new List<RestaurantDto>
-        {
-            new() { Name = "Restoran A" },
-            new() { Name = "Restoran B" }
-        };
+        Restaurant restaurant = new() { Id = 1, Name = "Restoran A", UserId = "guid-042" };
+        RestaurantDto expectedDto = new() { Name = "Restoran A" };
 
         _mockUow.Setup(u => u.Restaurant.GetAllAsync(It.IsAny<Expression<Func<Restaurant, bool>>>(), false, null))
-                .ReturnsAsync(restaurants);
-        _mockMapper.Setup(m => m.Map<IEnumerable<RestaurantDto>>(restaurants))
-                   .Returns(expectedDtos);
+                .ReturnsAsync(new List<Restaurant> { restaurant });
+        _mockMapper.Setup(m => m.Map<RestaurantDto>(restaurant))
+                   .Returns(expectedDto);
 
-        var result = await _handler.Handle(new GetRestaurantByUserIdQuery(), CancellationToken.None);
+        RestaurantDto result = await _handler.Handle(new GetRestaurantByUserIdQuery(), CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal(2, result.Count());
+        Assert.Equal("Restoran A", result.Name);
     }
 
+    #endregion
+
+    #region edge cases
+
     [Fact]
-    public async Task Handle_WhenNoRestaurantsExist_ShouldReturnEmptyList()
+    public async Task Handle_WhenNoRestaurantExists_ShouldThrowNotFoundException()
     {
         _mockUow.Setup(u => u.Restaurant.GetAllAsync(It.IsAny<Expression<Func<Restaurant, bool>>>(), false, null))
                 .ReturnsAsync(new List<Restaurant>());
-        _mockMapper.Setup(m => m.Map<IEnumerable<RestaurantDto>>(It.IsAny<IEnumerable<Restaurant>>()))
-                   .Returns(new List<RestaurantDto>());
 
-        var result = await _handler.Handle(new GetRestaurantByUserIdQuery(), CancellationToken.None);
-
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            _handler.Handle(new GetRestaurantByUserIdQuery(), CancellationToken.None));
     }
 
     #endregion

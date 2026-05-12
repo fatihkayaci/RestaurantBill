@@ -1,8 +1,8 @@
 using MediatR;
 
-namespace RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaurant
+namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant
 {
-    public class CreateRestaurantCommand: IRequest
+    public class UpdateRestaurantCommand: IRequest
     {
         
         public string Name { get; set; } = string.Empty;

@@ -1,9 +1,9 @@
 using FluentValidation;
-namespace RestaurantBill.Application.Features.Restaurants.Commands.CreateRestaurant;
+namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant;
 
-public class CreateRestaurantCommandValidator : AbstractValidator<CreateRestaurantCommand>
+public class UpdateRestaurantCommandValidator : AbstractValidator<UpdateRestaurantCommand>
 {
-    public CreateRestaurantCommandValidator()
+    public UpdateRestaurantCommandValidator()
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Restoran adı boş bırakılamaz.")

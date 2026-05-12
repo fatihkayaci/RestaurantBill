@@ -7,7 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Utensils } from "lucide-react";
 
-export default function RestaurantSetupForm() {
+interface Props {
+    onComplete?: (name: string) => void;
+}
+
+export default function RestaurantSetupForm({ onComplete }: Props) {
     const [form, setForm] = useState<CreateRestaurant>({
         name: '',
         phoneNumber: '',
@@ -22,8 +26,8 @@ export default function RestaurantSetupForm() {
         e.preventDefault();
         try {
             setIsSubmitting(true);
-            await restaurantService.create(form);
-            window.location.reload();
+            await restaurantService.update(form);
+            onComplete?.(form.name);
         } catch (error) {
             console.error(error);
         } finally {
