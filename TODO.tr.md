@@ -40,11 +40,11 @@
 - [x] **Refactor:** şu an güncellemelerde, eklemelerde, silmelerde hepsinde restaurantId kontrolü yapılsın başka bir restauranttakilere etki etmesin
 - [x] **Refactor:** kayıt olurken restaurantId atanacak sonra bir daha problem çıkmayacak şu an restaurant tanımlandıktan sonra restaurantId geldiği için problemli çalışıyor
 - [x] **Refactor [Auth]:** Kayıt aşamasında kullanıcıdan `UserCode` alma zorunluluğu kaldırılacak; bu kod backend tarafında otomatik oluşturulacak.
-- [ ] **Refactor:** application katmanı feautre içerisindeki isimlendirmeler değişecek
+- [x] **Refactor:** application katmanı feautre içerisindeki isimlendirmeler değişecek
+- [x] **Refactor:** Admin tarafına önbellekleme eklenecek: ürünler, kategoriler, personel ve masalar için.
 - [ ] **Doğrulama:** Backend tarafındaki mevcut doğrulama kuralları gözden geçirilecek ve eksik iş kuralları tamamlanacak.
 - [ ] **Refactor:** Gelen DTO'lar ve nesne eşleme konfigürasyonları kontrol edilip optimize edilecek.
 - [ ] **Refactor [Kategori]:** `DeleteCategoryCommandHandler` içerisindeki iş mantığı gözden geçirilip optimize edilecek.
-- [ ] **Refactor:** Admin tarafına önbellekleme eklenecek: ürünler, kategoriler, personel ve masalar için.
 - [ ] **Kasiyer:** Transaction için bahşiş kısmı ayrı bir alan olarak ele alınacak.
 - [ ] **Ürün:** Ürün bazlı durum değişimi backend tarafında da kontrol edilecek.
 - [ ] **Refactor:** cachlemeye bakılacak.

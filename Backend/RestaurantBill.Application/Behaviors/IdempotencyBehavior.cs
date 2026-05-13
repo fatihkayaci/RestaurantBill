@@ -9,11 +9,13 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
 {
     private readonly IMemoryCache _cache;
     private readonly ILogger<IdempotencyBehavior<TRequest, TResponse>> _logger;
+    private readonly ICurrentUserService _currentUser;
 
-    public IdempotencyBehavior(IMemoryCache cache, ILogger<IdempotencyBehavior<TRequest, TResponse>> logger)
+    public IdempotencyBehavior(IMemoryCache cache, ILogger<IdempotencyBehavior<TRequest, TResponse>> logger, ICurrentUserService currentUser)
     {
         _cache = cache;
         _logger = logger;
+        _currentUser = currentUser;
     }
 
     public async Task<TResponse> Handle(
@@ -24,7 +26,7 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
         if (request is not IIdempotent idempotent)
             return await next();
 
-        var key = $"idempotency:{idempotent.IdempotencyKey}";
+        var key = $"idempotency:r{_currentUser.RestaurantId}:{idempotent.IdempotencyKey}";
 
         if (_cache.TryGetValue(key, out _))
         {

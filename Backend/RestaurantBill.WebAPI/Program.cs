@@ -24,7 +24,7 @@ builder.Services.AddSwaggerWithJwt()
                 .AddRepositories()
                 .AddCorsPolicy()
                 .AddMediatRWithBehaviors()
-                .AddAutoMapper(typeof(MappingProfile))
+                .AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>())
                 .AddInfrastructureServices()
                 .AddCurrentUserService();
 await builder.Services.AddRabbitMQAsync(builder.Configuration);

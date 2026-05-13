@@ -28,7 +28,7 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
         public async Task<List<ProductDto>> Handle(GetAllProductQuery request, CancellationToken cancellationToken)
         {
             int restaurantId = _currentUser.RestaurantId;
-        if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
+            if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
             var entities = await _uow.Product.GetAllAsync(p => p.RestaurantId == restaurantId, includeProperties: "Category");
 
             return _mapper.Map<List<ProductDto>>(entities.OrderBy(p => p.Name));

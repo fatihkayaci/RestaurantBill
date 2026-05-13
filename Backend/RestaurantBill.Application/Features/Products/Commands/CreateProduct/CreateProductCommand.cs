@@ -10,7 +10,7 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
         public bool IsActive { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
         public int CategoryId { get; set; }
-        public string IdempotencyKey { get; set; } = string.Empty;
+        public string IdempotencyKey => $"create-product:{Name}:{CategoryId}";
 
         public string[] CacheKeysToInvalidate => ["products:all"];
     }

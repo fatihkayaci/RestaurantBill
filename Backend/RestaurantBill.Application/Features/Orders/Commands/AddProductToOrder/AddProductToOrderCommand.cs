@@ -10,8 +10,8 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
         public string Note { get; set; } = string.Empty;
         public ICollection<CreateOrderItemDto> OrderItems { get; set; } = new List<CreateOrderItemDto>();
 
-        public string IdempotencyKey => 
-            $"order:{OrderId}:{string.Join("_", OrderItems.Select(x => $"{x.ProductId}-{x.Quantity}"))}";
+        public string IdempotencyKey =>
+            $"order:{OrderId}:{string.Join("_", OrderItems.OrderBy(x => x.ProductId).Select(x => $"{x.ProductId}-{x.Quantity}"))}";
 
     }
 }

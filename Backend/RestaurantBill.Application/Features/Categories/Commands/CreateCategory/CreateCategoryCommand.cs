@@ -7,7 +7,7 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
     {
         public required string Name { get; set; }
 
-        public string IdempotencyKey { get; set; } = string.Empty;
+        public string IdempotencyKey => $"create-category:{Name}";
         public string[] CacheKeysToInvalidate => ["categories:all"];
     }
 }
