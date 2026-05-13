@@ -1,5 +1,5 @@
 using Moq;
-using RestaurantBill.Application.Features.CashRegisters.Commands.Create;
+using RestaurantBill.Application.Features.CashRegisters.Commands.CreateCashRegister;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;

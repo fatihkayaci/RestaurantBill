@@ -1,6 +1,6 @@
 using Moq;
 using RestaurantBill.Application.Exceptions;
-using RestaurantBill.Application.Features.Tables.Commands.CancelReservation;
+using RestaurantBill.Application.Features.Tables.Commands.CancelReservationToTable;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -12,13 +12,13 @@ public class CancelReservationHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<ITableNotificationService> _mockNotificationService;
-    private readonly CancelReservationHandler _handler;
+    private readonly CancelReservationCommandHandler _handler;
 
     public CancelReservationHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
         _mockNotificationService = new Mock<ITableNotificationService>();
-        _handler = new CancelReservationHandler(_mockUow.Object, _mockNotificationService.Object);
+        _handler = new CancelReservationCommandHandler(_mockUow.Object, _mockNotificationService.Object);
     }
 
     #region happy paths

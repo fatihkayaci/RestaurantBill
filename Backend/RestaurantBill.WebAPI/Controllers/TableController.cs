@@ -1,13 +1,13 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Application.Features.Tables.Commands.CancelReservation;
+using RestaurantBill.Application.Features.Tables.Commands.CancelReservationToTable;
 using RestaurantBill.Application.Features.Tables.Commands.CreateTable;
-using RestaurantBill.Application.Features.Tables.Commands.Delete;
+using RestaurantBill.Application.Features.Tables.Commands.DeleteTable;
 using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
 using RestaurantBill.Application.Features.Tables.Commands.ReservationTable;
-using RestaurantBill.Application.Features.Tables.Commands.Update;
-using RestaurantBill.Application.Features.Tables.Queries.GetAll;
+using RestaurantBill.Application.Features.Tables.Commands.UpdateTable;
+using RestaurantBill.Application.Features.Tables.Queries.GetAllTable;
 using RestaurantBill.Application.Features.Tables.Queries.GetTableById;
 namespace RestaurantBill.WebAPI.Controllers
 {
@@ -74,7 +74,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <returns>200 OK with success message on update.</returns>
         [Authorize(Roles = "Admin")]
         [HttpPost("update")]
-        public async Task<IActionResult> UpdateTable([FromBody]UpdateCommand command, CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdateTable([FromBody]UpdateTableCommand command, CancellationToken cancellationToken)
         {
             await _mediator.Send(command, cancellationToken);
             return Ok("Masa başarıyla Güncellendi");
@@ -128,7 +128,7 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken cancellationToken)
         {
-            var command = new DeleteCommand
+            var command = new DeleteTableCommand
             {
                 TableId = id
             };

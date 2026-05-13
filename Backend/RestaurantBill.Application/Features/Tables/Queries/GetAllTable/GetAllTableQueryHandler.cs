@@ -5,7 +5,7 @@ using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Exceptions;
 
-namespace RestaurantBill.Application.Features.Tables.Queries.GetAll
+namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
 {
     public class GetAllTableQueryHandler : IRequestHandler<GetAllTableQuery, List<TableDto>>
     {

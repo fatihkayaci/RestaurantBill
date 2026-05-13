@@ -1,13 +1,13 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RestaurantBill.Application.Features.CashRegisters.Commands.AddTransaction;
-using RestaurantBill.Application.Features.CashRegisters.Commands.Create;
-using RestaurantBill.Application.Features.CashRegisters.Commands.Delete;
-using RestaurantBill.Application.Features.CashRegisters.Commands.Update;
-using RestaurantBill.Application.Features.CashRegisters.Queries.GetAll;
-using RestaurantBill.Application.Features.CashRegisters.Queries.GetById;
-using RestaurantBill.Application.Features.CashRegisters.Queries.GetTransactions;
+using RestaurantBill.Application.Features.CashRegisters.Commands.AddTransactionToCashRegister;
+using RestaurantBill.Application.Features.CashRegisters.Commands.CreateCashRegister;
+using RestaurantBill.Application.Features.CashRegisters.Commands.DeleteCashRegister;
+using RestaurantBill.Application.Features.CashRegisters.Commands.UpdateCashRegister;
+using RestaurantBill.Application.Features.CashRegisters.Queries.GetAllCashRegister;
+using RestaurantBill.Application.Features.CashRegisters.Queries.GetCashRegisterById;
+using RestaurantBill.Application.Features.CashRegisters.Queries.GetCashTransactions;
 
 namespace RestaurantBill.WebAPI.Controllers;
 
@@ -91,7 +91,7 @@ public class CashRegisterController : ControllerBase
     /// </summary>
     [Authorize(Roles = "Admin,Cashier")]
     [HttpPost("transaction")]
-    public async Task<IActionResult> AddTransaction([FromBody] AddCashTransactionCommand command, CancellationToken cancellationToken)
+    public async Task<IActionResult> AddTransaction([FromBody] AddTransactionToCashRegisterCommand command, CancellationToken cancellationToken)
     {
         await _mediator.Send(command, cancellationToken);
         return Ok(new { Message = "İşlem başarıyla kaydedildi." });

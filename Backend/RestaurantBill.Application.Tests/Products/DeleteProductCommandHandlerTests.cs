@@ -10,12 +10,12 @@ namespace RestaurantBill.Application.Tests.Products;
 public class DeleteProductCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
-    private readonly DeleteCommandHandler _handler;
+    private readonly DeleteProductCommandHandler _handler;
 
     public DeleteProductCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _handler = new DeleteCommandHandler(_mockUow.Object);
+        _handler = new DeleteProductCommandHandler(_mockUow.Object);
     }
 
     #region happy paths

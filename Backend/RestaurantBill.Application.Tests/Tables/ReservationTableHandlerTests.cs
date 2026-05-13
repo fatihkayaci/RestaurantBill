@@ -12,13 +12,13 @@ public class ReservationTableHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<ITableNotificationService> _mockNotificationService;
-    private readonly ReservationTableHandler _handler;
+    private readonly ReservationTableCommandHandler _handler;
 
     public ReservationTableHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
         _mockNotificationService = new Mock<ITableNotificationService>();
-        _handler = new ReservationTableHandler(_mockUow.Object, _mockNotificationService.Object);
+        _handler = new ReservationTableCommandHandler(_mockUow.Object, _mockNotificationService.Object);
     }
 
     #region happy paths

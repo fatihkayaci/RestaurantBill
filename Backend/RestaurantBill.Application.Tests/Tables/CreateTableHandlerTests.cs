@@ -10,14 +10,14 @@ public class CreateTableHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<ICurrentUserService> _mockCurrentUser;
-    private readonly CreateTableHandler _handler;
+    private readonly CreateTableCommandHandler _handler;
 
     public CreateTableHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
         _mockCurrentUser = new Mock<ICurrentUserService>();
         _mockCurrentUser.Setup(s => s.RestaurantId).Returns(1);
-        _handler = new CreateTableHandler(_mockUow.Object, _mockCurrentUser.Object);
+        _handler = new CreateTableCommandHandler(_mockUow.Object, _mockCurrentUser.Object);
     }
 
     #region happy paths

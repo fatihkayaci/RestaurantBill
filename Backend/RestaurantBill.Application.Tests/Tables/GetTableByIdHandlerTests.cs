@@ -12,13 +12,13 @@ public class GetTableByIdHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<IMapper> _mockMapper;
-    private readonly GetTableByIdHandler _handler;
+    private readonly GetTableByIdQueryHandler _handler;
 
     public GetTableByIdHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
         _mockMapper = new Mock<IMapper>();
-        _handler = new GetTableByIdHandler(_mockUow.Object, _mockMapper.Object);
+        _handler = new GetTableByIdQueryHandler(_mockUow.Object, _mockMapper.Object);
     }
 
     [Fact]

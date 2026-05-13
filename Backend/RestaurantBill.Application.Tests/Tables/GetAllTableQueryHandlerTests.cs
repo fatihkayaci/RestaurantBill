@@ -1,7 +1,7 @@
 using AutoMapper;
 using Moq;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Features.Tables.Queries.GetAll;
+using RestaurantBill.Application.Features.Tables.Queries.GetAllTable;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;

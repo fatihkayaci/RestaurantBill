@@ -15,7 +15,7 @@ public class GetRestaurantByUserIdHandlerTests
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<IMapper> _mockMapper;
     private readonly Mock<ICurrentUserService> _mockCurrentUser;
-    private readonly GetRestaurantByUserIdHandler _handler;
+    private readonly GetRestaurantByUserIdQueryHandler _handler;
 
     public GetRestaurantByUserIdHandlerTests()
     {
@@ -23,7 +23,7 @@ public class GetRestaurantByUserIdHandlerTests
         _mockMapper = new Mock<IMapper>();
         _mockCurrentUser = new Mock<ICurrentUserService>();
         _mockCurrentUser.Setup(u => u.UserId).Returns("guid-042");
-        _handler = new GetRestaurantByUserIdHandler(_mockUow.Object, _mockMapper.Object, _mockCurrentUser.Object);
+        _handler = new GetRestaurantByUserIdQueryHandler(_mockUow.Object, _mockMapper.Object, _mockCurrentUser.Object);
     }
 
     #region happy paths

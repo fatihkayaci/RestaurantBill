@@ -1,6 +1,6 @@
 using Moq;
 using RestaurantBill.Application.Exceptions;
-using RestaurantBill.Application.Features.CashRegisters.Commands.AddTransaction;
+using RestaurantBill.Application.Features.CashRegisters.Commands.AddTransactionToCashRegister;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -12,14 +12,14 @@ public class AddCashTransactionHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<ICurrentUserService> _mockCurrentUser;
-    private readonly AddCashTransactionHandler _handler;
+    private readonly AddTransactionToCashRegisterCommandHandler _handler;
 
     public AddCashTransactionHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork> { DefaultValue = DefaultValue.Mock };
         _mockCurrentUser = new Mock<ICurrentUserService>();
         _mockCurrentUser.Setup(u => u.UserId).Returns("guid-005");
-        _handler = new AddCashTransactionHandler(_mockUow.Object, _mockCurrentUser.Object);
+        _handler = new AddTransactionToCashRegisterCommandHandler(_mockUow.Object, _mockCurrentUser.Object);
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class AddCashTransactionHandlerTests
         var register = new CashRegister { Id = 1, Balance = 100m, Status = CashRegisterStatus.Open };
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
-        var command = new AddCashTransactionCommand
+        var command = new AddTransactionToCashRegisterCommand
         {
             CashRegisterId = 1,
             Type = CashTransactionType.In,
@@ -53,7 +53,7 @@ public class AddCashTransactionHandlerTests
         var register = new CashRegister { Id = 1, Balance = 100m, Status = CashRegisterStatus.Open };
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
-        var command = new AddCashTransactionCommand
+        var command = new AddTransactionToCashRegisterCommand
         {
             CashRegisterId = 1,
             Type = CashTransactionType.Out,
@@ -71,7 +71,7 @@ public class AddCashTransactionHandlerTests
         var register = new CashRegister { Id = 1, Balance = 100m, Status = CashRegisterStatus.Closed };
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
-        var command = new AddCashTransactionCommand
+        var command = new AddTransactionToCashRegisterCommand
         {
             CashRegisterId = 1,
             Type = CashTransactionType.In,
@@ -91,7 +91,7 @@ public class AddCashTransactionHandlerTests
         var register = new CashRegister { Id = 1, Balance = 20m, Status = CashRegisterStatus.Open };
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
-        var command = new AddCashTransactionCommand
+        var command = new AddTransactionToCashRegisterCommand
         {
             CashRegisterId = 1,
             Type = CashTransactionType.Out,
@@ -110,7 +110,7 @@ public class AddCashTransactionHandlerTests
     {
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(999, true)).ReturnsAsync((CashRegister?)null);
 
-        var command = new AddCashTransactionCommand
+        var command = new AddTransactionToCashRegisterCommand
         {
             CashRegisterId = 999,
             Type = CashTransactionType.In,

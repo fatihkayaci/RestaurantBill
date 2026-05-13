@@ -1,6 +1,6 @@
 using Moq;
 using RestaurantBill.Application.Exceptions;
-using RestaurantBill.Application.Features.CashRegisters.Commands.Update;
+using RestaurantBill.Application.Features.CashRegisters.Commands.UpdateCashRegister;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;

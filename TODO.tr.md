@@ -32,20 +32,19 @@
 - [ ] **Dosyalama:** şu an frontend tarafında adminpage tek satır diğer kitchen filan fazla sayfa onlara bi bakarız.
  
 ## ⚙️ Backend (.NET Core)
-- [x] **Özellik [Kategori]:** Kategori silme endpoint'inde ilişkili ürün kontrolü yapıldı; bağlı ürün varsa silme işlemi engellendi.
+- [x] **Özellik [Kategori]:** Kategori silme endpoint'inde ilişkili ürün kontrolü yapıldı bağlı ürün varsa silme işlemi engellendi.
 - [x] **Özellik [Kullanıcı]:** Kullanıcı güncelleme metodu yazıldı.
 - [x] **Refactor [Auth]:** Giriş işlemi yalnızca kullanıcı adıyla değil, e-posta ile de yapılabilecek şekilde CQRS yapıları güncellendi.
 - [x] **Özellik [Kasiyer]:** Kasiyer sayfası için backend yazıldı; ödeme alma ve transaction listeleme endpoint'leri eklendi.
 - [x] **Refactor [Doğrulama]:** `AddFluentValidationAutoValidation` kaldırıldı; doğrulama yalnızca MediatR pipeline üzerinden çalışıyor.
-- [ ] **Refactor [Auth]:** Kayıt aşamasında kullanıcıdan `UserCode` alma zorunluluğu kaldırılacak; bu kod backend tarafında otomatik oluşturulacak.
-- [ ] **Refactor:** şu an güncellemelerde, eklemelerde, silmelerde hepsinde restaurantId kontrolü yapılsın başka bir restauranttakilere etki etmesin
+- [x] **Refactor:** şu an güncellemelerde, eklemelerde, silmelerde hepsinde restaurantId kontrolü yapılsın başka bir restauranttakilere etki etmesin
+- [x] **Refactor:** kayıt olurken restaurantId atanacak sonra bir daha problem çıkmayacak şu an restaurant tanımlandıktan sonra restaurantId geldiği için problemli çalışıyor
+- [x] **Refactor [Auth]:** Kayıt aşamasında kullanıcıdan `UserCode` alma zorunluluğu kaldırılacak; bu kod backend tarafında otomatik oluşturulacak.
+- [ ] **Refactor:** application katmanı feautre içerisindeki isimlendirmeler değişecek
 - [ ] **Doğrulama:** Backend tarafındaki mevcut doğrulama kuralları gözden geçirilecek ve eksik iş kuralları tamamlanacak.
 - [ ] **Refactor:** Gelen DTO'lar ve nesne eşleme konfigürasyonları kontrol edilip optimize edilecek.
-- [ ] **Refactor:** Table işlemleri içerisindeki genel `Update` metodunun ismi `UpdateTable` olarak değiştirilecek.
 - [ ] **Refactor [Kategori]:** `DeleteCategoryCommandHandler` içerisindeki iş mantığı gözden geçirilip optimize edilecek.
 - [ ] **Refactor:** Admin tarafına önbellekleme eklenecek: ürünler, kategoriler, personel ve masalar için.
 - [ ] **Kasiyer:** Transaction için bahşiş kısmı ayrı bir alan olarak ele alınacak.
 - [ ] **Ürün:** Ürün bazlı durum değişimi backend tarafında da kontrol edilecek.
-- [ ] **Refactor:** application katmanı feautre içerisindeki isimlendirmeler değişecek
 - [ ] **Refactor:** cachlemeye bakılacak.
-- [x] **Refactor:** kayıt olurken restaurantId atanacak sonra bir daha problem çıkmayacak şu an restaurant tanımlandıktan sonra restaurantId geldiği için problemli çalışıyor
