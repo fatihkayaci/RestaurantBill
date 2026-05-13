@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as signalR from "@microsoft/signalr";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,35 @@ export default function CashierPage() {
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [tip, setTip] = useState<number>(0);
     const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>('');
+
+    useEffect(() => {
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/cashier-hub`)
+            .withAutomaticReconnect()
+            .configureLogging({
+                log(logLevel: signalR.LogLevel, message: string) {
+                    if (message.includes("stopped during negotiation")) return;
+                    if (logLevel >= signalR.LogLevel.Error) console.error(message);
+                }
+            })
+            .build();
+
+        connection.on("OrderServed", () => {
+            orderService.getAllOrdersToCashier()
+                .then(setServedOrders)
+                .catch(() => {});
+        });
+
+        let isCancelled = false;
+
+        connection.start()
+            .catch((err) => { if (!isCancelled) console.error("SignalR Connection Error:", err); });
+
+        return () => {
+            isCancelled = true;
+            connection.stop();
+        };
+    }, []);
 
     useEffect(() => {
         orderService.getAllOrdersToCashier()

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant;
 using RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantByUserId;
 
@@ -21,11 +22,11 @@ public class RestaurantController : ControllerBase
     /// Returns all restaurants associated with the authenticated user. Only accessible by Admin.
     /// </summary>
     /// <returns>200 OK with restaurant list on success.</returns>
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin, Cashier, Waiter, Kitchen")]
     [HttpGet]
     public async Task<IActionResult> GetMyRestaurant(CancellationToken cancellationToken)
     {
-        RestaurantBill.Application.DTOs.RestaurantDto result = await _mediator.Send(new GetRestaurantByUserIdQuery(), cancellationToken);
+        RestaurantDto result = await _mediator.Send(new GetRestaurantByUserIdQuery(), cancellationToken);
         return Ok(result);
     }
         

@@ -12,6 +12,7 @@ namespace RestaurantBill.Infrastructure.Extensions
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
         {
             services.AddScoped<ITableNotificationService, TableNotificationService>();
+            services.AddScoped<ICashierNotificationService, CashierNotificationService>();
             return services;
         }
 

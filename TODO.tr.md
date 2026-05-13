@@ -13,12 +13,12 @@
 - [x] **Kasiyer:** Sahte veriler kaldırılıp gerçek API verileri bağlandı.
 - [x] **Kasiyer:** Ödeme yöntemi olarak mevcut kasalardan seçim yapılabilmesi sağlandı.
 - [x] **Kasiyer:** Son işlemler gerçek veriden çekiliyor.
-- [ ] **Kasiyer:** Sayfaya SignalR eklenecek.
+- [x] **Kasiyer:** Sayfaya SignalR eklenecek.
+- [x] **UI/UX:** İlk kayıt sonrası restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
 - [ ] **Kasiyer:** Sayfaya detaylı işlemleri görebileceği bir bölüm eklenecek.
 - [ ] **Kasiyer:** Sayfadaki istatistik kartları düzeltilecek.
 - [ ] **PosPage:** Sayfadaki "Onayla" gibi butonlar düzeltilecek.
 - [ ] **Doğrulama:** Frontend formlarına istemci taraflı doğrulama eklenecek; hatalı verilerin backend'e gidip hata fırlatmasının önüne geçilecek. (Tamamlananlar: admin tarafındaki { menü, kategoriler, personel, masalar, raporlar })
-- [ ] **UI/UX:** İlk kayıt sonrası restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
 - [ ] **UI:** API'den dönen hata mesajlarının tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
 - [ ] **Profil:** Profil sayfası eksik; eklenecek.
 - [ ] **Raporlar:** Raporlar sayfasının içeriği doldurulacak.
@@ -48,3 +48,5 @@
 - [ ] **Kasiyer:** Transaction için bahşiş kısmı ayrı bir alan olarak ele alınacak.
 - [ ] **Ürün:** Ürün bazlı durum değişimi backend tarafında da kontrol edilecek.
 - [ ] **Refactor:** cachlemeye bakılacak.
+- [ ] **Anlamak:** Rabbitmq a komple bakılacak.
+- [ ] **Refactor:** isim için döndüğümüz bir tane restaurantdto oluşturulacak şu an isim için bütün bilgileri gönderiyoruz sırf header a yazmak için

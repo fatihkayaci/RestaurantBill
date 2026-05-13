@@ -8,6 +8,6 @@ public class CashTransactionDto
     public int CashRegisterId { get; set; }
     public CashTransactionType Type { get; set; }
     public decimal Amount { get; set; }
-    public int UserId { get; set; }
+    public string UserId { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 }
