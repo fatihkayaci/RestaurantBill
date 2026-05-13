@@ -10,7 +10,10 @@ export default function MainLayout() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) {
+      setNeedsSetup(false);
+      return;
+    }
 
     restaurantService.getMyRestaurant()
       .then(restaurant => {
