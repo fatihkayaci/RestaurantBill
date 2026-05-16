@@ -15,11 +15,11 @@
 - [x] **Kasiyer:** Son işlemler gerçek veriden çekiliyor.
 - [x] **Kasiyer:** Sayfaya SignalR eklenecek.
 - [x] **UI/UX:** İlk kayıt sonrası restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
+- [x] **UI:** API'den dönen hata mesajlarının tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
 - [ ] **Kasiyer:** Sayfaya detaylı işlemleri görebileceği bir bölüm eklenecek.
 - [ ] **Kasiyer:** Sayfadaki istatistik kartları düzeltilecek.
 - [ ] **PosPage:** Sayfadaki "Onayla" gibi butonlar düzeltilecek.
 - [ ] **Doğrulama:** Frontend formlarına istemci taraflı doğrulama eklenecek; hatalı verilerin backend'e gidip hata fırlatmasının önüne geçilecek. (Tamamlananlar: admin tarafındaki { menü, kategoriler, personel, masalar, raporlar })
-- [ ] **UI:** API'den dönen hata mesajlarının tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
 - [ ] **Profil:** Profil sayfası eksik; eklenecek.
 - [ ] **Raporlar:** Raporlar sayfasının içeriği doldurulacak.
 - [ ] **PosPage:** Sayfadaki ücret alma kısmı kaldırılacak ve kasiyer sayfasıyla entegre edilecek.
@@ -50,3 +50,4 @@
 - [ ] **Refactor:** cachlemeye bakılacak.
 - [ ] **Anlamak:** Rabbitmq a komple bakılacak.
 - [ ] **Refactor:** isim için döndüğümüz bir tane restaurantdto oluşturulacak şu an isim için bütün bilgileri gönderiyoruz sırf header a yazmak için
+- [ ] **Refactor:** admin staff içerisinde kendisini göremeyecek.

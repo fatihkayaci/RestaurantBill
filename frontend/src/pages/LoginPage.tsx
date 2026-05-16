@@ -2,30 +2,38 @@ import { useState } from "react";
 import { authService } from "../api/authService";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from 'jwt-decode';
+import { toast } from "sonner";
 
-// shadcn/ui bileşenleri
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-    Card, 
-    CardContent, 
-    CardDescription, 
-    CardFooter, 
-    CardHeader, 
-    CardTitle 
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle
 } from "@/components/ui/card";
 
 export default function LoginPage() {
-
+    const [errors, setErrors] = useState<{ userName?: string; password?: string }>({});
     const [userName, setUserName] = useState<string>("");
     const [password, setPassword] = useState<string>("");
     const navigate = useNavigate();
 
-    const handleSubmitUser = async (e: any) => {
+    const handleSubmitUser = async (e: React.SyntheticEvent) => {
         e.preventDefault();
+        const newErrors: typeof errors = {};
+
+        if (!userName) newErrors.userName = "Kullanıcı adı zorunludur.";
+        if (!password) newErrors.password = "Şifre zorunludur.";
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
         try {
-            if (!userName || !password) return;
             const result = await authService.login(userName, password);
             localStorage.setItem("token", result);
             const decoded: any = jwtDecode(result);
@@ -35,12 +43,13 @@ export default function LoginPage() {
             else if (role === 'Kitchen') navigate('/kitchen');
             else if (role === 'Cashier') navigate('/cashier');
             else navigate('/');
-            
+
         } catch (error: any) {
-            console.log(error.response?.data || "Bilinmeyen bir hata oluştu");
+            const message = error.response?.data?.message ?? error.response?.data ?? "Bilinmeyen bir hata oluştu";
+            toast.error(message);
         }
     }
-    
+
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
             <Card className="w-full max-w-md">
@@ -52,7 +61,7 @@ export default function LoginPage() {
                         Sisteme giriş yapın
                     </CardDescription>
                 </CardHeader>
-                
+
                 <CardContent>
                     <form onSubmit={handleSubmitUser} className="space-y-6">
                         <div className="space-y-2">
@@ -63,10 +72,11 @@ export default function LoginPage() {
                                 onChange={(e) => setUserName(e.target.value)}
                                 type="text"
                                 placeholder="kullanici_adi"
-                                required
                             />
+                            {errors.userName && (
+                                <p className="text-sm text-destructive">{errors.userName}</p>
+                            )}
                         </div>
-                        
                         <div className="space-y-2">
                             <Label htmlFor="password">Şifre</Label>
                             <Input
@@ -75,10 +85,11 @@ export default function LoginPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 type="password"
                                 placeholder="••••••••"
-                                required
                             />
+                            {errors.password && (
+                                <p className="text-sm text-destructive">{errors.password}</p>
+                            )}
                         </div>
-
                         <Button type="submit" className="w-full">
                             Giriş Yap
                         </Button>
@@ -88,8 +99,8 @@ export default function LoginPage() {
                 <CardFooter className="flex justify-center">
                     <p className="text-sm text-muted-foreground">
                         Hesabın yok mu?{' '}
-                        <span 
-                            onClick={() => navigate('/register')} 
+                        <span
+                            onClick={() => navigate('/register')}
                             className="text-primary cursor-pointer hover:underline font-medium"
                         >
                             Kayıt Ol

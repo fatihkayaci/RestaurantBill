@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
+import { Toaster } from './components/ui/sonner';
 import PrivateRoute from './components/PrivateRoute';
-import MainLayout from './components/MainLayout'; // Yeni layout'umuzu ekledik
+import MainLayout from './components/MainLayout';
 import TablesPage from './pages/TablesPage';
 import PosPage from './pages/PosPage';
 import KitchenPage from './pages/KitchenPage';
@@ -11,18 +12,21 @@ import CashierPage from './pages/CashierPage';
 
 function App() {
   return (
-    <Routes>
-      <Route element={<MainLayout />}>
-        <Route path="/" element={<PrivateRoute><TablesPage/></PrivateRoute>} />
-        <Route path="/table/:tableId" element={<PrivateRoute><PosPage /></PrivateRoute>} />
-        <Route path="/kitchen" element={<PrivateRoute><KitchenPage /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
-        <Route path="/cashier" element={<PrivateRoute><CashierPage /></PrivateRoute>} />
-      </Route>
+    <>
+      <Routes>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<PrivateRoute><TablesPage/></PrivateRoute>} />
+          <Route path="/table/:tableId" element={<PrivateRoute><PosPage /></PrivateRoute>} />
+          <Route path="/kitchen" element={<PrivateRoute><KitchenPage /></PrivateRoute>} />
+          <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+          <Route path="/cashier" element={<PrivateRoute><CashierPage /></PrivateRoute>} />
+        </Route>
 
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-    </Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Routes>
+      <Toaster position="top-right" richColors />
+    </>
   );
 }
 

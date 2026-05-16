@@ -17,7 +17,6 @@ export const authService = {
             FullName: request.fullName,
             UserName: request.userName,
             Email: request.email,
-            UserCode: request.userCode,
             Password: request.password,
         });
         return response.data;

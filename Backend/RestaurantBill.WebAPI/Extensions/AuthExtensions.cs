@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Persistence.Context;
+using RestaurantBill.WebAPI.Services;
 using System.Text;
 
 namespace RestaurantBill.WebAPI.Extensions;
@@ -20,7 +21,8 @@ public static class AuthExtensions
             options.Password.RequireLowercase = false;
         })
         .AddEntityFrameworkStores<RestaurantBillDbContext>()
-        .AddDefaultTokenProviders();
+        .AddDefaultTokenProviders()
+        .AddErrorDescriber<TurkishIdentityErrorDescriber>();
 
         services.AddAuthentication(options =>
         {
