@@ -33,7 +33,8 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
             var restaurantId = _currentUser.RestaurantId;
             if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
 
-            var users = await _uow.User.GetAllAsync(x => x.RestaurantId == restaurantId, false);
+            var currentUserId = _currentUser.UserId;
+            var users = await _uow.User.GetAllAsync(x => x.RestaurantId == restaurantId && x.Id != currentUserId, false);
             return _mapper.Map<IEnumerable<UserDto>>(users.OrderBy(u => u.FullName));
         }
     }

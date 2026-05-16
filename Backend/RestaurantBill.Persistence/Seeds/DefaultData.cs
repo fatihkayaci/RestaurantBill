@@ -84,9 +84,9 @@ public static class DefaultData
             await context.SaveChangesAsync();
         }
 
-        // Link all non-admin users to the restaurant
+        // Link all users to the restaurant
         var demoRestaurant = await context.Restaurants.FirstAsync();
-        foreach (var userName in new[] { "waiter", "kitchen", "cashier" })
+        foreach (var userName in new[] { "admin", "waiter", "kitchen", "cashier" })
         {
             var user = await userManager.FindByNameAsync(userName);
             if (user != null && user.RestaurantId == 0)

@@ -33,6 +33,11 @@ export default function Staff() {
         userService.getUsersByRestaurantId().then(setUsers).catch(console.error);
     }, []);
 
+    const generatePassword = () => {
+        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    };
+
     const generateUserCode = () => {
         const numbers = users
             .map(u => parseInt(u.userCode.replace(/\D/g, ''), 10))
@@ -43,7 +48,7 @@ export default function Staff() {
 
     const openCreateModal = () => {
         setEditUser(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: '', userCode: generateUserCode(), role: 2 });
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: 2 });
         setFieldErrors({});
         setIsModalOpen(true);
     };

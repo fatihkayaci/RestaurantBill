@@ -16,6 +16,7 @@
 - [x] **Kasiyer:** Sayfaya SignalR eklenecek.
 - [x] **UI/UX:** İlk kayıt sonrası restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
 - [x] **UI:** API'den dönen hata mesajlarının tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
+- [x] **staff:** staff oluştururken şifre rastgele gelsin isterse yenisini verebilir
 - [ ] **Kasiyer:** Sayfaya detaylı işlemleri görebileceği bir bölüm eklenecek.
 - [ ] **Kasiyer:** Sayfadaki istatistik kartları düzeltilecek.
 - [ ] **PosPage:** Sayfadaki "Onayla" gibi butonlar düzeltilecek.
@@ -42,6 +43,7 @@
 - [x] **Refactor [Auth]:** Kayıt aşamasında kullanıcıdan `UserCode` alma zorunluluğu kaldırılacak; bu kod backend tarafında otomatik oluşturulacak.
 - [x] **Refactor:** application katmanı feautre içerisindeki isimlendirmeler değişecek
 - [x] **Refactor:** Admin tarafına önbellekleme eklenecek: ürünler, kategoriler, personel ve masalar için.
+- [x] **Refactor:** admin staff içerisinde kendisini göremeyecek.
 - [ ] **Doğrulama:** Backend tarafındaki mevcut doğrulama kuralları gözden geçirilecek ve eksik iş kuralları tamamlanacak.
 - [ ] **Refactor:** Gelen DTO'lar ve nesne eşleme konfigürasyonları kontrol edilip optimize edilecek.
 - [ ] **Refactor [Kategori]:** `DeleteCategoryCommandHandler` içerisindeki iş mantığı gözden geçirilip optimize edilecek.
@@ -50,4 +52,3 @@
 - [ ] **Refactor:** cachlemeye bakılacak.
 - [ ] **Anlamak:** Rabbitmq a komple bakılacak.
 - [ ] **Refactor:** isim için döndüğümüz bir tane restaurantdto oluşturulacak şu an isim için bütün bilgileri gönderiyoruz sırf header a yazmak için
-- [ ] **Refactor:** admin staff içerisinde kendisini göremeyecek.
