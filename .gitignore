@@ -3,6 +3,9 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+# C# Dev Kit cache files
+*.lscache
+
 # dotenv files
 appsettings.Development.json
 appsettings.Production.json
