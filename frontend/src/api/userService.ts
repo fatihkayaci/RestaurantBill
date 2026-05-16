@@ -2,6 +2,10 @@ import { api } from './axiosInstance';
 import type { User, CreateUser, UpdateUser } from '../features/auths/userTypes';
 
 export const userService = {
+    getCurrentUser: async (): Promise<User> => {
+        const response = await api.get<User>('/user/me');
+        return response.data;
+    },
     getUsersByRestaurantId: async () => {
         const response = await api.get<User[]>(`/user`);
         return response.data;

@@ -1,9 +1,11 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Features.Users.Commands.CreateUser;
 using RestaurantBill.Application.Features.Users.Commands.DeleteUser;
 using RestaurantBill.Application.Features.Users.Commands.UpdateUser;
+using RestaurantBill.Application.Features.Users.Queries.GetCurrentUser;
 using RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantId;
 
 namespace RestaurantBill.WebAPI.Controllers
@@ -24,6 +26,13 @@ namespace RestaurantBill.WebAPI.Controllers
         /// </summary>
         /// <returns>200 OK with user list on success.</returns>
         
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            UserDto user = await _mediator.Send(new GetCurrentUserQuery());
+            return Ok(user);
+        }
+
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetUserByRestaurantId()
