@@ -27,8 +27,7 @@
 - [ ] **PosPage:** UI telefona uygun değil; responsive yapılacak.
 - [ ] **PosPage:** Siparişler içindeki "Yeni" sekmesindeki çöp ikonu çalışmıyor, düzeltilecek.
 - [ ] **PosPage:** "Masalara dön" ikonu uygunsuz bir konumda, yeri gözden geçirilecek.
-- [ ] **Ürün:** Sipariş içerisindeki ürün bazlı durum değişimi yapılacak.
-- [ ] **Mutfak:** mutfak sayfasında servis edilmiş veya 
+- [x] **Ürün:** Sipariş içerisindeki ürün bazlı durum değişimi yapılacak.
 - [ ] **KDV:** Ayarlaması yapılabilecek bir alan eklenecek.
 - [ ] **Status:** status olan yerlerde 2 tane olduğu için on off şeklinde slider'lı yapılacak.
 - [ ] **Dosyalama:** şu an frontend tarafında adminpage tek satır diğer kitchen filan fazla sayfa onlara bi bakarız.

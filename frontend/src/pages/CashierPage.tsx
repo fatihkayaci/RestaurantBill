@@ -17,9 +17,22 @@ export default function CashierPage() {
     const [servedOrders, setServedOrders] = useState<Order[]>([]);
     const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
     const [transactions, setTransactions] = useState<CashTransaction[]>([]);
+    const [completedCount, setCompletedCount] = useState<number>(0);
+    const [completedRevenue, setCompletedRevenue] = useState<number>(0);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [tip, setTip] = useState<number>(0);
     const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>('');
+
+    const refreshTransactions = () => {
+        cashRegisterService.getTransactions()
+            .then(data => {
+                const income = data.filter(t => t.type === 1);
+                setCompletedCount(income.length);
+                setCompletedRevenue(income.reduce((sum, t) => sum + t.amount, 0));
+                setTransactions(data.slice(0, 5));
+            })
+            .catch(() => {});
+    };
 
     useEffect(() => {
         const connection = new signalR.HubConnectionBuilder()
@@ -59,13 +72,11 @@ export default function CashierPage() {
             .then((data) => setCashRegisters(data.filter(r => r.status === 1)))
             .catch((error) => console.error('Kasalar çekilirken hata:', error));
 
-        cashRegisterService.getTransactions()
-            .then(data => setTransactions(data.slice(0, 5)))
-            .catch((error) => console.error('İşlemler çekilirken hata:', error));
+        refreshTransactions();
     }, []);
 
-    const todayRevenue = servedOrders.reduce((sum, o) => sum + o.totalPrice, 0);
-    const totalOrderCount = transactions.length + servedOrders.length;
+    const todayRevenue = completedRevenue + servedOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+    const totalOrderCount = completedCount + servedOrders.length;
     const avgTicket = totalOrderCount > 0 ? todayRevenue / totalOrderCount : 0;
 
     const handleSelectTip = (percentage: number) => {
@@ -92,7 +103,7 @@ export default function CashierPage() {
             await cashRegisterService.addTransaction(Number(selectedCashRegisterId), 1, calculateTotal());
             await orderService.closeOrder(selectedOrder.id);
             setServedOrders(prev => prev.filter(o => o.id !== selectedOrder.id));
-            cashRegisterService.getTransactions().then(data => setTransactions(data.slice(0, 5))).catch(() => {});
+            refreshTransactions();
             closeDialog();
         } catch (error) {
             console.error('Ödeme tamamlanırken hata:', error);
@@ -143,7 +154,7 @@ export default function CashierPage() {
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Tamamlanan</p>
-                            <p className="text-2xl font-bold">{transactions.length}</p>
+                            <p className="text-2xl font-bold">{completedCount}</p>
                         </div>
                     </CardContent>
                 </Card>
