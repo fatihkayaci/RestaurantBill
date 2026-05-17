@@ -8,6 +8,7 @@ using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
+using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemStatus;
 using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashierQuery;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitchen;
@@ -130,6 +131,17 @@ namespace RestaurantBill.WebAPI.Controllers
             command.OrderId = id;
             await _mediator.Send(command, cancellationToken);
             return Ok(new { Message = "Sipariş durumu güncellendi." });
+        }
+
+        /// <summary> Updates the status of a single order item (Kitchen use). </summary>
+        [Authorize(Roles = "Admin,Kitchen")]
+        [HttpPost("{orderId}/item/{itemId}/status")]
+        public async Task<IActionResult> UpdateItemStatus([FromRoute] int orderId, [FromRoute] int itemId, [FromBody] UpdateOrderItemStatusCommand command, CancellationToken cancellationToken)
+        {
+            command.OrderId = orderId;
+            command.OrderItemId = itemId;
+            await _mediator.Send(command, cancellationToken);
+            return Ok(new { Message = "Ürün durumu güncellendi." });
         }
 
         #endregion

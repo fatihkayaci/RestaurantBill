@@ -43,9 +43,21 @@ export default function KitchenPage() {
   // const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
 
-  const pendingOrders = orders.filter(o => o.status === 1 || o.status === 2)
-  const preparingOrders = orders.filter(o => o.status === 3)
-  const readyOrders = orders.filter(o => o.status === 4)
+  // Her order için her status grubunu ayrı bir kart kaydı olarak üret
+  interface OrderGroup { order: Order; items: Order['orderItems']; colStatus: number }
+
+  const orderGroups: OrderGroup[] = orders.flatMap(order => {
+    const byStatus = [1, 2, 3].map(s => ({
+      order,
+      items: order.orderItems.filter(i => i.status === s),
+      colStatus: s,
+    }))
+    return byStatus.filter(g => g.items.length > 0)
+  })
+
+  const pendingGroups   = orderGroups.filter(g => g.colStatus === 1)
+  const preparingGroups = orderGroups.filter(g => g.colStatus === 2)
+  const readyGroups     = orderGroups.filter(g => g.colStatus === 3)
 
   // const statusConfig: Record<
   //   number,
@@ -84,7 +96,27 @@ export default function KitchenPage() {
 
   const itemStatusMap: Record<number, { from: number; to: number }> = {
     [OrderStatus.Preparing]: { from: 1, to: 2 },
-    [OrderStatus.Ready]: { from: 2, to: 3 },
+    [OrderStatus.Ready]:     { from: 2, to: 3 },
+    [OrderStatus.Served]:    { from: 3, to: 4 },
+  };
+
+  const handleItemStatusUpdate = async (orderId: number, itemId: number, newStatus: number) => {
+    try {
+      await orderService.updateOrderItemStatus(orderId, itemId, newStatus);
+      setOrders(prev =>
+        prev.map(o => {
+          if (o.id !== orderId) return o;
+          return {
+            ...o,
+            orderItems: o.orderItems.map(i =>
+              i.id === itemId ? { ...i, status: newStatus } : i
+            )
+          };
+        })
+      );
+    } catch (err) {
+      console.error("handleItemStatusUpdate error:", err);
+    }
   };
 
   const handleStatusUpdate = async (orderId: number, newStatus: number) => {
@@ -96,11 +128,11 @@ export default function KitchenPage() {
           const map = itemStatusMap[newStatus];
           const updatedItems = map
             ? o.orderItems.map((i) =>
-                i.status === map.from ? { ...i, status: map.to } : i,
+                i.status === map.from ? { ...i, status: map.to } : i
               )
             : o.orderItems;
           return { ...o, status: newStatus, orderItems: updatedItems };
-        }),
+        })
       );
     } catch (err) {
       console.error("handleStatusUpdate error:", err);
@@ -132,19 +164,13 @@ export default function KitchenPage() {
       .withAutomaticReconnect()
       .build();
 
-    kitchenConnection.on("ReceiveNewOrder", (newOrder: Order) => {
-      const formattedOrder: Order = {
-        id: newOrder.id,
-        tableId: newOrder.tableId,
-        note: newOrder.note || "Yeni Sipariş",
-        totalPrice: newOrder.totalPrice || 0,
-        status: 1,
-        orderItems: newOrder.orderItems || []
-      };
-      setOrders((prevOrders) => {
-        if (prevOrders.some(o => o.id === newOrder.id)) return prevOrders;
-        return [formattedOrder, ...prevOrders];
-      });
+    kitchenConnection.on("ReceiveNewOrder", async () => {
+      try {
+        const all = await orderService.getAllOrdersToKitchen();
+        setOrders(all);
+      } catch (err) {
+        console.error("ReceiveNewOrder refresh error:", err);
+      }
     });
 
     const tableConnection = new signalR.HubConnectionBuilder()
@@ -191,7 +217,7 @@ export default function KitchenPage() {
           <CardContent className="flex items-center justify-between p-4">
             <div>
               <p className="text-sm text-amber-800 font-medium">Pending</p>
-              <p className="text-3xl font-bold text-amber-900">{pendingOrders.length}</p>
+              <p className="text-3xl font-bold text-amber-900">{pendingGroups.length}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-200">
               <Clock className="h-6 w-6 text-amber-700" />
@@ -202,7 +228,7 @@ export default function KitchenPage() {
           <CardContent className="flex items-center justify-between p-4">
             <div>
               <p className="text-sm text-blue-800 font-medium">Preparing</p>
-              <p className="text-3xl font-bold text-blue-900">{preparingOrders.length}</p>
+              <p className="text-3xl font-bold text-blue-900">{preparingGroups.length}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-200">
               <ChefHat className="h-6 w-6 text-blue-700" />
@@ -213,7 +239,7 @@ export default function KitchenPage() {
           <CardContent className="flex items-center justify-between p-4">
             <div>
               <p className="text-sm text-green-800 font-medium">Ready</p>
-              <p className="text-3xl font-bold text-green-900">{readyOrders.length}</p>
+              <p className="text-3xl font-bold text-green-900">{readyGroups.length}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-200">
               <CheckCircle2 className="h-6 w-6 text-green-700" />
@@ -227,16 +253,22 @@ export default function KitchenPage() {
           <div className="flex items-center gap-2 pb-2 border-b">
             <div className="h-3 w-3 rounded-full bg-amber-500" />
             <h2 className="font-semibold">New Orders</h2>
-            <Badge variant="secondary">{pendingOrders.length}</Badge>
+            <Badge variant="secondary">{pendingGroups.length}</Badge>
           </div>
           <div className="space-y-4">
-            {pendingOrders.length === 0 ? (
+            {pendingGroups.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 No pending orders
               </p>
             ) : (
-              pendingOrders.map((order) => (
-                <OrderCard key={order.id} order={order} showAcceptButton onAccept={(id) => handleStatusUpdate(id, OrderStatus.Preparing)} />
+              pendingGroups.map(g => (
+                <OrderCard
+                  key={`${g.order.id}-pending`}
+                  order={g.order}
+                  visibleItems={g.items}
+                  onAccept={(id) => handleStatusUpdate(id, OrderStatus.Preparing)}
+                  onItemAccept={(orderId, itemId) => handleItemStatusUpdate(orderId, itemId, 2)}
+                />
               ))
             )}
           </div>
@@ -247,16 +279,23 @@ export default function KitchenPage() {
           <div className="flex items-center gap-2 pb-2 border-b">
             <div className="h-3 w-3 rounded-full bg-blue-500" />
             <h2 className="font-semibold">Preparing</h2>
-            <Badge variant="secondary">{preparingOrders.length}</Badge>
+            <Badge variant="secondary">{preparingGroups.length}</Badge>
           </div>
           <div className="space-y-4">
-            {preparingOrders.length === 0 ? (
+            {preparingGroups.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 No orders being prepared
               </p>
             ) : (
-              preparingOrders.map((order) => (
-                <OrderCard key={order.id} order={order} showReadyButton onReady={(id) => handleStatusUpdate(id, OrderStatus.Ready)} />
+              preparingGroups.map(g => (
+                <OrderCard
+                  key={`${g.order.id}-preparing`}
+                  order={g.order}
+                  visibleItems={g.items}
+                  showBatches
+                  onReady={(id) => handleStatusUpdate(id, OrderStatus.Ready)}
+                  onItemReady={(orderId, itemId) => handleItemStatusUpdate(orderId, itemId, 3)}
+                />
               ))
             )}
           </div>
@@ -267,16 +306,20 @@ export default function KitchenPage() {
           <div className="flex items-center gap-2 pb-2 border-b">
             <div className="h-3 w-3 rounded-full bg-green-500" />
             <h2 className="font-semibold">Ready to Serve</h2>
-            <Badge variant="secondary">{readyOrders.length}</Badge>
+            <Badge variant="secondary">{readyGroups.length}</Badge>
           </div>
           <div className="space-y-4">
-            {readyOrders.length === 0 ? (
+            {readyGroups.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 No orders ready
               </p>
             ) : (
-              readyOrders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+              readyGroups.map(g => (
+                <OrderCard
+                  key={`${g.order.id}-ready`}
+                  order={g.order}
+                  visibleItems={g.items}
+                />
               ))
             )}
           </div>

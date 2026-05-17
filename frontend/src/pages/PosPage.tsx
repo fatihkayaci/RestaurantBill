@@ -228,10 +228,11 @@ export default function PosPage() {
                         : item
                 );
             } else {
-                updatedItems = [...prevOrder.orderItems, { 
-                    productId: clickedProduct.id, 
-                    productName: clickedProduct.name, 
-                    unitPrice: clickedProduct.price, 
+                updatedItems = [...prevOrder.orderItems, {
+                    id: 0,
+                    productId: clickedProduct.id,
+                    productName: clickedProduct.name,
+                    unitPrice: clickedProduct.price,
                     quantity: 1,
                     status: 1,
                     is_load: false,
@@ -358,13 +359,28 @@ export default function PosPage() {
         ? products.filter(product => product.categoryId === selectedCategoryId) 
         : products;
 
-    const filteredOrderItems =
-        orderTab === 1 ? activeOrder.orderItems.filter(item => item.is_load === false) :
-        orderTab === 2 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 1) :
-        orderTab === 3 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 2) :
-        orderTab === 4 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 3) :
-        orderTab === 5 ? activeOrder.orderItems.filter(item => item.is_load === true && item.status === 4) :
-        [];
+    const mergeByProduct = (items: typeof activeOrder.orderItems) => {
+        const map = new Map<number, typeof items[0]>()
+        for (const item of items) {
+            const existing = map.get(item.productId)
+            if (existing) {
+                existing.quantity += item.quantity
+            } else {
+                map.set(item.productId, { ...item })
+            }
+        }
+        return Array.from(map.values())
+    }
+
+    const filteredOrderItems = (() => {
+        if (orderTab === 1) return activeOrder.orderItems.filter(item => item.is_load === false)
+        if (orderTab === 2) return activeOrder.orderItems.filter(item => item.is_load === true && item.status === 1)
+        const statusForTab: Record<number, number> = { 3: 2, 4: 3, 5: 4 }
+        const targetStatus = statusForTab[orderTab]
+        if (targetStatus === undefined) return []
+        const items = activeOrder.orderItems.filter(item => item.is_load === true && item.status === targetStatus)
+        return mergeByProduct(items)
+    })()
 
     // --- LOADING---
     if (isLoading) {
@@ -618,10 +634,19 @@ export default function PosPage() {
                                 <Utensils className="w-12 h-12 opacity-20" />
                                 Bu statüde ürün bulunmuyor.
                             </div>
+                        ) : orderTab >= 3 ? (
+                            <div className="rounded-xl border bg-card divide-y">
+                                {filteredOrderItems.map(item => (
+                                    <div key={item.id !== 0 ? item.id : `new-${item.productId}`} className="flex items-center justify-between px-4 py-3">
+                                        <span className="font-medium text-sm">{item.productName}</span>
+                                        <span className="text-sm font-bold text-primary">{item.quantity}x</span>
+                                    </div>
+                                ))}
+                            </div>
                         ) : (
                             filteredOrderItems.map(item => (
                                 <OrderCard
-                                    key={`${item.productId}-${item.is_load}`}
+                                    key={item.id !== 0 ? item.id : `new-${item.productId}`}
                                     item={item}
                                     decreaseQuantity={decreaseQuantity}
                                     increaseQuantity={increaseQuantity}

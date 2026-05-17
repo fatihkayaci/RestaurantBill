@@ -37,7 +37,8 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
                 var product = await _uow.Product.GetByIdAsync(item.ProductId);
                 Guard.AgainstNull(product, "Böyle bir ürün bulunamadı.");
 
-                var existingItem = order.OrderItems.FirstOrDefault(x => x.ProductId == item.ProductId);
+
+                var existingItem = order.OrderItems.FirstOrDefault(x => x.ProductId == item.ProductId && x.Status == OrderItemStatus.Pending);
 
                 if (existingItem != null)
                 {
@@ -58,7 +59,8 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             }
 
             order.TotalPrice = order.OrderItems.Sum(item => item.UnitPrice * item.Quantity);
-            order.Status = OrderStatus.Pending;
+            if (order.Status < OrderStatus.Preparing)
+                order.Status = OrderStatus.Pending;
 
             await _uow.SaveChangesAsync(cancellationToken);
 

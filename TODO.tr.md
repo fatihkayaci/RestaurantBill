@@ -28,6 +28,7 @@
 - [ ] **PosPage:** Siparişler içindeki "Yeni" sekmesindeki çöp ikonu çalışmıyor, düzeltilecek.
 - [ ] **PosPage:** "Masalara dön" ikonu uygunsuz bir konumda, yeri gözden geçirilecek.
 - [ ] **Ürün:** Sipariş içerisindeki ürün bazlı durum değişimi yapılacak.
+- [ ] **Mutfak:** mutfak sayfasında servis edilmiş veya 
 - [ ] **KDV:** Ayarlaması yapılabilecek bir alan eklenecek.
 - [ ] **Status:** status olan yerlerde 2 tane olduğu için on off şeklinde slider'lı yapılacak.
 - [ ] **Dosyalama:** şu an frontend tarafında adminpage tek satır diğer kitchen filan fazla sayfa onlara bi bakarız.
@@ -51,4 +52,4 @@
 - [ ] **Ürün:** Ürün bazlı durum değişimi backend tarafında da kontrol edilecek.
 - [ ] **Refactor:** cachlemeye bakılacak.
 - [ ] **Anlamak:** Rabbitmq a komple bakılacak.
-- [ ] **Refactor:** isim için döndüğümüz bir tane restaurantdto oluşturulacak şu an isim için bütün bilgileri gönderiyoruz sırf header a yazmak için
+- [ ] **Refactor:** isim için döndüğümüz bir tane restaurantdto oluşturulacak şu an isim için bütün bilgileri gönderiyoruz sırf header a yazmak için    

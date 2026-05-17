@@ -44,6 +44,7 @@ namespace RestaurantBill.Infrastructure.Messaging
                 Status = (int)order.Status,
                 OrderItems = order.OrderItems.Select(i => new KitchenOrderItemMessage
                 {
+                    Id = i.Id,
                     ProductId = i.ProductId,
                     ProductName = i.Product?.Name ?? string.Empty,
                     UnitPrice = i.UnitPrice,
