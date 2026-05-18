@@ -4,6 +4,7 @@ using RestaurantBill.Application.Features.CashRegisters.Commands.AddTransactionT
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Tests.CashRegisters;
@@ -25,7 +26,7 @@ public class AddCashTransactionHandlerTests
     [Fact]
     public async Task Handle_WhenInTransaction_ShouldIncreaseBalanceAndPersist()
     {
-        var register = new CashRegister { Id = 1, Balance = 100m, Status = CashRegisterStatus.Open };
+        CashRegister register = CashRegister.Create("Cash", 100m, CashRegisterStatus.Open, 1);
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
         var command = new AddTransactionToCashRegisterCommand
@@ -39,7 +40,7 @@ public class AddCashTransactionHandlerTests
 
         Assert.Equal(150m, register.Balance);
         _mockUow.Verify(u => u.CashTransaction.AddAsync(It.Is<CashTransaction>(t =>
-            t.CashRegisterId == 1 &&
+            t.CashRegisterId == register.Id &&
             t.Type == CashTransactionType.In &&
             t.Amount == 50m &&
             t.UserId == "guid-005")), Times.Once);
@@ -50,7 +51,7 @@ public class AddCashTransactionHandlerTests
     [Fact]
     public async Task Handle_WhenOutTransaction_ShouldDecreaseBalance()
     {
-        var register = new CashRegister { Id = 1, Balance = 100m, Status = CashRegisterStatus.Open };
+        CashRegister register = CashRegister.Create("Cash", 100m, CashRegisterStatus.Open, 1);
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
         var command = new AddTransactionToCashRegisterCommand
@@ -66,9 +67,9 @@ public class AddCashTransactionHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenRegisterClosed_ShouldThrowBusinessException()
+    public async Task Handle_WhenRegisterClosed_ShouldThrowDomainException()
     {
-        var register = new CashRegister { Id = 1, Balance = 100m, Status = CashRegisterStatus.Closed };
+        CashRegister register = CashRegister.Create("Cash", 100m, CashRegisterStatus.Closed, 1);
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
         var command = new AddTransactionToCashRegisterCommand
@@ -78,7 +79,7 @@ public class AddCashTransactionHandlerTests
             Amount = 50m
         };
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() =>
+        var ex = await Assert.ThrowsAsync<DomainException>(() =>
             _handler.Handle(command, CancellationToken.None));
 
         Assert.Equal("Kapalı bir kasaya işlem eklenemez.", ex.Message);
@@ -86,9 +87,9 @@ public class AddCashTransactionHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenInsufficientBalanceForOut_ShouldThrowBusinessException()
+    public async Task Handle_WhenInsufficientBalanceForOut_ShouldThrowDomainException()
     {
-        var register = new CashRegister { Id = 1, Balance = 20m, Status = CashRegisterStatus.Open };
+        CashRegister register = CashRegister.Create("Cash", 20m, CashRegisterStatus.Open, 1);
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
         var command = new AddTransactionToCashRegisterCommand
@@ -98,7 +99,7 @@ public class AddCashTransactionHandlerTests
             Amount = 50m
         };
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() =>
+        var ex = await Assert.ThrowsAsync<DomainException>(() =>
             _handler.Handle(command, CancellationToken.None));
 
         Assert.Equal("Kasa bakiyesi bu çıkışı karşılamak için yetersiz.", ex.Message);

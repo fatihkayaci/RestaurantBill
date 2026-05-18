@@ -3,7 +3,6 @@ using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
-using System.Linq.Expressions;
 
 namespace RestaurantBill.Application.Tests.Products;
 
@@ -25,7 +24,7 @@ public class DeleteProductCommandHandlerTests
     {
         // --- ARRANGE ---
         var command = new DeleteProductCommand { Id = 1 };
-        var product = new Product { Id = 1, Name = "Lahmacun", Price = 120 };
+        Product product = Product.Create("Lahmacun", 120m, true, "", 1, 1);
 
         _mockUow.Setup(u => u.Product.GetByIdAsync(command.Id, false))
                 .ReturnsAsync(product);
@@ -45,16 +44,16 @@ public class DeleteProductCommandHandlerTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task Handle_WhenIdIsZeroOrNegative_ShouldThrowBusinessException(int invalidId)
+    public async Task Handle_WhenIdIsZeroOrNegative_ShouldThrowNotFoundException(int invalidId)
     {
         // --- ARRANGE ---
         var command = new DeleteProductCommand { Id = invalidId };
+        _mockUow.Setup(u => u.Product.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>()))
+                .ReturnsAsync((Product?)null);
 
         // --- ACT & ASSERT ---
-        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("Ürün'ün ID değeri 0 veya negatif olamaz.", exception.Message);
     }
 
     [Fact]

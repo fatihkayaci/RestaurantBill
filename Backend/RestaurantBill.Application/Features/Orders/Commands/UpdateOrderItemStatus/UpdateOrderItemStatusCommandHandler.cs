@@ -1,7 +1,7 @@
 using MediatR;
 using RestaurantBill.Application.Common;
-using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 
@@ -20,16 +20,10 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemSta
 
         public async Task Handle(UpdateOrderItemStatusCommand request, CancellationToken cancellationToken)
         {
-            if (!Enum.IsDefined(typeof(OrderItemStatus), request.Status))
-                throw new BusinessException("Geçersiz ürün durumu.");
-
-            var order = await _uow.Order.GetByIdAsync(request.OrderId, true, o => o.OrderItems);
+            Order? order = await _uow.Order.GetByIdAsync(request.OrderId, true, o => o.OrderItems);
             Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
 
-            var item = order.OrderItems.FirstOrDefault(x => x.Id == request.OrderItemId);
-            Guard.AgainstNull(item, "Böyle bir sipariş kalemi bulunamadı.");
-
-            item.Status = (OrderItemStatus)request.Status;
+            order.UpdateItemStatus(request.OrderItemId, (OrderItemStatus)request.Status);
 
             await _uow.SaveChangesAsync(cancellationToken);
 

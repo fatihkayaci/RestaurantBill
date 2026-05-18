@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Users.Commands.DeleteUser;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Tests.Users;
@@ -31,7 +32,8 @@ public class DeleteUserCommandHandlerTests
     public async Task Handle_WhenUserExists_ShouldDeleteAndSaveChanges()
     {
         var command = new DeleteUserCommand { UserId = "guid-001" };
-        var user = new User { Id = "guid-001", FullName = "Garson Ali", UserName = "garsonali", UserCode = "WTR001" };
+        User user = User.Create("Garson Ali", "garsonali", null, null, "WTR001", UserRole.Waiter, 1);
+        user.Id = "guid-001";
 
         _mockUserManager.Setup(um => um.FindByIdAsync(command.UserId)).ReturnsAsync(user);
 

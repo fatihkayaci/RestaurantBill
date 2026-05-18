@@ -4,7 +4,9 @@
       "Bash(dotnet test *)",
       "Bash(dotnet build *)",
       "Bash(xargs grep -l \"\")",
-      "Bash(dotnet add *)"
+      "Bash(dotnet add *)",
+      "Bash(Get-ChildItem -Recurse \"c:\\\\Users\\\\pc\\\\Desktop\\\\github-repository\\\\RestaurantBill\\\\Backend\\\\RestaurantBill.Application.Tests\\\\\" -Filter \"*.cs\" | Select-Object FullName)",
+      "Bash(grep -oP \"\\\\\\\\\\\\\\\\\\([^\\\\\\\\\\\\\\\\]+\\\\.cs\\)\")"
     ]
   }
 }

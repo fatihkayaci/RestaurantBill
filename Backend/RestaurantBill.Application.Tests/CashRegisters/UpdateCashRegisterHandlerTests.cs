@@ -21,13 +21,7 @@ public class UpdateCashRegisterHandlerTests
     [Fact]
     public async Task Handle_WhenRegisterExists_ShouldUpdateAndSave()
     {
-        var existing = new CashRegister
-        {
-            Id = 1,
-            Name = "Old",
-            Balance = 50m,
-            Status = CashRegisterStatus.Open
-        };
+        CashRegister existing = CashRegister.Create("Old", 50m, CashRegisterStatus.Open, 1);
 
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(existing);
 

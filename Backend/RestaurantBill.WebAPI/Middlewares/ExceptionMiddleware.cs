@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 namespace RestaurantBill.WebAPI.Middlewares;
 
 public class ExceptionMiddleware
@@ -39,6 +40,11 @@ public class ExceptionMiddleware
         {
             statusCode = baseEx.StatusCode;
             message = baseEx.Message;
+        }
+        else if (exception is DomainException domainEx)
+        {
+            statusCode = (int)HttpStatusCode.BadRequest;
+            message = domainEx.Message;
         }
 
         context.Response.StatusCode = statusCode;

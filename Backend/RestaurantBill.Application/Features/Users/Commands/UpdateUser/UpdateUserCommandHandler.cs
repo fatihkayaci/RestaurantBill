@@ -22,12 +22,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
             User user = await _userManager.FindByIdAsync(request.UserId.ToString())
                 ?? throw new NotFoundException("Kullanıcı bulunamadı.");
 
-            user.FullName = request.FullName;
-            user.UserName = request.UserName;
-            user.Email = request.Email;
-            user.PhoneNumber = request.PhoneNumber;
-            user.UserCode = request.UserCode;
-            user.Role = request.Role;
+            user.Update(request.FullName, request.UserName, request.Email, request.PhoneNumber, request.UserCode, request.Role);
 
             if (!string.IsNullOrWhiteSpace(request.Password))
             {

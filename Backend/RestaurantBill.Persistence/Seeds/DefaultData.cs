@@ -24,12 +24,10 @@ public static class DefaultData
             UserRole.Kitchen.ToString()
         };
 
-        foreach (var role in roles)
+        foreach (string role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
-            {
                 await roleManager.CreateAsync(new AppRole { Name = role });
-            }
         }
     }
 
@@ -47,20 +45,10 @@ public static class DefaultData
         {
             if (await userManager.FindByNameAsync(u.UserName) != null) continue;
 
-            var user = new User
-            {
-                UserName = u.UserName,
-                Email = u.Email,
-                FullName = u.FullName,
-                UserCode = u.UserCode,
-                Role = u.Role
-            };
-
-            var result = await userManager.CreateAsync(user, u.Password);
+            User user = User.Create(u.FullName, u.UserName, u.Email, null, u.UserCode, u.Role, restaurantId: 0);
+            IdentityResult result = await userManager.CreateAsync(user, u.Password);
             if (result.Succeeded)
-            {
                 await userManager.AddToRoleAsync(user, u.Role.ToString());
-            }
         }
     }
 
@@ -69,29 +57,21 @@ public static class DefaultData
         // Restaurant
         if (!await context.Restaurants.AnyAsync())
         {
-            var admin = await userManager.FindByNameAsync("admin");
-            var restaurant = new Restaurant
-            {
-                UserId = admin!.Id,
-                Name = "Demo Restaurant",
-                PhoneNumber = "0212 000 00 00",
-                MobilePhoneNumber = "0532 000 00 00",
-                Email = "info@demorestaurant.com",
-                City = "Istanbul",
-                District = "Kadikoy"
-            };
+            User? admin = await userManager.FindByNameAsync("admin");
+            Restaurant restaurant = Restaurant.Create(admin!.Id);
+            restaurant.Update("Demo Restaurant", "0212 000 00 00", "0532 000 00 00", "info@demorestaurant.com", "Istanbul", "Kadikoy");
             await context.Restaurants.AddAsync(restaurant);
             await context.SaveChangesAsync();
         }
 
         // Link all users to the restaurant
-        var demoRestaurant = await context.Restaurants.FirstAsync();
-        foreach (var userName in new[] { "admin", "waiter", "kitchen", "cashier" })
+        Restaurant demoRestaurant = await context.Restaurants.FirstAsync();
+        foreach (string userName in new[] { "admin", "waiter", "kitchen", "cashier" })
         {
-            var user = await userManager.FindByNameAsync(userName);
+            User? user = await userManager.FindByNameAsync(userName);
             if (user != null && user.RestaurantId == 0)
             {
-                user.RestaurantId = demoRestaurant.Id;
+                user.AssignRestaurant(demoRestaurant.Id);
                 await userManager.UpdateAsync(user);
             }
         }
@@ -99,11 +79,11 @@ public static class DefaultData
         // Categories
         if (!await context.Categories.AnyAsync())
         {
-            var categories = new[]
+            Category[] categories = new[]
             {
-                new Category { Name = "Starters",    RestaurantId = demoRestaurant.Id },
-                new Category { Name = "Main Course", RestaurantId = demoRestaurant.Id },
-                new Category { Name = "Beverages",   RestaurantId = demoRestaurant.Id },
+                Category.Create("Starters",    demoRestaurant.Id),
+                Category.Create("Main Course", demoRestaurant.Id),
+                Category.Create("Beverages",   demoRestaurant.Id),
             };
             await context.Categories.AddRangeAsync(categories);
             await context.SaveChangesAsync();
@@ -112,24 +92,24 @@ public static class DefaultData
         // Products
         if (!await context.Products.AnyAsync())
         {
-            var starter = await context.Categories.FirstAsync(c => c.Name == "Starters");
-            var main    = await context.Categories.FirstAsync(c => c.Name == "Main Course");
-            var drink   = await context.Categories.FirstAsync(c => c.Name == "Beverages");
+            Category starter = await context.Categories.FirstAsync(c => c.Name == "Starters");
+            Category main    = await context.Categories.FirstAsync(c => c.Name == "Main Course");
+            Category drink   = await context.Categories.FirstAsync(c => c.Name == "Beverages");
 
-            var products = new[]
+            Product[] products = new[]
             {
-                new Product { Name = "Garden Salad",      Price = 85m,  IsActive = true, CategoryId = starter.Id, RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Lentil Soup",       Price = 75m,  IsActive = true, CategoryId = starter.Id, RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Hummus",            Price = 90m,  IsActive = true, CategoryId = starter.Id, RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Beyti Wrap",        Price = 220m, IsActive = true, CategoryId = main.Id,    RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Adana Kebab",       Price = 240m, IsActive = true, CategoryId = main.Id,    RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Grilled Meatballs", Price = 200m, IsActive = true, CategoryId = main.Id,    RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Chicken Skewer",    Price = 180m, IsActive = true, CategoryId = main.Id,    RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Mixed Pide",        Price = 160m, IsActive = true, CategoryId = main.Id,    RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Water (500ml)",     Price = 20m,  IsActive = true, CategoryId = drink.Id,   RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Ayran",             Price = 35m,  IsActive = true, CategoryId = drink.Id,   RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Cola",              Price = 55m,  IsActive = true, CategoryId = drink.Id,   RestaurantId = demoRestaurant.Id },
-                new Product { Name = "Turkish Coffee",    Price = 65m,  IsActive = true, CategoryId = drink.Id,   RestaurantId = demoRestaurant.Id },
+                Product.Create("Garden Salad",      85m,  true, string.Empty, starter.Id, demoRestaurant.Id),
+                Product.Create("Lentil Soup",       75m,  true, string.Empty, starter.Id, demoRestaurant.Id),
+                Product.Create("Hummus",            90m,  true, string.Empty, starter.Id, demoRestaurant.Id),
+                Product.Create("Beyti Wrap",        220m, true, string.Empty, main.Id,    demoRestaurant.Id),
+                Product.Create("Adana Kebab",       240m, true, string.Empty, main.Id,    demoRestaurant.Id),
+                Product.Create("Grilled Meatballs", 200m, true, string.Empty, main.Id,    demoRestaurant.Id),
+                Product.Create("Chicken Skewer",    180m, true, string.Empty, main.Id,    demoRestaurant.Id),
+                Product.Create("Mixed Pide",        160m, true, string.Empty, main.Id,    demoRestaurant.Id),
+                Product.Create("Water (500ml)",     20m,  true, string.Empty, drink.Id,   demoRestaurant.Id),
+                Product.Create("Ayran",             35m,  true, string.Empty, drink.Id,   demoRestaurant.Id),
+                Product.Create("Cola",              55m,  true, string.Empty, drink.Id,   demoRestaurant.Id),
+                Product.Create("Turkish Coffee",    65m,  true, string.Empty, drink.Id,   demoRestaurant.Id),
             };
             await context.Products.AddRangeAsync(products);
             await context.SaveChangesAsync();
@@ -138,10 +118,10 @@ public static class DefaultData
         // Cash Registers
         if (!await context.CashRegisters.AnyAsync())
         {
-            var cashRegisters = new[]
+            CashRegister[] cashRegisters = new[]
             {
-                new CashRegister { Name = "Cash", Balance = 0m, Status = CashRegisterStatus.Open, RestaurantId = demoRestaurant.Id },
-                new CashRegister { Name = "Card", Balance = 0m, Status = CashRegisterStatus.Open, RestaurantId = demoRestaurant.Id },
+                CashRegister.Create("Cash", 0m, CashRegisterStatus.Open, demoRestaurant.Id),
+                CashRegister.Create("Card", 0m, CashRegisterStatus.Open, demoRestaurant.Id),
             };
             await context.CashRegisters.AddRangeAsync(cashRegisters);
             await context.SaveChangesAsync();
@@ -150,13 +130,9 @@ public static class DefaultData
         // Tables
         if (!await context.Tables.AnyAsync())
         {
-            var tables = Enumerable.Range(1, 8).Select(i => new Table
-            {
-                Name = $"Table {i}",
-                Status = TableStatus.Available,
-                RestaurantId = demoRestaurant.Id
-            }).ToList();
-
+            List<Table> tables = Enumerable.Range(1, 8)
+                .Select(i => Table.Create($"Table {i}", string.Empty, demoRestaurant.Id))
+                .ToList();
             await context.Tables.AddRangeAsync(tables);
             await context.SaveChangesAsync();
         }

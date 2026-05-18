@@ -4,6 +4,7 @@ using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Features.CashRegisters.Queries.GetAllCashRegister;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using System.Linq.Expressions;
 
@@ -30,8 +31,8 @@ public class GetAllCashRegisterHandlerTests
     {
         var registers = new List<CashRegister>
         {
-            new() { Id = 1, Name = "Card" },
-            new() { Id = 2, Name = "Cash" }
+            CashRegister.Create("Card", 0m, CashRegisterStatus.Open, 1),
+            CashRegister.Create("Cash", 0m, CashRegisterStatus.Open, 1)
         };
         var dtos = new List<CashRegisterDto>
         {

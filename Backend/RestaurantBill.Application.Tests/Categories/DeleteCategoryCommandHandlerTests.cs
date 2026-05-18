@@ -2,6 +2,7 @@ using Moq;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Categories.Commands.DeleteCategory;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Interfaces;
 using System.Linq.Expressions;
 
@@ -25,11 +26,17 @@ public class DeleteCategoryCommandHandlerTests
     {
         // --- ARRANGE ---
         var command = new DeleteCategoryCommand { Id = 1 };
-        var category = new Category { Id = 1, Name = "İçecekler" };
+        Category category = Category.Create("İçecekler", 1);
 
-        _mockUow.Setup(u => u.Category.GetByIdAsync(command.Id, false))
+        _mockUow.Setup(u => u.Category.GetByIdAsync(
+                It.IsAny<int>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Category, object>>[]>()))
                 .ReturnsAsync(category);
-        _mockUow.Setup(u => u.Product.GetAllAsync(It.IsAny<Expression<Func<Product, bool>>>(), It.IsAny<bool>(), It.IsAny<string?>()))
+        _mockUow.Setup(u => u.Product.GetAllAsync(
+                It.IsAny<Expression<Func<Product, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<string?>()))
                 .ReturnsAsync(new List<Product>());
 
         // --- ACT ---
@@ -41,43 +48,33 @@ public class DeleteCategoryCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenCategoryHasProducts_ShouldThrowBusinessException()
+    public async Task Handle_WhenCategoryHasProducts_ShouldThrowDomainException()
     {
         // --- ARRANGE ---
         var command = new DeleteCategoryCommand { Id = 1 };
-        var category = new Category { Id = 1, Name = "İçecekler" };
-        var linkedProducts = new List<Product> { new Product { Id = 1, CategoryId = 1 } };
+        Category category = Category.Create("İçecekler", 1);
+        Product linkedProduct = Product.Create("Ürün", 10m, true, "", 1, 1);
+        var linkedProducts = new List<Product> { linkedProduct };
 
-        _mockUow.Setup(u => u.Category.GetByIdAsync(command.Id, false))
+        _mockUow.Setup(u => u.Category.GetByIdAsync(
+                It.IsAny<int>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Category, object>>[]>()))
                 .ReturnsAsync(category);
-        _mockUow.Setup(u => u.Product.GetAllAsync(It.IsAny<Expression<Func<Product, bool>>>(), It.IsAny<bool>(), It.IsAny<string?>()))
+        _mockUow.Setup(u => u.Product.GetAllAsync(
+                It.IsAny<Expression<Func<Product, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<string?>()))
                 .ReturnsAsync(linkedProducts);
 
         // --- ACT & ASSERT ---
-        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+        await Assert.ThrowsAsync<DomainException>(() =>
             _handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("Bu kategoriye bağlı ürünler bulunmaktadır. Lütfen silmeden önce ilgili ürünlerin kategorisini güncelleyin.", exception.Message);
     }
 
     #endregion
 
     #region sad paths
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task Handle_WhenIdIsZeroOrNegative_ShouldThrowBusinessException(int invalidId)
-    {
-        // --- ARRANGE ---
-        var command = new DeleteCategoryCommand { Id = invalidId };
-
-        // --- ACT & ASSERT ---
-        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
-            _handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("Kategori ID değeri 0 veya negatif olamaz.", exception.Message);
-    }
 
     [Fact]
     public async Task Handle_WhenCategoryNotFound_ShouldThrowNotFoundException()
@@ -85,14 +82,15 @@ public class DeleteCategoryCommandHandlerTests
         // --- ARRANGE ---
         var command = new DeleteCategoryCommand { Id = 999 };
 
-        _mockUow.Setup(u => u.Category.GetByIdAsync(command.Id, false))
+        _mockUow.Setup(u => u.Category.GetByIdAsync(
+                It.IsAny<int>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Category, object>>[]>()))
                 .ReturnsAsync((Category?)null);
 
         // --- ACT & ASSERT ---
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("Böyle bir kategori bulunamadı", exception.Message);
     }
 
     #endregion

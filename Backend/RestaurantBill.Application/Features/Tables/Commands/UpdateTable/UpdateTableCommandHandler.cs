@@ -1,7 +1,7 @@
 using RestaurantBill.Domain.Interfaces;
-
 using MediatR;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
 {
@@ -14,16 +14,15 @@ namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
             _uow = uow;
         }
 
-        /// <summary>
-        /// Creates a new table with the given name.
-        /// </summary>
         public async Task Handle(UpdateTableCommand request, CancellationToken cancellationToken)
         {
-            var table = await _uow.Table.GetByIdAsync(request.Id, true);
+            Table? table = await _uow.Table.GetByIdAsync(request.Id, true);
             Guard.AgainstNull(table, "Böyle bir masa bulunamadı");
-            table.Name = request.Name;
+
+            table.Update(request.Name, table.Note);
             if (request.Status.HasValue)
-                table.Status = request.Status.Value;
+                table.SetStatus(request.Status.Value);
+
             await _uow.Table.UpdateAsync(table);
             await _uow.SaveChangesAsync(cancellationToken);
         }

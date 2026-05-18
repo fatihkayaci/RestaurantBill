@@ -1,5 +1,4 @@
 using Moq;
-using AutoMapper;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant;
 using RestaurantBill.Application.Interfaces;
@@ -12,18 +11,16 @@ namespace RestaurantBill.Application.Tests.Restaurants;
 public class UpdateRestaurantCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
-    private readonly Mock<IMapper> _mockMapper;
     private readonly Mock<ICurrentUserService> _mockCurrentUser;
     private readonly UpdateRestaurantCommandHandler _handler;
 
     public UpdateRestaurantCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _mockMapper = new Mock<IMapper>();
         _mockCurrentUser = new Mock<ICurrentUserService>();
         _mockCurrentUser.Setup(u => u.UserId).Returns("guid-042");
 
-        _handler = new UpdateRestaurantCommandHandler(_mockUow.Object, _mockMapper.Object, _mockCurrentUser.Object);
+        _handler = new UpdateRestaurantCommandHandler(_mockUow.Object, _mockCurrentUser.Object);
     }
 
     #region happy paths
@@ -40,16 +37,18 @@ public class UpdateRestaurantCommandHandlerTests
             City = "İstanbul",
             District = "Kadıköy"
         };
-        Restaurant existingRestaurant = new Restaurant { Id = 1, UserId = "guid-042", Name = "" };
+        Restaurant existingRestaurant = Restaurant.Create("guid-042");
 
-        _mockUow.Setup(u => u.Restaurant.GetAllAsync(It.IsAny<Expression<Func<Restaurant, bool>>>(), true, null))
+        _mockUow.Setup(u => u.Restaurant.GetAllAsync(
+                It.IsAny<Expression<Func<Restaurant, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<string?>()))
                 .ReturnsAsync(new List<Restaurant> { existingRestaurant });
-        _mockMapper.Setup(m => m.Map(command, existingRestaurant));
         _mockUow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         await _handler.Handle(command, CancellationToken.None);
 
-        _mockMapper.Verify(m => m.Map(command, existingRestaurant), Times.Once);
+        Assert.Equal("Test Restoran", existingRestaurant.Name);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -62,7 +61,10 @@ public class UpdateRestaurantCommandHandlerTests
     {
         UpdateRestaurantCommand command = new UpdateRestaurantCommand { Name = "Test" };
 
-        _mockUow.Setup(u => u.Restaurant.GetAllAsync(It.IsAny<Expression<Func<Restaurant, bool>>>(), true, null))
+        _mockUow.Setup(u => u.Restaurant.GetAllAsync(
+                It.IsAny<Expression<Func<Restaurant, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<string?>()))
                 .ReturnsAsync(new List<Restaurant>());
 
         await Assert.ThrowsAsync<NotFoundException>(() =>

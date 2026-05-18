@@ -5,6 +5,7 @@ using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantId;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using System.Linq.Expressions;
 
@@ -34,8 +35,8 @@ public class GetUserByRestaurantIdCommandHandlerTests
 
         var users = new List<User>
         {
-            new() { Id = "guid-001", FullName = "Garson Ali", UserName = "ali", UserCode = "WTR001", RestaurantId = 5 },
-            new() { Id = "guid-002", FullName = "Garson Veli", UserName = "veli", UserCode = "WTR002", RestaurantId = 5 }
+            User.Create("Garson Ali", "ali", null, null, "WTR001", UserRole.Waiter, 5),
+            User.Create("Garson Veli", "veli", null, null, "WTR002", UserRole.Waiter, 5)
         };
         var expectedDtos = new List<UserDto>
         {

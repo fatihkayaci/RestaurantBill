@@ -31,7 +31,7 @@ public class GetRestaurantByUserIdHandlerTests
     [Fact]
     public async Task Handle_WhenRestaurantExists_ShouldReturnMappedDto()
     {
-        Restaurant restaurant = new() { Id = 1, Name = "Restoran A", UserId = "guid-042" };
+        Restaurant restaurant = Restaurant.Create("guid-042");
         RestaurantDto expectedDto = new() { Name = "Restoran A" };
 
         _mockUow.Setup(u => u.Restaurant.GetAllAsync(It.IsAny<Expression<Func<Restaurant, bool>>>(), false, null))

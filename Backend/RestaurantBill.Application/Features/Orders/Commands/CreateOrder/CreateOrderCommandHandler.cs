@@ -2,9 +2,7 @@ using AutoMapper;
 using MediatR;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
@@ -24,18 +22,12 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
         /// </summary>
         public async Task<OrderDto> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
         {
-            if (request.TableId <= 0)
-                throw new BusinessException("Masa Id'si 0 veya daha küçük olduğundan işlem yapılamıyor.");
-
-            var table = await _uow.Table.GetByIdAsync(request.TableId, true);
+            Table? table = await _uow.Table.GetByIdAsync(request.TableId, true);
             Guard.AgainstNull(table, "Böyle bir Masa bulunamadı.");
 
-            if (table.Status != TableStatus.Available)
-                throw new BusinessException("Seçilen masa şu an hizmet dışı veya dolu durumda.");
-            
-            var order = new Order { TableId = request.TableId, Status = OrderStatus.Active };
-            
-            table.Status = TableStatus.Occupied;
+            table.Occupy();
+
+            Order order = Order.Create(request.TableId);
 
             await _uow.Order.AddAsync(order);
             await _uow.SaveChangesAsync(cancellationToken);

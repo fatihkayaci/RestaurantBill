@@ -1,7 +1,7 @@
 using MediatR;
 using RestaurantBill.Application.Common;
-using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 
@@ -22,38 +22,17 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus
 
         public async Task Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)
         {
-            if (request.OrderId <= 0)
-                throw new BusinessException("Geçersiz sipariş ID.");
-
-            if (!Enum.IsDefined(typeof(OrderStatus), request.Status))
-                throw new BusinessException("Geçersiz sipariş durumu.");
-
-            var newOrderStatus = (OrderStatus)request.Status;
-
-            var order = await _uow.Order.GetByIdAsync(request.OrderId, true, o => o.OrderItems);
+            Order? order = await _uow.Order.GetByIdAsync(request.OrderId, true, o => o.OrderItems);
             Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
 
-            order.Status = newOrderStatus;
-
-            var (fromItemStatus, toItemStatus) = newOrderStatus switch
-            {
-                OrderStatus.Preparing => (OrderItemStatus.Pending,   OrderItemStatus.Preparing),
-                OrderStatus.Ready     => (OrderItemStatus.Preparing, OrderItemStatus.Ready),
-                OrderStatus.Served    => (OrderItemStatus.Ready,     OrderItemStatus.Delivered),
-                _                     => ((OrderItemStatus?)null,    (OrderItemStatus?)null)
-            };
-
-            if (fromItemStatus.HasValue && toItemStatus.HasValue)
-            {
-                foreach (var item in order.OrderItems.Where(i => i.Status == fromItemStatus.Value))
-                    item.Status = toItemStatus.Value;
-            }
+            OrderStatus newStatus = (OrderStatus)request.Status;
+            order.UpdateStatus(newStatus);
 
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _tableNotificationService.SendOrderUpdatedAsync(order.TableId);
 
-            if (newOrderStatus == OrderStatus.Served)
+            if (newStatus == OrderStatus.Served)
                 await _cashierNotificationService.SendOrderServedAsync();
         }
     }

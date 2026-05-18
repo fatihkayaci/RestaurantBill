@@ -1,9 +1,7 @@
 using MediatR;
 using RestaurantBill.Application.Common;
-using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Features.CashRegisters.Commands.AddTransactionToCashRegister;
@@ -21,26 +19,10 @@ public class AddTransactionToCashRegisterCommandHandler : IRequestHandler<AddTra
 
     public async Task Handle(AddTransactionToCashRegisterCommand request, CancellationToken cancellationToken)
     {
-        var register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId, true);
+        CashRegister? register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId, true);
         Guard.AgainstNull(register, "Kasa bulunamadı.");
 
-        if (register!.Status != CashRegisterStatus.Open)
-            throw new BusinessException("Kapalı bir kasaya işlem eklenemez.");
-
-        if (request.Type == CashTransactionType.Out && register.Balance < request.Amount)
-            throw new BusinessException("Kasa bakiyesi bu çıkışı karşılamak için yetersiz.");
-
-        CashTransaction transaction = new CashTransaction
-        {
-            CashRegisterId = request.CashRegisterId,
-            Type = request.Type,
-            Amount = request.Amount,
-            UserId = _currentUser.UserId
-        };
-
-        register.Balance += request.Type == CashTransactionType.In
-            ? request.Amount
-            : -request.Amount;
+        CashTransaction transaction = register.AddTransaction(request.Type, request.Amount, _currentUser.UserId);
 
         await _uow.CashTransaction.AddAsync(transaction);
         await _uow.CashRegister.UpdateAsync(register);

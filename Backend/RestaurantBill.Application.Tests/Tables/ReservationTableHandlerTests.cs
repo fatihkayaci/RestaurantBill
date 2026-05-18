@@ -22,12 +22,13 @@ public class ReservationTableHandlerTests
     }
 
     #region happy paths
+
     [Fact]
     public async Task Handle_WhenValidRequest_ShouldSetTableToReserved()
     {
         var tableId = 1;
         var command = new ReservationTableCommand { TableId = tableId };
-        var table = new Table { Id = tableId, Status = TableStatus.Available };
+        Table table = Table.Create("Masa 1", "", 1);
 
         _mockUow.Setup(u => u.Table.GetByIdAsync(tableId, true))
                 .ReturnsAsync(table);
@@ -37,20 +38,22 @@ public class ReservationTableHandlerTests
         Assert.Equal(TableStatus.Reserved, table.Status);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
     #endregion
 
     #region sad paths
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task Handle_WhenTableIdIsZeroOrNegative_ShouldThrowBusinessException(int invalidId)
+    public async Task Handle_WhenTableIdIsZeroOrNegative_ShouldThrowNotFoundException(int invalidId)
     {
         var command = new ReservationTableCommand { TableId = invalidId };
+        _mockUow.Setup(u => u.Table.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>()))
+                .ReturnsAsync((Table?)null);
 
-        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("id 0 dan küçük veya eşit olamaz", exception.Message);
     }
 
     [Fact]
@@ -66,5 +69,6 @@ public class ReservationTableHandlerTests
 
         Assert.Equal("Böyle bir masa bulunamadı.", exception.Message);
     }
+
     #endregion
 }

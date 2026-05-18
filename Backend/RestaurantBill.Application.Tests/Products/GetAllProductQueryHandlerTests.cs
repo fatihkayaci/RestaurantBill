@@ -32,8 +32,8 @@ public class GetAllProductQueryHandlerTests
     {
         var products = new List<Product>
         {
-            new() { Id = 1, Name = "Lahmacun", Price = 120 },
-            new() { Id = 2, Name = "Ayran", Price = 30 }
+            Product.Create("Lahmacun", 120m, true, "", 1, 1),
+            Product.Create("Ayran", 30m, true, "", 1, 1)
         };
         var expectedDtos = new List<ProductDto>
         {

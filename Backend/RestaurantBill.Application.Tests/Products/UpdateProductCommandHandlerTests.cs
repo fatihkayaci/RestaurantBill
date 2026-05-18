@@ -1,5 +1,4 @@
 using Moq;
-using AutoMapper;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
 using RestaurantBill.Domain.Entities;
@@ -10,24 +9,22 @@ namespace RestaurantBill.Application.Tests.Products;
 public class UpdateProductCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
-    private readonly Mock<IMapper> _mockMapper;
     private readonly UpdateProductCommandHandler _handler;
 
     public UpdateProductCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _mockMapper = new Mock<IMapper>();
-        _handler = new UpdateProductCommandHandler(_mockUow.Object, _mockMapper.Object);
+        _handler = new UpdateProductCommandHandler(_mockUow.Object);
     }
 
     #region happy paths
 
     [Fact]
-    public async Task Handle_WhenValidCommand_ShouldMapAndSaveChanges()
+    public async Task Handle_WhenValidCommand_ShouldUpdateProductAndSaveChanges()
     {
         // --- ARRANGE ---
         var command = new UpdateProductCommand { Id = 1, Name = "Güncellendi", Price = 150, IsActive = true, CategoryId = 2 };
-        var product = new Product { Id = 1, Name = "Eski", Price = 100, IsActive = false };
+        Product product = Product.Create("Eski", 100m, false, "", 1, 1);
 
         _mockUow.Setup(u => u.Product.GetByIdAsync(command.Id, true))
                 .ReturnsAsync(product);
@@ -36,7 +33,9 @@ public class UpdateProductCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // --- ASSERT ---
-        _mockMapper.Verify(m => m.Map(command, product), Times.Once);
+        Assert.Equal("Güncellendi", product.Name);
+        Assert.Equal(150m, product.Price);
+        Assert.True(product.IsActive);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -47,16 +46,16 @@ public class UpdateProductCommandHandlerTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task Handle_WhenIdIsZeroOrNegative_ShouldThrowBusinessException(int invalidId)
+    public async Task Handle_WhenIdIsZeroOrNegative_ShouldThrowNotFoundException(int invalidId)
     {
         // --- ARRANGE ---
         var command = new UpdateProductCommand { Id = invalidId, Name = "Test", Price = 100 };
+        _mockUow.Setup(u => u.Product.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>()))
+                .ReturnsAsync((Product?)null);
 
         // --- ACT & ASSERT ---
-        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("id 0 dan küçük veya eşit olamaz", exception.Message);
     }
 
     [Fact]

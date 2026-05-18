@@ -2,6 +2,7 @@ using Moq;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.CashRegisters.Commands.DeleteCashRegister;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Tests.CashRegisters;
@@ -20,7 +21,7 @@ public class DeleteCashRegisterHandlerTests
     [Fact]
     public async Task Handle_WhenRegisterExists_ShouldDeleteAndSave()
     {
-        var register = new CashRegister { Id = 1, Name = "Cash" };
+        CashRegister register = CashRegister.Create("Cash", 0m, CashRegisterStatus.Open, 1);
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, true)).ReturnsAsync(register);
 
         await _handler.Handle(new DeleteCashRegisterCommand { CashRegisterId = 1 }, CancellationToken.None);

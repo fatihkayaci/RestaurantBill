@@ -24,8 +24,8 @@ public class GetActiveOrderByTableIdHandlerTests
     public async Task Handle_WhenActiveOrderExists_ShouldReturnMappedDto()
     {
         var tableId = 1;
-        var order = new Order { Id = 5, TableId = tableId };
-        var orderDto = new OrderDto { Id = 5, TableId = tableId };
+        Order order = Order.Create(tableId);
+        var orderDto = new OrderDto { TableId = tableId };
 
         _mockUow.Setup(u => u.Order.GetActiveOrderByTableId(tableId, false))
                 .ReturnsAsync(order);
@@ -35,7 +35,6 @@ public class GetActiveOrderByTableIdHandlerTests
 
         var result = await _handler.Handle(new GetActiveOrderByTableIdQuery { TableId = tableId }, CancellationToken.None);
 
-        Assert.Equal(5, result.Id);
         Assert.Equal(tableId, result.TableId);
     }
 

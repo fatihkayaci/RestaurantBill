@@ -1,5 +1,4 @@
 using Moq;
-using AutoMapper;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.Categories.Commands.UpdateCategory;
 using RestaurantBill.Domain.Entities;
@@ -10,24 +9,22 @@ namespace RestaurantBill.Application.Tests.Categories;
 public class UpdateCategoryCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _mockUow;
-    private readonly Mock<IMapper> _mockMapper;
     private readonly UpdateCategoryCommandHandler _handler;
 
     public UpdateCategoryCommandHandlerTests()
     {
         _mockUow = new Mock<IUnitOfWork>();
-        _mockMapper = new Mock<IMapper>();
-        _handler = new UpdateCategoryCommandHandler(_mockUow.Object, _mockMapper.Object);
+        _handler = new UpdateCategoryCommandHandler(_mockUow.Object);
     }
 
     #region happy paths
 
     [Fact]
-    public async Task Handle_WhenValidCommand_ShouldMapAndSaveChanges()
+    public async Task Handle_WhenValidCommand_ShouldRenameAndSaveChanges()
     {
         // --- ARRANGE ---
         var command = new UpdateCategoryCommand { Id = 1, Name = "Yeni İsim" };
-        var category = new Category { Id = 1, Name = "Eski İsim" };
+        Category category = Category.Create("Eski İsim", 1);
 
         _mockUow.Setup(u => u.Category.GetByIdAsync(command.Id, true))
                 .ReturnsAsync(category);
@@ -36,7 +33,7 @@ public class UpdateCategoryCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // --- ASSERT ---
-        _mockMapper.Verify(m => m.Map(command, category), Times.Once);
+        Assert.Equal("Yeni İsim", category.Name);
         _mockUow.Verify(u => u.Category.UpdateAsync(category), Times.Once);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -48,16 +45,16 @@ public class UpdateCategoryCommandHandlerTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task Handle_WhenIdIsZeroOrNegative_ShouldThrowBusinessException(int invalidId)
+    public async Task Handle_WhenIdIsZeroOrNegative_ShouldThrowNotFoundException(int invalidId)
     {
         // --- ARRANGE ---
         var command = new UpdateCategoryCommand { Id = invalidId, Name = "Test" };
+        _mockUow.Setup(u => u.Category.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>()))
+                .ReturnsAsync((Category?)null);
 
         // --- ACT & ASSERT ---
-        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("Güncellenecek ID 0 veya negatif olamaz.", exception.Message);
     }
 
     [Fact]

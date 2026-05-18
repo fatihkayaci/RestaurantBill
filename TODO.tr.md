@@ -51,4 +51,7 @@
 - [ ] **Ürün:** Ürün bazlı durum değişimi backend tarafında da kontrol edilecek.
 - [ ] **Refactor:** cachlemeye bakılacak.
 - [ ] **Anlamak:** Rabbitmq a komple bakılacak.
-- [ ] **Refactor:** isim için döndüğümüz bir tane restaurantdto oluşturulacak şu an isim için bütün bilgileri gönderiyoruz sırf header a yazmak için    
+- [ ] **Refactor:** isim için döndüğümüz bir tane restaurantdto oluşturulacak şu an isim için bütün bilgileri gönderiyoruz sırf header a yazmak için
+- [ ] **Refactor:** expectionları biraz daha arttırmak lazım.
+- [ ] **Refactor:** anemic modelden rich modele dönülecek.
+- [ ] **Refactor [Query]:** Query handler'lardaki `restaurantId <= 0` kontrollerini middleware seviyesinde JWT doğrulamasıyla garanti altına alarak handler'lardan kaldır.

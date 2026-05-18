@@ -28,7 +28,11 @@ public class GetAllTableQueryHandlerTests
     [Fact]
     public async Task Handle_WhenTablesExist_ShouldReturnMappedList()
     {
-        var tables = new List<Table> { new() { Id = 1, Name = "Masa 1" }, new() { Id = 2, Name = "Masa 2" } };
+        var tables = new List<Table>
+        {
+            Table.Create("Masa 1", "", 1),
+            Table.Create("Masa 2", "", 1)
+        };
         var tableDtos = new List<TableDto> { new() { Id = 1 }, new() { Id = 2 } };
 
         _mockUow.Setup(u => u.Table.GetAllAsync(It.IsAny<Expression<Func<Table, bool>>>(), false, null))

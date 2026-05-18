@@ -36,10 +36,10 @@ public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, string>
             switch (data.State)
             {
                 case EntityState.Added:
-                    data.Entity.CreatedAt = DateTime.UtcNow;
+                    data.Entity.SetCreatedAt();
                     break;
                 case EntityState.Modified:
-                    data.Entity.UpdatedAt = DateTime.UtcNow;
+                    data.Entity.SetUpdatedAt();
                     break;
             }
         }

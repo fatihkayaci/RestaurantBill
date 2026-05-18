@@ -5,9 +5,38 @@ namespace RestaurantBill.Domain.Entities
 {
     public class User : IdentityUser
     {
-        public int RestaurantId { get; set; }
-        public required string FullName { get; set; }
-        public required string UserCode { get; set; }
-        public UserRole Role { get; set; } = UserRole.Admin;
+        public int RestaurantId { get; private set; }
+        public string FullName { get; private set; } = string.Empty;
+        public string UserCode { get; private set; } = string.Empty;
+        public UserRole Role { get; private set; } = UserRole.Admin;
+
+        public static User Create(string fullName, string userName, string? email, string? phoneNumber, string userCode, UserRole role, int restaurantId)
+        {
+            return new User
+            {
+                FullName = fullName,
+                UserName = userName,
+                Email = email,
+                PhoneNumber = phoneNumber,
+                UserCode = userCode,
+                Role = role,
+                RestaurantId = restaurantId
+            };
+        }
+
+        public void Update(string fullName, string userName, string? email, string? phoneNumber, string userCode, UserRole role)
+        {
+            FullName = fullName;
+            UserName = userName;
+            Email = email;
+            PhoneNumber = phoneNumber;
+            UserCode = userCode;
+            Role = role;
+        }
+
+        public void AssignRestaurant(int restaurantId)
+        {
+            RestaurantId = restaurantId;
+        }
     }
 }

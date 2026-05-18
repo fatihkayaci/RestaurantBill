@@ -1,8 +1,7 @@
 using RestaurantBill.Domain.Interfaces;
 using MediatR;
-using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Common;
-using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservationToTable
@@ -17,19 +16,13 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservationT
             _uow = uow;
             _tableNotificationService = tableNotificationService;
         }
-        /// <summary>
-        /// Cancels the reservation and sets the table status back to Available.
-        /// </summary>
-        /// <exception cref="BusinessException">Thrown if table ID is zero or less, or if the table is not found.</exception>
+
         public async Task Handle(CancelReservationCommand request, CancellationToken cancellationToken)
         {
-            if (request.TableId <= 0)
-                throw new BusinessException("id 0 dan küçük veya eşit olamaz");
-
-            var table = await _uow.Table.GetByIdAsync(request.TableId, true);
+            Table? table = await _uow.Table.GetByIdAsync(request.TableId, true);
             Guard.AgainstNull(table, "Böyle bir masa bulunamadı.");
 
-            table.Status = TableStatus.Available;
+            table.Release();
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _tableNotificationService.SendTableStatusChangedAsync(table.Id, (int)table.Status);

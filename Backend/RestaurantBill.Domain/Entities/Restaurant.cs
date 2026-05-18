@@ -2,12 +2,29 @@ namespace RestaurantBill.Domain.Entities
 {
     public class Restaurant : BaseEntity
     {
-        public string UserId { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public string MobilePhoneNumber { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string City { get; set; } = string.Empty;
-        public string District { get; set; } = string.Empty;
+        public string UserId { get; private set; } = string.Empty;
+        public string Name { get; private set; } = string.Empty;
+        public string PhoneNumber { get; private set; } = string.Empty;
+        public string MobilePhoneNumber { get; private set; } = string.Empty;
+        public string Email { get; private set; } = string.Empty;
+        public string City { get; private set; } = string.Empty;
+        public string District { get; private set; } = string.Empty;
+
+        protected Restaurant() { }
+
+        public static Restaurant Create(string userId)
+        {
+            return new Restaurant { UserId = userId };
+        }
+
+        public void Update(string name, string phoneNumber, string mobilePhoneNumber, string email, string city, string district)
+        {
+            Name = name;
+            PhoneNumber = phoneNumber;
+            MobilePhoneNumber = mobilePhoneNumber;
+            Email = email;
+            City = city;
+            District = district;
+        }
     }
 }

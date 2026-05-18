@@ -25,7 +25,7 @@ public class GetTableByIdHandlerTests
     public async Task Handle_WhenTableExists_ShouldReturnMappedDto()
     {
         var tableId = 1;
-        var table = new Table { Id = tableId, Name = "Masa 1" };
+        Table table = Table.Create("Masa 1", "", 1);
         var tableDto = new TableDto { Id = tableId };
 
         _mockUow.Setup(u => u.Table.GetByIdAsync(tableId, false))

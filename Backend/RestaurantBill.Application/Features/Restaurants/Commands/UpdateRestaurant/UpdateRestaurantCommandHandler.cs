@@ -1,7 +1,6 @@
 using RestaurantBill.Domain.Entities;
 using MediatR;
 using RestaurantBill.Domain.Interfaces;
-using AutoMapper;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Interfaces;
 
@@ -10,13 +9,11 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaur
     public class UpdateRestaurantCommandHandler : IRequestHandler<UpdateRestaurantCommand>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUser;
 
-        public UpdateRestaurantCommandHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser)
+        public UpdateRestaurantCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
         {
             _uow = uow;
-            _mapper = mapper;
             _currentUser = currentUser;
         }
 
@@ -28,7 +25,7 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaur
             Restaurant restaurant = restaurants.FirstOrDefault()
                 ?? throw new NotFoundException("Restoran bulunamadı.");
 
-            _mapper.Map(request, restaurant);
+            restaurant.Update(request.Name, request.PhoneNumber, request.MobilePhoneNumber, request.Email, request.City, request.District);
 
             await _uow.SaveChangesAsync(cancellationToken);
         }

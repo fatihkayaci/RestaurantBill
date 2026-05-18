@@ -4,6 +4,7 @@ using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Tests.Tables;
@@ -25,12 +26,13 @@ public class OpenTableHandlerTests
     }
 
     #region happy paths
+
     [Fact]
     public async Task Handle_WhenValidRequest_ShouldSetTableOccupiedAndCreateOrder()
     {
         var tableId = 1;
         var command = new OpenTableCommand { TableId = tableId };
-        var table = new Table { Id = tableId, Status = TableStatus.Available };
+        Table table = Table.Create("Masa 1", "", 1);
 
         _mockUow.Setup(u => u.Table.GetByIdAsync(tableId, true))
                 .ReturnsAsync(table);
@@ -43,20 +45,22 @@ public class OpenTableHandlerTests
         _mockUow.Verify(u => u.Order.AddAsync(It.Is<Order>(o => o.TableId == tableId)), Times.Once);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
     #endregion
 
     #region sad paths
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task Handle_WhenTableIdIsZeroOrNegative_ShouldThrowBusinessException(int invalidId)
+    public async Task Handle_WhenTableIdIsZeroOrNegative_ShouldThrowNotFoundException(int invalidId)
     {
         var command = new OpenTableCommand { TableId = invalidId };
+        _mockUow.Setup(u => u.Table.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>()))
+                .ReturnsAsync((Table?)null);
 
-        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("id 0 dan küçük veya eşit olamaz", exception.Message);
     }
 
     [Fact]
@@ -74,19 +78,19 @@ public class OpenTableHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenTableIsOccupied_ShouldThrowBusinessException()
+    public async Task Handle_WhenTableIsOccupied_ShouldThrowDomainException()
     {
         var tableId = 1;
         var command = new OpenTableCommand { TableId = tableId };
-        var table = new Table { Id = tableId, Status = TableStatus.Occupied };
+        Table table = Table.Create("Masa 1", "", 1);
+        table.Occupy();
 
         _mockUow.Setup(u => u.Table.GetByIdAsync(tableId, true))
                 .ReturnsAsync(table);
 
-        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+        await Assert.ThrowsAsync<DomainException>(() =>
             _handler.Handle(command, CancellationToken.None));
-
-        Assert.Equal("Bu masa zaten dolu!", exception.Message);
     }
+
     #endregion
 }

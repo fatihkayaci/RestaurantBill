@@ -1,9 +1,7 @@
 using RestaurantBill.Domain.Interfaces;
-using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Common;
-
 using MediatR;
-using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CancelOrder
@@ -24,17 +22,15 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CancelOrder
         /// <exception cref="BusinessException">Thrown if order ID is zero or less, or if the order/table is not found.</exception>
         public async Task Handle(CancelOrderCommand request, CancellationToken cancellationToken)
         {
-            if (request.OrderId <= 0)
-                throw new BusinessException("id 0 dan küçük veya eşit olamaz");
-            
-            var order = await _uow.Order.GetByIdAsync(request.OrderId, true);
+            Order? order = await _uow.Order.GetByIdAsync(request.OrderId, true);
             Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
 
-            var table = await _uow.Table.GetByIdAsync(order.TableId, true);
+            Table? table = await _uow.Table.GetByIdAsync(order.TableId, true);
             Guard.AgainstNull(table, "Bu siparişe ait bir masa bulunamadı.");
 
-            order.Status = OrderStatus.Cancelled;
-            table.Status = TableStatus.Available;
+            order.Cancel();
+            table.Release();
+
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _tableNotificationService.SendTableStatusChangedAsync(table.Id, (int)table.Status);

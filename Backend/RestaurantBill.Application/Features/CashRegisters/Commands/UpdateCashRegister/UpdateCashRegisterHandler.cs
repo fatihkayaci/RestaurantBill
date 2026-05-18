@@ -18,9 +18,7 @@ public class UpdateCashRegisterHandler : IRequestHandler<UpdateCashRegisterComma
         var register = await _uow.CashRegister.GetByIdAsync(request.Id, true);
         Guard.AgainstNull(register, "Böyle bir kasa bulunamadı");
 
-        register!.Name = request.Name;
-        register.Balance = request.Balance;
-        register.Status = request.Status;
+        register!.Update(request.Name, request.Balance, request.Status);
 
         await _uow.CashRegister.UpdateAsync(register);
         await _uow.SaveChangesAsync(cancellationToken);

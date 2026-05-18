@@ -1,5 +1,4 @@
 using MediatR;
-using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
@@ -20,15 +19,7 @@ public class CreateCashRegisterHandler : IRequestHandler<CreateCashRegisterComma
     public async Task Handle(CreateCashRegisterCommand request, CancellationToken cancellationToken)
     {
         int restaurantId = _currentUser.RestaurantId;
-        if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
-        
-        CashRegister register = new CashRegister
-        {
-            Name = request.Name,
-            Balance = request.OpeningBalance,
-            Status = request.Status,
-            RestaurantId = restaurantId
-        };
+        CashRegister register = CashRegister.Create(request.Name, request.OpeningBalance, request.Status, restaurantId);
 
         await _uow.CashRegister.AddAsync(register);
         await _uow.SaveChangesAsync(cancellationToken);

@@ -17,8 +17,6 @@ public class MappingProfile : Profile
     {
         // Product
         CreateMap<ProductDto, Product>().ReverseMap();
-        CreateMap<CreateProductCommand, Product>().ReverseMap();
-        CreateMap<UpdateProductCommand, Product>().ReverseMap();
 
         // Order
         CreateMap<OrderDto, Order>().ReverseMap();
@@ -42,8 +40,6 @@ public class MappingProfile : Profile
 
         // Category
         CreateMap<CategoryDto, Category>().ReverseMap();
-        CreateMap<CreateCategoryCommand, Category>().ReverseMap();
-        CreateMap<UpdateCategoryCommand, Category>().ReverseMap();
 
         // Table
         CreateMap<TableDto, Table>().ReverseMap();
@@ -56,11 +52,9 @@ public class MappingProfile : Profile
         CreateMap<UserDto, User>().ReverseMap();
         CreateMap<CreateUserDto, User>().ReverseMap();
         CreateMap<UpdateUserDto, User>().ReverseMap();
-        CreateMap<CreateUserCommand, User>().ReverseMap();
 
         // Restaurant
         CreateMap<RestaurantDto, Restaurant>().ReverseMap();
-        CreateMap<UpdateRestaurantCommand, Restaurant>().ReverseMap();
 
         
     }

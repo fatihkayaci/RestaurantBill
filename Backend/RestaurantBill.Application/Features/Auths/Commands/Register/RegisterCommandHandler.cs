@@ -26,37 +26,22 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
         /// <exception cref="BusinessException">Thrown when user creation fails due to validation errors (e.g., weak password, duplicate user).</exception>
         public async Task Handle(RegisterCommand request, CancellationToken cancellationToken)
         {
-            var user = new User
-            {
-                FullName = request.FullName,
-                UserName = request.UserName,
-                Email = request.Email,
-                UserCode = $"USR-{Guid.NewGuid().ToString("N")[..6].ToUpper()}",
-                Role = UserRole.Admin
-            };
+            string userCode = $"USR-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
+            User user = User.Create(request.FullName, request.UserName, request.Email, null, userCode, UserRole.Admin, restaurantId: 0);
 
-            var result = await _userManager.CreateAsync(user, request.Password);
+            IdentityResult result = await _userManager.CreateAsync(user, request.Password);
 
             if (!result.Succeeded)
             {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                string errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 throw new BusinessException($"Kayıt başarısız: {errors}");
             }
-            var restaurant = new Restaurant
-            {
-                UserId = user.Id,
-                Name = "",
-                PhoneNumber = "",
-                MobilePhoneNumber = "",
-                Email = "",
-                City = "",
-                District = "",
-            };
-            
+
+            Restaurant restaurant = Restaurant.Create(user.Id);
             await _uow.Restaurant.AddAsync(restaurant);
             await _uow.SaveChangesAsync(cancellationToken);
-            
-            user.RestaurantId = restaurant.Id;
+
+            user.AssignRestaurant(restaurant.Id);
             await _userManager.UpdateAsync(user);
             
         }

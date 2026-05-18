@@ -39,15 +39,8 @@ public class LoginCommandHandlerTests
     public async Task Handle_WhenValidCredentialsAndRestaurantIdSet_ShouldReturnJwtToken()
     {
         var command = new LoginCommand { UserName = "testuser", Password = "Test123!" };
-        var user = new User
-        {
-            Id = "guid-001",
-            UserName = "testuser",
-            FullName = "Test User",
-            UserCode = "USR001",
-            RestaurantId = 5,
-            Role = UserRole.Admin
-        };
+        User user = User.Create("Test User", "testuser", null, null, "USR001", UserRole.Admin, 5);
+        user.Id = "guid-001";
 
         _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName)).ReturnsAsync(user);
         _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password)).ReturnsAsync(true);
@@ -63,16 +56,10 @@ public class LoginCommandHandlerTests
     public async Task Handle_WhenRestaurantIdIsZero_ShouldFetchFromRepositoryAndReturnToken()
     {
         var command = new LoginCommand { UserName = "testuser", Password = "Test123!" };
-        var user = new User
-        {
-            Id = "guid-002",
-            UserName = "testuser",
-            FullName = "Test User",
-            UserCode = "USR002",
-            RestaurantId = 0,
-            Role = UserRole.Admin
-        };
-        var restaurant = new Restaurant { Id = 10, UserId = user.Id, Name = "Test Restaurant" };
+        User user = User.Create("Test User", "testuser", null, null, "USR002", UserRole.Admin, 0);
+        user.Id = "guid-002";
+
+        Restaurant restaurant = Restaurant.Create(user.Id);
 
         _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName)).ReturnsAsync(user);
         _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password)).ReturnsAsync(true);
@@ -90,15 +77,8 @@ public class LoginCommandHandlerTests
     public async Task Handle_WhenRestaurantIdIsZeroAndNoRestaurantFound_ShouldReturnTokenWithRestaurantIdZero()
     {
         var command = new LoginCommand { UserName = "testuser", Password = "Test123!" };
-        var user = new User
-        {
-            Id = "guid-003",
-            UserName = "testuser",
-            FullName = "Test User",
-            UserCode = "USR003",
-            RestaurantId = 0,
-            Role = UserRole.Admin
-        };
+        User user = User.Create("Test User", "testuser", null, null, "USR003", UserRole.Admin, 0);
+        user.Id = "guid-003";
 
         _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName)).ReturnsAsync(user);
         _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password)).ReturnsAsync(true);
@@ -132,15 +112,8 @@ public class LoginCommandHandlerTests
     public async Task Handle_WhenPasswordIsWrong_ShouldThrowBusinessException()
     {
         var command = new LoginCommand { UserName = "testuser", Password = "WrongPassword!" };
-        var user = new User
-        {
-            Id = "guid-001",
-            UserName = "testuser",
-            FullName = "Test User",
-            UserCode = "USR001",
-            RestaurantId = 5,
-            Role = UserRole.Admin
-        };
+        User user = User.Create("Test User", "testuser", null, null, "USR001", UserRole.Admin, 5);
+        user.Id = "guid-001";
 
         _mockUserManager.Setup(um => um.FindByNameAsync(command.UserName)).ReturnsAsync(user);
         _mockUserManager.Setup(um => um.CheckPasswordAsync(user, command.Password)).ReturnsAsync(false);

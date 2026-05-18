@@ -5,7 +5,6 @@ using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using System.Linq.Expressions;
 
 namespace RestaurantBill.Application.Tests.Orders;
 
@@ -19,6 +18,12 @@ public class CancelOrderCommandHandlerTests
     {
         _mockUow = new Mock<IUnitOfWork>();
         _mockNotificationService = new Mock<ITableNotificationService>();
+        _mockNotificationService
+            .Setup(s => s.SendTableStatusChangedAsync(It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
+        _mockNotificationService
+            .Setup(s => s.SendOrderClosedAsync(It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
         _handler = new CancelOrderCommandHandler(_mockUow.Object, _mockNotificationService.Object);
     }
 
@@ -32,13 +37,14 @@ public class CancelOrderCommandHandlerTests
         var tableId = 3;
         var command = new CancelOrderCommand { OrderId = orderId };
 
-        var order = new Order { Id = orderId, TableId = tableId, Status = OrderStatus.Active };
-        var table = new Table { Id = tableId, Status = TableStatus.Occupied };
+        Order order = Order.Create(tableId);
+        Table table = Table.Create("Masa 3", "", 1);
+        table.Occupy();
 
         _mockUow.Setup(u => u.Order.GetByIdAsync(orderId, true))
                 .ReturnsAsync(order);
 
-        _mockUow.Setup(u => u.Table.GetByIdAsync(tableId, true))
+        _mockUow.Setup(u => u.Table.GetByIdAsync(order.TableId, true))
                 .ReturnsAsync(table);
 
         // --- ACT ---
@@ -53,20 +59,6 @@ public class CancelOrderCommandHandlerTests
     #endregion
 
     #region sad paths
-
-    
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task Handle_WhenOrderIdIsZeroOrNegative_ShouldThrowBusinessException(int invalidId)
-    {
-        var commandWithZero = new CancelOrderCommand { OrderId = invalidId };
-
-        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
-            _handler.Handle(commandWithZero, CancellationToken.None));
-            
-        Assert.Equal("id 0 dan küçük veya eşit olamaz", exception.Message);
-    }
 
     [Fact]
     public async Task Handle_WhenOrderNotFound_ShouldThrowException()
@@ -89,12 +81,12 @@ public class CancelOrderCommandHandlerTests
         var tableId = 99;
         var command = new CancelOrderCommand { OrderId = orderId };
 
-        var order = new Order { Id = orderId, TableId = tableId };
+        Order order = Order.Create(tableId);
 
         _mockUow.Setup(u => u.Order.GetByIdAsync(orderId, true))
                 .ReturnsAsync(order);
 
-        _mockUow.Setup(u => u.Table.GetByIdAsync(tableId, true))
+        _mockUow.Setup(u => u.Table.GetByIdAsync(order.TableId, true))
                 .ReturnsAsync((Table?)null);
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(() =>

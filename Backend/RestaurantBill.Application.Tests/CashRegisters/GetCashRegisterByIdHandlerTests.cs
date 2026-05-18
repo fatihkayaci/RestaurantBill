@@ -4,6 +4,7 @@ using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Exceptions;
 using RestaurantBill.Application.Features.CashRegisters.Queries.GetCashRegisterById;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Tests.CashRegisters;
@@ -24,7 +25,7 @@ public class GetCashRegisterByIdHandlerTests
     [Fact]
     public async Task Handle_WhenRegisterExists_ShouldReturnMappedDto()
     {
-        var register = new CashRegister { Id = 1, Name = "Cash" };
+        CashRegister register = CashRegister.Create("Cash", 0m, CashRegisterStatus.Open, 1);
         var dto = new CashRegisterDto { Id = 1, Name = "Cash" };
 
         _mockUow.Setup(u => u.CashRegister.GetByIdAsync(1, false)).ReturnsAsync(register);

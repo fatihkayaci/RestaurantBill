@@ -31,8 +31,8 @@ public class GetAllCategoryQueryHandlerTests
     {
         var categories = new List<Category>
         {
-            new() { Id = 1, Name = "İçecekler" },
-            new() { Id = 2, Name = "Yiyecekler" }
+            Category.Create("İçecekler", 1),
+            Category.Create("Yiyecekler", 1)
         };
         var expectedDtos = new List<CategoryDto>
         {
