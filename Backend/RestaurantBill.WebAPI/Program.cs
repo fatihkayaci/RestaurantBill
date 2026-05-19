@@ -27,7 +27,6 @@ builder.Services.AddSwaggerWithJwt()
                 .AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>())
                 .AddInfrastructureServices()
                 .AddCurrentUserService();
-await builder.Services.AddRabbitMQAsync(builder.Configuration);
 
 var app = builder.Build();
 
