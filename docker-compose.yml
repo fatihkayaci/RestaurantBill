@@ -12,13 +12,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
     environment:
       - ConnectionStrings__DefaultConnection=Host=database;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
-      - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Username=${RABBITMQ_USER}
-      - RabbitMQ__Password=${RABBITMQ_PASS}
       - ASPNETCORE_ENVIRONMENT=Production
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
       
@@ -51,23 +46,5 @@ services:
       timeout: 5s
       retries: 10
 
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: restaurant_rabbitmq
-    environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
-    ports:
-      - "5672:5672" # communicate port number
-      - "15672:15672" # admin panel port number
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-
 volumes:
   pg_data:
-  rabbitmq_data:
