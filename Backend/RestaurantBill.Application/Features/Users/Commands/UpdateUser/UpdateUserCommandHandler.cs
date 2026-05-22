@@ -19,7 +19,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 
         public async Task Handle(UpdateUserCommand request, CancellationToken cancellationToken)
         {
-            User user = await _userManager.FindByIdAsync(request.UserId.ToString())
+            User user = await _userManager.FindByIdAsync(request.UserId)
                 ?? throw new NotFoundException("Kullanıcı bulunamadı.");
 
             user.Update(request.FullName, request.UserName, request.Email, request.PhoneNumber, request.UserCode, request.Role);

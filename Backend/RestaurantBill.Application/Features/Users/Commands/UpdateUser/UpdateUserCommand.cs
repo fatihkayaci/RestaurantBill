@@ -5,7 +5,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 {
     public class UpdateUserCommand : IRequest
     {
-        public int UserId { get; set; }
+        public string UserId { get; set; } = string.Empty;
         public required string FullName { get; set; }
         public required string UserName { get; set; }
         public string? Email { get; set; }

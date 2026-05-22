@@ -33,7 +33,7 @@ export const userService = {
             Role: data.role
         });
     },
-    deleteUser: async (id: number) => {
+    deleteUser: async (id: string) => {
         await api.delete(`/user/${id}`);
     },
 };

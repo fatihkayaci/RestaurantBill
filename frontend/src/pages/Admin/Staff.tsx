@@ -16,8 +16,8 @@ import axios from "axios";
 export default function Staff() {
     const roleMap: Record<number, string> = {
         1: "Admin",
-        2: "Kasiyer",
-        3: "Garson",
+        2: "Garson",
+        3: "Kasiyer",
         4: "Mutfak"
     };
     const [users, setUsers] = useState<User[]>([]);
@@ -60,7 +60,7 @@ export default function Staff() {
         setIsModalOpen(true);
     };
 
-    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
     const handleDelete = async () => {
         if (deleteTargetId === null) return;
@@ -103,6 +103,7 @@ export default function Staff() {
         setFieldErrors({});
         try {
             if (editUser) {
+                console.log(form);
                 await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash });
             } else {
                 await userService.createUser(form);

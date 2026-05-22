@@ -1,5 +1,5 @@
 export interface User {
-    id: number;
+    id: string;
     fullName: string;
     userName: string;
     email?: string;
@@ -19,7 +19,7 @@ export interface CreateUser {
 }
 
 export interface UpdateUser {
-    id: number;
+    id: string;
     fullName: string;
     userName: string;
     email?: string;

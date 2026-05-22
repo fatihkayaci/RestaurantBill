@@ -55,3 +55,5 @@
 - [ ] **Refactor:** expectionları biraz daha arttırmak lazım.
 - [ ] **Refactor:** anemic modelden rich modele dönülecek.
 - [ ] **Refactor [Query]:** Query handler'lardaki `restaurantId <= 0` kontrollerini middleware seviyesinde JWT doğrulamasıyla garanti altına alarak handler'lardan kaldır.
+- [ ] **Refactor:** kullanıcı giriş yaptıysa ve admin rol değişikliği yaptıysa giriş yapmış kullanıcıyı uyarı verip yönlendirmesi lazım login sayfasına.
+- [ ] 
