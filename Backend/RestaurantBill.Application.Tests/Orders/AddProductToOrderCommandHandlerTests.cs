@@ -1,11 +1,11 @@
-using MediatR;
+﻿using MediatR;
 using Moq;
 using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
 using System.Linq.Expressions;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Application.Tests.Orders;

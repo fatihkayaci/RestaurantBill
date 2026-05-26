@@ -43,12 +43,6 @@ public class CashRegister : BaseEntity
 
         Balance += type == CashTransactionType.In ? amount : -amount;
 
-        return new CashTransaction
-        {
-            CashRegisterId = Id,
-            Type = type,
-            Amount = amount,
-            UserId = userId
-        };
+        return CashTransaction.Create(Id, type, amount, userId);
     }
 }

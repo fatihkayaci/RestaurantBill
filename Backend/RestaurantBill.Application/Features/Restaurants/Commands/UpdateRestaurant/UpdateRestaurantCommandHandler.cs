@@ -1,7 +1,7 @@
-using RestaurantBill.Domain.Entities;
+﻿using RestaurantBill.Domain.Entities;
 using MediatR;
 using RestaurantBill.Domain.Interfaces;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant

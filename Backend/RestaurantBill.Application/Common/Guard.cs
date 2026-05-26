@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Application.Common;
 

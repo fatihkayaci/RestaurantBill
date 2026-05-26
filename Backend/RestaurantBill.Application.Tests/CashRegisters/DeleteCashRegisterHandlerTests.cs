@@ -1,5 +1,5 @@
-using Moq;
-using RestaurantBill.Application.Exceptions;
+﻿using Moq;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Features.CashRegisters.Commands.DeleteCashRegister;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;

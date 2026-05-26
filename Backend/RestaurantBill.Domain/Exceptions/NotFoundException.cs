@@ -1,7 +1,7 @@
-namespace RestaurantBill.Application.Exceptions
+namespace RestaurantBill.Domain.Exceptions
 {
     public class NotFoundException : BaseException
     {
         public NotFoundException(string message) : base(message, 404) { }
-    }    
+    }
 }

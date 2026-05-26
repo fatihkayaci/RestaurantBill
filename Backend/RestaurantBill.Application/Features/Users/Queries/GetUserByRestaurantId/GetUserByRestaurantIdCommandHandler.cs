@@ -1,8 +1,8 @@
-using MediatR;
+﻿using MediatR;
 using AutoMapper;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantId

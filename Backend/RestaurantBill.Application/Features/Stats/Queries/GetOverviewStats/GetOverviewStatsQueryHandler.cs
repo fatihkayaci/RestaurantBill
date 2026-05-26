@@ -1,6 +1,6 @@
-using MediatR;
+﻿using MediatR;
 using RestaurantBill.Application.DTOs.Stats;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Interfaces;
 

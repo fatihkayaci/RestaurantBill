@@ -1,6 +1,6 @@
-using Moq;
+﻿using Moq;
 using Microsoft.AspNetCore.Identity;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Features.Users.Commands.DeleteUser;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
