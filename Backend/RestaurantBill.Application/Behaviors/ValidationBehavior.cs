@@ -30,7 +30,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
             {
                 string ilkHataMesaji = failures.First().ErrorMessage;
 
-                throw new RestaurantBill.Application.Exceptions.ValidationException(ilkHataMesaji);
+                throw new RestaurantBill.Domain.Exceptions.ValidationException(ilkHataMesaji);
             }
         }
 

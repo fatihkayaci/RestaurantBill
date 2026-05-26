@@ -1,6 +1,6 @@
-using Moq;
+﻿using Moq;
 using Microsoft.AspNetCore.Identity;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Features.Auths.Commands.Register;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;

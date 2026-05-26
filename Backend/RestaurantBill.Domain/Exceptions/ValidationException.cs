@@ -1,4 +1,4 @@
-namespace RestaurantBill.Application.Exceptions
+namespace RestaurantBill.Domain.Exceptions
 {
     public class ValidationException : BaseException
     {

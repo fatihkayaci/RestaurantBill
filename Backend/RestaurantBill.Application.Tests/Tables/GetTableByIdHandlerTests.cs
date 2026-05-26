@@ -1,7 +1,7 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Moq;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Features.Tables.Queries.GetTableById;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;

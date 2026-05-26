@@ -1,8 +1,8 @@
-using AutoMapper;
+﻿using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 

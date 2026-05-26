@@ -1,7 +1,7 @@
-using Moq;
+﻿using Moq;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using AutoMapper;

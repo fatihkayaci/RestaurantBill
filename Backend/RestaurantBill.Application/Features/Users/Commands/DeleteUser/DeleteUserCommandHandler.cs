@@ -1,8 +1,8 @@
-using RestaurantBill.Domain.Interfaces;
+﻿using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Application.Features.Users.Commands.DeleteUser
 {

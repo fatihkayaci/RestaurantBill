@@ -1,6 +1,6 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
-using RestaurantBill.Application.Exceptions;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Exceptions;
 namespace RestaurantBill.WebAPI.Middlewares;
 
