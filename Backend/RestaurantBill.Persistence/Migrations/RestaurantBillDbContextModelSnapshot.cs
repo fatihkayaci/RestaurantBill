@@ -192,7 +192,7 @@ namespace RestaurantBill.Persistence.Migrations
                     b.ToTable("CashRegisters");
                 });
 
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.CashTransaction", b =>
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.CashRegister+CashTransaction", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -618,7 +618,7 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.CashTransaction", b =>
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.CashRegister+CashTransaction", b =>
                 {
                     b.HasOne("RestaurantBill.Domain.Entities.CashRegister", "CashRegister")
                         .WithMany()

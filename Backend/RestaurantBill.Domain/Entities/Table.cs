@@ -14,6 +14,9 @@ namespace RestaurantBill.Domain.Entities
 
         public static Table Create(string name, string note, int restaurantId)
         {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new DomainException("Masa adı boş olamaz.");
+
             if (restaurantId <= 0)
                 throw new DomainException("Geçersiz restoran ID'si.");
 
@@ -27,6 +30,9 @@ namespace RestaurantBill.Domain.Entities
 
         public void Update(string name, string note)
         {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new DomainException("Masa adı boş olamaz.");
+
             Name = name;
             Note = note;
         }

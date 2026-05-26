@@ -18,6 +18,9 @@ namespace RestaurantBill.Domain.Entities
 
         public static Order Create(int tableId)
         {
+            if (tableId <= 0)
+                throw new DomainException("Geçersiz masa ID'si.");
+
             return new Order
             {
                 TableId = tableId,

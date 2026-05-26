@@ -10,6 +10,9 @@ public class Category : BaseEntity
 
     public static Category Create(string name, int restaurantId)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Kategori adı boş olamaz.");
+
         if (restaurantId <= 0)
             throw new DomainException("Geçersiz restoran ID'si.");
 
@@ -22,6 +25,9 @@ public class Category : BaseEntity
 
     public void Rename(string name)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Kategori adı boş olamaz.");
+
         Name = name;
     }
 

@@ -6,7 +6,7 @@ namespace RestaurantBill.Persistence.Context;
 
 public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, string>
 {
-    public RestaurantBillDbContext(DbContextOptions<RestaurantBillDbContext> options) 
+    public RestaurantBillDbContext(DbContextOptions<RestaurantBillDbContext> options)
     : base(options)
     {
     }
@@ -18,7 +18,7 @@ public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, string>
     public DbSet<Restaurant> Restaurants { get; set; }
     public DbSet<Table> Tables { get; set; }
     public DbSet<CashRegister> CashRegisters { get; set; }
-    public DbSet<CashTransaction> CashTransactions { get; set; }
+    public DbSet<CashRegister.CashTransaction> CashTransactions { get; set; }
     // db configurations =>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,7 +26,7 @@ public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, string>
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(RestaurantBillDbContext).Assembly);
     }
-    
+
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var datas = ChangeTracker.Entries<BaseEntity>();

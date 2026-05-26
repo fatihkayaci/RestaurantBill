@@ -14,6 +14,12 @@ public class CashRegister : BaseEntity
 
     public static CashRegister Create(string name, decimal openingBalance, CashRegisterStatus status, int restaurantId)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Kasa adı boş olamaz.");
+
+        if (openingBalance < 0)
+            throw new DomainException("Açılış bakiyesi negatif olamaz.");
+
         if (restaurantId <= 0)
             throw new DomainException("Geçersiz restoran ID'si.");
 
@@ -28,6 +34,12 @@ public class CashRegister : BaseEntity
 
     public void Update(string name, decimal balance, CashRegisterStatus status)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Kasa adı boş olamaz.");
+
+        if (balance < 0)
+            throw new DomainException("Bakiye negatif olamaz.");
+
         Name = name;
         Balance = balance;
         Status = status;
@@ -44,5 +56,27 @@ public class CashRegister : BaseEntity
         Balance += type == CashTransactionType.In ? amount : -amount;
 
         return CashTransaction.Create(Id, type, amount, userId);
+    }
+
+    public class CashTransaction : BaseEntity
+    {
+        public CashTransactionType Type { get; private set; }
+        public decimal Amount { get; private set; }
+        public string UserId { get; private set; } = string.Empty;
+        public int CashRegisterId { get; private set; }
+        public CashRegister CashRegister { get; private set; } = default!;
+
+        protected CashTransaction() { }
+
+        internal static CashTransaction Create(int cashRegisterId, CashTransactionType type, decimal amount, string userId)
+        {
+            return new CashTransaction
+            {
+                CashRegisterId = cashRegisterId,
+                Type = type,
+                Amount = amount,
+                UserId = userId
+            };
+        }
     }
 }

@@ -16,6 +16,15 @@ namespace RestaurantBill.Domain.Entities
 
         internal static OrderItem Create(int productId, decimal unitPrice, int quantity, Product product)
         {
+            if (productId <= 0)
+                throw new DomainException("Geçersiz ürün ID'si.");
+
+            if (unitPrice < 0)
+                throw new DomainException("Birim fiyat negatif olamaz.");
+
+            if (quantity < 0)
+                throw new DomainException("Miktar negatif olamaz.");
+
             return new OrderItem
             {
                 ProductId = productId,
