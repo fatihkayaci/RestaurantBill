@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Domain.Entities
 {
@@ -12,6 +13,15 @@ namespace RestaurantBill.Domain.Entities
 
         public static User Create(string fullName, string userName, string? email, string? phoneNumber, string userCode, UserRole role, int restaurantId)
         {
+            if (string.IsNullOrWhiteSpace(fullName))
+                throw new DomainException("Ad soyad boş bırakılamaz.");
+
+            if (string.IsNullOrWhiteSpace(userName))
+                throw new DomainException("Kullanıcı adı boş bırakılamaz.");
+
+            if (string.IsNullOrWhiteSpace(userCode))
+                throw new DomainException("Kullanıcı kodu boş bırakılamaz.");
+
             return new User
             {
                 FullName = fullName,
@@ -26,6 +36,15 @@ namespace RestaurantBill.Domain.Entities
 
         public void Update(string fullName, string userName, string? email, string? phoneNumber, string userCode, UserRole role)
         {
+            if (string.IsNullOrWhiteSpace(fullName))
+                throw new DomainException("Ad soyad boş bırakılamaz.");
+
+            if (string.IsNullOrWhiteSpace(userName))
+                throw new DomainException("Kullanıcı adı boş bırakılamaz.");
+
+            if (string.IsNullOrWhiteSpace(userCode))
+                throw new DomainException("Kullanıcı kodu boş bırakılamaz.");
+
             FullName = fullName;
             UserName = userName;
             Email = email;

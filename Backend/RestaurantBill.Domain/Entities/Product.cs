@@ -16,6 +16,15 @@ namespace RestaurantBill.Domain.Entities
 
         public static Product Create(string name, decimal price, bool isActive, string imageUrl, int categoryId, int restaurantId)
         {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new DomainException("Ürün adı boş olamaz.");
+
+            if (price <= 0)
+                throw new DomainException("Fiyat 0'dan büyük olmalıdır.");
+
+            if (categoryId <= 0)
+                throw new DomainException("Geçersiz kategori ID'si.");
+
             if (restaurantId <= 0)
                 throw new DomainException("Geçersiz restoran ID'si.");
 
@@ -32,6 +41,15 @@ namespace RestaurantBill.Domain.Entities
 
         public void Update(string name, decimal price, bool isActive, int categoryId)
         {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new DomainException("Ürün adı boş olamaz.");
+
+            if (price <= 0)
+                throw new DomainException("Fiyat 0'dan büyük olmalıdır.");
+
+            if (categoryId <= 0)
+                throw new DomainException("Geçersiz kategori ID'si.");
+
             Name = name;
             Price = price;
             IsActive = isActive;

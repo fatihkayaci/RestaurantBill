@@ -21,20 +21,8 @@ public class MappingProfile : Profile
         // Order
         CreateMap<OrderDto, Order>().ReverseMap();
         CreateMap<CreateOrderCommand, Order>().ReverseMap();
-        
-        #region if database column name different than createOrderCommand use this way.
-        /*
-            dest (Destination) for order
-            src (source) for command
 
-            CreateMap<CreateOrderCommand, Order>()
-            .ForMember(dest => dest.TableId, opt => opt.MapFrom(src => src.MasaNo))
-            .ForMember(dest => dest.Note, opt => opt.MapFrom(src => src.MusteriNotu))
-            .ReverseMap(); 
-        */
-        #endregion
-
-        // OrderItem (En kritik yer burası)
+        // OrderItem
         CreateMap<OrderItemDto, OrderItem>().ReverseMap();
         CreateMap<CreateOrderItemDto, OrderItem>().ReverseMap();
 
@@ -46,7 +34,7 @@ public class MappingProfile : Profile
 
         // CashRegister
         CreateMap<CashRegisterDto, CashRegister>().ReverseMap();
-        CreateMap<CashTransactionDto, CashTransaction>().ReverseMap();
+        CreateMap<CashTransactionDto, CashRegister.CashTransaction>().ReverseMap();
 
         // User
         CreateMap<UserDto, User>().ReverseMap();
@@ -55,7 +43,5 @@ public class MappingProfile : Profile
 
         // Restaurant
         CreateMap<RestaurantDto, Restaurant>().ReverseMap();
-
-        
     }
 }

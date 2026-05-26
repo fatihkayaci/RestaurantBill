@@ -1,3 +1,5 @@
+using RestaurantBill.Domain.Exceptions;
+
 namespace RestaurantBill.Domain.Entities
 {
     public class Restaurant : BaseEntity
@@ -14,6 +16,9 @@ namespace RestaurantBill.Domain.Entities
 
         public static Restaurant Create(string userId)
         {
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new DomainException("Kullanıcı ID'si boş olamaz.");
+
             return new Restaurant { UserId = userId };
         }
 

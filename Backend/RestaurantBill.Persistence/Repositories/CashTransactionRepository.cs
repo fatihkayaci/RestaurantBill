@@ -4,7 +4,7 @@ using RestaurantBill.Persistence.Context;
 
 namespace RestaurantBill.Persistence.Repositories;
 
-public class CashTransactionRepository : GenericRepository<CashTransaction>, ICashTransactionRepository
+public class CashTransactionRepository : GenericRepository<CashRegister.CashTransaction>, ICashTransactionRepository
 {
     public CashTransactionRepository(RestaurantBillDbContext context) : base(context)
     {
