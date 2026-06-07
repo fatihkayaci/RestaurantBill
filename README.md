@@ -1,8 +1,8 @@
 <h1 align="center">🍽️ RestaurantBill</h1>
 
 <p align="center">
-  <strong>A full-stack Restaurant POS & Kitchen Display System</strong><br/>
-  Built with Clean Architecture, CQRS, and real-time messaging
+  <strong>A full-stack Restaurant POS, Cashier & Kitchen Display System</strong><br/>
+  Built with Clean Architecture, CQRS, and real-time SignalR messaging
 </p>
 
 <p align="center">
@@ -10,9 +10,8 @@
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white"/>
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white"/>
-  <img src="https://img.shields.io/badge/RabbitMQ-3-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white"/>
+  <img src="https://img.shields.io/badge/SignalR-Real--time-512BD4?style=for-the-badge&logo=dotnet&logoColor=white"/>
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Tests-15%2B%20Unit%20Tests-brightgreen?style=for-the-badge&logo=xunit"/>
 </p>
 
 <p align="center">
@@ -41,16 +40,18 @@
 
 ## 📋 Overview
 
-RestaurantBill is a production-ready Point of Sale (POS) application designed for restaurant operations. It enables waitstaff to manage tables and orders in real time, while the kitchen receives instant notifications through an asynchronous message queue — eliminating the need for manual communication between the floor and the kitchen.
+RestaurantBill is a Point of Sale (POS) application built for restaurant operations. Waitstaff manage tables and orders, the kitchen tracks incoming items on a dedicated display, and cashiers handle payments through a register system. Order and status changes propagate to every screen in real time over SignalR — no manual communication needed between the floor, the kitchen, and the cashier.
 
 ### Key Highlights
 
-- **Clean Architecture** — strict separation of Domain, Application, Infrastructure, and Presentation layers
-- **CQRS with MediatR** — Commands and Queries are fully decoupled for scalability and testability
-- **Real-time Kitchen Notifications** — order updates are published to RabbitMQ and consumed by a background service
-- **Role-Based Authorization** — JWT authentication with Admin, Waiter, Cashier, and Kitchen roles
-- **MediatR Pipeline Behaviors** — Caching, idempotency, and performance monitoring as cross-cutting concerns
-- **Modern Dark UI** — responsive React frontend with Tailwind CSS featuring a neon/dark aesthetic
+- **Clean Architecture** — strict separation of Domain, Application, Infrastructure, Persistence, and Presentation layers
+- **CQRS with MediatR** — Commands and Queries are fully decoupled, with cross-cutting concerns handled in the pipeline
+- **Real-time updates over SignalR** — three dedicated hubs push live changes to the Kitchen, Tables, and Cashier screens
+- **Role-Based Authorization** — JWT authentication with `Admin`, `Waiter`, `Cashier`, and `Kitchen` roles enforced per endpoint
+- **Cashier & Cash Register** — payment processing with cash-register sessions and transaction history
+- **Admin Panel** — manage products, categories, tables, users, and view overview statistics
+- **MediatR Pipeline Behaviors** — Validation, Caching, Idempotency, Logging, and Performance monitoring as cross-cutting concerns
+- **Modern UI** — responsive React frontend with Tailwind CSS
 
 ---
 
@@ -59,15 +60,16 @@ RestaurantBill is a production-ready Point of Sale (POS) application designed fo
 ```
 RestaurantBill/
 ├── Backend/
-│   ├── RestaurantBill.Domain          # Entities, Enums, Domain Interfaces
-│   ├── RestaurantBill.Application     # CQRS Handlers, DTOs, Validators, Interfaces
-│   ├── RestaurantBill.Infrastructure  # RabbitMQ Producer & Consumer (Background Service)
+│   ├── RestaurantBill.Domain          # Entities, Enums, Domain Exceptions, Interfaces
+│   ├── RestaurantBill.Application     # CQRS Handlers, DTOs, Validators, Pipeline Behaviors
+│   ├── RestaurantBill.Infrastructure  # SignalR Hubs & Notification Services
 │   ├── RestaurantBill.Persistence     # EF Core, Repositories, UnitOfWork, Migrations
 │   └── RestaurantBill.WebAPI          # Controllers, Middleware, Program.cs
 └── frontend/
     └── src/
-        ├── pages/                     # TablesPage, PosPage, KitchenPage
-        ├── features/                  # Feature-sliced: orders, tables, products, categories
+        ├── pages/                     # Login, Register, Tables, Pos, Kitchen, Cashier, Admin
+        ├── features/                  # Feature-sliced: order, tables, products, categories, stats…
+        ├── components/                # Shared components (AdminDashboard, PrivateRoute…)
         └── api/                       # Axios service layer
 ```
 
@@ -75,66 +77,58 @@ RestaurantBill/
 
 | Layer | Responsibility |
 |-------|---------------|
-| **Domain** | Core business entities and rules, zero dependencies |
-| **Application** | Use cases via CQRS (MediatR), FluentValidation, AutoMapper |
-| **Infrastructure** | External services — RabbitMQ producer/consumer |
-| **Persistence** | EF Core + PostgreSQL, Generic Repository, Unit of Work |
-| **WebAPI** | HTTP endpoints, JWT auth, global exception middleware |
+| **Domain** | Core business entities, enums, validation guards, and domain exceptions — zero framework dependencies |
+| **Application** | Use cases via CQRS (MediatR), FluentValidation, AutoMapper, Pipeline Behaviors |
+| **Infrastructure** | SignalR hubs and real-time notification services |
+| **Persistence** | EF Core + PostgreSQL, Generic Repository, Unit of Work, migrations & seeding |
+| **WebAPI** | HTTP endpoints, JWT auth, global exception middleware, hub mapping |
 
 ---
 
 ## 🧠 Key Design Decisions
 
-- **Why Clean Architecture?** The Domain layer has zero framework dependencies — business logic is portable and testable in complete isolation, regardless of whether the persistence layer uses EF Core, Dapper, or anything else.
-- **Why CQRS?** Read and write operations on orders have very different complexity profiles. Separating them via MediatR pipelines allowed adding validation and logging as cross-cutting concerns (Pipeline Behaviors) without touching any business logic.
-- **Why RabbitMQ over WebSockets for kitchen notifications?** If the Kitchen Display System is temporarily offline, orders must not be lost. RabbitMQ's durable, persistent queue guarantees delivery — a guarantee WebSockets fundamentally cannot provide.
-- **Why Pipeline Behaviors over Decorators?** Cross-cutting concerns like caching and idempotency are handled in the MediatR pipeline — handlers stay focused on business logic only.
-- **Why Repository + Unit of Work over raw EF Core?** Abstracting persistence behind interfaces allows the entire Application layer to be tested with Moq-mocked repositories — no real database, no migrations, no test containers required. This is directly visible in the 15+ unit test suites.
+- **Why Clean Architecture?** The Domain layer has zero framework dependencies — business logic is portable and testable in isolation, regardless of whether persistence uses EF Core, Dapper, or anything else.
+- **Why CQRS?** Read and write operations on orders have very different complexity profiles. Separating them via MediatR pipelines lets validation, caching, and logging live as cross-cutting concerns without touching business logic.
+- **Why SignalR for real-time updates?** A POS is inherently multi-screen — the waiter's POS, the kitchen display, and the cashier all need to reflect the same order state instantly. SignalR pushes those changes to each connected screen the moment they happen, over a single persistent connection.
+- **Why Pipeline Behaviors over Decorators?** Cross-cutting concerns (validation, caching, idempotency, logging, performance) are handled in the MediatR pipeline, so handlers stay focused on business logic only.
+- **Why domain exceptions instead of raw `throw`?** All errors derive from `BaseException` (`BusinessException`, `NotFoundException`, `ValidationException`) and live in the Domain layer. A single global exception middleware maps them to consistent HTTP responses.
+- **Why Repository + Unit of Work over raw EF Core?** Abstracting persistence behind interfaces keeps the Application layer independent of the database and guarantees a single transaction per command via Unit of Work.
 
 ---
 
 ## ✨ Features
 
 ### Table Management
-- Visual salon view with real-time table status (Available / Occupied / Reserved / Out of Service)
+- Visual salon view with real-time table status (Available / Occupied / Reserved / OutOfService)
 - Open, close, reserve, and cancel reservation from the same interface
+- Live status sync across all clients via the Table hub
 
 ### POS (Point of Sale)
 - Dynamic category filtering for the product menu
-- Add/remove order items with quantity control
+- Add / remove order items with quantity control
 - Order item status tracking: **Pending → Preparing → Ready → Delivered**
-- Confirm and send orders to the kitchen with one click
-- Cancel active orders
+- Confirm and send orders to the kitchen, serve items, and cancel active orders
 
 ### Kitchen Display System (KDS)
-- Dedicated kitchen view for order queue management
-- Status-based filtering per item
-- Real-time update via RabbitMQ message consumption
+- Dedicated kitchen view for the order queue
+- Per-item status updates (Preparing / Ready)
+- Real-time push of new orders and status changes via the Kitchen hub
+
+### Cashier & Cash Register
+- Open/close cash-register sessions
+- Process payments and close orders from the cashier screen
+- Record cash transactions (In / Out) and view recent transaction history
+
+### Admin Panel
+- Manage **Products** and **Categories** (create, update, delete with FK-safe deletion)
+- Manage **Tables** (create, update, delete)
+- Manage **Users** (create, update, delete, role assignment)
+- **Overview dashboard** with summary statistics and charts
 
 ### Authentication & Authorization
 - JWT Bearer token authentication
-- Role-based access: `Admin`, `Waiter`, `Cashier`, `Kitchen`
 - ASP.NET Core Identity with custom User/Role entities
-
----
-
-## 🧪 Testing
-
-Unit tests cover all CQRS command and query handlers using **xUnit + Moq**. The Application layer is tested in complete isolation — no database, no HTTP server, no RabbitMQ required.
-
-| Suite | Covered Handlers |
-|-------|-----------------|
-| **Order Commands** | CreateOrder, AddProductToOrder, CancelOrder, CloseOrder, RemoveProductFromOrder, UpdateOrderItemQuantity |
-| **Order Queries** | GetAllOrders, GetOrderById, GetActiveOrderByTableId |
-| **Table Commands** | CreateTable, OpenTable, ReservationTable, CancelReservation |
-| **Table Queries** | GetAllTables, GetTableById |
-| **Services** | ProductService |
-
-```bash
-# Run all tests
-cd Backend
-dotnet test
-```
+- Role-based access enforced per endpoint: `Admin`, `Waiter`, `Cashier`, `Kitchen`
 
 ---
 
@@ -146,16 +140,14 @@ dotnet test
 | **.NET 9.0** | Web API framework |
 | **Entity Framework Core 9** | ORM + migrations |
 | **PostgreSQL 16** | Primary database |
-| **MediatR 14** | CQRS mediator |
+| **MediatR** | CQRS mediator + pipeline behaviors |
 | **FluentValidation** | Input validation pipeline |
 | **AutoMapper** | DTO ↔ Entity mapping |
-| **RabbitMQ.Client 7** | Async message broker |
+| **SignalR** | Real-time push to Kitchen / Tables / Cashier |
 | **ASP.NET Core Identity** | User/role management |
 | **JWT Bearer** | Stateless authentication |
-| **Serilog** | Structured logging |
-| **SignalR** | Real-time push notifications to Kitchen Display |
-| **Swagger + Scalar** | API documentation |
-| **xUnit + Moq** | Unit testing framework & mocking |
+| **Serilog** | Structured logging (console + rolling file) |
+| **Swagger** | API documentation |
 
 ### Frontend
 | Technology | Purpose |
@@ -166,20 +158,34 @@ dotnet test
 | **React Router v7** | Client-side routing |
 | **Tailwind CSS 4** | Utility-first styling |
 | **Axios** | HTTP client |
-| **SignalR Client** | Real-time WebSocket connection |
+| **@microsoft/signalr** | Real-time WebSocket connection |
+| **Recharts** | Dashboard charts |
 
 ### Infrastructure
 | Technology | Purpose |
 |-----------|---------|
-| **Docker Compose** | Orchestrates PostgreSQL, PgAdmin, RabbitMQ |
-| **RabbitMQ** | Decoupled kitchen notification system |
-| **PgAdmin 4** | Database management UI |
+| **Docker Compose** | Orchestrates API, frontend, and PostgreSQL |
+| **GitHub Actions** | CI build + deploy to Digital Ocean droplet |
+
+---
+
+## 🔌 Pipeline Behaviors
+
+Cross-cutting concerns run as MediatR pipeline behaviors, applied around every command/query:
+
+| Behavior | Responsibility |
+|----------|---------------|
+| **ValidationBehavior** | Runs FluentValidation validators before the handler |
+| **CachingBehavior** | Caches query results for cacheable requests |
+| **IdempotencyBehavior** | Prevents duplicate processing of idempotent commands |
+| **LoggingBehavior** | Logs request/response flow |
+| **PerformanceBehavior** | Measures and flags slow handlers |
 
 ---
 
 ## 🔑 Demo Credentials
 
-After running `docker-compose up` and starting the API, the following demo accounts are seeded automatically:
+After the API starts, the following demo accounts are seeded automatically:
 
 | Role | Username | Password |
 |------|----------|----------|
@@ -188,64 +194,84 @@ After running `docker-compose up` and starting the API, the following demo accou
 | **Kitchen** | `kitchen` | `Kitchen123*` |
 | **Cashier** | `cashier` | `Cashier123*` |
 
-> The demo restaurant comes pre-loaded with 8 tables, 3 categories, and 12 products.
+> The demo restaurant comes pre-loaded with sample tables, categories, and products.
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Option A — Docker Compose (recommended)
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 20+](https://nodejs.org)
+#### Prerequisites
 - [Docker Desktop](https://www.docker.com/products/docker-desktop)
 
-### 1. Environment Setup
-
-Create a `.env` file in the root directory:
+#### 1. Create a `.env` file in the root directory
 
 ```env
+DB_NAME=RestaurantDb
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
-DB_NAME=RestaurantDb
-
-RABBITMQ_USER=admin
-RABBITMQ_PASS=admin_password
+JWT_SECRET_KEY=your_long_random_secret_key
+VITE_API_URL=http://localhost:8080
 ```
 
-Then configure sensitive values (JWT secret, DB connection string, RabbitMQ credentials) via .NET User Secrets:
+#### 2. Build and start everything
+
+```bash
+docker compose up --build
+```
+
+This starts:
+- **API** on `http://localhost:8080` (Swagger: `http://localhost:8080/swagger`)
+- **Frontend** on `http://localhost:3000`
+- **PostgreSQL** on `localhost:5432`
+
+Database migrations and demo seeding run automatically on API startup (`MigrateAndSeedAsync`).
+
+---
+
+### Option B — Manual (local development)
+
+#### Prerequisites
+- [.NET 9 SDK](https://dotnet.microsoft.com/download)
+- [Node.js 20+](https://nodejs.org)
+- [PostgreSQL 16](https://www.postgresql.org/download/)
+
+#### 1. Set up PostgreSQL
+
+Install PostgreSQL, then create a database and a user for the app. Using `psql`:
+
+```bash
+# Connect as the default postgres superuser
+psql -U postgres
+
+# Inside the psql shell:
+CREATE DATABASE "RestaurantDb";
+CREATE USER fatih_admin WITH PASSWORD 'your_db_password';
+GRANT ALL PRIVILEGES ON DATABASE "RestaurantDb" TO fatih_admin;
+\q
+```
+
+> You don't need to create any tables manually — schema migrations and demo seeding run automatically on API startup (`MigrateAndSeedAsync`). Make sure the database name, user, and password here match the connection string in the next step.
+
+#### 2. Configure the backend
+
+Set sensitive values via .NET User Secrets:
 
 ```bash
 cd Backend/RestaurantBill.WebAPI
 dotnet user-secrets set "JwtSettings:SecretKey" "your_secret_key"
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=RestaurantDb;Username=your_db_user;Password=your_db_password"
-dotnet user-secrets set "RabbitMQ:Username" "admin"
-dotnet user-secrets set "RabbitMQ:Password" "admin_password"
 ```
 
-### 2. Start Infrastructure Services
+#### 3. Run the backend
 
 ```bash
-docker compose up -d database rabbitmq pgadmin
+cd Backend
+dotnet run --project RestaurantBill.WebAPI
 ```
 
-This starts:
-- **PostgreSQL** on `localhost:5432`
-- **PgAdmin** on `localhost:5050`
-- **RabbitMQ** on `localhost:5672` (Management UI: `localhost:15672`)
-
-### 3. Run the Backend
-
-```bash
-cd Backend/RestaurantBill.WebAPI
-dotnet ef database update
-dotnet watch
-```
-
-API will be available at `http://localhost:5077`  
-Swagger docs: `http://localhost:5077/swagger`
-
-### 4. Run the Frontend
+#### 4. Run the frontend
 
 ```bash
 cd frontend
@@ -253,69 +279,111 @@ npm install
 npm run dev
 ```
 
-App will be available at `http://localhost:5173`
+The frontend dev server runs on `http://localhost:5173`.
 
 ---
 
 ## 📡 API Reference
 
+> All endpoints (except auth) require a JWT Bearer token. Roles in brackets indicate the authorized roles.
+
 ### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/auth/register` | Register a new user |
-| `POST` | `/api/auth/login` | Login and receive JWT token |
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `POST` | `/api/auth/login` | — | Login with username or email, receive a JWT |
+| `POST` | `/api/auth/register` | — | Register a new user |
 
 ### Orders
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/order` | Get all orders |
-| `GET` | `/api/order/table/{tableId}` | Get active order for a table |
-| `POST` | `/api/order` | Create a new order |
-| `POST` | `/api/order/add-product` | Add items to an order |
-| `POST` | `/api/order/cancel` | Cancel an order |
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `GET` | `/api/order/kitchen` | Admin, Kitchen | Orders for the kitchen display |
+| `GET` | `/api/order/cashier` | Cashier | Orders for the cashier screen |
+| `GET` | `/api/order/table/{tableId}` | Admin, Waiter, Kitchen | Active order for a table |
+| `POST` | `/api/order` | Admin, Waiter | Create a new order |
+| `POST` | `/api/order/add-product` | Admin, Waiter | Add items to an order |
+| `POST` | `/api/order/item/quantity` | Admin, Waiter | Update an order item's quantity |
+| `POST` | `/api/order/item/remove` | Admin, Waiter | Remove an item from an order |
+| `POST` | `/api/order/cancel` | Admin, Waiter | Cancel an order |
+| `POST` | `/api/order/close` | Admin, Waiter, Cashier | Close/settle an order |
+| `POST` | `/api/order/{id}/status` | Admin, Kitchen, Waiter | Update order status |
+| `POST` | `/api/order/{orderId}/item/{itemId}/status` | Admin, Kitchen | Update an order item's status |
 
 ### Tables
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/table` | Get all tables |
-| `POST` | `/api/table/create` | Create a table |
-| `POST` | `/api/table/{id}/open` | Open table (set Occupied) |
-| `POST` | `/api/table/{id}/close` | Close table (set Available) |
-| `POST` | `/api/table/{id}/reservation` | Reserve a table |
-| `POST` | `/api/table/{id}/cancel-reservation` | Cancel reservation |
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `GET` | `/api/table` | Admin, Waiter, Kitchen | Get all tables |
+| `GET` | `/api/table/{id}` | Admin, Waiter, Kitchen | Get a table by id |
+| `POST` | `/api/table/create` | Admin | Create a table |
+| `POST` | `/api/table/update` | Admin | Update a table |
+| `POST` | `/api/table/open` | Admin, Waiter | Open table (set Occupied) |
+| `POST` | `/api/table/reservation` | Admin, Waiter | Reserve a table |
+| `POST` | `/api/table/cancel-reservation` | Admin, Waiter | Cancel a reservation |
+| `DELETE` | `/api/table/{id}` | Admin | Delete a table |
 
 ### Products & Categories
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/product` | Get all products |
-| `POST` | `/api/product/create-product` | Create a product |
-| `PUT` | `/api/product/update-product` | Update a product |
-| `DELETE` | `/api/product/{id}` | Delete a product |
-| `GET` | `/api/category` | Get all categories |
-| `POST` | `/api/category/create-category` | Create a category |
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `GET` | `/api/product` | Admin, Waiter, Kitchen | Get all products |
+| `POST` | `/api/product` | Admin, Kitchen | Create a product |
+| `POST` | `/api/product/update` | Admin, Kitchen | Update a product |
+| `DELETE` | `/api/product/{id}` | Admin, Kitchen | Delete a product |
+| `GET` | `/api/category` | Admin, Waiter, Kitchen | Get all categories |
+| `POST` | `/api/category/create` | Admin | Create a category |
+| `POST` | `/api/category/update` | Admin | Update a category |
+| `DELETE` | `/api/category/{id}` | Admin | Delete a category (FK-safe) |
+
+### Cash Register
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `GET` | `/api/cashregister` | Admin, Cashier | List cash registers |
+| `GET` | `/api/cashregister/{id}` | Admin, Cashier | Get a cash register by id |
+| `GET` | `/api/cashregister/transactions` | Admin, Cashier | List cash transactions |
+| `POST` | `/api/cashregister/create` | Admin | Create a cash register |
+| `POST` | `/api/cashregister/update` | Admin | Update a cash register |
+| `POST` | `/api/cashregister/transaction` | Admin, Cashier | Record a cash transaction (In/Out) |
+| `DELETE` | `/api/cashregister/{id}` | Admin | Delete a cash register |
+
+### Users
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `GET` | `/api/user/me` | Any authenticated | Get the current user |
+| `GET` | `/api/user` | Admin | Get all users |
+| `POST` | `/api/user/create` | Admin | Create a user |
+| `POST` | `/api/user/update` | Admin | Update a user |
+| `DELETE` | `/api/user/{id}` | Admin | Delete a user |
+
+### Restaurant & Stats
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `GET` | `/api/restaurant` | Admin, Cashier, Waiter, Kitchen | Get restaurant info |
+| `POST` | `/api/restaurant` | Admin | Create the restaurant (onboarding) |
+| `GET` | `/api/stats/overview` | Admin | Overview statistics for the dashboard |
+
+### SignalR Hubs
+| Hub | Path | Purpose |
+|-----|------|---------|
+| **KitchenHub** | `/kitchen-hub` | New orders & item status updates to the kitchen |
+| **TableHub** | `/table-hub` | Table status changes to all clients |
+| **CashierHub** | `/cashier-hub` | Order/payment updates to the cashier |
 
 ---
 
 ## 🔄 Order Flow
 
 ```
-Waiter (POS)                Backend                    Kitchen (KDS)
-    │                          │                             │
-    ├─── Add items to order ──►│                             │
-    │                          │                             │
-    ├─── Confirm order ───────►│                             │
-    │                          ├── Publish to RabbitMQ ─────►│
-    │                          │      kitchen.orders         │
-    │                          │                             │
-    │                          │◄── KitchenOrderConsumer ───►│
-    │                          │    (BackgroundService)      │
-    │                          │                             │
-    │                          ├── SignalR (KitchenHub) ────►│
-    │                          │   "ReceiveNewOrder"         ├── Real-time notification
-    │                          │                             ├── Update status: Preparing
-    │                          │                             ├── Update status: Ready
-    │                          │                             │
-    ◄── See status update ─────┤◄── Status propagates ──────┤
+Waiter (POS)              Backend                  Kitchen (KDS)        Cashier
+    │                        │                          │                  │
+    ├── Add items ──────────►│                          │                  │
+    ├── Confirm order ──────►│                          │                  │
+    │                        ├── SignalR KitchenHub ───►│                  │
+    │                        │   "new order"            ├── Prepare item   │
+    │                        │◄── Update item status ───┤                  │
+    │◄── Status update ──────┤── SignalR ───────────────┤                  │
+    │                        │                          │                  │
+    │                        │                          │   Settle order   │
+    │                        │◄── Close / payment ──────┼──────────────────┤
+    │                        ├── SignalR CashierHub ────┼─────────────────►│
+    │                        ├── SignalR TableHub ──────┴── table freed ──►(all)
 ```
 
 ---
@@ -324,15 +392,16 @@ Waiter (POS)                Backend                    Kitchen (KDS)
 
 ```
 Restaurant
-  └── Tables (Available / Occupied / Reserved / OutOfService)
-        └── Orders (Active / Preparing / Ready / Served / Paid / Cancelled)
-              └── OrderItems (Pending / Preparing / Ready / Delivered)
-                    └── Products
-                          └── Categories
+  ├── Tables ........... (Available / Occupied / Reserved / OutOfService)
+  │     └── Orders ..... (Active / Pending / Preparing / Ready / Served / Paid / Cancelled)
+  │           └── OrderItems (Pending / Preparing / Ready / Delivered)
+  │                 └── Product ──► Category
+  ├── CashRegisters ... (Open / Closed)
+  │     └── CashTransactions (In / Out)
+  └── Users ........... (Admin / Waiter / Cashier / Kitchen)
 ```
 
-All entities extend `BaseEntity` which provides:
-- `Id`, `CreatedAt`, `UpdatedAt`, `CreatedUser`, `IsDeleted` (soft delete)
+All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`, `CreatedUser`, and `IsDeleted` (soft delete). Domain entities expose `Create` / `Update` factory methods with built-in validation guards.
 
 ---
 
@@ -340,10 +409,10 @@ All entities extend `BaseEntity` which provides:
 
 | Role | Access |
 |------|--------|
-| **Admin** | Full system access |
-| **Waiter** | Table & order management |
-| **Cashier** | Payment processing |
-| **Kitchen** | Read order queue, update item status |
+| **Admin** | Full system access — admin panel, all management endpoints |
+| **Waiter** | Table & order management via POS |
+| **Cashier** | Payments, cash register, order settlement |
+| **Kitchen** | Order queue and item status updates |
 
 ---
 
@@ -354,27 +423,33 @@ All entities extend `BaseEntity` which provides:
 **Completed:**
 - [x] Clean Architecture + CQRS setup
 - [x] Table lifecycle management
-- [x] Full order management
-- [x] OrderItem status tracking
-- [x] JWT authentication & roles
-- [x] RabbitMQ integration (Producer + BackgroundService Consumer)
-- [x] SignalR real-time kitchen notifications
-- [x] Docker Compose infrastructure
-- [x] Dark mode POS UI with category filtering
-- [x] Unit tests for all CQRS command/query handlers (xUnit + Moq)
-- [x] MediatR Pipeline Behaviors (Caching, Idempotency, Performance)
+- [x] Full order & order-item status tracking
+- [x] JWT authentication & role-based authorization
+- [x] SignalR real-time updates (Kitchen / Table / Cashier hubs)
+- [x] Cashier & cash register with payment/transaction flow
+- [x] Admin panel (products, categories, tables, users)
+- [x] Overview statistics dashboard
+- [x] MediatR Pipeline Behaviors (Validation, Caching, Idempotency, Logging, Performance)
+- [x] Domain exceptions & validation guards
+- [x] Docker Compose infrastructure + GitHub Actions CI/CD
 
-**Planned:**
-- [ ] Payment processing flow
-- [ ] Reservation detail management (customer name, time, party size)
-- [ ] Reporting & analytics dashboard
-- [ ] Mobile-responsive KDS view
+**Planned:** (see [TODO.md](TODO.md))
+- [ ] Configurable VAT rate
+- [ ] Detailed reservation management (customer name, time, party size)
+- [ ] Reports page contents & richer analytics
+- [ ] Mobile-responsive POS & KDS
+- [ ] Client-side form validation polish (remaining non-admin pages)
+- [ ] Unit test suite (xUnit + Moq)
 
 ---
 
 ## 🤝 Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+Pull requests are welcome! Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** for setup, branch, and commit conventions.
+
+- Browse the [open issues](https://github.com/fatihkayaci/RestaurantBill/issues) — look for the **`good first issue`** label to get started.
+- See the [project roadmap](TODO.md) for planned and completed work.
+- For major changes, please open an issue first to discuss what you'd like to change.
 
 ---
 
