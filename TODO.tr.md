@@ -1,59 +1,70 @@
-# 📋 Yapılacaklar Listesi
-> **Son Güncelleme:** Mayıs 2026
-> *Bu dosya, projenin devam eden geliştirme sürecini ve gelecekteki yol haritasını takip etmek amacıyla aktif olarak güncellenmektedir.*
+# 📋 Proje Yol Haritası (Yapılacaklar)
+
+> **Son güncelleme:** Haziran 2026
+> Bu dosya, RestaurantBill'in tamamlanan işlerini ve kalan yol haritasını takip eder. İngilizce versiyon için: [TODO.md](TODO.md).
+
+---
 
 ## 🎨 Frontend (React)
-- [x] **UI/UX:** Personel sayfasındaki ekleme ve düzenleme modallarının ekrana sığmama (overflow) sorunları giderildi.
-- [x] **UI:** Kullanıcı ekleme ve düzenleme modallarına e-posta alanı dahil edildi.
-- [x] **UI:** Silme işlemleri tetiklendiğinde kullanıcıdan onay alınması sağlandı.
-- [x] **Özellik:** Kullanıcı modalı açıldığında sistemin otomatik bir `UserCode` önermesi sağlandı (kullanıcı dilerse değiştirebilir).
-- [x] **Kasiyer:** Kasiyer sayfasının tasarımı uygulandı.
-- [x] **Garson:** Sayfaya servis işlemi eklendi.
-- [x] **Garson:** Sayfaya servis sekmesi eklendi.
-- [x] **Kasiyer:** Sahte veriler kaldırılıp gerçek API verileri bağlandı.
-- [x] **Kasiyer:** Ödeme yöntemi olarak mevcut kasalardan seçim yapılabilmesi sağlandı.
-- [x] **Kasiyer:** Son işlemler gerçek veriden çekiliyor.
-- [x] **Kasiyer:** Sayfaya SignalR eklenecek.
-- [x] **UI/UX:** İlk kayıt sonrası restoran oluşturma ekranının tasarımı, mevcut global tasarım diline uyarlanacak.
-- [x] **UI:** API'den dönen hata mesajlarının tüm sayfalarda düzgün gösterilmesi için global bir bildirim (Toast) mekanizması kurulacak.
-- [x] **staff:** staff oluştururken şifre rastgele gelsin isterse yenisini verebilir
-- [ ] **Kasiyer:** Sayfaya detaylı işlemleri görebileceği bir bölüm eklenecek.
-- [ ] **Kasiyer:** Sayfadaki istatistik kartları düzeltilecek.
-- [ ] **PosPage:** Sayfadaki "Onayla" gibi butonlar düzeltilecek.
-- [ ] **Doğrulama:** Frontend formlarına istemci taraflı doğrulama eklenecek; hatalı verilerin backend'e gidip hata fırlatmasının önüne geçilecek. (Tamamlananlar: admin tarafındaki { menü, kategoriler, personel, masalar, raporlar })
-- [ ] **Profil:** Profil sayfası eksik; eklenecek.
+
+### ✅ Tamamlananlar
+- [x] **UI/UX:** Personel ekleme & düzenleme modallarındaki ekrana sığmama (overflow) sorunu giderildi.
+- [x] **UI:** Kullanıcı ekleme & düzenleme modallarına e-posta alanı eklendi.
+- [x] **UI:** Silme işlemlerinden önce onay diyaloğu gösterilmesi sağlandı.
+- [x] **UI:** API hata mesajlarını tüm sayfalarda göstermek için global Toast bildirim mekanizması kuruldu.
+- [x] **Özellik:** Kullanıcı modalı açıldığında otomatik `UserCode` önerisi gelir (kullanıcı değiştirebilir).
+- [x] **Personel:** Personel oluştururken rastgele varsayılan şifre üretiliyor (değiştirilebilir).
+- [x] **Onboarding:** Restoran oluşturma ekranı global tasarım diline uyarlandı.
+- [x] **Kasiyer:** Sayfa tasarımı uygulandı.
+- [x] **Kasiyer:** Sahte veriler kaldırılıp gerçek API verisi bağlandı.
+- [x] **Kasiyer:** Ödeme hedefi olarak mevcut kasalardan seçim yapılabiliyor.
+- [x] **Kasiyer:** Son işlemler listesi gerçek veriye bağlandı.
+- [x] **Kasiyer:** SignalR ile gerçek zamanlı güncelleme eklendi.
+- [x] **Garson:** POS sayfasına servis işlemi ve "Servis edildi" sekmesi eklendi.
+- [x] **Sipariş:** Sipariş içinde ürün bazlı durum değişimi eklendi.
+
+### 🚧 Planlananlar
+- [ ] **Doğrulama:** Hatalı verinin backend'e ulaşmasını engellemek için istemci taraflı form doğrulaması eklenecek. *(Tamamlananlar: admin tarafı — menü, kategoriler, personel, masalar, raporlar.)*
+- [ ] **Kasiyer:** Detaylı işlemleri görebileceği bir bölüm eklenecek.
+- [ ] **Kasiyer:** İstatistik kartları düzeltilecek.
 - [ ] **Raporlar:** Raporlar sayfasının içeriği doldurulacak.
-- [ ] **PosPage:** Sayfadaki ücret alma kısmı kaldırılacak ve kasiyer sayfasıyla entegre edilecek.
-- [ ] **PosPage:** UI telefona uygun değil; responsive yapılacak.
-- [ ] **PosPage:** Siparişler içindeki "Yeni" sekmesindeki çöp ikonu çalışmıyor, düzeltilecek.
-- [ ] **PosPage:** "Masalara dön" ikonu uygunsuz bir konumda, yeri gözden geçirilecek.
-- [x] **Ürün:** Sipariş içerisindeki ürün bazlı durum değişimi yapılacak.
-- [ ] **KDV:** Ayarlaması yapılabilecek bir alan eklenecek.
-- [ ] **Status:** status olan yerlerde 2 tane olduğu için on off şeklinde slider'lı yapılacak.
-- [ ] **Dosyalama:** şu an frontend tarafında adminpage tek satır diğer kitchen filan fazla sayfa onlara bi bakarız.
- 
-## ⚙️ Backend (.NET Core)
-- [x] **Özellik [Kategori]:** Kategori silme endpoint'inde ilişkili ürün kontrolü yapıldı bağlı ürün varsa silme işlemi engellendi.
-- [x] **Özellik [Kullanıcı]:** Kullanıcı güncelleme metodu yazıldı.
-- [x] **Refactor [Auth]:** Giriş işlemi yalnızca kullanıcı adıyla değil, e-posta ile de yapılabilecek şekilde CQRS yapıları güncellendi.
-- [x] **Özellik [Kasiyer]:** Kasiyer sayfası için backend yazıldı; ödeme alma ve transaction listeleme endpoint'leri eklendi.
-- [x] **Refactor [Doğrulama]:** `AddFluentValidationAutoValidation` kaldırıldı; doğrulama yalnızca MediatR pipeline üzerinden çalışıyor.
-- [x] **Refactor:** şu an güncellemelerde, eklemelerde, silmelerde hepsinde restaurantId kontrolü yapılsın başka bir restauranttakilere etki etmesin
-- [x] **Refactor:** kayıt olurken restaurantId atanacak sonra bir daha problem çıkmayacak şu an restaurant tanımlandıktan sonra restaurantId geldiği için problemli çalışıyor
-- [x] **Refactor [Auth]:** Kayıt aşamasında kullanıcıdan `UserCode` alma zorunluluğu kaldırılacak; bu kod backend tarafında otomatik oluşturulacak.
-- [x] **Refactor:** application katmanı feautre içerisindeki isimlendirmeler değişecek
-- [x] **Refactor:** Admin tarafına önbellekleme eklenecek: ürünler, kategoriler, personel ve masalar için.
-- [x] **Refactor:** admin staff içerisinde kendisini göremeyecek.
-- [ ] **Doğrulama:** Backend tarafındaki mevcut doğrulama kuralları gözden geçirilecek ve eksik iş kuralları tamamlanacak.
-- [ ] **Refactor:** Gelen DTO'lar ve nesne eşleme konfigürasyonları kontrol edilip optimize edilecek.
-- [ ] **Refactor [Kategori]:** `DeleteCategoryCommandHandler` içerisindeki iş mantığı gözden geçirilip optimize edilecek.
-- [ ] **Kasiyer:** Transaction için bahşiş kısmı ayrı bir alan olarak ele alınacak.
-- [ ] **Ürün:** Ürün bazlı durum değişimi backend tarafında da kontrol edilecek.
-- [ ] **Refactor:** cachlemeye bakılacak.
-- [ ] **Anlamak:** Rabbitmq a komple bakılacak.
-- [ ] **Refactor:** isim için döndüğümüz bir tane restaurantdto oluşturulacak şu an isim için bütün bilgileri gönderiyoruz sırf header a yazmak için
-- [ ] **Refactor:** expectionları biraz daha arttırmak lazım.
-- [ ] **Refactor:** anemic modelden rich modele dönülecek.
-- [ ] **Refactor [Query]:** Query handler'lardaki `restaurantId <= 0` kontrollerini middleware seviyesinde JWT doğrulamasıyla garanti altına alarak handler'lardan kaldır.
-- [ ] **Refactor:** kullanıcı giriş yaptıysa ve admin rol değişikliği yaptıysa giriş yapmış kullanıcıyı uyarı verip yönlendirmesi lazım login sayfasına.
-- [ ] 
+- [ ] **Profil:** Profil sayfası eklenecek.
+- [ ] **POS:** Aksiyon butonları (ör. "Onayla") düzeltilecek.
+- [ ] **POS:** Ücret alma kısmı kaldırılıp Kasiyer sayfasıyla entegre edilecek.
+- [ ] **POS:** Sayfa tamamen mobil uyumlu yapılacak.
+- [ ] **POS:** "Yeni" sekmesindeki çalışmayan çöp ikonu düzeltilecek.
+- [ ] **POS:** Konumu uygunsuz olan "Masalara dön" ikonu yeniden yerleştirilecek.
+- [ ] **UI:** İki durumlu status seçimleri aç/kapa slider'a dönüştürülecek.
+- [ ] **KDV:** Ayarlanabilir bir KDV oranı alanı eklenecek.
+- [ ] **Yapı:** Sayfa/klasör organizasyonu gözden geçirilecek (ör. tek dosya AdminPage'e karşı çok dosyalı Kitchen).
+
+---
+
+## ⚙️ Backend (.NET)
+
+### ✅ Tamamlananlar
+- [x] **Kategori:** İlişkili ürünü olan kategorilerin silinmesi engellendi (FK doğrulaması).
+- [x] **Kullanıcı:** Eksik olan kullanıcı güncelleme metodu yazıldı.
+- [x] **Kullanıcı:** `UserCode` kayıt sırasında istenmek yerine backend'de otomatik üretiliyor.
+- [x] **Auth:** Giriş artık kullanıcı adı veya e-posta ile yapılabiliyor.
+- [x] **Auth:** Sonradan oluşan kapsam sorunlarını önlemek için `restaurantId` kayıt anında atanıyor.
+- [x] **Kasiyer:** Backend yazıldı — ödeme alma ve transaction listeleme endpoint'leri eklendi.
+- [x] **Çok kiracılılık:** Tüm ekleme/güncelleme/silme işlemleri `restaurantId` ile kapsamlandı; kiracılar birbirinden izole.
+- [x] **Önbellekleme:** Admin tarafı için ürünler, kategoriler, personel ve masalara önbellekleme eklendi.
+- [x] **Personel:** Admin, personel listesinde kendini görmüyor.
+- [x] **Doğrulama:** `AddFluentValidationAutoValidation` kaldırıldı; doğrulama yalnızca MediatR pipeline üzerinden çalışıyor.
+- [x] **Refactor:** Application feature klasörlerindeki isimlendirmeler düzenlendi.
+
+### 🚧 Planlananlar
+- [ ] **Doğrulama:** Backend doğrulama kuralları gözden geçirilecek; eksik iş kuralları tamamlanacak.
+- [ ] **Refactor:** Anemic modelden daha zengin (rich) domain modeline geçilecek.
+- [ ] **Refactor:** Daha fazla domain exception tipi eklenip kapsam genişletilecek.
+- [ ] **Refactor:** Gelen DTO'lar ve AutoMapper konfigürasyonları gözden geçirilip optimize edilecek.
+- [ ] **Refactor:** Yalnızca isim gereken durumlar için hafif bir `RestaurantDto` oluşturulacak (şu an sadece header'a yazmak için tüm bilgiler gönderiliyor).
+- [ ] **Refactor:** Masa işlemlerindeki generic `Update` metodu, isim tutarlılığı için `UpdateTable` olarak yeniden adlandırılacak.
+- [ ] **Refactor [Kategori]:** `DeleteCategoryCommandHandler` içindeki iş mantığı gözden geçirilip optimize edilecek.
+- [ ] **Refactor [Query]:** `restaurantId` JWT middleware ile garanti altına alınıp query handler'lardaki `restaurantId <= 0` kontrolleri kaldırılacak.
+- [ ] **Önbellekleme:** Genel önbellekleme stratejisi gözden geçirilecek.
+- [ ] **Kasiyer:** Bahşiş, transaction üzerinde ayrı bir alan olarak modellenecek.
+- [ ] **Sipariş:** Ürün bazlı durum değişimi backend tarafında da doğrulanacak.
+- [ ] **Auth:** Admin, giriş yapmış bir kullanıcının rolünü değiştirdiğinde o kullanıcı uyarılıp login sayfasına yönlendirilecek.
