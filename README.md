@@ -30,11 +30,14 @@
 
 ## 📸 Screenshots & Demo
 
-### Table Management
-![Tables](docs/screenshots/tables.gif)
+### Waiter & Kitchen Flow
+![Waiter and Kitchen](docs/screenshots/WaiterAndKitchen.gif)
 
-### POS Order Flow
-![POS](docs/screenshots/pos.gif)
+### Cashier
+![Cashier](docs/screenshots/Cashier.gif)
+
+### Admin Panel
+![Admin](docs/screenshots/Admin.gif)
 
 ---
 
