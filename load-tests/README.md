@@ -1,98 +1,98 @@
 # Load Tests
 
-k6 ile yazılmış performans testleri. Sistemin farklı yük seviyelerinde nasıl davrandığını ölçer.
+Performance tests written with k6. Measures how the system behaves under different load levels.
 
-## Kurulum
+## Setup
 
-k6'nın yüklü olması gerekir:
+k6 must be installed:
 
 ```bash
 # Windows (zip)
-# https://github.com/grafana/k6/releases/latest adresinden k6-vX.X.X-windows-amd64.zip indir
-# C:\k6\ klasörüne çıkart, PATH'e ekle
+# Download k6-vX.X.X-windows-amd64.zip from https://github.com/grafana/k6/releases/latest
+# Extract to C:\k6\, add to PATH
 ```
 
-## Çalıştırma
+## Running
 
-API'nin ayakta olması gerekir (`docker compose up` veya `dotnet run`).
+The API must be running (`docker compose up` or `dotnet run`).
 
 ```bash
-# Smoke test — sistem ayakta mı? (1 kullanıcı, 20 saniye)
+# Smoke test — is the system up? (1 user, 20 seconds)
 k6 run load-tests/smoke.js
 
-# Load test — normal yük altında performans (20 kullanıcıya kadar, 2 dakika)
+# Load test — performance under normal load (up to 20 users, 2 minutes)
 k6 run load-tests/load-test.js
 
-# Stress test — sistemin sınırlarını bul (100 kullanıcıya kadar, 2.5 dakika)
+# Stress test — find the breaking point (up to 100 users, 2.5 minutes)
 k6 run load-tests/stress-test.js
 ```
 
-Farklı bir API adresi hedeflemek için:
+To target a different API:
 
 ```bash
 k6 run -e BASE_URL=https://your-api.com load-tests/smoke.js
 ```
 
-## Testler
+## Tests
 
 ### smoke.js
-1 sanal kullanıcı, 20 saniye. Deployment sonrası sistemin ayakta olduğunu doğrular.
+1 virtual user, 20 seconds. Verifies the system is alive after deployment.
 
-**Senaryo:** Login → Masa listesi → Ürün listesi → Mutfak siparişleri
+**Scenario:** Login → Table list → Product list → Kitchen orders
 
-**Threshold:**
-- Hata oranı < %1
-- p(95) yanıt süresi < 1 saniye
+**Thresholds:**
+- Error rate < 1%
+- p(95) response time < 1 second
 
 ### load-test.js
-0'dan 20 kullanıcıya kademeli artış, toplam 2 dakika. Normal iş yükü altında sistemi test eder.
+Gradual ramp-up to 20 users, 2 minutes total. Tests performance under normal workload.
 
-**Senaryo:** Login → Masa listesi → Sipariş oluştur → Ürün ekle → Siparişi kapat
+**Scenario:** Login → Table list → Create order → Add product → Close order
 
-**Threshold:**
-- Hata oranı < %5
-- p(95) yanıt süresi < 2 saniye
+**Thresholds:**
+- Error rate < 5%
+- p(95) response time < 2 seconds
 
 ### stress-test.js
-0'dan 100 kullanıcıya kademeli artış, toplam 2.5 dakika. Sistemin kırılma noktasını bulur.
+Gradual ramp-up to 100 users, 2.5 minutes total. Finds the breaking point of the system.
 
-**Senaryo:** Login → Masa listesi → Ürün listesi → Mutfak siparişleri (okuma ağırlıklı)
+**Scenario:** Login → Table list → Product list → Kitchen orders (read-heavy)
 
-**Threshold:**
-- Hata oranı < %10
-- p(95) yanıt süresi < 5 saniye
+**Thresholds:**
+- Error rate < 10%
+- p(95) response time < 5 seconds
 
-## Sonuçları Okuma
+## Reading Results
 
 ```
-✓ 'p(95)<2000'  p(95)=1.46s   → threshold geçildi (iyi)
-✗ 'p(95)<2000'  p(95)=2.95s   → threshold aşıldı (kötü)
+✓ 'p(95)<2000'  p(95)=1.46s   → threshold passed (good)
+✗ 'p(95)<2000'  p(95)=2.95s   → threshold exceeded (bad)
 
 http_req_duration: avg=479ms  p(90)=1.29s  p(95)=1.46s  max=8.48s
-                   ^ortalama  ^%90 altında  ^%95 altında  ^en kötü istek
+                   ^average   ^90% below   ^95% below   ^slowest request
 ```
 
-**p(95)** — isteklerin %95'inin bu sürenin altında tamamlandığını gösterir. Performans ölçümünde ortalama yerine p(95) kullanılır çünkü uç değerlerden etkilenmez.
+**p(95)** — 95% of requests completed below this duration. Used instead of average because it is not skewed by outliers.
 
-## Bulgular ve Yapılan İyileştirmeler
+## Findings & Improvements
 
-### Load Test — Sipariş Kapatma Eklendi
+### Load Test — Order Close Added
 
-**Sorun:** İlk load test çalıştırmasında p(95) = 2.95s çıktı, threshold (2s) aşıldı.
+**Problem:** First load test run resulted in p(95) = 2.95s, exceeding the 2s threshold.
 
-**Neden:** 20 sanal kullanıcı aynı anda sipariş oluşturuyordu. 7-8 masa dolunca yeni kullanıcılar müsait masa bulamıyor, iterasyonları yarıda kesiliyordu. Bu hem gerçekçi olmayan bir test hem de masa rekabetinden kaynaklanan yapay gecikmelere yol açıyordu.
+**Cause:** 20 virtual users were creating orders simultaneously. Once the 7-8 available tables were occupied, new users could not find an available table and their iterations were cut short. This caused both unrealistic test coverage and artificial delays from table contention.
 
-**Çözüm:** Her iterasyon sonunda sipariş kapatıldı (`POST /api/order/close`). Masa tekrar müsait hale geliyor, bir sonraki kullanıcı onu kullanabiliyor.
+**Fix:** Added order close (`POST /api/order/close`) at the end of each iteration. The table becomes available again for the next user.
 
-**Sonuç:** p(95) 2.95s → 1.46s, threshold geçildi.
+**Result:** p(95) dropped from 2.95s to 1.46s, threshold passed.
 
-### Stress Test — Sistemin Doyma Noktası
+### Stress Test — Saturation Point
 
-**Bulgu:** Sistem ~90 kullanıcıda doyma noktasına ulaşıyor.
+**Finding:** System reaches saturation at ~90 concurrent users.
 
-**Detay:**
-- p(90) = 2.47s → ilk %90'lık dilim normal hızda yanıt veriyor
-- p(95) = 37.25s → 90. kullanıcıdan sonra istekler kuyrukta beklemeye başlıyor
-- Hata oranı = %0 → sistem çökmedi, yavaşladı ama cevap vermeye devam etti
+**Details:**
+- p(90) = 2.47s → first 90% of requests respond at normal speed
+- p(95) = 37.25s → requests start queuing after the 90th user
+- Error rate = 0% → system did not crash, it degraded gracefully
 
-**Yorum:** Graceful degradation — sistem aşırı yük altında hata fırlatmak yerine yavaşlayarak ayakta kaldı. 100 eş zamanlı kullanıcı bu projenin gerçekçi kullanım senaryosunun çok üzerinde olduğundan bu sonuç kabul edilebilir.
+**Conclusion:** Graceful degradation under extreme load — the system slowed down but kept responding. 100 concurrent users is well above the realistic usage scenario for this project, so this result is acceptable.
