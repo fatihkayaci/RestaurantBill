@@ -12,7 +12,7 @@ const roleLabel = (role: number) => {
 
 interface UserCardProps {
     user: User;
-    onDelete: (id: number) => void;
+    onDelete: (id: string) => void;
     onUpdate: (user: User) => void;
 }
 

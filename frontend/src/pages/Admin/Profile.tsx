@@ -84,7 +84,7 @@ export default function Profile() {
         if (!userId) return;
         try {
             const payload: UpdateUser = {
-                id: userId,
+                id: String(userId),
                 fullName: data.fullName,
                 userName: data.userName,
                 email: data.email,
