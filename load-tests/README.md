@@ -74,6 +74,33 @@ http_req_duration: avg=479ms  p(90)=1.29s  p(95)=1.46s  max=8.48s
 
 **p(95)** — 95% of requests completed below this duration. Used instead of average because it is not skewed by outliers.
 
+## Results by Environment
+
+### Local vs Production Comparison
+
+Tests run from a local machine (Windows). Local targets `http://localhost:8080`, production targets `https://bill.fatihkayaci.com`.
+
+> **Note:** Local results reflect raw application performance. Production results include network latency (local machine → remote server) on top of application performance, so they are not directly comparable.
+
+| Test | Metric | Local | Production (1 vCPU / 512MB) |
+|---|---|---|---|
+| Smoke | p(95) | 156ms ✓ | 901ms ✓ |
+| Smoke | Error rate | 0% ✓ | 0% ✓ |
+| Load | p(95) | 1.46s ✓ | 9.49s ✗ |
+| Load | Error rate | 0% ✓ | 0.24% ✓ |
+| Stress | p(95) | 37.25s ✗ | 29.1s ✗ |
+| Stress | Error rate | 0% ✓ | 25.15% ✗ |
+
+### Production Server Findings (1 vCPU / 512MB RAM)
+
+**Smoke test passed** — single user response times are within threshold (p(95) = 901ms < 1s).
+
+**Load test failed** — 20 concurrent users pushed p(95) to 9.49s (threshold: 2s). The server struggles under normal workload due to limited CPU and memory.
+
+**Stress test failed** — error rate hit 25.15% (threshold: 10%). Login success rate dropped to 61% at peak load. System started failing around 60–70 concurrent users due to database connection pool exhaustion and memory pressure on the 512MB instance.
+
+**Conclusion:** The current production server (1 vCPU / 512MB RAM) is sufficient for smoke-level traffic only. A larger instance is needed to handle realistic concurrent load.
+
 ## Findings & Improvements
 
 ### Load Test — Order Close Added
