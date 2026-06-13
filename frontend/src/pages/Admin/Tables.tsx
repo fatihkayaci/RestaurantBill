@@ -21,10 +21,10 @@ export default function Tables() {
     const [newTableStatus, setNewTableStatus] = useState<number>(1);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const tableStatusMap: Record<number, string> = {
-        1: "available",
-        2: "occupied",
-        3: "reserved",
-        4: "outofservice "
+        1: "Müsait",
+        2: "Dolu",
+        3: "Rezerve",
+        4: "Servis Dışı"
     };
     const openCreateModal = () => {
         setEditTable(null);
@@ -100,10 +100,10 @@ export default function Tables() {
     return (
         <>
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Table Management</h2>
+            <h2 className="text-xl font-semibold">Masa Yönetimi</h2>
             <Button className="gap-2" onClick={openCreateModal}>
               <Plus className="h-4 w-4" />
-              Add Table
+              Masa Ekle
             </Button>
           </div>
 
@@ -112,10 +112,10 @@ export default function Tables() {
               <Card 
                 key={table.id}
                 className={
-                  tableStatusMap[table.status] === "available"? 'border-green-300 bg-green-50' :
-                  tableStatusMap[table.status] === "occupied" ? 'border-red-300 bg-red-50' :
-                  tableStatusMap[table.status] === "reserved" ? 'border-amber-300 bg-amber-50' :
-                  tableStatusMap[table.status] === "outofservice" ? 'border-black-300 bg-black-50' : ''
+                  tableStatusMap[table.status] === "Müsait"      ? 'border-green-300 bg-green-50' :
+                  tableStatusMap[table.status] === "Dolu"        ? 'border-red-300 bg-red-50' :
+                  tableStatusMap[table.status] === "Rezerve"     ? 'border-amber-300 bg-amber-50' :
+                  tableStatusMap[table.status] === "Servis Dışı" ? 'border-gray-300 bg-gray-50' : ''
                 }
               >
                 <CardContent className="p-4">
@@ -128,18 +128,18 @@ export default function Tables() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                            className="gap-2 cursor-pointer" 
+                        <DropdownMenuItem
+                            className="gap-2 cursor-pointer"
                             onClick={() => openEditModal(table)}
                         >
-                            <Pencil className="h-4 w-4" /> Edit
+                            <Pencil className="h-4 w-4" /> Düzenle
                         </DropdownMenuItem>
-                        
-                        <DropdownMenuItem 
-                            className="gap-2 text-destructive cursor-pointer" 
+
+                        <DropdownMenuItem
+                            className="gap-2 text-destructive cursor-pointer"
                             onClick={() => setDeleteTargetId(table.id)}
                         >
-                            <Trash2 className="h-4 w-4" /> Remove
+                            <Trash2 className="h-4 w-4" /> Sil
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

@@ -25,7 +25,7 @@ export default function Header({ restaurantName }: Props) {
                 </div>
                 <div>
                     <h1 className="text-lg font-semibold">{restaurantName}</h1>
-                    <p className="text-xs text-muted-foreground">Restaurant Management</p>
+                    <p className="text-xs text-muted-foreground">Restoran Yönetimi</p>
                 </div>
                 </div>
                 

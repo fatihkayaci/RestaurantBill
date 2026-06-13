@@ -128,10 +128,10 @@ export default function Staff() {
     return (
         <>
             <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Staff Members</h2>
+                <h2 className="text-xl font-semibold">Personel Listesi</h2>
                 <Button className="gap-2" onClick={openCreateModal}>
                 <Plus className="h-4 w-4"/>
-                Add Staff
+                Personel Ekle
                 </Button>
             </div>
 
@@ -156,18 +156,18 @@ export default function Staff() {
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem 
-                                            className="gap-2 cursor-pointer" 
+                                        <DropdownMenuItem
+                                            className="gap-2 cursor-pointer"
                                             onClick={() => openEditModal(user)}
                                         >
-                                            <Pencil className="h-4 w-4" /> Edit
+                                            <Pencil className="h-4 w-4" /> Düzenle
                                         </DropdownMenuItem>
-                                        
-                                        <DropdownMenuItem 
-                                            className="gap-2 text-destructive cursor-pointer" 
+
+                                        <DropdownMenuItem
+                                            className="gap-2 text-destructive cursor-pointer"
                                             onClick={() => setDeleteTargetId(user.id)}
                                         >
-                                            <Trash2 className="h-4 w-4" /> Remove
+                                            <Trash2 className="h-4 w-4" /> Sil
                                         </DropdownMenuItem>
 
                                     </DropdownMenuContent>
