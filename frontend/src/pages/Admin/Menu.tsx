@@ -102,7 +102,7 @@ export default function Menu() {
                     <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search menu items..."
+                            placeholder="Menüde ara..."
                             className="pl-9"
                             value={menuSearch}
                             onChange={(e) => setMenuSearch(e.target.value)}
@@ -110,10 +110,10 @@ export default function Menu() {
                     </div>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                         <SelectTrigger className="w-40">
-                            <SelectValue placeholder="Category" />
+                            <SelectValue placeholder="Kategori" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="all">Tüm Kategoriler</SelectItem>
                             {categories.map(cat => (
                                 <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
                             ))}
@@ -122,12 +122,12 @@ export default function Menu() {
                 </div>
                 <Button className="gap-2" onClick={openCreateModal}>
                     <Plus className="h-4 w-4" />
-                    Add Item
+                    Ürün Ekle
                 </Button>
             </div>
 
             {filteredMenuItems.length === 0 ? (
-                <p className="text-center text-muted-foreground py-16">No menu items found.</p>
+                <p className="text-center text-muted-foreground py-16">Ürün bulunamadı.</p>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredMenuItems.map(item => (
@@ -143,10 +143,10 @@ export default function Menu() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem className="gap-2" onClick={() => openEditModal(item)}>
-                                                <Pencil className="h-4 w-4" /> Edit
+                                                <Pencil className="h-4 w-4" /> Düzenle
                                             </DropdownMenuItem>
                                             <DropdownMenuItem className="gap-2 text-destructive" onClick={() => setDeleteTargetId(item.id)}>
-                                                <Trash2 className="h-4 w-4" /> Delete
+                                                <Trash2 className="h-4 w-4" /> Sil
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
@@ -158,11 +158,11 @@ export default function Menu() {
                                 <div>
                                     {item.isActive ? (
                                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600">
-                                            <span className="h-2 w-2 rounded-full bg-green-500" /> Active
+                                            <span className="h-2 w-2 rounded-full bg-green-500" /> Aktif
                                         </span>
                                     ) : (
                                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                                            <span className="h-2 w-2 rounded-full bg-gray-400" /> Inactive
+                                            <span className="h-2 w-2 rounded-full bg-gray-400" /> Pasif
                                         </span>
                                     )}
                                 </div>
@@ -175,22 +175,22 @@ export default function Menu() {
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>{editProduct ? 'Edit Item' : 'Add Item'}</DialogTitle>
+                        <DialogTitle>{editProduct ? 'Ürünü Düzenle' : 'Ürün Ekle'}</DialogTitle>
                         <DialogDescription aria-describedby={undefined} />
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="name">Product Name</Label>
+                            <Label htmlFor="name">Ürün Adı</Label>
                             <Input
                                 id="name"
                                 value={form.name}
                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                placeholder="Product name"
+                                placeholder="Ürün adı"
                             />
                             {fieldErrors.name && <p className="text-sm text-destructive">{fieldErrors.name}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="price">Price</Label>
+                            <Label htmlFor="price">Fiyat</Label>
                             <Input
                                 id="price"
                                 type="number"
@@ -201,14 +201,14 @@ export default function Menu() {
                             {fieldErrors.price && <p className="text-sm text-destructive">{fieldErrors.price}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="category">Category</Label>
+                            <Label htmlFor="category">Kategori</Label>
                             <select
                                 id="category"
                                 value={form.categoryId}
                                 onChange={(e) => setForm({ ...form, categoryId: Number(e.target.value) })}
                                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                             >
-                                <option value={0}>Select category</option>
+                                <option value={0}>Kategori seçin</option>
                                 {categories.map(c => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
@@ -216,23 +216,23 @@ export default function Menu() {
                             {fieldErrors.categoryId && <p className="text-sm text-destructive">{fieldErrors.categoryId}</p>}
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="status">Status</Label>
+                            <Label htmlFor="status">Durum</Label>
                             <select
                                 id="status"
                                 value={form.isActive ? 'true' : 'false'}
                                 onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}
                                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                             >
-                                <option value="true">Active</option>
-                                <option value="false">Inactive</option>
+                                <option value="true">Aktif</option>
+                                <option value="false">Pasif</option>
                             </select>
                         </div>
                         <div className="flex gap-3 pt-2">
                             <Button type="button" variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
-                                Cancel
+                                İptal
                             </Button>
                             <Button type="submit" className="flex-1">
-                                Save
+                                Kaydet
                             </Button>
                         </div>
                     </form>

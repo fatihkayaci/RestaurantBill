@@ -19,35 +19,35 @@ export default function AdminDashboard() {
                 <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-grid">
                     <TabsTrigger value="overview" className="gap-2">
                         <LayoutDashboard className="h-4 w-4" />
-                        <span className="hidden sm:inline">Overview</span>
+                        <span className="hidden sm:inline">Genel Bakış</span>
                     </TabsTrigger>
                     <TabsTrigger value="menu" className="gap-2">
                         <UtensilsCrossed className="h-4 w-4" />
-                        <span className="hidden sm:inline">Menu</span>
+                        <span className="hidden sm:inline">Menü</span>
                     </TabsTrigger>
                     <TabsTrigger value="categories" className="gap-2">
                         <Tag className="h-4 w-4" />
-                        <span className="hidden sm:inline">Categories</span>
+                        <span className="hidden sm:inline">Kategoriler</span>
                     </TabsTrigger>
                     <TabsTrigger value="users" className="gap-2">
                         <Users className="h-4 w-4" />
-                        <span className="hidden sm:inline">Staff</span>
+                        <span className="hidden sm:inline">Personel</span>
                     </TabsTrigger>
                     <TabsTrigger value="tables" className="gap-2">
                         <LayoutGrid className="h-4 w-4" />
-                        <span className="hidden sm:inline">Tables</span>
+                        <span className="hidden sm:inline">Masalar</span>
                     </TabsTrigger>
                     <TabsTrigger value="cashRegisters" className="gap-2">
                         <Wallet className="h-4 w-4" />
-                        <span className="hidden sm:inline">Cash Registers</span>
+                        <span className="hidden sm:inline">Kasalar</span>
                     </TabsTrigger>
                     <TabsTrigger value="reports" className="gap-2">
                         <BarChart3 className="h-4 w-4" />
-                        <span className="hidden sm:inline">Reports</span>
+                        <span className="hidden sm:inline">Raporlar</span>
                     </TabsTrigger>
                     <TabsTrigger value="profile" className="gap-2">
                         <UserCircle className="h-4 w-4" />
-                        <span className="hidden sm:inline">Profile</span>
+                        <span className="hidden sm:inline">Profil</span>
                     </TabsTrigger>
                 </TabsList>
 

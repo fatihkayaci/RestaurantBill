@@ -114,7 +114,7 @@ export default function CategoriesPanel() {
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search categories..."
+                        placeholder="Kategori ara..."
                         className="pl-9"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -122,12 +122,12 @@ export default function CategoriesPanel() {
                 </div>
                 <Button className="gap-2" onClick={openCreateModal}>
                     <Plus className="h-4 w-4" />
-                    Add Category
+                    Kategori Ekle
                 </Button>
             </div>
 
             {filteredCategories.length === 0 ? (
-                <p className="text-center text-muted-foreground py-16">No categories found.</p>
+                <p className="text-center text-muted-foreground py-16">Kategori bulunamadı.</p>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredCategories.map(category => (
@@ -142,10 +142,10 @@ export default function CategoriesPanel() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem className="gap-2" onClick={() => openEditModal(category)}>
-                                            <Pencil className="h-4 w-4" /> Edit
+                                            <Pencil className="h-4 w-4" /> Düzenle
                                         </DropdownMenuItem>
                                         <DropdownMenuItem className="gap-2 text-destructive" onClick={() => setDeleteTargetId(category.id)}>
-                                            <Trash2 className="h-4 w-4" /> Delete
+                                            <Trash2 className="h-4 w-4" /> Sil
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -158,26 +158,26 @@ export default function CategoriesPanel() {
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>{editCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
+                        <DialogTitle>{editCategory ? 'Kategoriyi Düzenle' : 'Kategori Ekle'}</DialogTitle>
                         <DialogDescription aria-describedby={undefined} />
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="name">Category Name</Label>
+                            <Label htmlFor="name">Kategori Adı</Label>
                             <Input
                                 id="name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                placeholder="Category name"
+                                placeholder="Kategori adı"
                             />
                             {fieldErrors.name && <p className="text-sm text-destructive">{fieldErrors.name}</p>}
                         </div>
                         <div className="flex gap-3 pt-2">
                             <Button type="button" variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
-                                Cancel
+                                İptal
                             </Button>
                             <Button type="submit" className="flex-1">
-                                Save
+                                Kaydet
                             </Button>
                         </div>
                     </form>

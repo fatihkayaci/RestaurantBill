@@ -216,7 +216,7 @@ export default function KitchenPage() {
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-sm text-amber-800 font-medium">Pending</p>
+              <p className="text-sm text-amber-800 font-medium">Bekliyor</p>
               <p className="text-3xl font-bold text-amber-900">{pendingGroups.length}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-200">
@@ -227,7 +227,7 @@ export default function KitchenPage() {
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-sm text-blue-800 font-medium">Preparing</p>
+              <p className="text-sm text-blue-800 font-medium">Hazırlanıyor</p>
               <p className="text-3xl font-bold text-blue-900">{preparingGroups.length}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-200">
@@ -238,7 +238,7 @@ export default function KitchenPage() {
         <Card className="border-green-200 bg-green-50">
           <CardContent className="flex items-center justify-between p-4">
             <div>
-              <p className="text-sm text-green-800 font-medium">Ready</p>
+              <p className="text-sm text-green-800 font-medium">Hazır</p>
               <p className="text-3xl font-bold text-green-900">{readyGroups.length}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-200">
@@ -252,13 +252,13 @@ export default function KitchenPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b">
             <div className="h-3 w-3 rounded-full bg-amber-500" />
-            <h2 className="font-semibold">New Orders</h2>
+            <h2 className="font-semibold">Yeni Siparişler</h2>
             <Badge variant="secondary">{pendingGroups.length}</Badge>
           </div>
           <div className="space-y-4">
             {pendingGroups.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                No pending orders
+                Bekleyen sipariş yok
               </p>
             ) : (
               pendingGroups.map(g => (
@@ -278,13 +278,13 @@ export default function KitchenPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b">
             <div className="h-3 w-3 rounded-full bg-blue-500" />
-            <h2 className="font-semibold">Preparing</h2>
+            <h2 className="font-semibold">Hazırlanıyor</h2>
             <Badge variant="secondary">{preparingGroups.length}</Badge>
           </div>
           <div className="space-y-4">
             {preparingGroups.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                No orders being prepared
+                Hazırlanan sipariş yok
               </p>
             ) : (
               preparingGroups.map(g => (
@@ -305,13 +305,13 @@ export default function KitchenPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b">
             <div className="h-3 w-3 rounded-full bg-green-500" />
-            <h2 className="font-semibold">Ready to Serve</h2>
+            <h2 className="font-semibold">Servise Hazır</h2>
             <Badge variant="secondary">{readyGroups.length}</Badge>
           </div>
           <div className="space-y-4">
             {readyGroups.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                No orders ready
+                Hazır sipariş yok
               </p>
             ) : (
               readyGroups.map(g => (

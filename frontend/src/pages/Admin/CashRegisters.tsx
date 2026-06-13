@@ -175,10 +175,10 @@ export default function CashRegisters() {
     return (
         <>
             <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Cash Register Management</h2>
+                <h2 className="text-xl font-semibold">Kasa Yönetimi</h2>
                 <Button className="gap-2" onClick={openCreateModal}>
                     <Plus className="h-4 w-4" />
-                    Add Register
+                    Kasa Ekle
                 </Button>
             </div>
 
@@ -249,13 +249,13 @@ export default function CashRegisters() {
                                             className="gap-2 cursor-pointer"
                                             onClick={() => openEditModal(r)}
                                         >
-                                            <Pencil className="h-4 w-4" /> Edit
+                                            <Pencil className="h-4 w-4" /> Düzenle
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             className="gap-2 text-destructive cursor-pointer"
                                             onClick={() => setDeleteTargetId(r.id)}
                                         >
-                                            <Trash2 className="h-4 w-4" /> Remove
+                                            <Trash2 className="h-4 w-4" /> Sil
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>

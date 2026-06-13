@@ -51,7 +51,7 @@ function OrderCard({ order, visibleItems, showBatches, onAccept, onReady, onItem
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Table {order.tableId}</CardTitle>
+          <CardTitle className="text-lg">Masa {order.tableId}</CardTitle>
           <span className="text-sm text-muted-foreground font-mono">#{order.id}</span>
         </div>
       </CardHeader>
