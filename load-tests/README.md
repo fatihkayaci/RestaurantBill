@@ -82,14 +82,14 @@ Tests run from a local machine (Windows). Local targets `http://localhost:8080`,
 
 > **Note:** Local results reflect raw application performance. Production results include network latency (local machine → remote server) on top of application performance, so they are not directly comparable.
 
-| Test | Metric | Local | Production (1 vCPU / 512MB) |
-|---|---|---|---|
-| Smoke | p(95) | 156ms ✓ | 901ms ✓ |
-| Smoke | Error rate | 0% ✓ | 0% ✓ |
-| Load | p(95) | 1.46s ✓ | 9.49s ✗ |
-| Load | Error rate | 0% ✓ | 0.24% ✓ |
-| Stress | p(95) | 37.25s ✗ | 29.1s ✗ |
-| Stress | Error rate | 0% ✓ | 25.15% ✗ |
+| Test | Metric | Local | Production (1 vCPU / 512MB) | Production (2 vCPU / 4GB) |
+|---|---|---|---|---|
+| Smoke | p(95) | 156ms ✓ | 901ms ✓ | 233ms ✓ |
+| Smoke | Error rate | 0% ✓ | 0% ✓ | 0% ✓ |
+| Load | p(95) | 1.46s ✓ | 9.49s ✗ | 1.53s ✓ |
+| Load | Error rate | 0% ✓ | 0.24% ✓ | 0% ✓ |
+| Stress | p(95) | 37.25s ✗ | 29.1s ✗ | 3.7s ✓ |
+| Stress | Error rate | 0% ✓ | 25.15% ✗ | 0% ✓ |
 
 ### Production Server Findings (1 vCPU / 512MB RAM)
 
@@ -99,9 +99,21 @@ Tests run from a local machine (Windows). Local targets `http://localhost:8080`,
 
 **Stress test failed** — error rate hit 25.15% (threshold: 10%). Login success rate dropped to 61% at peak load. System started failing around 60–70 concurrent users due to database connection pool exhaustion and memory pressure on the 512MB instance.
 
-**Conclusion:** The current production server (1 vCPU / 512MB RAM) is sufficient for smoke-level traffic only. A larger instance is needed to handle realistic concurrent load.
+**Conclusion:** The 1 vCPU / 512MB instance is sufficient for smoke-level traffic only. A larger instance is needed to handle realistic concurrent load.
 
-## Findings & Improvements
+### Production Server Findings (2 vCPU / 4GB RAM)
+
+**All tests passed** — zero errors across all three test levels.
+
+**Smoke test** — p(95) = 233ms, well under the 1s threshold. Significantly faster than the 512MB instance (901ms).
+
+**Load test** — p(95) = 1.53s under 20 concurrent users, within the 2s threshold. Error rate 0%.
+
+**Stress test** — p(95) = 3.7s under 100 concurrent users, within the 5s threshold. Error rate 0%. The system handled peak load gracefully with no failures.
+
+**Conclusion:** The 2 vCPU / 4GB instance handles all load levels comfortably and is suitable for real-world restaurant usage.
+
+## Iteration History
 
 ### Load Test — Order Close Added
 
@@ -112,14 +124,3 @@ Tests run from a local machine (Windows). Local targets `http://localhost:8080`,
 **Fix:** Added order close (`POST /api/order/close`) at the end of each iteration. The table becomes available again for the next user.
 
 **Result:** p(95) dropped from 2.95s to 1.46s, threshold passed.
-
-### Stress Test — Saturation Point
-
-**Finding:** System reaches saturation at ~90 concurrent users.
-
-**Details:**
-- p(90) = 2.47s → first 90% of requests respond at normal speed
-- p(95) = 37.25s → requests start queuing after the 90th user
-- Error rate = 0% → system did not crash, it degraded gracefully
-
-**Conclusion:** Graceful degradation under extreme load — the system slowed down but kept responding. 100 concurrent users is well above the realistic usage scenario for this project, so this result is acceptable.
