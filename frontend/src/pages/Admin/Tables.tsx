@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as signalR from "@microsoft/signalr";
 import type { Table } from "../../features/tables/types";
 import type { Order, OrderItem } from "../../features/order/types";
 import type { CashRegister } from "../../features/cashRegisters/types";
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, Minus, MoreHorizontal, Pencil, Trash2, CheckCircle, Landmark, X, Ban } from 'lucide-react'
+import { Plus, Minus, MoreHorizontal, Pencil, Trash2, CheckCircle, Landmark, Ban } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -58,6 +59,9 @@ export default function Tables() {
     const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>('');
     const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
+    const orderDialogTableRef = useRef<Table | null>(null);
+    useEffect(() => { orderDialogTableRef.current = orderDialogTable; }, [orderDialogTable]);
+
     // Product panel state (inside order dialog)
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -79,6 +83,40 @@ export default function Tables() {
 
     useEffect(() => {
         refreshTables().catch((err) => console.error("Masalar çekilirken hata:", err));
+    }, []);
+
+    useEffect(() => {
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`)
+            .withAutomaticReconnect()
+            .configureLogging({
+                log(logLevel: signalR.LogLevel, message: string) {
+                    if (message.includes("stopped during negotiation")) return;
+                    if (logLevel >= signalR.LogLevel.Error) console.error(message);
+                }
+            })
+            .build();
+
+        connection.on("TableStatusChanged", (changedTableId: number, status: number) => {
+            setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, status } : t));
+        });
+
+        connection.on("OrderUpdated", (changedTableId: number) => {
+            const current = orderDialogTableRef.current;
+            if (current && current.id === changedTableId) {
+                orderService.getOrderByTableId(changedTableId.toString()).then((data) => {
+                    if (data) setTableOrder(data);
+                });
+            }
+        });
+
+        connection.start().catch((err: Error) => {
+            if (!err.message.includes("stopped during negotiation")) {
+                console.error("SignalR Connection Error:", err);
+            }
+        });
+
+        return () => { connection.stop(); };
     }, []);
 
     const openCreateModal = () => {
