@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Application.Behaviors;
 public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
@@ -31,7 +32,7 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
         if (_cache.TryGetValue(key, out _))
         {
             _logger.LogWarning("Duplicate request blocked: {Key}", key);
-            return default!;
+            throw new BusinessException("Bu istek zaten işlendi, lütfen tekrar denemeyin.");
         }
 
         var response = await next();
