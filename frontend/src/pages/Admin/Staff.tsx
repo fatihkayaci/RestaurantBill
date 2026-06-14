@@ -28,6 +28,7 @@ export default function Staff() {
         passwordHash: '', userCode: '', role: 2
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [generalError, setGeneralError] = useState<string | null>(null);
 
     useEffect(() => {
         userService.getUsersByRestaurantId().then(setUsers).catch(console.error);
@@ -50,6 +51,7 @@ export default function Staff() {
         setEditUser(null);
         setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: 2 });
         setFieldErrors({});
+        setGeneralError(null);
         setIsModalOpen(true);
     };
 
@@ -57,6 +59,7 @@ export default function Staff() {
         setEditUser(user);
         setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', userCode: user.userCode, role: user.role });
         setFieldErrors({});
+        setGeneralError(null);
         setIsModalOpen(true);
     };
 
@@ -101,9 +104,9 @@ export default function Staff() {
         }
 
         setFieldErrors({});
+        setGeneralError(null);
         try {
             if (editUser) {
-                console.log(form);
                 await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash });
             } else {
                 await userService.createUser(form);
@@ -113,13 +116,16 @@ export default function Staff() {
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                const backendErrors = err.response?.data?.errors as Record<string, string[]> | undefined;
+                const data = err.response?.data;
+                const backendErrors = data?.errors as Record<string, string[]> | undefined;
                 if (backendErrors) {
                     const mapped: Record<string, string> = {};
                     for (const key in backendErrors) {
                         mapped[key.charAt(0).toLowerCase() + key.slice(1)] = backendErrors[key][0];
                     }
                     setFieldErrors(mapped);
+                } else if (data?.message) {
+                    setGeneralError(data.message as string);
                 }
             }
         }
@@ -269,6 +275,12 @@ export default function Staff() {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {generalError && (
+                                <p className="text-sm text-destructive rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2">
+                                    {generalError}
+                                </p>
+                            )}
 
                             <DialogFooter className="mt-4">
                                 <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
