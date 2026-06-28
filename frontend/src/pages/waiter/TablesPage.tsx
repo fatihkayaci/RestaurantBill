@@ -1,101 +1,222 @@
 import { useState, useEffect } from 'react';
-import * as signalR from "@microsoft/signalr";
-import TableCard from '@/features/tables/components/TableCard';
+import * as signalR from '@microsoft/signalr';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Table } from '@/features/tables/types';
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import TablePanel from './components/TablePanel';
 
-export default function TablesPage() {
+type FilterType = 'all' | 'empty' | 'occupied' | 'reserved';
+
+const FILTER_CONFIG = [
+    { key: 'all' as FilterType, label: (counts: Counts) => `Tümü (${counts.total})` },
+    { key: 'empty' as FilterType, label: (counts: Counts) => `Boş (${counts.empty})` },
+    { key: 'occupied' as FilterType, label: (counts: Counts) => `Dolu (${counts.occupied})` },
+    { key: 'reserved' as FilterType, label: (counts: Counts) => `Rezerve (${counts.reserved})` },
+];
+
+interface Counts {
+    total: number;
+    empty: number;
+    occupied: number;
+    reserved: number;
+}
+
+const STATUS_CARD = {
+    1: {
+        bg: 'bg-[#f0faf4] dark:bg-green-950/20',
+        border: 'border-green-200 dark:border-green-800/60',
+        badge: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400',
+        label: 'BOŞ',
+    },
+    2: {
+        bg: 'bg-[#fff5f5] dark:bg-red-950/20',
+        border: 'border-red-200 dark:border-red-800/60',
+        badge: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400',
+        label: 'DOLU',
+    },
+    3: {
+        bg: 'bg-[#fffbf0] dark:bg-amber-950/20',
+        border: 'border-amber-200 dark:border-amber-800/60',
+        badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400',
+        label: 'REZERVE',
+    },
+} as const;
+
+function TableCard({
+    table,
+    isSelected,
+    onClick,
+}: {
+    table: Table;
+    isSelected: boolean;
+    onClick: () => void;
+}) {
+    const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
+
+    return (
+        <button
+            onClick={onClick}
+            className={`text-left rounded-2xl border p-4 h-52 flex flex-col cursor-pointer transition-all duration-150
+                hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]
+                ${cfg.bg} ${cfg.border}
+                ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-background' : ''}
+            `}
+        >
+            <div className="flex items-start justify-between gap-1 mb-2">
+                <span className="text-xl font-serif font-bold text-foreground leading-tight">
+                    {table.name}
+                </span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 leading-tight ${cfg.badge}`}>
+                    {cfg.label}
+                </span>
+            </div>
+
+            <div className="flex-1 flex flex-col justify-end gap-1">
+                {table.status === 1 && (
+                    <span className="text-xs text-blue-500 font-medium">
+                        ↑ Sipariş oluştur
+                    </span>
+                )}
+                {table.status === 2 && (
+                    <span className="text-xs text-muted-foreground">Aktif sipariş</span>
+                )}
+                {table.status === 3 && (
+                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                        Rezervasyon mevcut
+                    </span>
+                )}
+            </div>
+        </button>
+    );
+}
+
+export default function WaiterTablesPage() {
     const [tables, setTables] = useState<Table[]>([]);
     const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState<FilterType>('all');
+    const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
 
     useEffect(() => {
         tableService.getTables()
-            .then((data) => {
-                setTables(data);
-                setLoading(false);
-            })
-            .catch((error) => {
-                console.error("Masalar çekilirken hata oluştu:", error);
-                setLoading(false);
-            });
+            .then(t => setTables(t))
+            .catch(console.error)
+            .finally(() => setLoading(false));
+
     }, []);
 
     useEffect(() => {
-        const connection = new signalR.HubConnectionBuilder()
+        const conn = new signalR.HubConnectionBuilder()
             .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`)
             .withAutomaticReconnect()
             .configureLogging({
-                log(logLevel: signalR.LogLevel, message: string) {
-                    if (message.includes("stopped during negotiation")) return;
-                    if (logLevel >= signalR.LogLevel.Error) console.error(message);
-                }
+                log(level: signalR.LogLevel, msg: string) {
+                    if (msg.includes('stopped during negotiation')) return;
+                    if (level >= signalR.LogLevel.Error) console.error(msg);
+                },
             })
             .build();
 
-        connection.on("TableStatusChanged", (tableId: number, status: number) => {
-            setTables((prev) =>
-                prev.map((t) => t.id === tableId ? { ...t, status } : t)
-            );
+        conn.on('TableStatusChanged', (tableId: number, status: number) => {
+            setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
         });
 
-        let isCancelled = false;
-
-        connection.start()
-            .catch((err) => { if (!isCancelled) console.error("SignalR Connection Error:", err); });
-
-        return () => {
-            isCancelled = true;
-            connection.stop();
-        };
+        let cancelled = false;
+        conn.start().catch(err => { if (!cancelled) console.error('SignalR:', err); });
+        return () => { cancelled = true; conn.stop(); };
     }, []);
+
+    const handleTableUpdated = (tableId: number, status: number) => {
+        setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
+    };
+
+    const counts: Counts = {
+        total: tables.length,
+        empty: tables.filter(t => t.status === 1).length,
+        occupied: tables.filter(t => t.status === 2).length,
+        reserved: tables.filter(t => t.status === 3).length,
+    };
+
+    const filtered = tables.filter(t => {
+        if (filter === 'empty') return t.status === 1;
+        if (filter === 'occupied') return t.status === 2;
+        if (filter === 'reserved') return t.status === 3;
+        return true;
+    });
+
+    const selectedTable = tables.find(t => t.id === selectedTableId) ?? null;
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-background p-6 md:p-8">
-                <Skeleton className="h-10 w-64 mb-2" />
-                <Skeleton className="h-5 w-96 mb-8" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5 md:gap-6">
-                    {[...Array(12)].map((_, i) => (
-                        <Skeleton key={i} className="h-32 rounded-2xl shadow-sm" />
-                    ))}
-                </div>
+            <div className="p-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {[...Array(12)].map((_, i) => (
+                    <div key={i} className="h-52 rounded-2xl bg-muted animate-pulse" />
+                ))}
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-background p-6 md:p-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 border-b pb-5 gap-4">
-                <div>
-                    <h1 className="text-4xl font-extrabold tracking-tight">
-                        Salon Görünümü
-                    </h1>
-                    <p className="text-muted-foreground font-medium mt-2">
-                        Masaların anlık durumunu buradan takip edebilirsiniz.
-                    </p>
+        <>
+            {/* Stats + Filter Bar */}
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {/* Stats */}
+                <div className="flex items-center gap-3 text-sm flex-wrap">
+                    <span className="font-semibold text-foreground">{counts.total} Toplam</span>
+                    <span className="text-border">·</span>
+                    <span className="text-green-600 dark:text-green-400 font-medium">{counts.empty} Boş</span>
+                    <span className="text-border">·</span>
+                    <span className="text-red-500 font-medium">{counts.occupied} Dolu</span>
+                    <span className="text-border">·</span>
+                    <span className="text-amber-500 font-medium">{counts.reserved} Rezerve</span>
                 </div>
-                <div className="flex flex-wrap gap-3 items-center">
-                    <Badge variant="outline" className="gap-2 px-3 py-1.5 text-green-600 border-green-500/30 bg-green-500/10 hover:bg-green-500/20">
-                        <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                        Boş
-                    </Badge>
-                    <Badge variant="outline" className="gap-2 px-3 py-1.5 text-red-600 border-red-500/30 bg-red-500/10 hover:bg-red-500/20">
-                        <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
-                        Dolu
-                    </Badge>
-                    <Badge variant="outline" className="gap-2 px-3 py-1.5 text-amber-600 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20">
-                        <span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
-                        Rezerve
-                    </Badge>
+
+                {/* Filtreler */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    {FILTER_CONFIG.map(({ key, label }) => (
+                        <button
+                            key={key}
+                            onClick={() => setFilter(key)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                filter === key
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                            }`}
+                        >
+                            {label(counts)}
+                        </button>
+                    ))}
                 </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5 md:gap-6">
-                {tables.map(table => (
-                    <TableCard key={table.id} table={table} />
-                ))}
+
+            {/* Masa Grid */}
+            <div className="p-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+                    {filtered.map(table => (
+                        <TableCard
+                            key={table.id}
+                            table={table}
+                            isSelected={selectedTableId === table.id}
+                            onClick={() => setSelectedTableId(prev => prev === table.id ? null : table.id)}
+                        />
+                    ))}
+                </div>
             </div>
-        </div>
+
+            {/* Overlay + Panel */}
+            {selectedTable && (
+                <>
+                    <div
+                        className="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+                        onClick={() => setSelectedTableId(null)}
+                    />
+                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-96 shadow-2xl animate-in slide-in-from-right duration-300">
+                        <TablePanel
+                            table={selectedTable}
+                            onClose={() => setSelectedTableId(null)}
+                            onTableUpdated={handleTableUpdated}
+                        />
+                    </div>
+                </>
+            )}
+        </>
     );
 }
