@@ -1,58 +1,13 @@
-﻿import { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Plus,
-    MoreHorizontal,
-    Pencil,
-    Trash2,
-    Wallet,
-    ArrowDownCircle,
-    ArrowUpCircle,
-    Banknote,
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { X, Pencil, ArrowDownCircle, ArrowUpCircle, Banknote, Wallet } from 'lucide-react';
 import axios from 'axios';
 import type { CashRegister, CashRegisterStatus } from '@/features/cashier/types';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
+import { cn } from '@/lib/utils';
 
-const statusLabel: Record<CashRegisterStatus, string> = {
-    1: 'Açık',
-    2: 'Kapalı',
-};
+const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function CashRegisters() {
     const [registers, setRegisters] = useState<CashRegister[]>([]);
@@ -75,14 +30,12 @@ export default function CashRegisters() {
         try {
             const data = await cashRegisterService.getCashRegisters();
             setRegisters(data);
-        } catch (error) {
-            console.error('Kasalar çekilirken hata oluştu:', error);
+        } catch (err) {
+            console.error(err);
         }
     };
 
-    useEffect(() => {
-        refresh();
-    }, []);
+    useEffect(() => { refresh(); }, []);
 
     const openCreateModal = () => {
         setEditTarget(null);
@@ -106,25 +59,14 @@ export default function CashRegisters() {
         e.preventDefault();
         const errors: Record<string, string> = {};
         if (!name.trim()) errors.name = 'Kasa adı boş olamaz.';
-        else if (name.length > 50) errors.name = 'Kasa adı en fazla 50 karakter olabilir.';
+        else if (name.length > 50) errors.name = 'En fazla 50 karakter.';
         const balanceNum = balanceInput === '' ? 0 : Number(balanceInput);
-        if (isNaN(balanceNum) || balanceNum < 0)
-            errors.balance = 'Geçerli bir bakiye giriniz.';
-
-        if (Object.keys(errors).length > 0) {
-            setFieldErrors(errors);
-            return;
-        }
-
+        if (isNaN(balanceNum) || balanceNum < 0) errors.balance = 'Geçerli bir bakiye giriniz.';
+        if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
         try {
             if (editTarget) {
-                await cashRegisterService.updateCashRegister(
-                    editTarget.id,
-                    name,
-                    balanceNum,
-                    status
-                );
+                await cashRegisterService.updateCashRegister(editTarget.id, name, balanceNum, status);
             } else {
                 await cashRegisterService.createCashRegister(name, balanceNum, status);
             }
@@ -135,9 +77,7 @@ export default function CashRegisters() {
                 const backendErrors = err.response?.data?.errors as Record<string, string[]> | undefined;
                 if (backendErrors) {
                     const mapped: Record<string, string> = {};
-                    for (const key in backendErrors) {
-                        mapped[key.charAt(0).toLowerCase() + key.slice(1)] = backendErrors[key][0];
-                    }
+                    for (const key in backendErrors) mapped[key.charAt(0).toLowerCase() + key.slice(1)] = backendErrors[key][0];
                     setFieldErrors(mapped);
                 }
             }
@@ -167,267 +107,246 @@ export default function CashRegisters() {
             await refresh();
             setTxTarget(null);
             setTxAmount('');
-        } catch (error) {
-            console.error('İşlem eklenirken hata oluştu:', error);
+        } catch (err) {
+            console.error(err);
         }
     };
 
     return (
-        <>
-            <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Kasa Yönetimi</h2>
-                <Button className="gap-2" onClick={openCreateModal}>
-                    <Plus className="h-4 w-4" />
-                    Kasa Ekle
-                </Button>
+        <div className="space-y-5">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Kasalar</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">{registers.length} kasa</p>
+                </div>
+                <button
+                    onClick={openCreateModal}
+                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                >
+                    + Kasa Ekle
+                </button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <Card>
-                    <CardContent className="flex items-center gap-3 p-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-                            <Banknote className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Toplam Bakiye</p>
-                            <p className="text-2xl font-bold">{totalBalance.toFixed(2)} ₺</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="flex items-center gap-3 p-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                            <Wallet className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Toplam Kasa</p>
-                            <p className="text-2xl font-bold">{registers.length}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="flex items-center gap-3 p-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                            <Wallet className="h-5 w-5 text-amber-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Açık Kasa</p>
-                            <p className="text-2xl font-bold">{openCount}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* Stat Cards */}
+            <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-xl border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-950/40 p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400">Toplam Bakiye</p>
+                    <p className="text-3xl font-bold text-foreground mt-2">₺{totalBalance.toFixed(0)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">tüm kasalar</p>
+                </div>
+                <div className="rounded-xl border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/40 p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-blue-600 dark:text-blue-400">Toplam Kasa</p>
+                    <p className="text-3xl font-bold text-foreground mt-2">{registers.length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">kayıtlı</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/40 p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-amber-600 dark:text-amber-400">Açık Kasa</p>
+                    <p className="text-3xl font-bold text-foreground mt-2">{openCount}</p>
+                    <p className="text-xs text-muted-foreground mt-1">aktif</p>
+                </div>
             </div>
 
+            {/* Kasa Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {registers.map(r => (
-                    <Card
+                    <div
                         key={r.id}
-                        className={
+                        className={cn(
+                            "rounded-xl border p-5 flex flex-col gap-4",
                             r.status === 1
-                                ? 'border-green-300 bg-green-50'
-                                : 'border-gray-300 bg-gray-50'
-                        }
+                                ? "bg-card border-border"
+                                : "bg-muted/30 border-border"
+                        )}
                     >
-                        <CardContent className="p-4">
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                                        <Wallet className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold">{r.name}</p>
-                                    </div>
+                        {/* Top row */}
+                        <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className={cn(
+                                    "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                                    r.status === 1 ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-muted"
+                                )}>
+                                    <Wallet className={cn("h-4 w-4", r.status === 1 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")} />
                                 </div>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                            className="gap-2 cursor-pointer"
-                                            onClick={() => openEditModal(r)}
-                                        >
-                                            <Pencil className="h-4 w-4" /> Düzenle
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            className="gap-2 text-destructive cursor-pointer"
-                                            onClick={() => setDeleteTargetId(r.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" /> Sil
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                <p className="font-semibold text-foreground">{r.name}</p>
                             </div>
-
-                            <div className="mb-3">
-                                <p className="text-xs text-muted-foreground">İçindeki Para</p>
-                                <p className="text-2xl font-bold">{r.balance.toFixed(2)} ₺</p>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => openEditModal(r)} className="text-muted-foreground hover:text-foreground transition-colors">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button onClick={() => setDeleteTargetId(r.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
                             </div>
+                        </div>
 
-                            <div className="flex items-center justify-between mb-3">
-                                <Badge
-                                    variant="outline"
-                                    className={
-                                        r.status === 1
-                                            ? 'bg-green-50 text-green-700 border-green-200'
-                                            : 'bg-gray-100 text-gray-700 border-gray-200'
-                                    }
-                                >
-                                    {statusLabel[r.status]}
-                                </Badge>
-                                {r.status === 1 && r.openedAt && (
-                                    <span className="text-xs text-muted-foreground">
-                                        Açılış: {r.openedAt}
-                                    </span>
-                                )}
-                            </div>
+                        {/* Balance */}
+                        <div>
+                            <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Bakiye</p>
+                            <p className="text-2xl font-bold text-foreground mt-1">₺{r.balance.toFixed(2)}</p>
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1"
+                        {/* Status + actions */}
+                        <div className="flex items-center justify-between">
+                            <span className={cn(
+                                "text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded",
+                                r.status === 1
+                                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                    : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                            )}>
+                                {r.status === 1 ? 'Açık' : 'Kapalı'}
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
                                     disabled={r.status !== 1}
                                     onClick={() => openTxDialog(r, 1)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    <ArrowDownCircle className="h-4 w-4 text-green-600" />
+                                    <ArrowDownCircle className="h-3.5 w-3.5" />
                                     Giriş
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1"
+                                </button>
+                                <button
                                     disabled={r.status !== 1}
                                     onClick={() => openTxDialog(r, 2)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    <ArrowUpCircle className="h-4 w-4 text-red-600" />
+                                    <ArrowUpCircle className="h-3.5 w-3.5" />
                                     Çıkış
-                                </Button>
+                                </button>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 ))}
             </div>
 
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{editTarget ? 'Kasayı Düzenle' : 'Yeni Kasa Ekle'}</DialogTitle>
-                        <DialogDescription aria-describedby={undefined} />
-                    </DialogHeader>
-
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4">
-                        <div className="flex flex-col gap-2">
-                            <Label>Kasa Adı</Label>
-                            <Input
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                                placeholder="Ana Kasa"
-                            />
-                            {fieldErrors.name && (
-                                <p className="text-sm text-destructive">{fieldErrors.name}</p>
-                            )}
+            {/* Kasa Ekle / Düzenle Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-foreground">
+                                {editTarget ? 'Kasayı Düzenle' : 'Kasa Ekle'}
+                            </h2>
+                            <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                            <Label>{editTarget ? 'Mevcut Bakiye (₺)' : 'Açılış Bakiyesi (₺)'}</Label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                value={balanceInput}
-                                onChange={e => setBalanceInput(e.target.value)}
-                                placeholder="0.00"
-                            />
-                            {fieldErrors.balance && (
-                                <p className="text-sm text-destructive">{fieldErrors.balance}</p>
-                            )}
+                        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+                            <div>
+                                <label className={labelClass}>Kasa Adı</label>
+                                <input
+                                    className={cn(inputClass, fieldErrors.name && "border-destructive")}
+                                    placeholder="Ana Kasa"
+                                    value={name}
+                                    onChange={e => setName(e.target.value)}
+                                    autoFocus
+                                />
+                                {fieldErrors.name && <p className="text-xs text-destructive mt-1">{fieldErrors.name}</p>}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>{editTarget ? 'Mevcut Bakiye (₺)' : 'Açılış Bakiyesi (₺)'}</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    className={cn(inputClass, fieldErrors.balance && "border-destructive")}
+                                    placeholder="0.00"
+                                    value={balanceInput}
+                                    onChange={e => setBalanceInput(e.target.value)}
+                                />
+                                {fieldErrors.balance && <p className="text-xs text-destructive mt-1">{fieldErrors.balance}</p>}
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Durum</label>
+                                <select
+                                    className={inputClass}
+                                    value={status}
+                                    onChange={e => setStatus(Number(e.target.value) as CashRegisterStatus)}
+                                >
+                                    <option value={1}>Açık</option>
+                                    <option value={2}>Kapalı</option>
+                                </select>
+                            </div>
+                        </form>
+
+                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
+                            <button type="button" onClick={handleSubmit} className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">
+                                {editTarget ? 'Kaydet' : 'Ekle'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Para Giriş / Çıkış Modal */}
+            {txTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setTxTarget(null)} />
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-foreground">
+                                    {txType === 1 ? 'Para Girişi' : 'Para Çıkışı'}
+                                </h2>
+                                <p className="text-sm text-muted-foreground mt-0.5">{txTarget.name}</p>
+                            </div>
+                            <button onClick={() => setTxTarget(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                            <Label>Durum</Label>
-                            <Select
-                                value={status.toString()}
-                                onValueChange={v => setStatus(Number(v) as CashRegisterStatus)}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="1">Açık</SelectItem>
-                                    <SelectItem value="2">Kapalı</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <DialogFooter className="mt-4">
-                            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                                İptal
-                            </Button>
-                            <Button type="submit">{editTarget ? 'Kaydet' : 'Ekle'}</Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={txTarget !== null} onOpenChange={open => !open && setTxTarget(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>
-                            {txType === 1 ? 'Kasaya Para Girişi' : 'Kasadan Para Çıkışı'} —{' '}
-                            {txTarget?.name}
-                        </DialogTitle>
-                        <DialogDescription aria-describedby={undefined} />
-                    </DialogHeader>
-
-                    <form onSubmit={handleTxSubmit} className="flex flex-col gap-4 py-4">
-                        <div className="flex flex-col gap-2">
-                            <Label>Tutar (₺)</Label>
-                            <Input
+                        <form onSubmit={handleTxSubmit} className="px-6 py-5">
+                            <label className={labelClass}>Tutar (₺)</label>
+                            <input
                                 type="number"
                                 step="0.01"
                                 min="0.01"
+                                className={inputClass}
+                                placeholder="0.00"
                                 value={txAmount}
                                 onChange={e => setTxAmount(e.target.value)}
-                                placeholder="0.00"
                                 autoFocus
                             />
-                            {txTarget && (
-                                <p className="text-xs text-muted-foreground">
-                                    Mevcut bakiye: {txTarget.balance.toFixed(2)} ₺
-                                </p>
-                            )}
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Mevcut bakiye: ₺{txTarget.balance.toFixed(2)}
+                            </p>
+                        </form>
+
+                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                            <button type="button" onClick={() => setTxTarget(null)} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
+                            <button
+                                type="button"
+                                onClick={handleTxSubmit}
+                                className={cn(
+                                    "px-4 py-2 text-sm rounded-lg text-white font-medium transition-colors",
+                                    txType === 1 ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+                                )}
+                            >
+                                Onayla
+                            </button>
                         </div>
+                    </div>
+                </div>
+            )}
 
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setTxTarget(null)}>
-                                İptal
-                            </Button>
-                            <Button type="submit">Onayla</Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            <AlertDialog
-                open={deleteTargetId !== null}
-                onOpenChange={open => !open && setDeleteTargetId(null)}
-            >
+            {/* Delete Confirm */}
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Kasayı sil?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Bu kasa kalıcı olarak silinecek. Bu işlem geri alınamaz.
-                        </AlertDialogDescription>
+                        <AlertDialogTitle>Kasayı sil</AlertDialogTitle>
+                        <AlertDialogDescription>Bu kasa kalıcı olarak silinecek. Bu işlem geri alınamaz.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Sil</AlertDialogAction>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sil</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </div>
     );
 }
-
