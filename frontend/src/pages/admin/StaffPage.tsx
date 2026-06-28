@@ -1,26 +1,28 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { Search, X, Pencil } from 'lucide-react';
 import { userService } from "@/features/admin/api/userService";
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Plus, Pencil, Trash2, MoreHorizontal} from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent,DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
-import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter} from "@/components/ui/dialog"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { CreateUser, User } from "@/features/admin/types";
 import axios from "axios";
+import { cn } from "@/lib/utils";
+
+const roleMap: Record<number, string> = { 1: "Admin", 2: "Garson", 3: "Kasiyer", 4: "Mutfak" };
+
+const roleStyle: Record<number, { avatar: string; badge: string }> = {
+    1: { avatar: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
+    2: { avatar: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+    3: { avatar: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
+    4: { avatar: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+};
+
+const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function Staff() {
-    const roleMap: Record<number, string> = {
-        1: "Admin",
-        2: "Garson",
-        3: "Kasiyer",
-        4: "Mutfak"
-    };
     const [users, setUsers] = useState<User[]>([]);
+    const [search, setSearch] = useState('');
+    const [activeMap, setActiveMap] = useState<Record<string, boolean>>({});
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editUser, setEditUser] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
@@ -29,9 +31,17 @@ export default function Staff() {
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [generalError, setGeneralError] = useState<string | null>(null);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
     useEffect(() => {
-        userService.getUsersByRestaurantId().then(setUsers).catch(console.error);
+        userService.getUsersByRestaurantId()
+            .then(data => {
+                setUsers(data);
+                const map: Record<string, boolean> = {};
+                data.forEach(u => { map[u.id] = true; });
+                setActiveMap(map);
+            })
+            .catch(console.error);
     }, []);
 
     const generatePassword = () => {
@@ -40,9 +50,7 @@ export default function Staff() {
     };
 
     const generateUserCode = () => {
-        const numbers = users
-            .map(u => parseInt(u.userCode.replace(/\D/g, ''), 10))
-            .filter(n => !isNaN(n));
+        const numbers = users.map(u => parseInt(u.userCode.replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
         const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
         return `USR-${String(next).padStart(3, '0')}`;
     };
@@ -63,46 +71,29 @@ export default function Staff() {
         setIsModalOpen(true);
     };
 
-    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-
     const handleDelete = async () => {
-        if (deleteTargetId === null) return;
+        if (!deleteTargetId) return;
         await userService.deleteUser(deleteTargetId);
-        setUsers(users.filter(u => u.id !== deleteTargetId));
+        setUsers(prev => prev.filter(u => u.id !== deleteTargetId));
         setDeleteTargetId(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
         const errors: Record<string, string> = {};
         if (!form.fullName.trim()) errors.fullName = 'Ad soyad boş bırakılamaz.';
-        else if (form.fullName.length > 100) errors.fullName = 'Ad soyad en fazla 100 karakter olabilir.';
-
+        else if (form.fullName.length > 100) errors.fullName = 'En fazla 100 karakter.';
         if (!form.userName.trim()) errors.userName = 'Kullanıcı adı boş bırakılamaz.';
-        else if (form.userName.length > 50) errors.userName = 'Kullanıcı adı en fazla 50 karakter olabilir.';
-
-        if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-            errors.email = 'Geçerli bir e-posta adresi giriniz.';
-        }
-
-        if (form.phoneNumber && form.phoneNumber.length > 20) {
-            errors.phoneNumber = 'Telefon numarası en fazla 20 karakter olabilir.';
-        }
-
+        else if (form.userName.length > 50) errors.userName = 'En fazla 50 karakter.';
+        if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
         if (!editUser) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
-            else if (form.passwordHash.length < 6) errors.passwordHash = 'Şifre en az 6 karakter olmalıdır.';
+            else if (form.passwordHash.length < 6) errors.passwordHash = 'En az 6 karakter.';
             if (!form.userCode.trim()) errors.userCode = 'Kullanıcı kodu boş bırakılamaz.';
         } else if (form.passwordHash && form.passwordHash.length < 6) {
-            errors.passwordHash = 'Şifre en az 6 karakter olmalıdır.';
+            errors.passwordHash = 'En az 6 karakter.';
         }
-
-        if (Object.keys(errors).length > 0) {
-            setFieldErrors(errors);
-            return;
-        }
-
+        if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
         setGeneralError(null);
         try {
@@ -113,6 +104,7 @@ export default function Staff() {
             }
             const updated = await userService.getUsersByRestaurantId();
             setUsers(updated);
+            updated.forEach(u => { if (!(u.id in activeMap)) setActiveMap(prev => ({ ...prev, [u.id]: true })); });
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
@@ -120,9 +112,7 @@ export default function Staff() {
                 const backendErrors = data?.errors as Record<string, string[]> | undefined;
                 if (backendErrors) {
                     const mapped: Record<string, string> = {};
-                    for (const key in backendErrors) {
-                        mapped[key.charAt(0).toLowerCase() + key.slice(1)] = backendErrors[key][0];
-                    }
+                    for (const key in backendErrors) mapped[key.charAt(0).toLowerCase() + key.slice(1)] = backendErrors[key][0];
                     setFieldErrors(mapped);
                 } else if (data?.message) {
                     setGeneralError(data.message as string);
@@ -131,185 +121,260 @@ export default function Staff() {
         }
     };
 
+    const filtered = users.filter(u => u.fullName.toLowerCase().includes(search.toLowerCase()));
+
     return (
-        <>
-            <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Personel Listesi</h2>
-                <Button className="gap-2" onClick={openCreateModal}>
-                <Plus className="h-4 w-4"/>
-                Personel Ekle
-                </Button>
+        <div className="space-y-5">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Çalışanlar</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">{users.length} çalışan</p>
+                </div>
+                <button
+                    onClick={openCreateModal}
+                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                >
+                    + Çalışan Ekle
+                </button>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {users.map(user => (
-                    <Card key={user.id}>
-                        <CardContent className="p-4">
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg">
-                                        {user.fullName.split(' ').map(n => n[0]).join('')}
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold">{user.fullName}</p>
-                                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                                    </div>
-                                </div>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                            className="gap-2 cursor-pointer"
-                                            onClick={() => openEditModal(user)}
+            {/* Search */}
+            <div className="relative w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                    className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    placeholder="Çalışan ara..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                />
+            </div>
+
+            {/* Table */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="border-b border-border">
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ad Soyad</th>
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Rol</th>
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Bölge</th>
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Başlangıç</th>
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.map(user => {
+                            const style = roleStyle[user.role] ?? roleStyle[1];
+                            const initials = user.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+                            const isActive = activeMap[user.id] ?? true;
+                            return (
+                                <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                                    <td className="px-5 py-3.5">
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0", style.avatar)}>
+                                                {initials}
+                                            </div>
+                                            <button
+                                                className="font-medium text-foreground hover:underline text-left"
+                                                onClick={() => openEditModal(user)}
+                                            >
+                                                {user.fullName}
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3.5">
+                                        <span className={cn("inline-block px-3 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase", style.badge)}>
+                                            {roleMap[user.role] ?? 'Bilinmiyor'}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3.5 text-muted-foreground">—</td>
+                                    <td className="px-4 py-3.5 text-muted-foreground">—</td>
+                                    <td className="px-4 py-3.5">
+                                        <button
+                                            onClick={() => setActiveMap(prev => ({ ...prev, [user.id]: !isActive }))}
+                                            className={cn(
+                                                "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none",
+                                                isActive ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                                            )}
                                         >
-                                            <Pencil className="h-4 w-4" /> Düzenle
-                                        </DropdownMenuItem>
+                                            <span className={cn(
+                                                "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200",
+                                                isActive ? "translate-x-4" : "translate-x-0.5"
+                                            )} />
+                                        </button>
+                                    </td>
+                                    <td className="px-4 py-3.5">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => openEditModal(user)}
+                                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setDeleteTargetId(user.id)}
+                                                className="text-muted-foreground hover:text-destructive transition-colors"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        {filtered.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                                    Çalışan bulunamadı.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
-                                        <DropdownMenuItem
-                                            className="gap-2 text-destructive cursor-pointer"
-                                            onClick={() => setDeleteTargetId(user.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" /> Sil
-                                        </DropdownMenuItem>
+            {/* Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-foreground">
+                                {editUser ? 'Çalışanı Düzenle' : 'Çalışan Ekle'}
+                            </h2>
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
 
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                            <div className="mt-3">
-                                <Badge className="capitalize">{roleMap[user.role] || "Bilinmiyor"}</Badge>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogContent className="flex flex-col max-h-[90vh]">
-                        <DialogHeader>
-                            <DialogTitle>
-                                {editUser ? 'Kullanıcıyı Düzenle' : 'Yeni Kullanıcı Ekle'}
-                            </DialogTitle>
-                            <DialogDescription aria-describedby={undefined} />
-                        </DialogHeader>
-
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4 overflow-y-auto">
-                            <div className="flex flex-col gap-2">
-                                <Label>Ad Soyad</Label>
-                                <Input
+                        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                            <div>
+                                <label className={labelClass}>Ad Soyad</label>
+                                <input
+                                    className={cn(inputClass, fieldErrors.fullName && "border-destructive")}
+                                    placeholder="Ad Soyad..."
                                     value={form.fullName}
                                     onChange={e => setForm({ ...form, fullName: e.target.value })}
-                                    placeholder="Ad Soyad"
                                 />
-                                {fieldErrors.fullName && <p className="text-sm text-destructive">{fieldErrors.fullName}</p>}
+                                {fieldErrors.fullName && <p className="text-xs text-destructive mt-1">{fieldErrors.fullName}</p>}
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                                <Label>Kullanıcı Adı</Label>
-                                <Input
+                            <div>
+                                <label className={labelClass}>Kullanıcı Adı</label>
+                                <input
+                                    className={cn(inputClass, fieldErrors.userName && "border-destructive")}
+                                    placeholder="kullanici_adi"
                                     value={form.userName}
                                     onChange={e => setForm({ ...form, userName: e.target.value })}
-                                    placeholder="kullanici_adi"
                                 />
-                                {fieldErrors.userName && <p className="text-sm text-destructive">{fieldErrors.userName}</p>}
+                                {fieldErrors.userName && <p className="text-xs text-destructive mt-1">{fieldErrors.userName}</p>}
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                                <Label>Email</Label>
-                                <Input
+                            <div>
+                                <label className={labelClass}>Rol</label>
+                                <select
+                                    className={inputClass}
+                                    value={form.role}
+                                    onChange={e => setForm({ ...form, role: Number(e.target.value) })}
+                                >
+                                    <option value={1}>Admin</option>
+                                    <option value={2}>Garson</option>
+                                    <option value={3}>Kasiyer</option>
+                                    <option value={4}>Mutfak</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>E-posta</label>
+                                <input
                                     type="email"
-                                    value={form.email}
-                                    onChange={e => setForm({ ...form, email: e.target.value })}
+                                    className={cn(inputClass, fieldErrors.email && "border-destructive")}
                                     placeholder="ornek@mail.com"
+                                    value={form.email ?? ''}
+                                    onChange={e => setForm({ ...form, email: e.target.value })}
                                 />
-                                {fieldErrors.email && <p className="text-sm text-destructive">{fieldErrors.email}</p>}
+                                {fieldErrors.email && <p className="text-xs text-destructive mt-1">{fieldErrors.email}</p>}
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                                <Label>Telefon</Label>
-                                <Input
+                            <div>
+                                <label className={labelClass}>Telefon</label>
+                                <input
+                                    className={inputClass}
+                                    placeholder="0532 000 00 00"
                                     value={form.phoneNumber}
                                     onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
-                                    placeholder="0532 000 00 00"
                                 />
-                                {fieldErrors.phoneNumber && <p className="text-sm text-destructive">{fieldErrors.phoneNumber}</p>}
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                                <Label>Kullanıcı Kodu</Label>
-                                <Input
+                            <div>
+                                <label className={labelClass}>Kullanıcı Kodu</label>
+                                <input
+                                    className={cn(inputClass, fieldErrors.userCode && "border-destructive")}
+                                    placeholder="USR-001"
                                     value={form.userCode}
                                     onChange={e => setForm({ ...form, userCode: e.target.value })}
-                                    placeholder="USR001"
                                 />
-                                {fieldErrors.userCode && <p className="text-sm text-destructive">{fieldErrors.userCode}</p>}
+                                {fieldErrors.userCode && <p className="text-xs text-destructive mt-1">{fieldErrors.userCode}</p>}
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                                <Label>Şifre</Label>
-                                <Input
+                            <div>
+                                <label className={labelClass}>Şifre {editUser && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
+                                <input
                                     type="text"
+                                    className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}
+                                    placeholder={editUser ? "Yeni şifre..." : "Şifre..."}
                                     value={form.passwordHash}
                                     onChange={e => setForm({ ...form, passwordHash: e.target.value })}
-                                    placeholder={editUser ? "Değiştirmek için yeni şifre girin" : "Şifre"}
                                 />
-                                {fieldErrors.passwordHash && <p className="text-sm text-destructive">{fieldErrors.passwordHash}</p>}
-                            </div>
-                            
-                            <div className="flex flex-col gap-2">
-                                <Label>Rol</Label>
-                                <Select 
-                                    value={form.role.toString()} 
-                                    onValueChange={value => setForm({ ...form, role: Number(value) })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Rol seçin" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="1">Admin</SelectItem>
-                                        <SelectItem value="2">Garson</SelectItem>
-                                        <SelectItem value="3">Kasiyer</SelectItem>
-                                        <SelectItem value="4">Mutfak</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                {fieldErrors.passwordHash && <p className="text-xs text-destructive mt-1">{fieldErrors.passwordHash}</p>}
                             </div>
 
                             {generalError && (
-                                <p className="text-sm text-destructive rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2">
+                                <p className="text-xs text-destructive rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
                                     {generalError}
                                 </p>
                             )}
-
-                            <DialogFooter className="mt-4">
-                                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                                    İptal
-                                </Button>
-                                <Button type="submit">
-                                    Kaydet
-                                </Button>
-                            </DialogFooter>
                         </form>
-                    </DialogContent>
-                </Dialog>
 
-                <AlertDialog open={deleteTargetId !== null} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Personeli sil</AlertDialogTitle>
-                            <AlertDialogDescription>Bu personeli silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>İptal</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Sil
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </div>
-          </>
+                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                            >
+                                Kaydet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirm */}
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Çalışanı sil</AlertDialogTitle>
+                        <AlertDialogDescription>Bu çalışanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Sil
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     );
 }
-
