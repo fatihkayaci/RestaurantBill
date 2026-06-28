@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { authService } from "../api/authService";
+import { authService } from "@/features/auth/api/authService";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from 'jwt-decode';
 import { toast } from "sonner";
@@ -42,13 +42,13 @@ export default function LoginPage() {
             if (role === 'Admin') navigate('/admin');
             else if (role === 'Kitchen') navigate('/kitchen');
             else if (role === 'Cashier') navigate('/cashier');
-            else navigate('/');
+            else navigate('/waiter');
 
         } catch (error: any) {
             const message = error.response?.data?.message ?? error.response?.data ?? "Bilinmeyen bir hata oluştu";
             toast.error(message);
         }
-    }
+    };
 
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">

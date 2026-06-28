@@ -6,18 +6,15 @@ interface TableCardProps {
 }
 
 export default function TableCard({ table }: TableCardProps) {
-    
+
     const getStyles = (status: number) => {
         switch (status) {
             case 1:
                 return "bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 hover:border-green-500/60 hover:shadow-[0_0_20px_rgba(34,197,94,0.25)]";
-            
             case 2:
                 return "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 hover:shadow-[0_0_20px_rgba(239,68,68,0.25)]";
-            
             case 3:
                 return "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/60 hover:shadow-[0_0_20px_rgba(245,158,11,0.25)]";
-            
             default:
                 return "bg-slate-800 border-slate-700 text-slate-500";
         }
@@ -31,20 +28,20 @@ export default function TableCard({ table }: TableCardProps) {
     };
 
     return (
-        <Link 
-            to={`/table/${table.id}`}
+        <Link
+            to={`/waiter/table/${table.id}`}
             className={`
-                relative flex flex-col items-center justify-center 
-                h-32 sm:h-36 rounded-2xl border 
-                transition-all duration-300 ease-out 
-                hover:-translate-y-1 active:scale-95 
+                relative flex flex-col items-center justify-center
+                h-32 sm:h-36 rounded-2xl border
+                transition-all duration-300 ease-out
+                hover:-translate-y-1 active:scale-95
                 ${getStyles(table.status)}
             `}
         >
             <span className="text-4xl font-black tracking-tight mb-1 drop-shadow-md">
                 {table.name}
             </span>
-            
+
             <span className="text-xs font-bold uppercase tracking-[0.2em] opacity-80">
                 {getStatusText(table.status)}
             </span>
