@@ -14,7 +14,7 @@ export default function CategoryCard({ category, isSelected, onClick }: Category
             size="lg"
             onClick={onClick}
             className={`rounded-xl font-bold whitespace-nowrap transition-all shadow-md active:scale-95
-                ${isSelected 
+                ${isSelected
                     ? "bg-orange-500 hover:bg-orange-600 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)] scale-105"
                     : "text-muted-foreground"
                 }`}

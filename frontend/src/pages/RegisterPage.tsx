@@ -1,4 +1,4 @@
-import { authService } from "../api/authService";
+import { authService } from "@/features/auth/api/authService";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,9 +20,8 @@ const registerSchema = z.object({
 type RegisterForm = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-
     const navigate = useNavigate();
-    const {register, handleSubmit, formState: { errors, isSubmitting }} = useForm<RegisterForm>({
+    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
         resolver: zodResolver(registerSchema),
     });
 
@@ -39,7 +38,6 @@ export default function RegisterPage() {
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4 py-10">
             <Card className="w-full max-w-md">
-
                 <CardHeader className="space-y-2 text-center">
                     <CardTitle className="text-3xl font-bold tracking-tight">
                         Kayıt Ol
@@ -51,7 +49,6 @@ export default function RegisterPage() {
 
                 <CardContent>
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-
                         <div className="space-y-2">
                             <Label htmlFor="fullName">Ad Soyad</Label>
                             <Input
@@ -91,7 +88,7 @@ export default function RegisterPage() {
                             )}
                         </div>
 
-<div className="space-y-2">
+                        <div className="space-y-2">
                             <Label htmlFor="password">Şifre</Label>
                             <Input
                                 id="password"
@@ -121,7 +118,6 @@ export default function RegisterPage() {
                         </span>
                     </p>
                 </CardFooter>
-
             </Card>
         </div>
     );
