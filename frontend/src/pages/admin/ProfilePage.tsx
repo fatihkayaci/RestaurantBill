@@ -1,31 +1,25 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { userService } from "@/features/admin/api/userService";
 import { restaurantService } from "@/features/admin/api/restaurantService";
-import type { UpdateUser } from "@/features/admin/types";
-import type { CreateRestaurant } from "@/features/admin/types";
+import type { UpdateUser, CreateRestaurant } from "@/features/admin/types";
 import { jwtDecode } from "jwt-decode";
+import { cn } from "@/lib/utils";
 
 const profileSchema = z.object({
     fullName: z.string().min(1, "Ad soyad zorunludur."),
-    userName: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalıdır."),
-    email: z.email("Geçerli bir e-posta adresi girin.").or(z.literal("")),
+    email: z.string().email("Geçerli bir e-posta girin.").or(z.literal("")),
     phoneNumber: z.string().optional(),
-    password: z.string().min(6, "Şifre en az 6 karakter olmalıdır.").or(z.literal("")),
 });
 
 const restaurantSchema = z.object({
     name: z.string().min(1, "Restoran adı zorunludur."),
     phoneNumber: z.string().optional(),
     mobilePhoneNumber: z.string().optional(),
-    email: z.email("Geçerli bir e-posta adresi girin.").or(z.literal("")),
+    email: z.string().email("Geçerli bir e-posta girin.").or(z.literal("")),
     city: z.string().optional(),
     district: z.string().optional(),
 });
@@ -33,14 +27,31 @@ const restaurantSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 type RestaurantForm = z.infer<typeof restaurantSchema>;
 
+const roleLabel: Record<number, string> = {
+    1: "Yönetici", 2: "Garson", 3: "Kasiyer", 4: "Mutfak",
+};
+
+const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
+
 export default function Profile() {
-    const [userId, setUserId] = useState<number | null>(null);
-    const [userCode, setUserCode] = useState<string>("");
-    const [role, setRole] = useState<number>(1);
+    const [userId, setUserId] = useState<string | null>(null);
+    const [userCode, setUserCode] = useState("");
+    const [role, setRole] = useState(1);
+    const [userName, setUserName] = useState("");
+    const [initials, setInitials] = useState("A");
+    const [restaurantName, setRestaurantName] = useState("");
+    const [restaurantLocation, setRestaurantLocation] = useState("");
+
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+    const [passwordLoading, setPasswordLoading] = useState(false);
 
     const profileForm = useForm<ProfileForm>({
         resolver: zodResolver(profileSchema),
-        defaultValues: { fullName: "", userName: "", email: "", phoneNumber: "", password: "" },
+        defaultValues: { fullName: "", email: "", phoneNumber: "" },
     });
 
     const restaurantForm = useForm<RestaurantForm>({
@@ -51,12 +62,21 @@ export default function Profile() {
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (token) {
-            const decoded: { [key: string]: string } = jwtDecode(token);
-            const id = parseInt(decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]);
-            setUserId(id);
+            const decoded: Record<string, string> = jwtDecode(token);
+            setUserId(decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]);
         }
 
+        userService.getCurrentUser().then(u => {
+            setUserCode(u.userCode);
+            setRole(u.role);
+            setUserName(u.userName);
+            setInitials(u.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase());
+            profileForm.reset({ fullName: u.fullName, email: u.email ?? "", phoneNumber: u.phoneNumber ?? "" });
+        }).catch(console.error);
+
         restaurantService.getMyRestaurant().then(r => {
+            setRestaurantName(r.name);
+            setRestaurantLocation([r.district, r.city].filter(Boolean).join(', '));
             restaurantForm.reset({
                 name: r.name,
                 phoneNumber: r.phoneNumber,
@@ -66,38 +86,53 @@ export default function Profile() {
                 district: r.district,
             });
         }).catch(console.error);
-
-        userService.getCurrentUser().then(u => {
-            setUserCode(u.userCode);
-            setRole(u.role);
-            profileForm.reset({
-                fullName: u.fullName,
-                userName: u.userName,
-                email: u.email ?? "",
-                phoneNumber: u.phoneNumber ?? "",
-                password: "",
-            });
-        }).catch(console.error);
     }, []);
 
     const onProfileSubmit = async (data: ProfileForm) => {
         if (!userId) return;
         try {
             const payload: UpdateUser = {
-                id: String(userId),
+                id: userId,
                 fullName: data.fullName,
-                userName: data.userName,
+                userName: userName,
                 email: data.email,
                 phoneNumber: data.phoneNumber ?? "",
-                password: data.password || undefined,
-                userCode: userCode,
-                role: role,
+                userCode,
+                role,
             };
             await userService.updateUser(payload);
+            setInitials(data.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase());
             toast.success("Profil güncellendi.");
-            profileForm.setValue("password", "");
         } catch {
             toast.error("Profil güncellenirken bir hata oluştu.");
+        }
+    };
+
+    const onPasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPasswordError("");
+        if (!newPassword || newPassword.length < 6) { setPasswordError("Yeni şifre en az 6 karakter olmalıdır."); return; }
+        if (newPassword !== confirmPassword) { setPasswordError("Şifreler eşleşmiyor."); return; }
+        if (!userId) return;
+        setPasswordLoading(true);
+        try {
+            const payload: UpdateUser = {
+                id: userId,
+                fullName: profileForm.getValues("fullName"),
+                userName,
+                email: profileForm.getValues("email"),
+                phoneNumber: profileForm.getValues("phoneNumber") ?? "",
+                password: newPassword,
+                userCode,
+                role,
+            };
+            await userService.updateUser(payload);
+            toast.success("Şifre güncellendi.");
+            setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+        } catch {
+            toast.error("Şifre güncellenirken bir hata oluştu.");
+        } finally {
+            setPasswordLoading(false);
         }
     };
 
@@ -112,6 +147,8 @@ export default function Profile() {
                 district: data.district ?? "",
             };
             await restaurantService.update(payload);
+            setRestaurantName(data.name);
+            setRestaurantLocation([data.district, data.city].filter(Boolean).join(', '));
             toast.success("Restoran bilgileri güncellendi.");
         } catch {
             toast.error("Restoran bilgileri güncellenirken bir hata oluştu.");
@@ -119,95 +156,173 @@ export default function Profile() {
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Profil Bilgileri</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label>Ad Soyad</Label>
-                            <Input {...profileForm.register("fullName")} />
-                            {profileForm.formState.errors.fullName && (
-                                <p className="text-sm text-destructive">{profileForm.formState.errors.fullName.message}</p>
-                            )}
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Kullanıcı Adı</Label>
-                            <Input {...profileForm.register("userName")} />
-                            {profileForm.formState.errors.userName && (
-                                <p className="text-sm text-destructive">{profileForm.formState.errors.userName.message}</p>
-                            )}
-                        </div>
-                        <div className="space-y-2">
-                            <Label>E-posta</Label>
-                            <Input type="email" {...profileForm.register("email")} />
-                            {profileForm.formState.errors.email && (
-                                <p className="text-sm text-destructive">{profileForm.formState.errors.email.message}</p>
-                            )}
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Telefon</Label>
-                            <Input {...profileForm.register("phoneNumber")} placeholder="0532 000 00 00" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Yeni Şifre</Label>
-                            <Input type="password" {...profileForm.register("password")} placeholder="Değiştirmek için yeni şifre girin" />
-                            {profileForm.formState.errors.password && (
-                                <p className="text-sm text-destructive">{profileForm.formState.errors.password.message}</p>
-                            )}
-                        </div>
-                        <Button type="submit" disabled={profileForm.formState.isSubmitting}>
-                            {profileForm.formState.isSubmitting ? "Kaydediliyor..." : "Kaydet"}
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
+        <div className="space-y-1">
+            {/* Page Header */}
+            <div className="mb-6">
+                <h1 className="text-2xl font-serif font-bold text-foreground">Profil Ayarları</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">Hesap ve restoran bilgileri</p>
+            </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Restoran Bilgileri</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={restaurantForm.handleSubmit(onRestaurantSubmit)} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label>Restoran Adı</Label>
-                            <Input {...restaurantForm.register("name")} />
-                            {restaurantForm.formState.errors.name && (
-                                <p className="text-sm text-destructive">{restaurantForm.formState.errors.name.message}</p>
-                            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* ── Left Column ── */}
+                <div className="space-y-4">
+                    {/* User Header Card */}
+                    <div className="rounded-xl bg-[#1c1917] dark:bg-[#0f0e0d] p-5 flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full border-2 border-purple-400 flex items-center justify-center shrink-0 bg-purple-900/40">
+                            <span className="text-purple-300 text-lg font-bold">{initials}</span>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Telefon</Label>
-                            <Input {...restaurantForm.register("phoneNumber")} placeholder="0212 000 00 00" />
+                        <div>
+                            <p className="text-white font-bold text-lg leading-tight">
+                                {profileForm.watch("fullName") || "—"}
+                            </p>
+                            <p className="text-purple-400 text-[10px] font-semibold tracking-widest uppercase mt-0.5">
+                                {roleLabel[role] ?? "Yönetici"}
+                            </p>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Cep Telefonu</Label>
-                            <Input {...restaurantForm.register("mobilePhoneNumber")} placeholder="0532 000 00 00" />
+                    </div>
+
+                    {/* Kişisel Bilgiler */}
+                    <div className="rounded-xl border border-border bg-card p-5">
+                        <h2 className="text-base font-semibold text-foreground mb-4">Kişisel Bilgiler</h2>
+                        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                            <div>
+                                <label className={labelClass}>Ad Soyad</label>
+                                <input className={cn(inputClass, profileForm.formState.errors.fullName && "border-destructive")} {...profileForm.register("fullName")} />
+                                {profileForm.formState.errors.fullName && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.fullName.message}</p>}
+                            </div>
+                            <div>
+                                <label className={labelClass}>E-posta</label>
+                                <input type="email" className={cn(inputClass, profileForm.formState.errors.email && "border-destructive")} {...profileForm.register("email")} />
+                                {profileForm.formState.errors.email && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.email.message}</p>}
+                            </div>
+                            <div>
+                                <label className={labelClass}>Telefon</label>
+                                <input className={inputClass} placeholder="0532 000 00 00" {...profileForm.register("phoneNumber")} />
+                            </div>
+                            <div className="flex justify-end">
+                                <button
+                                    type="submit"
+                                    disabled={profileForm.formState.isSubmitting}
+                                    className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                                >
+                                    {profileForm.formState.isSubmitting ? "Kaydediliyor..." : "Bilgileri Kaydet →"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Şifre Değiştir */}
+                    <div className="rounded-xl border border-border bg-card p-5">
+                        <h2 className="text-base font-semibold text-foreground mb-4">Şifre Değiştir</h2>
+                        <form onSubmit={onPasswordSubmit} className="space-y-4">
+                            <div>
+                                <label className={labelClass}>Mevcut Şifre</label>
+                                <input
+                                    type="password"
+                                    className={inputClass}
+                                    placeholder="Mevcut şifreniz..."
+                                    value={currentPassword}
+                                    onChange={e => setCurrentPassword(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Yeni Şifre</label>
+                                    <input
+                                        type="password"
+                                        className={cn(inputClass, passwordError && "border-destructive")}
+                                        placeholder="Yeni şifre..."
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Şifre Tekrar</label>
+                                    <input
+                                        type="password"
+                                        className={cn(inputClass, passwordError && "border-destructive")}
+                                        placeholder="Şifreyi tekrar girin..."
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+                            <div className="flex justify-end">
+                                <button
+                                    type="submit"
+                                    disabled={passwordLoading}
+                                    className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                                >
+                                    {passwordLoading ? "Güncelleniyor..." : "Şifreyi Güncelle →"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {/* ── Right Column ── */}
+                <div className="space-y-4">
+                    {/* Restaurant Header Card */}
+                    <div className="rounded-xl bg-[#1c1917] dark:bg-[#0f0e0d] p-5 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full border-2 border-amber-400 flex items-center justify-center shrink-0">
+                            <div className="w-3.5 h-3.5 rounded-full border-2 border-amber-400" />
                         </div>
-                        <div className="space-y-2">
-                            <Label>E-posta</Label>
-                            <Input type="email" {...restaurantForm.register("email")} />
-                            {restaurantForm.formState.errors.email && (
-                                <p className="text-sm text-destructive">{restaurantForm.formState.errors.email.message}</p>
-                            )}
+                        <div>
+                            <p className="text-white font-serif font-bold text-base leading-tight">
+                                {restaurantName || "—"}
+                            </p>
+                            <p className="text-white/50 text-xs mt-0.5">{restaurantLocation || "—"}</p>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Şehir</Label>
-                            <Input {...restaurantForm.register("city")} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>İlçe</Label>
-                            <Input {...restaurantForm.register("district")} />
-                        </div>
-                        <Button type="submit" disabled={restaurantForm.formState.isSubmitting}>
-                            {restaurantForm.formState.isSubmitting ? "Kaydediliyor..." : "Kaydet"}
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
+                    </div>
+
+                    {/* Restoran Bilgileri */}
+                    <div className="rounded-xl border border-border bg-card p-5">
+                        <h2 className="text-base font-semibold text-foreground mb-4">Restoran Bilgileri</h2>
+                        <form onSubmit={restaurantForm.handleSubmit(onRestaurantSubmit)} className="space-y-4">
+                            <div>
+                                <label className={labelClass}>Restoran Adı</label>
+                                <input className={cn(inputClass, restaurantForm.formState.errors.name && "border-destructive")} {...restaurantForm.register("name")} />
+                                {restaurantForm.formState.errors.name && <p className="text-xs text-destructive mt-1">{restaurantForm.formState.errors.name.message}</p>}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Sabit Telefon</label>
+                                    <input className={inputClass} placeholder="0212 000 00 00" {...restaurantForm.register("phoneNumber")} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Cep Telefonu</label>
+                                    <input className={inputClass} placeholder="0532 000 00 00" {...restaurantForm.register("mobilePhoneNumber")} />
+                                </div>
+                            </div>
+                            <div>
+                                <label className={labelClass}>E-posta</label>
+                                <input type="email" className={cn(inputClass, restaurantForm.formState.errors.email && "border-destructive")} {...restaurantForm.register("email")} />
+                                {restaurantForm.formState.errors.email && <p className="text-xs text-destructive mt-1">{restaurantForm.formState.errors.email.message}</p>}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Şehir</label>
+                                    <input className={inputClass} {...restaurantForm.register("city")} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>İlçe</label>
+                                    <input className={inputClass} {...restaurantForm.register("district")} />
+                                </div>
+                            </div>
+                            <div className="flex justify-end">
+                                <button
+                                    type="submit"
+                                    disabled={restaurantForm.formState.isSubmitting}
+                                    className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                                >
+                                    {restaurantForm.formState.isSubmitting ? "Kaydediliyor..." : "Restoran Bilgilerini Kaydet →"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
-
