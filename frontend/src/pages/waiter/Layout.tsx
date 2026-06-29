@@ -49,7 +49,7 @@ export default function WaiterLayout() {
         : '';
 
     return (
-        <div className="min-h-screen bg-background flex flex-col">
+        <div className="min-h-screen bg-[#F1ECE4] dark:bg-background flex flex-col">
             <header className="h-14 bg-[#1c1917] dark:bg-[#0f0e0d] flex items-center justify-between px-5 shrink-0 z-10">
                 {/* Sol: Logo + İsim + Rol */}
                 <div className="flex items-center gap-3">
