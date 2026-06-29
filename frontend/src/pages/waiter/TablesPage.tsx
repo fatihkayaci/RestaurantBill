@@ -6,13 +6,6 @@ import TablePanel from './components/TablePanel';
 
 type FilterType = 'all' | 'empty' | 'occupied' | 'reserved';
 
-const FILTER_CONFIG = [
-    { key: 'all' as FilterType, label: (counts: Counts) => `Tümü (${counts.total})` },
-    { key: 'empty' as FilterType, label: (counts: Counts) => `Boş (${counts.empty})` },
-    { key: 'occupied' as FilterType, label: (counts: Counts) => `Dolu (${counts.occupied})` },
-    { key: 'reserved' as FilterType, label: (counts: Counts) => `Rezerve (${counts.reserved})` },
-];
-
 interface Counts {
     total: number;
     empty: number;
@@ -20,24 +13,34 @@ interface Counts {
     reserved: number;
 }
 
+const FILTER_CONFIG = [
+    { key: 'all'      as FilterType, label: (c: Counts) => `Tümü (${c.total})`,       activeClass: 'bg-[#2b7fff] text-white' },
+    { key: 'empty'    as FilterType, label: (c: Counts) => `Boş (${c.empty})`,         activeClass: 'bg-[#1f8a52] dark:bg-[#45c87a] text-white' },
+    { key: 'occupied' as FilterType, label: (c: Counts) => `Dolu (${c.occupied})`,     activeClass: 'bg-[#c85010] dark:bg-[#f07840] text-white' },
+    { key: 'reserved' as FilterType, label: (c: Counts) => `Rezerve (${c.reserved})`, activeClass: 'bg-[#b8880a] dark:bg-[#e8b835] text-white' },
+];
+
 const STATUS_CARD = {
     1: {
-        bg: 'bg-[#f0faf4] dark:bg-green-950/20',
-        border: 'border-green-200 dark:border-green-800/60',
-        badge: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400',
-        label: 'BOŞ',
+        bg:     'bg-[#ECECE2] dark:bg-[rgba(69,200,122,0.05)]',
+        border: 'border-[#b8e8cd] dark:border-[rgba(69,200,122,0.25)]',
+        badge:  'bg-[#d0f2e3] text-[#1f8a52] dark:bg-[rgba(69,200,122,0.14)] dark:text-[#45c87a]',
+        hint:   'text-[#2b7fff] font-semibold',
+        label:  'BOŞ',
     },
     2: {
-        bg: 'bg-[#fff5f5] dark:bg-red-950/20',
-        border: 'border-red-200 dark:border-red-800/60',
-        badge: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400',
-        label: 'DOLU',
+        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,120,64,0.05)]',
+        border: 'border-[#f5c5aa] dark:border-[rgba(240,120,64,0.25)]',
+        badge:  'bg-[#fce0d0] text-[#c85010] dark:bg-[rgba(240,120,64,0.14)] dark:text-[#f07840]',
+        hint:   'text-muted-foreground',
+        label:  'DOLU',
     },
     3: {
-        bg: 'bg-[#fffbf0] dark:bg-amber-950/20',
-        border: 'border-amber-200 dark:border-amber-800/60',
-        badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400',
-        label: 'REZERVE',
+        bg:     'bg-white dark:bg-[rgba(232,184,53,0.05)]',
+        border: 'border-[#f0d98a] dark:border-[rgba(232,184,53,0.25)]',
+        badge:  'bg-[#fef3c7] text-[#b8880a] dark:bg-[rgba(232,184,53,0.14)] dark:text-[#e8b835]',
+        hint:   'text-[#b8880a] dark:text-[#e8b835] font-medium',
+        label:  'REZERVE',
     },
 } as const;
 
@@ -55,32 +58,33 @@ function TableCard({
     return (
         <button
             onClick={onClick}
-            className={`text-left rounded-2xl border p-4 h-52 flex flex-col cursor-pointer transition-all duration-150
-                hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]
+            className={`text-left rounded-2xl border py-3.5 px-4 flex flex-col gap-1.5 cursor-pointer
+                transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]
+                dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]
                 ${cfg.bg} ${cfg.border}
                 ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-background' : ''}
             `}
         >
-            <div className="flex items-start justify-between gap-1 mb-2">
-                <span className="text-xl font-serif font-bold text-foreground leading-tight">
+            <div className="flex items-start justify-between gap-1">
+                <span className="font-serif text-[21px] font-bold text-foreground leading-none">
                     {table.name}
                 </span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 leading-tight ${cfg.badge}`}>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-1.5 shrink-0 leading-tight tracking-[0.6px] uppercase ${cfg.badge}`}>
                     {cfg.label}
                 </span>
             </div>
 
-            <div className="flex-1 flex flex-col justify-end gap-1">
+            <div className="flex-1 flex flex-col justify-end">
                 {table.status === 1 && (
-                    <span className="text-xs text-blue-500 font-medium">
+                    <span className={`text-[11px] tracking-[0.2px] mt-1 ${cfg.hint}`}>
                         ↑ Sipariş oluştur
                     </span>
                 )}
                 {table.status === 2 && (
-                    <span className="text-xs text-muted-foreground">Aktif sipariş</span>
+                    <span className={`text-xs ${cfg.hint}`}>Aktif sipariş</span>
                 )}
                 {table.status === 3 && (
-                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    <span className={`text-[11px] ${cfg.hint}`}>
                         Rezervasyon mevcut
                     </span>
                 )}
@@ -129,14 +133,14 @@ export default function WaiterTablesPage() {
     };
 
     const counts: Counts = {
-        total: tables.length,
-        empty: tables.filter(t => t.status === 1).length,
+        total:    tables.length,
+        empty:    tables.filter(t => t.status === 1).length,
         occupied: tables.filter(t => t.status === 2).length,
         reserved: tables.filter(t => t.status === 3).length,
     };
 
     const filtered = tables.filter(t => {
-        if (filter === 'empty') return t.status === 1;
+        if (filter === 'empty')    return t.status === 1;
         if (filter === 'occupied') return t.status === 2;
         if (filter === 'reserved') return t.status === 3;
         return true;
@@ -146,39 +150,51 @@ export default function WaiterTablesPage() {
 
     if (loading) {
         return (
-            <div className="p-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <div className="p-6 grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2.5">
                 {[...Array(12)].map((_, i) => (
-                    <div key={i} className="h-52 rounded-2xl bg-muted animate-pulse" />
+                    <div key={i} className="h-25 rounded-2xl bg-muted animate-pulse" />
                 ))}
             </div>
         );
     }
 
     return (
-        <>
+        <div className="min-h-full">
             {/* Stats + Filter Bar */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="sticky top-0 z-10 bg-[#F1ECE4]/95 dark:bg-background/95 backdrop-blur-sm border-b border-[#e8e0d0] dark:border-[#3d3528] px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 {/* Stats */}
-                <div className="flex items-center gap-3 text-sm flex-wrap">
-                    <span className="font-semibold text-foreground">{counts.total} Toplam</span>
-                    <span className="text-border">·</span>
-                    <span className="text-green-600 dark:text-green-400 font-medium">{counts.empty} Boş</span>
-                    <span className="text-border">·</span>
-                    <span className="text-red-500 font-medium">{counts.occupied} Dolu</span>
-                    <span className="text-border">·</span>
-                    <span className="text-amber-500 font-medium">{counts.reserved} Rezerve</span>
+                <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-serif text-xl font-bold leading-none text-foreground">{counts.total}</span>
+                        <span className="text-xs text-muted-foreground">Toplam</span>
+                    </div>
+                    <div className="w-px h-4.5 bg-border mx-0.5" />
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-serif text-xl font-bold leading-none text-[#1f8a52] dark:text-[#45c87a]">{counts.empty}</span>
+                        <span className="text-xs text-muted-foreground">Boş</span>
+                    </div>
+                    <div className="w-px h-4.5 bg-border mx-0.5" />
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-serif text-xl font-bold leading-none text-[#c85010] dark:text-[#f07840]">{counts.occupied}</span>
+                        <span className="text-xs text-muted-foreground">Dolu</span>
+                    </div>
+                    <div className="w-px h-4.5 bg-border mx-0.5" />
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-serif text-xl font-bold leading-none text-[#b8880a] dark:text-[#e8b835]">{counts.reserved}</span>
+                        <span className="text-xs text-muted-foreground">Rezerve</span>
+                    </div>
                 </div>
 
                 {/* Filtreler */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                    {FILTER_CONFIG.map(({ key, label }) => (
+                    {FILTER_CONFIG.map(({ key, label, activeClass }) => (
                         <button
                             key={key}
                             onClick={() => setFilter(key)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                            className={`px-3.25 py-1.25 rounded-full text-xs font-medium transition-all duration-150 ${
                                 filter === key
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                                    ? activeClass
+                                    : 'text-[#a39080] dark:text-[#7a6e60] border border-[#e8e0d0] dark:border-[#3d3528] hover:border-[#c8b09a] dark:hover:border-[#5a4e40]'
                             }`}
                         >
                             {label(counts)}
@@ -188,8 +204,8 @@ export default function WaiterTablesPage() {
             </div>
 
             {/* Masa Grid */}
-            <div className="p-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+            <div className="px-6 py-4.5">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2.5">
                     {filtered.map(table => (
                         <TableCard
                             key={table.id}
@@ -205,10 +221,10 @@ export default function WaiterTablesPage() {
             {selectedTable && (
                 <>
                     <div
-                        className="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+                        className="fixed inset-0 z-20 bg-black/55 backdrop-blur-sm animate-in fade-in duration-200"
                         onClick={() => setSelectedTableId(null)}
                     />
-                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-96 shadow-2xl animate-in slide-in-from-right duration-300">
+                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-110 shadow-2xl animate-in slide-in-from-right duration-300">
                         <TablePanel
                             table={selectedTable}
                             onClose={() => setSelectedTableId(null)}
@@ -217,6 +233,6 @@ export default function WaiterTablesPage() {
                     </div>
                 </>
             )}
-        </>
+        </div>
     );
 }
