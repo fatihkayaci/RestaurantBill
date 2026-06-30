@@ -6,8 +6,7 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
     public UpdateUserCommandValidator()
     {
         RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("Geçersiz bir kullanıcı seçtiniz.")
-            .Must(id => Guid.TryParse(id, out _)).WithMessage("Geçersiz bir kullanıcı seçtiniz.");
+            .GreaterThan(0).WithMessage("Geçersiz bir kullanıcı seçtiniz.");
 
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage("Ad soyad boş bırakılamaz.")

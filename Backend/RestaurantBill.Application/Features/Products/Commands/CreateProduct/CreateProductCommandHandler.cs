@@ -18,8 +18,7 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
 
         public async Task Handle(CreateProductCommand request, CancellationToken cancellationToken)
         {
-            int restaurantId = _currentUser.RestaurantId;
-            Product product = Product.Create(request.Name, request.Price, request.IsActive, request.ImageUrl, request.CategoryId, restaurantId);
+            Product product = Product.Create(request.Name, request.Price, request.IsActive, request.ImageUrl, request.CategoryId);
             await _uow.Product.AddAsync(product);
             await _uow.SaveChangesAsync(cancellationToken);
         }

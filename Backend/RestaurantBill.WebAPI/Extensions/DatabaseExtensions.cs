@@ -26,10 +26,8 @@ public static class DatabaseExtensions
             var context = services.GetRequiredService<RestaurantBillDbContext>();
             context.Database.Migrate();
 
-            var userManager = services.GetRequiredService<UserManager<User>>();
-            var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
-
-            await RestaurantBill.Persistence.Seeds.DefaultData.SeedAsync(roleManager, userManager, context);
+            var passwordHasher = services.GetRequiredService<IPasswordHasher<User>>();
+            await RestaurantBill.Persistence.Seeds.DefaultData.SeedAsync(context, passwordHasher);
         }
         catch (Exception ex)
         {

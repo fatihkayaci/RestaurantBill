@@ -12,7 +12,7 @@ public class OrderTests
     // to simulate a persisted product without exposing a public setter.
     private static Product CreateProduct(int id = 1, decimal price = 10m)
     {
-        Product product = Product.Create("Test Product", price, true, "img.png", categoryId: 1, restaurantId: 1);
+        Product product = Product.Create("Test Product", price, true, "img.png", categoryId: 1);
         SetId(product, id);
         return product;
     }

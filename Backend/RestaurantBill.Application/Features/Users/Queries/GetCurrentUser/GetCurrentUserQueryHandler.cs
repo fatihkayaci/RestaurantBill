@@ -1,29 +1,28 @@
-﻿using AutoMapper;
+using AutoMapper;
 using MediatR;
-using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Features.Users.Queries.GetCurrentUser;
 
 public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, UserDto>
 {
-    private readonly UserManager<User> _userManager;
+    private readonly IUnitOfWork _uow;
     private readonly IMapper _mapper;
     private readonly ICurrentUserService _currentUser;
 
-    public GetCurrentUserQueryHandler(UserManager<User> userManager, IMapper mapper, ICurrentUserService currentUser)
+    public GetCurrentUserQueryHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser)
     {
-        _userManager = userManager;
+        _uow = uow;
         _mapper = mapper;
         _currentUser = currentUser;
     }
 
     public async Task<UserDto> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
     {
-        User user = await _userManager.FindByIdAsync(_currentUser.UserId)
+        var user = await _uow.User.GetByIdAsync(_currentUser.UserId)
             ?? throw new NotFoundException("Kullanıcı bulunamadı.");
 
         return _mapper.Map<UserDto>(user);

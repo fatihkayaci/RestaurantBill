@@ -45,7 +45,7 @@ public class CashRegister : BaseEntity
         Status = status;
     }
 
-    public CashTransaction AddTransaction(CashTransactionType type, decimal amount, string userId)
+    public CashTransaction AddTransaction(CashTransactionType type, decimal amount, int userId)
     {
         if (Status != CashRegisterStatus.Open)
             throw new DomainException("Kapalı bir kasaya işlem eklenemez.");
@@ -62,13 +62,13 @@ public class CashRegister : BaseEntity
     {
         public CashTransactionType Type { get; private set; }
         public decimal Amount { get; private set; }
-        public string UserId { get; private set; } = string.Empty;
+        public int UserId { get; private set; }
         public int CashRegisterId { get; private set; }
         public CashRegister CashRegister { get; private set; } = default!;
 
         protected CashTransaction() { }
 
-        internal static CashTransaction Create(int cashRegisterId, CashTransactionType type, decimal amount, string userId)
+        internal static CashTransaction Create(int cashRegisterId, CashTransactionType type, decimal amount, int userId)
         {
             return new CashTransaction
             {

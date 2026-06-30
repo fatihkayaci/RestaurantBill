@@ -1,16 +1,16 @@
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Persistence.Context;
 
-public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, string>
+public class RestaurantBillDbContext : DbContext
 {
     public RestaurantBillDbContext(DbContextOptions<RestaurantBillDbContext> options)
     : base(options)
     {
     }
-    // db tables =>
+
+    public DbSet<User> Users { get; set; }
     public DbSet<Product> Products { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
@@ -19,11 +19,10 @@ public class RestaurantBillDbContext : IdentityDbContext<User, AppRole, string>
     public DbSet<Table> Tables { get; set; }
     public DbSet<CashRegister> CashRegisters { get; set; }
     public DbSet<CashRegister.CashTransaction> CashTransactions { get; set; }
-    // db configurations =>
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(RestaurantBillDbContext).Assembly);
     }
 

@@ -3,6 +3,6 @@ namespace RestaurantBill.Application.Interfaces;
 public interface ICurrentUserService
 {
     int RestaurantId { get; }
-    string UserId { get; }
+    int UserId { get; }
     string Role { get; }
 }
