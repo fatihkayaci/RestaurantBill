@@ -233,7 +233,7 @@ API → Client           : 200 OK
 - .NET 9 + ASP.NET Core
 - Entity Framework Core + PostgreSQL
 - MediatR (CQRS), FluentValidation, AutoMapper
-- ASP.NET Identity + JWT authentication
+- Custom JWT authentication (`IPasswordHasher<User>` + `IUnitOfWork`, no ASP.NET Identity)
 - SignalR (real-time updates)
 - Serilog (structured logging to console + daily rolling files)
 
@@ -249,7 +249,6 @@ API → Client           : 200 OK
   - `api` — port 8080
   - `frontend` — port 3000
   - `database` — PostgreSQL on port 5432
-  - `rabbitmq` — port 5672 (AMQP) + 15672 (management UI)
 
 ---
 
@@ -272,6 +271,18 @@ Each endpoint is protected with `[Authorize(Roles = "...")]`. The token carries 
 
 ### ADR-006: FluentValidation over Data Annotations
 Keeps validation logic out of the domain model, allows complex cross-field rules, and integrates naturally with the MediatR pipeline behavior.
+
+### ADR-007: Pipeline Behaviors over Decorators
+Cross-cutting concerns (validation, caching, idempotency, logging, performance) run as MediatR pipeline behaviors instead of decorator classes wrapping each handler. Handlers stay focused on business logic only, and new behaviors can be added globally without touching existing handlers.
+
+### ADR-008: Domain exceptions instead of raw `throw`
+All errors derive from `BaseException` (`BusinessException`, `NotFoundException`, `ValidationException`) and live in the Domain layer. A single global exception middleware maps them to consistent HTTP responses, so controllers never handle error formatting.
+
+### ADR-009: Repository + Unit of Work over raw EF Core
+Abstracting persistence behind repository interfaces keeps the Application layer independent of the database technology and guarantees a single transaction per command via Unit of Work.
+
+### ADR-010: ASP.NET Identity removed in favor of custom auth
+ASP.NET Identity's `IdentityDbContext` and role/claim infrastructure added overhead the project didn't need — a single `User` entity with four fixed roles. Custom auth (`IPasswordHasher<User>` + manual JWT issuance via `IUnitOfWork`) keeps the Domain layer free of framework dependencies and full control over the user model.
 
 ---
 
