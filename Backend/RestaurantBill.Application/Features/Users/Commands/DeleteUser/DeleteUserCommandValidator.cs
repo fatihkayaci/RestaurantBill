@@ -6,6 +6,6 @@ public class DeleteUserCommandValidator : AbstractValidator<DeleteUserCommand>
     public DeleteUserCommandValidator()
     {
         RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("Geçerli bir kullanıcı seçilmelidir.");
+            .GreaterThan(0).WithMessage("Geçerli bir kullanıcı seçilmelidir.");
     }
 }

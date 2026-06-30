@@ -1,4 +1,4 @@
-﻿using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -9,41 +9,34 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
 {
     public class RegisterCommandHandler : IRequestHandler<RegisterCommand>
     {
-        private readonly UserManager<User> _userManager;
         private readonly IUnitOfWork _uow;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
-        public RegisterCommandHandler(UserManager<User> userManager, IUnitOfWork uow)
+        public RegisterCommandHandler(IUnitOfWork uow, IPasswordHasher<User> passwordHasher)
         {
-            _userManager = userManager;
             _uow = uow;
+            _passwordHasher = passwordHasher;
         }
-        /// <summary>
-        /// Registers a new user in the system using the provided request details and assigns them the 'Admin' role by default.
-        /// Throws a business exception containing aggregated identity validation errors if the creation fails.
-        /// </summary>
-        /// <param name="request">The command containing the user's registration details.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <exception cref="BusinessException">Thrown when user creation fails due to validation errors (e.g., weak password, duplicate user).</exception>
+
         public async Task Handle(RegisterCommand request, CancellationToken cancellationToken)
         {
+            bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName, false)).Any();
+            if (userNameExists)
+                throw new BusinessException("Bu kullanıcı adı zaten kullanımda.");
+
+            bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email, false)).Any();
+            if (emailExists)
+                throw new BusinessException("Bu e-posta adresi zaten kullanımda.");
+
+            Restaurant restaurant = Restaurant.Create();
+
             string userCode = $"USR-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
-            User user = User.Create(request.FullName, request.UserName, request.Email, null, userCode, UserRole.Admin, restaurantId: 0);
+            User user = User.Create(request.FullName, request.UserName, request.Email, null, userCode, UserRole.Admin, restaurant);
+            user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));
 
-            IdentityResult result = await _userManager.CreateAsync(user, request.Password);
-
-            if (!result.Succeeded)
-            {
-                string errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                throw new BusinessException($"Kayıt başarısız: {errors}");
-            }
-
-            Restaurant restaurant = Restaurant.Create(user.Id);
             await _uow.Restaurant.AddAsync(restaurant);
+            await _uow.User.AddAsync(user);
             await _uow.SaveChangesAsync(cancellationToken);
-
-            user.AssignRestaurant(restaurant.Id);
-            await _userManager.UpdateAsync(user);
-            
         }
     }
 }

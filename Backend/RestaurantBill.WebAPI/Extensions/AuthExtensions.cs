@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Persistence.Context;
-using RestaurantBill.WebAPI.Services;
 using System.Text;
 
 namespace RestaurantBill.WebAPI.Extensions;
@@ -12,17 +10,7 @@ public static class AuthExtensions
 {
     public static IServiceCollection AddIdentityWithJwt(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddIdentity<User, AppRole>(options =>
-        {
-            options.Password.RequireDigit = false;
-            options.Password.RequiredLength = 6;
-            options.Password.RequireNonAlphanumeric = false;
-            options.Password.RequireUppercase = false;
-            options.Password.RequireLowercase = false;
-        })
-        .AddEntityFrameworkStores<RestaurantBillDbContext>()
-        .AddDefaultTokenProviders()
-        .AddErrorDescriber<TurkishIdentityErrorDescriber>();
+        services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
         services.AddAuthentication(options =>
         {

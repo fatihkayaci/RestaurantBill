@@ -1,4 +1,4 @@
-﻿using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Entities;
 using MediatR;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Exceptions;
@@ -19,10 +19,9 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaur
 
         public async Task Handle(UpdateRestaurantCommand request, CancellationToken cancellationToken)
         {
-            string userId = _currentUser.UserId;
+            int restaurantId = _currentUser.RestaurantId;
 
-            IEnumerable<Restaurant> restaurants = await _uow.Restaurant.GetAllAsync(x => x.UserId == userId, trackChanges: true);
-            Restaurant restaurant = restaurants.FirstOrDefault()
+            Restaurant restaurant = await _uow.Restaurant.GetByIdAsync(restaurantId)
                 ?? throw new NotFoundException("Restoran bulunamadı.");
 
             restaurant.Update(request.Name, request.PhoneNumber, request.MobilePhoneNumber, request.Email, request.City, request.District);
