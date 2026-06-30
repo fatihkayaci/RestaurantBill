@@ -88,14 +88,7 @@ RestaurantBill/
 
 ---
 
-## 🧠 Key Design Decisions
-
-- **Why Clean Architecture?** The Domain layer has zero framework dependencies — business logic is portable and testable in isolation, regardless of whether persistence uses EF Core, Dapper, or anything else.
-- **Why CQRS?** Read and write operations on orders have very different complexity profiles. Separating them via MediatR pipelines lets validation, caching, and logging live as cross-cutting concerns without touching business logic.
-- **Why SignalR for real-time updates?** A POS is inherently multi-screen — the waiter's POS, the kitchen display, and the cashier all need to reflect the same order state instantly. SignalR pushes those changes to each connected screen the moment they happen, over a single persistent connection.
-- **Why Pipeline Behaviors over Decorators?** Cross-cutting concerns (validation, caching, idempotency, logging, performance) are handled in the MediatR pipeline, so handlers stay focused on business logic only.
-- **Why domain exceptions instead of raw `throw`?** All errors derive from `BaseException` (`BusinessException`, `NotFoundException`, `ValidationException`) and live in the Domain layer. A single global exception middleware maps them to consistent HTTP responses.
-- **Why Repository + Unit of Work over raw EF Core?** Abstracting persistence behind interfaces keeps the Application layer independent of the database and guarantees a single transaction per command via Unit of Work.
+> 🧠 Architectural decisions (why Clean Architecture, why CQRS, why SignalR, etc.) live in **[docs/architecture.md](docs/architecture.md)**.
 
 ---
 
@@ -137,8 +130,8 @@ RestaurantBill/
 - **Overview dashboard** with summary statistics and charts
 
 ### Authentication & Authorization
-- JWT Bearer token authentication
-- ASP.NET Core Identity with custom User/Role entities
+- JWT Bearer token authentication with a custom `User` entity (no ASP.NET Identity)
+- Password hashing via `IPasswordHasher<User>`
 - Role-based access enforced per endpoint: `Admin`, `Waiter`, `Cashier`, `Kitchen`
 
 ---
@@ -155,8 +148,7 @@ RestaurantBill/
 | **FluentValidation** | Input validation pipeline |
 | **AutoMapper** | DTO ↔ Entity mapping |
 | **SignalR** | Real-time push to Kitchen / Tables / Cashier |
-| **ASP.NET Core Identity** | User/role management |
-| **JWT Bearer** | Stateless authentication |
+| **JWT Bearer** | Stateless authentication (custom `User` entity, no ASP.NET Identity) |
 | **Serilog** | Structured logging (console + rolling file) |
 | **Swagger** | API documentation |
 
