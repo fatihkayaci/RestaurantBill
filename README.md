@@ -94,7 +94,7 @@ RestaurantBill/
 
 ## 🧪 Testing
 
-The project has two xUnit test projects targeting the Domain and Application layers.
+The project has three xUnit test projects covering Domain, Application, and Integration layers.
 
 ### Domain Tests (`RestaurantBill.Domain.Tests`)
 
@@ -122,6 +122,19 @@ Command handler tests using hand-written fake implementations (`FakeUnitOfWork`,
 | **Table** | Create, Update, Delete, Open, Reserve, CancelReservation |
 | **User** | Create (duplicate username guard), Update, Delete |
 | **Restaurant** | Update |
+
+### Integration Tests (`RestaurantBill.Integration.Tests`)
+
+Query handler tests using a real EF Core InMemory database with real `UnitOfWork` and `GenericRepository` implementations — verifying that LINQ filters, `Include()` chains, and ordering actually produce correct results end-to-end.
+
+| Feature | Tests |
+|---------|-------|
+| **Categories** | Empty result, restaurant isolation, alphabetical ordering |
+| **Products** | Empty result, restaurant isolation (via `Category.RestaurantId`), ordering, CategoryName included |
+| **Tables** | Empty result, restaurant isolation, alphabetical ordering |
+| **Orders (Kitchen)** | Excludes Paid/Cancelled, restaurant isolation via Table |
+| **Orders (Cashier)** | Served-only filter, restaurant isolation via Table |
+| **Orders (Active)** | Returns active order for the correct table |
 
 ```bash
 # Run all tests
@@ -482,8 +495,10 @@ All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`,
 - [x] Overview statistics dashboard
 - [x] MediatR Pipeline Behaviors (Validation, Caching, Idempotency, Logging, Performance)
 - [x] Domain exceptions & validation guards
-- [x] Docker Compose infrastructure + GitHub Actions CI/CD
-- [x] Unit tests — Domain entity tests & Application command handler tests (xUnit)
+- [x] Docker Compose infrastructure + GitHub Actions CI/CD (all branches)
+- [x] Unit & Integration tests — Domain entity tests, Application command handler tests, EF Core InMemory integration tests (xUnit)
+- [x] Health check endpoint (`/health`) with DB connectivity check
+- [x] Rate limiting on auth endpoints (brute-force protection)
 
 **Planned:** (see [TODO.md](TODO.md))
 - [ ] Configurable VAT rate
@@ -491,7 +506,6 @@ All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`,
 - [ ] Reports page contents & richer analytics
 - [ ] Mobile-responsive POS & KDS
 - [ ] Client-side form validation polish (remaining non-admin pages)
-- [ ] Integration tests (EF Core InMemory)
 
 ---
 

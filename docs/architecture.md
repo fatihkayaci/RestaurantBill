@@ -232,10 +232,12 @@ API → Client           : 200 OK
 ### Backend
 - .NET 9 + ASP.NET Core
 - Entity Framework Core + PostgreSQL
-- MediatR (CQRS), FluentValidation, AutoMapper
+- MediatR (CQRS), FluentValidation, manual `ToDto()` mapping extensions
 - Custom JWT authentication (`IPasswordHasher<User>` + `IUnitOfWork`, no ASP.NET Identity)
 - SignalR (real-time updates)
 - Serilog (structured logging to console + daily rolling files)
+- Built-in health check middleware (`/health`, DB connectivity)
+- Built-in rate limiting middleware (fixed-window per IP on auth endpoints)
 
 ### Frontend
 - React 19 + TypeScript + Vite
@@ -284,6 +286,12 @@ Abstracting persistence behind repository interfaces keeps the Application layer
 ### ADR-010: ASP.NET Identity removed in favor of custom auth
 ASP.NET Identity's `IdentityDbContext` and role/claim infrastructure added overhead the project didn't need — a single `User` entity with four fixed roles. Custom auth (`IPasswordHasher<User>` + manual JWT issuance via `IUnitOfWork`) keeps the Domain layer free of framework dependencies and full control over the user model.
 
+### ADR-011: Built-in health check over third-party solutions
+ASP.NET Core's built-in `AddHealthChecks()` with `AddDbContextCheck<T>()` covers the only critical dependency (PostgreSQL). Third-party health check packages (e.g., AspNetCore.Diagnostics.HealthChecks) would add dependency overhead with no benefit at this scale. The `/health` endpoint is also wired into Docker Compose so the frontend container only starts after the API is confirmed healthy.
+
+### ADR-012: Built-in rate limiting over middleware packages
+ASP.NET Core 7+ includes a rate limiter middleware that covers the brute-force protection needed for auth endpoints. A fixed-window policy (10 requests / 1 minute per IP) is applied only to `/api/auth/*` — authenticated endpoints are already protected by JWT so rate limiting there would add overhead without meaningful security benefit.
+
 ---
 
 ## 10. Project Structure
@@ -304,10 +312,13 @@ RestaurantBill/
 │   ├── RestaurantBill.Persistence/
 │   │   ├── Configurations/     # EF Core Fluent API configs
 │   │   └── Repositories/
-│   └── RestaurantBill.WebAPI/
-│       ├── Controllers/
-│       ├── Extensions/         # DI registration helpers
-│       └── Middleware/
+│   ├── RestaurantBill.WebAPI/
+│   │   ├── Controllers/
+│   │   ├── Extensions/         # DI registration helpers
+│   │   └── Middleware/
+│   ├── RestaurantBill.Domain.Tests/         # xUnit — entity business logic
+│   ├── RestaurantBill.Application.Tests/    # xUnit — command handlers (fake infra)
+│   └── RestaurantBill.Integration.Tests/   # xUnit — query handlers (EF Core InMemory)
 ├── frontend/
 │   └── src/
 │       ├── api/
