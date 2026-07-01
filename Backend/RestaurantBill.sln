@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestaurantBill.Domain.Tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestaurantBill.Application.Tests", "RestaurantBill.Application.Tests\RestaurantBill.Application.Tests.csproj", "{FB4395FA-F066-4519-B9C1-9954ECDD7B59}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestaurantBill.Integration.Tests", "RestaurantBill.Integration.Tests\RestaurantBill.Integration.Tests.csproj", "{0D140EE7-52FF-4C3B-A374-3E56146B2073}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +113,18 @@ Global
 		{FB4395FA-F066-4519-B9C1-9954ECDD7B59}.Release|x64.Build.0 = Release|Any CPU
 		{FB4395FA-F066-4519-B9C1-9954ECDD7B59}.Release|x86.ActiveCfg = Release|Any CPU
 		{FB4395FA-F066-4519-B9C1-9954ECDD7B59}.Release|x86.Build.0 = Release|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Debug|x64.Build.0 = Debug|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Debug|x86.Build.0 = Debug|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Release|x64.ActiveCfg = Release|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Release|x64.Build.0 = Release|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Release|x86.ActiveCfg = Release|Any CPU
+		{0D140EE7-52FF-4C3B-A374-3E56146B2073}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
