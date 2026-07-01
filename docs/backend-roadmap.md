@@ -33,11 +33,11 @@ auth ile alakasız.
 
 ## 1. Hızlı kazanımlar (1-2 günlük efor, projeyi "bitmiş" hissettirir)
 
-- [ ] **Test coverage** — şu an sadece `RestaurantBill.Domain.Tests/Entities/OrderTests.cs`
-      var. Application katmanındaki handler'lara xUnit + Moq ile unit test, birkaç kritik
-      akış için `WebApplicationFactory` ile integration test eklenmeli. Kapsamlı olması
-      şart değil, savunulabilir olması yeter.
-- [ ] **CI/CD** — GitHub Actions ile push'ta build + test pipeline'ı.
+- [x] **Test coverage** — `RestaurantBill.Domain.Tests` (6 entity, 50+ test) ve
+      `RestaurantBill.Application.Tests` (49 command handler testi, elle yazılmış fake
+      infrastructure) tamamlandı. AutoMapper kaldırılıp manuel `ToDto()` extension
+      method'larına geçildi. Sonraki adım: EF Core InMemory ile integration testler.
+- [x] **CI/CD** — GitHub Actions ile push'ta build + test pipeline'ı (`dotnet-ci.yml`).
 - [ ] **Health check endpoint** — ASP.NET Core'un yerleşik health check middleware'i ile
       `/health` (DB bağlantısı dahil).
 - [ ] **Rate limiting** — ASP.NET Core yerleşik rate limiter middleware'i ile login/register
