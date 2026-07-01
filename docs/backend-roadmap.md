@@ -39,9 +39,9 @@ auth ile alakasız.
       InMemory + gerçek UnitOfWork/Repositories) tamamlandı. AutoMapper kaldırılıp manuel
       `ToDto()` extension method'larına geçildi.
 - [x] **CI/CD** — GitHub Actions ile push'ta build + test pipeline'ı (`dotnet-ci.yml`).
-- [ ] **Health check endpoint** — ASP.NET Core'un yerleşik health check middleware'i ile
+- [x] **Health check endpoint** — ASP.NET Core'un yerleşik health check middleware'i ile
       `/health` (DB bağlantısı dahil).
-- [ ] **Rate limiting** — ASP.NET Core yerleşik rate limiter middleware'i ile login/register
+- [x] **Rate limiting** — ASP.NET Core yerleşik rate limiter middleware'i ile login/register
       gibi endpoint'lerde brute-force koruması.
 
 ---
