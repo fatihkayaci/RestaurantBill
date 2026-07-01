@@ -1,7 +1,7 @@
-using AutoMapper;
 using MediatR;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
 
@@ -10,12 +10,10 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
     public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, OrderDto>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMapper _mapper;
 
-        public CreateOrderCommandHandler(IUnitOfWork uow, IMapper mapper)
+        public CreateOrderCommandHandler(IUnitOfWork uow)
         {
             _uow = uow;
-            _mapper = mapper;
         }
         /// <summary>
         /// Creates a new empty order for the given table. Called when a table is opened.
@@ -32,7 +30,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
             await _uow.Order.AddAsync(order);
             await _uow.SaveChangesAsync(cancellationToken);
 
-            return _mapper.Map<OrderDto>(order);
+            return order.ToDto();
         }
     }
 }

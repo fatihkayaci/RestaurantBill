@@ -1,8 +1,8 @@
 ﻿using MediatR;
-using AutoMapper;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
@@ -10,13 +10,11 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
     public class GetAllTableQueryHandler : IRequestHandler<GetAllTableQuery, List<TableDto>>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUser;
 
-        public GetAllTableQueryHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser)
+        public GetAllTableQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
         {
             _uow = uow;
-            _mapper = mapper;
             _currentUser = currentUser;
         }
 
@@ -29,7 +27,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
             if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
             var entities = await _uow.Table.GetAllAsync(t => t.RestaurantId == restaurantId);
 
-            return _mapper.Map<List<TableDto>>(entities.OrderBy(t => t.Name));
+            return entities.OrderBy(t => t.Name).Select(t => t.ToDto()).ToList();
         }
     }
 }

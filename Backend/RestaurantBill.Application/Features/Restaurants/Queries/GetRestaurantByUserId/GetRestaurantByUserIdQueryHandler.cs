@@ -1,8 +1,8 @@
 ﻿using MediatR;
-using AutoMapper;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Entities;
 
@@ -11,13 +11,11 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantB
     public class GetRestaurantByUserIdQueryHandler : IRequestHandler<GetRestaurantByUserIdQuery, RestaurantDto>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUser;
 
-        public GetRestaurantByUserIdQueryHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser)
+        public GetRestaurantByUserIdQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
         {
             _uow = uow;
-            _mapper = mapper;
             _currentUser = currentUser;
         }
         /// <summary>
@@ -30,7 +28,7 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantB
             IEnumerable<Restaurant> restaurants = await _uow.Restaurant.GetAllAsync(x => x.Id == restaurantId, false);
             Restaurant restaurant = restaurants.FirstOrDefault()
                 ?? throw new NotFoundException("Restoran bulunamadı.");
-            return _mapper.Map<RestaurantDto>(restaurant);
+            return restaurant.ToDto();
         }
     }
 }

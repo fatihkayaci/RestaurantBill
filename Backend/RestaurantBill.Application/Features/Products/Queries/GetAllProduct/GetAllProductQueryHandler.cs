@@ -1,20 +1,18 @@
 ﻿using MediatR;
-using AutoMapper;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Exceptions;
+using RestaurantBill.Application.Mappings;
 namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
 {
     public class GetAllProductQueryHandler : IRequestHandler<GetAllProductQuery, List<ProductDto>>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUser;
-        public GetAllProductQueryHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser)
+        public GetAllProductQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
         {
             _uow = uow;
-            _mapper = mapper;
             _currentUser = currentUser;
         }
 
@@ -31,7 +29,7 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
             if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
             var entities = await _uow.Product.GetAllAsync(p => p.Category.RestaurantId == restaurantId, includeProperties: "Category");
 
-            return _mapper.Map<List<ProductDto>>(entities.OrderBy(p => p.Name));
+            return entities.OrderBy(p => p.Name).Select(p => p.ToDto()).ToList();
         }
     }
 }
