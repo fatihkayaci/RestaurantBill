@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RestaurantBill.Application.Features.Auths.Commands.Login;
 using RestaurantBill.Application.Features.Auths.Commands.Register;
 
@@ -7,6 +8,7 @@ namespace RestaurantBill.WebAPI.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[EnableRateLimiting("auth")]
 public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;

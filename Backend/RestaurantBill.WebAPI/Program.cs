@@ -23,8 +23,10 @@ builder.Services.AddSwaggerWithJwt()
                 .AddRepositories()
                 .AddCorsPolicy()
                 .AddMediatRWithBehaviors()
-.AddInfrastructureServices()
-                .AddCurrentUserService();
+                .AddInfrastructureServices()
+                .AddCurrentUserService()
+                .AddHealthCheck()
+                .AddAuthRateLimiting();
 
 var app = builder.Build();
 
@@ -32,6 +34,7 @@ app.UseCors("Allow");
 app.UseHttpsRedirection();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -40,6 +43,7 @@ app.UseSwaggerUI();
 app.MapHub<KitchenHub>("/kitchen-hub");
 app.MapHub<TableHub>("/table-hub");
 app.MapHub<CashierHub>("/cashier-hub");
+app.MapHealthCheck();
 
 await app.MigrateAndSeedAsync();
 
