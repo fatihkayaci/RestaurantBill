@@ -81,7 +81,7 @@ RestaurantBill/
 | Layer | Responsibility |
 |-------|---------------|
 | **Domain** | Core business entities, enums, validation guards, and domain exceptions — zero framework dependencies |
-| **Application** | Use cases via CQRS (MediatR), FluentValidation, AutoMapper, Pipeline Behaviors |
+| **Application** | Use cases via CQRS (MediatR), FluentValidation, manual DTO mapping, Pipeline Behaviors |
 | **Infrastructure** | SignalR hubs and real-time notification services |
 | **Persistence** | EF Core + PostgreSQL, Generic Repository, Unit of Work, migrations & seeding |
 | **WebAPI** | HTTP endpoints, JWT auth, global exception middleware, hub mapping |
@@ -89,6 +89,44 @@ RestaurantBill/
 ---
 
 > 🧠 Architectural decisions (why Clean Architecture, why CQRS, why SignalR, etc.) live in **[docs/architecture.md](docs/architecture.md)**.
+
+---
+
+## 🧪 Testing
+
+The project has two xUnit test projects targeting the Domain and Application layers.
+
+### Domain Tests (`RestaurantBill.Domain.Tests`)
+
+Pure unit tests for domain entity business logic — no infrastructure dependencies.
+
+| Entity | Tests |
+|--------|-------|
+| `CashRegister` | Create validation, Update validation, AddTransaction (balance, closed register) |
+| `Category` | Create/Rename validation, EnsureCanBeDeleted |
+| `Order` | Create, AddItem, RemoveItem, UpdateItemQuantity, UpdateStatus transitions, Cancel, Close |
+| `Product` | Create/Update validation |
+| `Table` | Create/Update validation, Occupy/Release/Reserve state transitions |
+| `User` | Create/Update validation, SetPasswordHash |
+
+### Application Tests (`RestaurantBill.Application.Tests`)
+
+Command handler tests using hand-written fake implementations (`FakeUnitOfWork`, `FakeGenericRepository<T>`, `FakeCurrentUserService`, etc.) — no mocking libraries.
+
+| Feature | Handlers Tested |
+|---------|----------------|
+| **CashRegister** | Create, Update, Delete, AddTransaction |
+| **Category** | Create, Update, Delete (with linked-product guard) |
+| **Order** | Create, Cancel, Close, AddProduct, RemoveProduct, UpdateItemQuantity, UpdateStatus, UpdateItemStatus |
+| **Product** | Create, Update, Delete |
+| **Table** | Create, Update, Delete, Open, Reserve, CancelReservation |
+| **User** | Create (duplicate username guard), Update, Delete |
+| **Restaurant** | Update |
+
+```bash
+# Run all tests
+dotnet test Backend/RestaurantBill.sln
+```
 
 ---
 
@@ -146,7 +184,6 @@ RestaurantBill/
 | **PostgreSQL 16** | Primary database |
 | **MediatR** | CQRS mediator + pipeline behaviors |
 | **FluentValidation** | Input validation pipeline |
-| **AutoMapper** | DTO ↔ Entity mapping |
 | **SignalR** | Real-time push to Kitchen / Tables / Cashier |
 | **JWT Bearer** | Stateless authentication (custom `User` entity, no ASP.NET Identity) |
 | **Serilog** | Structured logging (console + rolling file) |
@@ -446,6 +483,7 @@ All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`,
 - [x] MediatR Pipeline Behaviors (Validation, Caching, Idempotency, Logging, Performance)
 - [x] Domain exceptions & validation guards
 - [x] Docker Compose infrastructure + GitHub Actions CI/CD
+- [x] Unit tests — Domain entity tests & Application command handler tests (xUnit)
 
 **Planned:** (see [TODO.md](TODO.md))
 - [ ] Configurable VAT rate
@@ -453,7 +491,7 @@ All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`,
 - [ ] Reports page contents & richer analytics
 - [ ] Mobile-responsive POS & KDS
 - [ ] Client-side form validation polish (remaining non-admin pages)
-- [ ] Unit test suite (xUnit + Moq)
+- [ ] Integration tests (EF Core InMemory)
 
 ---
 
