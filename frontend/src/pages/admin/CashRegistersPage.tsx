@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { X, Pencil, ArrowDownCircle, ArrowUpCircle, Banknote, Wallet } from 'lucide-react';
+import { X, Pencil, ArrowDownCircle, ArrowUpCircle, Wallet } from 'lucide-react';
 import axios from 'axios';
 import type { CashRegister, CashRegisterStatus } from '@/features/cashier/types';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
