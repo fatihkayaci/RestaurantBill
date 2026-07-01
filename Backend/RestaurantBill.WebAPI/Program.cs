@@ -1,4 +1,3 @@
-using RestaurantBill.Business.Mappings;
 using RestaurantBill.Infrastructure.Extensions;
 using RestaurantBill.WebAPI.Extensions;
 using RestaurantBill.WebAPI.Middlewares;
@@ -24,8 +23,7 @@ builder.Services.AddSwaggerWithJwt()
                 .AddRepositories()
                 .AddCorsPolicy()
                 .AddMediatRWithBehaviors()
-                .AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>())
-                .AddInfrastructureServices()
+.AddInfrastructureServices()
                 .AddCurrentUserService();
 
 var app = builder.Build();

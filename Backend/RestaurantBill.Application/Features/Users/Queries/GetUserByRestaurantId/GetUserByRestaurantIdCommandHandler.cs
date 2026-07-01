@@ -1,7 +1,7 @@
 ﻿using MediatR;
-using AutoMapper;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
 
@@ -10,18 +10,16 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
     public class GetUserByRestaurantIdCommandHandler : IRequestHandler<GetUserByRestaurantIdCommand, IEnumerable<UserDto>>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUser;
 
-        public GetUserByRestaurantIdCommandHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser)
+        public GetUserByRestaurantIdCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
         {
             _uow = uow;
-            _mapper = mapper;
             _currentUser = currentUser;
         }
 
         /// <summary>
-        /// Retrieves all users associated with the current user's restaurant asynchronously. 
+        /// Retrieves all users associated with the current user's restaurant asynchronously.
         /// The restaurant ID is dynamically extracted from the HTTP context claims, and the retrieved entities are mapped to a collection of DTOs.
         /// </summary>
         /// <param name="request">The request object to retrieve the users associated with the restaurant.</param>
@@ -35,7 +33,7 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
 
             var currentUserId = _currentUser.UserId;
             var users = await _uow.User.GetAllAsync(x => x.RestaurantId == restaurantId && x.Id != currentUserId, false);
-            return _mapper.Map<IEnumerable<UserDto>>(users.OrderBy(u => u.FullName));
+            return users.OrderBy(u => u.FullName).Select(u => u.ToDto());
         }
     }
 }

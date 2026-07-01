@@ -1,9 +1,9 @@
 ﻿using MediatR;
-using AutoMapper;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitchen
@@ -11,14 +11,12 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitch
     public class GetAllOrdersToKitchenQueryHandler : IRequestHandler<GetAllOrdersToKitchenQuery, List<OrderDto>>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUser;
 
-        public GetAllOrdersToKitchenQueryHandler(IUnitOfWork uow, IMapper mapper, ICurrentUserService currentUser)
+        public GetAllOrdersToKitchenQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
         {
             _uow = uow;
-            _mapper = mapper;
-            _currentUser = currentUser;   
+            _currentUser = currentUser;
         }
 
         public async Task<List<OrderDto>> Handle(GetAllOrdersToKitchenQuery request, CancellationToken cancellationToken)
@@ -34,7 +32,7 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitch
                 "OrderItems,OrderItems.Product"
             );
 
-            return _mapper.Map<List<OrderDto>>(entities);
+            return entities.Select(o => o.ToDto()).ToList();
         }
     }
 }
