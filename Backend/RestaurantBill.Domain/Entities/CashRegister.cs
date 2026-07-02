@@ -9,6 +9,7 @@ public class CashRegister : BaseEntity
     public decimal Balance { get; private set; }
     public CashRegisterStatus Status { get; private set; }
     public int RestaurantId { get; private set; }
+    public Restaurant Restaurant { get; private set; } = default!;
 
     protected CashRegister() { }
 

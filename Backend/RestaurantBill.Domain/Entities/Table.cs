@@ -9,6 +9,7 @@ namespace RestaurantBill.Domain.Entities
         public string Note { get; private set; } = string.Empty;
         public TableStatus Status { get; private set; } = TableStatus.Available;
         public int RestaurantId { get; private set; }
+        public Restaurant Restaurant { get; private set; } = default!;
 
         protected Table() { }
 

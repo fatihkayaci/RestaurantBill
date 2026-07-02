@@ -5,6 +5,7 @@ public class Category : BaseEntity
 {
     public string Name { get; private set; } = string.Empty;
     public int RestaurantId { get; private set; }
+    public Restaurant Restaurant { get; private set; } = default!;
 
     protected Category() { }
 

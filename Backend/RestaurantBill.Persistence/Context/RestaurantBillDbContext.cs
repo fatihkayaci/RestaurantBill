@@ -16,6 +16,7 @@ public class RestaurantBillDbContext : DbContext
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Restaurant> Restaurants { get; set; }
+    public DbSet<Membership> Memberships { get; set; }
     public DbSet<Table> Tables { get; set; }
     public DbSet<CashRegister> CashRegisters { get; set; }
     public DbSet<CashRegister.CashTransaction> CashTransactions { get; set; }
