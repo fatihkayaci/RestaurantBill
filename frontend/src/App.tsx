@@ -24,6 +24,7 @@ import StaffPage from './pages/admin/StaffPage';
 import AdminTablesPage from './pages/admin/TablesPage';
 import CashRegistersPage from './pages/admin/CashRegistersPage';
 import ProfilePage from './pages/admin/ProfilePage';
+import MembershipPage from './pages/admin/MembershipPage';
 
 function App() {
     return (
@@ -55,6 +56,7 @@ function App() {
                     <Route path="tables" element={<AdminTablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />
                     <Route path="profile" element={<ProfilePage />} />
+                    <Route path="membership" element={<MembershipPage />} />
                 </Route>
 
                 {/* Auth */}
