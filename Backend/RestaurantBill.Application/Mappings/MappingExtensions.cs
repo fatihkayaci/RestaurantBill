@@ -59,6 +59,15 @@ public static class MappingExtensions
         CategoryName = p.Category?.Name ?? string.Empty
     };
 
+    public static MembershipDto ToDto(this Membership m) => new()
+    {
+        Id = m.Id,
+        PlanType = m.PlanType,
+        Status = m.Status,
+        StartDate = m.StartDate,
+        EndDate = m.EndDate
+    };
+
     public static RestaurantDto ToDto(this Restaurant r) => new()
     {
         Name = r.Name,
