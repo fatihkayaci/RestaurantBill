@@ -21,7 +21,7 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaur
         {
             int restaurantId = _currentUser.RestaurantId;
 
-            Restaurant restaurant = await _uow.Restaurant.GetByIdAsync(restaurantId)
+            Restaurant restaurant = await _uow.Restaurant.GetByIdAsync(restaurantId, true)
                 ?? throw new NotFoundException("Restoran bulunamadı.");
 
             restaurant.Update(request.Name, request.PhoneNumber, request.MobilePhoneNumber, request.Email, request.City, request.District);
