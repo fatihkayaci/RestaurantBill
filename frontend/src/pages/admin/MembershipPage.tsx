@@ -1,29 +1,38 @@
+import { useEffect, useState } from 'react';
 import { Gem, CreditCard, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { membershipService } from '@/features/admin/api/membershipService';
+import { MembershipPlanType, MembershipStatus, type Membership } from '@/features/admin/types';
 
 const inputLikeCard = 'rounded-xl border border-border bg-card p-5';
 const sectionLabelClass = 'text-[11px] font-semibold tracking-widest uppercase text-muted-foreground';
 
-const plan = {
-    name: 'Profesyonel',
-    status: 'AKTİF',
-    price: '₺999',
-    billingCycle: 'Aylık faturalama',
-    nextRenewal: '1 Ağustos 2026',
+const planTypeLabel: Record<MembershipPlanType, string> = {
+    [MembershipPlanType.Free]: 'Ücretsiz',
+    [MembershipPlanType.Basic]: 'Başlangıç',
+    [MembershipPlanType.Premium]: 'Premium',
 };
+
+const statusLabel: Record<MembershipStatus, string> = {
+    [MembershipStatus.Active]: 'AKTİF',
+    [MembershipStatus.Expired]: 'SÜRESİ DOLDU',
+    [MembershipStatus.Cancelled]: 'İPTAL EDİLDİ',
+};
+
+const statusBadgeClass: Record<MembershipStatus, string> = {
+    [MembershipStatus.Active]: 'bg-green-500/15 text-green-400 border-green-500/30',
+    [MembershipStatus.Expired]: 'bg-red-500/15 text-red-400 border-red-500/30',
+    [MembershipStatus.Cancelled]: 'bg-white/10 text-white/50 border-white/20',
+};
+
+const formatDate = (isoDate: string) =>
+    new Date(isoDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 const usageStats = [
     { label: 'Masa Sayısı', value: '12', limitLabel: 'Sınırsız' },
     { label: 'Kullanıcı', value: '6', limitLabel: '/10 limit', progress: 60 },
     { label: 'Sipariş (Bu Ay)', value: '847', limitLabel: 'Sınırsız' },
     { label: 'Aktif Menü Ürünü', value: '14', limitLabel: 'Sınırsız' },
-];
-
-const billingInfo = [
-    { label: 'Plan', value: plan.name },
-    { label: 'Faturalama', value: "Aylık · Her ayın 1'i" },
-    { label: 'Sonraki Ödeme', value: plan.nextRenewal },
-    { label: 'Tutar', value: plan.price },
 ];
 
 const paymentMethod = {
@@ -33,6 +42,27 @@ const paymentMethod = {
 };
 
 export default function MembershipPage() {
+    const [membership, setMembership] = useState<Membership | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        membershipService.getMyMembership()
+            .then(setMembership)
+            .catch(() => setMembership(null))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const planName = membership ? planTypeLabel[membership.planType] : '—';
+    const status = membership?.status ?? MembershipStatus.Active;
+    const nextRenewal = membership ? formatDate(membership.endDate) : '—';
+
+    const billingInfo = [
+        { label: 'Plan', value: planName },
+        { label: 'Durum', value: membership ? statusLabel[membership.status] : '—' },
+        { label: 'Başlangıç', value: membership ? formatDate(membership.startDate) : '—' },
+        { label: 'Sonraki Yenileme', value: nextRenewal },
+    ];
+
     return (
         <div className="space-y-6">
             {/* Page Header */}
@@ -54,13 +84,19 @@ export default function MembershipPage() {
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <p className="text-white font-serif font-bold text-lg leading-none">{plan.name}</p>
-                            <span className="text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 bg-green-500/15 text-green-400 border border-green-500/30">
-                                {plan.status}
+                            <p className="text-white font-serif font-bold text-lg leading-none">
+                                {loading ? '—' : planName}
+                            </p>
+                            <span className={cn(
+                                'text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 border',
+                                statusBadgeClass[status]
+                            )}>
+                                {statusLabel[status]}
                             </span>
                         </div>
-                        <p className="text-white/50 text-sm mt-1.5">{plan.price} / ay · {plan.billingCycle}</p>
-                        <p className="text-white/30 text-xs mt-0.5">Sonraki yenileme: {plan.nextRenewal}</p>
+                        <p className="text-white/30 text-xs mt-1.5">
+                            {loading ? '—' : `Sonraki yenileme: ${nextRenewal}`}
+                        </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
