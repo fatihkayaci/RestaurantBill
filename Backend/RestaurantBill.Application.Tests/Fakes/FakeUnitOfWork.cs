@@ -10,6 +10,7 @@ public class FakeUnitOfWork : IUnitOfWork
     public FakeCategoryRepository CategoryRepo { get; } = new();
     public FakeTableRepository TableRepo { get; } = new();
     public FakeRestaurantRepository RestaurantRepo { get; } = new();
+    public FakeMembershipRepository MembershipRepo { get; } = new();
     public FakeUserRepository UserRepo { get; } = new();
     public FakeCashRegisterRepository CashRegisterRepo { get; } = new();
     public FakeCashTransactionRepository CashTransactionRepo { get; } = new();
@@ -21,6 +22,7 @@ public class FakeUnitOfWork : IUnitOfWork
     ICategoryRepository IUnitOfWork.Category => CategoryRepo;
     ITableRepository IUnitOfWork.Table => TableRepo;
     IRestaurantRepository IUnitOfWork.Restaurant => RestaurantRepo;
+    IMembershipRepository IUnitOfWork.Membership => MembershipRepo;
     IUserRepository IUnitOfWork.User => UserRepo;
     ICashRegisterRepository IUnitOfWork.CashRegister => CashRegisterRepo;
     ICashTransactionRepository IUnitOfWork.CashTransaction => CashTransactionRepo;

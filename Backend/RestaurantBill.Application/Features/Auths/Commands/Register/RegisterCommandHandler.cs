@@ -34,8 +34,11 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             User user = User.Create(request.FullName, request.UserName, request.Email, null, userCode, UserRole.Admin, restaurant);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));
 
+            Membership membership = Membership.Create(restaurant, MembershipPlanType.Free, DateTime.UtcNow, DateTime.UtcNow.AddDays(14));
+
             await _uow.Restaurant.AddAsync(restaurant);
             await _uow.User.AddAsync(user);
+            await _uow.Membership.AddAsync(membership);
             await _uow.SaveChangesAsync(cancellationToken);
         }
     }

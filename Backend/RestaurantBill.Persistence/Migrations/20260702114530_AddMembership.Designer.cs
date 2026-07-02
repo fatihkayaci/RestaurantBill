@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RestaurantBill.Persistence.Context;
@@ -11,9 +12,11 @@ using RestaurantBill.Persistence.Context;
 namespace RestaurantBill.Persistence.Migrations
 {
     [DbContext(typeof(RestaurantBillDbContext))]
-    partial class RestaurantBillDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260702114530_AddMembership")]
+    partial class AddMembership
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -56,8 +59,6 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RestaurantId");
 
                     b.ToTable("CashRegisters");
                 });
@@ -129,8 +130,6 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RestaurantId");
 
                     b.ToTable("Categories");
                 });
@@ -392,8 +391,6 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RestaurantId");
-
                     b.ToTable("Tables");
                 });
 
@@ -452,17 +449,6 @@ namespace RestaurantBill.Persistence.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.CashRegister", b =>
-                {
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
-                        .WithMany()
-                        .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Restaurant");
-                });
-
             modelBuilder.Entity("RestaurantBill.Domain.Entities.CashRegister+CashTransaction", b =>
                 {
                     b.HasOne("RestaurantBill.Domain.Entities.CashRegister", "CashRegister")
@@ -472,28 +458,6 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("CashRegister");
-                });
-
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.Category", b =>
-                {
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
-                        .WithMany()
-                        .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Restaurant");
-                });
-
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.Membership", b =>
-                {
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
-                        .WithMany()
-                        .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Restaurant");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Order", b =>
@@ -533,17 +497,6 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
-                });
-
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.Table", b =>
-                {
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
-                        .WithMany()
-                        .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Restaurant");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.User", b =>

@@ -16,6 +16,7 @@ public class UnitOfWork : IUnitOfWork
     private ICategoryRepository? _categoryRepository;
     private ITableRepository? _tableRepository;
     private IRestaurantRepository? _restaurantRepository;
+    private IMembershipRepository? _membershipRepository;
     private IUserRepository? _userRepository;
     private ICashRegisterRepository? _cashRegisterRepository;
     private ICashTransactionRepository? _cashTransactionRepository;
@@ -26,6 +27,7 @@ public class UnitOfWork : IUnitOfWork
     public ICategoryRepository Category => _categoryRepository ??= new CategoryRepository(_context);
     public ITableRepository Table => _tableRepository ??= new TableRepository(_context);
     public IRestaurantRepository Restaurant => _restaurantRepository ??= new RestaurantRepository(_context);
+    public IMembershipRepository Membership => _membershipRepository ??= new MembershipRepository(_context);
     public IUserRepository User => _userRepository ??= new UserRepository(_context);
     public ICashRegisterRepository CashRegister => _cashRegisterRepository ??= new CashRegisterRepository(_context);
     public ICashTransactionRepository CashTransaction => _cashTransactionRepository ??= new CashTransactionRepository(_context);
