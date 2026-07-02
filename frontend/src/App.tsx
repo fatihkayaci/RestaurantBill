@@ -4,6 +4,7 @@ import PrivateRoute from './components/PrivateRoute';
 
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import LandingPage from './pages/LandingPage';
 
 import WaiterLayout from './pages/waiter/Layout';
 import WaiterTablesPage from './pages/waiter/TablesPage';
@@ -60,8 +61,8 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
 
-                {/* Root redirect */}
-                <Route path="/" element={<Navigate to="/waiter" replace />} />
+                {/* Landing */}
+                <Route path="/" element={<LandingPage />} />
             </Routes>
             <Toaster position="top-right" richColors />
         </>
