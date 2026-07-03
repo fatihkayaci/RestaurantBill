@@ -65,7 +65,7 @@ public class UserTests
         {
             User user = User.Create("Eski Ad", "eski", null, null, "OLD01", UserRole.Admin, restaurantId: 1);
 
-            user.Update("Yeni Ad", "yeni", "y@mail.com", "05009999999", "NEW01", UserRole.Waiter);
+            user.Update("Yeni Ad", "yeni", "y@mail.com", "05009999999", "NEW01", UserRole.Waiter, false);
 
             Assert.Equal("Yeni Ad", user.FullName);
             Assert.Equal("yeni", user.UserName);
@@ -73,6 +73,7 @@ public class UserTests
             Assert.Equal("05009999999", user.PhoneNumber);
             Assert.Equal("NEW01", user.UserCode);
             Assert.Equal(UserRole.Waiter, user.Role);
+            Assert.False(user.IsActive);
         }
 
         [Theory]
@@ -83,7 +84,7 @@ public class UserTests
             User user = User.Create("Fatih", "fatih", null, null, "USR01", UserRole.Admin, restaurantId: 1);
 
             Assert.Throws<DomainException>(() =>
-                user.Update(invalidName, "fatih", null, null, "USR01", UserRole.Admin));
+                user.Update(invalidName, "fatih", null, null, "USR01", UserRole.Admin, true));
         }
 
         [Theory]
@@ -94,7 +95,7 @@ public class UserTests
             User user = User.Create("Fatih", "fatih", null, null, "USR01", UserRole.Admin, restaurantId: 1);
 
             Assert.Throws<DomainException>(() =>
-                user.Update("Fatih", invalidUserName, null, null, "USR01", UserRole.Admin));
+                user.Update("Fatih", invalidUserName, null, null, "USR01", UserRole.Admin, true));
         }
 
         [Theory]
@@ -105,7 +106,7 @@ public class UserTests
             User user = User.Create("Fatih", "fatih", null, null, "USR01", UserRole.Admin, restaurantId: 1);
 
             Assert.Throws<DomainException>(() =>
-                user.Update("Fatih", "fatih", null, null, invalidCode, UserRole.Admin));
+                user.Update("Fatih", "fatih", null, null, invalidCode, UserRole.Admin, true));
         }
     }
 
