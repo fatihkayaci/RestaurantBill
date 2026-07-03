@@ -30,7 +30,8 @@ export const userService = {
             PhoneNumber: data.phoneNumber,
             Password: data.password,
             UserCode: data.userCode,
-            Role: data.role
+            Role: data.role,
+            IsActive: data.isActive
         });
     },
     deleteUser: async (id: string) => {

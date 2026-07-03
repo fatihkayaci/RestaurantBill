@@ -94,6 +94,7 @@ public static class MappingExtensions
         Email = u.Email,
         PhoneNumber = u.PhoneNumber ?? string.Empty,
         UserCode = u.UserCode,
-        Role = u.Role
+        Role = u.Role,
+        IsActive = u.IsActive
     };
 }

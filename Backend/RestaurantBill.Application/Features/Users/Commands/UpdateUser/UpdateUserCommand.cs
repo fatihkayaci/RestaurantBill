@@ -13,5 +13,6 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
         public string? Password { get; set; }
         public required string UserCode { get; set; }
         public UserRole Role { get; set; } = UserRole.Waiter;
+        public bool IsActive { get; set; } = true;
     }
 }
