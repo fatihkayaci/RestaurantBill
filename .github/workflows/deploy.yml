@@ -36,8 +36,10 @@ jobs:
         username: ${{ secrets.DO_USER }}
         key: ${{ secrets.DO_SSH_KEY }}
         script: |
+          set -e
           cd /root/RestaurantBill
-          git pull origin main
+          git fetch origin main
+          git reset --hard origin/main
           docker compose down
           docker system prune -f
           docker compose build --no-cache api
