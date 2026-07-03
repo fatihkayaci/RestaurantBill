@@ -103,6 +103,7 @@ public class UserCommandHandlerTests
 
             Assert.Equal("Yeni Ad", user.FullName);
             Assert.Equal(UserRole.Admin, user.Role);
+            Assert.True(user.IsActive);
             Assert.True(uow.SaveChangesCalled);
         }
 

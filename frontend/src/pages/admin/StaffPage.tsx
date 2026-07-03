@@ -21,7 +21,6 @@ const labelClass = "block text-[11px] font-semibold tracking-widest uppercase te
 export default function Staff() {
     const [users, setUsers] = useState<User[]>([]);
     const [search, setSearch] = useState('');
-    const [activeMap, setActiveMap] = useState<Record<string, boolean>>({});
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editUser, setEditUser] = useState<User | null>(null);
@@ -35,12 +34,7 @@ export default function Staff() {
 
     useEffect(() => {
         userService.getUsersByRestaurantId()
-            .then(data => {
-                setUsers(data);
-                const map: Record<string, boolean> = {};
-                data.forEach(u => { map[u.id] = true; });
-                setActiveMap(map);
-            })
+            .then(setUsers)
             .catch(console.error);
     }, []);
 
@@ -78,6 +72,14 @@ export default function Staff() {
         setDeleteTargetId(null);
     };
 
+    const toggleActive = async (user: User) => {
+        await userService.updateUser({
+            id: user.id, fullName: user.fullName, userName: user.userName, email: user.email,
+            phoneNumber: user.phoneNumber, userCode: user.userCode, role: user.role, isActive: !user.isActive
+        });
+        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const errors: Record<string, string> = {};
@@ -98,13 +100,12 @@ export default function Staff() {
         setGeneralError(null);
         try {
             if (editUser) {
-                await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash });
+                await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash, isActive: editUser.isActive });
             } else {
                 await userService.createUser(form);
             }
             const updated = await userService.getUsersByRestaurantId();
             setUsers(updated);
-            updated.forEach(u => { if (!(u.id in activeMap)) setActiveMap(prev => ({ ...prev, [u.id]: true })); });
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
@@ -156,8 +157,8 @@ export default function Staff() {
                     <thead>
                         <tr className="border-b border-border">
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ad Soyad</th>
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kullanıcı Adı</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Rol</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Bölge</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Başlangıç</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İşlem</th>
@@ -167,7 +168,7 @@ export default function Staff() {
                         {filtered.map(user => {
                             const style = roleStyle[user.role] ?? roleStyle[1];
                             const initials = user.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-                            const isActive = activeMap[user.id] ?? true;
+                            const isActive = user.isActive;
                             return (
                                 <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                                     <td className="px-5 py-3.5">
@@ -175,24 +176,21 @@ export default function Staff() {
                                             <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0", style.avatar)}>
                                                 {initials}
                                             </div>
-                                            <button
-                                                className="font-medium text-foreground hover:underline text-left"
-                                                onClick={() => openEditModal(user)}
-                                            >
+                                            <span className="font-medium text-foreground">
                                                 {user.fullName}
-                                            </button>
+                                            </span>
                                         </div>
                                     </td>
+                                    <td className="px-4 py-3.5 text-muted-foreground">{user.userName}</td>
                                     <td className="px-4 py-3.5">
                                         <span className={cn("inline-block px-3 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase", style.badge)}>
                                             {roleMap[user.role] ?? 'Bilinmiyor'}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3.5 text-muted-foreground">—</td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">—</td>
                                     <td className="px-4 py-3.5">
                                         <button
-                                            onClick={() => setActiveMap(prev => ({ ...prev, [user.id]: !isActive }))}
+                                            onClick={() => toggleActive(user)}
                                             className={cn(
                                                 "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none",
                                                 isActive ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"

@@ -19,10 +19,10 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 
         public async Task Handle(UpdateUserCommand request, CancellationToken cancellationToken)
         {
-            User user = await _uow.User.GetByIdAsync(request.UserId)
+            User user = await _uow.User.GetByIdAsync(request.UserId, true)
                 ?? throw new NotFoundException("Kullanıcı bulunamadı.");
 
-            user.Update(request.FullName, request.UserName, request.Email, request.PhoneNumber, request.UserCode, request.Role);
+            user.Update(request.FullName, request.UserName, request.Email, request.PhoneNumber, request.UserCode, request.Role, request.IsActive);
 
             if (!string.IsNullOrWhiteSpace(request.Password))
                 user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));

@@ -32,7 +32,7 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
             if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
 
             var currentUserId = _currentUser.UserId;
-            var users = await _uow.User.GetAllAsync(x => x.RestaurantId == restaurantId && x.Id != currentUserId, false);
+            var users = await _uow.User.GetAllAsync(x => x.RestaurantId == restaurantId && x.Id != currentUserId && !x.IsDeleted, false);
             return users.OrderBy(u => u.FullName).Select(u => u.ToDto());
         }
     }

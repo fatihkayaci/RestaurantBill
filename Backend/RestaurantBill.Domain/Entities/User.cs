@@ -14,6 +14,7 @@ namespace RestaurantBill.Domain.Entities
         public int RestaurantId { get; private set; }
         public Restaurant Restaurant { get; private set; } = default!;
         public string PasswordHash { get; private set; } = string.Empty;
+        public bool IsActive { get; private set; } = true;
 
         protected User() { }
 
@@ -48,7 +49,7 @@ namespace RestaurantBill.Domain.Entities
                 Restaurant = restaurant
             };
         }
-        public void Update(string fullName, string userName, string? email, string? phoneNumber, string userCode, UserRole role)
+        public void Update(string fullName, string userName, string? email, string? phoneNumber, string userCode, UserRole role, bool isActive)
         {
             ValidateCommon(fullName, userName, userCode);
 
@@ -58,6 +59,7 @@ namespace RestaurantBill.Domain.Entities
             PhoneNumber = phoneNumber;
             UserCode = userCode;
             Role = role;
+            IsActive = isActive;
         }
         private static void ValidateCommon(string fullName, string userName, string userCode)
         {

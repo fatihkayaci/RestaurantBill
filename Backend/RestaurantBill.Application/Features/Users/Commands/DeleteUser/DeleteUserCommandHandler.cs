@@ -19,7 +19,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.DeleteUser
 
         public async Task Handle(DeleteUserCommand request, CancellationToken cancellationToken)
         {
-            User user = await _uow.User.GetByIdAsync(request.UserId)
+            User user = await _uow.User.GetByIdAsync(request.UserId, true)
                 ?? throw new NotFoundException("Kullanıcı bulunamadı.");
 
             user.MarkAsDeleted();

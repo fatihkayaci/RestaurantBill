@@ -6,6 +6,7 @@ export interface User {
     phoneNumber: string;
     userCode: string;
     role: number;
+    isActive: boolean;
 }
 
 export interface CreateUser {
@@ -27,6 +28,7 @@ export interface UpdateUser {
     password?: string;
     userCode: string;
     role: number;
+    isActive: boolean;
 }
 
 export interface TopProduct {

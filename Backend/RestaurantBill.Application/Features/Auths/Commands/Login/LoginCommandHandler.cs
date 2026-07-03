@@ -37,6 +37,9 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             if (result == PasswordVerificationResult.Failed)
                 throw new BusinessException("Kullanıcı adı, email veya şifre hatalı!");
 
+            // if (!user.IsActive)
+            //     throw new BusinessException("Hesabınız pasif durumda. Giriş yapabilmek için yöneticinizle iletişime geçin.");
+
             return GenerateJwtToken(user);
         }
 
