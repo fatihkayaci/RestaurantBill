@@ -86,6 +86,16 @@ public static class MappingExtensions
         Status = t.Status
     };
 
+    public static ReservationDto ToDto(this Reservation r) => new()
+    {
+        Id = r.Id,
+        TableId = r.TableId,
+        GuestName = r.GuestName,
+        Contact = r.Contact,
+        ReservationTime = r.ReservationTime,
+        Note = r.Note
+    };
+
     public static UserDto ToDto(this User u) => new()
     {
         Id = u.Id,

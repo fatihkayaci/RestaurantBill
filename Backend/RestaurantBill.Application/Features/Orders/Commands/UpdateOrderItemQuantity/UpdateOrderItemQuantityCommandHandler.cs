@@ -1,5 +1,6 @@
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.Interfaces;
 using MediatR;
 using RestaurantBill.Domain.Entities;
 
@@ -8,10 +9,12 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQua
     public class UpdateOrderItemQuantityCommandHandler : IRequestHandler<UpdateOrderItemQuantityCommand>
     {
         private readonly IUnitOfWork _uow;
+        private readonly ITableNotificationService _tableNotificationService;
 
-        public UpdateOrderItemQuantityCommandHandler(IUnitOfWork uow)
+        public UpdateOrderItemQuantityCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService)
         {
             _uow = uow;
+            _tableNotificationService = tableNotificationService;
         }
         /// <summary>
         /// Updates the quantity of a specific item in the order and recalculates the total price.
@@ -26,6 +29,8 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQua
             order.UpdateItemQuantity(request.ProductId, request.Quantity);
 
             await _uow.SaveChangesAsync(cancellationToken);
+
+            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId, order.TotalPrice);
         }
     }
 }

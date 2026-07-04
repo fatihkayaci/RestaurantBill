@@ -15,7 +15,7 @@ namespace RestaurantBill.Application.NotificationHandlers
 
         public async Task Handle(OrderUpdatedNotification notification, CancellationToken cancellationToken)
         {
-            await _tableNotificationService.SendOrderUpdatedAsync(notification.Order.TableId);
+            await _tableNotificationService.SendOrderUpdatedAsync(notification.Order.TableId, notification.Order.TotalPrice);
         }
     }
 }

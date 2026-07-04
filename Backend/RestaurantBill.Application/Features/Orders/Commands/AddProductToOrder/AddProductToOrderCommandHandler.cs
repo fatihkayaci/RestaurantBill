@@ -30,6 +30,9 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
                 order.AddItem(product, item.Quantity);
             }
 
+            if (!string.IsNullOrWhiteSpace(request.Note))
+                order.UpdateNote(request.Note);
+
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _mediator.Publish(new OrderUpdatedNotification(order), cancellationToken);

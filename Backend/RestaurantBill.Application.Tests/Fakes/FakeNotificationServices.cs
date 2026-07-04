@@ -5,7 +5,7 @@ namespace RestaurantBill.Application.Tests.Fakes;
 public class FakeTableNotificationService : ITableNotificationService
 {
     public Task SendTableStatusChangedAsync(int tableId, int status) => Task.CompletedTask;
-    public Task SendOrderUpdatedAsync(int tableId) => Task.CompletedTask;
+    public Task SendOrderUpdatedAsync(int tableId, decimal totalPrice) => Task.CompletedTask;
     public Task SendOrderClosedAsync(int tableId, int orderId) => Task.CompletedTask;
 }
 

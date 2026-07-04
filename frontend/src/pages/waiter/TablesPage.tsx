@@ -44,13 +44,22 @@ const STATUS_CARD = {
     },
 } as const;
 
+function formatElapsed(occupiedSince: string, now: number): string {
+    const minutes = Math.max(0, Math.floor((now - new Date(occupiedSince).getTime()) / 60000));
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
+}
+
 function TableCard({
     table,
     isSelected,
+    now,
     onClick,
 }: {
     table: Table;
     isSelected: boolean;
+    now: number;
     onClick: () => void;
 }) {
     const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
@@ -58,7 +67,7 @@ function TableCard({
     return (
         <button
             onClick={onClick}
-            className={`text-left rounded-2xl border py-3.5 px-4 flex flex-col gap-1.5 cursor-pointer
+            className={`text-left rounded-2xl border py-4 px-4 flex flex-col gap-1.5 cursor-pointer min-h-27
                 transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]
                 dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]
                 ${cfg.bg} ${cfg.border}
@@ -74,14 +83,25 @@ function TableCard({
                 </span>
             </div>
 
-            <div className="flex-1 flex flex-col justify-end">
+            <div className="flex-1 flex flex-col justify-end gap-1">
                 {table.status === 1 && (
                     <span className={`text-[11px] tracking-[0.2px] mt-1 ${cfg.hint}`}>
                         ↑ Sipariş oluştur
                     </span>
                 )}
                 {table.status === 2 && (
-                    <span className={`text-xs ${cfg.hint}`}>Aktif sipariş</span>
+                    <>
+                        <div className="flex items-center justify-between mt-1">
+                            <span className={`text-xs ${cfg.hint}`}>Aktif sipariş</span>
+                            <span className="text-sm font-bold text-foreground">₺{table.activeOrderTotal.toFixed(0)}</span>
+                        </div>
+                        {table.occupiedSince && (
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">
+                                <span>Açılış: {new Date(table.occupiedSince).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span>{formatElapsed(table.occupiedSince, now)}</span>
+                            </div>
+                        )}
+                    </>
                 )}
                 {table.status === 3 && (
                     <span className={`text-[11px] ${cfg.hint}`}>
@@ -98,6 +118,7 @@ export default function WaiterTablesPage() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<FilterType>('all');
     const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
+    const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
         tableService.getTables()
@@ -105,6 +126,11 @@ export default function WaiterTablesPage() {
             .catch(console.error)
             .finally(() => setLoading(false));
 
+    }, []);
+
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 30000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -120,7 +146,14 @@ export default function WaiterTablesPage() {
             .build();
 
         conn.on('TableStatusChanged', (tableId: number, status: number) => {
-            setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
+            setTables(prev => prev.map(t => t.id === tableId
+                ? { ...t, status, occupiedSince: status === 2 ? new Date().toISOString() : null }
+                : t
+            ));
+        });
+
+        conn.on('OrderUpdated', (tableId: number, totalPrice: number) => {
+            setTables(prev => prev.map(t => t.id === tableId ? { ...t, activeOrderTotal: totalPrice } : t));
         });
 
         let cancelled = false;
@@ -129,7 +162,10 @@ export default function WaiterTablesPage() {
     }, []);
 
     const handleTableUpdated = (tableId: number, status: number) => {
-        setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
+        setTables(prev => prev.map(t => t.id === tableId
+            ? { ...t, status, occupiedSince: status === 2 ? new Date().toISOString() : null }
+            : t
+        ));
     };
 
     const counts: Counts = {
@@ -211,6 +247,7 @@ export default function WaiterTablesPage() {
                             key={table.id}
                             table={table}
                             isSelected={selectedTableId === table.id}
+                            now={now}
                             onClick={() => setSelectedTableId(prev => prev === table.id ? null : table.id)}
                         />
                     ))}
@@ -236,3 +273,4 @@ export default function WaiterTablesPage() {
         </div>
     );
 }
+""

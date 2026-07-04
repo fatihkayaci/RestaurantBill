@@ -1,5 +1,5 @@
 import { api } from '@/lib/axiosInstance';
-import type { Table } from '../types';
+import type { Table, Reservation } from '../types';
 
 export const tableService = {
     getTables: async () => {
@@ -39,10 +39,18 @@ export const tableService = {
         });
         return response.data;
     },
-    reservationTable: async (tableId: string) => {
+    reservationTable: async (tableId: string, guestName: string, contact: string, reservationTime: string, note: string) => {
         const response = await api.post(`/table/reservation`, {
-            TableId: tableId
+            TableId: tableId,
+            GuestName: guestName,
+            Contact: contact,
+            ReservationTime: reservationTime,
+            Note: note
         });
+        return response.data;
+    },
+    getActiveReservation: async (tableId: string) => {
+        const response = await api.get<Reservation | null>(`/table/${tableId}/reservation`);
         return response.data;
     },
     cancelReservation: async (tableId: string) => {

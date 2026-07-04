@@ -23,6 +23,13 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
             Guard.AgainstNull(table, "Böyle bir masa bulunamadı.");
 
             table.Reserve();
+
+            TimeSpan timeOfDay = TimeSpan.Parse(request.ReservationTime);
+            DateTime reservationTime = DateTime.UtcNow.Date.Add(timeOfDay);
+
+            Reservation reservation = Reservation.Create(table, request.GuestName, request.Contact, reservationTime, request.Note);
+            await _uow.Reservation.AddAsync(reservation);
+
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _tableNotificationService.SendTableStatusChangedAsync(table.Id, (int)table.Status);

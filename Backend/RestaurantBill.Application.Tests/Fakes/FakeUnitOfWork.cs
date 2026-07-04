@@ -14,6 +14,7 @@ public class FakeUnitOfWork : IUnitOfWork
     public FakeUserRepository UserRepo { get; } = new();
     public FakeCashRegisterRepository CashRegisterRepo { get; } = new();
     public FakeCashTransactionRepository CashTransactionRepo { get; } = new();
+    public FakeReservationRepository ReservationRepo { get; } = new();
 
     public bool SaveChangesCalled { get; private set; }
 
@@ -26,6 +27,7 @@ public class FakeUnitOfWork : IUnitOfWork
     IUserRepository IUnitOfWork.User => UserRepo;
     ICashRegisterRepository IUnitOfWork.CashRegister => CashRegisterRepo;
     ICashTransactionRepository IUnitOfWork.CashTransaction => CashTransactionRepo;
+    IReservationRepository IUnitOfWork.Reservation => ReservationRepo;
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

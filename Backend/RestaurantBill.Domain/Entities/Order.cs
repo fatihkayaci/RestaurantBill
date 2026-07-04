@@ -51,6 +51,11 @@ namespace RestaurantBill.Domain.Entities
                 Status = OrderStatus.Pending;
         }
 
+        public void UpdateNote(string note)
+        {
+            Note = note ?? string.Empty;
+        }
+
         public void RemoveItem(int productId)
         {
             OrderItem? item = _orderItems.FirstOrDefault(x => x.ProductId == productId);
@@ -82,7 +87,7 @@ namespace RestaurantBill.Domain.Entities
             {
                 [OrderStatus.Preparing] = (OrderItemStatus.Pending,   OrderItemStatus.Preparing),
                 [OrderStatus.Ready]     = (OrderItemStatus.Preparing, OrderItemStatus.Ready),
-                [OrderStatus.Served]    = (OrderItemStatus.Ready,     OrderItemStatus.Delivered),
+                [OrderStatus.Served]    = (OrderItemStatus.Ready,     OrderItemStatus.Served),
             };
 
             if (transitions.TryGetValue(newStatus, out (OrderItemStatus from, OrderItemStatus to) transition))

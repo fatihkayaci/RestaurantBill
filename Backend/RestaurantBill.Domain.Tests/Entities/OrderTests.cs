@@ -154,7 +154,7 @@ public class OrderTests
         }
 
         [Fact]
-        public void ToServed_MovesReadyItemsToDelivered()
+        public void ToServed_MovesReadyItemsToServed()
         {
             Order order = Order.Create(1);
             order.AddItem(OrderTests.CreateProduct(), 1);
@@ -164,7 +164,7 @@ public class OrderTests
             order.UpdateStatus(OrderStatus.Served);
 
             Assert.Equal(OrderStatus.Served, order.Status);
-            Assert.All(order.OrderItems, item => Assert.Equal(OrderItemStatus.Delivered, item.Status));
+            Assert.All(order.OrderItems, item => Assert.Equal(OrderItemStatus.Served, item.Status));
         }
 
         [Fact]
