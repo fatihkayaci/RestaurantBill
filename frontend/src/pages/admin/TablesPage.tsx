@@ -166,7 +166,12 @@ export default function Tables() {
     const handleReservation = async () => {
         if (!statusDialogTable) return;
         setStatusActionLoading(true);
-        try { await tableService.reservationTable(statusDialogTable.id.toString()); await refreshTables(); setStatusDialogTable(null); }
+        try {
+            const currentTime = new Date().toTimeString().slice(0, 5);
+            await tableService.reservationTable(statusDialogTable.id.toString(), 'Rezervasyon', '', currentTime, '');
+            await refreshTables();
+            setStatusDialogTable(null);
+        }
         catch (err) { console.error(err); } finally { setStatusActionLoading(false); }
     };
     const handleCancelReservation = async () => {
