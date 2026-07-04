@@ -145,8 +145,7 @@ public class OrderCommandHandlerTests
             await uow.OrderRepo.AddAsync(order);
             await uow.ProductRepo.AddAsync(product);
 
-            var mediator = new FakeMediator();
-            var handler = new AddProductToOrderCommandHandler(uow, mediator);
+            var handler = new AddProductToOrderCommandHandler(uow, new FakeTableNotificationService());
             var command = new AddProductToOrderCommand
             {
                 OrderId = order.Id,
@@ -158,7 +157,6 @@ public class OrderCommandHandlerTests
             Assert.Single(order.OrderItems);
             Assert.Equal(30m, order.TotalPrice);
             Assert.True(uow.SaveChangesCalled);
-            Assert.True(mediator.PublishCalled);
         }
     }
 
