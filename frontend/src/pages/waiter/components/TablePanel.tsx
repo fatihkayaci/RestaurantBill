@@ -217,7 +217,6 @@ export default function TablePanel({ table, onClose, onTableUpdated, reservation
             if (refreshed) {
                 setActiveOrder({
                     ...refreshed,
-                    note: orderNote || refreshed.note,
                     orderItems: refreshed.orderItems.map(i => ({ ...i, is_load: true })),
                 });
             }

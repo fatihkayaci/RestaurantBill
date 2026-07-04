@@ -51,6 +51,11 @@ namespace RestaurantBill.Domain.Entities
                 Status = OrderStatus.Pending;
         }
 
+        public void UpdateNote(string note)
+        {
+            Note = note ?? string.Empty;
+        }
+
         public void RemoveItem(int productId)
         {
             OrderItem? item = _orderItems.FirstOrDefault(x => x.ProductId == productId);
