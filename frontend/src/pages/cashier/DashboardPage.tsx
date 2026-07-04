@@ -40,7 +40,9 @@ export default function CashierDashboardPage() {
 
     useEffect(() => {
         const conn = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/cashier-hub`)
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/cashier-hub`, {
+                accessTokenFactory: () => localStorage.getItem('token') ?? '',
+            })
             .withAutomaticReconnect()
             .configureLogging({
                 log(level: signalR.LogLevel, msg: string) {

@@ -180,7 +180,9 @@ export default function KitchenDashboardPage() {
 
     useEffect(() => {
         const kitchenConn = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/kitchen-hub`)
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/kitchen-hub`, {
+                accessTokenFactory: () => localStorage.getItem('token') ?? '',
+            })
             .withAutomaticReconnect()
             .build();
 
@@ -190,7 +192,9 @@ export default function KitchenDashboardPage() {
         });
 
         const tableConn = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`)
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`, {
+                accessTokenFactory: () => localStorage.getItem('token') ?? '',
+            })
             .withAutomaticReconnect()
             .build();
 

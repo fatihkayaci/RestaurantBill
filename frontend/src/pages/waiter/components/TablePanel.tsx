@@ -121,7 +121,9 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
 
     useEffect(() => {
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`)
+            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`, {
+                accessTokenFactory: () => localStorage.getItem('token') ?? '',
+            })
             .withAutomaticReconnect()
             .configureLogging({
                 log(logLevel: signalR.LogLevel, message: string) {

@@ -102,7 +102,7 @@ public class TableCommandHandlerTests
             Table table = CreateTable();
             await uow.TableRepo.AddAsync(table);
 
-            var handler = new OpenTableHandler(uow, new FakeTableNotificationService());
+            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new OpenTableCommand { TableId = table.Id }, CancellationToken.None);
 
             Assert.Equal(TableStatus.Occupied, table.Status);
@@ -114,7 +114,7 @@ public class TableCommandHandlerTests
         public async Task Handle_WithNonExistingTable_ThrowsException()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new OpenTableHandler(uow, new FakeTableNotificationService());
+            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
 
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 handler.Handle(new OpenTableCommand { TableId = 99 }, CancellationToken.None));
@@ -130,7 +130,7 @@ public class TableCommandHandlerTests
             Table table = CreateTable();
             await uow.TableRepo.AddAsync(table);
 
-            var handler = new ReservationTableCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new ReservationTableCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new ReservationTableCommand
             {
                 TableId = table.Id,
@@ -155,7 +155,7 @@ public class TableCommandHandlerTests
             table.Reserve();
             await uow.TableRepo.AddAsync(table);
 
-            var handler = new CancelReservationCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new CancelReservationCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new CancelReservationCommand { TableId = table.Id }, CancellationToken.None);
 
             Assert.Equal(TableStatus.Available, table.Status);
@@ -166,7 +166,7 @@ public class TableCommandHandlerTests
         public async Task Handle_WithNonExistingTable_ThrowsException()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new CancelReservationCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new CancelReservationCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
 
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 handler.Handle(new CancelReservationCommand { TableId = 99 }, CancellationToken.None));

@@ -10,11 +10,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromO
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public RemoveProductFromOrderCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService)
+        public RemoveProductFromOrderCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICurrentUserService currentUserService)
         {
             _uow = uow;
             _tableNotificationService = tableNotificationService;
+            _currentUserService = currentUserService;
         }
         /// <summary>
         /// Removes a specific product from the order and recalculates the total price.
@@ -29,7 +31,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromO
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId, order.TotalPrice);
+            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.RestaurantId, order.TableId, order.TotalPrice);
         }
     }
 }

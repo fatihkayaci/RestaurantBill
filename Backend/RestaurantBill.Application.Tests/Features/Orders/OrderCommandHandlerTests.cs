@@ -84,7 +84,7 @@ public class OrderCommandHandlerTests
             await uow.TableRepo.AddAsync(table);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new CancelOrderCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new CancelOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new CancelOrderCommand { OrderId = order.Id }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Cancelled, order.Status);
@@ -96,7 +96,7 @@ public class OrderCommandHandlerTests
         public async Task Handle_WithNonExistingOrder_ThrowsException()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new CancelOrderCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new CancelOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
 
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 handler.Handle(new CancelOrderCommand { OrderId = 99 }, CancellationToken.None));
@@ -115,7 +115,7 @@ public class OrderCommandHandlerTests
             await uow.TableRepo.AddAsync(table);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new CloseOrderCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new CloseOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new DeleteCommand { OrderId = order.Id }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Paid, order.Status);
@@ -127,7 +127,7 @@ public class OrderCommandHandlerTests
         public async Task Handle_WithNonExistingOrder_ThrowsException()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new CloseOrderCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new CloseOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
 
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 handler.Handle(new DeleteCommand { OrderId = 99 }, CancellationToken.None));
@@ -145,8 +145,7 @@ public class OrderCommandHandlerTests
             await uow.OrderRepo.AddAsync(order);
             await uow.ProductRepo.AddAsync(product);
 
-            var mediator = new FakeMediator();
-            var handler = new AddProductToOrderCommandHandler(uow, mediator);
+            var handler = new AddProductToOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
             var command = new AddProductToOrderCommand
             {
                 OrderId = order.Id,
@@ -158,7 +157,6 @@ public class OrderCommandHandlerTests
             Assert.Single(order.OrderItems);
             Assert.Equal(30m, order.TotalPrice);
             Assert.True(uow.SaveChangesCalled);
-            Assert.True(mediator.PublishCalled);
         }
     }
 
@@ -173,7 +171,7 @@ public class OrderCommandHandlerTests
             order.AddItem(product, 2);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new RemoveProductFromOrderCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new RemoveProductFromOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new RemoveProductFromOrderCommand { OrderId = order.Id, ProductId = 1 }, CancellationToken.None);
 
             Assert.Empty(order.OrderItems);
@@ -184,7 +182,7 @@ public class OrderCommandHandlerTests
         public async Task Handle_WithNonExistingOrder_ThrowsException()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new RemoveProductFromOrderCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new RemoveProductFromOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
 
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 handler.Handle(new RemoveProductFromOrderCommand { OrderId = 99, ProductId = 1 }, CancellationToken.None));
@@ -202,7 +200,7 @@ public class OrderCommandHandlerTests
             order.AddItem(product, 2);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new UpdateOrderItemQuantityCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new UpdateOrderItemQuantityCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new UpdateOrderItemQuantityCommand { OrderId = order.Id, ProductId = 1, Quantity = 5 }, CancellationToken.None);
 
             Assert.Equal(50m, order.TotalPrice);
@@ -220,7 +218,7 @@ public class OrderCommandHandlerTests
             order.AddItem(OrderCommandHandlerTests.CreateProduct(), 1);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new UpdateOrderStatusCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService());
+            var handler = new UpdateOrderStatusCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new UpdateOrderStatusCommand { OrderId = order.Id, Status = (int)OrderStatus.Preparing }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Preparing, order.Status);
@@ -240,7 +238,7 @@ public class OrderCommandHandlerTests
             SetId(item, 5);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new UpdateOrderItemStatusCommandHandler(uow, new FakeTableNotificationService());
+            var handler = new UpdateOrderItemStatusCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new UpdateOrderItemStatusCommand { OrderId = order.Id, OrderItemId = 5, Status = (int)OrderItemStatus.Preparing }, CancellationToken.None);
 
             Assert.Equal(OrderItemStatus.Preparing, item.Status);

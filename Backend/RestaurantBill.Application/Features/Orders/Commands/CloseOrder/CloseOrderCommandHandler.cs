@@ -10,11 +10,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public CloseOrderCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService)
+        public CloseOrderCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICurrentUserService currentUserService)
         {
             _uow = uow;
             _tableNotificationService = tableNotificationService;
+            _currentUserService = currentUserService;
         }
         /// <summary>
         /// Closes the order, marks it as Paid and sets the table status to Available.
@@ -33,8 +35,8 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendTableStatusChangedAsync(table.Id, (int)table.Status);
-            await _tableNotificationService.SendOrderClosedAsync(table.Id, order.Id);
+            await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
+            await _tableNotificationService.SendOrderClosedAsync(_currentUserService.RestaurantId, table.Id, order.Id);
         }
     }
 }

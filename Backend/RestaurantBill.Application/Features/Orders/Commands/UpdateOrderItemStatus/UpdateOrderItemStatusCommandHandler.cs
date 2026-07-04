@@ -11,11 +11,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemSta
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public UpdateOrderItemStatusCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService)
+        public UpdateOrderItemStatusCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICurrentUserService currentUserService)
         {
             _uow = uow;
             _tableNotificationService = tableNotificationService;
+            _currentUserService = currentUserService;
         }
 
         public async Task Handle(UpdateOrderItemStatusCommand request, CancellationToken cancellationToken)
@@ -27,7 +29,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemSta
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId, order.TotalPrice);
+            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.RestaurantId, order.TableId, order.TotalPrice);
         }
     }
 }
