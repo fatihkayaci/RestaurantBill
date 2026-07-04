@@ -133,8 +133,8 @@ namespace RestaurantBill.WebAPI.Controllers
             return Ok(new { Message = "Sipariş durumu güncellendi." });
         }
 
-        /// <summary> Updates the status of a single order item (Kitchen use). </summary>
-        [Authorize(Roles = "Admin,Kitchen")]
+        /// <summary> Updates the status of a single order item (Kitchen and Waiter use). </summary>
+        [Authorize(Roles = "Admin,Kitchen,Waiter")]
         [HttpPost("{orderId}/item/{itemId}/status")]
         public async Task<IActionResult> UpdateItemStatus([FromRoute] int orderId, [FromRoute] int itemId, [FromBody] UpdateOrderItemStatusCommand command, CancellationToken cancellationToken)
         {
