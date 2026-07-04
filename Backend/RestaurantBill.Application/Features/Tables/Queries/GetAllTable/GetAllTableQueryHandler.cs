@@ -32,6 +32,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
             var activeOrders = await _uow.Order.GetAllAsync(o =>
                 tableIds.Contains(o.TableId) && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled);
             var totalsByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.TotalPrice);
+            var occupiedSinceByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.CreatedAt);
 
             return entities
                 .OrderBy(t => t.Name)
@@ -39,6 +40,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
                 {
                     var dto = t.ToDto();
                     dto.ActiveOrderTotal = totalsByTableId.GetValueOrDefault(t.Id);
+                    dto.OccupiedSince = occupiedSinceByTableId.TryGetValue(t.Id, out var createdAt) ? createdAt : null;
                     return dto;
                 })
                 .ToList();

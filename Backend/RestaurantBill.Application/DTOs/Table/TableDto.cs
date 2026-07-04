@@ -8,4 +8,5 @@ public class TableDto
     public string Note { get; set; } = string.Empty;
     public TableStatus Status { get; set; }
     public decimal ActiveOrderTotal { get; set; }
+    public DateTime? OccupiedSince { get; set; }
 }
