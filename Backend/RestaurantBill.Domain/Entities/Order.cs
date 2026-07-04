@@ -82,7 +82,7 @@ namespace RestaurantBill.Domain.Entities
             {
                 [OrderStatus.Preparing] = (OrderItemStatus.Pending,   OrderItemStatus.Preparing),
                 [OrderStatus.Ready]     = (OrderItemStatus.Preparing, OrderItemStatus.Ready),
-                [OrderStatus.Served]    = (OrderItemStatus.Ready,     OrderItemStatus.Delivered),
+                [OrderStatus.Served]    = (OrderItemStatus.Ready,     OrderItemStatus.Served),
             };
 
             if (transitions.TryGetValue(newStatus, out (OrderItemStatus from, OrderItemStatus to) transition))
