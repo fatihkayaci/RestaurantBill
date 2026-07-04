@@ -173,7 +173,7 @@ public class OrderCommandHandlerTests
             order.AddItem(product, 2);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new RemoveProductFromOrderCommandHandler(uow);
+            var handler = new RemoveProductFromOrderCommandHandler(uow, new FakeTableNotificationService());
             await handler.Handle(new RemoveProductFromOrderCommand { OrderId = order.Id, ProductId = 1 }, CancellationToken.None);
 
             Assert.Empty(order.OrderItems);
@@ -184,7 +184,7 @@ public class OrderCommandHandlerTests
         public async Task Handle_WithNonExistingOrder_ThrowsException()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new RemoveProductFromOrderCommandHandler(uow);
+            var handler = new RemoveProductFromOrderCommandHandler(uow, new FakeTableNotificationService());
 
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 handler.Handle(new RemoveProductFromOrderCommand { OrderId = 99, ProductId = 1 }, CancellationToken.None));
@@ -202,7 +202,7 @@ public class OrderCommandHandlerTests
             order.AddItem(product, 2);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new UpdateOrderItemQuantityCommandHandler(uow);
+            var handler = new UpdateOrderItemQuantityCommandHandler(uow, new FakeTableNotificationService());
             await handler.Handle(new UpdateOrderItemQuantityCommand { OrderId = order.Id, ProductId = 1, Quantity = 5 }, CancellationToken.None);
 
             Assert.Equal(50m, order.TotalPrice);

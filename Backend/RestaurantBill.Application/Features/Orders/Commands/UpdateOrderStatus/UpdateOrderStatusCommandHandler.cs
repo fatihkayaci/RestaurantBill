@@ -30,7 +30,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId);
+            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId, order.TotalPrice);
 
             if (newStatus == OrderStatus.Served)
                 await _cashierNotificationService.SendOrderServedAsync();

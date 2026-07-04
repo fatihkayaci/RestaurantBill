@@ -3,6 +3,7 @@ using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
@@ -19,7 +20,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
         }
 
         /// <summary>
-        /// Returns all tables belonging to the authenticated user's restaurant.
+        /// Returns all tables belonging to the authenticated user's restaurant, including the total price of each table's active order (if any).
         /// </summary>
         public async Task<List<TableDto>> Handle(GetAllTableQuery request, CancellationToken cancellationToken)
         {
@@ -27,7 +28,20 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
             if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
             var entities = await _uow.Table.GetAllAsync(t => t.RestaurantId == restaurantId);
 
-            return entities.OrderBy(t => t.Name).Select(t => t.ToDto()).ToList();
+            var tableIds = entities.Select(t => t.Id).ToList();
+            var activeOrders = await _uow.Order.GetAllAsync(o =>
+                tableIds.Contains(o.TableId) && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled);
+            var totalsByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.TotalPrice);
+
+            return entities
+                .OrderBy(t => t.Name)
+                .Select(t =>
+                {
+                    var dto = t.ToDto();
+                    dto.ActiveOrderTotal = totalsByTableId.GetValueOrDefault(t.Id);
+                    return dto;
+                })
+                .ToList();
         }
     }
 }

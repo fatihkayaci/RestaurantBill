@@ -18,9 +18,9 @@ namespace RestaurantBill.Infrastructure.Services
             await _hubContext.Clients.All.SendAsync("TableStatusChanged", tableId, status);
         }
 
-        public async Task SendOrderUpdatedAsync(int tableId)
+        public async Task SendOrderUpdatedAsync(int tableId, decimal totalPrice)
         {
-            await _hubContext.Clients.All.SendAsync("OrderUpdated", tableId);
+            await _hubContext.Clients.All.SendAsync("OrderUpdated", tableId, totalPrice);
         }
 
         public async Task SendOrderClosedAsync(int tableId, int orderId)

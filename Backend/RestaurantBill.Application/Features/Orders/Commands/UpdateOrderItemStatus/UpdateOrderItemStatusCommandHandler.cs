@@ -27,7 +27,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemSta
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId);
+            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId, order.TotalPrice);
         }
     }
 }

@@ -44,12 +44,6 @@ const STATUS_CARD = {
     },
 } as const;
 
-// MOCK: masa listesi endpoint'i henüz aktif sipariş tutarını döndürmüyor.
-// Gerçek veri backend'e eklenene kadar masa id'sine göre sabit bir tutar üretir.
-function mockOrderTotal(tableId: number): number {
-    return ((tableId * 47) % 40 + 6) * 10;
-}
-
 function TableCard({
     table,
     isSelected,
@@ -89,7 +83,7 @@ function TableCard({
                 {table.status === 2 && (
                     <div className="flex items-center justify-between mt-1">
                         <span className={`text-xs ${cfg.hint}`}>Aktif sipariş</span>
-                        <span className="text-sm font-bold text-foreground">₺{mockOrderTotal(table.id)}</span>
+                        <span className="text-sm font-bold text-foreground">₺{table.activeOrderTotal.toFixed(0)}</span>
                     </div>
                 )}
                 {table.status === 3 && (
@@ -131,6 +125,10 @@ export default function WaiterTablesPage() {
 
         conn.on('TableStatusChanged', (tableId: number, status: number) => {
             setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
+        });
+
+        conn.on('OrderUpdated', (tableId: number, totalPrice: number) => {
+            setTables(prev => prev.map(t => t.id === tableId ? { ...t, activeOrderTotal: totalPrice } : t));
         });
 
         let cancelled = false;
