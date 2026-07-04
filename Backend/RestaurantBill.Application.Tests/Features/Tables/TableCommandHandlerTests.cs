@@ -131,7 +131,14 @@ public class TableCommandHandlerTests
             await uow.TableRepo.AddAsync(table);
 
             var handler = new ReservationTableCommandHandler(uow, new FakeTableNotificationService());
-            await handler.Handle(new ReservationTableCommand { TableId = table.Id }, CancellationToken.None);
+            await handler.Handle(new ReservationTableCommand
+            {
+                TableId = table.Id,
+                GuestName = "Ahmet Yılmaz",
+                Contact = "0555 555 55 55",
+                ReservationTime = "19:30",
+                Note = ""
+            }, CancellationToken.None);
 
             Assert.Equal(TableStatus.Reserved, table.Status);
             Assert.True(uow.SaveChangesCalled);

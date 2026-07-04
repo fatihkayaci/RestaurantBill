@@ -7,17 +7,27 @@ import { productService } from '@/features/products/api/productService';
 import { categoryService } from '@/features/categories/api/categoryService';
 import { orderService } from '@/features/orders/api/orderService';
 import { tableService } from '@/features/tables/api/tableService';
-import type { Table } from '@/features/tables/types';
+import type { Table, Reservation } from '@/features/tables/types';
 import type { Product } from '@/features/products/types';
 import type { Category } from '@/features/categories/types';
 import type { Order } from '@/features/orders/types';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
 
-export interface ReservationInfo {
-    name: string;
-    time: string;
-    note: string;
+function formatTimeDigits(rawValue: string): string {
+    let digits = rawValue.replace(/\D/g, '').slice(0, 4);
+
+    if (digits.length >= 1 && Number(digits[0]) > 2) {
+        digits = '2' + digits.slice(1);
+    }
+    if (digits.length >= 2 && digits[0] === '2' && Number(digits[1]) > 3) {
+        digits = digits[0] + '3' + digits.slice(2);
+    }
+    if (digits.length >= 3 && Number(digits[2]) > 5) {
+        digits = digits.slice(0, 2) + '5' + digits.slice(3);
+    }
+
+    return digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits;
 }
 
 interface CartItem {
@@ -37,11 +47,9 @@ interface Props {
     table: Table;
     onClose: () => void;
     onTableUpdated?: (tableId: number, status: number) => void;
-    reservationInfo?: ReservationInfo;
-    onReservationSaved?: (tableId: number, info: ReservationInfo) => void;
 }
 
-export default function TablePanel({ table, onClose, onTableUpdated, reservationInfo, onReservationSaved }: Props) {
+export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
     const [activeTab, setActiveTab] = useState<PanelTab>('new-order');
     const [categories, setCategories] = useState<Category[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
@@ -51,9 +59,11 @@ export default function TablePanel({ table, onClose, onTableUpdated, reservation
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [reservationName, setReservationName] = useState('');
+    const [reservationContact, setReservationContact] = useState('');
     const [reservationTime, setReservationTime] = useState('');
     const [reservationNote, setReservationNote] = useState('');
     const [savingReservation, setSavingReservation] = useState(false);
+    const [activeReservation, setActiveReservation] = useState<Reservation | null>(null);
     const [servingItemId, setServingItemId] = useState<number | null>(null);
     const [servingAll, setServingAll] = useState(false);
     const [orderNote, setOrderNote] = useState('');
@@ -65,9 +75,11 @@ export default function TablePanel({ table, onClose, onTableUpdated, reservation
         setActiveTab(table.status === 3 ? 'reservation' : 'new-order');
         setLoading(true);
         setReservationName('');
+        setReservationContact('');
         setReservationTime('');
         setReservationNote('');
         setOrderNote('');
+        setActiveReservation(null);
 
         const fetchData = async () => {
             try {
@@ -91,6 +103,11 @@ export default function TablePanel({ table, onClose, onTableUpdated, reservation
                     }
                 } catch {
                     // Sipariş yok, yeni sipariş sekmesi açık kalır
+                }
+
+                if (table.status === 3) {
+                    const reservation = await tableService.getActiveReservation(String(table.id));
+                    setActiveReservation(reservation);
                 }
             } catch (err) {
                 console.error(err);
@@ -244,10 +261,17 @@ export default function TablePanel({ table, onClose, onTableUpdated, reservation
     };
 
     const handleSaveReservation = async () => {
+        if (!reservationName.trim() || !reservationTime) {
+            toast.error('Ad soyad ve rezervasyon saati zorunludur.');
+            return;
+        }
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(reservationTime)) {
+            toast.error('Rezervasyon saati SS:DD formatında olmalıdır (örn. 19:30).');
+            return;
+        }
         try {
             setSavingReservation(true);
-            await tableService.reservationTable(String(table.id));
-            onReservationSaved?.(table.id, { name: reservationName, time: reservationTime, note: reservationNote });
+            await tableService.reservationTable(String(table.id), reservationName, reservationContact, reservationTime, reservationNote);
             onTableUpdated?.(table.id, 3);
             toast.success('Rezervasyon kaydedildi.');
             onClose();
@@ -351,7 +375,9 @@ export default function TablePanel({ table, onClose, onTableUpdated, reservation
             {/* Tabs */}
             <div className="flex border-b shrink-0">
                 {(
-                    table.status === 1 || table.status === 3
+                    table.status === 3
+                        ? (['reservation'] as PanelTab[])
+                        : table.status === 1
                         ? (['orders', 'new-order', 'reservation'] as PanelTab[])
                         : (['orders', 'new-order'] as PanelTab[])
                 ).map(tab => (
@@ -462,19 +488,25 @@ export default function TablePanel({ table, onClose, onTableUpdated, reservation
                             Bu masa rezerve edilmiştir.
                         </div>
 
-                        {reservationInfo ? (
+                        {activeReservation ? (
                             <div className="rounded-xl border divide-y">
                                 <div className="flex justify-between items-center px-4 py-3">
                                     <span className="text-xs text-muted-foreground font-medium">Ad Soyad</span>
-                                    <span className="text-sm font-bold text-foreground">{reservationInfo.name || '—'}</span>
+                                    <span className="text-sm font-bold text-foreground">{activeReservation.guestName || '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center px-4 py-3">
                                     <span className="text-xs text-muted-foreground font-medium">Saat</span>
-                                    <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{reservationInfo.time || '—'}</span>
+                                    <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                                        {new Date(activeReservation.reservationTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center px-4 py-3">
+                                    <span className="text-xs text-muted-foreground font-medium">İletişim</span>
+                                    <span className="text-sm font-medium text-foreground">{activeReservation.contact || '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center px-4 py-3">
                                     <span className="text-xs text-muted-foreground font-medium">Not</span>
-                                    <span className="text-sm font-medium text-foreground text-right">{reservationInfo.note || '—'}</span>
+                                    <span className="text-sm font-medium text-foreground text-right">{activeReservation.note || '—'}</span>
                                 </div>
                             </div>
                         ) : (
@@ -517,11 +549,23 @@ export default function TablePanel({ table, onClose, onTableUpdated, reservation
                         </div>
 
                         <div>
+                            <label className="text-[11px] font-bold text-muted-foreground tracking-wide">İLETİŞİM</label>
+                            <input
+                                value={reservationContact}
+                                onChange={e => setReservationContact(e.target.value)}
+                                placeholder="Telefon numarası..."
+                                className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        <div>
                             <label className="text-[11px] font-bold text-muted-foreground tracking-wide">REZERVASYON SAATİ</label>
                             <input
-                                type="time"
                                 value={reservationTime}
-                                onChange={e => setReservationTime(e.target.value)}
+                                onChange={e => setReservationTime(formatTimeDigits(e.target.value))}
+                                placeholder="19:30"
+                                inputMode="numeric"
+                                maxLength={5}
                                 className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>

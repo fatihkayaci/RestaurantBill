@@ -9,6 +9,7 @@ using RestaurantBill.Application.Features.Tables.Commands.ReservationTable;
 using RestaurantBill.Application.Features.Tables.Commands.UpdateTable;
 using RestaurantBill.Application.Features.Tables.Queries.GetAllTable;
 using RestaurantBill.Application.Features.Tables.Queries.GetTableById;
+using RestaurantBill.Application.Features.Tables.Queries.GetActiveReservationByTableId;
 namespace RestaurantBill.WebAPI.Controllers
 {
     
@@ -49,6 +50,18 @@ namespace RestaurantBill.WebAPI.Controllers
             };
             var table = await _mediator.Send(query);
             return Ok(table);
+        }
+        /// <summary>
+        /// Returns the active reservation for the given table, or null if there is none.
+        /// </summary>
+        /// <param name="id">TableId</param>
+        [Authorize(Roles = "Admin,Waiter")]
+        [HttpGet("{id}/reservation")]
+        public async Task<IActionResult> GetActiveReservation([FromRoute] int id)
+        {
+            var query = new GetActiveReservationByTableIdQuery { TableId = id };
+            var reservation = await _mediator.Send(query);
+            return Ok(reservation);
         }
         #endregion
 

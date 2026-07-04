@@ -23,6 +23,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservationT
             Guard.AgainstNull(table, "Böyle bir masa bulunamadı.");
 
             table.Release();
+
+            Reservation? reservation = await _uow.Reservation.GetActiveReservationByTableId(request.TableId, true);
+            reservation?.Cancel();
+
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _tableNotificationService.SendTableStatusChangedAsync(table.Id, (int)table.Status);
