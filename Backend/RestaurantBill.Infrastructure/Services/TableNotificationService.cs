@@ -13,19 +13,19 @@ namespace RestaurantBill.Infrastructure.Services
             _hubContext = hubContext;
         }
 
-        public async Task SendTableStatusChangedAsync(int tableId, int status)
+        public async Task SendTableStatusChangedAsync(int restaurantId, int tableId, int status)
         {
-            await _hubContext.Clients.All.SendAsync("TableStatusChanged", tableId, status);
+            await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("TableStatusChanged", tableId, status);
         }
 
-        public async Task SendOrderUpdatedAsync(int tableId, decimal totalPrice)
+        public async Task SendOrderUpdatedAsync(int restaurantId, int tableId, decimal totalPrice)
         {
-            await _hubContext.Clients.All.SendAsync("OrderUpdated", tableId, totalPrice);
+            await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("OrderUpdated", tableId, totalPrice);
         }
 
-        public async Task SendOrderClosedAsync(int tableId, int orderId)
+        public async Task SendOrderClosedAsync(int restaurantId, int tableId, int orderId)
         {
-            await _hubContext.Clients.All.SendAsync("OrderClosed", tableId, orderId);
+            await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("OrderClosed", tableId, orderId);
         }
     }
 }

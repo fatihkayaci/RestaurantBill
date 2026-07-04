@@ -2,5 +2,5 @@ namespace RestaurantBill.Application.Interfaces;
 
 public interface ICashierNotificationService
 {
-    Task SendOrderServedAsync();
+    Task SendOrderServedAsync(int restaurantId);
 }

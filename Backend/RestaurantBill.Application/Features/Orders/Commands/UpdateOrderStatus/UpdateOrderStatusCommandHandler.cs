@@ -12,12 +12,14 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
         private readonly ICashierNotificationService _cashierNotificationService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public UpdateOrderStatusCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICashierNotificationService cashierNotificationService)
+        public UpdateOrderStatusCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICashierNotificationService cashierNotificationService, ICurrentUserService currentUserService)
         {
             _uow = uow;
             _tableNotificationService = tableNotificationService;
             _cashierNotificationService = cashierNotificationService;
+            _currentUserService = currentUserService;
         }
 
         public async Task Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)
@@ -30,10 +32,10 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId, order.TotalPrice);
+            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.RestaurantId, order.TableId, order.TotalPrice);
 
             if (newStatus == OrderStatus.Served)
-                await _cashierNotificationService.SendOrderServedAsync();
+                await _cashierNotificationService.SendOrderServedAsync(_currentUserService.RestaurantId);
         }
     }
 }

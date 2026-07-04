@@ -10,11 +10,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public AddProductToOrderCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService)
+        public AddProductToOrderCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICurrentUserService currentUserService)
         {
             _uow = uow;
             _tableNotificationService = tableNotificationService;
+            _currentUserService = currentUserService;
         }
 
         public async Task Handle(AddProductToOrderCommand request, CancellationToken cancellationToken)
@@ -35,7 +37,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendOrderUpdatedAsync(order.TableId, order.TotalPrice);
+            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.RestaurantId, order.TableId, order.TotalPrice);
         }
     }
 }

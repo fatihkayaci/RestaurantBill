@@ -4,12 +4,12 @@ namespace RestaurantBill.Application.Tests.Fakes;
 
 public class FakeTableNotificationService : ITableNotificationService
 {
-    public Task SendTableStatusChangedAsync(int tableId, int status) => Task.CompletedTask;
-    public Task SendOrderUpdatedAsync(int tableId, decimal totalPrice) => Task.CompletedTask;
-    public Task SendOrderClosedAsync(int tableId, int orderId) => Task.CompletedTask;
+    public Task SendTableStatusChangedAsync(int restaurantId, int tableId, int status) => Task.CompletedTask;
+    public Task SendOrderUpdatedAsync(int restaurantId, int tableId, decimal totalPrice) => Task.CompletedTask;
+    public Task SendOrderClosedAsync(int restaurantId, int tableId, int orderId) => Task.CompletedTask;
 }
 
 public class FakeCashierNotificationService : ICashierNotificationService
 {
-    public Task SendOrderServedAsync() => Task.CompletedTask;
+    public Task SendOrderServedAsync(int restaurantId) => Task.CompletedTask;
 }

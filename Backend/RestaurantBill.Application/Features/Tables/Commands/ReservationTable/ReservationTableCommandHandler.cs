@@ -10,11 +10,13 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public ReservationTableCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService)
+        public ReservationTableCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICurrentUserService currentUserService)
         {
             _uow = uow;
             _tableNotificationService = tableNotificationService;
+            _currentUserService = currentUserService;
         }
 
         public async Task Handle(ReservationTableCommand request, CancellationToken cancellationToken)
@@ -32,7 +34,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendTableStatusChangedAsync(table.Id, (int)table.Status);
+            await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
         }
     }
 }
