@@ -8,7 +8,6 @@ import LandingPage from './pages/LandingPage';
 
 import WaiterLayout from './pages/waiter/Layout';
 import WaiterTablesPage from './pages/waiter/TablesPage';
-import WaiterPosPage from './pages/waiter/PosPage';
 
 import KitchenLayout from './pages/kitchen/Layout';
 import KitchenDashboardPage from './pages/kitchen/DashboardPage';
@@ -33,7 +32,6 @@ function App() {
                 {/* Waiter */}
                 <Route element={<PrivateRoute><WaiterLayout /></PrivateRoute>}>
                     <Route path="/waiter" element={<WaiterTablesPage />} />
-                    <Route path="/waiter/table/:tableId" element={<WaiterPosPage />} />
                 </Route>
 
                 {/* Kitchen */}

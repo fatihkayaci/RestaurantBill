@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Table } from '@/features/tables/types';
-import TablePanel from './components/TablePanel';
+import TablePanel, { type ReservationInfo } from './components/TablePanel';
 
 type FilterType = 'all' | 'empty' | 'occupied' | 'reserved';
 
@@ -44,6 +44,12 @@ const STATUS_CARD = {
     },
 } as const;
 
+// MOCK: masa listesi endpoint'i henüz aktif sipariş tutarını döndürmüyor.
+// Gerçek veri backend'e eklenene kadar masa id'sine göre sabit bir tutar üretir.
+function mockOrderTotal(tableId: number): number {
+    return ((tableId * 47) % 40 + 6) * 10;
+}
+
 function TableCard({
     table,
     isSelected,
@@ -81,7 +87,10 @@ function TableCard({
                     </span>
                 )}
                 {table.status === 2 && (
-                    <span className={`text-xs ${cfg.hint}`}>Aktif sipariş</span>
+                    <div className="flex items-center justify-between mt-1">
+                        <span className={`text-xs ${cfg.hint}`}>Aktif sipariş</span>
+                        <span className="text-sm font-bold text-foreground">₺{mockOrderTotal(table.id)}</span>
+                    </div>
                 )}
                 {table.status === 3 && (
                     <span className={`text-[11px] ${cfg.hint}`}>
@@ -98,6 +107,7 @@ export default function WaiterTablesPage() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<FilterType>('all');
     const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
+    const [reservationDetails, setReservationDetails] = useState<Record<number, ReservationInfo>>({});
 
     useEffect(() => {
         tableService.getTables()
@@ -130,6 +140,13 @@ export default function WaiterTablesPage() {
 
     const handleTableUpdated = (tableId: number, status: number) => {
         setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
+        if (status !== 3) {
+            setReservationDetails(prev => {
+                if (!(tableId in prev)) return prev;
+                const { [tableId]: _removed, ...rest } = prev;
+                return rest;
+            });
+        }
     };
 
     const counts: Counts = {
@@ -229,6 +246,10 @@ export default function WaiterTablesPage() {
                             table={selectedTable}
                             onClose={() => setSelectedTableId(null)}
                             onTableUpdated={handleTableUpdated}
+                            reservationInfo={reservationDetails[selectedTable.id]}
+                            onReservationSaved={(tableId, info) =>
+                                setReservationDetails(prev => ({ ...prev, [tableId]: info }))
+                            }
                         />
                     </div>
                 </>
@@ -236,3 +257,4 @@ export default function WaiterTablesPage() {
         </div>
     );
 }
+""
