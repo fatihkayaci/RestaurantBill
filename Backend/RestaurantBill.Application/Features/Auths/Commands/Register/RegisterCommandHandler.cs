@@ -4,10 +4,11 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Application.Common;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.Register
 {
-    public class RegisterCommandHandler : IRequestHandler<RegisterCommand>
+    public class RegisterCommandHandler : IRequestHandler<RegisterCommand, string>
     {
         private readonly IUnitOfWork _uow;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -18,7 +19,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             _passwordHasher = passwordHasher;
         }
 
-        public async Task Handle(RegisterCommand request, CancellationToken cancellationToken)
+        public async Task<string> Handle(RegisterCommand request, CancellationToken cancellationToken)
         {
             bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName, false)).Any();
             if (userNameExists)
@@ -28,7 +29,8 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             if (emailExists)
                 throw new BusinessException("Bu e-posta adresi zaten kullanımda.");
 
-            Restaurant restaurant = Restaurant.Create();
+            Restaurant restaurant = Restaurant.Create(request.RestaurantName);
+            restaurant.AssignSlug(await GenerateUniqueSlugAsync(request.RestaurantName));
 
             string userCode = $"USR-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
             User user = User.Create(request.FullName, request.UserName, request.Email, null, userCode, UserRole.Admin, restaurant);
@@ -40,6 +42,21 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             await _uow.User.AddAsync(user);
             await _uow.Membership.AddAsync(membership);
             await _uow.SaveChangesAsync(cancellationToken);
+
+            return restaurant.Slug;
+        }
+
+        private async Task<string> GenerateUniqueSlugAsync(string restaurantName)
+        {
+            string baseSlug = SlugHelper.Slugify(restaurantName);
+            string candidate = baseSlug;
+            int suffix = 2;
+            while ((await _uow.Restaurant.GetAllAsync(r => r.Slug == candidate, false)).Any())
+            {
+                candidate = $"{baseSlug}-{suffix}";
+                suffix++;
+            }
+            return candidate;
         }
     }
 }

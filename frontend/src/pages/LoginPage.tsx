@@ -32,6 +32,7 @@ export default function LoginPage() {
     // Register state
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
+    const [restaurantName, setRestaurantName] = useState("");
     const [regEmail, setRegEmail] = useState("");
     const [regPassword, setRegPassword] = useState("");
     const [regConfirm, setRegConfirm] = useState("");
@@ -63,7 +64,7 @@ export default function LoginPage() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!firstName || !lastName || !regEmail || !regPassword || !regConfirm) {
+        if (!firstName || !lastName || !restaurantName || !regEmail || !regPassword || !regConfirm) {
             toast.error("Tüm alanları doldurun.");
             return;
         }
@@ -77,13 +78,14 @@ export default function LoginPage() {
         }
         try {
             setRegLoading(true);
-            await authService.register({
+            const result = await authService.register({
                 fullName: `${firstName} ${lastName}`,
                 userName: regEmail,
                 email: regEmail,
                 password: regPassword,
+                restaurantName,
             });
-            toast.success("Hesap oluşturuldu! Giriş yapabilirsiniz.");
+            toast.success(`Hesap oluşturuldu! Giriş adresiniz: ${result.slug}.bill.fatihkayaci.com`);
             setActiveTab("login");
         } catch (error: any) {
             toast.error(error.response?.data?.message ?? error.response?.data ?? "Kayıt başarısız.");
@@ -268,6 +270,18 @@ export default function LoginPage() {
                                             className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
                                         />
                                     </div>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        RESTORAN ADI
+                                    </label>
+                                    <Input
+                                        value={restaurantName}
+                                        onChange={(e) => setRestaurantName(e.target.value)}
+                                        placeholder="Restoranınızın adı..."
+                                        className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                                    />
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">

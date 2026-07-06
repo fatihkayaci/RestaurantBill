@@ -10,12 +10,18 @@ namespace RestaurantBill.Domain.Entities
         public string Email { get; private set; } = string.Empty;
         public string City { get; private set; } = string.Empty;
         public string District { get; private set; } = string.Empty;
+        public string Slug { get; private set; } = string.Empty;
 
         protected Restaurant() { }
 
         public static Restaurant Create()
         {
             return new Restaurant();
+        }
+
+        public static Restaurant Create(string name)
+        {
+            return new Restaurant { Name = name };
         }
 
         public void Update(string name, string phoneNumber, string mobilePhoneNumber, string email, string city, string district)
@@ -26,6 +32,11 @@ namespace RestaurantBill.Domain.Entities
             Email = email;
             City = city;
             District = district;
+        }
+
+        public void AssignSlug(string slug)
+        {
+            Slug = slug;
         }
     }
 }

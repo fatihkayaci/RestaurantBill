@@ -21,5 +21,9 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Şifre boş bırakılamaz.")
             .MinimumLength(6).WithMessage("Şifre en az 6 karakter olmalıdır.");
+
+        RuleFor(x => x.RestaurantName)
+            .NotEmpty().WithMessage("Restoran adı boş bırakılamaz.")
+            .MaximumLength(100).WithMessage("Restoran adı en fazla 100 karakter olabilir.");
     }
 }

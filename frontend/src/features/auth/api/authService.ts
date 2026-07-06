@@ -13,11 +13,12 @@ export const authService = {
         return response.data;
     },
     register: async (request: Register) => {
-        const response = await api.post<{ token: string }>(`/auth/register`, {
+        const response = await api.post<{ message: string; slug: string }>(`/auth/register`, {
             FullName: request.fullName,
             UserName: request.userName,
             Email: request.email,
             Password: request.password,
+            RestaurantName: request.restaurantName,
         });
         return response.data;
     },
