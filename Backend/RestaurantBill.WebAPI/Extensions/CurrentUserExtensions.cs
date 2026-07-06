@@ -9,6 +9,7 @@ public static class CurrentUserExtensions
     {
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<ITenantResolver, TenantResolverService>();
         return services;
     }
 }

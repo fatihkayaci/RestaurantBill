@@ -20,6 +20,7 @@ public static class DefaultData
         {
             Restaurant restaurant = Restaurant.Create();
             restaurant.Update("Demo Restaurant", "0212 000 00 00", "0532 000 00 00", "info@demorestaurant.com", "Istanbul", "Kadikoy");
+            restaurant.AssignSlug("demo");
             await context.Restaurants.AddAsync(restaurant);
             await context.SaveChangesAsync();
         }

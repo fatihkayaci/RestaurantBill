@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.Login
 {
@@ -16,19 +17,28 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
         private readonly IUnitOfWork _uow;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IConfiguration _configuration;
+        private readonly ITenantResolver _tenantResolver;
 
-        public LoginCommandHandler(IUnitOfWork uow, IPasswordHasher<User> passwordHasher, IConfiguration configuration)
+        public LoginCommandHandler(IUnitOfWork uow, IPasswordHasher<User> passwordHasher, IConfiguration configuration, ITenantResolver tenantResolver)
         {
             _uow = uow;
             _passwordHasher = passwordHasher;
             _configuration = configuration;
+            _tenantResolver = tenantResolver;
         }
 
         public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
+            string? slug = _tenantResolver.Slug;
+            if (string.IsNullOrWhiteSpace(slug))
+                throw new BusinessException("Restoran belirlenemedi.");
+
+            Restaurant? restaurant = (await _uow.Restaurant.GetAllAsync(r => r.Slug == slug, false)).FirstOrDefault()
+                ?? throw new BusinessException("Restoran bulunamadı.");
+
             User? user = !string.IsNullOrEmpty(request.UserName)
-                ? (await _uow.User.GetAllAsync(u => u.UserName == request.UserName, false)).FirstOrDefault()
-                : (await _uow.User.GetAllAsync(u => u.Email == request.Email, false)).FirstOrDefault();
+                ? (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && u.RestaurantId == restaurant.Id, false)).FirstOrDefault()
+                : (await _uow.User.GetAllAsync(u => u.Email == request.Email && u.RestaurantId == restaurant.Id, false)).FirstOrDefault();
 
             if (user == null)
                 throw new BusinessException("Kullanıcı adı, email veya şifre hatalı!");

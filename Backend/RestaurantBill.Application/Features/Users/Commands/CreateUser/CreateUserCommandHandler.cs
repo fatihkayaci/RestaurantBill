@@ -1,3 +1,4 @@
+
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Application.Interfaces;
@@ -22,11 +23,11 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
 
         public async Task Handle(CreateUserCommand request, CancellationToken cancellationToken)
         {
-            bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName, false)).Any();
+            int restaurantId = _currentUser.RestaurantId;
+
+            bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && u.RestaurantId == restaurantId, false)).Any();
             if (userNameExists)
                 throw new BusinessException("Bu kullanıcı adı zaten kullanımda.");
-
-            int restaurantId = _currentUser.RestaurantId;
             User user = User.Create(request.FullName, request.UserName, request.Email, request.PhoneNumber, request.UserCode, request.Role, restaurantId);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.PasswordHash));
 
@@ -35,3 +36,4 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         }
     }
 }
+

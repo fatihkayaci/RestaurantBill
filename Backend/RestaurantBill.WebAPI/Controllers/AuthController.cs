@@ -39,8 +39,8 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterCommand command, CancellationToken cancellationToken)
     {
-        await _mediator.Send(command, cancellationToken);
-        return Ok(new { Message = "Kullanıcı kaydı tamamlandı." }); 
+        string slug = await _mediator.Send(command, cancellationToken);
+        return Ok(new { Message = "Kullanıcı kaydı tamamlandı.", Slug = slug });
     }
     #endregion
 }
