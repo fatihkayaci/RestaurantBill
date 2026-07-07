@@ -31,6 +31,7 @@ export default function Staff() {
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [generalError, setGeneralError] = useState<string | null>(null);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'personal' | 'login'>('personal');
 
     useEffect(() => {
         userService.getUsersByRestaurantId()
@@ -54,6 +55,7 @@ export default function Staff() {
         setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: 2 });
         setFieldErrors({});
         setGeneralError(null);
+        setActiveTab('personal');
         setIsModalOpen(true);
     };
 
@@ -62,8 +64,12 @@ export default function Staff() {
         setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', userCode: user.userCode, role: user.role });
         setFieldErrors({});
         setGeneralError(null);
+        setActiveTab('personal');
         setIsModalOpen(true);
     };
+
+    const personalFields = ['fullName', 'email', 'phoneNumber'];
+    const loginFields = ['userName', 'userCode', 'passwordHash'];
 
     const handleDelete = async () => {
         if (!deleteTargetId) return;
@@ -95,7 +101,12 @@ export default function Staff() {
         } else if (form.passwordHash && form.passwordHash.length < 6) {
             errors.passwordHash = 'En az 6 karakter.';
         }
-        if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            if (personalFields.some(f => errors[f]) && !loginFields.some(f => errors[f])) setActiveTab('personal');
+            else if (loginFields.some(f => errors[f])) setActiveTab('login');
+            return;
+        }
         setFieldErrors({});
         setGeneralError(null);
         try {
@@ -115,8 +126,22 @@ export default function Staff() {
                     const mapped: Record<string, string> = {};
                     for (const key in backendErrors) mapped[key.charAt(0).toLowerCase() + key.slice(1)] = backendErrors[key][0];
                     setFieldErrors(mapped);
+                    if (personalFields.some(f => mapped[f]) && !loginFields.some(f => mapped[f])) setActiveTab('personal');
+                    else if (loginFields.some(f => mapped[f])) setActiveTab('login');
                 } else if (data?.message) {
-                    setGeneralError(data.message as string);
+                    const message = data.message as string;
+                    const duplicateFieldMap: Record<string, string> = {
+                        'kullanıcı adı': 'userName',
+                        'kullanıcı kodu': 'userCode',
+                        'e-posta': 'email',
+                    };
+                    const duplicateField = Object.entries(duplicateFieldMap).find(([phrase]) => message.includes(phrase))?.[1];
+                    if (duplicateField) {
+                        setFieldErrors({ [duplicateField]: message });
+                        setActiveTab(personalFields.includes(duplicateField) ? 'personal' : 'login');
+                    } else {
+                        setGeneralError(message);
+                    }
                 }
             }
         }
@@ -237,7 +262,7 @@ export default function Staff() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                        <div className="px-6 pt-6 pb-4 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-foreground">
                                 {editUser ? 'Çalışanı Düzenle' : 'Çalışan Ekle'}
                             </h2>
@@ -249,87 +274,122 @@ export default function Staff() {
                             </button>
                         </div>
 
+                        <div className="px-6 pt-4 flex items-center gap-1 border-b border-border">
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('personal')}
+                                className={cn(
+                                    "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                                    activeTab === 'personal'
+                                        ? "border-blue-600 text-foreground"
+                                        : "border-transparent text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Kişisel Bilgiler
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('login')}
+                                className={cn(
+                                    "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                                    activeTab === 'login'
+                                        ? "border-blue-600 text-foreground"
+                                        : "border-transparent text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Giriş Bilgileri
+                            </button>
+                        </div>
+
                         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-                            <div>
-                                <label className={labelClass}>Ad Soyad</label>
-                                <input
-                                    className={cn(inputClass, fieldErrors.fullName && "border-destructive")}
-                                    placeholder="Ad Soyad..."
-                                    value={form.fullName}
-                                    onChange={e => setForm({ ...form, fullName: e.target.value })}
-                                />
-                                {fieldErrors.fullName && <p className="text-xs text-destructive mt-1">{fieldErrors.fullName}</p>}
-                            </div>
+                            {activeTab === 'personal' && (
+                                <>
+                                    <div>
+                                        <label className={labelClass}>Ad Soyad</label>
+                                        <input
+                                            className={cn(inputClass, fieldErrors.fullName && "border-destructive")}
+                                            placeholder="Ad Soyad..."
+                                            value={form.fullName}
+                                            onChange={e => setForm({ ...form, fullName: e.target.value })}
+                                        />
+                                        {fieldErrors.fullName && <p className="text-xs text-destructive mt-1">{fieldErrors.fullName}</p>}
+                                    </div>
 
-                            <div>
-                                <label className={labelClass}>Kullanıcı Adı</label>
-                                <input
-                                    className={cn(inputClass, fieldErrors.userName && "border-destructive")}
-                                    placeholder="kullanici_adi"
-                                    value={form.userName}
-                                    onChange={e => setForm({ ...form, userName: e.target.value })}
-                                />
-                                {fieldErrors.userName && <p className="text-xs text-destructive mt-1">{fieldErrors.userName}</p>}
-                            </div>
+                                    <div>
+                                        <label className={labelClass}>E-posta</label>
+                                        <input
+                                            type="email"
+                                            className={cn(inputClass, fieldErrors.email && "border-destructive")}
+                                            placeholder="ornek@mail.com"
+                                            value={form.email ?? ''}
+                                            onChange={e => setForm({ ...form, email: e.target.value })}
+                                        />
+                                        {fieldErrors.email && <p className="text-xs text-destructive mt-1">{fieldErrors.email}</p>}
+                                    </div>
 
-                            <div>
-                                <label className={labelClass}>Rol</label>
-                                <select
-                                    className={inputClass}
-                                    value={form.role}
-                                    onChange={e => setForm({ ...form, role: Number(e.target.value) })}
-                                >
-                                    <option value={1}>Admin</option>
-                                    <option value={2}>Garson</option>
-                                    <option value={3}>Kasiyer</option>
-                                    <option value={4}>Mutfak</option>
-                                </select>
-                            </div>
+                                    <div>
+                                        <label className={labelClass}>Telefon</label>
+                                        <input
+                                            className={inputClass}
+                                            placeholder="0532 000 00 00"
+                                            value={form.phoneNumber}
+                                            onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
+                                        />
+                                    </div>
 
-                            <div>
-                                <label className={labelClass}>E-posta</label>
-                                <input
-                                    type="email"
-                                    className={cn(inputClass, fieldErrors.email && "border-destructive")}
-                                    placeholder="ornek@mail.com"
-                                    value={form.email ?? ''}
-                                    onChange={e => setForm({ ...form, email: e.target.value })}
-                                />
-                                {fieldErrors.email && <p className="text-xs text-destructive mt-1">{fieldErrors.email}</p>}
-                            </div>
+                                    <div>
+                                        <label className={labelClass}>Rol</label>
+                                        <select
+                                            className={inputClass}
+                                            value={form.role}
+                                            onChange={e => setForm({ ...form, role: Number(e.target.value) })}
+                                        >
+                                            <option value={1}>Admin</option>
+                                            <option value={2}>Garson</option>
+                                            <option value={3}>Kasiyer</option>
+                                            <option value={4}>Mutfak</option>
+                                        </select>
+                                    </div>
+                                </>
+                            )}
 
-                            <div>
-                                <label className={labelClass}>Telefon</label>
-                                <input
-                                    className={inputClass}
-                                    placeholder="0532 000 00 00"
-                                    value={form.phoneNumber}
-                                    onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
-                                />
-                            </div>
+                            {activeTab === 'login' && (
+                                <>
+                                    <div>
+                                        <label className={labelClass}>Kullanıcı Adı</label>
+                                        <input
+                                            className={cn(inputClass, fieldErrors.userName && "border-destructive")}
+                                            placeholder="kullanici_adi"
+                                            value={form.userName}
+                                            onChange={e => setForm({ ...form, userName: e.target.value })}
+                                        />
+                                        {fieldErrors.userName && <p className="text-xs text-destructive mt-1">{fieldErrors.userName}</p>}
+                                    </div>
 
-                            <div>
-                                <label className={labelClass}>Kullanıcı Kodu</label>
-                                <input
-                                    className={cn(inputClass, fieldErrors.userCode && "border-destructive")}
-                                    placeholder="USR-001"
-                                    value={form.userCode}
-                                    onChange={e => setForm({ ...form, userCode: e.target.value })}
-                                />
-                                {fieldErrors.userCode && <p className="text-xs text-destructive mt-1">{fieldErrors.userCode}</p>}
-                            </div>
+                                    <div>
+                                        <label className={labelClass}>Kullanıcı Kodu</label>
+                                        <input
+                                            className={cn(inputClass, fieldErrors.userCode && "border-destructive")}
+                                            placeholder="USR-001"
+                                            value={form.userCode}
+                                            onChange={e => setForm({ ...form, userCode: e.target.value })}
+                                        />
+                                        {fieldErrors.userCode && <p className="text-xs text-destructive mt-1">{fieldErrors.userCode}</p>}
+                                    </div>
 
-                            <div>
-                                <label className={labelClass}>Şifre {editUser && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
-                                <input
-                                    type="text"
-                                    className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}
-                                    placeholder={editUser ? "Yeni şifre..." : "Şifre..."}
-                                    value={form.passwordHash}
-                                    onChange={e => setForm({ ...form, passwordHash: e.target.value })}
-                                />
-                                {fieldErrors.passwordHash && <p className="text-xs text-destructive mt-1">{fieldErrors.passwordHash}</p>}
-                            </div>
+                                    <div>
+                                        <label className={labelClass}>Şifre {editUser && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
+                                        <input
+                                            type="text"
+                                            className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}
+                                            placeholder={editUser ? "Yeni şifre..." : "Şifre..."}
+                                            value={form.passwordHash}
+                                            onChange={e => setForm({ ...form, passwordHash: e.target.value })}
+                                        />
+                                        {fieldErrors.passwordHash && <p className="text-xs text-destructive mt-1">{fieldErrors.passwordHash}</p>}
+                                    </div>
+                                </>
+                            )}
 
                             {generalError && (
                                 <p className="text-xs text-destructive rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">

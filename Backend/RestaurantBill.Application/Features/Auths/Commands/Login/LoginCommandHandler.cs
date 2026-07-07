@@ -31,7 +31,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
         {
             string identifier = !string.IsNullOrWhiteSpace(request.UserName) ? request.UserName : request.Email!;
 
-            User? user = (await _uow.User.GetAllAsync(u => u.Email == identifier, false)).FirstOrDefault();
+            User? user = (await _uow.User.GetAllAsync(u => u.Email == identifier && !u.IsDeleted, false)).FirstOrDefault();
 
             if (user == null)
             {
@@ -42,7 +42,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 Restaurant? restaurant = (await _uow.Restaurant.GetAllAsync(r => r.Slug == slug, false)).FirstOrDefault()
                     ?? throw new BusinessException("Restoran bulunamadı.");
 
-                user = (await _uow.User.GetAllAsync(u => u.UserName == identifier && u.RestaurantId == restaurant.Id, false)).FirstOrDefault();
+                user = (await _uow.User.GetAllAsync(u => u.UserName == identifier && u.RestaurantId == restaurant.Id && !u.IsDeleted, false)).FirstOrDefault();
             }
 
             if (user == null)

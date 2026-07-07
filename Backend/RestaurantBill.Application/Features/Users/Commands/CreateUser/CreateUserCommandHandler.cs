@@ -25,13 +25,17 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         {
             int restaurantId = _currentUser.RestaurantId;
 
-            bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && u.RestaurantId == restaurantId, false)).Any();
+            bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && u.RestaurantId == restaurantId && !u.IsDeleted, false)).Any();
             if (userNameExists)
                 throw new BusinessException("Bu kullanıcı adı zaten kullanımda.");
 
+            bool userCodeExists = (await _uow.User.GetAllAsync(u => u.UserCode == request.UserCode && u.RestaurantId == restaurantId && !u.IsDeleted, false)).Any();
+            if (userCodeExists)
+                throw new BusinessException("Bu kullanıcı kodu zaten kullanımda.");
+
             if (!string.IsNullOrWhiteSpace(request.Email))
             {
-                bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email, false)).Any();
+                bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && !u.IsDeleted, false)).Any();
                 if (emailExists)
                     throw new BusinessException("Bu e-posta adresi zaten kullanımda.");
             }

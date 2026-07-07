@@ -24,7 +24,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 
             if (!string.IsNullOrWhiteSpace(request.Email))
             {
-                bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && u.Id != request.UserId, false)).Any();
+                bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && u.Id != request.UserId && !u.IsDeleted, false)).Any();
                 if (emailExists)
                     throw new BusinessException("Bu e-posta adresi zaten kullanımda.");
             }
