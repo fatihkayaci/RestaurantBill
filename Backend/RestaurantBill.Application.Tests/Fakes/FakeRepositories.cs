@@ -8,6 +8,7 @@ public class FakeCashTransactionRepository : FakeGenericRepository<CashRegister.
 public class FakeCategoryRepository : FakeGenericRepository<Category>, ICategoryRepository { }
 public class FakeMembershipRepository : FakeGenericRepository<Membership>, IMembershipRepository { }
 public class FakeProductRepository : FakeGenericRepository<Product>, IProductRepository { }
+public class FakeRegionRepository : FakeGenericRepository<Region>, IRegionRepository { }
 public class FakeRestaurantRepository : FakeGenericRepository<Restaurant>, IRestaurantRepository { }
 public class FakeTableRepository : FakeGenericRepository<Table>, ITableRepository { }
 public class FakeUserRepository : FakeGenericRepository<User>, IUserRepository { }

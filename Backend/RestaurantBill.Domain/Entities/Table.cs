@@ -10,6 +10,8 @@ namespace RestaurantBill.Domain.Entities
         public TableStatus Status { get; private set; } = TableStatus.Available;
         public int RestaurantId { get; private set; }
         public Restaurant Restaurant { get; private set; } = default!;
+        public int? RegionId { get; private set; }
+        public Region? Region { get; private set; }
 
         protected Table() { }
 
@@ -36,6 +38,11 @@ namespace RestaurantBill.Domain.Entities
 
             Name = name;
             Note = note;
+        }
+
+        public void AssignRegion(int? regionId)
+        {
+            RegionId = regionId;
         }
 
         public void Occupy()

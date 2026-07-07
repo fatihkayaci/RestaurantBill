@@ -29,6 +29,12 @@ public static class MappingExtensions
         Name = c.Name
     };
 
+    public static RegionDto ToDto(this Region r) => new()
+    {
+        Id = r.Id,
+        Name = r.Name
+    };
+
     public static OrderDto ToDto(this Order o) => new()
     {
         Id = o.Id,
@@ -83,7 +89,9 @@ public static class MappingExtensions
         Id = t.Id,
         Name = t.Name,
         Note = t.Note,
-        Status = t.Status
+        Status = t.Status,
+        RegionId = t.RegionId,
+        RegionName = t.Region?.Name
     };
 
     public static ReservationDto ToDto(this Reservation r) => new()

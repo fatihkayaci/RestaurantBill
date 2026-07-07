@@ -20,6 +20,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
         {
             int restaurantId = _currentUser.RestaurantId;
             Table table = Table.Create(request.Name, string.Empty, restaurantId);
+            table.AssignRegion(request.RegionId);
             await _uow.Table.AddAsync(table);
             await _uow.SaveChangesAsync(cancellationToken);
         }

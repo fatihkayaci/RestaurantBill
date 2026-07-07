@@ -26,7 +26,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
         {
             int restaurantId = _currentUser.RestaurantId;
             if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
-            var entities = await _uow.Table.GetAllAsync(t => t.RestaurantId == restaurantId);
+            var entities = await _uow.Table.GetAllAsync(t => t.RestaurantId == restaurantId, includeProperties: "Region");
 
             var tableIds = entities.Select(t => t.Id).ToList();
             var activeOrders = await _uow.Order.GetAllAsync(o =>

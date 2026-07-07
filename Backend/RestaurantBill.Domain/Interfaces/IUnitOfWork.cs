@@ -6,6 +6,7 @@ public interface IUnitOfWork : IDisposable
     IOrderRepository Order { get; }
     ICategoryRepository Category { get; }
     ITableRepository Table { get; }
+    IRegionRepository Region { get; }
     IRestaurantRepository Restaurant { get; }
     IMembershipRepository Membership { get; }
     IUserRepository User { get; }
