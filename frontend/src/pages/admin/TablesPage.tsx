@@ -29,15 +29,37 @@ const ORDER_ITEM_STATUS_TEXT_COLOR: Record<number, string> = {
     1: "text-amber-500", 2: "text-blue-500", 3: "text-green-500", 4: "text-muted-foreground",
 };
 
-const statusBadge: Record<number, string> = {
-    1: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
-    2: "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
-    3: "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400",
-    4: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
-};
-const statusLabel: Record<number, string> = {
-    1: "Boş", 2: "Dolu", 3: "Rezerve", 4: "Kapalı",
-};
+// Masa grid kartlarının renk/etiket şeması — waiter tarafındaki tasarımla birebir aynı.
+const STATUS_CARD = {
+    1: {
+        bg:     'bg-[#ECECE2] dark:bg-[rgba(69,200,122,0.05)]',
+        border: 'border-[#b8e8cd] dark:border-[rgba(69,200,122,0.25)]',
+        badge:  'bg-[#d0f2e3] text-[#1f8a52] dark:bg-[rgba(69,200,122,0.14)] dark:text-[#45c87a]',
+        hint:   'text-[#2b7fff] font-semibold',
+        label:  'BOŞ',
+    },
+    2: {
+        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,120,64,0.05)]',
+        border: 'border-[#f5c5aa] dark:border-[rgba(240,120,64,0.25)]',
+        badge:  'bg-[#fce0d0] text-[#c85010] dark:bg-[rgba(240,120,64,0.14)] dark:text-[#f07840]',
+        hint:   'text-muted-foreground',
+        label:  'DOLU',
+    },
+    3: {
+        bg:     'bg-white dark:bg-[rgba(232,184,53,0.05)]',
+        border: 'border-[#f0d98a] dark:border-[rgba(232,184,53,0.25)]',
+        badge:  'bg-[#fef3c7] text-[#b8880a] dark:bg-[rgba(232,184,53,0.14)] dark:text-[#e8b835]',
+        hint:   'text-[#b8880a] dark:text-[#e8b835] font-medium',
+        label:  'REZERVE',
+    },
+} as const;
+
+function formatElapsed(occupiedSince: string, now: number): string {
+    const minutes = Math.max(0, Math.floor((now - new Date(occupiedSince).getTime()) / 60000));
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
+}
 
 const PANEL_STATUS_CONFIG: Record<number, { label: string; cls: string }> = {
     1: { label: 'BOŞ', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
@@ -66,6 +88,7 @@ function formatTimeDigits(rawValue: string): string {
 
 export default function Tables() {
     const [tables, setTables] = useState<Table[]>([]);
+    const [now, setNow] = useState(() => Date.now());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editTable, setEditTable] = useState<Table | null>(null);
     const [newTableName, setNewTableName] = useState('');
@@ -113,6 +136,11 @@ export default function Tables() {
     }, []);
 
     useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`, {
                 accessTokenFactory: () => localStorage.getItem('token') ?? '',
@@ -129,7 +157,8 @@ export default function Tables() {
         connection.on("TableStatusChanged", (changedTableId: number, status: number) => {
             setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, status } : t));
         });
-        connection.on("OrderUpdated", (changedTableId: number) => {
+        connection.on("OrderUpdated", (changedTableId: number, totalPrice: number) => {
+            setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, activeOrderTotal: totalPrice } : t));
             if (selectedTableIdRef.current === changedTableId) {
                 orderService.getOrderByTableId(changedTableId.toString()).then(data => { if (data) setTableOrder(data); });
             }
@@ -420,43 +449,73 @@ export default function Tables() {
                 </button>
             </div>
 
-            {/* Table Grid */}
+            {/* Table Grid — waiter tarafındaki tasarımla aynı renk/hover davranışı */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {tables.map(table => (
-                    <div
-                        key={table.id}
-                        className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5 hover:shadow-sm transition-shadow"
-                    >
-                        {/* Name + edit + status */}
-                        <div className="flex items-start justify-between gap-1">
-                            <button
-                                className="text-lg font-serif font-bold text-foreground leading-tight text-left hover:underline"
-                                onClick={() => handleTableClick(table)}
-                            >
-                                {table.name}
-                            </button>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                    onClick={e => { e.stopPropagation(); openEditModal(table); }}
-                                    className="text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    <Pencil className="h-3 w-3" />
-                                </button>
-                                <span className={cn("text-[10px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded", statusBadge[table.status] ?? statusBadge[4])}>
-                                    {statusLabel[table.status] ?? 'Kapalı'}
+                {tables.map(table => {
+                    const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
+                    return (
+                        <div
+                            key={table.id}
+                            onClick={() => handleTableClick(table)}
+                            className={cn(
+                                "rounded-2xl border py-4 px-4 flex flex-col gap-1.5 cursor-pointer min-h-27",
+                                "transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]",
+                                "dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]",
+                                cfg.bg, cfg.border
+                            )}
+                        >
+                            <div className="flex items-start justify-between gap-1">
+                                <span className="font-serif text-[21px] font-bold text-foreground leading-none">
+                                    {table.name}
                                 </span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        onClick={e => { e.stopPropagation(); openEditModal(table); }}
+                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                        onClick={e => { e.stopPropagation(); setDeleteTargetId(table.id); }}
+                                        className="text-muted-foreground hover:text-destructive transition-colors"
+                                    >
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-1.5 leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
+                                        {cfg.label}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 flex flex-col justify-end gap-1">
+                                {table.status === 1 && (
+                                    <span className={cn("text-[11px] tracking-[0.2px] mt-1", cfg.hint)}>
+                                        ↑ Sipariş oluştur
+                                    </span>
+                                )}
+                                {table.status === 2 && (
+                                    <>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <span className={cn("text-xs", cfg.hint)}>Aktif sipariş</span>
+                                            <span className="text-sm font-bold text-foreground">₺{table.activeOrderTotal.toFixed(0)}</span>
+                                        </div>
+                                        {table.occupiedSince && (
+                                            <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">
+                                                <span>Açılış: {new Date(table.occupiedSince).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span>{formatElapsed(table.occupiedSince, now)}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                                {table.status === 3 && (
+                                    <span className={cn("text-[11px]", cfg.hint)}>
+                                        Rezervasyon mevcut
+                                    </span>
+                                )}
                             </div>
                         </div>
-
-                        {/* Delete */}
-                        <button
-                            onClick={() => setDeleteTargetId(table.id)}
-                            className="mt-auto w-full py-1.5 text-xs border border-border rounded-lg text-muted-foreground hover:bg-muted transition-colors"
-                        >
-                            Masayı Sil
-                        </button>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Masa Ekle / Düzenle Modal */}
