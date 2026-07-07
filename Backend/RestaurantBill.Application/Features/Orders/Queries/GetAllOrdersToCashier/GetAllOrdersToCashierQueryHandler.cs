@@ -25,7 +25,7 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashi
             if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
 
             var entities = await _uow.Order.GetAllAsync(
-                o => o.Status == OrderStatus.Served && o.Table.RestaurantId == restaurantId,
+                o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.Table.RestaurantId == restaurantId,
                 false,
                 "OrderItems,OrderItems.Product"
             );

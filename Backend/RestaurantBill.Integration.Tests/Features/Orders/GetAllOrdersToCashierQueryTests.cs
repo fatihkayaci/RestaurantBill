@@ -23,7 +23,7 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Handle_WhenNoServedOrdersExist_ReturnsEmptyList()
+    public async Task Handle_WhenNoOpenOrdersExist_ReturnsEmptyList()
     {
         var result = await _handler.Handle(new GetAllOrdersToCashierQuery(), CancellationToken.None);
 
@@ -31,22 +31,29 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Handle_ReturnsOnlyServedOrders()
+    public async Task Handle_ReturnsOpenOrders_ExcludingPaidAndCancelled()
     {
         var table = await SeedTableAsync(RestaurantId);
+
+        var activeOrder = Order.Create(table.Id);
 
         var servedOrder = Order.Create(table.Id);
         servedOrder.UpdateStatus(OrderStatus.Served);
 
-        var activeOrder = Order.Create(table.Id);
+        var paidOrder = Order.Create(table.Id);
+        paidOrder.Close();
 
-        await DbContext.Orders.AddRangeAsync(servedOrder, activeOrder);
+        var cancelledOrder = Order.Create(table.Id);
+        cancelledOrder.Cancel();
+
+        await DbContext.Orders.AddRangeAsync(activeOrder, servedOrder, paidOrder, cancelledOrder);
         await DbContext.SaveChangesAsync();
 
         var result = await _handler.Handle(new GetAllOrdersToCashierQuery(), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(OrderStatus.Served, result[0].Status);
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, o => o.Status == OrderStatus.Active);
+        Assert.Contains(result, o => o.Status == OrderStatus.Served);
     }
 
     [Fact]

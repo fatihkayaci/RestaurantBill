@@ -10,12 +10,14 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
+        private readonly ICashierNotificationService _cashierNotificationService;
         private readonly ICurrentUserService _currentUserService;
 
-        public OpenTableHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICurrentUserService currentUserService)
+        public OpenTableHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICashierNotificationService cashierNotificationService, ICurrentUserService currentUserService)
         {
             _uow = uow;
             _tableNotificationService = tableNotificationService;
+            _cashierNotificationService = cashierNotificationService;
             _currentUserService = currentUserService;
         }
 
@@ -32,6 +34,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
+            await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.RestaurantId);
 
             return order.Id;
         }
