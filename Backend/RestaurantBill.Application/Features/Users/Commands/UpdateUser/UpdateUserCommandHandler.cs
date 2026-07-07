@@ -22,6 +22,13 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
             User user = await _uow.User.GetByIdAsync(request.UserId, true)
                 ?? throw new NotFoundException("Kullanıcı bulunamadı.");
 
+            if (!string.IsNullOrWhiteSpace(request.Email))
+            {
+                bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && u.Id != request.UserId, false)).Any();
+                if (emailExists)
+                    throw new BusinessException("Bu e-posta adresi zaten kullanımda.");
+            }
+
             user.Update(request.FullName, request.UserName, request.Email, request.PhoneNumber, request.UserCode, request.Role, request.IsActive ?? user.IsActive);
 
             if (!string.IsNullOrWhiteSpace(request.Password))

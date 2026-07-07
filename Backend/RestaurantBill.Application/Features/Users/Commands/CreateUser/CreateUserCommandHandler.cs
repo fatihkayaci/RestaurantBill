@@ -28,6 +28,14 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
             bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && u.RestaurantId == restaurantId, false)).Any();
             if (userNameExists)
                 throw new BusinessException("Bu kullanıcı adı zaten kullanımda.");
+
+            if (!string.IsNullOrWhiteSpace(request.Email))
+            {
+                bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email, false)).Any();
+                if (emailExists)
+                    throw new BusinessException("Bu e-posta adresi zaten kullanımda.");
+            }
+
             User user = User.Create(request.FullName, request.UserName, request.Email, request.PhoneNumber, request.UserCode, request.Role, restaurantId);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.PasswordHash));
 
