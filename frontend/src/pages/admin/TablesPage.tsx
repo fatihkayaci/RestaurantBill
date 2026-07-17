@@ -6,11 +6,13 @@ import type { Order, OrderItem } from "@/features/orders/types";
 import type { CashRegister } from "@/features/cashier/types";
 import type { Product } from "@/features/products/types";
 import type { Category } from "@/features/categories/types";
+import type { Region } from "@/features/regions/types";
 import { tableService } from "@/features/tables/api/tableService";
 import { orderService } from "@/features/orders/api/orderService";
 import { cashRegisterService } from "@/features/cashier/api/cashRegisterService";
 import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
+import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { CheckCircle, Landmark, X, Pencil } from 'lucide-react';
@@ -92,8 +94,19 @@ export default function Tables() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editTable, setEditTable] = useState<Table | null>(null);
     const [newTableName, setNewTableName] = useState('');
+    const [newTableRegionId, setNewTableRegionId] = useState<number | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
+    const [regions, setRegions] = useState<Region[]>([]);
+    const [selectedRegionId, setSelectedRegionId] = useState<number | 'all'>('all');
+    const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
+    const [editRegion, setEditRegion] = useState<Region | null>(null);
+    const [newRegionName, setNewRegionName] = useState('');
+    const [regionFieldError, setRegionFieldError] = useState('');
+    const [savingRegion, setSavingRegion] = useState(false);
+    const [regionDeleteTargetId, setRegionDeleteTargetId] = useState<number | null>(null);
+    const [regionDeleteError, setRegionDeleteError] = useState<string | null>(null);
 
     const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
     const selectedTable = tables.find(t => t.id === selectedTableId) ?? null;
@@ -131,8 +144,14 @@ export default function Tables() {
         setTables(updated);
     };
 
+    const refreshRegions = async () => {
+        const updated = await regionService.getRegions();
+        setRegions(updated);
+    };
+
     useEffect(() => {
         refreshTables().catch(console.error);
+        refreshRegions().catch(console.error);
     }, []);
 
     useEffect(() => {
@@ -172,6 +191,7 @@ export default function Tables() {
     const openCreateModal = () => {
         setEditTable(null);
         setNewTableName('');
+        setNewTableRegionId(selectedRegionId === 'all' ? null : selectedRegionId);
         setFieldErrors({});
         setIsModalOpen(true);
     };
@@ -179,6 +199,7 @@ export default function Tables() {
     const openEditModal = (table: Table) => {
         setEditTable(table);
         setNewTableName(table.name);
+        setNewTableRegionId(table.regionId ?? null);
         setFieldErrors({});
         setIsModalOpen(true);
     };
@@ -192,9 +213,9 @@ export default function Tables() {
 
         try {
             if (editTable) {
-                await tableService.updateTable(editTable.id, newTableName.trim());
+                await tableService.updateTable(editTable.id, newTableName.trim(), undefined, newTableRegionId);
             } else {
-                await tableService.createTable(newTableName.trim());
+                await tableService.createTable(newTableName.trim(), newTableRegionId);
             }
             await refreshTables();
             setIsModalOpen(false);
@@ -215,6 +236,55 @@ export default function Tables() {
         await tableService.deleteTable(deleteTargetId);
         setTables(prev => prev.filter(t => t.id !== deleteTargetId));
         setDeleteTargetId(null);
+    };
+
+    const openRegionModal = (region?: Region) => {
+        setEditRegion(region ?? null);
+        setNewRegionName(region?.name ?? '');
+        setRegionFieldError('');
+        setIsRegionModalOpen(true);
+    };
+
+    const handleSaveRegion = async () => {
+        if (!newRegionName.trim()) { setRegionFieldError('Bölge adı boş olamaz.'); return; }
+        setRegionFieldError('');
+        setSavingRegion(true);
+        try {
+            if (editRegion) {
+                await regionService.updateRegion(editRegion.id, newRegionName.trim());
+            } else {
+                await regionService.createRegion(newRegionName.trim());
+            }
+            await refreshRegions();
+            setIsRegionModalOpen(false);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const backendErrors = err.response?.data?.errors as Record<string, string[]> | undefined;
+                setRegionFieldError(backendErrors?.Name?.[0] ?? 'Bölge kaydedilemedi.');
+            }
+        } finally {
+            setSavingRegion(false);
+        }
+    };
+
+    const closeRegionDeleteDialog = () => {
+        setRegionDeleteTargetId(null);
+        setRegionDeleteError(null);
+    };
+
+    const handleDeleteRegion = async () => {
+        if (regionDeleteTargetId === null) return;
+        try {
+            await regionService.deleteRegion(regionDeleteTargetId);
+            setRegions(prev => prev.filter(r => r.id !== regionDeleteTargetId));
+            if (selectedRegionId === regionDeleteTargetId) setSelectedRegionId('all');
+            await refreshTables();
+            setRegionDeleteTargetId(null);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setRegionDeleteError(err.response?.data?.message ?? 'Bölge silinemedi.');
+            }
+        }
     };
 
     // Panel açıldığında (veya farklı bir masa seçildiğinde) menü/sipariş/rezervasyon verisini yükler.
@@ -425,6 +495,12 @@ export default function Tables() {
 
     const filteredProducts = selectedCategoryId ? products.filter(p => p.categoryId === selectedCategoryId) : products;
 
+    const regionCounts = regions.map(region => ({
+        region,
+        count: tables.filter(t => t.regionId === region.id).length,
+    }));
+    const filteredTables = selectedRegionId === 'all' ? tables : tables.filter(t => t.regionId === selectedRegionId);
+
     const visibleTabs: PanelTab[] = !selectedTable
         ? []
         : selectedTable.status === 3
@@ -449,9 +525,63 @@ export default function Tables() {
                 </button>
             </div>
 
+            {/* Bölge Sekmeleri */}
+            <div className="flex gap-2 flex-wrap items-center">
+                <button
+                    onClick={() => setSelectedRegionId('all')}
+                    className={cn(
+                        "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                        selectedRegionId === 'all'
+                            ? "bg-blue-600 text-white"
+                            : "border border-border text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    Tümü ({tables.length})
+                </button>
+                {regionCounts.map(({ region, count }) => (
+                    <div
+                        key={region.id}
+                        className={cn(
+                            "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
+                            selectedRegionId === region.id
+                                ? "bg-blue-600 text-white"
+                                : "border border-border text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        <button onClick={() => setSelectedRegionId(region.id)} className="py-0.5">
+                            {region.name} ({count})
+                        </button>
+                        <button
+                            onClick={() => openRegionModal(region)}
+                            className={cn(
+                                "p-1 rounded-full transition-colors",
+                                selectedRegionId === region.id ? "hover:bg-white/20" : "hover:bg-muted"
+                            )}
+                        >
+                            <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                            onClick={() => setRegionDeleteTargetId(region.id)}
+                            className={cn(
+                                "p-1 rounded-full transition-colors",
+                                selectedRegionId === region.id ? "hover:bg-white/20" : "hover:bg-muted"
+                            )}
+                        >
+                            <X className="h-3 w-3" />
+                        </button>
+                    </div>
+                ))}
+                <button
+                    onClick={() => openRegionModal()}
+                    className="px-4 py-1.5 rounded-full text-sm font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                >
+                    + Bölge Ekle
+                </button>
+            </div>
+
             {/* Table Grid — waiter tarafındaki tasarımla aynı renk/hover davranışı */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {tables.map(table => {
+                {filteredTables.map(table => {
                     const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
                     return (
                         <div
@@ -486,6 +616,12 @@ export default function Tables() {
                                     </span>
                                 </div>
                             </div>
+
+                            {table.regionName && (
+                                <span className="self-start text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                    {table.regionName}
+                                </span>
+                            )}
 
                             <div className="flex-1 flex flex-col justify-end gap-1">
                                 {table.status === 1 && (
@@ -531,7 +667,7 @@ export default function Tables() {
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
-                        <div className="px-6 py-5">
+                        <div className="px-6 py-5 space-y-4">
                             <div>
                                 <label className={labelClass}>Masa Adı</label>
                                 <input
@@ -542,6 +678,19 @@ export default function Tables() {
                                     autoFocus
                                 />
                                 {fieldErrors.name && <p className="text-xs text-destructive mt-1">{fieldErrors.name}</p>}
+                            </div>
+                            <div>
+                                <label className={labelClass}>Bölge</label>
+                                <select
+                                    className={inputClass}
+                                    value={newTableRegionId ?? ''}
+                                    onChange={e => setNewTableRegionId(e.target.value ? Number(e.target.value) : null)}
+                                >
+                                    <option value="">Bölge seçilmedi</option>
+                                    {regions.map(r => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
@@ -561,6 +710,70 @@ export default function Tables() {
                     </div>
                 </div>
             )}
+
+            {/* Bölge Ekle Modal */}
+            {isRegionModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsRegionModalOpen(false)} />
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-foreground">
+                                {editRegion ? 'Bölgeyi Düzenle' : 'Bölge Ekle'}
+                            </h2>
+                            <button onClick={() => setIsRegionModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="px-6 py-5">
+                            <div>
+                                <label className={labelClass}>Bölge Adı</label>
+                                <input
+                                    className={cn(inputClass, regionFieldError && "border-destructive")}
+                                    value={newRegionName}
+                                    onChange={e => setNewRegionName(e.target.value)}
+                                    placeholder="İç Mekan"
+                                    autoFocus
+                                    onKeyDown={e => e.key === 'Enter' && handleSaveRegion()}
+                                />
+                                {regionFieldError && <p className="text-xs text-destructive mt-1">{regionFieldError}</p>}
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => setIsRegionModalOpen(false)}
+                                className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={handleSaveRegion}
+                                disabled={savingRegion}
+                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-60"
+                            >
+                                {savingRegion ? 'Kaydediliyor...' : 'Kaydet'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bölge Silme Onay */}
+            <AlertDialog open={regionDeleteTargetId !== null} onOpenChange={open => !open && closeRegionDeleteDialog()}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Bölgeyi sil</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {regionDeleteError ?? "Bu bölgeyi silmek istediğinizden emin misiniz? Bölgeye atanmış masalar bölgesiz kalacaktır."}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        {!regionDeleteError && (
+                            <AlertDialogAction onClick={handleDeleteRegion} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sil</AlertDialogAction>
+                        )}
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {/* Masa Silme Onay */}
             <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>

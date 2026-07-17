@@ -22,6 +22,14 @@ export default function Menu() {
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    const [editCategory, setEditCategory] = useState<Category | null>(null);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [categoryFieldError, setCategoryFieldError] = useState('');
+    const [savingCategory, setSavingCategory] = useState(false);
+    const [categoryDeleteTargetId, setCategoryDeleteTargetId] = useState<number | null>(null);
+    const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null);
+
     const filteredProducts = products.filter(p =>
         selectedCategory === 'all' || p.categoryId === selectedCategory
     );
@@ -60,6 +68,55 @@ export default function Menu() {
         await productService.deleteProduct(deleteTargetId);
         setProducts(prev => prev.filter(p => p.id !== deleteTargetId));
         setDeleteTargetId(null);
+    };
+
+    const openCategoryModal = (category?: Category) => {
+        setEditCategory(category ?? null);
+        setNewCategoryName(category?.name ?? '');
+        setCategoryFieldError('');
+        setIsCategoryModalOpen(true);
+    };
+
+    const handleSaveCategory = async () => {
+        if (!newCategoryName.trim()) { setCategoryFieldError('Kategori adı boş olamaz.'); return; }
+        setCategoryFieldError('');
+        setSavingCategory(true);
+        try {
+            if (editCategory) {
+                await categoryService.updateCategory({ id: editCategory.id, name: newCategoryName.trim() });
+            } else {
+                await categoryService.createCategory(newCategoryName.trim());
+            }
+            const updated = await categoryService.getCategories();
+            setCategories(updated);
+            setIsCategoryModalOpen(false);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const backendErrors = err.response?.data?.errors as Record<string, string[]> | undefined;
+                setCategoryFieldError(backendErrors?.Name?.[0] ?? 'Kategori kaydedilemedi.');
+            }
+        } finally {
+            setSavingCategory(false);
+        }
+    };
+
+    const closeCategoryDeleteDialog = () => {
+        setCategoryDeleteTargetId(null);
+        setCategoryDeleteError(null);
+    };
+
+    const handleDeleteCategory = async () => {
+        if (categoryDeleteTargetId === null) return;
+        try {
+            await categoryService.deleteCategory(categoryDeleteTargetId);
+            setCategories(prev => prev.filter(c => c.id !== categoryDeleteTargetId));
+            if (selectedCategory === categoryDeleteTargetId) setSelectedCategory('all');
+            setCategoryDeleteTargetId(null);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setCategoryDeleteError(err.response?.data?.message ?? 'Kategori silinemedi.');
+            }
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -122,19 +179,44 @@ export default function Menu() {
                     Tümü
                 </button>
                 {categories.map(cat => (
-                    <button
+                    <div
                         key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
                         className={cn(
-                            "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                            "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
                             selectedCategory === cat.id
                                 ? "bg-blue-600 text-white"
                                 : "border border-border text-muted-foreground hover:text-foreground"
                         )}
                     >
-                        {cat.name}
-                    </button>
+                        <button onClick={() => setSelectedCategory(cat.id)} className="py-0.5">
+                            {cat.name}
+                        </button>
+                        <button
+                            onClick={() => openCategoryModal(cat)}
+                            className={cn(
+                                "p-1 rounded-full transition-colors",
+                                selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
+                            )}
+                        >
+                            <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                            onClick={() => setCategoryDeleteTargetId(cat.id)}
+                            className={cn(
+                                "p-1 rounded-full transition-colors",
+                                selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
+                            )}
+                        >
+                            <X className="h-3 w-3" />
+                        </button>
+                    </div>
                 ))}
+                <button
+                    onClick={() => openCategoryModal()}
+                    className="px-4 py-1.5 rounded-full text-sm font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                >
+                    + Kategori Ekle
+                </button>
             </div>
 
             {/* Table */}
@@ -278,6 +360,52 @@ export default function Menu() {
                 </div>
             )}
 
+            {/* Kategori Ekle Modal */}
+            {isCategoryModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsCategoryModalOpen(false)} />
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-foreground">
+                                {editCategory ? 'Kategoriyi Düzenle' : 'Kategori Ekle'}
+                            </h2>
+                            <button onClick={() => setIsCategoryModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="px-6 py-5">
+                            <div>
+                                <label className={labelClass}>Kategori Adı</label>
+                                <input
+                                    className={cn(inputClass, categoryFieldError && "border-destructive")}
+                                    value={newCategoryName}
+                                    onChange={e => setNewCategoryName(e.target.value)}
+                                    placeholder="Çorbalar"
+                                    autoFocus
+                                    onKeyDown={e => e.key === 'Enter' && handleSaveCategory()}
+                                />
+                                {categoryFieldError && <p className="text-xs text-destructive mt-1">{categoryFieldError}</p>}
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => setIsCategoryModalOpen(false)}
+                                className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={handleSaveCategory}
+                                disabled={savingCategory}
+                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-60"
+                            >
+                                {savingCategory ? 'Kaydediliyor...' : 'Kaydet'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Delete Confirm */}
             <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
                 <AlertDialogContent>
@@ -288,6 +416,24 @@ export default function Menu() {
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sil</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Kategori Silme Onay */}
+            <AlertDialog open={categoryDeleteTargetId !== null} onOpenChange={open => !open && closeCategoryDeleteDialog()}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Kategoriyi sil</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {categoryDeleteError ?? "Bu kategoriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        {!categoryDeleteError && (
+                            <AlertDialogAction onClick={handleDeleteCategory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sil</AlertDialogAction>
+                        )}
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

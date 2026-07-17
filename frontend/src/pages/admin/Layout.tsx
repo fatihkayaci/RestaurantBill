@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import {
-    LayoutDashboard, UtensilsCrossed, Tag, Users,
+    LayoutDashboard, UtensilsCrossed, Users,
     LayoutGrid, Wallet, BarChart3, UserCircle, CreditCard
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
@@ -17,7 +17,6 @@ const navItems = [
     { to: '/admin/staff', icon: Users, label: 'Çalışanlar' },
     { to: '/admin/tables', icon: LayoutGrid, label: 'Masalar' },
     { to: '/admin/menu', icon: UtensilsCrossed, label: 'Menü' },
-    { to: '/admin/categories', icon: Tag, label: 'Kategoriler' },
     { to: '/admin/cash-registers', icon: Wallet, label: 'Kasalar' },
     { to: '/admin/reports', icon: BarChart3, label: 'Raporlar' },
     { to: '/admin/profile', icon: UserCircle, label: 'Profil' },
