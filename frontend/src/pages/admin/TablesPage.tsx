@@ -259,8 +259,7 @@ export default function Tables() {
             setIsRegionModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                const backendErrors = err.response?.data?.errors as Record<string, string[]> | undefined;
-                setRegionFieldError(backendErrors?.Name?.[0] ?? 'Bölge kaydedilemedi.');
+                setRegionFieldError(err.response?.data?.message ?? 'Bölge kaydedilemedi.');
             }
         } finally {
             setSavingRegion(false);

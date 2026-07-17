@@ -92,8 +92,7 @@ export default function Menu() {
             setIsCategoryModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                const backendErrors = err.response?.data?.errors as Record<string, string[]> | undefined;
-                setCategoryFieldError(backendErrors?.Name?.[0] ?? 'Kategori kaydedilemedi.');
+                setCategoryFieldError(err.response?.data?.message ?? 'Kategori kaydedilemedi.');
             }
         } finally {
             setSavingCategory(false);
