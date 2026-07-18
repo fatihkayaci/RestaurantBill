@@ -70,5 +70,11 @@ namespace RestaurantBill.Domain.Entities
         {
             Status = status;
         }
+
+        public void EnsureCanBeDeleted(IEnumerable<Order> activeOrders)
+        {
+            if (activeOrders.Any())
+                throw new DomainException("Bu masaya ait açık bir sipariş bulunmaktadır. Lütfen silmeden önce siparişi kapatın.");
+        }
     }
 }

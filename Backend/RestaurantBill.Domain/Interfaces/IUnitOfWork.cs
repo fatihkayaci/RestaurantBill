@@ -4,6 +4,7 @@ public interface IUnitOfWork : IDisposable
 {
     IProductRepository Product { get; }
     IOrderRepository Order { get; }
+    IOrderItemRepository OrderItem { get; }
     ICategoryRepository Category { get; }
     ITableRepository Table { get; }
     IRegionRepository Region { get; }

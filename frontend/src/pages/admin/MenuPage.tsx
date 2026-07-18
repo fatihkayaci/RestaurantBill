@@ -3,7 +3,8 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import type { Product } from "@/features/products/types";
 import type { Category } from "@/features/categories/types";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { X, Pencil } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import axios from "axios";
@@ -21,6 +22,7 @@ export default function Menu() {
     const [form, setForm] = useState({ name: '', price: 0, categoryId: 0, isActive: true, id: 0 });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [productDeleteError, setProductDeleteError] = useState<string | null>(null);
 
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [editCategory, setEditCategory] = useState<Category | null>(null);
@@ -34,6 +36,10 @@ export default function Menu() {
         selectedCategory === 'all' || p.categoryId === selectedCategory
     );
     const activeCount = products.filter(p => p.isActive).length;
+    const categoryCounts = categories.map(cat => ({
+        category: cat,
+        count: products.filter(p => p.categoryId === cat.id).length,
+    }));
 
     useEffect(() => {
         productService.getProducts().then(setProducts).catch(console.error);
@@ -63,11 +69,22 @@ export default function Menu() {
         }
     };
 
+    const closeProductDeleteDialog = () => {
+        setDeleteTargetId(null);
+        setProductDeleteError(null);
+    };
+
     const handleDelete = async () => {
         if (deleteTargetId === null) return;
-        await productService.deleteProduct(deleteTargetId);
-        setProducts(prev => prev.filter(p => p.id !== deleteTargetId));
-        setDeleteTargetId(null);
+        try {
+            await productService.deleteProduct(deleteTargetId);
+            setProducts(prev => prev.filter(p => p.id !== deleteTargetId));
+            setDeleteTargetId(null);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setProductDeleteError(err.response?.data?.message ?? 'Ürün silinemedi.');
+            }
+        }
     };
 
     const openCategoryModal = (category?: Category) => {
@@ -170,9 +187,9 @@ export default function Menu() {
                             : "border border-border text-muted-foreground hover:text-foreground"
                     )}
                 >
-                    Tümü
+                    Tümü ({products.length})
                 </button>
-                {categories.map(cat => (
+                {categoryCounts.map(({ category: cat, count }) => (
                     <div
                         key={cat.id}
                         className={cn(
@@ -183,7 +200,7 @@ export default function Menu() {
                         )}
                     >
                         <button onClick={() => setSelectedCategory(cat.id)} className="py-0.5">
-                            {cat.name}
+                            {cat.name} ({count})
                         </button>
                         <button
                             onClick={() => openCategoryModal(cat)}
@@ -401,15 +418,19 @@ export default function Menu() {
             )}
 
             {/* Delete Confirm */}
-            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && closeProductDeleteDialog()}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Ürünü sil</AlertDialogTitle>
-                        <AlertDialogDescription>Bu ürünü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription>
+                        <AlertDialogDescription>
+                            {productDeleteError ?? "Bu ürünü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sil</AlertDialogAction>
+                        {!productDeleteError && (
+                            <Button variant="destructive" onClick={handleDelete}>Sil</Button>
+                        )}
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -426,7 +447,7 @@ export default function Menu() {
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
                         {!categoryDeleteError && (
-                            <AlertDialogAction onClick={handleDeleteCategory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sil</AlertDialogAction>
+                            <Button variant="destructive" onClick={handleDeleteCategory}>Sil</Button>
                         )}
                     </AlertDialogFooter>
                 </AlertDialogContent>

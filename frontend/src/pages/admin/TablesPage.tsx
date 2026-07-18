@@ -97,6 +97,7 @@ export default function Tables() {
     const [newTableRegionId, setNewTableRegionId] = useState<number | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [tableDeleteError, setTableDeleteError] = useState<string | null>(null);
 
     const [regions, setRegions] = useState<Region[]>([]);
     const [selectedRegionId, setSelectedRegionId] = useState<number | 'all'>('all');
@@ -227,11 +228,22 @@ export default function Tables() {
         }
     };
 
+    const closeTableDeleteDialog = () => {
+        setDeleteTargetId(null);
+        setTableDeleteError(null);
+    };
+
     const handleDelete = async () => {
         if (deleteTargetId === null) return;
-        await tableService.deleteTable(deleteTargetId);
-        setTables(prev => prev.filter(t => t.id !== deleteTargetId));
-        setDeleteTargetId(null);
+        try {
+            await tableService.deleteTable(deleteTargetId);
+            setTables(prev => prev.filter(t => t.id !== deleteTargetId));
+            setDeleteTargetId(null);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setTableDeleteError(err.response?.data?.message ?? 'Masa silinemedi.');
+            }
+        }
     };
 
     const openRegionModal = (region?: Region) => {
@@ -762,22 +774,26 @@ export default function Tables() {
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
                         {!regionDeleteError && (
-                            <AlertDialogAction onClick={handleDeleteRegion} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sil</AlertDialogAction>
+                            <Button variant="destructive" onClick={handleDeleteRegion}>Sil</Button>
                         )}
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
 
             {/* Masa Silme Onay */}
-            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && closeTableDeleteDialog()}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Masayı sil</AlertDialogTitle>
-                        <AlertDialogDescription>Bu masayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription>
+                        <AlertDialogDescription>
+                            {tableDeleteError ?? "Bu masayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sil</AlertDialogAction>
+                        {!tableDeleteError && (
+                            <Button variant="destructive" onClick={handleDelete}>Sil</Button>
+                        )}
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

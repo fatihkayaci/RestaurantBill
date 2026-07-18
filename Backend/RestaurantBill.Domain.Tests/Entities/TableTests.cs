@@ -142,4 +142,28 @@ public class TableTests
             Assert.Throws<DomainException>(() => table.AssignRegion(invalidRegionId));
         }
     }
+
+    public class EnsureCanBeDeleted
+    {
+        [Fact]
+        public void WithNoActiveOrders_DoesNotThrow()
+        {
+            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+
+            var exception = Record.Exception(() =>
+                table.EnsureCanBeDeleted([]));
+
+            Assert.Null(exception);
+        }
+
+        [Fact]
+        public void WithActiveOrders_ThrowsDomainException()
+        {
+            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Order[] orders = [Order.Create(tableId: 1)];
+
+            Assert.Throws<DomainException>(() =>
+                table.EnsureCanBeDeleted(orders));
+        }
+    }
 }
