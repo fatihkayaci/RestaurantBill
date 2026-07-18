@@ -98,6 +98,27 @@ public class CashRegisterTests
         }
     }
 
+    public class EnsureCanBeDeleted
+    {
+        [Fact]
+        public void WithZeroBalance_DoesNotThrow()
+        {
+            CashRegister cashRegister = CashRegister.Create("Kasa", 0m, CashRegisterStatus.Open, restaurantId: 1);
+
+            var exception = Record.Exception(() => cashRegister.EnsureCanBeDeleted());
+
+            Assert.Null(exception);
+        }
+
+        [Fact]
+        public void WithPositiveBalance_ThrowsDomainException()
+        {
+            CashRegister cashRegister = CashRegister.Create("Kasa", 100m, CashRegisterStatus.Open, restaurantId: 1);
+
+            Assert.Throws<DomainException>(() => cashRegister.EnsureCanBeDeleted());
+        }
+    }
+
     public class AddTransaction
     {
         [Fact]

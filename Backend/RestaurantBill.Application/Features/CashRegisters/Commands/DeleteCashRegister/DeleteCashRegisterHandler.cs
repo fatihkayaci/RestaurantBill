@@ -17,8 +17,9 @@ public class DeleteCashRegisterHandler : IRequestHandler<DeleteCashRegisterComma
     {
         var register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId, true);
         Guard.AgainstNull(register, "Kasa bulunamadı.");
+        register!.EnsureCanBeDeleted();
 
-        _uow.CashRegister.Delete(register!);
+        _uow.CashRegister.Delete(register);
         await _uow.SaveChangesAsync(cancellationToken);
     }
 }

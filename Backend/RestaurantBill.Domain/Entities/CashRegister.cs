@@ -46,6 +46,12 @@ public class CashRegister : BaseEntity
         Status = status;
     }
 
+    public void EnsureCanBeDeleted()
+    {
+        if (Balance > 0)
+            throw new DomainException("Bu kasada bakiye bulunmaktadır. Lütfen silmeden önce bakiyeyi sıfırlayın.");
+    }
+
     public CashTransaction AddTransaction(CashTransactionType type, decimal amount, int userId)
     {
         if (Status != CashRegisterStatus.Open)

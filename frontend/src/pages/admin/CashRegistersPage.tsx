@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { X, Pencil, ArrowDownCircle, ArrowUpCircle, Wallet } from 'lucide-react';
 import axios from 'axios';
 import type { CashRegister, CashRegisterStatus } from '@/features/cashier/types';
@@ -18,10 +19,12 @@ export default function CashRegisters() {
     const [status, setStatus] = useState<CashRegisterStatus>(1);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     const [txTarget, setTxTarget] = useState<CashRegister | null>(null);
     const [txType, setTxType] = useState<1 | 2>(1);
     const [txAmount, setTxAmount] = useState<string>('');
+    const [txError, setTxError] = useState<string | null>(null);
 
     const totalBalance = registers.reduce((sum, r) => sum + r.balance, 0);
     const openCount = registers.filter(r => r.status === 1).length;
@@ -84,31 +87,51 @@ export default function CashRegisters() {
         }
     };
 
+    const closeDeleteDialog = () => {
+        setDeleteTargetId(null);
+        setDeleteError(null);
+    };
+
     const handleDelete = async () => {
         if (deleteTargetId === null) return;
-        await cashRegisterService.deleteCashRegister(deleteTargetId);
-        setRegisters(prev => prev.filter(r => r.id !== deleteTargetId));
-        setDeleteTargetId(null);
+        try {
+            await cashRegisterService.deleteCashRegister(deleteTargetId);
+            setRegisters(prev => prev.filter(r => r.id !== deleteTargetId));
+            setDeleteTargetId(null);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setDeleteError(err.response?.data?.message ?? 'Kasa silinemedi.');
+            }
+        }
     };
 
     const openTxDialog = (r: CashRegister, type: 1 | 2) => {
         setTxTarget(r);
         setTxType(type);
         setTxAmount('');
+        setTxError(null);
+    };
+
+    const closeTxDialog = () => {
+        setTxTarget(null);
+        setTxAmount('');
+        setTxError(null);
     };
 
     const handleTxSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!txTarget) return;
         const amount = Number(txAmount);
-        if (isNaN(amount) || amount <= 0) return;
+        if (isNaN(amount) || amount <= 0) { setTxError('Geçerli bir tutar giriniz.'); return; }
+        setTxError(null);
         try {
             await cashRegisterService.addTransaction(txTarget.id, txType, amount);
             await refresh();
-            setTxTarget(null);
-            setTxAmount('');
-        } catch (err) {
-            console.error(err);
+            closeTxDialog();
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setTxError(err.response?.data?.message ?? 'İşlem gerçekleştirilemedi.');
+            }
         }
     };
 
@@ -286,7 +309,7 @@ export default function CashRegisters() {
             {/* Para Giriş / Çıkış Modal */}
             {txTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setTxTarget(null)} />
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeTxDialog} />
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
                         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <div>
@@ -295,7 +318,7 @@ export default function CashRegisters() {
                                 </h2>
                                 <p className="text-sm text-muted-foreground mt-0.5">{txTarget.name}</p>
                             </div>
-                            <button onClick={() => setTxTarget(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+                            <button onClick={closeTxDialog} className="text-muted-foreground hover:text-foreground transition-colors">
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
@@ -306,19 +329,20 @@ export default function CashRegisters() {
                                 type="number"
                                 step="0.01"
                                 min="0.01"
-                                className={inputClass}
+                                className={cn(inputClass, txError && "border-destructive")}
                                 placeholder="0.00"
                                 value={txAmount}
                                 onChange={e => setTxAmount(e.target.value)}
                                 autoFocus
                             />
+                            {txError && <p className="text-xs text-destructive mt-1">{txError}</p>}
                             <p className="text-xs text-muted-foreground mt-2">
                                 Mevcut bakiye: ₺{txTarget.balance.toFixed(2)}
                             </p>
                         </form>
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
-                            <button type="button" onClick={() => setTxTarget(null)} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
+                            <button type="button" onClick={closeTxDialog} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
                             <button
                                 type="button"
                                 onClick={handleTxSubmit}
@@ -335,15 +359,19 @@ export default function CashRegisters() {
             )}
 
             {/* Delete Confirm */}
-            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && closeDeleteDialog()}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Kasayı sil</AlertDialogTitle>
-                        <AlertDialogDescription>Bu kasa kalıcı olarak silinecek. Bu işlem geri alınamaz.</AlertDialogDescription>
+                        <AlertDialogDescription>
+                            {deleteError ?? "Bu kasa kalıcı olarak silinecek. Bu işlem geri alınamaz."}
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sil</AlertDialogAction>
+                        {!deleteError && (
+                            <Button variant="destructive" onClick={handleDelete}>Sil</Button>
+                        )}
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
