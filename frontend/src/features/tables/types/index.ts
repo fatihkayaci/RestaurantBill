@@ -4,6 +4,8 @@ export interface Table {
     status: number;
     activeOrderTotal: number;
     occupiedSince: string | null;
+    regionId: number;
+    regionName: string;
 }
 
 export interface Reservation {

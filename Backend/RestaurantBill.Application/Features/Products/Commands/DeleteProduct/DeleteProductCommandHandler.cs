@@ -19,6 +19,9 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
             Product? product = await _uow.Product.GetByIdAsync(request.Id, false);
             Guard.AgainstNull(product, "Böyle bir ürün bulunamadı.");
 
+            IEnumerable<OrderItem> linkedOrderItems = await _uow.OrderItem.GetAllAsync(oi => oi.ProductId == request.Id, false);
+            product.EnsureCanBeDeleted(linkedOrderItems);
+
             _uow.Product.Delete(product);
             await _uow.SaveChangesAsync(cancellationToken);
         }

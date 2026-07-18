@@ -10,12 +10,14 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
+        private readonly ICashierNotificationService _cashierNotificationService;
         private readonly ICurrentUserService _currentUserService;
 
-        public CloseOrderCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICurrentUserService currentUserService)
+        public CloseOrderCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICashierNotificationService cashierNotificationService, ICurrentUserService currentUserService)
         {
             _uow = uow;
             _tableNotificationService = tableNotificationService;
+            _cashierNotificationService = cashierNotificationService;
             _currentUserService = currentUserService;
         }
         /// <summary>
@@ -37,6 +39,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
 
             await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
             await _tableNotificationService.SendOrderClosedAsync(_currentUserService.RestaurantId, table.Id, order.Id);
+            await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.RestaurantId);
         }
     }
 }

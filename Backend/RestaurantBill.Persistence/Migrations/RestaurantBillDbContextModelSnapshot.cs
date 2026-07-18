@@ -307,6 +307,40 @@ namespace RestaurantBill.Persistence.Migrations
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.Region", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CreatedUser")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RestaurantId");
+
+                    b.ToTable("Regions");
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Reservation", b =>
                 {
                     b.Property<int>("Id")
@@ -433,6 +467,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("RegionId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("RestaurantId")
                         .HasColumnType("integer");
 
@@ -443,6 +480,8 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RegionId");
 
                     b.HasIndex("RestaurantId");
 
@@ -590,6 +629,17 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.Region", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Restaurant");
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Reservation", b =>
                 {
                     b.HasOne("RestaurantBill.Domain.Entities.Table", "Table")
@@ -603,11 +653,19 @@ namespace RestaurantBill.Persistence.Migrations
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Table", b =>
                 {
+                    b.HasOne("RestaurantBill.Domain.Entities.Region", "Region")
+                        .WithMany()
+                        .HasForeignKey("RegionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
                         .WithMany()
                         .HasForeignKey("RestaurantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Region");
 
                     b.Navigation("Restaurant");
                 });

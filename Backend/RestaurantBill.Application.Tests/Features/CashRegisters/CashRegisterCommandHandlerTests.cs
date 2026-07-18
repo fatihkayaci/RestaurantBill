@@ -80,7 +80,7 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithExistingRegister_DeletesAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister existing = CashRegister.Create("Kasa", 100m, CashRegisterStatus.Open, restaurantId: 1);
+            CashRegister existing = CashRegister.Create("Kasa", 0m, CashRegisterStatus.Open, restaurantId: 1);
             await uow.CashRegisterRepo.AddAsync(existing);
 
             var handler = new DeleteCashRegisterHandler(uow);
@@ -90,6 +90,19 @@ public class CashRegisterCommandHandlerTests
 
             Assert.Empty(uow.CashRegisterRepo.Added);
             Assert.True(uow.SaveChangesCalled);
+        }
+
+        [Fact]
+        public async Task Handle_WithPositiveBalance_ThrowsException()
+        {
+            var uow = new FakeUnitOfWork();
+            CashRegister existing = CashRegister.Create("Kasa", 100m, CashRegisterStatus.Open, restaurantId: 1);
+            await uow.CashRegisterRepo.AddAsync(existing);
+
+            var handler = new DeleteCashRegisterHandler(uow);
+            var command = new DeleteCashRegisterCommand { CashRegisterId = existing.Id };
+
+            await Assert.ThrowsAnyAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
         }
 
         [Fact]

@@ -52,7 +52,7 @@ export default function CashierDashboardPage() {
             })
             .build();
 
-        conn.on('OrderServed', () => {
+        conn.on('OrdersChanged', () => {
             orderService.getAllOrdersToCashier()
                 .then(setServedOrders)
                 .catch(() => {});
@@ -94,17 +94,17 @@ export default function CashierDashboardPage() {
                 <div className="w-px h-8 bg-gray-700" />
                 <div>
                     <p className="text-lg font-bold text-amber-400">{servedOrders.length}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Bekleyen Masa</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Açık Masa</p>
                 </div>
             </div>
 
             {/* İçerik */}
             <div className="flex flex-1 overflow-hidden">
-                {/* Sol: Ödeme bekleyen masalar */}
+                {/* Sol: Açık masalar */}
                 <div className="flex-1 overflow-y-auto p-6">
                     <div className="flex items-center gap-2 mb-5">
                         <h2 className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
-                            Ödeme Bekleyen Masalar
+                            Açık Masalar
                         </h2>
                         {servedOrders.length > 0 && (
                             <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 text-xs font-bold px-1.5 py-0.5 rounded">
@@ -114,7 +114,7 @@ export default function CashierDashboardPage() {
                     </div>
 
                     {servedOrders.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Ödeme bekleyen masa yok.</p>
+                        <p className="text-sm text-muted-foreground">Açık masa yok.</p>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {servedOrders.map(order => (

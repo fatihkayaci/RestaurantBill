@@ -95,4 +95,30 @@ public class ProductTests
                 product.Update("Çay", 10m, true, invalidId));
         }
     }
+
+    public class EnsureCanBeDeleted
+    {
+        [Fact]
+        public void WithNoLinkedOrderItems_DoesNotThrow()
+        {
+            Product product = Product.Create("Çay", 15m, true, "img.png", categoryId: 1);
+
+            var exception = Record.Exception(() =>
+                product.EnsureCanBeDeleted([]));
+
+            Assert.Null(exception);
+        }
+
+        [Fact]
+        public void WithLinkedOrderItems_ThrowsDomainException()
+        {
+            Product product = Product.Create("Çay", 15m, true, "img.png", categoryId: 1);
+            typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(product, 1);
+            Order order = Order.Create(tableId: 1);
+            order.AddItem(product, 1);
+
+            Assert.Throws<DomainException>(() =>
+                product.EnsureCanBeDeleted(order.OrderItems));
+        }
+    }
 }

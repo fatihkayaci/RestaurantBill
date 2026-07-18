@@ -7,8 +7,10 @@ public class FakeUnitOfWork : IUnitOfWork
 {
     public FakeProductRepository ProductRepo { get; } = new();
     public FakeOrderRepository OrderRepo { get; } = new();
+    public FakeOrderItemRepository OrderItemRepo { get; } = new();
     public FakeCategoryRepository CategoryRepo { get; } = new();
     public FakeTableRepository TableRepo { get; } = new();
+    public FakeRegionRepository RegionRepo { get; } = new();
     public FakeRestaurantRepository RestaurantRepo { get; } = new();
     public FakeMembershipRepository MembershipRepo { get; } = new();
     public FakeUserRepository UserRepo { get; } = new();
@@ -20,8 +22,10 @@ public class FakeUnitOfWork : IUnitOfWork
 
     IProductRepository IUnitOfWork.Product => ProductRepo;
     IOrderRepository IUnitOfWork.Order => OrderRepo;
+    IOrderItemRepository IUnitOfWork.OrderItem => OrderItemRepo;
     ICategoryRepository IUnitOfWork.Category => CategoryRepo;
     ITableRepository IUnitOfWork.Table => TableRepo;
+    IRegionRepository IUnitOfWork.Region => RegionRepo;
     IRestaurantRepository IUnitOfWork.Restaurant => RestaurantRepo;
     IMembershipRepository IUnitOfWork.Membership => MembershipRepo;
     IUserRepository IUnitOfWork.User => UserRepo;

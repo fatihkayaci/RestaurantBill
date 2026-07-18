@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Persistence.Context;
 using RestaurantBill.Persistence.Repositories;
@@ -16,6 +17,9 @@ public abstract class IntegrationTestBase : IDisposable
     protected const int OtherRestaurantId = 2;
     protected const int UserId = 1;
 
+    protected readonly int DefaultRegionId;
+    protected readonly int OtherDefaultRegionId;
+
     protected IntegrationTestBase()
     {
         var options = new DbContextOptionsBuilder<RestaurantBillDbContext>()
@@ -25,6 +29,13 @@ public abstract class IntegrationTestBase : IDisposable
         DbContext = new RestaurantBillDbContext(options);
         UnitOfWork = new UnitOfWork(DbContext);
         CurrentUser = new FakeCurrentUserService { RestaurantId = RestaurantId, UserId = UserId };
+
+        Region defaultRegion = Region.Create("Genel", RestaurantId);
+        Region otherDefaultRegion = Region.Create("Genel", OtherRestaurantId);
+        DbContext.Regions.AddRange(defaultRegion, otherDefaultRegion);
+        DbContext.SaveChanges();
+        DefaultRegionId = defaultRegion.Id;
+        OtherDefaultRegionId = otherDefaultRegion.Id;
     }
 
     public void Dispose() => DbContext.Dispose();

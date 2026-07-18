@@ -62,7 +62,7 @@ public class UserCommandHandlerTests
             User user = User.Create("Fatih", "fatih", null, null, "USR01", UserRole.Waiter, restaurantId: 1);
             await uow.UserRepo.AddAsync(user);
 
-            var handler = new DeleteUserCommandHandler(uow, new FakeMemoryCache());
+            var handler = new DeleteUserCommandHandler(uow);
             await handler.Handle(new DeleteUserCommand { UserId = user.Id }, CancellationToken.None);
 
             Assert.True(user.IsDeleted);
@@ -73,7 +73,7 @@ public class UserCommandHandlerTests
         public async Task Handle_WithNonExistingUser_ThrowsNotFoundException()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new DeleteUserCommandHandler(uow, new FakeMemoryCache());
+            var handler = new DeleteUserCommandHandler(uow);
 
             await Assert.ThrowsAsync<NotFoundException>(() =>
                 handler.Handle(new DeleteUserCommand { UserId = 99 }, CancellationToken.None));

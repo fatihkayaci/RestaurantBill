@@ -21,11 +21,11 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
 
         public async Task<string> Handle(RegisterCommand request, CancellationToken cancellationToken)
         {
-            bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName, false)).Any();
+            bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && !u.IsDeleted, false)).Any();
             if (userNameExists)
                 throw new BusinessException("Bu kullanıcı adı zaten kullanımda.");
 
-            bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email, false)).Any();
+            bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && !u.IsDeleted, false)).Any();
             if (emailExists)
                 throw new BusinessException("Bu e-posta adresi zaten kullanımda.");
 

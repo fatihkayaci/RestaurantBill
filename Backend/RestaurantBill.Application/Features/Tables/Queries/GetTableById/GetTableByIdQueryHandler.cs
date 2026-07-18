@@ -21,7 +21,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetTableById
         /// <exception cref="BusinessException">Thrown if the table is not found.</exception>
         public async Task<TableDto> Handle(GetTableByIdQuery request, CancellationToken cancellationToken)
         {
-            var table = await _uow.Table.GetByIdAsync(request.TableId, false);
+            var table = await _uow.Table.GetByIdAsync(request.TableId, false, t => t.Region!);
             Guard.AgainstNull(table, "Sipariş bulunamadı.");
             return table!.ToDto();
         }

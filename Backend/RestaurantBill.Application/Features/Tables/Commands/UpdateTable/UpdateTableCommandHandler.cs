@@ -20,6 +20,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
             Guard.AgainstNull(table, "Böyle bir masa bulunamadı");
 
             table.Update(request.Name, table.Note);
+            table.AssignRegion(request.RegionId);
             if (request.Status.HasValue)
                 table.SetStatus(request.Status.Value);
 

@@ -28,7 +28,7 @@ public class TableCommandHandlerTests
             var uow = new FakeUnitOfWork();
             var handler = new CreateTableCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 2 });
 
-            await handler.Handle(new CreateTableCommand { Name = "Masa 1" }, CancellationToken.None);
+            await handler.Handle(new CreateTableCommand { Name = "Masa 1", RegionId = 1 }, CancellationToken.None);
 
             Assert.Single(uow.TableRepo.Added);
             Assert.Equal(2, uow.TableRepo.Added[0].RestaurantId);
@@ -46,7 +46,7 @@ public class TableCommandHandlerTests
             await uow.TableRepo.AddAsync(table);
 
             var handler = new UpdateCommandHandler(uow);
-            var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved };
+            var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved, RegionId = 1 };
 
             await handler.Handle(command, CancellationToken.None);
 
@@ -102,7 +102,7 @@ public class TableCommandHandlerTests
             Table table = CreateTable();
             await uow.TableRepo.AddAsync(table);
 
-            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
+            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
             await handler.Handle(new OpenTableCommand { TableId = table.Id }, CancellationToken.None);
 
             Assert.Equal(TableStatus.Occupied, table.Status);
@@ -114,7 +114,7 @@ public class TableCommandHandlerTests
         public async Task Handle_WithNonExistingTable_ThrowsException()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
+            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
 
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 handler.Handle(new OpenTableCommand { TableId = 99 }, CancellationToken.None));

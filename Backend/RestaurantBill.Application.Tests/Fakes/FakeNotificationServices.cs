@@ -11,5 +11,5 @@ public class FakeTableNotificationService : ITableNotificationService
 
 public class FakeCashierNotificationService : ICashierNotificationService
 {
-    public Task SendOrderServedAsync(int restaurantId) => Task.CompletedTask;
+    public Task SendOrdersChangedAsync(int restaurantId) => Task.CompletedTask;
 }

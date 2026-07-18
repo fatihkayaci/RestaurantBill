@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Memory;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Interfaces;
@@ -9,12 +8,10 @@ namespace RestaurantBill.Application.Features.Users.Commands.DeleteUser
     public class DeleteUserCommandHandler : IRequestHandler<DeleteUserCommand>
     {
         private readonly IUnitOfWork _uow;
-        private readonly IMemoryCache _cache;
 
-        public DeleteUserCommandHandler(IUnitOfWork uow, IMemoryCache cache)
+        public DeleteUserCommandHandler(IUnitOfWork uow)
         {
             _uow = uow;
-            _cache = cache;
         }
 
         public async Task Handle(DeleteUserCommand request, CancellationToken cancellationToken)
@@ -24,8 +21,6 @@ namespace RestaurantBill.Application.Features.Users.Commands.DeleteUser
 
             user.MarkAsDeleted();
             await _uow.SaveChangesAsync(cancellationToken);
-
-            _cache.Remove($"idempotency:r{user.RestaurantId}:create-user:{user.UserName}");
         }
     }
 }

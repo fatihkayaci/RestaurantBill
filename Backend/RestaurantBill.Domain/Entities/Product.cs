@@ -34,6 +34,12 @@ namespace RestaurantBill.Domain.Entities
             };
         }
 
+        public void EnsureCanBeDeleted(IEnumerable<OrderItem> linkedOrderItems)
+        {
+            if (linkedOrderItems.Any())
+                throw new DomainException("Bu ürüne ait sipariş kayıtları bulunmaktadır. Bu ürün silinemez, bunun yerine pasif hale getirebilirsiniz.");
+        }
+
         public void Update(string name, decimal price, bool isActive, int categoryId)
         {
             if (string.IsNullOrWhiteSpace(name))

@@ -11,6 +11,7 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
     private readonly IMemoryCache _cache;
     private readonly ILogger<IdempotencyBehavior<TRequest, TResponse>> _logger;
     private readonly ICurrentUserService _currentUser;
+    private static readonly TimeSpan LockSafetyNet = TimeSpan.FromSeconds(30);
 
     public IdempotencyBehavior(IMemoryCache cache, ILogger<IdempotencyBehavior<TRequest, TResponse>> logger, ICurrentUserService currentUser)
     {
@@ -18,7 +19,7 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
         _logger = logger;
         _currentUser = currentUser;
     }
-
+    
     public async Task<TResponse> Handle(
         TRequest request,
         RequestHandlerDelegate<TResponse> next,
@@ -32,13 +33,18 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
         if (_cache.TryGetValue(key, out _))
         {
             _logger.LogWarning("Duplicate request blocked: {Key}", key);
-            throw new BusinessException("Bu istek zaten işlendi, lütfen tekrar denemeyin.");
+            throw new BusinessException("İşleminiz gerçekleştiriliyor, lütfen birkaç saniye bekleyip tekrar deneyin.");
         }
 
-        var response = await next();
+        _cache.Set(key, true, LockSafetyNet);
 
-        _cache.Set(key, true, TimeSpan.FromMinutes(5));
-
-        return response;
+        try
+        {
+            return await next();
+        }
+        finally
+        {
+            _cache.Remove(key);
+        }
     }
 }
