@@ -113,6 +113,7 @@ public class ProductTests
         public void WithLinkedOrderItems_ThrowsDomainException()
         {
             Product product = Product.Create("Çay", 15m, true, "img.png", categoryId: 1);
+            typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(product, 1);
             Order order = Order.Create(tableId: 1);
             order.AddItem(product, 1);
 
