@@ -18,6 +18,7 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
     public async Task Handle_ReturnsActiveOrderForGivenTable()
     {
         var table = Table.Create("Masa 1", "", RestaurantId);
+        table.AssignRegion(DefaultRegionId);
         await DbContext.Tables.AddAsync(table);
         await DbContext.SaveChangesAsync();
 
@@ -38,7 +39,9 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
     public async Task Handle_WhenMultipleTablesExist_ReturnsOrderForCorrectTable()
     {
         var table1 = Table.Create("Masa 1", "", RestaurantId);
+        table1.AssignRegion(DefaultRegionId);
         var table2 = Table.Create("Masa 2", "", RestaurantId);
+        table2.AssignRegion(DefaultRegionId);
         await DbContext.Tables.AddRangeAsync(table1, table2);
         await DbContext.SaveChangesAsync();
 

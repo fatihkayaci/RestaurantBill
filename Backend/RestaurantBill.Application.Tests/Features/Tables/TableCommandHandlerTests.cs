@@ -28,7 +28,7 @@ public class TableCommandHandlerTests
             var uow = new FakeUnitOfWork();
             var handler = new CreateTableCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 2 });
 
-            await handler.Handle(new CreateTableCommand { Name = "Masa 1" }, CancellationToken.None);
+            await handler.Handle(new CreateTableCommand { Name = "Masa 1", RegionId = 1 }, CancellationToken.None);
 
             Assert.Single(uow.TableRepo.Added);
             Assert.Equal(2, uow.TableRepo.Added[0].RestaurantId);
@@ -46,7 +46,7 @@ public class TableCommandHandlerTests
             await uow.TableRepo.AddAsync(table);
 
             var handler = new UpdateCommandHandler(uow);
-            var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved };
+            var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved, RegionId = 1 };
 
             await handler.Handle(command, CancellationToken.None);
 

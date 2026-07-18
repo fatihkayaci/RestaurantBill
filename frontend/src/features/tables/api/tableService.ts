@@ -13,19 +13,19 @@ export const tableService = {
     deleteTable: async (id: number) => {
         await api.delete(`/table/${id}`);
     },
-    createTable: async (name: string, regionId?: number | null) => {
+    createTable: async (name: string, regionId: number) => {
         const response = await api.post(`/table/create`, {
             Name: name,
-            RegionId: regionId ?? null
+            RegionId: regionId
         });
         return response.data;
     },
-    updateTable: async (id: number, name: string, status?: number, regionId?: number | null) => {
+    updateTable: async (id: number, name: string, regionId: number, status?: number) => {
         const response = await api.post(`/table/update`, {
             Id: id,
             Name: name,
             Status: status,
-            RegionId: regionId ?? null
+            RegionId: regionId
         });
         return response.data;
     },

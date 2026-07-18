@@ -24,10 +24,11 @@ public class GetAllTablesQueryTests : IntegrationTestBase
     [Fact]
     public async Task Handle_ReturnsOnlyTablesForCurrentRestaurant()
     {
-        await DbContext.Tables.AddRangeAsync(
-            Table.Create("Masa 1", "", RestaurantId),
-            Table.Create("Masa 2", "", OtherRestaurantId)
-        );
+        var table1 = Table.Create("Masa 1", "", RestaurantId);
+        table1.AssignRegion(DefaultRegionId);
+        var table2 = Table.Create("Masa 2", "", OtherRestaurantId);
+        table2.AssignRegion(OtherDefaultRegionId);
+        await DbContext.Tables.AddRangeAsync(table1, table2);
         await DbContext.SaveChangesAsync();
 
         var result = await _handler.Handle(new GetAllTableQuery(), CancellationToken.None);
@@ -39,11 +40,13 @@ public class GetAllTablesQueryTests : IntegrationTestBase
     [Fact]
     public async Task Handle_ReturnsTablesOrderedByName()
     {
-        await DbContext.Tables.AddRangeAsync(
-            Table.Create("C Masa", "", RestaurantId),
-            Table.Create("A Masa", "", RestaurantId),
-            Table.Create("B Masa", "", RestaurantId)
-        );
+        var tableC = Table.Create("C Masa", "", RestaurantId);
+        tableC.AssignRegion(DefaultRegionId);
+        var tableA = Table.Create("A Masa", "", RestaurantId);
+        tableA.AssignRegion(DefaultRegionId);
+        var tableB = Table.Create("B Masa", "", RestaurantId);
+        tableB.AssignRegion(DefaultRegionId);
+        await DbContext.Tables.AddRangeAsync(tableC, tableA, tableB);
         await DbContext.SaveChangesAsync();
 
         var result = await _handler.Handle(new GetAllTableQuery(), CancellationToken.None);

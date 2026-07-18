@@ -199,7 +199,7 @@ export default function Tables() {
     const openEditModal = (table: Table) => {
         setEditTable(table);
         setNewTableName(table.name);
-        setNewTableRegionId(table.regionId ?? null);
+        setNewTableRegionId(table.regionId);
         setFieldErrors({});
         setIsModalOpen(true);
     };
@@ -208,25 +208,21 @@ export default function Tables() {
         const errors: Record<string, string> = {};
         if (!newTableName.trim()) errors.name = 'Masa adı boş olamaz.';
         else if (newTableName.length > 50) errors.name = 'En fazla 50 karakter.';
+        if (!newTableRegionId) errors.regionId = 'Bölge seçilmelidir.';
         if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
 
         try {
             if (editTable) {
-                await tableService.updateTable(editTable.id, newTableName.trim(), undefined, newTableRegionId);
+                await tableService.updateTable(editTable.id, newTableName.trim(), newTableRegionId!);
             } else {
-                await tableService.createTable(newTableName.trim(), newTableRegionId);
+                await tableService.createTable(newTableName.trim(), newTableRegionId!);
             }
             await refreshTables();
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                const backendErrors = err.response?.data?.errors as Record<string, string[]> | undefined;
-                if (backendErrors) {
-                    const mapped: Record<string, string> = {};
-                    for (const key in backendErrors) mapped[key.charAt(0).toLowerCase() + key.slice(1)] = backendErrors[key][0];
-                    setFieldErrors(mapped);
-                }
+                setFieldErrors({ name: err.response?.data?.message ?? 'Masa kaydedilemedi.' });
             }
         }
     };
@@ -277,7 +273,6 @@ export default function Tables() {
             await regionService.deleteRegion(regionDeleteTargetId);
             setRegions(prev => prev.filter(r => r.id !== regionDeleteTargetId));
             if (selectedRegionId === regionDeleteTargetId) setSelectedRegionId('all');
-            await refreshTables();
             setRegionDeleteTargetId(null);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
@@ -616,11 +611,9 @@ export default function Tables() {
                                 </div>
                             </div>
 
-                            {table.regionName && (
-                                <span className="self-start text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                                    {table.regionName}
-                                </span>
-                            )}
+                            <span className="self-start text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                {table.regionName}
+                            </span>
 
                             <div className="flex-1 flex flex-col justify-end gap-1">
                                 {table.status === 1 && (
@@ -681,15 +674,16 @@ export default function Tables() {
                             <div>
                                 <label className={labelClass}>Bölge</label>
                                 <select
-                                    className={inputClass}
+                                    className={cn(inputClass, fieldErrors.regionId && "border-destructive")}
                                     value={newTableRegionId ?? ''}
                                     onChange={e => setNewTableRegionId(e.target.value ? Number(e.target.value) : null)}
                                 >
-                                    <option value="">Bölge seçilmedi</option>
+                                    <option value="">Bölge seçin</option>
                                     {regions.map(r => (
                                         <option key={r.id} value={r.id}>{r.name}</option>
                                     ))}
                                 </select>
+                                {fieldErrors.regionId && <p className="text-xs text-destructive mt-1">{fieldErrors.regionId}</p>}
                             </div>
                         </div>
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
@@ -762,7 +756,7 @@ export default function Tables() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Bölgeyi sil</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {regionDeleteError ?? "Bu bölgeyi silmek istediğinizden emin misiniz? Bölgeye atanmış masalar bölgesiz kalacaktır."}
+                            {regionDeleteError ?? "Bu bölgeyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

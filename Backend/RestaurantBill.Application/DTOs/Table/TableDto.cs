@@ -9,6 +9,6 @@ public class TableDto
     public TableStatus Status { get; set; }
     public decimal ActiveOrderTotal { get; set; }
     public DateTime? OccupiedSince { get; set; }
-    public int? RegionId { get; set; }
-    public string? RegionName { get; set; }
+    public int RegionId { get; set; }
+    public string RegionName { get; set; } = string.Empty;
 }

@@ -12,12 +12,8 @@ namespace RestaurantBill.Application.Features.Regions.Commands.DeleteRegion
             Region? region = await uow.Region.GetByIdAsync(command.Id);
             Guard.AgainstNull(region, "Böyle bir bölge bulunamadı");
 
-            IEnumerable<Table> linkedTables = await uow.Table.GetAllAsync(t => t.RegionId == command.Id, true);
-            foreach (Table table in linkedTables)
-            {
-                table.AssignRegion(null);
-                await uow.Table.UpdateAsync(table);
-            }
+            IEnumerable<Table> linkedTables = await uow.Table.GetAllAsync(t => t.RegionId == command.Id, false);
+            region.EnsureCanBeDeleted(linkedTables);
 
             uow.Region.Delete(region);
             await uow.SaveChangesAsync(cancellationToken);

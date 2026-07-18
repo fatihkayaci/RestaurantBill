@@ -10,8 +10,8 @@ namespace RestaurantBill.Domain.Entities
         public TableStatus Status { get; private set; } = TableStatus.Available;
         public int RestaurantId { get; private set; }
         public Restaurant Restaurant { get; private set; } = default!;
-        public int? RegionId { get; private set; }
-        public Region? Region { get; private set; }
+        public int RegionId { get; private set; }
+        public Region Region { get; private set; } = default!;
 
         protected Table() { }
 
@@ -40,8 +40,11 @@ namespace RestaurantBill.Domain.Entities
             Note = note;
         }
 
-        public void AssignRegion(int? regionId)
+        public void AssignRegion(int regionId)
         {
+            if (regionId <= 0)
+                throw new DomainException("Geçersiz bölge ID'si.");
+
             RegionId = regionId;
         }
 

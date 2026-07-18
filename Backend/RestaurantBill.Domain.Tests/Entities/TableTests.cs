@@ -119,4 +119,27 @@ public class TableTests
             Assert.Equal(TableStatus.Reserved, table.Status);
         }
     }
+
+    public class AssignRegion
+    {
+        [Fact]
+        public void WithValidRegionId_SetsRegionId()
+        {
+            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+
+            table.AssignRegion(5);
+
+            Assert.Equal(5, table.RegionId);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void WithInvalidRegionId_ThrowsDomainException(int invalidRegionId)
+        {
+            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+
+            Assert.Throws<DomainException>(() => table.AssignRegion(invalidRegionId));
+        }
+    }
 }

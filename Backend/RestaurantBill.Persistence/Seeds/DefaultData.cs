@@ -99,12 +99,27 @@ public static class DefaultData
             await context.SaveChangesAsync();
         }
 
+        // Regions
+        if (!await context.Regions.AnyAsync())
+        {
+            Region[] regions = new[]
+            {
+                Region.Create("Indoor", demoRestaurant.Id),
+                Region.Create("Terrace", demoRestaurant.Id),
+            };
+            await context.Regions.AddRangeAsync(regions);
+            await context.SaveChangesAsync();
+        }
+
         // Tables
         if (!await context.Tables.AnyAsync())
         {
+            Region indoor = await context.Regions.FirstAsync(r => r.Name == "Indoor");
+
             List<Table> tables = Enumerable.Range(1, 8)
                 .Select(i => Table.Create($"Table {i}", string.Empty, demoRestaurant.Id))
                 .ToList();
+            tables.ForEach(t => t.AssignRegion(indoor.Id));
             await context.Tables.AddRangeAsync(tables);
             await context.SaveChangesAsync();
         }

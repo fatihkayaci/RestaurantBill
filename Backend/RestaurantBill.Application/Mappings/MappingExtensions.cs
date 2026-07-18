@@ -91,7 +91,7 @@ public static class MappingExtensions
         Note = t.Note,
         Status = t.Status,
         RegionId = t.RegionId,
-        RegionName = t.Region?.Name
+        RegionName = t.Region.Name
     };
 
     public static ReservationDto ToDto(this Reservation r) => new()

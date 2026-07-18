@@ -17,6 +17,7 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
     private async Task<Table> SeedTableAsync(int restaurantId)
     {
         var table = Table.Create("Masa", "", restaurantId);
+        table.AssignRegion(restaurantId == RestaurantId ? DefaultRegionId : OtherDefaultRegionId);
         await DbContext.Tables.AddAsync(table);
         await DbContext.SaveChangesAsync();
         return table;

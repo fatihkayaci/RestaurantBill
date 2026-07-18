@@ -31,4 +31,10 @@ public class Region : BaseEntity
 
         Name = name;
     }
+
+    public void EnsureCanBeDeleted(IEnumerable<Table> linkedTables)
+    {
+        if (linkedTables.Any())
+            throw new DomainException("Bu bölgeye bağlı masalar bulunmaktadır. Lütfen silmeden önce ilgili masaların bölgesini güncelleyin.");
+    }
 }
