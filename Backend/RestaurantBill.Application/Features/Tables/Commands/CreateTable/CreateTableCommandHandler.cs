@@ -1,6 +1,7 @@
 using MediatR;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
@@ -19,6 +20,11 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
         public async Task Handle(CreateTableCommand request, CancellationToken cancellationToken)
         {
             int restaurantId = _currentUser.RestaurantId;
+
+            bool nameExistsInRegion = (await _uow.Table.GetAllAsync(t => t.Name == request.Name && t.RegionId == request.RegionId && t.RestaurantId == restaurantId, false)).Any();
+            if (nameExistsInRegion)
+                throw new BusinessException("Bu bölgede bu isimde bir masa zaten mevcut.");
+
             Table table = Table.Create(request.Name, string.Empty, restaurantId);
             table.AssignRegion(request.RegionId);
             await _uow.Table.AddAsync(table);

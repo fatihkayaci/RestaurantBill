@@ -138,12 +138,7 @@ export default function Menu() {
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                const errs = err.response?.data?.errors as Record<string, string[]> | undefined;
-                if (errs) {
-                    const mapped: Record<string, string> = {};
-                    for (const key in errs) mapped[key.charAt(0).toLowerCase() + key.slice(1)] = errs[key][0];
-                    setFieldErrors(mapped);
-                }
+                setFieldErrors({ name: err.response?.data?.message ?? 'Ürün kaydedilemedi.' });
             }
         }
     };
