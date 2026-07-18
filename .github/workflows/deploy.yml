@@ -41,7 +41,7 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           docker compose down
-          docker system prune -f
-          docker compose build --no-cache api
-          docker compose build --no-cache frontend
+          docker image prune -f
+          docker compose build api
+          docker compose build frontend
           docker compose up -d
