@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.CashRegisters.Commands.AddTransactionToCashRegister;
 using RestaurantBill.Application.Features.CashRegisters.Commands.CreateCashRegister;
 using RestaurantBill.Application.Features.CashRegisters.Commands.DeleteCashRegister;
+using RestaurantBill.Application.Features.CashRegisters.Commands.TransferBetweenCashRegisters;
 using RestaurantBill.Application.Features.CashRegisters.Commands.UpdateCashRegister;
 using RestaurantBill.Application.Features.CashRegisters.Queries.GetAllCashRegister;
 using RestaurantBill.Application.Features.CashRegisters.Queries.GetCashRegisterById;
@@ -95,6 +96,17 @@ public class CashRegisterController : ControllerBase
     {
         await _mediator.Send(command, cancellationToken);
         return Ok(new { Message = "İşlem başarıyla kaydedildi." });
+    }
+
+    /// <summary>
+    /// Transfers a given amount from one cash register to another.
+    /// </summary>
+    [Authorize(Roles = "Admin,Cashier")]
+    [HttpPost("transfer")]
+    public async Task<IActionResult> Transfer([FromBody] TransferBetweenCashRegistersCommand command, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(command, cancellationToken);
+        return Ok(new { Message = "Aktarım başarıyla gerçekleştirildi." });
     }
     #endregion
 

@@ -13,13 +13,14 @@ public static class MappingExtensions
         Status = r.Status
     };
 
-    public static CashTransactionDto ToDto(this CashRegister.CashTransaction t) => new()
+    public static CashTransactionDto ToDto(this CashTransaction t) => new()
     {
         Id = t.Id,
         CashRegisterId = t.CashRegisterId,
         Type = t.Type,
         Amount = t.Amount,
         UserId = t.UserId,
+        RelatedCashRegisterId = t.RelatedCashRegisterId,
         CreatedAt = t.CreatedAt
     };
 

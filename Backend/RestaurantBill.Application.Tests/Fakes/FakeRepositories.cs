@@ -4,7 +4,7 @@ using RestaurantBill.Domain.Interfaces;
 namespace RestaurantBill.Application.Tests.Fakes;
 
 public class FakeCashRegisterRepository : FakeGenericRepository<CashRegister>, ICashRegisterRepository { }
-public class FakeCashTransactionRepository : FakeGenericRepository<CashRegister.CashTransaction>, ICashTransactionRepository { }
+public class FakeCashTransactionRepository : FakeGenericRepository<CashTransaction>, ICashTransactionRepository { }
 public class FakeCategoryRepository : FakeGenericRepository<Category>, ICategoryRepository { }
 public class FakeMembershipRepository : FakeGenericRepository<Membership>, IMembershipRepository { }
 public class FakeOrderItemRepository : FakeGenericRepository<OrderItem>, IOrderItemRepository { }
