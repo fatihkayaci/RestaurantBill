@@ -30,19 +30,23 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
         public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
             string identifier = !string.IsNullOrWhiteSpace(request.UserName) ? request.UserName : request.Email!;
+            string? slug = _tenantResolver.Slug;
 
-            User? user = (await _uow.User.GetAllAsync(u => u.Email == identifier && !u.IsDeleted, false)).FirstOrDefault();
+            User? user;
 
-            if (user == null)
+            if (!string.IsNullOrWhiteSpace(slug))
             {
-                string? slug = _tenantResolver.Slug;
-                if (string.IsNullOrWhiteSpace(slug))
-                    throw new BusinessException("Restoran belirlenemedi.");
-
-                Restaurant? restaurant = (await _uow.Restaurant.GetAllAsync(r => r.Slug == slug, false)).FirstOrDefault()
+                Restaurant restaurant = (await _uow.Restaurant.GetAllAsync(r => r.Slug == slug, false)).FirstOrDefault()
                     ?? throw new BusinessException("Restoran bulunamadı.");
 
-                user = (await _uow.User.GetAllAsync(u => u.UserName == identifier && u.RestaurantId == restaurant.Id && !u.IsDeleted, false)).FirstOrDefault();
+                user = (await _uow.User.GetAllAsync(u =>
+                    (u.UserName == identifier || u.Email == identifier)
+                    && u.RestaurantId == restaurant.Id
+                    && !u.IsDeleted, false)).FirstOrDefault();
+            }
+            else
+            {
+                user = (await _uow.User.GetAllAsync(u => u.Email == identifier && !u.IsDeleted, false)).FirstOrDefault();
             }
 
             if (user == null)
