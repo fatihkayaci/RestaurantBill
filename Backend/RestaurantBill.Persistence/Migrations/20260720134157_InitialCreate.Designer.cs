@@ -12,8 +12,8 @@ using RestaurantBill.Persistence.Context;
 namespace RestaurantBill.Persistence.Migrations
 {
     [DbContext(typeof(RestaurantBillDbContext))]
-    [Migration("20260720100356_AddCashTransactionRelatedCashRegisterId")]
-    partial class AddCashTransactionRelatedCashRegisterId
+    [Migration("20260720134157_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
