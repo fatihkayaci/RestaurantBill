@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace RestaurantBill.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class RegionIdNotNullable : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -177,6 +177,7 @@ namespace RestaurantBill.Persistence.Migrations
                     Amount = table.Column<decimal>(type: "numeric", nullable: false),
                     UserId = table.Column<int>(type: "integer", nullable: false),
                     CashRegisterId = table.Column<int>(type: "integer", nullable: false),
+                    RelatedCashRegisterId = table.Column<int>(type: "integer", nullable: true),
                     CreatedUser = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
