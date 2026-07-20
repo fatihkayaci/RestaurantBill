@@ -52,38 +52,30 @@ public class CashRegister : BaseEntity
             throw new DomainException("Bu kasada bakiye bulunmaktadır. Lütfen silmeden önce bakiyeyi sıfırlayın.");
     }
 
-    public CashTransaction AddTransaction(CashTransactionType type, decimal amount, int userId)
+    public CashTransaction AddTransaction(CashTransactionType type, decimal amount, int userId, int? relatedCashRegisterId = null)
     {
         if (Status != CashRegisterStatus.Open)
             throw new DomainException("Kapalı bir kasaya işlem eklenemez.");
 
-        if (type == CashTransactionType.Out && Balance < amount)
+        bool isOutgoing = type is CashTransactionType.Out or CashTransactionType.TransferOut;
+
+        if (isOutgoing && Balance < amount)
             throw new DomainException("Kasa bakiyesi bu çıkışı karşılamak için yetersiz.");
 
-        Balance += type == CashTransactionType.In ? amount : -amount;
+        Balance += isOutgoing ? -amount : amount;
 
-        return CashTransaction.Create(Id, type, amount, userId);
+        return CashTransaction.Create(Id, type, amount, userId, relatedCashRegisterId);
     }
 
-    public class CashTransaction : BaseEntity
+    public static (CashTransaction SourceTransaction, CashTransaction DestinationTransaction) Transfer(
+        CashRegister source, CashRegister destination, decimal amount, int userId)
     {
-        public CashTransactionType Type { get; private set; }
-        public decimal Amount { get; private set; }
-        public int UserId { get; private set; }
-        public int CashRegisterId { get; private set; }
-        public CashRegister CashRegister { get; private set; } = default!;
+        if (source.Id == destination.Id)
+            throw new DomainException("Aynı kasaya aktarım yapılamaz.");
 
-        protected CashTransaction() { }
+        CashTransaction sourceTransaction = source.AddTransaction(CashTransactionType.TransferOut, amount, userId, destination.Id);
+        CashTransaction destinationTransaction = destination.AddTransaction(CashTransactionType.TransferIn, amount, userId, source.Id);
 
-        internal static CashTransaction Create(int cashRegisterId, CashTransactionType type, decimal amount, int userId)
-        {
-            return new CashTransaction
-            {
-                CashRegisterId = cashRegisterId,
-                Type = type,
-                Amount = amount,
-                UserId = userId
-            };
-        }
+        return (sourceTransaction, destinationTransaction);
     }
 }

@@ -20,7 +20,7 @@ public class RestaurantBillDbContext : DbContext
     public DbSet<Table> Tables { get; set; }
     public DbSet<Region> Regions { get; set; }
     public DbSet<CashRegister> CashRegisters { get; set; }
-    public DbSet<CashRegister.CashTransaction> CashTransactions { get; set; }
+    public DbSet<CashTransaction> CashTransactions { get; set; }
     public DbSet<Reservation> Reservations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

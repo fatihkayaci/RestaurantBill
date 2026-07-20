@@ -42,4 +42,12 @@ export const cashRegisterService = {
         });
         return response.data;
     },
+    transferBetweenCashRegisters: async (sourceCashRegisterId: number, destinationCashRegisterId: number, amount: number) => {
+        const response = await api.post('/cashregister/transfer', {
+            SourceCashRegisterId: sourceCashRegisterId,
+            DestinationCashRegisterId: destinationCashRegisterId,
+            Amount: amount,
+        });
+        return response.data;
+    },
 };

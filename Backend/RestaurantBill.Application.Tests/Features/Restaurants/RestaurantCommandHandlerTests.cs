@@ -14,6 +14,7 @@ public class RestaurantCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             Restaurant restaurant = Restaurant.Create();
+            typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(restaurant, 1);
             await uow.RestaurantRepo.AddAsync(restaurant);
 
             var handler = new UpdateRestaurantCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 1 });

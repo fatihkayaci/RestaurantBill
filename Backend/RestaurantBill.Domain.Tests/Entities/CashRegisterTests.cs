@@ -174,12 +174,69 @@ public class CashRegisterTests
         {
             CashRegister cashRegister = CashRegister.Create("Kasa", 200m, CashRegisterStatus.Open, restaurantId: 1);
 
-            CashRegister.CashTransaction transaction =
+            CashTransaction transaction =
                 cashRegister.AddTransaction(CashTransactionType.In, 75m, userId: 42);
 
             Assert.Equal(CashTransactionType.In, transaction.Type);
             Assert.Equal(75m, transaction.Amount);
             Assert.Equal(42, transaction.UserId);
+        }
+    }
+
+    public class Transfer
+    {
+        private static void SetId(CashRegister register, int id)
+        {
+            typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(register, id);
+        }
+
+        [Fact]
+        public void WithValidParameters_MovesBalanceBetweenRegisters()
+        {
+            CashRegister source = CashRegister.Create("Kasa A", 300m, CashRegisterStatus.Open, restaurantId: 1);
+            CashRegister destination = CashRegister.Create("Kasa B", 100m, CashRegisterStatus.Open, restaurantId: 1);
+            SetId(source, 1);
+            SetId(destination, 2);
+
+            var (sourceTransaction, destinationTransaction) = CashRegister.Transfer(source, destination, 120m, userId: 7);
+
+            Assert.Equal(180m, source.Balance);
+            Assert.Equal(220m, destination.Balance);
+            Assert.Equal(CashTransactionType.TransferOut, sourceTransaction.Type);
+            Assert.Equal(2, sourceTransaction.RelatedCashRegisterId);
+            Assert.Equal(CashTransactionType.TransferIn, destinationTransaction.Type);
+            Assert.Equal(1, destinationTransaction.RelatedCashRegisterId);
+        }
+
+        [Fact]
+        public void WithSameRegisterAsSourceAndDestination_ThrowsDomainException()
+        {
+            CashRegister register = CashRegister.Create("Kasa", 300m, CashRegisterStatus.Open, restaurantId: 1);
+            SetId(register, 1);
+
+            Assert.Throws<DomainException>(() => CashRegister.Transfer(register, register, 50m, userId: 1));
+        }
+
+        [Fact]
+        public void WithInsufficientSourceBalance_ThrowsDomainException()
+        {
+            CashRegister source = CashRegister.Create("Kasa A", 50m, CashRegisterStatus.Open, restaurantId: 1);
+            CashRegister destination = CashRegister.Create("Kasa B", 100m, CashRegisterStatus.Open, restaurantId: 1);
+            SetId(source, 1);
+            SetId(destination, 2);
+
+            Assert.Throws<DomainException>(() => CashRegister.Transfer(source, destination, 100m, userId: 1));
+        }
+
+        [Fact]
+        public void WithClosedDestinationRegister_ThrowsDomainException()
+        {
+            CashRegister source = CashRegister.Create("Kasa A", 300m, CashRegisterStatus.Open, restaurantId: 1);
+            CashRegister destination = CashRegister.Create("Kasa B", 100m, CashRegisterStatus.Closed, restaurantId: 1);
+            SetId(source, 1);
+            SetId(destination, 2);
+
+            Assert.Throws<DomainException>(() => CashRegister.Transfer(source, destination, 50m, userId: 1));
         }
     }
 }

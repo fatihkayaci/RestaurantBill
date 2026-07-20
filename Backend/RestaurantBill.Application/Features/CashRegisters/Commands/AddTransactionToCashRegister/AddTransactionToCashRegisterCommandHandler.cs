@@ -22,7 +22,7 @@ public class AddTransactionToCashRegisterCommandHandler : IRequestHandler<AddTra
         CashRegister? register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId, true);
         Guard.AgainstNull(register, "Kasa bulunamadı.");
 
-        CashRegister.CashTransaction transaction = register.AddTransaction(request.Type, request.Amount, _currentUser.UserId);
+        CashTransaction transaction = register.AddTransaction(request.Type, request.Amount, _currentUser.UserId);
 
         await _uow.CashTransaction.AddAsync(transaction);
         await _uow.CashRegister.UpdateAsync(register);

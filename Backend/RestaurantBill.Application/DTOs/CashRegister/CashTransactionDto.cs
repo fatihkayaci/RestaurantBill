@@ -9,5 +9,6 @@ public class CashTransactionDto
     public CashTransactionType Type { get; set; }
     public decimal Amount { get; set; }
     public int UserId { get; set; }
+    public int? RelatedCashRegisterId { get; set; }
     public DateTime CreatedAt { get; set; }
 }

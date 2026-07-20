@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Pencil, ArrowDownCircle, ArrowUpCircle, Wallet } from 'lucide-react';
+import { X, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Wallet } from 'lucide-react';
 import axios from 'axios';
 import type { CashRegister, CashRegisterStatus } from '@/features/cashier/types';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
@@ -25,6 +25,11 @@ export default function CashRegisters() {
     const [txType, setTxType] = useState<1 | 2>(1);
     const [txAmount, setTxAmount] = useState<string>('');
     const [txError, setTxError] = useState<string | null>(null);
+
+    const [transferSource, setTransferSource] = useState<CashRegister | null>(null);
+    const [transferDestinationId, setTransferDestinationId] = useState<number | ''>('');
+    const [transferAmount, setTransferAmount] = useState<string>('');
+    const [transferError, setTransferError] = useState<string | null>(null);
 
     const totalBalance = registers.reduce((sum, r) => sum + r.balance, 0);
     const openCount = registers.filter(r => r.status === 1).length;
@@ -135,6 +140,37 @@ export default function CashRegisters() {
         }
     };
 
+    const openTransferDialog = (r: CashRegister) => {
+        setTransferSource(r);
+        setTransferDestinationId('');
+        setTransferAmount('');
+        setTransferError(null);
+    };
+
+    const closeTransferDialog = () => {
+        setTransferSource(null);
+        setTransferDestinationId('');
+        setTransferAmount('');
+        setTransferError(null);
+    };
+
+    const handleTransferSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!transferSource || transferDestinationId === '') return;
+        const amount = Number(transferAmount);
+        if (isNaN(amount) || amount <= 0) { setTransferError('Geçerli bir tutar giriniz.'); return; }
+        setTransferError(null);
+        try {
+            await cashRegisterService.transferBetweenCashRegisters(transferSource.id, transferDestinationId, amount);
+            await refresh();
+            closeTransferDialog();
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setTransferError(err.response?.data?.message ?? 'Aktarım gerçekleştirilemedi.');
+            }
+        }
+    };
+
     return (
         <div className="space-y-5">
             {/* Header */}
@@ -235,6 +271,14 @@ export default function CashRegisters() {
                                 >
                                     <ArrowUpCircle className="h-3.5 w-3.5" />
                                     Çıkış
+                                </button>
+                                <button
+                                    disabled={r.status !== 1 || registers.filter(x => x.id !== r.id && x.status === 1).length === 0}
+                                    onClick={() => openTransferDialog(r)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ArrowLeftRight className="h-3.5 w-3.5" />
+                                    Aktar
                                 </button>
                             </div>
                         </div>
@@ -352,6 +396,79 @@ export default function CashRegisters() {
                                 )}
                             >
                                 Onayla
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Kasalar Arası Aktarım Modal */}
+            {transferSource && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeTransferDialog} />
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-foreground">Kasalar Arası Aktarım</h2>
+                                <p className="text-sm text-muted-foreground mt-0.5">{transferSource.name}</p>
+                            </div>
+                            <button onClick={closeTransferDialog} className="text-muted-foreground hover:text-foreground transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleTransferSubmit} className="px-6 py-5 space-y-4">
+                            <div>
+                                <label className={labelClass}>Hedef Kasa</label>
+                                <select
+                                    className={inputClass}
+                                    value={transferDestinationId}
+                                    onChange={e => setTransferDestinationId(e.target.value === '' ? '' : Number(e.target.value))}
+                                >
+                                    <option value="">Seçiniz</option>
+                                    {registers.filter(x => x.id !== transferSource.id && x.status === 1).map(x => (
+                                        <option key={x.id} value={x.id}>{x.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className={cn(labelClass, "mb-0")}>Tutar (₺)</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTransferAmount(transferSource.balance.toString())}
+                                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                                    >
+                                        Tümünü Yaz
+                                    </button>
+                                </div>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    className={cn(inputClass, transferError && "border-destructive")}
+                                    placeholder="0.00"
+                                    value={transferAmount}
+                                    onChange={e => setTransferAmount(e.target.value)}
+                                    autoFocus
+                                />
+                                {transferError && <p className="text-xs text-destructive mt-1">{transferError}</p>}
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    Mevcut bakiye: ₺{transferSource.balance.toFixed(2)}
+                                </p>
+                            </div>
+                        </form>
+
+                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                            <button type="button" onClick={closeTransferDialog} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
+                            <button
+                                type="button"
+                                onClick={handleTransferSubmit}
+                                disabled={transferDestinationId === ''}
+                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Aktar
                             </button>
                         </div>
                     </div>
