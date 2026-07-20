@@ -177,12 +177,12 @@ export default function LoginPage() {
 
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
-                                        KULLANICI ADI
+                                        KULLANICI ADI VEYA E-POSTA
                                     </label>
                                     <Input
                                         value={loginField}
                                         onChange={(e) => setLoginField(e.target.value)}
-                                        placeholder="kullanici_adi"
+                                        placeholder="kullanici_adi veya e-posta"
                                         className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
                                     />
                                 </div>
