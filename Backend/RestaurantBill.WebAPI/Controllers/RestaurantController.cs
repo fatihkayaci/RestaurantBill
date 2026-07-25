@@ -10,7 +10,7 @@ namespace RestaurantBill.WebAPI.Controllers;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class RestaurantController : ControllerBase
+public class RestaurantController : BaseController
 {
     private readonly IMediator _mediator;
     public RestaurantController(IMediator mediator)
@@ -26,8 +26,8 @@ public class RestaurantController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetMyRestaurant(CancellationToken cancellationToken)
     {
-        RestaurantDto result = await _mediator.Send(new GetRestaurantByUserIdQuery(), cancellationToken);
-        return Ok(result);
+        var result = await _mediator.Send(new GetRestaurantByUserIdQuery(), cancellationToken);
+        return HandleResult(result);
     }
         
     #endregion
@@ -42,8 +42,8 @@ public class RestaurantController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> UpdateRestaurant([FromBody] UpdateRestaurantCommand command, CancellationToken cancellationToken)
     {
-        await _mediator.Send(command, cancellationToken);
-        return Ok(new { Message = "Restaurant oluşturuldu." });
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
     }
     
     #endregion

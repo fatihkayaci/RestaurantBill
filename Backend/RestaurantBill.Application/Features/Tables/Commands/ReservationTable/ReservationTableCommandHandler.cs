@@ -3,10 +3,11 @@ using MediatR;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
 {
-    public class ReservationTableCommandHandler : IRequestHandler<ReservationTableCommand>
+    public class ReservationTableCommandHandler : IRequestHandler<ReservationTableCommand, Result>
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
@@ -19,10 +20,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
             _currentUserService = currentUserService;
         }
 
-        public async Task Handle(ReservationTableCommand request, CancellationToken cancellationToken)
+        public async Task<Result> Handle(ReservationTableCommand request, CancellationToken cancellationToken)
         {
             Table? table = await _uow.Table.GetByIdAsync(request.TableId, true);
-            Guard.AgainstNull(table, "Böyle bir masa bulunamadı.");
+            if (table is null) return Result.Failure("Böyle bir masa bulunamadı.");
 
             table.Reserve();
 
@@ -35,6 +36,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
+            return Result.Success();
         }
     }
 }

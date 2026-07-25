@@ -1,10 +1,11 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
 {
-    public class CreateUserCommand : IRequest, IInvalidatesCache, IIdempotent
+    public class CreateUserCommand : IRequest<Result>, IInvalidatesCache, IIdempotent
     {
         public required string FullName { get; set; }
         public required string UserName { get; set; }

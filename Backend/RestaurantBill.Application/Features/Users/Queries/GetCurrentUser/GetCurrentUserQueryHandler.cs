@@ -4,10 +4,12 @@ using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Domain.Shared;
+using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Application.Features.Users.Queries.GetCurrentUser;
 
-public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, UserDto>
+public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, Result<UserDto>>
 {
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
@@ -18,11 +20,11 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, U
         _currentUser = currentUser;
     }
 
-    public async Task<UserDto> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
+    public async Task<Result<UserDto>> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
     {
-        var user = await _uow.User.GetByIdAsync(_currentUser.UserId)
-            ?? throw new NotFoundException("Kullanıcı bulunamadı.");
+        User? user = await _uow.User.GetByIdAsync(_currentUser.UserId);
+        if (user is null) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
 
-        return user.ToDto();
+        return Result<UserDto>.Success(user.ToDto());
     }
 }

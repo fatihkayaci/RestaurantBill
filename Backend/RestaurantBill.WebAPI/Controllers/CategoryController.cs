@@ -11,7 +11,7 @@ namespace RestaurantBill.WebAPI.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class CategoryController : ControllerBase
+    public class CategoryController : BaseController
     {
         private readonly IMediator _mediator;
         public CategoryController(IMediator mediator)
@@ -28,8 +28,8 @@ namespace RestaurantBill.WebAPI.Controllers
         public async Task<IActionResult> GetAll()
         {
             var query = new GetAllCategoryQuery();
-            var categories = await _mediator.Send(query);
-            return Ok(categories);
+            var result = await _mediator.Send(query);
+            return HandleResult(result);
         }
         #endregion
         #region post methods
@@ -45,8 +45,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateCategory([FromBody]CreateCategoryCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Kategori başarıyla oluşturuldu");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         
         /// <summary>
@@ -60,8 +60,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("update")]
         public async Task<IActionResult> UpdateCategory([FromBody]UpdateCategoryCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Kategori başarıyla güncellendi");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
             
         #endregion
@@ -78,8 +78,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory([FromRoute]int id, CancellationToken cancellationToken)
         {
-            await _mediator.Send(new DeleteCategoryCommand{Id= id}, cancellationToken);
-            return Ok("kategori başarıyla silindi");
+            var result = await _mediator.Send(new DeleteCategoryCommand{Id= id}, cancellationToken);
+            return HandleResult(result);
         }
         #endregion
     }

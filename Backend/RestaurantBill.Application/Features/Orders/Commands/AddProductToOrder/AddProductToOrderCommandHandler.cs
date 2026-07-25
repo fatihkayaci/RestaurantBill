@@ -3,10 +3,11 @@ using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using MediatR;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 {
-    public class AddProductToOrderCommandHandler : IRequestHandler<AddProductToOrderCommand>
+    public class AddProductToOrderCommandHandler : IRequestHandler<AddProductToOrderCommand, Result>
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
@@ -21,15 +22,17 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             _currentUserService = currentUserService;
         }
 
-        public async Task Handle(AddProductToOrderCommand request, CancellationToken cancellationToken)
+        public async Task<Result> Handle(AddProductToOrderCommand request, CancellationToken cancellationToken)
         {
             Order? order = await _uow.Order.GetByIdAsync(request.OrderId, true, o => o.OrderItems);
-            Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
+            if (order is null)
+                return Result.Failure("Böyle bir sipariş bulunamadı.");
 
             foreach (var item in request.OrderItems)
             {
                 Product? product = await _uow.Product.GetByIdAsync(item.ProductId);
-                Guard.AgainstNull(product, "Böyle bir ürün bulunamadı.");
+                if (product is null)
+                    return Result.Failure("Böyle bir ürün bulunamadı.");
 
                 order.AddItem(product, item.Quantity);
             }
@@ -41,6 +44,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 
             await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.RestaurantId, order.TableId, order.TotalPrice);
             await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.RestaurantId);
+            return Result.Success();
         }
     }
 }

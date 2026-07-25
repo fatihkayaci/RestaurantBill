@@ -17,7 +17,7 @@ namespace RestaurantBill.WebAPI.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class OrderController : ControllerBase
+    public class OrderController : BaseController
     {
         private readonly IMediator _mediator;
 
@@ -34,7 +34,7 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             var query = new GetAllOrdersToKitchenQuery();
             var result = await _mediator.Send(query, cancellationToken);
-            return Ok(result);
+            return HandleResult(result);
         }
         [Authorize(Roles = "Cashier")]
         [HttpGet("cashier")]
@@ -42,7 +42,7 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             var query = new GetAllOrdersToCashierQuery();
             var result = await _mediator.Send(query, cancellationToken);
-            return Ok(result);
+            return HandleResult(result);
         }
         /// <summary> Returns the active order for the given table. </summary>
         /// <param name="tableId">Table ID</param>
@@ -53,7 +53,7 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             var query = new GetActiveOrderByTableIdQuery{TableId = tableId};
             var result = await _mediator.Send(query, cancellationToken);
-            return Ok(result);
+            return HandleResult(result);
         }
         #endregion
         
@@ -65,8 +65,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("add-product")]
         public async Task<IActionResult> AddProducts([FromBody] AddProductToOrderCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Masaya ürünler eklendi veya güncellendi." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         /// <summary> Cancels the entire order and releases the table. </summary>
         /// <param name="command"></param>
@@ -75,8 +75,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("cancel")]
         public async Task<IActionResult> Cancel([FromBody]CancelOrderCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         /// <summary> Closes the order, marks it as paid and sets the table to available. </summary>
         /// <param name="command"></param>
@@ -85,8 +85,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("close")]
         public async Task<IActionResult> Close([FromBody]DeleteCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Masa başarılı bir şekilde kapatıldı." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         /// <summary> Creates a new order for a table. </summary>
         /// <param name="command"></param>
@@ -95,8 +95,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody]CreateOrderCommand command, CancellationToken cancellationToken)
         {
-            var newOrder = await _mediator.Send(command, cancellationToken);
-            return Created("", newOrder);
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         /// <summary> Updates the quantity of a specific item in the order. Only Pending items can be updated. </summary>
         /// <param name="command"></param>
@@ -105,8 +105,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("item/quantity")]
         public async Task<IActionResult> UpdateOrderItemQuantity([FromBody]UpdateOrderItemQuantityCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Ürün başarıyla güncellendi."});
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         
         /// <summary> Removes a specific product from the order. Only Pending items can be removed. </summary>
@@ -116,8 +116,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("item/remove")]
         public async Task<IActionResult> RemoveProductFromOrder([FromBody]RemoveProductFromOrderCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "siparişten ürün başarıyla kaldırıldi." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         
         /// <summary> Updates the status of an order (Kitchen use). </summary>
@@ -129,8 +129,8 @@ namespace RestaurantBill.WebAPI.Controllers
         public async Task<IActionResult> UpdateStatus([FromRoute] int id, [FromBody] UpdateOrderStatusCommand command, CancellationToken cancellationToken)
         {
             command.OrderId = id;
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Sipariş durumu güncellendi." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
 
         /// <summary> Updates the status of a single order item (Kitchen and Waiter use). </summary>
@@ -140,8 +140,8 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             command.OrderId = orderId;
             command.OrderItemId = itemId;
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Ürün durumu güncellendi." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
 
         #endregion

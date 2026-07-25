@@ -28,7 +28,8 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
     {
         var result = await _handler.Handle(new GetAllOrdersToCashierQuery(), CancellationToken.None);
 
-        Assert.Empty(result);
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value!);
     }
 
     [Fact]
@@ -52,9 +53,10 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllOrdersToCashierQuery(), CancellationToken.None);
 
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, o => o.Status == OrderStatus.Active);
-        Assert.Contains(result, o => o.Status == OrderStatus.Served);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value!.Count);
+        Assert.Contains(result.Value!, o => o.Status == OrderStatus.Active);
+        Assert.Contains(result.Value!, o => o.Status == OrderStatus.Served);
     }
 
     [Fact]
@@ -74,7 +76,8 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllOrdersToCashierQuery(), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(myTable.Id, result[0].TableId);
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!);
+        Assert.Equal(myTable.Id, result.Value![0].TableId);
     }
 }

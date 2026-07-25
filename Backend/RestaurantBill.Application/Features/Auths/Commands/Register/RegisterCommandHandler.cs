@@ -5,10 +5,11 @@ using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.Register
 {
-    public class RegisterCommandHandler : IRequestHandler<RegisterCommand, string>
+    public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<string>>
     {
         private readonly IUnitOfWork _uow;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -19,15 +20,15 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             _passwordHasher = passwordHasher;
         }
 
-        public async Task<string> Handle(RegisterCommand request, CancellationToken cancellationToken)
+        public async Task<Result<string>> Handle(RegisterCommand request, CancellationToken cancellationToken)
         {
             bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && !u.IsDeleted, false)).Any();
             if (userNameExists)
-                throw new BusinessException("Bu kullanıcı adı zaten kullanımda.");
+                return Result<string>.Failure("Bu kullanıcı adı zaten kullanımda.");
 
             bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && !u.IsDeleted, false)).Any();
             if (emailExists)
-                throw new BusinessException("Bu e-posta adresi zaten kullanımda.");
+                return Result<string>.Failure("Bu e-posta adresi zaten kullanımda.");
 
             Restaurant restaurant = Restaurant.Create(request.RestaurantName);
             restaurant.AssignSlug(await GenerateUniqueSlugAsync(request.RestaurantName));
@@ -43,7 +44,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             await _uow.Membership.AddAsync(membership);
             await _uow.SaveChangesAsync(cancellationToken);
 
-            return restaurant.Slug;
+            return Result<string>.Success(restaurant.Slug);
         }
 
         private async Task<string> GenerateUniqueSlugAsync(string restaurantName)

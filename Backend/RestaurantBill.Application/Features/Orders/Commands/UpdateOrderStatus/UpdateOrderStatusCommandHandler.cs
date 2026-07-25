@@ -4,10 +4,11 @@ using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus
 {
-    public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatusCommand>
+    public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatusCommand, Result>
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
@@ -22,10 +23,11 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus
             _currentUserService = currentUserService;
         }
 
-        public async Task Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)
+        public async Task<Result> Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)
         {
             Order? order = await _uow.Order.GetByIdAsync(request.OrderId, true, o => o.OrderItems);
-            Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
+            if (order is null)
+                return Result.Failure("Böyle bir sipariş bulunamadı.");
 
             OrderStatus newStatus = (OrderStatus)request.Status;
             order.UpdateStatus(newStatus);
@@ -34,6 +36,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus
 
             await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.RestaurantId, order.TableId, order.TotalPrice);
             await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.RestaurantId);
+            return Result.Success();
         }
     }
 }

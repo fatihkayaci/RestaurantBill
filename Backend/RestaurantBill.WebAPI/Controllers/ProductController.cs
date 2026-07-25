@@ -11,7 +11,7 @@ namespace RestaurantBill.WebAPI.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class ProductController : ControllerBase
+    public class ProductController : BaseController
     {
         private readonly IMediator _mediator;
         public ProductController(IMediator mediator)
@@ -28,8 +28,8 @@ namespace RestaurantBill.WebAPI.Controllers
         public async Task<IActionResult> GetAll()
         {
             var query = new GetAllProductQuery();
-            var products = await _mediator.Send(query);
-            return Ok(products);
+            var result = await _mediator.Send(query);
+            return HandleResult(result);
         }
             
         #endregion
@@ -45,8 +45,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateProduct([FromBody]CreateProductCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Ürün başarıyla oluşturuldu");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -59,8 +59,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("update")]
         public async Task<IActionResult> UpdateProduct([FromBody]UpdateProductCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Ürün başarıyla güncellendi");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
             
         #endregion
@@ -76,8 +76,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct([FromRoute]int id, CancellationToken cancellationToken)
         {
-            await _mediator.Send(new DeleteProductCommand{Id = id}, cancellationToken);
-            return Ok("Ürün başarıyla silindi");
+            var result = await _mediator.Send(new DeleteProductCommand{Id = id}, cancellationToken);
+            return HandleResult(result);
         }    
         #endregion
     }

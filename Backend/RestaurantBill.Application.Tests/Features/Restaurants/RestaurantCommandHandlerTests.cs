@@ -1,7 +1,6 @@
 using RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant;
 using RestaurantBill.Application.Tests.Fakes;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Application.Tests.Features.Restaurants;
 
@@ -36,13 +35,14 @@ public class RestaurantCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingRestaurant_ThrowsNotFoundException()
+        public async Task Handle_WithNonExistingRestaurant_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new UpdateRestaurantCommandHandler(uow, new FakeCurrentUserService());
 
-            await Assert.ThrowsAsync<NotFoundException>(() =>
-                handler.Handle(new UpdateRestaurantCommand { Name = "Ad" }, CancellationToken.None));
+            var result = await handler.Handle(new UpdateRestaurantCommand { Name = "Ad" }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 }

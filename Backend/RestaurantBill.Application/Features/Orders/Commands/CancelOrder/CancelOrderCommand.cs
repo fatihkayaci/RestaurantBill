@@ -1,9 +1,10 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CancelOrder
 {
-    public class CancelOrderCommand : IRequest, IIdempotent
+    public class CancelOrderCommand : IRequest<Result>, IIdempotent
     {
         public int OrderId { get; set; }
 

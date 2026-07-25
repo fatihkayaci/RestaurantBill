@@ -1,13 +1,12 @@
 using MediatR;
-using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.CashRegisters.Commands.TransferBetweenCashRegisters;
 
-public class TransferBetweenCashRegistersCommandHandler : IRequestHandler<TransferBetweenCashRegistersCommand>
+public class TransferBetweenCashRegistersCommandHandler : IRequestHandler<TransferBetweenCashRegistersCommand, Result>
 {
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
@@ -18,16 +17,16 @@ public class TransferBetweenCashRegistersCommandHandler : IRequestHandler<Transf
         _currentUser = currentUser;
     }
 
-    public async Task Handle(TransferBetweenCashRegistersCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(TransferBetweenCashRegistersCommand request, CancellationToken cancellationToken)
     {
         CashRegister? source = await _uow.CashRegister.GetByIdAsync(request.SourceCashRegisterId, true);
-        Guard.AgainstNull(source, "Kaynak kasa bulunamadı.");
-
+        if(source is null) return Result.Failure("Kaynak kasa bulunamadı");
+        
         CashRegister? destination = await _uow.CashRegister.GetByIdAsync(request.DestinationCashRegisterId, true);
-        Guard.AgainstNull(destination, "Hedef kasa bulunamadı.");
+        if (destination is null) return Result.Failure("Hedef kasa bulunamadı.");
 
         if (source.RestaurantId != _currentUser.RestaurantId || destination.RestaurantId != _currentUser.RestaurantId)
-            throw new NotFoundException("Kasa bulunamadı.");
+            return Result.Failure("Kasa bulunamadı.");
 
         (CashTransaction sourceTransaction, CashTransaction destinationTransaction) =
             CashRegister.Transfer(source, destination, request.Amount, _currentUser.UserId);
@@ -37,5 +36,6 @@ public class TransferBetweenCashRegistersCommandHandler : IRequestHandler<Transf
         await _uow.CashRegister.UpdateAsync(source);
         await _uow.CashRegister.UpdateAsync(destination);
         await _uow.SaveChangesAsync(cancellationToken);
+        return Result.Success();
     }
 }

@@ -19,6 +19,7 @@ public class CashRegisterCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             var currentUser = new FakeCurrentUserService { RestaurantId = 5 };
+            
             var handler = new CreateCashRegisterHandler(uow, currentUser);
             var command = new CreateCashRegisterCommand
             {
@@ -27,13 +28,13 @@ public class CashRegisterCommandHandlerTests
                 Status = CashRegisterStatus.Open
             };
 
-            await handler.Handle(command, CancellationToken.None);
-
+            var result = await handler.Handle(command, CancellationToken.None);
             Assert.Single(uow.CashRegisterRepo.Added);
             Assert.Equal("Ana Kasa", uow.CashRegisterRepo.Added[0].Name);
             Assert.Equal(1000m, uow.CashRegisterRepo.Added[0].Balance);
             Assert.Equal(5, uow.CashRegisterRepo.Added[0].RestaurantId);
             Assert.True(uow.SaveChangesCalled);
+            Assert.True(result.IsSuccess);
         }
     }
 
@@ -44,7 +45,6 @@ public class CashRegisterCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             CashRegister existing = CashRegister.Create("Eski Ad", 500m, CashRegisterStatus.Open, restaurantId: 1);
-            uow.CashRegisterRepo.Added.Contains(existing); // seed
             await uow.CashRegisterRepo.AddAsync(existing);
 
             var handler = new UpdateCashRegisterHandler(uow);
@@ -56,22 +56,25 @@ public class CashRegisterCommandHandlerTests
                 Status = CashRegisterStatus.Closed
             };
 
-            await handler.Handle(command, CancellationToken.None);
+            var result = await handler.Handle(command, CancellationToken.None);
 
             Assert.Equal("Yeni Ad", existing.Name);
             Assert.Equal(750m, existing.Balance);
             Assert.Equal(CashRegisterStatus.Closed, existing.Status);
             Assert.True(uow.SaveChangesCalled);
+            Assert.True(result.IsSuccess);
+
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingRegister_ThrowsException()
+        public async Task Handle_WithNonExistingRegister_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new UpdateCashRegisterHandler(uow);
             var command = new UpdateCashRegisterCommand { Id = 99, Name = "Ad", Balance = 0m, Status = CashRegisterStatus.Open };
 
-            await Assert.ThrowsAnyAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
+            var result = await handler.Handle(command, CancellationToken.None);
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -87,14 +90,15 @@ public class CashRegisterCommandHandlerTests
             var handler = new DeleteCashRegisterHandler(uow);
             var command = new DeleteCashRegisterCommand { CashRegisterId = existing.Id };
 
-            await handler.Handle(command, CancellationToken.None);
+            var result = await handler.Handle(command, CancellationToken.None);
 
             Assert.Empty(uow.CashRegisterRepo.Added);
             Assert.True(uow.SaveChangesCalled);
+            Assert.True(result.IsSuccess);
         }
 
         [Fact]
-        public async Task Handle_WithPositiveBalance_ThrowsException()
+        public async Task Handle_WithPositiveBalance_ThrowsDomainException()
         {
             var uow = new FakeUnitOfWork();
             CashRegister existing = CashRegister.Create("Kasa", 100m, CashRegisterStatus.Open, restaurantId: 1);
@@ -103,17 +107,18 @@ public class CashRegisterCommandHandlerTests
             var handler = new DeleteCashRegisterHandler(uow);
             var command = new DeleteCashRegisterCommand { CashRegisterId = existing.Id };
 
-            await Assert.ThrowsAnyAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
+            await Assert.ThrowsAsync<DomainException>(() => handler.Handle(command, CancellationToken.None));
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingRegister_ThrowsException()
+        public async Task Handle_WithNonExistingRegister_ReturnResultIsFailure()
         {
             var uow = new FakeUnitOfWork();
             var handler = new DeleteCashRegisterHandler(uow);
             var command = new DeleteCashRegisterCommand { CashRegisterId = 99 };
 
-            await Assert.ThrowsAnyAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
+            var result = await handler.Handle(command, CancellationToken.None);
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -134,11 +139,12 @@ public class CashRegisterCommandHandlerTests
                 Amount = 200m
             };
 
-            await handler.Handle(command, CancellationToken.None);
+            var result = await handler.Handle(command, CancellationToken.None);
 
             Assert.Equal(700m, register.Balance);
             Assert.Single(uow.CashTransactionRepo.Added);
             Assert.True(uow.SaveChangesCalled);
+            Assert.True(result.IsSuccess);
         }
 
         [Fact]
@@ -217,7 +223,7 @@ public class CashRegisterCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithRegisterFromAnotherRestaurant_ThrowsException()
+        public async Task Handle_WithRegisterFromAnotherRestaurant_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             CashRegister source = CashRegister.Create("Kasa A", 300m, CashRegisterStatus.Open, restaurantId: 5);
@@ -235,11 +241,13 @@ public class CashRegisterCommandHandlerTests
                 Amount = 50m
             };
 
-            await Assert.ThrowsAnyAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingDestinationRegister_ThrowsException()
+        public async Task Handle_WithNonExistingDestinationRegister_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             CashRegister source = CashRegister.Create("Kasa A", 300m, CashRegisterStatus.Open, restaurantId: 5);
@@ -254,7 +262,9 @@ public class CashRegisterCommandHandlerTests
                 Amount = 50m
             };
 
-            await Assert.ThrowsAnyAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 }

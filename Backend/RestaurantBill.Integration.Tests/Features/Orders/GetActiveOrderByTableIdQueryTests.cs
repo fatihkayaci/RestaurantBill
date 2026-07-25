@@ -30,9 +30,10 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
             new GetActiveOrderByTableIdQuery { TableId = table.Id },
             CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Equal(table.Id, result.TableId);
-        Assert.Equal(OrderStatus.Active, result.Status);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(table.Id, result.Value!.TableId);
+        Assert.Equal(OrderStatus.Active, result.Value!.Status);
     }
 
     [Fact]
@@ -54,7 +55,8 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
             new GetActiveOrderByTableIdQuery { TableId = table2.Id },
             CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Equal(table2.Id, result.TableId);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(table2.Id, result.Value!.TableId);
     }
 }

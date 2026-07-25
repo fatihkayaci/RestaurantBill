@@ -15,7 +15,7 @@ namespace RestaurantBill.WebAPI.Controllers;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class CashRegisterController : ControllerBase
+public class CashRegisterController : BaseController
 {
     private readonly IMediator _mediator;
     public CashRegisterController(IMediator mediator)
@@ -33,7 +33,7 @@ public class CashRegisterController : ControllerBase
     {
         var query = new GetAllCashRegisterQuery();
         var values = await _mediator.Send(query);
-        return Ok(values);
+        return HandleResult(values);
     }
 
     /// <summary>
@@ -49,7 +49,7 @@ public class CashRegisterController : ControllerBase
             CashRegisterId = id
         };
         var register = await _mediator.Send(query);
-        return Ok(register);
+        return HandleResult(register);
     }
     /// <summary>
     /// Returns the last 50 cash transactions ordered by date.
@@ -60,7 +60,7 @@ public class CashRegisterController : ControllerBase
     {
         var query = new GetCashTransactionsQuery();
         var result = await _mediator.Send(query, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
     #endregion
 
@@ -72,8 +72,8 @@ public class CashRegisterController : ControllerBase
     [HttpPost("create")]
     public async Task<IActionResult> Create([FromBody] CreateCashRegisterCommand command, CancellationToken cancellationToken)
     {
-        await _mediator.Send(command, cancellationToken);
-        return Ok("Kasa başarıyla oluşturuldu");
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -83,8 +83,8 @@ public class CashRegisterController : ControllerBase
     [HttpPost("update")]
     public async Task<IActionResult> Update([FromBody] UpdateCashRegisterCommand command, CancellationToken cancellationToken)
     {
-        await _mediator.Send(command, cancellationToken);
-        return Ok("Kasa başarıyla güncellendi");
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -94,8 +94,8 @@ public class CashRegisterController : ControllerBase
     [HttpPost("transaction")]
     public async Task<IActionResult> AddTransaction([FromBody] AddTransactionToCashRegisterCommand command, CancellationToken cancellationToken)
     {
-        await _mediator.Send(command, cancellationToken);
-        return Ok(new { Message = "İşlem başarıyla kaydedildi." });
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -105,8 +105,8 @@ public class CashRegisterController : ControllerBase
     [HttpPost("transfer")]
     public async Task<IActionResult> Transfer([FromBody] TransferBetweenCashRegistersCommand command, CancellationToken cancellationToken)
     {
-        await _mediator.Send(command, cancellationToken);
-        return Ok(new { Message = "Aktarım başarıyla gerçekleştirildi." });
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
     }
     #endregion
 
@@ -122,8 +122,8 @@ public class CashRegisterController : ControllerBase
         {
             CashRegisterId = id
         };
-        await _mediator.Send(command, cancellationToken);
-        return Ok(new { message = "Kasa başarıyla silindi" });
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
     }
     #endregion
 }

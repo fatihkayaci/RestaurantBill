@@ -9,7 +9,7 @@ namespace RestaurantBill.WebAPI.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [EnableRateLimiting("auth")]
-public class AuthController : ControllerBase
+public class AuthController : BaseController
 {
     private readonly IMediator _mediator;
     public AuthController(IMediator mediator)
@@ -27,7 +27,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody]LoginCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -39,8 +39,8 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterCommand command, CancellationToken cancellationToken)
     {
-        string slug = await _mediator.Send(command, cancellationToken);
-        return Ok(new { Message = "Kullanıcı kaydı tamamlandı.", Slug = slug });
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
     }
     #endregion
 }

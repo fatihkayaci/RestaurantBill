@@ -4,7 +4,6 @@ using RestaurantBill.Application.Features.Users.Commands.UpdateUser;
 using RestaurantBill.Application.Tests.Fakes;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Application.Tests.Features.Users;
 
@@ -34,7 +33,7 @@ public class UserCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithDuplicateUserName_ThrowsBusinessException()
+        public async Task Handle_WithDuplicateUserName_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             User existing = User.Create("Ali Veli", "fatih", null, null, "USR01", UserRole.Waiter, restaurantId: 1);
@@ -49,7 +48,9 @@ public class UserCommandHandlerTests
                 PasswordHash = "123456"
             };
 
-            await Assert.ThrowsAsync<BusinessException>(() => handler.Handle(command, CancellationToken.None));
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -70,13 +71,14 @@ public class UserCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingUser_ThrowsNotFoundException()
+        public async Task Handle_WithNonExistingUser_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new DeleteUserCommandHandler(uow);
 
-            await Assert.ThrowsAsync<NotFoundException>(() =>
-                handler.Handle(new DeleteUserCommand { UserId = 99 }, CancellationToken.None));
+            var result = await handler.Handle(new DeleteUserCommand { UserId = 99 }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -130,13 +132,14 @@ public class UserCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingUser_ThrowsNotFoundException()
+        public async Task Handle_WithNonExistingUser_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher());
 
-            await Assert.ThrowsAsync<NotFoundException>(() =>
-                handler.Handle(new UpdateUserCommand { UserId = 99, FullName = "Ad", UserName = "un", UserCode = "UC" }, CancellationToken.None));
+            var result = await handler.Handle(new UpdateUserCommand { UserId = 99, FullName = "Ad", UserName = "un", UserCode = "UC" }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 }

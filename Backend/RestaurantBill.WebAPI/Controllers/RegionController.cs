@@ -11,7 +11,7 @@ namespace RestaurantBill.WebAPI.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class RegionController : ControllerBase
+    public class RegionController : BaseController
     {
         private readonly IMediator _mediator;
         public RegionController(IMediator mediator)
@@ -28,8 +28,8 @@ namespace RestaurantBill.WebAPI.Controllers
         public async Task<IActionResult> GetAll()
         {
             var query = new GetAllRegionQuery();
-            var regions = await _mediator.Send(query);
-            return Ok(regions);
+            var result = await _mediator.Send(query);
+            return HandleResult(result);
         }
         #endregion
         #region post methods
@@ -44,8 +44,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateRegion([FromBody]CreateRegionCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Bölge başarıyla oluşturuldu");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -58,8 +58,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("update")]
         public async Task<IActionResult> UpdateRegion([FromBody]UpdateRegionCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Bölge başarıyla güncellendi");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
 
         #endregion
@@ -75,8 +75,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRegion([FromRoute]int id, CancellationToken cancellationToken)
         {
-            await _mediator.Send(new DeleteRegionCommand{Id = id}, cancellationToken);
-            return Ok("Bölge başarıyla silindi");
+            var result = await _mediator.Send(new DeleteRegionCommand{Id = id}, cancellationToken);
+            return HandleResult(result);
         }
         #endregion
     }

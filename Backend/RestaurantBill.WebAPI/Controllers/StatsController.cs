@@ -9,7 +9,7 @@ namespace RestaurantBill.WebAPI.Controllers
     [Authorize(Roles = "Admin")]
     [Route("api/[controller]")]
     [ApiController]
-    public class StatsController : ControllerBase
+    public class StatsController : BaseController
     {
         private readonly IMediator _mediator;
 
@@ -21,8 +21,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpGet("overview")]
         public async Task<IActionResult> GetOverview(CancellationToken cancellationToken)
         {
-            OverviewStatsDto result = await _mediator.Send(new GetOverviewStatsQuery(), cancellationToken);
-            return Ok(result);
+            var result = await _mediator.Send(new GetOverviewStatsQuery(), cancellationToken);
+            return HandleResult(result);
         }
     }
 }

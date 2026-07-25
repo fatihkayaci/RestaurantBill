@@ -1,9 +1,10 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
 {
-    public class CreateProductCommand : IRequest, IInvalidatesCache, IIdempotent
+    public class CreateProductCommand : IRequest<Result>, IInvalidatesCache, IIdempotent
     {
         public string Name { get; set; } = string.Empty;
         public decimal Price { get; set; }

@@ -1,9 +1,10 @@
 using MediatR;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 {
-    public class UpdateUserCommand : IRequest
+    public class UpdateUserCommand : IRequest<Result>
     {
         public int UserId { get; set; }
         public required string FullName { get; set; }

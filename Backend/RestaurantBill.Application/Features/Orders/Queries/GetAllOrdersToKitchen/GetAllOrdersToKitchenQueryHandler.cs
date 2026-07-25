@@ -5,10 +5,11 @@ using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Exceptions;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitchen
 {
-    public class GetAllOrdersToKitchenQueryHandler : IRequestHandler<GetAllOrdersToKitchenQuery, List<OrderDto>>
+    public class GetAllOrdersToKitchenQueryHandler : IRequestHandler<GetAllOrdersToKitchenQuery, Result<List<OrderDto>>>
     {
         private readonly IUnitOfWork _uow;
         private readonly ICurrentUserService _currentUser;
@@ -19,10 +20,11 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitch
             _currentUser = currentUser;
         }
 
-        public async Task<List<OrderDto>> Handle(GetAllOrdersToKitchenQuery request, CancellationToken cancellationToken)
+        public async Task<Result<List<OrderDto>>> Handle(GetAllOrdersToKitchenQuery request, CancellationToken cancellationToken)
         {
             int restaurantId = _currentUser.RestaurantId;
-            if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
+            if(restaurantId <= 0) 
+                return Result<List<OrderDto>>.Failure("ID değeri 0 veya negatif olamaz.");
 
             var excludedStatuses = new[] { OrderStatus.Paid, OrderStatus.Cancelled };
 
@@ -32,7 +34,7 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitch
                 "OrderItems,OrderItems.Product"
             );
 
-            return entities.Select(o => o.ToDto()).ToList();
+            return Result<List<OrderDto>>.Success(entities.Select(o => o.ToDto()).ToList());
         }
     }
 }
