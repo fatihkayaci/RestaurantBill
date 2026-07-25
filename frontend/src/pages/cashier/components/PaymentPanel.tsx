@@ -44,7 +44,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
             toast.success('Ödeme tamamlandı!');
             onComplete(order.id);
         } catch (err: any) {
-            toast.error(err.response?.data?.message ?? 'Ödeme tamamlanamadı.');
+            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Ödeme tamamlanamadı.');
         } finally {
             setSubmitting(false);
         }

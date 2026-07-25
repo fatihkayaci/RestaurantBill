@@ -241,7 +241,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             }
             setActiveTab('orders');
         } catch (err: any) {
-            toast.error(err.response?.data?.message ?? 'Sipariş gönderilemedi.');
+            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Sipariş gönderilemedi.');
         } finally {
             setSubmitting(false);
         }
@@ -258,7 +258,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             toast.success('Masa kapatıldı.');
             onClose();
         } catch (err: any) {
-            toast.error(err.response?.data?.message ?? 'Masa kapatılamadı.');
+            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Masa kapatılamadı.');
         }
     };
 
@@ -278,7 +278,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             toast.success('Rezervasyon kaydedildi.');
             onClose();
         } catch (err: any) {
-            toast.error(err.response?.data?.message ?? 'Rezervasyon kaydedilemedi.');
+            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Rezervasyon kaydedilemedi.');
         } finally {
             setSavingReservation(false);
         }
@@ -293,7 +293,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                 orderItems: prev.orderItems.map(i => i.id === itemId ? { ...i, status: 4 } : i),
             } : prev);
         } catch (err: any) {
-            toast.error(err.response?.data?.message ?? 'Servis edildi olarak işaretlenemedi.');
+            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Servis edildi olarak işaretlenemedi.');
         } finally {
             setServingItemId(null);
         }
@@ -310,7 +310,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             } : prev);
             toast.success('Ürünler servis edildi olarak işaretlendi.');
         } catch (err: any) {
-            toast.error(err.response?.data?.message ?? 'Servis edilemedi.');
+            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Servis edilemedi.');
         } finally {
             setServingAll(false);
         }
@@ -333,7 +333,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             setActiveTab('new-order');
             toast.success('Masa açıldı, müşteri karşılandı!');
         } catch (err: any) {
-            toast.error(err.response?.data?.message ?? 'Masa açılamadı.');
+            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Masa açılamadı.');
         } finally {
             setArriving(false);
         }
@@ -346,7 +346,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             toast.success('Rezervasyon iptal edildi.');
             onClose();
         } catch (err: any) {
-            toast.error(err.response?.data?.message ?? 'Rezervasyon iptal edilemedi.');
+            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Rezervasyon iptal edilemedi.');
         }
     };
 

@@ -44,8 +44,9 @@ export default function CategoriesPanel() {
             setCategories(prev => prev.filter(c => c.id !== deleteTargetId));
             setDeleteTargetId(null);
         } catch (err: unknown) {
-            const axiosError = err as { response?: { data?: { message?: string } } };
-            setDeleteError(axiosError.response?.data?.message ?? "Kategori silinemedi.");
+            if (axios.isAxiosError(err)) {
+                setDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? "Kategori silinemedi.");
+            }
         }
     };
 

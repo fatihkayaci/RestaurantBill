@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { authService } from "@/features/auth/api/authService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import axios from "axios";
 
 type TabType = "login" | "register";
 
@@ -55,8 +56,12 @@ export default function LoginPage() {
             else if (role === "Kitchen") navigate("/kitchen");
             else if (role === "Cashier") navigate("/cashier");
             else navigate("/waiter");
-        } catch (error: any) {
-            toast.error(error.response?.data?.message ?? error.response?.data ?? "Giriş başarısız.");
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                toast.error(error.response?.data.error ?? "Giriş başarısız.");
+            } else {
+                console.log('Beklenmeyen hata:', error);
+            }
         } finally {
             setLoginLoading(false);
         }
@@ -78,17 +83,21 @@ export default function LoginPage() {
         }
         try {
             setRegLoading(true);
-            const result = await authService.register({
+            const slug = await authService.register({
                 fullName: `${firstName} ${lastName}`,
                 userName: regEmail,
                 email: regEmail,
                 password: regPassword,
                 restaurantName,
             });
-            toast.success(`Hesap oluşturuldu! Giriş adresiniz: ${result.slug}.bill.fatihkayaci.com`);
+            toast.success(`Hesap oluşturuldu! Giriş adresiniz: ${slug}.bill.fatihkayaci.com`);
             setActiveTab("login");
-        } catch (error: any) {
-            toast.error(error.response?.data?.message ?? error.response?.data ?? "Kayıt başarısız.");
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                toast.error(error.response?.data?.error ?? "Kayıt başarısız.");
+            } else {
+                console.log('Beklenmeyen hata:', error);
+            }
         } finally {
             setRegLoading(false);
         }

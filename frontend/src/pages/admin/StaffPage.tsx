@@ -31,6 +31,7 @@ export default function Staff() {
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [generalError, setGeneralError] = useState<string | null>(null);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'login'>('personal');
 
     useEffect(() => {
@@ -71,11 +72,22 @@ export default function Staff() {
     const personalFields = ['fullName', 'email', 'phoneNumber'];
     const loginFields = ['userName', 'userCode', 'passwordHash'];
 
+    const closeDeleteDialog = () => {
+        setDeleteTargetId(null);
+        setDeleteError(null);
+    };
+
     const handleDelete = async () => {
         if (!deleteTargetId) return;
-        await userService.deleteUser(deleteTargetId);
-        setUsers(prev => prev.filter(u => u.id !== deleteTargetId));
-        setDeleteTargetId(null);
+        try {
+            await userService.deleteUser(deleteTargetId);
+            setUsers(prev => prev.filter(u => u.id !== deleteTargetId));
+            setDeleteTargetId(null);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Çalışan silinemedi.');
+            }
+        }
     };
 
     const toggleActive = async (user: User) => {
@@ -128,8 +140,8 @@ export default function Staff() {
                     setFieldErrors(mapped);
                     if (personalFields.some(f => mapped[f]) && !loginFields.some(f => mapped[f])) setActiveTab('personal');
                     else if (loginFields.some(f => mapped[f])) setActiveTab('login');
-                } else if (data?.message) {
-                    const message = data.message as string;
+                } else if (data?.error ?? data?.message) {
+                    const message = (data.error ?? data.message) as string;
                     const duplicateFieldMap: Record<string, string> = {
                         'kullanıcı adı': 'userName',
                         'kullanıcı kodu': 'userCode',
@@ -419,17 +431,21 @@ export default function Staff() {
             )}
 
             {/* Delete Confirm */}
-            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && closeDeleteDialog()}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Çalışanı sil</AlertDialogTitle>
-                        <AlertDialogDescription>Bu çalışanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</AlertDialogDescription>
+                        <AlertDialogDescription>
+                            {deleteError ?? "Bu çalışanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Sil
-                        </AlertDialogAction>
+                        {!deleteError && (
+                            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Sil
+                            </AlertDialogAction>
+                        )}
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
