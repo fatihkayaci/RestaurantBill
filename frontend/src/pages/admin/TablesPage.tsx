@@ -223,7 +223,7 @@ export default function Tables() {
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setFieldErrors({ name: err.response?.data?.message ?? 'Masa kaydedilemedi.' });
+                setFieldErrors({ name: err.response?.data?.error ?? err.response?.data?.message ?? 'Masa kaydedilemedi.' });
             }
         }
     };
@@ -241,7 +241,7 @@ export default function Tables() {
             setDeleteTargetId(null);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setTableDeleteError(err.response?.data?.message ?? 'Masa silinemedi.');
+                setTableDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Masa silinemedi.');
             }
         }
     };
@@ -267,7 +267,7 @@ export default function Tables() {
             setIsRegionModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setRegionFieldError(err.response?.data?.message ?? 'Bölge kaydedilemedi.');
+                setRegionFieldError(err.response?.data?.error ?? err.response?.data?.message ?? 'Bölge kaydedilemedi.');
             }
         } finally {
             setSavingRegion(false);
@@ -288,7 +288,7 @@ export default function Tables() {
             setRegionDeleteTargetId(null);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setRegionDeleteError(err.response?.data?.message ?? 'Bölge silinemedi.');
+                setRegionDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Bölge silinemedi.');
             }
         }
     };

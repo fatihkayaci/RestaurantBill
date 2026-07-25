@@ -13,7 +13,7 @@ export const authService = {
         return response.data;
     },
     register: async (request: Register) => {
-        const response = await api.post<{ message: string; slug: string }>(`/auth/register`, {
+        const response = await api.post<string>(`/auth/register`, {
             FullName: request.fullName,
             UserName: request.userName,
             Email: request.email,

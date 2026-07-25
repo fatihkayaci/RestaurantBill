@@ -105,7 +105,7 @@ export default function CashRegisters() {
             setDeleteTargetId(null);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setDeleteError(err.response?.data?.message ?? 'Kasa silinemedi.');
+                setDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Kasa silinemedi.');
             }
         }
     };
@@ -135,7 +135,7 @@ export default function CashRegisters() {
             closeTxDialog();
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setTxError(err.response?.data?.message ?? 'İşlem gerçekleştirilemedi.');
+                setTxError(err.response?.data?.error ?? err.response?.data?.message ?? 'İşlem gerçekleştirilemedi.');
             }
         }
     };
@@ -166,7 +166,7 @@ export default function CashRegisters() {
             closeTransferDialog();
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setTransferError(err.response?.data?.message ?? 'Aktarım gerçekleştirilemedi.');
+                setTransferError(err.response?.data?.error ?? err.response?.data?.message ?? 'Aktarım gerçekleştirilemedi.');
             }
         }
     };

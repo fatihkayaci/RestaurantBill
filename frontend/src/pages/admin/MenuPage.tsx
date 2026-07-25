@@ -82,7 +82,7 @@ export default function Menu() {
             setDeleteTargetId(null);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setProductDeleteError(err.response?.data?.message ?? 'Ürün silinemedi.');
+                setProductDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Ürün silinemedi.');
             }
         }
     };
@@ -109,7 +109,7 @@ export default function Menu() {
             setIsCategoryModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setCategoryFieldError(err.response?.data?.message ?? 'Kategori kaydedilemedi.');
+                setCategoryFieldError(err.response?.data?.error ?? err.response?.data?.message ?? 'Kategori kaydedilemedi.');
             }
         } finally {
             setSavingCategory(false);
@@ -130,7 +130,7 @@ export default function Menu() {
             setCategoryDeleteTargetId(null);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setCategoryDeleteError(err.response?.data?.message ?? 'Kategori silinemedi.');
+                setCategoryDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Kategori silinemedi.');
             }
         }
     };
@@ -155,7 +155,7 @@ export default function Menu() {
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setFieldErrors({ name: err.response?.data?.message ?? 'Ürün kaydedilemedi.' });
+                setFieldErrors({ name: err.response?.data?.error ?? err.response?.data?.message ?? 'Ürün kaydedilemedi.' });
             }
         }
     };
