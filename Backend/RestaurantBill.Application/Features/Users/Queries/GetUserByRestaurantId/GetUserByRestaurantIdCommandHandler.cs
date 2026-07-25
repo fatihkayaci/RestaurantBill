@@ -4,10 +4,11 @@ using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantId
 {
-    public class GetUserByRestaurantIdCommandHandler : IRequestHandler<GetUserByRestaurantIdCommand, IEnumerable<UserDto>>
+    public class GetUserByRestaurantIdCommandHandler : IRequestHandler<GetUserByRestaurantIdCommand, Result<IEnumerable<UserDto>>>
     {
         private readonly IUnitOfWork _uow;
         private readonly ICurrentUserService _currentUser;
@@ -26,14 +27,14 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>An enumerable collection of <see cref="UserDto"/> representing the users of the restaurant.</returns>
         /// <exception cref="BusinessException">Thrown when the extracted restaurant ID from the claims is zero or negative.</exception>
-        public async Task<IEnumerable<UserDto>> Handle(GetUserByRestaurantIdCommand request, CancellationToken cancellationToken)
+        public async Task<Result<IEnumerable<UserDto>>> Handle(GetUserByRestaurantIdCommand request, CancellationToken cancellationToken)
         {
             var restaurantId = _currentUser.RestaurantId;
-            if(restaurantId <= 0) throw new BusinessException("ID değeri 0 veya negatif olamaz.");
+            if(restaurantId <= 0) return Result<IEnumerable<UserDto>>.Failure("ID değeri 0 veya negatif olamaz.");
 
             var currentUserId = _currentUser.UserId;
             var users = await _uow.User.GetAllAsync(x => x.RestaurantId == restaurantId && x.Id != currentUserId && !x.IsDeleted, false);
-            return users.OrderBy(u => u.FullName).Select(u => u.ToDto());
+            return Result<IEnumerable<UserDto>>.Success(users.OrderBy(u => u.FullName).Select(u => u.ToDto()));
         }
     }
 }

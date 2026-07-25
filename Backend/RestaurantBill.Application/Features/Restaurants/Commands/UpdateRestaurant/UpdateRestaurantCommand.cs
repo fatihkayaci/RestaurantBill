@@ -1,8 +1,9 @@
 using MediatR;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant
 {
-    public class UpdateRestaurantCommand: IRequest
+    public class UpdateRestaurantCommand: IRequest<Result>
     {
         
         public string Name { get; set; } = string.Empty;

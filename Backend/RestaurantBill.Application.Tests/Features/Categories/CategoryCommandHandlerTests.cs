@@ -18,7 +18,8 @@ public class CategoryCommandHandlerTests
             var handler = new CreateCategoryCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 3 });
             var command = new CreateCategoryCommand { Name = "İçecekler" };
 
-            await handler.Handle(command, CancellationToken.None);
+            var result = await handler.Handle(command, CancellationToken.None);
+            Assert.True(result.IsSuccess);
 
             Assert.Single(uow.CategoryRepo.Added);
             Assert.Equal(3, uow.CategoryRepo.Added[0].RestaurantId);
@@ -38,20 +39,22 @@ public class CategoryCommandHandlerTests
             var handler = new UpdateCategoryCommandHandler(uow);
             var command = new UpdateCategoryCommand { Id = existing.Id, Name = "Yeni Ad" };
 
-            await handler.Handle(command, CancellationToken.None);
-
+            var result = await handler.Handle(command, CancellationToken.None);
+            Assert.True(result.IsSuccess);
             Assert.Equal("Yeni Ad", existing.Name);
             Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingCategory_ThrowsException()
+        public async Task Handle_WithNonExistingCategory_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new UpdateCategoryCommandHandler(uow);
             var command = new UpdateCategoryCommand { Id = 99, Name = "Ad" };
 
-            await Assert.ThrowsAnyAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -88,13 +91,15 @@ public class CategoryCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingCategory_ThrowsException()
+        public async Task Handle_WithNonExistingCategory_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new DeleteCategoryCommandHandler(uow);
             var command = new DeleteCategoryCommand { Id = 99 };
 
-            await Assert.ThrowsAnyAsync<Exception>(() => handler.Handle(command, CancellationToken.None));
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 }

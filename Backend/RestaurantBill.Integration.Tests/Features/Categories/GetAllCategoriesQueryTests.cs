@@ -1,16 +1,17 @@
 using RestaurantBill.Application.Features.Categories.Queries.GetAllCategories;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Shared;
 using RestaurantBill.Integration.Tests.Infrastructure;
 
 namespace RestaurantBill.Integration.Tests.Features.Categories;
 
 public class GetAllCategoriesQueryTests : IntegrationTestBase
 {
-    private readonly GetAllOrdersQueryHandler _handler;
+    private readonly GetAllCategoryQueryHandler _handler;
 
     public GetAllCategoriesQueryTests()
     {
-        _handler = new GetAllOrdersQueryHandler(UnitOfWork, CurrentUser);
+        _handler = new GetAllCategoryQueryHandler(UnitOfWork, CurrentUser);
     }
 
     [Fact]
@@ -18,7 +19,7 @@ public class GetAllCategoriesQueryTests : IntegrationTestBase
     {
         var result = await _handler.Handle(new GetAllCategoryQuery(), CancellationToken.None);
 
-        Assert.Empty(result);
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
@@ -32,8 +33,9 @@ public class GetAllCategoriesQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllCategoryQuery(), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal("A Kategori", result[0].Name);
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!);
+        Assert.Equal("A Kategori", result.Value![0].Name);
     }
 
     [Fact]
@@ -47,10 +49,10 @@ public class GetAllCategoriesQueryTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         var result = await _handler.Handle(new GetAllCategoryQuery(), CancellationToken.None);
-
-        Assert.Equal(3, result.Count);
-        Assert.Equal("A Kategori", result[0].Name);
-        Assert.Equal("B Kategori", result[1].Name);
-        Assert.Equal("C Kategori", result[2].Name);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(3, result.Value!.Count);
+        Assert.Equal("A Kategori", result.Value![0].Name);
+        Assert.Equal("B Kategori", result.Value![1].Name);
+        Assert.Equal("C Kategori", result.Value![2].Name);
     }
 }

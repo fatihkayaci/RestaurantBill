@@ -3,10 +3,11 @@ using MediatR;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
 {
-    public class OpenTableHandler : IRequestHandler<OpenTableCommand, int>
+    public class OpenTableHandler : IRequestHandler<OpenTableCommand, Result<int>>
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
@@ -21,10 +22,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
             _currentUserService = currentUserService;
         }
 
-        public async Task<int> Handle(OpenTableCommand request, CancellationToken cancellationToken)
+        public async Task<Result<int>> Handle(OpenTableCommand request, CancellationToken cancellationToken)
         {
             Table? table = await _uow.Table.GetByIdAsync(request.TableId, true);
-            Guard.AgainstNull(table, "Böyle bir masa bulunamadı.");
+            if (table is null) return Result<int>.Failure("Böyle bir masa bulunamadı.");
 
             table.Occupy();
 
@@ -36,7 +37,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
             await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
             await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.RestaurantId);
 
-            return order.Id;
+            return Result<int>.Success(order.Id);
         }
     }
 }

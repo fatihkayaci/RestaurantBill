@@ -28,7 +28,8 @@ public class GetAllOrdersToKitchenQueryTests : IntegrationTestBase
     {
         var result = await _handler.Handle(new GetAllOrdersToKitchenQuery(), CancellationToken.None);
 
-        Assert.Empty(result);
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value!);
     }
 
     [Fact]
@@ -45,8 +46,9 @@ public class GetAllOrdersToKitchenQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllOrdersToKitchenQuery(), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(OrderStatus.Active, result[0].Status);
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!);
+        Assert.Equal(OrderStatus.Active, result.Value![0].Status);
     }
 
     [Fact]
@@ -63,8 +65,9 @@ public class GetAllOrdersToKitchenQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllOrdersToKitchenQuery(), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(OrderStatus.Active, result[0].Status);
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!);
+        Assert.Equal(OrderStatus.Active, result.Value![0].Status);
     }
 
     [Fact]
@@ -81,7 +84,8 @@ public class GetAllOrdersToKitchenQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllOrdersToKitchenQuery(), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(myTable.Id, result[0].TableId);
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!);
+        Assert.Equal(myTable.Id, result.Value![0].TableId);
     }
 }

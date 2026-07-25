@@ -3,10 +3,11 @@ using MediatR;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.DeleteTable
 {
-    public class DeleteHandler : IRequestHandler<DeleteTableCommand>
+    public class DeleteHandler : IRequestHandler<DeleteTableCommand, Result>
     {
         private readonly IUnitOfWork _uow;
 
@@ -19,10 +20,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.DeleteTable
         /// <summary>
         /// Creates a new table with the given name.
         /// </summary>
-        public async Task Handle(DeleteTableCommand request, CancellationToken cancellationToken)
+        public async Task<Result> Handle(DeleteTableCommand request, CancellationToken cancellationToken)
         {
             Table? table = await _uow.Table.GetByIdAsync(request.TableId, true);
-            Guard.AgainstNull(table, "Masa bulunamadı.");
+            if (table is null) return Result.Failure("Masa bulunamadı.");
 
             IEnumerable<Order> activeOrders = await _uow.Order.GetAllAsync(
                 o => o.TableId == table.Id && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled, false);
@@ -30,6 +31,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.DeleteTable
 
             _uow.Table.Delete(table);
             await _uow.SaveChangesAsync(cancellationToken);
+            return Result.Success();
         }
     }
 }

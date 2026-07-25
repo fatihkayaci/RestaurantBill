@@ -3,10 +3,11 @@ using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.CashRegisters.Commands.AddTransactionToCashRegister;
 
-public class AddTransactionToCashRegisterCommandHandler : IRequestHandler<AddTransactionToCashRegisterCommand>
+public class AddTransactionToCashRegisterCommandHandler : IRequestHandler<AddTransactionToCashRegisterCommand, Result>
 {
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
@@ -17,15 +18,17 @@ public class AddTransactionToCashRegisterCommandHandler : IRequestHandler<AddTra
         _currentUser = currentUser;
     }
 
-    public async Task Handle(AddTransactionToCashRegisterCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(AddTransactionToCashRegisterCommand request, CancellationToken cancellationToken)
     {
         CashRegister? register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId, true);
-        Guard.AgainstNull(register, "Kasa bulunamadı.");
+        if (register is null)
+            return Result.Failure("Kasa Bulunamadı");
 
         CashTransaction transaction = register.AddTransaction(request.Type, request.Amount, _currentUser.UserId);
 
         await _uow.CashTransaction.AddAsync(transaction);
         await _uow.CashRegister.UpdateAsync(register);
         await _uow.SaveChangesAsync(cancellationToken);
+        return Result.Success();
     }
 }

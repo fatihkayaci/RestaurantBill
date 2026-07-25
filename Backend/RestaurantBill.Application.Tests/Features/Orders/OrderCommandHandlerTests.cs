@@ -48,14 +48,14 @@ public class OrderCommandHandlerTests
         public async Task Handle_WithAvailableTable_CreatesOrderAndOccupiesTable()
         {
             var uow = new FakeUnitOfWork();
-            Table table = OrderCommandHandlerTests.CreateTable();
+            Table table = CreateTable();
             await uow.TableRepo.AddAsync(table);
 
             var handler = new CreateOrderCommandHandler(uow);
             var command = new CreateOrderCommand { TableId = table.Id };
 
-            OrderDto result = await handler.Handle(command, CancellationToken.None);
-
+            var result = await handler.Handle(command, CancellationToken.None);
+            Assert.True(result.IsSuccess);
             Assert.Single(uow.OrderRepo.Added);
             Assert.Equal(TableStatus.Occupied, table.Status);
             Assert.True(uow.SaveChangesCalled);
@@ -66,9 +66,8 @@ public class OrderCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             var handler = new CreateOrderCommandHandler(uow);
-
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new CreateOrderCommand { TableId = 99 }, CancellationToken.None));
+            var result = await handler.Handle(new CreateOrderCommand{TableId = 99}, CancellationToken.None);
+            Assert.False(result.IsSuccess);
         }
     }
 
@@ -93,13 +92,13 @@ public class OrderCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingOrder_ThrowsException()
+        public async Task Handle_WithNonExistingOrder_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new CancelOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new CancelOrderCommand { OrderId = 99 }, CancellationToken.None));
+            var result = await handler.Handle(new CancelOrderCommand { OrderId = 99 }, CancellationToken.None);
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -109,9 +108,9 @@ public class OrderCommandHandlerTests
         public async Task Handle_WithExistingOrder_ClosesOrderAndReleasesTable()
         {
             var uow = new FakeUnitOfWork();
-            Table table = OrderCommandHandlerTests.CreateTable(tableId: 1);
+            Table table = CreateTable(tableId: 1);
             table.Occupy();
-            Order order = OrderCommandHandlerTests.CreateOrder(tableId: 1);
+            Order order = CreateOrder(tableId: 1);
             await uow.TableRepo.AddAsync(table);
             await uow.OrderRepo.AddAsync(order);
 
@@ -124,13 +123,14 @@ public class OrderCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingOrder_ThrowsException()
+        public async Task Handle_WithNonExistingOrder_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new CloseOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new DeleteCommand { OrderId = 99 }, CancellationToken.None));
+            var result = await handler.Handle(new DeleteCommand { OrderId = 99 }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -179,13 +179,14 @@ public class OrderCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingOrder_ThrowsException()
+        public async Task Handle_WithNonExistingOrder_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new RemoveProductFromOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new RemoveProductFromOrderCommand { OrderId = 99, ProductId = 1 }, CancellationToken.None));
+            var result = await handler.Handle(new RemoveProductFromOrderCommand { OrderId = 99, ProductId = 1 }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 

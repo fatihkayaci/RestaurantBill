@@ -1,12 +1,12 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
 {
-    public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryCommand>
+    public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryCommand, Result>
     {
         private readonly IUnitOfWork _uow;
         private readonly ICurrentUserService _userService;
@@ -17,17 +17,18 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
             _userService = userService;
         }
 
-        public async Task Handle(CreateCategoryCommand command, CancellationToken cancellationToken)
+        public async Task<Result> Handle(CreateCategoryCommand command, CancellationToken cancellationToken)
         {
             int restaurantId = _userService.RestaurantId;
 
             bool nameExists = (await _uow.Category.GetAllAsync(c => c.Name == command.Name && c.RestaurantId == restaurantId, false)).Any();
             if (nameExists)
-                throw new BusinessException("Bu isimde bir kategori zaten mevcut.");
+                return Result.Failure("Bu isimde bir kategori zaten mevcut.");
 
             Category category = Category.Create(command.Name, restaurantId);
             await _uow.Category.AddAsync(category);
             await _uow.SaveChangesAsync(cancellationToken);
+            return Result.Success();
         }
     }
 }

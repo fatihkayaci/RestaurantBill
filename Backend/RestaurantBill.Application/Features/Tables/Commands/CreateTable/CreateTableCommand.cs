@@ -1,9 +1,10 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
 {
-    public class CreateTableCommand : IRequest, IInvalidatesCache
+    public class CreateTableCommand : IRequest<Result>, IInvalidatesCache
     {
         public string Name { get; set; } = string.Empty;
         public int RegionId { get; set; }

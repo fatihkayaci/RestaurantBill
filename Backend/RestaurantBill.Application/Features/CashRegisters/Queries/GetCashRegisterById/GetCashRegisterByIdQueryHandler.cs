@@ -1,12 +1,12 @@
 using MediatR;
-using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.CashRegisters.Queries.GetCashRegisterById;
 
-public class GetCashRegisterByIdHandler : IRequestHandler<GetCashRegisterByIdQuery, CashRegisterDto>
+public class GetCashRegisterByIdHandler : IRequestHandler<GetCashRegisterByIdQuery, Result<CashRegisterDto>>
 {
     private readonly IUnitOfWork _uow;
 
@@ -15,10 +15,11 @@ public class GetCashRegisterByIdHandler : IRequestHandler<GetCashRegisterByIdQue
         _uow = uow;
     }
 
-    public async Task<CashRegisterDto> Handle(GetCashRegisterByIdQuery request, CancellationToken cancellationToken)
+    public async Task<Result<CashRegisterDto>> Handle(GetCashRegisterByIdQuery request, CancellationToken cancellationToken)
     {
         var register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId, false);
-        Guard.AgainstNull(register, "Kasa bulunamadı.");
-        return register.ToDto();
+        if (register is null) return Result<CashRegisterDto>.Failure("Kasa bulunamadı");
+
+        return Result<CashRegisterDto>.Success(register.ToDto());
     }
 }

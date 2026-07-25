@@ -9,10 +9,11 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.Login
 {
-    public class LoginCommandHandler : IRequestHandler<LoginCommand, string>
+    public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<string>>
     {
         private readonly IUnitOfWork _uow;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -27,7 +28,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             _tenantResolver = tenantResolver;
         }
 
-        public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
+        public async Task<Result<string>> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
             string identifier = !string.IsNullOrWhiteSpace(request.UserName) ? request.UserName : request.Email!;
             string? slug = _tenantResolver.Slug;
@@ -36,8 +37,12 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
             if (!string.IsNullOrWhiteSpace(slug))
             {
-                Restaurant restaurant = (await _uow.Restaurant.GetAllAsync(r => r.Slug == slug, false)).FirstOrDefault()
-                    ?? throw new BusinessException("Restoran bulunamadı.");
+                Restaurant? restaurant = (await _uow.Restaurant.GetAllAsync(r => r.Slug == slug, false)).FirstOrDefault();
+
+                if (restaurant is null)
+                {
+                    return Result<string>.Failure("Restoran bulunamadı.");
+                }
 
                 user = (await _uow.User.GetAllAsync(u =>
                     (u.UserName == identifier || u.Email == identifier)
@@ -50,16 +55,16 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             }
 
             if (user == null)
-                throw new BusinessException("Kullanıcı adı, email veya şifre hatalı!");
+                return Result<string>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
             var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
             if (result == PasswordVerificationResult.Failed)
-                throw new BusinessException("Kullanıcı adı, email veya şifre hatalı!");
+                return Result<string>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
             // if (!user.IsActive)
             //     throw new BusinessException("Hesabınız pasif durumda. Giriş yapabilmek için yöneticinizle iletişime geçin.");
 
-            return GenerateJwtToken(user);
+            return Result<string>.Success(GenerateJwtToken(user));
         }
 
         private string GenerateJwtToken(User user)

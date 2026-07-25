@@ -18,7 +18,8 @@ public class GetAllProductsQueryTests : IntegrationTestBase
     {
         var result = await _handler.Handle(new GetAllProductQuery(), CancellationToken.None);
 
-        Assert.Empty(result);
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value!);
     }
 
     [Fact]
@@ -37,8 +38,9 @@ public class GetAllProductsQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllProductQuery(), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal("Cay", result[0].Name);
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!);
+        Assert.Equal("Cay", result.Value![0].Name);
     }
 
     [Fact]
@@ -57,10 +59,11 @@ public class GetAllProductsQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllProductQuery(), CancellationToken.None);
 
-        Assert.Equal(3, result.Count);
-        Assert.Equal("A Urun", result[0].Name);
-        Assert.Equal("B Urun", result[1].Name);
-        Assert.Equal("C Urun", result[2].Name);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(3, result.Value!.Count);
+        Assert.Equal("A Urun", result.Value![0].Name);
+        Assert.Equal("B Urun", result.Value![1].Name);
+        Assert.Equal("C Urun", result.Value![2].Name);
     }
 
     [Fact]
@@ -75,7 +78,8 @@ public class GetAllProductsQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllProductQuery(), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal("Tatlilar", result[0].CategoryName);
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!);
+        Assert.Equal("Tatlilar", result.Value![0].CategoryName);
     }
 }

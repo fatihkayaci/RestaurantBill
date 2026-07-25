@@ -5,10 +5,11 @@ using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
 {
-    public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand>
+    public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Result>
     {
         private readonly IUnitOfWork _uow;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -21,23 +22,23 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
             _currentUser = currentUser;
         }
 
-        public async Task Handle(CreateUserCommand request, CancellationToken cancellationToken)
+        public async Task<Result> Handle(CreateUserCommand request, CancellationToken cancellationToken)
         {
             int restaurantId = _currentUser.RestaurantId;
 
             bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && u.RestaurantId == restaurantId && !u.IsDeleted, false)).Any();
             if (userNameExists)
-                throw new BusinessException("Bu kullanıcı adı zaten kullanımda.");
+                return Result.Failure("Bu kullanıcı adı zaten kullanımda.");
 
             bool userCodeExists = (await _uow.User.GetAllAsync(u => u.UserCode == request.UserCode && u.RestaurantId == restaurantId && !u.IsDeleted, false)).Any();
             if (userCodeExists)
-                throw new BusinessException("Bu kullanıcı kodu zaten kullanımda.");
+                return Result.Failure("Bu kullanıcı kodu zaten kullanımda.");
 
             if (!string.IsNullOrWhiteSpace(request.Email))
             {
                 bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && !u.IsDeleted, false)).Any();
                 if (emailExists)
-                    throw new BusinessException("Bu e-posta adresi zaten kullanımda.");
+                    return Result.Failure("Bu e-posta adresi zaten kullanımda.");
             }
 
             User user = User.Create(request.FullName, request.UserName, request.Email, request.PhoneNumber, request.UserCode, request.Role, restaurantId);
@@ -45,6 +46,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
 
             await _uow.User.AddAsync(user);
             await _uow.SaveChangesAsync(cancellationToken);
+            return Result.Success();
         }
     }
 }

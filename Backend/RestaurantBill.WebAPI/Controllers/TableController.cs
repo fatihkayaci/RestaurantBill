@@ -16,7 +16,7 @@ namespace RestaurantBill.WebAPI.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class TableController : ControllerBase
+    public class TableController : BaseController
     {
         private readonly IMediator _mediator;
         public TableController(IMediator mediator)
@@ -33,8 +33,8 @@ namespace RestaurantBill.WebAPI.Controllers
         public async Task<IActionResult> GetAll()
         {
             var query = new GetAllTableQuery();
-            var values = await _mediator.Send(query);
-            return Ok(values);
+            var result = await _mediator.Send(query);
+            return HandleResult(result);
         }
         /// <summary>
         /// Returns a table by its ID.
@@ -48,8 +48,8 @@ namespace RestaurantBill.WebAPI.Controllers
             {
                 TableId = id
             };
-            var table = await _mediator.Send(query);
-            return Ok(table);
+            var result = await _mediator.Send(query);
+            return HandleResult(result);
         }
         /// <summary>
         /// Returns the active reservation for the given table, or null if there is none.
@@ -60,8 +60,8 @@ namespace RestaurantBill.WebAPI.Controllers
         public async Task<IActionResult> GetActiveReservation([FromRoute] int id)
         {
             var query = new GetActiveReservationByTableIdQuery { TableId = id };
-            var reservation = await _mediator.Send(query);
-            return Ok(reservation);
+            var result = await _mediator.Send(query);
+            return HandleResult(result);
         }
         #endregion
 
@@ -76,8 +76,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateTable([FromBody]CreateTableCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Masa başarıyla oluşturuldu");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         /// <summary>
         /// Updates an existing table. Only accessible by Admin.
@@ -89,8 +89,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("update")]
         public async Task<IActionResult> UpdateTable([FromBody]UpdateTableCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Masa başarıyla Güncellendi");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         /// <summary>
         /// Opens the table when a customer arrives. Sets status to Occupied and creates an empty order.
@@ -101,8 +101,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("open")]
         public async Task<IActionResult> OpenTable([FromBody]OpenTableCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         /// <summary>
         /// Reserves the table. Sets status to Reserved.
@@ -113,8 +113,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("reservation")]
         public async Task<IActionResult> ReservationTable([FromBody]ReservationTableCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         /// <summary>
         /// Cancels the reservation and sets the table status back to Available.
@@ -125,8 +125,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("cancel-reservation")]
         public async Task<IActionResult> CancelReservationTable([FromBody]CancelReservationCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new { Message = "Masa Durumu başarıyla güncellendi." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }      
         #endregion
 
@@ -145,8 +145,8 @@ namespace RestaurantBill.WebAPI.Controllers
             {
                 TableId = id
             };
-            await _mediator.Send(command, cancellationToken);
-            return Ok(new {message="Masa başarıyla silindi"});
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         #endregion
     }

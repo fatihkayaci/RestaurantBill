@@ -14,7 +14,7 @@ public class ProductCommandHandlerTests
         public async Task Handle_WithValidCommand_AddsProductAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new CreateProductCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new CreateProductCommandHandler(uow);
             var command = new CreateProductCommand
             {
                 Name = "Çay",
@@ -24,8 +24,8 @@ public class ProductCommandHandlerTests
                 CategoryId = 1
             };
 
-            await handler.Handle(command, CancellationToken.None);
-
+            var result = await handler.Handle(command, CancellationToken.None);
+            Assert.True(result.IsSuccess);
             Assert.Single(uow.ProductRepo.Added);
             Assert.True(uow.SaveChangesCalled);
         }
@@ -51,13 +51,14 @@ public class ProductCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingProduct_ThrowsException()
+        public async Task Handle_WithNonExistingProduct_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new UpdateProductCommandHandler(uow);
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new UpdateProductCommand { Id = 99, Name = "Ad", Price = 10m, CategoryId = 1 }, CancellationToken.None));
+            var result = await handler.Handle(new UpdateProductCommand { Id = 99, Name = "Ad", Price = 10m, CategoryId = 1 }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -78,13 +79,14 @@ public class ProductCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingProduct_ThrowsException()
+        public async Task Handle_WithNonExistingProduct_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new DeleteProductCommandHandler(uow);
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new DeleteProductCommand { Id = 99 }, CancellationToken.None));
+            var result = await handler.Handle(new DeleteProductCommand { Id = 99 }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 }

@@ -3,10 +3,11 @@ using RestaurantBill.Application.Common;
 using MediatR;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
 {
-    public class CloseOrderCommandHandler : IRequestHandler<DeleteCommand>
+    public class CloseOrderCommandHandler : IRequestHandler<DeleteCommand, Result>
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
@@ -24,13 +25,17 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
         /// Closes the order, marks it as Paid and sets the table status to Available.
         /// </summary>
         /// <exception cref="BusinessException">Thrown if order ID is zero or less, or if the order is not found.</exception>
-        public async Task Handle(DeleteCommand request, CancellationToken cancellationToken)
+        public async Task<Result> Handle(DeleteCommand request, CancellationToken cancellationToken)
         {
             Order? order = await _uow.Order.GetByIdAsync(request.OrderId, true);
-            Guard.AgainstNull(order, "Böyle bir sipariş bulunamadı.");
+            
+            if (order is null)
+                return Result.Failure("Böyle bir sipariş bulunamadı.");
 
             Table? table = await _uow.Table.GetByIdAsync(order.TableId, true);
-            Guard.AgainstNull(table, "Böyle bir Masa bulunamadı.");
+            
+            if (table is null)
+                return Result.Failure("Böyle bir sipariş bulunamadı.");
 
             order.Close();
             table.Release();
@@ -40,6 +45,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
             await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
             await _tableNotificationService.SendOrderClosedAsync(_currentUserService.RestaurantId, table.Id, order.Id);
             await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.RestaurantId);
+            return Result.Success();
         }
     }
 }

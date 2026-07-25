@@ -56,13 +56,14 @@ public class TableCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingTable_ThrowsException()
+        public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new UpdateCommandHandler(uow);
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new UpdateTableCommand { Id = 99, Name = "Ad" }, CancellationToken.None));
+            var result = await handler.Handle(new UpdateTableCommand { Id = 99, Name = "Ad" }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -83,13 +84,14 @@ public class TableCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingTable_ThrowsException()
+        public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new DeleteHandler(uow);
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new DeleteTableCommand { TableId = 99 }, CancellationToken.None));
+            var result = await handler.Handle(new DeleteTableCommand { TableId = 99 }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -111,13 +113,14 @@ public class TableCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingTable_ThrowsException()
+        public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new OpenTableCommand { TableId = 99 }, CancellationToken.None));
+            var result = await handler.Handle(new OpenTableCommand { TableId = 99 }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 
@@ -163,13 +166,14 @@ public class TableCommandHandlerTests
         }
 
         [Fact]
-        public async Task Handle_WithNonExistingTable_ThrowsException()
+        public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
             var handler = new CancelReservationCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
 
-            await Assert.ThrowsAnyAsync<Exception>(() =>
-                handler.Handle(new CancelReservationCommand { TableId = 99 }, CancellationToken.None));
+            var result = await handler.Handle(new CancelReservationCommand { TableId = 99 }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 }

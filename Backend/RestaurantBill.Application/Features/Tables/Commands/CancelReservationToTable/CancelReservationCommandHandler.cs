@@ -3,10 +3,11 @@ using MediatR;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservationToTable
 {
-    public class CancelReservationCommandHandler : IRequestHandler<CancelReservationCommand>
+    public class CancelReservationCommandHandler : IRequestHandler<CancelReservationCommand, Result>
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
@@ -19,10 +20,11 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservationT
             _currentUserService = currentUserService;
         }
 
-        public async Task Handle(CancelReservationCommand request, CancellationToken cancellationToken)
+        public async Task<Result> Handle(CancelReservationCommand request, CancellationToken cancellationToken)
         {
             Table? table = await _uow.Table.GetByIdAsync(request.TableId, true);
-            Guard.AgainstNull(table, "Böyle bir masa bulunamadı.");
+            if (table is null)
+                return Result.Failure("Böyle bir masa bulunamadı.");
 
             table.Release();
 
@@ -32,6 +34,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservationT
             await _uow.SaveChangesAsync(cancellationToken);
 
             await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
+            return Result.Success();
         }
     }
 }

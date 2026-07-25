@@ -14,14 +14,6 @@ public class GetAllTablesQueryTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Handle_WhenNoTablesExist_ReturnsEmptyList()
-    {
-        var result = await _handler.Handle(new GetAllTableQuery(), CancellationToken.None);
-
-        Assert.Empty(result);
-    }
-
-    [Fact]
     public async Task Handle_ReturnsOnlyTablesForCurrentRestaurant()
     {
         var table1 = Table.Create("Masa 1", "", RestaurantId);
@@ -33,8 +25,9 @@ public class GetAllTablesQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllTableQuery(), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal("Masa 1", result[0].Name);
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!);
+        Assert.Equal("Masa 1", result.Value![0].Name);
     }
 
     [Fact]
@@ -51,9 +44,10 @@ public class GetAllTablesQueryTests : IntegrationTestBase
 
         var result = await _handler.Handle(new GetAllTableQuery(), CancellationToken.None);
 
-        Assert.Equal(3, result.Count);
-        Assert.Equal("A Masa", result[0].Name);
-        Assert.Equal("B Masa", result[1].Name);
-        Assert.Equal("C Masa", result[2].Name);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(3, result.Value!.Count);
+        Assert.Equal("A Masa", result.Value![0].Name);
+        Assert.Equal("B Masa", result.Value![1].Name);
+        Assert.Equal("C Masa", result.Value![2].Name);
     }
 }

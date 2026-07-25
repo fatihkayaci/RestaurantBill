@@ -1,8 +1,9 @@
 using MediatR;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
 {
-    public class ReservationTableCommand : IRequest
+    public class ReservationTableCommand : IRequest<Result>
     {
         public int TableId { get; set; }
         public string GuestName { get; set; } = string.Empty;

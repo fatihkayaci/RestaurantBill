@@ -13,7 +13,7 @@ namespace RestaurantBill.WebAPI.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController : ControllerBase
+    public class UserController : BaseController
     {
         private readonly IMediator _mediator;
         public UserController(IMediator mediator)
@@ -29,8 +29,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
         {
-            UserDto user = await _mediator.Send(new GetCurrentUserQuery());
-            return Ok(user);
+            var result = await _mediator.Send(new GetCurrentUserQuery());
+            return HandleResult(result);
         }
 
         [Authorize(Roles = "Admin")]
@@ -38,8 +38,8 @@ namespace RestaurantBill.WebAPI.Controllers
         public async Task<IActionResult> GetUserByRestaurantId()
         {
             var query = new GetUserByRestaurantIdCommand();
-            var users = await _mediator.Send(query);
-            return Ok(users);
+            var result = await _mediator.Send(query);
+            return HandleResult(result);
         }
             
         #endregion
@@ -55,8 +55,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateUser([FromBody]CreateUserCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Kullanıcı başarıyla oluşturuldu");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         /// <summary>
         /// Creates a new user and associates them with the authenticated user's restaurant.
@@ -69,8 +69,8 @@ namespace RestaurantBill.WebAPI.Controllers
         [HttpPost("update")]
         public async Task<IActionResult> UpdateUser([FromBody]UpdateUserCommand command, CancellationToken cancellationToken)
         {
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Kullanıcı başarıyla oluşturuldu");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
             
         #endregion
@@ -90,8 +90,8 @@ namespace RestaurantBill.WebAPI.Controllers
             {
                 UserId = id
             };
-            await _mediator.Send(command, cancellationToken);
-            return Ok("Kullanıcı başarıyla silindi");
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
         }
         #endregion
     }

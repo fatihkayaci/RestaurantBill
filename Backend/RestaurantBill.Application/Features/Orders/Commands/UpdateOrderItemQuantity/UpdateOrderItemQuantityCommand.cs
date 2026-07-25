@@ -1,8 +1,9 @@
 using MediatR;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity
 {
-    public class UpdateOrderItemQuantityCommand : IRequest
+    public class UpdateOrderItemQuantityCommand : IRequest<Result>
     {
         public int OrderId { get; set; }
         public int ProductId { get; set; }
