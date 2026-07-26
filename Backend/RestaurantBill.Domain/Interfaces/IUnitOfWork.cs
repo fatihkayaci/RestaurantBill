@@ -12,6 +12,7 @@ public interface IUnitOfWork : IDisposable
     IMembershipRepository Membership { get; }
     IUserRepository User { get; }
     IUserRestaurantRepository UserRestaurant { get; }
+    IVerificationCodeRepository VerificationCode { get; }
     ICashRegisterRepository CashRegister { get; }
     ICashTransactionRepository CashTransaction { get; }
     IReservationRepository Reservation { get; }

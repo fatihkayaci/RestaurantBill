@@ -32,22 +32,23 @@ public static class DefaultData
         {
             var demoUsers = new[]
             {
-                new { FullName = "System Administrator", UserName = "admin",   Email = "admin@demo.com",   UserCode = "0000", Password = "Admin123*",   Role = UserRole.Admin   },
-                new { FullName = "Demo Waiter",          UserName = "waiter",  Email = "waiter@demo.com",  UserCode = "1001", Password = "Waiter123*",  Role = UserRole.Waiter  },
-                new { FullName = "Demo Kitchen",         UserName = "kitchen", Email = "kitchen@demo.com", UserCode = "1002", Password = "Kitchen123*", Role = UserRole.Kitchen },
-                new { FullName = "Demo Cashier",         UserName = "cashier", Email = "cashier@demo.com", UserCode = "1003", Password = "Cashier123*", Role = UserRole.Cashier },
+                new { FullName = "System Administrator", UserName = "admin",   Email = "admin@demo.com",   Phone = "05000000000", UserCode = "0000", Password = "Admin123*",   Role = UserRole.Admin   },
+                new { FullName = "Demo Waiter",          UserName = "waiter",  Email = "waiter@demo.com",  Phone = "05000000001", UserCode = "1001", Password = "Waiter123*",  Role = UserRole.Waiter  },
+                new { FullName = "Demo Kitchen",         UserName = "kitchen", Email = "kitchen@demo.com", Phone = "05000000002", UserCode = "1002", Password = "Kitchen123*", Role = UserRole.Kitchen },
+                new { FullName = "Demo Cashier",         UserName = "cashier", Email = "cashier@demo.com", Phone = "05000000003", UserCode = "1003", Password = "Cashier123*", Role = UserRole.Cashier },
             };
 
             foreach (var u in demoUsers)
             {
-                User user = User.Create(u.FullName, u.Email, null);
+                User user = User.Create(u.FullName, u.Email, u.Phone);
                 user.SetPasswordHash(passwordHasher.HashPassword(user, u.Password));
-                UserRestaurant userRestaurant = UserRestaurant.Create(user, demoRestaurant, u.UserName, u.UserCode, u.Role);
                 await context.Users.AddAsync(user);
-                await context.UserRestaurants.AddAsync(userRestaurant);
-            }
+                await context.SaveChangesAsync();
 
-            await context.SaveChangesAsync();
+                UserRestaurant userRestaurant = UserRestaurant.Create(user, demoRestaurant, u.UserName, u.UserCode, u.Role);
+                await context.UserRestaurants.AddAsync(userRestaurant);
+                await context.SaveChangesAsync();
+            }
         }
 
         // Categories

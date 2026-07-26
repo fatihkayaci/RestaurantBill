@@ -21,6 +21,7 @@ public class UnitOfWork : IUnitOfWork
     private IMembershipRepository? _membershipRepository;
     private IUserRepository? _userRepository;
     private IUserRestaurantRepository? _userRestaurantRepository;
+    private IVerificationCodeRepository? _verificationCodeRepository;
     private ICashRegisterRepository? _cashRegisterRepository;
     private ICashTransactionRepository? _cashTransactionRepository;
     private IReservationRepository? _reservationRepository;
@@ -36,6 +37,7 @@ public class UnitOfWork : IUnitOfWork
     public IMembershipRepository Membership => _membershipRepository ??= new MembershipRepository(_context);
     public IUserRepository User => _userRepository ??= new UserRepository(_context);
     public IUserRestaurantRepository UserRestaurant => _userRestaurantRepository ??= new UserRestaurantRepository(_context);
+    public IVerificationCodeRepository VerificationCode => _verificationCodeRepository ??= new VerificationCodeRepository(_context);
     public ICashRegisterRepository CashRegister => _cashRegisterRepository ??= new CashRegisterRepository(_context);
     public ICashTransactionRepository CashTransaction => _cashTransactionRepository ??= new CashTransactionRepository(_context);
     public IReservationRepository Reservation => _reservationRepository ??= new ReservationRepository(_context);

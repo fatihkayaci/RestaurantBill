@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RestaurantBill.Application.Features.Auths.Commands.Login;
 using RestaurantBill.Application.Features.Auths.Commands.Register;
+using RestaurantBill.Application.Features.Auths.Commands.SendVerificationCode;
 
 namespace RestaurantBill.WebAPI.Controllers;
 
@@ -38,6 +39,19 @@ public class AuthController : BaseController
     /// <returns>200 Ok with string message on success</returns>
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Sends a verification code to the user via SMS or email.
+    /// </summary>
+    /// <param name="command">UserId and verification type (Phone or Email).</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>200 OK on success.</returns>
+    [HttpPost("send-verification-code")]
+    public async Task<IActionResult> SendVerificationCode([FromBody] SendVerificationCodeCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);

@@ -25,7 +25,7 @@ namespace RestaurantBill.Domain.Entities
 
             return new VerificationCode
             {
-                User = user,
+                UserId = user.Id,
                 Code = code,
                 Type = type,
                 Status = VerificationCodeStatus.Pending,

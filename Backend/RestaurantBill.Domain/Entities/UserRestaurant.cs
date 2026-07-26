@@ -31,7 +31,7 @@ namespace RestaurantBill.Domain.Entities
 
             return new UserRestaurant
             {
-                User = user,
+                UserId = user.Id,
                 Restaurant = restaurant,
                 UserName = userName,
                 UserCode = userCode,

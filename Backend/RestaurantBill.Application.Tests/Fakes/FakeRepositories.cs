@@ -14,3 +14,4 @@ public class FakeRestaurantRepository : FakeGenericRepository<Restaurant>, IRest
 public class FakeTableRepository : FakeGenericRepository<Table>, ITableRepository { }
 public class FakeUserRepository : FakeGenericRepository<User>, IUserRepository { }
 public class FakeUserRestaurantRepository : FakeGenericRepository<UserRestaurant>, IUserRestaurantRepository { }
+public class FakeVerificationCodeRepository : FakeGenericRepository<VerificationCode>, IVerificationCodeRepository { }
