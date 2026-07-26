@@ -33,5 +33,15 @@ namespace RestaurantBill.Domain.Entities
                 ExpiresAt = expiresAt
             };
         }
+
+        public void MarkAsVerified()
+        {
+            Status = VerificationCodeStatus.Verified;
+        }
+
+        public void IncrementAttempt()
+        {
+            Attempts++;
+        }
     }
 }

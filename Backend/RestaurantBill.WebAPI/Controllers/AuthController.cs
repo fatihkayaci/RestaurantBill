@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using RestaurantBill.Application.Features.Auths.Commands.Login;
 using RestaurantBill.Application.Features.Auths.Commands.Register;
 using RestaurantBill.Application.Features.Auths.Commands.SendVerificationCode;
+using RestaurantBill.Application.Features.Auths.Commands.VerifyCode;
 
 namespace RestaurantBill.WebAPI.Controllers;
 
@@ -52,6 +53,19 @@ public class AuthController : BaseController
     /// <returns>200 OK on success.</returns>
     [HttpPost("send-verification-code")]
     public async Task<IActionResult> SendVerificationCode([FromBody] SendVerificationCodeCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Verifies a code previously sent to the user.
+    /// </summary>
+    /// <param name="command">UserId and the code to verify.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>200 OK on success.</returns>
+    [HttpPost("verify-code")]
+    public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
