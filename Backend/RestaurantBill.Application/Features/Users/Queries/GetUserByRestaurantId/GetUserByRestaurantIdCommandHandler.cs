@@ -33,8 +33,12 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
             if(restaurantId <= 0) return Result<IEnumerable<UserDto>>.Failure("ID değeri 0 veya negatif olamaz.");
 
             var currentUserId = _currentUser.UserId;
-            var users = await _uow.User.GetAllAsync(x => x.RestaurantId == restaurantId && x.Id != currentUserId && !x.IsDeleted, false);
-            return Result<IEnumerable<UserDto>>.Success(users.OrderBy(u => u.FullName).Select(u => u.ToDto()));
+            var userRestaurants = await _uow.UserRestaurant.GetAllAsync(
+                ur => ur.RestaurantId == restaurantId && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
+                false,
+                nameof(RestaurantBill.Domain.Entities.UserRestaurant.User));
+
+            return Result<IEnumerable<UserDto>>.Success(userRestaurants.OrderBy(ur => ur.User.FullName).Select(ur => ur.User.ToDto(ur)));
         }
     }
 }

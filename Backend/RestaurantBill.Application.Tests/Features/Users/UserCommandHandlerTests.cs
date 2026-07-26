@@ -9,12 +9,21 @@ namespace RestaurantBill.Application.Tests.Features.Users;
 
 public class UserCommandHandlerTests
 {
+    private static Restaurant CreateRestaurantWithId(int id)
+    {
+        Restaurant restaurant = Restaurant.Create();
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(restaurant, id);
+        return restaurant;
+    }
+
     public class CreateUserHandlerTests
     {
         [Fact]
         public async Task Handle_WithValidCommand_AddsUserAndSaves()
         {
             var uow = new FakeUnitOfWork();
+            await uow.RestaurantRepo.AddAsync(CreateRestaurantWithId(1));
+
             var handler = new CreateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService { RestaurantId = 1 });
             var command = new CreateUserCommand
             {
@@ -29,6 +38,9 @@ public class UserCommandHandlerTests
 
             Assert.Single(uow.UserRepo.Added);
             Assert.Equal("hashed_123456", uow.UserRepo.Added[0].PasswordHash);
+            Assert.Single(uow.UserRestaurantRepo.Added);
+            Assert.Equal("fatih", uow.UserRestaurantRepo.Added[0].UserName);
+            Assert.Equal(UserRole.Waiter, uow.UserRestaurantRepo.Added[0].Role);
             Assert.True(uow.SaveChangesCalled);
         }
 
@@ -36,10 +48,14 @@ public class UserCommandHandlerTests
         public async Task Handle_WithDuplicateUserName_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            User existing = User.Create("Ali Veli", "fatih", null, null, "USR01", UserRole.Waiter, restaurantId: 1);
-            await uow.UserRepo.AddAsync(existing);
+            Restaurant restaurant = CreateRestaurantWithId(1);
+            await uow.RestaurantRepo.AddAsync(restaurant);
 
-            var handler = new CreateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService());
+            User existing = User.Create("Ali Veli", null, null);
+            await uow.UserRepo.AddAsync(existing);
+            await uow.UserRestaurantRepo.AddAsync(UserRestaurant.Create(existing, restaurant, "fatih", "USR01", UserRole.Waiter));
+
+            var handler = new CreateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService { RestaurantId = 1 });
             var command = new CreateUserCommand
             {
                 FullName = "Başka Biri",
@@ -60,7 +76,7 @@ public class UserCommandHandlerTests
         public async Task Handle_WithExistingUser_MarksAsDeletedAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            User user = User.Create("Fatih", "fatih", null, null, "USR01", UserRole.Waiter, restaurantId: 1);
+            User user = User.Create("Fatih", null, null);
             await uow.UserRepo.AddAsync(user);
 
             var handler = new DeleteUserCommandHandler(uow);
@@ -88,8 +104,11 @@ public class UserCommandHandlerTests
         public async Task Handle_WithExistingUser_UpdatesAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            User user = User.Create("Eski Ad", "eski", null, null, "OLD01", UserRole.Waiter, restaurantId: 1);
+            Restaurant restaurant = CreateRestaurantWithId(1);
+            User user = User.Create("Eski Ad", null, null);
             await uow.UserRepo.AddAsync(user);
+            UserRestaurant userRestaurant = UserRestaurant.Create(user, restaurant, "eski", "OLD01", UserRole.Waiter);
+            await uow.UserRestaurantRepo.AddAsync(userRestaurant);
 
             var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher());
             var command = new UpdateUserCommand
@@ -104,7 +123,7 @@ public class UserCommandHandlerTests
             await handler.Handle(command, CancellationToken.None);
 
             Assert.Equal("Yeni Ad", user.FullName);
-            Assert.Equal(UserRole.Admin, user.Role);
+            Assert.Equal(UserRole.Admin, userRestaurant.Role);
             Assert.True(user.IsActive);
             Assert.True(uow.SaveChangesCalled);
         }
@@ -113,8 +132,10 @@ public class UserCommandHandlerTests
         public async Task Handle_WithPassword_HashesAndSetsPassword()
         {
             var uow = new FakeUnitOfWork();
-            User user = User.Create("Fatih", "fatih", null, null, "USR01", UserRole.Waiter, restaurantId: 1);
+            Restaurant restaurant = CreateRestaurantWithId(1);
+            User user = User.Create("Fatih", null, null);
             await uow.UserRepo.AddAsync(user);
+            await uow.UserRestaurantRepo.AddAsync(UserRestaurant.Create(user, restaurant, "fatih", "USR01", UserRole.Waiter));
 
             var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher());
             var command = new UpdateUserCommand

@@ -11,6 +11,7 @@ public interface IUnitOfWork : IDisposable
     IRestaurantRepository Restaurant { get; }
     IMembershipRepository Membership { get; }
     IUserRepository User { get; }
+    IUserRestaurantRepository UserRestaurant { get; }
     ICashRegisterRepository CashRegister { get; }
     ICashTransactionRepository CashTransaction { get; }
     IReservationRepository Reservation { get; }

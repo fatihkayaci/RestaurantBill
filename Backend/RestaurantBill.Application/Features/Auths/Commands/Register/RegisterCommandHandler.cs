@@ -9,7 +9,7 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.Register
 {
-    public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<string>>
+    public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<int>>
     {
         private readonly IUnitOfWork _uow;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -20,31 +20,23 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             _passwordHasher = passwordHasher;
         }
 
-        public async Task<Result<string>> Handle(RegisterCommand request, CancellationToken cancellationToken)
+        public async Task<Result<int>> Handle(RegisterCommand request, CancellationToken cancellationToken)
         {
-            bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && !u.IsDeleted, false)).Any();
-            if (userNameExists)
-                return Result<string>.Failure("Bu kullanıcı adı zaten kullanımda.");
+            bool phoneNumberExists = (await _uow.User.GetAllAsync(u => u.PhoneNumber == request.PhoneNumber && !u.IsDeleted, false)).Any();
+            if (phoneNumberExists)
+                return Result<int>.Failure("Bu Telefon Numarası zaten kullanımda.");
 
             bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && !u.IsDeleted, false)).Any();
             if (emailExists)
-                return Result<string>.Failure("Bu e-posta adresi zaten kullanımda.");
+                return Result<int>.Failure("Bu e-posta adresi zaten kullanımda.");
 
-            Restaurant restaurant = Restaurant.Create(request.RestaurantName);
-            restaurant.AssignSlug(await GenerateUniqueSlugAsync(request.RestaurantName));
-
-            string userCode = $"USR-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
-            User user = User.Create(request.FullName, request.UserName, request.Email, null, userCode, UserRole.Admin, restaurant);
+            User user = User.Create(request.FullName, request.Email, request.PhoneNumber);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));
 
-            Membership membership = Membership.Create(restaurant, MembershipPlanType.Free, DateTime.UtcNow, DateTime.UtcNow.AddDays(14));
-
-            await _uow.Restaurant.AddAsync(restaurant);
             await _uow.User.AddAsync(user);
-            await _uow.Membership.AddAsync(membership);
             await _uow.SaveChangesAsync(cancellationToken);
 
-            return Result<string>.Success(restaurant.Slug);
+            return Result<int>.Success(user.Id);
         }
 
         private async Task<string> GenerateUniqueSlugAsync(string restaurantName)

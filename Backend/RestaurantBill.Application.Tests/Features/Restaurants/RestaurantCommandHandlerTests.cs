@@ -21,7 +21,6 @@ public class RestaurantCommandHandlerTests
             {
                 Name = "Yeni Restoran",
                 PhoneNumber = "05001234567",
-                MobilePhoneNumber = "05007654321",
                 Email = "info@restoran.com",
                 City = "İstanbul",
                 District = "Kadıköy"

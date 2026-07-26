@@ -26,11 +26,15 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         {
             int restaurantId = _currentUser.RestaurantId;
 
-            bool userNameExists = (await _uow.User.GetAllAsync(u => u.UserName == request.UserName && u.RestaurantId == restaurantId && !u.IsDeleted, false)).Any();
+            Restaurant? restaurant = await _uow.Restaurant.GetByIdAsync(restaurantId, true);
+            if (restaurant is null)
+                return Result.Failure("Restoran bulunamadı.");
+
+            bool userNameExists = (await _uow.UserRestaurant.GetAllAsync(ur => ur.UserName == request.UserName && ur.RestaurantId == restaurantId && !ur.IsDeleted, false)).Any();
             if (userNameExists)
                 return Result.Failure("Bu kullanıcı adı zaten kullanımda.");
 
-            bool userCodeExists = (await _uow.User.GetAllAsync(u => u.UserCode == request.UserCode && u.RestaurantId == restaurantId && !u.IsDeleted, false)).Any();
+            bool userCodeExists = (await _uow.UserRestaurant.GetAllAsync(ur => ur.UserCode == request.UserCode && ur.RestaurantId == restaurantId && !ur.IsDeleted, false)).Any();
             if (userCodeExists)
                 return Result.Failure("Bu kullanıcı kodu zaten kullanımda.");
 
@@ -41,10 +45,12 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
                     return Result.Failure("Bu e-posta adresi zaten kullanımda.");
             }
 
-            User user = User.Create(request.FullName, request.UserName, request.Email, request.PhoneNumber, request.UserCode, request.Role, restaurantId);
+            User user = User.Create(request.FullName, request.Email, request.PhoneNumber);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.PasswordHash));
+            UserRestaurant userRestaurant = UserRestaurant.Create(user, restaurant, request.UserName, request.UserCode, request.Role);
 
             await _uow.User.AddAsync(user);
+            await _uow.UserRestaurant.AddAsync(userRestaurant);
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }

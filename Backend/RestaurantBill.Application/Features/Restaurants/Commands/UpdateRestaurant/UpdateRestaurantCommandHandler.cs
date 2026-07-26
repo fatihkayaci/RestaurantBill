@@ -28,7 +28,7 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaur
                 return Result.Failure("Restoran bulunamadı");
             }
 
-            restaurant.Update(request.Name, request.PhoneNumber, request.MobilePhoneNumber, request.Email, request.City, request.District);
+            restaurant.Update(request.Name, request.PhoneNumber, request.Email, request.City, request.District);
 
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();

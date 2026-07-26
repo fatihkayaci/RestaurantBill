@@ -13,10 +13,6 @@ public class UpdateRestaurantCommandValidator : AbstractValidator<UpdateRestaura
             .NotEmpty().WithMessage("Telefon numarası boş bırakılamaz.")
             .MaximumLength(20).WithMessage("Telefon numarası en fazla 20 karakter olabilir.");
 
-        RuleFor(x => x.MobilePhoneNumber)
-            .MaximumLength(20).WithMessage("Cep telefonu en fazla 20 karakter olabilir.")
-            .When(x => !string.IsNullOrEmpty(x.MobilePhoneNumber));
-
         RuleFor(x => x.Email)
             .EmailAddress().WithMessage("Geçerli bir e-posta adresi giriniz.")
             .When(x => !string.IsNullOrEmpty(x.Email));

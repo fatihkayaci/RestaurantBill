@@ -33,7 +33,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             string identifier = !string.IsNullOrWhiteSpace(request.UserName) ? request.UserName : request.Email!;
             string? slug = _tenantResolver.Slug;
 
-            User? user;
+            UserRestaurant? userRestaurant;
 
             if (!string.IsNullOrWhiteSpace(slug))
             {
@@ -44,18 +44,24 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                     return Result<string>.Failure("Restoran bulunamadı.");
                 }
 
-                user = (await _uow.User.GetAllAsync(u =>
-                    (u.UserName == identifier || u.Email == identifier)
-                    && u.RestaurantId == restaurant.Id
-                    && !u.IsDeleted, false)).FirstOrDefault();
+                userRestaurant = (await _uow.UserRestaurant.GetAllAsync(ur =>
+                    (ur.UserName == identifier || ur.User.Email == identifier)
+                    && ur.RestaurantId == restaurant.Id
+                    && !ur.IsDeleted
+                    && !ur.User.IsDeleted, false, nameof(RestaurantBill.Domain.Entities.UserRestaurant.User))).FirstOrDefault();
             }
             else
             {
-                user = (await _uow.User.GetAllAsync(u => u.Email == identifier && !u.IsDeleted, false)).FirstOrDefault();
+                User? userByEmail = (await _uow.User.GetAllAsync(u => u.Email == identifier && !u.IsDeleted, false)).FirstOrDefault();
+                userRestaurant = userByEmail is null
+                    ? null
+                    : (await _uow.UserRestaurant.GetAllAsync(ur => ur.UserId == userByEmail.Id && !ur.IsDeleted, false, nameof(RestaurantBill.Domain.Entities.UserRestaurant.User))).FirstOrDefault();
             }
 
-            if (user == null)
+            if (userRestaurant == null)
                 return Result<string>.Failure("Kullanıcı adı, email veya şifre hatalı!");
+
+            User user = userRestaurant.User;
 
             var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
             if (result == PasswordVerificationResult.Failed)
@@ -64,18 +70,20 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             // if (!user.IsActive)
             //     throw new BusinessException("Hesabınız pasif durumda. Giriş yapabilmek için yöneticinizle iletişime geçin.");
 
-            return Result<string>.Success(GenerateJwtToken(user));
+            return Result<string>.Success(GenerateJwtToken(userRestaurant));
         }
 
-        private string GenerateJwtToken(User user)
+        private string GenerateJwtToken(UserRestaurant userRestaurant)
         {
+            User user = userRestaurant.User;
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.Name, userRestaurant.UserName),
                 new Claim("FullName", user.FullName),
-                new Claim(ClaimTypes.Role, user.Role.ToString()),
-                new Claim("RestaurantId", user.RestaurantId.ToString())
+                new Claim(ClaimTypes.Role, userRestaurant.Role.ToString()),
+                new Claim("RestaurantId", userRestaurant.RestaurantId.ToString())
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecretKey"]!));

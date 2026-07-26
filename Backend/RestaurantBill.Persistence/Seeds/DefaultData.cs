@@ -19,7 +19,7 @@ public static class DefaultData
         if (!await context.Restaurants.AnyAsync())
         {
             Restaurant restaurant = Restaurant.Create();
-            restaurant.Update("Demo Restaurant", "0212 000 00 00", "0532 000 00 00", "info@demorestaurant.com", "Istanbul", "Kadikoy");
+            restaurant.Update("Demo Restaurant", "0212 000 00 00", "info@demorestaurant.com", "Istanbul", "Kadikoy");
             restaurant.AssignSlug("demo");
             await context.Restaurants.AddAsync(restaurant);
             await context.SaveChangesAsync();
@@ -40,9 +40,11 @@ public static class DefaultData
 
             foreach (var u in demoUsers)
             {
-                User user = User.Create(u.FullName, u.UserName, u.Email, null, u.UserCode, u.Role, demoRestaurant.Id);
+                User user = User.Create(u.FullName, u.Email, null);
                 user.SetPasswordHash(passwordHasher.HashPassword(user, u.Password));
+                UserRestaurant userRestaurant = UserRestaurant.Create(user, demoRestaurant, u.UserName, u.UserCode, u.Role);
                 await context.Users.AddAsync(user);
+                await context.UserRestaurants.AddAsync(userRestaurant);
             }
 
             await context.SaveChangesAsync();

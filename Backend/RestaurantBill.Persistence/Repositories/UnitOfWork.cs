@@ -20,6 +20,7 @@ public class UnitOfWork : IUnitOfWork
     private IRestaurantRepository? _restaurantRepository;
     private IMembershipRepository? _membershipRepository;
     private IUserRepository? _userRepository;
+    private IUserRestaurantRepository? _userRestaurantRepository;
     private ICashRegisterRepository? _cashRegisterRepository;
     private ICashTransactionRepository? _cashTransactionRepository;
     private IReservationRepository? _reservationRepository;
@@ -34,6 +35,7 @@ public class UnitOfWork : IUnitOfWork
     public IRestaurantRepository Restaurant => _restaurantRepository ??= new RestaurantRepository(_context);
     public IMembershipRepository Membership => _membershipRepository ??= new MembershipRepository(_context);
     public IUserRepository User => _userRepository ??= new UserRepository(_context);
+    public IUserRestaurantRepository UserRestaurant => _userRestaurantRepository ??= new UserRestaurantRepository(_context);
     public ICashRegisterRepository CashRegister => _cashRegisterRepository ??= new CashRegisterRepository(_context);
     public ICashTransactionRepository CashTransaction => _cashTransactionRepository ??= new CashTransactionRepository(_context);
     public IReservationRepository Reservation => _reservationRepository ??= new ReservationRepository(_context);

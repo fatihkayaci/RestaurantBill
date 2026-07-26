@@ -25,6 +25,9 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, R
         User? user = await _uow.User.GetByIdAsync(_currentUser.UserId);
         if (user is null) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
 
-        return Result<UserDto>.Success(user.ToDto());
+        UserRestaurant? userRestaurant = (await _uow.UserRestaurant.GetAllAsync(ur => ur.UserId == user.Id, false)).FirstOrDefault();
+        if (userRestaurant is null) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
+
+        return Result<UserDto>.Success(user.ToDto(userRestaurant));
     }
 }
