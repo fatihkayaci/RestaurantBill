@@ -10,17 +10,17 @@ namespace RestaurantBill.Domain.Entities
         public string City { get; private set; } = string.Empty;
         public string District { get; private set; } = string.Empty;
         public string Slug { get; private set; } = string.Empty;
+        public int OwnerUserId { get; private set; }
+        public User OwnerUser { get; private set; } = default!;
 
         protected Restaurant() { }
 
-        public static Restaurant Create()
+        public static Restaurant Create(string name, User owner)
         {
-            return new Restaurant();
-        }
+            if (owner == null)
+                throw new DomainException("Geçersiz kullanıcı.");
 
-        public static Restaurant Create(string name)
-        {
-            return new Restaurant { Name = name };
+            return new Restaurant { Name = name, OwnerUser = owner };
         }
 
         public void Update(string name, string phoneNumber, string email, string city, string district)
