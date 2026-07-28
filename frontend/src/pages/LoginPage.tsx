@@ -34,6 +34,7 @@ export default function LoginPage() {
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [restaurantName, setRestaurantName] = useState("");
+    const [regPhoneNumber, setRegPhoneNumber] = useState("");
     const [regEmail, setRegEmail] = useState("");
     const [regPassword, setRegPassword] = useState("");
     const [regConfirm, setRegConfirm] = useState("");
@@ -69,7 +70,7 @@ export default function LoginPage() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!firstName || !lastName || !restaurantName || !regEmail || !regPassword || !regConfirm) {
+        if (!firstName || !lastName || !restaurantName || !regPhoneNumber || !regEmail || !regPassword || !regConfirm) {
             toast.error("Tüm alanları doldurun.");
             return;
         }
@@ -85,7 +86,7 @@ export default function LoginPage() {
             setRegLoading(true);
             const slug = await authService.register({
                 fullName: `${firstName} ${lastName}`,
-                userName: regEmail,
+                phoneNumber: regPhoneNumber,
                 email: regEmail,
                 password: regPassword,
                 restaurantName,
@@ -289,6 +290,19 @@ export default function LoginPage() {
                                         value={restaurantName}
                                         onChange={(e) => setRestaurantName(e.target.value)}
                                         placeholder="Restoranınızın adı..."
+                                        className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                                    />
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        TELEFON NUMARASI
+                                    </label>
+                                    <Input
+                                        type="tel"
+                                        value={regPhoneNumber}
+                                        onChange={(e) => setRegPhoneNumber(e.target.value)}
+                                        placeholder="05XX XXX XX XX"
                                         className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
                                     />
                                 </div>

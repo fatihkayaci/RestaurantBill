@@ -12,6 +12,7 @@ namespace RestaurantBill.Domain.Entities
         public string UserName { get; private set; } = string.Empty;
         public string UserCode { get; private set; } = string.Empty;
         public UserRole Role { get; private set; }
+        public bool IsActive { get; private set; } = true;
 
         protected UserRestaurant() { }
 

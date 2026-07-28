@@ -32,10 +32,14 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
 
             User user = User.Create(request.FullName, request.Email, request.PhoneNumber);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));
+            Restaurant restaurant = Restaurant.Create(request.RestaurantName, user);
+            Membership membership = Membership.Create(restaurant, MembershipPlanType.Free, DateTime.UtcNow, DateTime.UtcNow.AddDays(14));
 
             await _uow.User.AddAsync(user);
+            await _uow.Restaurant.AddAsync(restaurant);
+            await _uow.Membership.AddAsync(membership);
             await _uow.SaveChangesAsync(cancellationToken);
-
+            
             return Result<int>.Success(user.Id);
         }
 
