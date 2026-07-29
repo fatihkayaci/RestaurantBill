@@ -11,7 +11,8 @@ public class UserCommandHandlerTests
 {
     private static Restaurant CreateRestaurantWithId(int id)
     {
-        Restaurant restaurant = Restaurant.Create();
+        User owner = User.Create("Restoran Sahibi", null, null);
+        Restaurant restaurant = Restaurant.Create("Test Restoran", owner);
         typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(restaurant, id);
         return restaurant;
     }
