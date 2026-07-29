@@ -52,6 +52,7 @@ export interface Restaurant {
     email: string;
     city: string;
     district: string;
+    slug: string;
 }
 
 export interface CreateRestaurant {

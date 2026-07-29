@@ -17,6 +17,8 @@ import CashierDashboardPage from './pages/cashier/DashboardPage';
 import OwnerLayout from './pages/owner/Layout';
 import OwnerSettingsPage from './pages/owner/SettingsPage';
 import OwnerMembershipPage from './pages/owner/MembershipPage';
+import OwnerStaffPage from './pages/owner/StaffPage';
+import SlugSetupPage from './pages/owner/SlugSetupPage';
 
 import AdminLayout from './pages/admin/Layout';
 import OverViewPage from './pages/admin/OverViewPage';
@@ -26,6 +28,7 @@ import StaffPage from './pages/admin/StaffPage';
 import AdminTablesPage from './pages/admin/TablesPage';
 import CashRegistersPage from './pages/admin/CashRegistersPage';
 import ProfilePage from './pages/admin/ProfilePage';
+import AdminRestaurantPage from './pages/admin/RestaurantPage';
 
 function App() {
     return (
@@ -47,8 +50,10 @@ function App() {
                 </Route>
 
                 {/* Owner */}
+                <Route path="/setup-slug" element={<PrivateRoute><SlugSetupPage /></PrivateRoute>} />
                 <Route path="/owner" element={<PrivateRoute><OwnerLayout /></PrivateRoute>}>
                     <Route index element={<Navigate to="/owner/settings" replace />} />
+                    <Route path="staff" element={<OwnerStaffPage />} />
                     <Route path="settings" element={<OwnerSettingsPage />} />
                     <Route path="membership" element={<OwnerMembershipPage />} />
                 </Route>
@@ -62,6 +67,7 @@ function App() {
                     <Route path="staff" element={<StaffPage />} />
                     <Route path="tables" element={<AdminTablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />
+                    <Route path="restaurant" element={<AdminRestaurantPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                 </Route>
 

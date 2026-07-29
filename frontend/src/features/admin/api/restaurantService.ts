@@ -9,5 +9,9 @@ export const restaurantService = {
     update: async (data: CreateRestaurant) => {
         const response = await api.post(`/restaurant`, data);
         return response.data;
+    },
+    setSlug: async (slug: string): Promise<string> => {
+        const response = await api.post<string>(`/restaurant/slug`, { Slug: slug });
+        return response.data;
     }
 };

@@ -75,7 +75,8 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 var single = accessible.Values.First();
                 return Result<LoginResponseDto>.Success(new LoginResponseDto
                 {
-                    Token = _jwtTokenGenerator.GenerateToken(emailUser, single.Restaurant.Id, single.Role, single.UserName)
+                    Token = _jwtTokenGenerator.GenerateToken(emailUser, single.Restaurant.Id, single.Role, single.UserName),
+                    NeedsSlugSetup = string.IsNullOrWhiteSpace(single.Restaurant.Slug)
                 });
             }
 

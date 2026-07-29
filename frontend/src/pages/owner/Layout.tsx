@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Settings, CreditCard } from 'lucide-react';
+import { Settings, CreditCard, Users } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { restaurantService } from '@/features/admin/api/restaurantService';
 import { userService } from '@/features/admin/api/userService';
@@ -9,6 +9,7 @@ import type { User } from '@/features/admin/types';
 import { cn } from '@/lib/utils';
 
 const navItems = [
+    { to: '/owner/staff', icon: Users, label: 'Çalışanlar' },
     { to: '/owner/settings', icon: Settings, label: 'Ayarlar' },
     { to: '/owner/membership', icon: CreditCard, label: 'Üyelik' },
 ];
