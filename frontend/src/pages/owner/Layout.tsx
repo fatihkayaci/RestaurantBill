@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Settings, CreditCard, Users, LayoutGrid, UtensilsCrossed, LayoutDashboard, UserCircle, Wallet } from 'lucide-react';
+import { LayoutDashboard, Building2, UserCog, CreditCard, Palette, BarChart3, History } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { restaurantService } from '@/features/admin/api/restaurantService';
 import { userService } from '@/features/admin/api/userService';
@@ -10,13 +10,12 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
     { to: '/owner/overview', icon: LayoutDashboard, label: 'Genel Bakış' },
-    { to: '/owner/staff', icon: Users, label: 'Çalışanlar' },
-    { to: '/owner/tables', icon: LayoutGrid, label: 'Masalar' },
-    { to: '/owner/menu', icon: UtensilsCrossed, label: 'Menü' },
-    { to: '/owner/cash-registers', icon: Wallet, label: 'Kasalar' },
-    { to: '/owner/settings', icon: Settings, label: 'Ayarlar' },
-    { to: '/owner/membership', icon: CreditCard, label: 'Üyelik' },
-    { to: '/owner/profile', icon: UserCircle, label: 'Profil' },
+    { to: '/owner/branches', icon: Building2, label: 'Şubeler' },
+    { to: '/owner/admins', icon: UserCog, label: 'Adminler' },
+    { to: '/owner/membership', icon: CreditCard, label: 'Üyelik & Fatura' },
+    { to: '/owner/branding', icon: Palette, label: 'Marka Ayarları' },
+    { to: '/owner/reports', icon: BarChart3, label: 'Finansal Rapor' },
+    { to: '/owner/audit-log', icon: History, label: 'Denetim Kaydı' },
 ];
 
 export default function OwnerLayout() {
@@ -67,24 +66,22 @@ export default function OwnerLayout() {
 
                 {/* Nav */}
                 <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-                    {navItems.map(({ to, label }) => (
+                    {navItems.map(({ to, icon: Icon, label }) => (
                         <NavLink
                             key={to}
                             to={to}
                             className={({ isActive }) =>
                                 cn(
-                                    'flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors',
+                                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
                                     isActive
-                                        ? 'text-white'
+                                        ? 'bg-white/10 text-white'
                                         : 'text-white/40 hover:text-white/70'
                                 )
                             }
                         >
                             {({ isActive }) => (
                                 <>
-                                    <span className={cn('text-[10px] leading-none', isActive ? 'text-amber-400' : 'text-white/25')}>
-                                        {isActive ? '◆' : '○'}
-                                    </span>
+                                    <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-amber-400' : 'text-white/30')} />
                                     {label}
                                 </>
                             )}
