@@ -6,29 +6,27 @@ namespace RestaurantBill.Domain.Entities
     {
         public string Name { get; private set; } = string.Empty;
         public string PhoneNumber { get; private set; } = string.Empty;
-        public string MobilePhoneNumber { get; private set; } = string.Empty;
         public string Email { get; private set; } = string.Empty;
         public string City { get; private set; } = string.Empty;
         public string District { get; private set; } = string.Empty;
         public string Slug { get; private set; } = string.Empty;
+        public int OwnerUserId { get; private set; }
+        public User OwnerUser { get; private set; } = default!;
 
         protected Restaurant() { }
 
-        public static Restaurant Create()
+        public static Restaurant Create(string name, User owner)
         {
-            return new Restaurant();
+            if (owner == null)
+                throw new DomainException("Geçersiz kullanıcı.");
+
+            return new Restaurant { Name = name, OwnerUser = owner };
         }
 
-        public static Restaurant Create(string name)
-        {
-            return new Restaurant { Name = name };
-        }
-
-        public void Update(string name, string phoneNumber, string mobilePhoneNumber, string email, string city, string district)
+        public void Update(string name, string phoneNumber, string email, string city, string district)
         {
             Name = name;
             PhoneNumber = phoneNumber;
-            MobilePhoneNumber = mobilePhoneNumber;
             Email = email;
             City = city;
             District = district;

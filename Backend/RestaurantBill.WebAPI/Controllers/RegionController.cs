@@ -23,7 +23,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// Returns all regions.
         /// </summary>
         /// <returns>200 OK with region list on success.</returns>
-        [Authorize(Roles = "Admin,Waiter,Kitchen,Cashier")]
+        [Authorize(Roles = "Owner,Admin,Waiter,Kitchen,Cashier")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -40,7 +40,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="command">Region creation details containing Name.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on creation.</returns>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateRegion([FromBody]CreateRegionCommand command, CancellationToken cancellationToken)
         {
@@ -54,7 +54,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="command">Region update details containing Id and Name.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on update.</returns>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpPost("update")]
         public async Task<IActionResult> UpdateRegion([FromBody]UpdateRegionCommand command, CancellationToken cancellationToken)
         {
@@ -71,7 +71,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="id">The ID of the region to delete.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on deletion.</returns>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRegion([FromRoute]int id, CancellationToken cancellationToken)
         {

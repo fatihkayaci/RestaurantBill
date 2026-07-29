@@ -15,37 +15,50 @@ public static class DefaultData
 
     private static async Task SeedDemoDataAsync(RestaurantBillDbContext context, IPasswordHasher<User> passwordHasher)
     {
-        // Restaurant
+        var demoUsers = new[]
+        {
+            new { FullName = "System Administrator", UserName = "admin",   Email = "admin@demo.com",   Phone = "05000000000", UserCode = "0000", Password = "Admin123*",   Role = UserRole.Admin   },
+            new { FullName = "Demo Waiter",          UserName = "waiter",  Email = "waiter@demo.com",  Phone = "05000000001", UserCode = "1001", Password = "Waiter123*",  Role = UserRole.Waiter  },
+            new { FullName = "Demo Kitchen",         UserName = "kitchen", Email = "kitchen@demo.com", Phone = "05000000002", UserCode = "1002", Password = "Kitchen123*", Role = UserRole.Kitchen },
+            new { FullName = "Demo Cashier",         UserName = "cashier", Email = "cashier@demo.com", Phone = "05000000003", UserCode = "1003", Password = "Cashier123*", Role = UserRole.Cashier },
+        };
+
+        // Restaurant (owner = admin demo user)
         if (!await context.Restaurants.AnyAsync())
         {
-            Restaurant restaurant = Restaurant.Create();
-            restaurant.Update("Demo Restaurant", "0212 000 00 00", "0532 000 00 00", "info@demorestaurant.com", "Istanbul", "Kadikoy");
+            var adminData = demoUsers[0];
+            User adminUser = User.Create(adminData.FullName, adminData.Email, adminData.Phone);
+            adminUser.SetPasswordHash(passwordHasher.HashPassword(adminUser, adminData.Password));
+            await context.Users.AddAsync(adminUser);
+            await context.SaveChangesAsync();
+
+            Restaurant restaurant = Restaurant.Create("Demo Restaurant", adminUser);
+            restaurant.Update("Demo Restaurant", "0212 000 00 00", "info@demorestaurant.com", "Istanbul", "Kadikoy");
             restaurant.AssignSlug("demo");
             await context.Restaurants.AddAsync(restaurant);
+            await context.SaveChangesAsync();
+
+            UserRestaurant adminUserRestaurant = UserRestaurant.Create(adminUser, restaurant, adminData.UserName, adminData.UserCode, adminData.Role);
+            await context.UserRestaurants.AddAsync(adminUserRestaurant);
             await context.SaveChangesAsync();
         }
 
         Restaurant demoRestaurant = await context.Restaurants.FirstAsync();
 
-        // Users
-        if (!await context.Users.AnyAsync())
+        // Remaining users
+        if (await context.Users.CountAsync() < demoUsers.Length)
         {
-            var demoUsers = new[]
+            foreach (var u in demoUsers.Skip(1))
             {
-                new { FullName = "System Administrator", UserName = "admin",   Email = "admin@demo.com",   UserCode = "0000", Password = "Admin123*",   Role = UserRole.Admin   },
-                new { FullName = "Demo Waiter",          UserName = "waiter",  Email = "waiter@demo.com",  UserCode = "1001", Password = "Waiter123*",  Role = UserRole.Waiter  },
-                new { FullName = "Demo Kitchen",         UserName = "kitchen", Email = "kitchen@demo.com", UserCode = "1002", Password = "Kitchen123*", Role = UserRole.Kitchen },
-                new { FullName = "Demo Cashier",         UserName = "cashier", Email = "cashier@demo.com", UserCode = "1003", Password = "Cashier123*", Role = UserRole.Cashier },
-            };
-
-            foreach (var u in demoUsers)
-            {
-                User user = User.Create(u.FullName, u.UserName, u.Email, null, u.UserCode, u.Role, demoRestaurant.Id);
+                User user = User.Create(u.FullName, u.Email, u.Phone);
                 user.SetPasswordHash(passwordHasher.HashPassword(user, u.Password));
                 await context.Users.AddAsync(user);
-            }
+                await context.SaveChangesAsync();
 
-            await context.SaveChangesAsync();
+                UserRestaurant userRestaurant = UserRestaurant.Create(user, demoRestaurant, u.UserName, u.UserCode, u.Role);
+                await context.UserRestaurants.AddAsync(userRestaurant);
+                await context.SaveChangesAsync();
+            }
         }
 
         // Categories

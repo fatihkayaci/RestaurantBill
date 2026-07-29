@@ -11,6 +11,7 @@ public class RestaurantBillDbContext : DbContext
     }
 
     public DbSet<User> Users { get; set; }
+    public DbSet<UserRestaurant> UserRestaurants { get; set; }
     public DbSet<Product> Products { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
@@ -22,6 +23,7 @@ public class RestaurantBillDbContext : DbContext
     public DbSet<CashRegister> CashRegisters { get; set; }
     public DbSet<CashTransaction> CashTransactions { get; set; }
     public DbSet<Reservation> Reservations { get; set; }
+    public DbSet<VerificationCode> VerificationCodes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

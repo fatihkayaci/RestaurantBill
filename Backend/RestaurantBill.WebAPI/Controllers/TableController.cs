@@ -28,7 +28,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary>
         /// Returns all tables.
         /// </summary>
-        [Authorize(Roles = "Admin,Waiter,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Waiter,Kitchen")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -40,7 +40,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// Returns a table by its ID.
         /// </summary>
         /// <param name="id">TableId</param>
-        [Authorize(Roles = "Admin,Waiter,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Waiter,Kitchen")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTableById([FromRoute]int id)
         {
@@ -55,7 +55,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// Returns the active reservation for the given table, or null if there is none.
         /// </summary>
         /// <param name="id">TableId</param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpGet("{id}/reservation")]
         public async Task<IActionResult> GetActiveReservation([FromRoute] int id)
         {
@@ -72,7 +72,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="command">Table creation details containing capacity and table number.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on creation.</returns>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateTable([FromBody]CreateTableCommand command, CancellationToken cancellationToken)
         {
@@ -85,7 +85,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="command">Table update details containing Id and updated fields.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on update.</returns>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpPost("update")]
         public async Task<IActionResult> UpdateTable([FromBody]UpdateTableCommand command, CancellationToken cancellationToken)
         {
@@ -97,7 +97,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// </summary>
         /// <param name="command">TableId</param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost("open")]
         public async Task<IActionResult> OpenTable([FromBody]OpenTableCommand command, CancellationToken cancellationToken)
         {
@@ -109,7 +109,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// </summary>
         /// <param name="command">TableId</param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost("reservation")]
         public async Task<IActionResult> ReservationTable([FromBody]ReservationTableCommand command, CancellationToken cancellationToken)
         {
@@ -121,7 +121,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// </summary>
         /// <param name="command">TableId</param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost("cancel-reservation")]
         public async Task<IActionResult> CancelReservationTable([FromBody]CancelReservationCommand command, CancellationToken cancellationToken)
         {
@@ -137,7 +137,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="id">The ID of the table to delete.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on deletion.</returns>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken cancellationToken)
         {

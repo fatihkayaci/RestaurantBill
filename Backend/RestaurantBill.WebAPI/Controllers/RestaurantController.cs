@@ -22,7 +22,7 @@ public class RestaurantController : BaseController
     /// Returns all restaurants associated with the authenticated user. Only accessible by Admin.
     /// </summary>
     /// <returns>200 OK with restaurant list on success.</returns>
-    [Authorize(Roles = "Admin, Cashier, Waiter, Kitchen")]
+    [Authorize(Roles = "Owner, Admin, Cashier, Waiter, Kitchen")]
     [HttpGet]
     public async Task<IActionResult> GetMyRestaurant(CancellationToken cancellationToken)
     {
@@ -38,7 +38,7 @@ public class RestaurantController : BaseController
     /// <param name="command">Restaurant creation details containing Name, PhoneNumber, MobilePhoneNumber, Email, City and District.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
     /// <returns>200 OK with success message on creation.</returns>
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Owner,Admin")]
     [HttpPost]
     public async Task<IActionResult> UpdateRestaurant([FromBody] UpdateRestaurantCommand command, CancellationToken cancellationToken)
     {

@@ -12,7 +12,8 @@ public class RestaurantCommandHandlerTests
         public async Task Handle_WithExistingRestaurant_UpdatesAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            Restaurant restaurant = Restaurant.Create();
+            User owner = User.Create("Restoran Sahibi", null, null);
+            Restaurant restaurant = Restaurant.Create("Eski Restoran", owner);
             typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(restaurant, 1);
             await uow.RestaurantRepo.AddAsync(restaurant);
 
@@ -21,7 +22,6 @@ public class RestaurantCommandHandlerTests
             {
                 Name = "Yeni Restoran",
                 PhoneNumber = "05001234567",
-                MobilePhoneNumber = "05007654321",
                 Email = "info@restoran.com",
                 City = "İstanbul",
                 District = "Kadıköy"

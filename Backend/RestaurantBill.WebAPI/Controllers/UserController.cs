@@ -33,7 +33,7 @@ namespace RestaurantBill.WebAPI.Controllers
             return HandleResult(result);
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpGet]
         public async Task<IActionResult> GetUserByRestaurantId()
         {
@@ -51,7 +51,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on creation.</returns>
         
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateUser([FromBody]CreateUserCommand command, CancellationToken cancellationToken)
         {
@@ -65,7 +65,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on creation.</returns>
         
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpPost("update")]
         public async Task<IActionResult> UpdateUser([FromBody]UpdateUserCommand command, CancellationToken cancellationToken)
         {
@@ -82,7 +82,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on deletion.</returns>
         
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser([FromRoute]int id, CancellationToken cancellationToken)
         {

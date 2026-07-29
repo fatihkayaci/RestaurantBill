@@ -28,7 +28,7 @@ namespace RestaurantBill.WebAPI.Controllers
         #region methods for get
 
         /// <summary> Returns all active orders for kitchen (excludes Paid and Cancelled). </summary>
-        [Authorize(Roles = "Admin,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Kitchen")]
         [HttpGet("kitchen")]
         public async Task<IActionResult> GetAllOrdersToKitchen(CancellationToken cancellationToken)
         {
@@ -47,7 +47,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Returns the active order for the given table. </summary>
         /// <param name="tableId">Table ID</param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Waiter,Kitchen")]
         [HttpGet("table/{tableId:int}")]
         public async Task<IActionResult> GetActiveOrderByTableId([FromRoute]int tableId, CancellationToken cancellationToken)
         {
@@ -61,7 +61,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Adds products to an order or updates quantity if the product already exists. </summary>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost("add-product")]
         public async Task<IActionResult> AddProducts([FromBody] AddProductToOrderCommand command, CancellationToken cancellationToken)
         {
@@ -71,7 +71,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Cancels the entire order and releases the table. </summary>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost("cancel")]
         public async Task<IActionResult> Cancel([FromBody]CancelOrderCommand command, CancellationToken cancellationToken)
         {
@@ -81,7 +81,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Closes the order, marks it as paid and sets the table to available. </summary>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin, Waiter, Cashier")]
+        [Authorize(Roles = "Owner, Admin, Waiter, Cashier")]
         [HttpPost("close")]
         public async Task<IActionResult> Close([FromBody]DeleteCommand command, CancellationToken cancellationToken)
         {
@@ -91,7 +91,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Creates a new order for a table. </summary>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody]CreateOrderCommand command, CancellationToken cancellationToken)
         {
@@ -101,7 +101,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Updates the quantity of a specific item in the order. Only Pending items can be updated. </summary>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost("item/quantity")]
         public async Task<IActionResult> UpdateOrderItemQuantity([FromBody]UpdateOrderItemQuantityCommand command, CancellationToken cancellationToken)
         {
@@ -112,7 +112,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Removes a specific product from the order. Only Pending items can be removed. </summary>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost("item/remove")]
         public async Task<IActionResult> RemoveProductFromOrder([FromBody]RemoveProductFromOrderCommand command, CancellationToken cancellationToken)
         {
@@ -124,7 +124,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="id">Order ID</param>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Admin, Kitchen, Waiter")]
+        [Authorize(Roles = "Owner, Admin, Kitchen, Waiter")]
         [HttpPost("{id}/status")]
         public async Task<IActionResult> UpdateStatus([FromRoute] int id, [FromBody] UpdateOrderStatusCommand command, CancellationToken cancellationToken)
         {
@@ -134,7 +134,7 @@ namespace RestaurantBill.WebAPI.Controllers
         }
 
         /// <summary> Updates the status of a single order item (Kitchen and Waiter use). </summary>
-        [Authorize(Roles = "Admin,Kitchen,Waiter")]
+        [Authorize(Roles = "Owner,Admin,Kitchen,Waiter")]
         [HttpPost("{orderId}/item/{itemId}/status")]
         public async Task<IActionResult> UpdateItemStatus([FromRoute] int orderId, [FromRoute] int itemId, [FromBody] UpdateOrderItemStatusCommand command, CancellationToken cancellationToken)
         {

@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.WebAPI.Services;
 using System.Text;
 
 namespace RestaurantBill.WebAPI.Extensions;
@@ -12,6 +14,7 @@ public static class AuthExtensions
     public static IServiceCollection AddIdentityWithJwt(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
         services.AddAuthentication(options =>
         {

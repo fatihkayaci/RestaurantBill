@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import {
     LayoutDashboard, UtensilsCrossed, Users,
-    LayoutGrid, Wallet, BarChart3, UserCircle, CreditCard
+    LayoutGrid, Wallet, BarChart3, UserCircle
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { restaurantService } from '@/features/admin/api/restaurantService';
@@ -20,7 +20,6 @@ const navItems = [
     { to: '/admin/cash-registers', icon: Wallet, label: 'Kasalar' },
     { to: '/admin/reports', icon: BarChart3, label: 'Raporlar' },
     { to: '/admin/profile', icon: UserCircle, label: 'Profil' },
-    { to: '/admin/membership', icon: CreditCard, label: 'Üyelik' },
 ];
 
 export default function AdminLayout() {

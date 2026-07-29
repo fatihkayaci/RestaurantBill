@@ -79,7 +79,6 @@ public static class MappingExtensions
     {
         Name = r.Name,
         PhoneNumber = r.PhoneNumber,
-        MobilePhoneNumber = r.MobilePhoneNumber,
         Email = r.Email,
         City = r.City,
         District = r.District
@@ -105,15 +104,15 @@ public static class MappingExtensions
         Note = r.Note
     };
 
-    public static UserDto ToDto(this User u) => new()
+    public static UserDto ToDto(this User u, UserRestaurant ur) => new()
     {
         Id = u.Id,
         FullName = u.FullName,
-        UserName = u.UserName,
+        UserName = ur.UserName,
         Email = u.Email,
         PhoneNumber = u.PhoneNumber ?? string.Empty,
-        UserCode = u.UserCode,
-        Role = u.Role,
+        UserCode = ur.UserCode,
+        Role = ur.Role,
         IsActive = u.IsActive
     };
 }

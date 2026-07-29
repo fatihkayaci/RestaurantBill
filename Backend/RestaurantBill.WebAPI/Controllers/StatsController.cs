@@ -6,7 +6,7 @@ using RestaurantBill.Application.Features.Stats.Queries.GetOverviewStats;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Owner,Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class StatsController : BaseController

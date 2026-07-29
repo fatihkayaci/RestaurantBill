@@ -10,6 +10,8 @@ namespace RestaurantBill.Infrastructure.Extensions
         {
             services.AddScoped<ITableNotificationService, TableNotificationService>();
             services.AddScoped<ICashierNotificationService, CashierNotificationService>();
+            services.AddScoped<ISmsSender, SmsSender>();
+            services.AddScoped<IEmailSender, EmailSender>();
             return services;
         }
     }

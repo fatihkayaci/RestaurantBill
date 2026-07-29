@@ -27,7 +27,7 @@ public class CashRegisterController : BaseController
     /// <summary>
     /// Returns all cash registers.
     /// </summary>
-    [Authorize(Roles = "Admin,Cashier")]
+    [Authorize(Roles = "Owner,Admin,Cashier")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -40,7 +40,7 @@ public class CashRegisterController : BaseController
     /// Returns a cash register by its ID.
     /// </summary>
     /// <param name="id">CashRegisterId</param>
-    [Authorize(Roles = "Admin,Cashier")]
+    [Authorize(Roles = "Owner,Admin,Cashier")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById([FromRoute] int id)
     {
@@ -54,7 +54,7 @@ public class CashRegisterController : BaseController
     /// <summary>
     /// Returns the last 50 cash transactions ordered by date.
     /// </summary>
-    [Authorize(Roles = "Admin,Cashier")]
+    [Authorize(Roles = "Owner,Admin,Cashier")]
     [HttpGet("transactions")]
     public async Task<IActionResult> GetTransactions(CancellationToken cancellationToken)
     {
@@ -68,7 +68,7 @@ public class CashRegisterController : BaseController
     /// <summary>
     /// Creates a new cash register. Only accessible by Admin.
     /// </summary>
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Owner,Admin")]
     [HttpPost("create")]
     public async Task<IActionResult> Create([FromBody] CreateCashRegisterCommand command, CancellationToken cancellationToken)
     {
@@ -79,7 +79,7 @@ public class CashRegisterController : BaseController
     /// <summary>
     /// Updates an existing cash register. Only accessible by Admin.
     /// </summary>
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Owner,Admin")]
     [HttpPost("update")]
     public async Task<IActionResult> Update([FromBody] UpdateCashRegisterCommand command, CancellationToken cancellationToken)
     {
@@ -90,7 +90,7 @@ public class CashRegisterController : BaseController
     /// <summary>
     /// Adds a money in/out transaction to a cash register and updates its balance.
     /// </summary>
-    [Authorize(Roles = "Admin,Cashier")]
+    [Authorize(Roles = "Owner,Admin,Cashier")]
     [HttpPost("transaction")]
     public async Task<IActionResult> AddTransaction([FromBody] AddTransactionToCashRegisterCommand command, CancellationToken cancellationToken)
     {
@@ -101,7 +101,7 @@ public class CashRegisterController : BaseController
     /// <summary>
     /// Transfers a given amount from one cash register to another.
     /// </summary>
-    [Authorize(Roles = "Admin,Cashier")]
+    [Authorize(Roles = "Owner,Admin,Cashier")]
     [HttpPost("transfer")]
     public async Task<IActionResult> Transfer([FromBody] TransferBetweenCashRegistersCommand command, CancellationToken cancellationToken)
     {
@@ -114,7 +114,7 @@ public class CashRegisterController : BaseController
     /// <summary>
     /// Deletes a cash register by its ID. Only accessible by Admin.
     /// </summary>
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Owner,Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken cancellationToken)
     {
