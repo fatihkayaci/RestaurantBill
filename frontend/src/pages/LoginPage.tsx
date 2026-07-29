@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { useTheme } from "next-themes";
 import { authService } from "@/features/auth/api/authService";
+import { getRoleFromToken, getRoleHomePath } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
@@ -61,13 +61,8 @@ export default function LoginPage() {
                 return;
             }
 
-            const decoded: any = jwtDecode(response.token);
-            const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-            if (role === "Owner") navigate("/owner");
-            else if (role === "Admin") navigate("/admin");
-            else if (role === "Kitchen") navigate("/kitchen");
-            else if (role === "Cashier") navigate("/cashier");
-            else navigate("/waiter");
+            const role = getRoleFromToken(response.token);
+            navigate(getRoleHomePath(role));
 
         } catch (error) {
             if (axios.isAxiosError(error)) {

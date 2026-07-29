@@ -35,23 +35,23 @@ function App() {
         <>
             <Routes>
                 {/* Waiter */}
-                <Route element={<PrivateRoute><WaiterLayout /></PrivateRoute>}>
+                <Route element={<PrivateRoute allowedRoles={["Waiter"]}><WaiterLayout /></PrivateRoute>}>
                     <Route path="/waiter" element={<WaiterTablesPage />} />
                 </Route>
 
                 {/* Kitchen */}
-                <Route element={<PrivateRoute><KitchenLayout /></PrivateRoute>}>
+                <Route element={<PrivateRoute allowedRoles={["Kitchen"]}><KitchenLayout /></PrivateRoute>}>
                     <Route path="/kitchen" element={<KitchenDashboardPage />} />
                 </Route>
 
                 {/* Cashier */}
-                <Route element={<PrivateRoute><CashierLayout /></PrivateRoute>}>
+                <Route element={<PrivateRoute allowedRoles={["Cashier"]}><CashierLayout /></PrivateRoute>}>
                     <Route path="/cashier" element={<CashierDashboardPage />} />
                 </Route>
 
                 {/* Owner */}
-                <Route path="/setup-slug" element={<PrivateRoute><SlugSetupPage /></PrivateRoute>} />
-                <Route path="/owner" element={<PrivateRoute><OwnerLayout /></PrivateRoute>}>
+                <Route path="/setup-slug" element={<PrivateRoute allowedRoles={["Owner"]}><SlugSetupPage /></PrivateRoute>} />
+                <Route path="/owner" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerLayout /></PrivateRoute>}>
                     <Route index element={<Navigate to="/owner/settings" replace />} />
                     <Route path="staff" element={<OwnerStaffPage />} />
                     <Route path="settings" element={<OwnerSettingsPage />} />
@@ -59,7 +59,7 @@ function App() {
                 </Route>
 
                 {/* Admin */}
-                <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
+                <Route path="/admin" element={<PrivateRoute allowedRoles={["Admin"]}><AdminLayout /></PrivateRoute>}>
                     <Route index element={<Navigate to="/admin/overview" replace />} />
                     <Route path="overview" element={<OverViewPage />} />
                     <Route path="menu" element={<MenuPage />} />
