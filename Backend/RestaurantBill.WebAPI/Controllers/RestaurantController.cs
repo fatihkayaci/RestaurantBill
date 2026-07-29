@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Features.Restaurants.Commands.SetRestaurantSlug;
 using RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant;
 using RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantByUserId;
 
@@ -38,13 +39,27 @@ public class RestaurantController : BaseController
     /// <param name="command">Restaurant creation details containing Name, PhoneNumber, MobilePhoneNumber, Email, City and District.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
     /// <returns>200 OK with success message on creation.</returns>
-    [Authorize(Roles = "Owner,Admin")]
+    [Authorize(Roles = "Owner")]
     [HttpPost]
     public async Task<IActionResult> UpdateRestaurant([FromBody] UpdateRestaurantCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }
-    
+
+    /// <summary>
+    /// Sets or updates the subdomain slug for the authenticated user's restaurant.
+    /// </summary>
+    /// <param name="command">Slug creation details containing the desired Slug.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>200 OK with the assigned slug on success.</returns>
+    [Authorize(Roles = "Owner")]
+    [HttpPost("slug")]
+    public async Task<IActionResult> SetSlug([FromBody] SetRestaurantSlugCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
     #endregion
 }

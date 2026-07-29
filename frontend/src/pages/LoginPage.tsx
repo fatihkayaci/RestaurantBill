@@ -55,9 +55,14 @@ export default function LoginPage() {
                 return;
             }
             localStorage.setItem("token", response.token);
+
+            if (response.needsSlugSetup) {
+                navigate("/setup-slug");
+                return;
+            }
+
             const decoded: any = jwtDecode(response.token);
             const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-            console.log(role);
             if (role === "Owner") navigate("/owner");
             else if (role === "Admin") navigate("/admin");
             else if (role === "Kitchen") navigate("/kitchen");
@@ -91,14 +96,14 @@ export default function LoginPage() {
         }
         try {
             setRegLoading(true);
-            const slug = await authService.register({
+            await authService.register({
                 fullName: `${firstName} ${lastName}`,
                 phoneNumber: regPhoneNumber,
                 email: regEmail,
                 password: regPassword,
                 restaurantName,
             });
-            toast.success(`Hesap oluşturuldu! Giriş adresiniz: ${slug}.bill.fatihkayaci.com`);
+            toast.success("Hesap oluşturuldu!");
             setActiveTab("login");
         } catch (error) {
             if (axios.isAxiosError(error)) {

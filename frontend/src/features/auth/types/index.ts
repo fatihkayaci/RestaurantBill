@@ -15,6 +15,7 @@ export interface RestaurantSelection {
 
 export interface LoginResponse {
     token?: string;
+    needsSlugSetup?: boolean;
     transitionToken?: string;
     restaurants?: RestaurantSelection[];
 }

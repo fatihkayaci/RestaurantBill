@@ -10,7 +10,6 @@ public class UpdateRestaurantCommandValidator : AbstractValidator<UpdateRestaura
             .MaximumLength(100).WithMessage("Restoran adı en fazla 100 karakter olabilir.");
 
         RuleFor(x => x.PhoneNumber)
-            .NotEmpty().WithMessage("Telefon numarası boş bırakılamaz.")
             .MaximumLength(20).WithMessage("Telefon numarası en fazla 20 karakter olabilir.");
 
         RuleFor(x => x.Email)
@@ -18,11 +17,9 @@ public class UpdateRestaurantCommandValidator : AbstractValidator<UpdateRestaura
             .When(x => !string.IsNullOrEmpty(x.Email));
 
         RuleFor(x => x.City)
-            .NotEmpty().WithMessage("Şehir boş bırakılamaz.")
             .MaximumLength(50).WithMessage("Şehir en fazla 50 karakter olabilir.");
 
         RuleFor(x => x.District)
-            .NotEmpty().WithMessage("İlçe boş bırakılamaz.")
             .MaximumLength(50).WithMessage("İlçe en fazla 50 karakter olabilir.");
     }
 }

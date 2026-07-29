@@ -1,4 +1,4 @@
-const ROOT_DOMAIN = 'bill.fatihkayaci.com';
+export const ROOT_DOMAIN = 'bill.fatihkayaci.com';
 
 export function getTenantSlug(): string | null {
     const hostname = window.location.hostname;

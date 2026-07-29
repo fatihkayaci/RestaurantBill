@@ -3,6 +3,7 @@ namespace RestaurantBill.Application.DTOs;
 public class LoginResponseDto
 {
     public string? Token { get; set; }
+    public bool NeedsSlugSetup { get; set; }
     public string? TransitionToken { get; set; }
     public List<RestaurantSelectionDto>? Restaurants { get; set; }
 }

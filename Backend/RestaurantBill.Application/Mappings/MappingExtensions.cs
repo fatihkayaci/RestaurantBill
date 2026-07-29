@@ -81,7 +81,8 @@ public static class MappingExtensions
         PhoneNumber = r.PhoneNumber,
         Email = r.Email,
         City = r.City,
-        District = r.District
+        District = r.District,
+        Slug = r.Slug
     };
 
     public static TableDto ToDto(this Table t) => new()
