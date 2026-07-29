@@ -24,7 +24,11 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
             if (user is null) return Result.Failure("Kullanıcı bulunamadı.");
 
             UserRestaurant? userRestaurant = (await _uow.UserRestaurant.GetAllAsync(ur => ur.UserId == request.UserId && !ur.IsDeleted, true)).FirstOrDefault();
-            if (userRestaurant is null) return Result.Failure("Kullanıcı bulunamadı.");
+            if (userRestaurant is null)
+            {
+                bool isOwner = (await _uow.Restaurant.GetAllAsync(r => r.OwnerUserId == request.UserId && !r.IsDeleted, false)).Any();
+                if (!isOwner) return Result.Failure("Kullanıcı bulunamadı.");
+            }
 
             if (!string.IsNullOrWhiteSpace(request.Email))
             {
@@ -34,7 +38,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
             }
 
             user.Update(request.FullName, request.Email, request.PhoneNumber, request.IsActive ?? user.IsActive);
-            userRestaurant.Update(request.UserName, request.UserCode, request.Role);
+            userRestaurant?.Update(request.UserName, request.UserCode, request.Role);
 
             if (!string.IsNullOrWhiteSpace(request.Password))
                 user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));

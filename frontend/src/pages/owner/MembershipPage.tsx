@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { Gem, CreditCard, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { membershipService } from '@/features/admin/api/membershipService';
+import { userService } from '@/features/admin/api/userService';
+import { statsService } from '@/features/admin/api/statsService';
+import { tableService } from '@/features/tables/api/tableService';
+import { productService } from '@/features/products/api/productService';
 import { MembershipPlanType, MembershipStatus, type Membership } from '@/features/admin/types';
 
 const inputLikeCard = 'rounded-xl border border-border bg-card p-5';
@@ -28,13 +32,6 @@ const statusBadgeClass: Record<MembershipStatus, string> = {
 const formatDate = (isoDate: string) =>
     new Date(isoDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-const usageStats = [
-    { label: 'Masa Sayısı', value: '12', limitLabel: 'Sınırsız' },
-    { label: 'Kullanıcı', value: '6', limitLabel: '/10 limit', progress: 60 },
-    { label: 'Sipariş (Bu Ay)', value: '847', limitLabel: 'Sınırsız' },
-    { label: 'Aktif Menü Ürünü', value: '14', limitLabel: 'Sınırsız' },
-];
-
 const paymentMethod = {
     brand: 'Visa',
     last4: '4242',
@@ -45,11 +42,28 @@ export default function MembershipPage() {
     const [membership, setMembership] = useState<Membership | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const [usage, setUsage] = useState({ tables: 0, staff: 0, orders: 0, activeProducts: 0 });
+    const [usageLoading, setUsageLoading] = useState(true);
+
     useEffect(() => {
         membershipService.getMyMembership()
             .then(setMembership)
             .catch(() => setMembership(null))
             .finally(() => setLoading(false));
+
+        Promise.all([
+            tableService.getTables(),
+            userService.getUsersByRestaurantId(),
+            productService.getProducts(),
+            statsService.getOverview(),
+        ]).then(([tables, staff, products, stats]) => {
+            setUsage({
+                tables: tables.length,
+                staff: staff.length,
+                orders: stats.totalOrders,
+                activeProducts: products.filter(p => p.isActive).length,
+            });
+        }).catch(console.error).finally(() => setUsageLoading(false));
     }, []);
 
     const planName = membership ? planTypeLabel[membership.planType] : '—';
@@ -61,6 +75,13 @@ export default function MembershipPage() {
         { label: 'Durum', value: membership ? statusLabel[membership.status] : '—' },
         { label: 'Başlangıç', value: membership ? formatDate(membership.startDate) : '—' },
         { label: 'Sonraki Yenileme', value: nextRenewal },
+    ];
+
+    const usageStats = [
+        { label: 'Masa Sayısı', value: usageLoading ? '—' : String(usage.tables) },
+        { label: 'Çalışan', value: usageLoading ? '—' : String(usage.staff) },
+        { label: 'Toplam Sipariş', value: usageLoading ? '—' : String(usage.orders) },
+        { label: 'Aktif Menü Ürünü', value: usageLoading ? '—' : String(usage.activeProducts) },
     ];
 
     return (
@@ -115,22 +136,8 @@ export default function MembershipPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {usageStats.map((stat) => (
                         <div key={stat.label} className={inputLikeCard}>
-                            <div className="flex items-center justify-between">
-                                <p className={sectionLabelClass}>{stat.label}</p>
-                                <span className="text-xs text-muted-foreground">{stat.limitLabel}</span>
-                            </div>
+                            <p className={sectionLabelClass}>{stat.label}</p>
                             <p className="text-3xl font-serif font-bold text-foreground mt-2">{stat.value}</p>
-                            {stat.progress !== undefined && (
-                                <div className="mt-3 space-y-1">
-                                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                                        <div
-                                            className="h-full rounded-full bg-green-500"
-                                            style={{ width: `${stat.progress}%` }}
-                                        />
-                                    </div>
-                                    <p className="text-xs text-green-500">%{stat.progress}</p>
-                                </div>
-                            )}
                         </div>
                     ))}
                 </div>

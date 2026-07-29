@@ -17,7 +17,7 @@ const profileSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 
 const roleLabel: Record<number, string> = {
-    1: "Yönetici", 2: "Garson", 3: "Kasiyer", 4: "Mutfak",
+    1: "Yönetici", 2: "Garson", 3: "Kasiyer", 4: "Mutfak", 5: "Sahibi",
 };
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
@@ -113,7 +113,7 @@ export default function Profile() {
                 <p className="text-sm text-muted-foreground mt-0.5">Hesap bilgileri</p>
             </div>
 
-            <div className="max-w-xl space-y-4">
+            <div className="space-y-4">
                 {/* User Header Card */}
                 <div className="rounded-xl bg-[#1c1917] dark:bg-[#0f0e0d] p-5 flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full border-2 border-purple-400 flex items-center justify-center shrink-0 bg-purple-900/40">
@@ -129,83 +129,85 @@ export default function Profile() {
                     </div>
                 </div>
 
-                {/* Kişisel Bilgiler */}
-                <div className="rounded-xl border border-border bg-card p-5">
-                    <h2 className="text-base font-semibold text-foreground mb-4">Kişisel Bilgiler</h2>
-                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-                        <div>
-                            <label className={labelClass}>Ad Soyad</label>
-                            <input className={cn(inputClass, profileForm.formState.errors.fullName && "border-destructive")} {...profileForm.register("fullName")} />
-                            {profileForm.formState.errors.fullName && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.fullName.message}</p>}
-                        </div>
-                        <div>
-                            <label className={labelClass}>E-posta</label>
-                            <input type="email" className={cn(inputClass, profileForm.formState.errors.email && "border-destructive")} {...profileForm.register("email")} />
-                            {profileForm.formState.errors.email && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.email.message}</p>}
-                        </div>
-                        <div>
-                            <label className={labelClass}>Telefon</label>
-                            <input className={inputClass} placeholder="0532 000 00 00" {...profileForm.register("phoneNumber")} />
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={profileForm.formState.isSubmitting}
-                                className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
-                            >
-                                {profileForm.formState.isSubmitting ? "Kaydediliyor..." : "Bilgileri Kaydet →"}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                    {/* Kişisel Bilgiler */}
+                    <div className="rounded-xl border border-border bg-card p-5">
+                        <h2 className="text-base font-semibold text-foreground mb-4">Kişisel Bilgiler</h2>
+                        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                            <div>
+                                <label className={labelClass}>Ad Soyad</label>
+                                <input className={cn(inputClass, profileForm.formState.errors.fullName && "border-destructive")} {...profileForm.register("fullName")} />
+                                {profileForm.formState.errors.fullName && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.fullName.message}</p>}
+                            </div>
+                            <div>
+                                <label className={labelClass}>E-posta</label>
+                                <input type="email" className={cn(inputClass, profileForm.formState.errors.email && "border-destructive")} {...profileForm.register("email")} />
+                                {profileForm.formState.errors.email && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.email.message}</p>}
+                            </div>
+                            <div>
+                                <label className={labelClass}>Telefon</label>
+                                <input className={inputClass} placeholder="0532 000 00 00" {...profileForm.register("phoneNumber")} />
+                            </div>
+                            <div className="flex justify-end">
+                                <button
+                                    type="submit"
+                                    disabled={profileForm.formState.isSubmitting}
+                                    className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                                >
+                                    {profileForm.formState.isSubmitting ? "Kaydediliyor..." : "Bilgileri Kaydet →"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
 
-                {/* Şifre Değiştir */}
-                <div className="rounded-xl border border-border bg-card p-5">
-                    <h2 className="text-base font-semibold text-foreground mb-4">Şifre Değiştir</h2>
-                    <form onSubmit={onPasswordSubmit} className="space-y-4">
-                        <div>
-                            <label className={labelClass}>Mevcut Şifre</label>
-                            <input
-                                type="password"
-                                className={inputClass}
-                                placeholder="Mevcut şifreniz..."
-                                value={currentPassword}
-                                onChange={e => setCurrentPassword(e.target.value)}
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
+                    {/* Şifre Değiştir */}
+                    <div className="rounded-xl border border-border bg-card p-5">
+                        <h2 className="text-base font-semibold text-foreground mb-4">Şifre Değiştir</h2>
+                        <form onSubmit={onPasswordSubmit} className="space-y-4">
                             <div>
-                                <label className={labelClass}>Yeni Şifre</label>
+                                <label className={labelClass}>Mevcut Şifre</label>
                                 <input
                                     type="password"
-                                    className={cn(inputClass, passwordError && "border-destructive")}
-                                    placeholder="Yeni şifre..."
-                                    value={newPassword}
-                                    onChange={e => setNewPassword(e.target.value)}
+                                    className={inputClass}
+                                    placeholder="Mevcut şifreniz..."
+                                    value={currentPassword}
+                                    onChange={e => setCurrentPassword(e.target.value)}
                                 />
                             </div>
-                            <div>
-                                <label className={labelClass}>Şifre Tekrar</label>
-                                <input
-                                    type="password"
-                                    className={cn(inputClass, passwordError && "border-destructive")}
-                                    placeholder="Şifreyi tekrar girin..."
-                                    value={confirmPassword}
-                                    onChange={e => setConfirmPassword(e.target.value)}
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Yeni Şifre</label>
+                                    <input
+                                        type="password"
+                                        className={cn(inputClass, passwordError && "border-destructive")}
+                                        placeholder="Yeni şifre..."
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Şifre Tekrar</label>
+                                    <input
+                                        type="password"
+                                        className={cn(inputClass, passwordError && "border-destructive")}
+                                        placeholder="Şifreyi tekrar girin..."
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
-                        <div className="flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={passwordLoading}
-                                className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
-                            >
-                                {passwordLoading ? "Güncelleniyor..." : "Şifreyi Güncelle →"}
-                            </button>
-                        </div>
-                    </form>
+                            {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+                            <div className="flex justify-end">
+                                <button
+                                    type="submit"
+                                    disabled={passwordLoading}
+                                    className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                                >
+                                    {passwordLoading ? "Güncelleniyor..." : "Şifreyi Güncelle →"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
