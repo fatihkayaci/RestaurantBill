@@ -49,14 +49,21 @@ export default function LoginPage() {
         }
         try {
             setLoginLoading(true);
-            const token = await authService.login(loginField, loginPassword);
-            localStorage.setItem("token", token);
-            const decoded: any = jwtDecode(token);
+            const response = await authService.login(loginField, loginPassword);
+            if (!response.token) {
+                toast.error("Bu hesap birden fazla restorana bağlı, bu ekran henüz desteklenmiyor.");
+                return;
+            }
+            localStorage.setItem("token", response.token);
+            const decoded: any = jwtDecode(response.token);
             const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-            if (role === "Admin") navigate("/admin");
+            console.log(role);
+            if (role === "Owner") navigate("/owner");
+            else if (role === "Admin") navigate("/admin");
             else if (role === "Kitchen") navigate("/kitchen");
             else if (role === "Cashier") navigate("/cashier");
             else navigate("/waiter");
+
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 toast.error(error.response?.data.error ?? "Giriş başarısız.");

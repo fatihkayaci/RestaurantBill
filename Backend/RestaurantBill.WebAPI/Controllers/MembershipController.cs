@@ -21,7 +21,7 @@ public class MembershipController : BaseController
     /// Returns the membership associated with the authenticated user's restaurant.
     /// </summary>
     /// <returns>200 OK with membership on success.</returns>
-    [Authorize(Roles = "Admin, Cashier, Waiter, Kitchen")]
+    [Authorize(Roles = "Owner, Admin, Cashier, Waiter, Kitchen")]
     [HttpGet]
     public async Task<IActionResult> GetMyMembership(CancellationToken cancellationToken)
     {

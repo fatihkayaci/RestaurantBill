@@ -1,48 +1,30 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import {
-    LayoutDashboard, UtensilsCrossed, Users,
-    LayoutGrid, Wallet, BarChart3, UserCircle
-} from 'lucide-react';
+import { Settings, CreditCard } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { restaurantService } from '@/features/admin/api/restaurantService';
 import { userService } from '@/features/admin/api/userService';
-import RestaurantSetupForm from '@/features/admin/components/RestaurantSetupForm';
 import type { User } from '@/features/admin/types';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-    { to: '/admin/overview', icon: LayoutDashboard, label: 'Genel Bakış' },
-    { to: '/admin/staff', icon: Users, label: 'Çalışanlar' },
-    { to: '/admin/tables', icon: LayoutGrid, label: 'Masalar' },
-    { to: '/admin/menu', icon: UtensilsCrossed, label: 'Menü' },
-    { to: '/admin/cash-registers', icon: Wallet, label: 'Kasalar' },
-    { to: '/admin/reports', icon: BarChart3, label: 'Raporlar' },
-    { to: '/admin/profile', icon: UserCircle, label: 'Profil' },
+    { to: '/owner/settings', icon: Settings, label: 'Ayarlar' },
+    { to: '/owner/membership', icon: CreditCard, label: 'Üyelik' },
 ];
 
-export default function AdminLayout() {
+export default function OwnerLayout() {
     const { theme, setTheme } = useTheme();
     const isDark = theme === 'dark';
     const navigate = useNavigate();
 
-    const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
     const [restaurantName, setRestaurantName] = useState('');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            setNeedsSetup(false);
-            return;
-        }
         restaurantService.getMyRestaurant()
-            .then((restaurant) => {
-                setRestaurantName(restaurant.name);
-                setNeedsSetup(!restaurant.name);
-            })
-            .catch(() => setNeedsSetup(false));
+            .then((restaurant) => setRestaurantName(restaurant.name))
+            .catch(() => {});
 
         userService.getCurrentUser()
             .then(u => setCurrentUser(u))
@@ -55,16 +37,9 @@ export default function AdminLayout() {
     };
 
     const initials = currentUser?.fullName
-        ?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() ?? 'A';
+        ?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() ?? 'O';
 
-    const displayName = currentUser?.fullName ?? 'Admin';
-
-    if (needsSetup === null) return null;
-    if (needsSetup) return (
-        <RestaurantSetupForm
-            onComplete={(name: string) => { setRestaurantName(name); setNeedsSetup(false); }}
-        />
-    );
+    const displayName = currentUser?.fullName ?? 'Owner';
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -79,7 +54,7 @@ export default function AdminLayout() {
                             {restaurantName || 'Restaurant'}
                         </p>
                         <p className="text-amber-400 text-[10px] font-semibold tracking-widest uppercase mt-0.5">
-                            Admin
+                            Owner
                         </p>
                     </div>
                 </div>

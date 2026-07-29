@@ -1,13 +1,15 @@
-import type { Register } from '../types';
+import type { LoginResponse, Register } from '../types';
 import { api } from '@/lib/axiosInstance';
 
 export const authService = {
     logout: () => {
         localStorage.removeItem('token');
     },
-    login: async (userName: string, password: string) => {
-        const response = await api.post<string>(`/auth/login`, {
-            UserName: userName,
+    login: async (loginField: string, password: string) => {
+        const isEmail = loginField.includes('@');
+        const response = await api.post<LoginResponse>(`/auth/login`, {
+            UserName: isEmail ? undefined : loginField,
+            Email: isEmail ? loginField : undefined,
             Password: password
         });
         return response.data;

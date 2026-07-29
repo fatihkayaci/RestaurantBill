@@ -23,7 +23,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// Returns all products including their associated category information.
         /// </summary>
         /// <returns>200 OK with product list on success.</returns>
-        [Authorize(Roles = "Admin,Waiter,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Waiter,Kitchen")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -41,7 +41,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="command">Product creation details containing CategoryId, Name, Price, IsActive and ImageUrl.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on creation.</returns>
-        [Authorize(Roles = "Admin,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Kitchen")]
         [HttpPost]
         public async Task<IActionResult> CreateProduct([FromBody]CreateProductCommand command, CancellationToken cancellationToken)
         {
@@ -55,7 +55,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="command">Product update details containing Id, CategoryId, Name, Price and IsActive.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on update.</returns>
-        [Authorize(Roles = "Admin,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Kitchen")]
         [HttpPost("update")]
         public async Task<IActionResult> UpdateProduct([FromBody]UpdateProductCommand command, CancellationToken cancellationToken)
         {
@@ -72,7 +72,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="id">The ID of the product to delete.</param>
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on deletion.</returns>
-        [Authorize(Roles = "Admin,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Kitchen")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct([FromRoute]int id, CancellationToken cancellationToken)
         {

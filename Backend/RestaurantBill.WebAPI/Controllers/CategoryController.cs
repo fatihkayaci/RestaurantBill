@@ -23,7 +23,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// Returns all categories.
         /// </summary>
         /// <returns>200 OK with category list on success.</returns>
-        [Authorize(Roles = "Admin,Waiter,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Waiter,Kitchen")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -41,7 +41,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on creation.</returns>
         
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateCategory([FromBody]CreateCategoryCommand command, CancellationToken cancellationToken)
         {
@@ -56,7 +56,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on update.</returns>
         
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpPost("update")]
         public async Task<IActionResult> UpdateCategory([FromBody]UpdateCategoryCommand command, CancellationToken cancellationToken)
         {
@@ -74,7 +74,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on deletion.</returns>
         
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory([FromRoute]int id, CancellationToken cancellationToken)
         {
