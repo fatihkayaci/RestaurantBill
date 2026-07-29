@@ -117,7 +117,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="max-w-4xl space-y-4">
+        <div className="space-y-4">
             <div className="mb-2">
                 <h1 className="text-2xl font-serif font-bold text-foreground">Ayarlar</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">Restoran bilgileri</p>

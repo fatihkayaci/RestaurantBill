@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Settings, CreditCard, Users } from 'lucide-react';
+import { Settings, CreditCard, Users, LayoutGrid, UtensilsCrossed, LayoutDashboard, UserCircle, Wallet } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { restaurantService } from '@/features/admin/api/restaurantService';
 import { userService } from '@/features/admin/api/userService';
@@ -9,9 +9,14 @@ import type { User } from '@/features/admin/types';
 import { cn } from '@/lib/utils';
 
 const navItems = [
+    { to: '/owner/overview', icon: LayoutDashboard, label: 'Genel Bakış' },
     { to: '/owner/staff', icon: Users, label: 'Çalışanlar' },
+    { to: '/owner/tables', icon: LayoutGrid, label: 'Masalar' },
+    { to: '/owner/menu', icon: UtensilsCrossed, label: 'Menü' },
+    { to: '/owner/cash-registers', icon: Wallet, label: 'Kasalar' },
     { to: '/owner/settings', icon: Settings, label: 'Ayarlar' },
     { to: '/owner/membership', icon: CreditCard, label: 'Üyelik' },
+    { to: '/owner/profile', icon: UserCircle, label: 'Profil' },
 ];
 
 export default function OwnerLayout() {
@@ -43,7 +48,7 @@ export default function OwnerLayout() {
     const displayName = currentUser?.fullName ?? 'Owner';
 
     return (
-        <div className="flex min-h-screen bg-background">
+        <div className="flex h-screen bg-background">
             <aside className="w-52 shrink-0 bg-[#1c1917] dark:bg-[#0f0e0d] flex flex-col">
                 {/* Logo */}
                 <div className="flex items-center gap-3 px-5 py-5">

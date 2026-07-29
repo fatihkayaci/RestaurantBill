@@ -68,7 +68,7 @@ export default function AdminLayout() {
     );
 
     return (
-        <div className="flex min-h-screen bg-background">
+        <div className="flex h-screen bg-background">
             <aside className="w-52 shrink-0 bg-[#1c1917] dark:bg-[#0f0e0d] flex flex-col">
                 {/* Logo */}
                 <div className="flex items-center gap-3 px-5 py-5">

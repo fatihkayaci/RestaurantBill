@@ -17,18 +17,18 @@ import CashierDashboardPage from './pages/cashier/DashboardPage';
 import OwnerLayout from './pages/owner/Layout';
 import OwnerSettingsPage from './pages/owner/SettingsPage';
 import OwnerMembershipPage from './pages/owner/MembershipPage';
-import OwnerStaffPage from './pages/owner/StaffPage';
 import SlugSetupPage from './pages/owner/SlugSetupPage';
 
 import AdminLayout from './pages/admin/Layout';
-import OverViewPage from './pages/admin/OverViewPage';
-import MenuPage from './pages/admin/MenuPage';
 import CategoriesPage from './pages/admin/CategoriesPage';
-import StaffPage from './pages/admin/StaffPage';
-import AdminTablesPage from './pages/admin/TablesPage';
-import CashRegistersPage from './pages/admin/CashRegistersPage';
-import ProfilePage from './pages/admin/ProfilePage';
 import AdminRestaurantPage from './pages/admin/RestaurantPage';
+
+import OverViewPage from './pages/shared/OverViewPage';
+import StaffPage from './pages/shared/StaffPage';
+import TablesPage from './pages/shared/TablesPage';
+import MenuPage from './pages/shared/MenuPage';
+import CashRegistersPage from './pages/shared/CashRegistersPage';
+import ProfilePage from './pages/shared/ProfilePage';
 
 function App() {
     return (
@@ -52,10 +52,15 @@ function App() {
                 {/* Owner */}
                 <Route path="/setup-slug" element={<PrivateRoute allowedRoles={["Owner"]}><SlugSetupPage /></PrivateRoute>} />
                 <Route path="/owner" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerLayout /></PrivateRoute>}>
-                    <Route index element={<Navigate to="/owner/settings" replace />} />
-                    <Route path="staff" element={<OwnerStaffPage />} />
+                    <Route index element={<Navigate to="/owner/overview" replace />} />
+                    <Route path="overview" element={<OverViewPage />} />
+                    <Route path="staff" element={<StaffPage />} />
+                    <Route path="tables" element={<TablesPage />} />
+                    <Route path="menu" element={<MenuPage />} />
+                    <Route path="cash-registers" element={<CashRegistersPage />} />
                     <Route path="settings" element={<OwnerSettingsPage />} />
                     <Route path="membership" element={<OwnerMembershipPage />} />
+                    <Route path="profile" element={<ProfilePage />} />
                 </Route>
 
                 {/* Admin */}
@@ -65,7 +70,7 @@ function App() {
                     <Route path="menu" element={<MenuPage />} />
                     <Route path="categories" element={<CategoriesPage />} />
                     <Route path="staff" element={<StaffPage />} />
-                    <Route path="tables" element={<AdminTablesPage />} />
+                    <Route path="tables" element={<TablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />
                     <Route path="restaurant" element={<AdminRestaurantPage />} />
                     <Route path="profile" element={<ProfilePage />} />
