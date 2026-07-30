@@ -46,6 +46,7 @@ export interface OverviewStats {
 }
 
 export interface Restaurant {
+    id: number;
     name: string;
     phoneNumber: string;
     mobilePhoneNumber: string;
@@ -53,6 +54,13 @@ export interface Restaurant {
     city: string;
     district: string;
     slug: string;
+}
+
+export interface Branch extends Restaurant {
+    tableCount: number;
+    staffCount: number;
+    revenue: number;
+    managerName?: string | null;
 }
 
 export interface CreateRestaurant {

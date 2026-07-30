@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Settings, CreditCard, Users, LayoutGrid, UtensilsCrossed, LayoutDashboard, UserCircle, Wallet } from 'lucide-react';
+import { LayoutDashboard, Building2, UserCog, CreditCard, Palette, BarChart3, History } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { restaurantService } from '@/features/admin/api/restaurantService';
 import { userService } from '@/features/admin/api/userService';
@@ -10,13 +10,12 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
     { to: '/owner/overview', icon: LayoutDashboard, label: 'Genel Bakış' },
-    { to: '/owner/staff', icon: Users, label: 'Çalışanlar' },
-    { to: '/owner/tables', icon: LayoutGrid, label: 'Masalar' },
-    { to: '/owner/menu', icon: UtensilsCrossed, label: 'Menü' },
-    { to: '/owner/cash-registers', icon: Wallet, label: 'Kasalar' },
-    { to: '/owner/settings', icon: Settings, label: 'Ayarlar' },
-    { to: '/owner/membership', icon: CreditCard, label: 'Üyelik' },
-    { to: '/owner/profile', icon: UserCircle, label: 'Profil' },
+    { to: '/owner/branches', icon: Building2, label: 'Şubeler' },
+    { to: '/owner/admins', icon: UserCog, label: 'Adminler' },
+    { to: '/owner/membership', icon: CreditCard, label: 'Üyelik & Fatura' },
+    { to: '/owner/branding', icon: Palette, label: 'Marka Ayarları' },
+    { to: '/owner/reports', icon: BarChart3, label: 'Finansal Rapor' },
+    { to: '/owner/audit-log', icon: History, label: 'Denetim Kaydı' },
 ];
 
 export default function OwnerLayout() {
@@ -49,17 +48,17 @@ export default function OwnerLayout() {
 
     return (
         <div className="flex h-screen bg-background">
-            <aside className="w-52 shrink-0 bg-[#1c1917] dark:bg-[#0f0e0d] flex flex-col">
+            <aside className="w-52 shrink-0 bg-sidebar flex flex-col">
                 {/* Logo */}
                 <div className="flex items-center gap-3 px-5 py-5">
-                    <div className="w-8 h-8 rounded-full border-2 border-amber-400 flex items-center justify-center shrink-0">
-                        <div className="w-3 h-3 rounded-full border-2 border-amber-400" />
+                    <div className="w-8 h-8 rounded-full border-2 border-rb-gold flex items-center justify-center shrink-0">
+                        <div className="w-3 h-3 rounded-full border-2 border-rb-gold" />
                     </div>
                     <div>
-                        <p className="text-white font-serif font-bold text-base leading-none truncate max-w-25">
+                        <p className="text-sidebar-foreground font-serif font-bold text-base leading-none truncate max-w-25">
                             {restaurantName || 'Restaurant'}
                         </p>
-                        <p className="text-amber-400 text-[10px] font-semibold tracking-widest uppercase mt-0.5">
+                        <p className="text-rb-gold text-[10px] font-semibold tracking-widest uppercase mt-0.5">
                             Owner
                         </p>
                     </div>
@@ -67,24 +66,22 @@ export default function OwnerLayout() {
 
                 {/* Nav */}
                 <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-                    {navItems.map(({ to, label }) => (
+                    {navItems.map(({ to, icon: Icon, label }) => (
                         <NavLink
                             key={to}
                             to={to}
                             className={({ isActive }) =>
                                 cn(
-                                    'flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors',
+                                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
                                     isActive
-                                        ? 'text-white'
-                                        : 'text-white/40 hover:text-white/70'
+                                        ? 'bg-white/10 text-sidebar-foreground'
+                                        : 'text-sidebar-foreground/40 hover:text-sidebar-foreground/70'
                                 )
                             }
                         >
                             {({ isActive }) => (
                                 <>
-                                    <span className={cn('text-[10px] leading-none', isActive ? 'text-amber-400' : 'text-white/25')}>
-                                        {isActive ? '◆' : '○'}
-                                    </span>
+                                    <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-rb-gold' : 'text-sidebar-foreground/30')} />
                                     {label}
                                 </>
                             )}
@@ -98,7 +95,7 @@ export default function OwnerLayout() {
                         onClick={() => setTheme(isDark ? 'light' : 'dark')}
                         className={cn(
                             'relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none',
-                            isDark ? 'bg-blue-500' : 'bg-gray-600'
+                            isDark ? 'bg-rb-accent' : 'bg-gray-600'
                         )}
                     >
                         <span className={cn(
@@ -112,10 +109,10 @@ export default function OwnerLayout() {
                         className="flex items-center gap-2 w-full hover:opacity-80 transition-opacity"
                         title="Çıkış Yap"
                     >
-                        <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
-                            <span className="text-white text-xs font-bold">{initials}</span>
+                        <div className="w-7 h-7 rounded-full bg-rb-gold flex items-center justify-center shrink-0">
+                            <span className="text-rb-gold-foreground text-xs font-bold">{initials}</span>
                         </div>
-                        <span className="text-white/70 text-sm truncate">{displayName}</span>
+                        <span className="text-sidebar-foreground/70 text-sm truncate">{displayName}</span>
                     </button>
                 </div>
             </aside>

@@ -1,10 +1,14 @@
 using FluentValidation;
-namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant;
 
-public class UpdateRestaurantCommandValidator : AbstractValidator<UpdateRestaurantCommand>
+namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranch;
+
+public class UpdateBranchCommandValidator : AbstractValidator<UpdateBranchCommand>
 {
-    public UpdateRestaurantCommandValidator()
+    public UpdateBranchCommandValidator()
     {
+        RuleFor(x => x.RestaurantId)
+            .GreaterThan(0).WithMessage("Geçersiz şube.");
+
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Restoran adı boş bırakılamaz.")
             .MaximumLength(100).WithMessage("Restoran adı en fazla 100 karakter olabilir.");

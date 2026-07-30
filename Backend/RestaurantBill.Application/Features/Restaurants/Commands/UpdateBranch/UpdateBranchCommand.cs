@@ -1,11 +1,11 @@
 using MediatR;
 using RestaurantBill.Domain.Shared;
 
-namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant
+namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranch
 {
-    public class UpdateRestaurantCommand: IRequest<Result>
+    public class UpdateBranchCommand : IRequest<Result>
     {
-        
+        public int RestaurantId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;

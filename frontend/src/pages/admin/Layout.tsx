@@ -29,6 +29,7 @@ export default function AdminLayout() {
     const navigate = useNavigate();
 
     const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+    const [restaurantId, setRestaurantId] = useState<number | null>(null);
     const [restaurantName, setRestaurantName] = useState('');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -40,6 +41,7 @@ export default function AdminLayout() {
         }
         restaurantService.getMyRestaurant()
             .then((restaurant) => {
+                setRestaurantId(restaurant.id);
                 setRestaurantName(restaurant.name);
                 setNeedsSetup(!restaurant.name);
             })
@@ -61,25 +63,26 @@ export default function AdminLayout() {
     const displayName = currentUser?.fullName ?? 'Admin';
 
     if (needsSetup === null) return null;
-    if (needsSetup) return (
+    if (needsSetup && restaurantId !== null) return (
         <RestaurantSetupForm
+            restaurantId={restaurantId}
             onComplete={(name: string) => { setRestaurantName(name); setNeedsSetup(false); }}
         />
     );
 
     return (
         <div className="flex h-screen bg-background">
-            <aside className="w-52 shrink-0 bg-[#1c1917] dark:bg-[#0f0e0d] flex flex-col">
+            <aside className="w-52 shrink-0 bg-sidebar flex flex-col">
                 {/* Logo */}
                 <div className="flex items-center gap-3 px-5 py-5">
-                    <div className="w-8 h-8 rounded-full border-2 border-amber-400 flex items-center justify-center shrink-0">
-                        <div className="w-3 h-3 rounded-full border-2 border-amber-400" />
+                    <div className="w-8 h-8 rounded-full border-2 border-rb-amber flex items-center justify-center shrink-0">
+                        <div className="w-3 h-3 rounded-full border-2 border-rb-amber" />
                     </div>
                     <div>
-                        <p className="text-white font-serif font-bold text-base leading-none truncate max-w-25">
+                        <p className="text-sidebar-foreground font-serif font-bold text-base leading-none truncate max-w-25">
                             {restaurantName || 'Restaurant'}
                         </p>
-                        <p className="text-amber-400 text-[10px] font-semibold tracking-widest uppercase mt-0.5">
+                        <p className="text-rb-amber text-[10px] font-semibold tracking-widest uppercase mt-0.5">
                             Admin
                         </p>
                     </div>
@@ -95,14 +98,14 @@ export default function AdminLayout() {
                                 cn(
                                     'flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors',
                                     isActive
-                                        ? 'text-white'
-                                        : 'text-white/40 hover:text-white/70'
+                                        ? 'text-sidebar-foreground'
+                                        : 'text-sidebar-foreground/40 hover:text-sidebar-foreground/70'
                                 )
                             }
                         >
                             {({ isActive }) => (
                                 <>
-                                    <span className={cn('text-[10px] leading-none', isActive ? 'text-amber-400' : 'text-white/25')}>
+                                    <span className={cn('text-[10px] leading-none', isActive ? 'text-rb-amber' : 'text-sidebar-foreground/25')}>
                                         {isActive ? '◆' : '○'}
                                     </span>
                                     {label}
@@ -118,7 +121,7 @@ export default function AdminLayout() {
                         onClick={() => setTheme(isDark ? 'light' : 'dark')}
                         className={cn(
                             'relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none',
-                            isDark ? 'bg-blue-500' : 'bg-gray-600'
+                            isDark ? 'bg-rb-accent' : 'bg-gray-600'
                         )}
                     >
                         <span className={cn(
@@ -132,10 +135,10 @@ export default function AdminLayout() {
                         className="flex items-center gap-2 w-full hover:opacity-80 transition-opacity"
                         title="Çıkış Yap"
                     >
-                        <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-rb-amber flex items-center justify-center shrink-0">
                             <span className="text-white text-xs font-bold">{initials}</span>
                         </div>
-                        <span className="text-white/70 text-sm truncate">{displayName}</span>
+                        <span className="text-sidebar-foreground/70 text-sm truncate">{displayName}</span>
                     </button>
                 </div>
             </aside>

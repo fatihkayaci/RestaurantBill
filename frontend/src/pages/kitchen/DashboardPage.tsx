@@ -35,9 +35,9 @@ function KitchenCard({
     const { order, items, colStatus } = group;
 
     const bulkButton = colStatus === 1
-        ? { label: 'Hazırlamaya Başla →', action: OrderStatus.Preparing, cls: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 dark:text-blue-400' }
+        ? { label: 'Hazırlamaya Başla →', action: OrderStatus.Preparing, cls: 'bg-rb-accent-bg hover:opacity-80 text-rb-accent' }
         : colStatus === 2
-        ? { label: 'Hazır ✓', action: OrderStatus.Ready, cls: 'bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:bg-green-500/15 dark:hover:bg-green-500/25 dark:text-green-400' }
+        ? { label: 'Hazır ✓', action: OrderStatus.Ready, cls: 'bg-rb-green-bg hover:opacity-80 text-rb-green' }
         : { label: 'Garson Çağrıldı — Teslim', action: OrderStatus.Served, cls: 'bg-muted/60 text-muted-foreground/60 cursor-default' };
 
     const itemNextStatus = colStatus === 1 ? 2 : colStatus === 2 ? 3 : null;
@@ -70,8 +70,8 @@ function KitchenCard({
                                     onClick={() => onItemUpdate(order.id, item.id, itemNextStatus)}
                                     className={`text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors ${
                                         colStatus === 1
-                                            ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/40'
-                                            : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40'
+                                            ? 'text-rb-accent hover:bg-rb-accent-bg'
+                                            : 'text-rb-green hover:bg-rb-green-bg'
                                     }`}
                                     title={colStatus === 1 ? 'Hazırlamaya başla' : 'Hazır işaretle'}
                                 >
@@ -226,9 +226,9 @@ export default function KitchenDashboardPage() {
             {/* Header stats portal */}
             {statsSlot && createPortal(
                 <>
-                    <StatsChip label="Bekliyor"      count={pendingGroups.length}   color="text-amber-400" />
-                    <StatsChip label="Hazırlanıyor"  count={preparingGroups.length} color="text-blue-400" />
-                    <StatsChip label="Hazır"         count={readyGroups.length}     color="text-green-400" />
+                    <StatsChip label="Bekliyor"      count={pendingGroups.length}   color="text-rb-amber" />
+                    <StatsChip label="Hazırlanıyor"  count={preparingGroups.length} color="text-rb-accent" />
+                    <StatsChip label="Hazır"         count={readyGroups.length}     color="text-rb-green" />
                 </>,
                 statsSlot
             )}
@@ -237,7 +237,7 @@ export default function KitchenDashboardPage() {
             <div className="flex-1 grid grid-cols-3 divide-x divide-border overflow-hidden">
                 {/* BEKLIYOR */}
                 <div className="overflow-y-auto flex flex-col">
-                    <ColumnHeader dot="bg-amber-500" label="Bekliyor" count={pendingGroups.length} />
+                    <ColumnHeader dot="bg-rb-amber" label="Bekliyor" count={pendingGroups.length} />
                     <div className="p-4 space-y-3 flex-1">
                         {pendingGroups.length === 0 ? (
                             <p className="text-xs text-muted-foreground text-center py-8">Bekleyen sipariş yok</p>
@@ -251,7 +251,7 @@ export default function KitchenDashboardPage() {
 
                 {/* HAZIRLANIYOR */}
                 <div className="overflow-y-auto flex flex-col">
-                    <ColumnHeader dot="bg-blue-500" label="Hazırlanıyor" count={preparingGroups.length} />
+                    <ColumnHeader dot="bg-rb-accent" label="Hazırlanıyor" count={preparingGroups.length} />
                     <div className="p-4 space-y-3 flex-1">
                         {preparingGroups.length === 0 ? (
                             <p className="text-xs text-muted-foreground text-center py-8">Hazırlanan sipariş yok</p>
@@ -265,7 +265,7 @@ export default function KitchenDashboardPage() {
 
                 {/* HAZIR */}
                 <div className="overflow-y-auto flex flex-col">
-                    <ColumnHeader dot="bg-green-500" label="Hazır" count={readyGroups.length} />
+                    <ColumnHeader dot="bg-rb-green" label="Hazır" count={readyGroups.length} />
                     <div className="p-4 space-y-3 flex-1">
                         {readyGroups.length === 0 ? (
                             <p className="text-xs text-muted-foreground text-center py-8">Hazır sipariş yok</p>

@@ -1,32 +1,26 @@
 import { useEffect, useState } from "react";
-import { Search, X, Pencil } from 'lucide-react';
+import { X, Pencil } from 'lucide-react';
 import { userService } from "@/features/admin/api/userService";
+import { restaurantService } from "@/features/admin/api/restaurantService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { CreateUser, User } from "@/features/admin/types";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 
-const roleMap: Record<number, string> = { 1: "Admin", 2: "Garson", 3: "Kasiyer", 4: "Mutfak" };
-
-const roleStyle: Record<number, { avatar: string; badge: string }> = {
-    1: { avatar: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
-    2: { avatar: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-    3: { avatar: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
-    4: { avatar: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-};
+const ADMIN_ROLE = 1;
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
-export default function StaffPage() {
-    const [users, setUsers] = useState<User[]>([]);
-    const [search, setSearch] = useState('');
+export default function AdminsPage() {
+    const [admins, setAdmins] = useState<User[]>([]);
+    const [restaurantName, setRestaurantName] = useState('');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editUser, setEditUser] = useState<User | null>(null);
+    const [editAdmin, setEditAdmin] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', userCode: '', role: 1
+        passwordHash: '', userCode: '', role: ADMIN_ROLE
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [generalError, setGeneralError] = useState<string | null>(null);
@@ -34,10 +28,17 @@ export default function StaffPage() {
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'login'>('personal');
 
-    useEffect(() => {
+    const loadAdmins = () => {
         userService.getUsersByRestaurantId()
-            .then(setUsers)
+            .then(users => setAdmins(users.filter(u => u.role === ADMIN_ROLE)))
             .catch(console.error);
+    };
+
+    useEffect(() => {
+        loadAdmins();
+        restaurantService.getMyRestaurant()
+            .then(r => setRestaurantName(r.name))
+            .catch(() => {});
     }, []);
 
     const generatePassword = () => {
@@ -46,23 +47,23 @@ export default function StaffPage() {
     };
 
     const generateUserCode = () => {
-        const numbers = users.map(u => parseInt(u.userCode.replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
+        const numbers = admins.map(u => parseInt(u.userCode.replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
         const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
-        return `USR-${String(next).padStart(3, '0')}`;
+        return `ADM-${String(next).padStart(3, '0')}`;
     };
 
     const openCreateModal = () => {
-        setEditUser(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: 1 });
+        setEditAdmin(null);
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: ADMIN_ROLE });
         setFieldErrors({});
         setGeneralError(null);
         setActiveTab('personal');
         setIsModalOpen(true);
     };
 
-    const openEditModal = (user: User) => {
-        setEditUser(user);
-        setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', userCode: user.userCode, role: user.role });
+    const openEditModal = (admin: User) => {
+        setEditAdmin(admin);
+        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', userCode: admin.userCode, role: ADMIN_ROLE });
         setFieldErrors({});
         setGeneralError(null);
         setActiveTab('personal');
@@ -81,21 +82,21 @@ export default function StaffPage() {
         if (!deleteTargetId) return;
         try {
             await userService.deleteUser(deleteTargetId);
-            setUsers(prev => prev.filter(u => u.id !== deleteTargetId));
+            setAdmins(prev => prev.filter(u => u.id !== deleteTargetId));
             setDeleteTargetId(null);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Çalışan silinemedi.');
+                setDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Admin silinemedi.');
             }
         }
     };
 
-    const toggleActive = async (user: User) => {
+    const toggleActive = async (admin: User) => {
         await userService.updateUser({
-            id: user.id, fullName: user.fullName, userName: user.userName, email: user.email,
-            phoneNumber: user.phoneNumber, userCode: user.userCode, role: user.role, isActive: !user.isActive
+            id: admin.id, fullName: admin.fullName, userName: admin.userName, email: admin.email,
+            phoneNumber: admin.phoneNumber, userCode: admin.userCode, role: ADMIN_ROLE, isActive: !admin.isActive
         });
-        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
+        setAdmins(prev => prev.map(u => u.id === admin.id ? { ...u, isActive: !u.isActive } : u));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -106,7 +107,7 @@ export default function StaffPage() {
         if (!form.userName.trim()) errors.userName = 'Kullanıcı adı boş bırakılamaz.';
         else if (form.userName.length > 50) errors.userName = 'En fazla 50 karakter.';
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
-        if (!editUser) {
+        if (!editAdmin) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
             else if (form.passwordHash.length < 6) errors.passwordHash = 'En az 6 karakter.';
             if (!form.userCode.trim()) errors.userCode = 'Kullanıcı kodu boş bırakılamaz.';
@@ -122,13 +123,12 @@ export default function StaffPage() {
         setFieldErrors({});
         setGeneralError(null);
         try {
-            if (editUser) {
-                await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash, isActive: editUser.isActive });
+            if (editAdmin) {
+                await userService.updateUser({ id: editAdmin.id, ...form, role: ADMIN_ROLE, password: form.passwordHash, isActive: editAdmin.isActive });
             } else {
-                await userService.createUser(form);
+                await userService.createUser({ ...form, role: ADMIN_ROLE });
             }
-            const updated = await userService.getUsersByRestaurantId();
-            setUsers(updated);
+            loadAdmins();
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
@@ -159,33 +159,20 @@ export default function StaffPage() {
         }
     };
 
-    const filtered = users.filter(u => u.fullName.toLowerCase().includes(search.toLowerCase()));
-
     return (
         <div className="space-y-5">
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Çalışanlar</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">{users.length} çalışan</p>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Adminler</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">{admins.length} admin hesabı</p>
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
-                    + Çalışan Ekle
+                    + Admin Ekle
                 </button>
-            </div>
-
-            {/* Search */}
-            <div className="relative w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                    className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    placeholder="Çalışan ara..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                />
             </div>
 
             {/* Table */}
@@ -194,61 +181,51 @@ export default function StaffPage() {
                     <thead>
                         <tr className="border-b border-border">
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ad Soyad</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kullanıcı Adı</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Rol</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Başlangıç</th>
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Şube</th>
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">E-posta</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İşlem</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {filtered.map(user => {
-                            const style = roleStyle[user.role] ?? roleStyle[1];
-                            const initials = user.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-                            const isActive = user.isActive;
+                        {admins.map(admin => {
+                            const initials = admin.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
                             return (
-                                <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                                <tr key={admin.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                                     <td className="px-5 py-3.5">
                                         <div className="flex items-center gap-3">
-                                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0", style.avatar)}>
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-rb-purple-bg text-rb-purple">
                                                 {initials}
                                             </div>
-                                            <span className="font-medium text-foreground">
-                                                {user.fullName}
-                                            </span>
+                                            <span className="font-medium text-foreground">{admin.fullName}</span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">{user.userName}</td>
-                                    <td className="px-4 py-3.5">
-                                        <span className={cn("inline-block px-3 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase", style.badge)}>
-                                            {roleMap[user.role] ?? 'Bilinmiyor'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">—</td>
+                                    <td className="px-4 py-3.5 text-muted-foreground">{restaurantName || '—'}</td>
+                                    <td className="px-4 py-3.5 text-muted-foreground">{admin.email || '—'}</td>
                                     <td className="px-4 py-3.5">
                                         <button
-                                            onClick={() => toggleActive(user)}
+                                            onClick={() => toggleActive(admin)}
                                             className={cn(
                                                 "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none",
-                                                isActive ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                                                admin.isActive ? "bg-rb-green" : "bg-gray-300 dark:bg-gray-600"
                                             )}
                                         >
                                             <span className={cn(
                                                 "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200",
-                                                isActive ? "translate-x-4" : "translate-x-0.5"
+                                                admin.isActive ? "translate-x-4" : "translate-x-0.5"
                                             )} />
                                         </button>
                                     </td>
                                     <td className="px-4 py-3.5">
                                         <div className="flex items-center gap-2">
                                             <button
-                                                onClick={() => openEditModal(user)}
+                                                onClick={() => openEditModal(admin)}
                                                 className="text-muted-foreground hover:text-foreground transition-colors"
                                             >
                                                 <Pencil className="h-4 w-4" />
                                             </button>
                                             <button
-                                                onClick={() => setDeleteTargetId(user.id)}
+                                                onClick={() => setDeleteTargetId(admin.id)}
                                                 className="text-muted-foreground hover:text-destructive transition-colors"
                                             >
                                                 <X className="h-4 w-4" />
@@ -258,10 +235,10 @@ export default function StaffPage() {
                                 </tr>
                             );
                         })}
-                        {filtered.length === 0 && (
+                        {admins.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                                    Çalışan bulunamadı.
+                                <td colSpan={5} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                                    Admin bulunamadı.
                                 </td>
                             </tr>
                         )}
@@ -276,7 +253,7 @@ export default function StaffPage() {
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-foreground">
-                                {editUser ? 'Çalışanı Düzenle' : 'Çalışan Ekle'}
+                                {editAdmin ? 'Admini Düzenle' : 'Admin Ekle'}
                             </h2>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -293,7 +270,7 @@ export default function StaffPage() {
                                 className={cn(
                                     "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
                                     activeTab === 'personal'
-                                        ? "border-blue-600 text-foreground"
+                                        ? "border-rb-gold text-foreground"
                                         : "border-transparent text-muted-foreground hover:text-foreground"
                                 )}
                             >
@@ -305,7 +282,7 @@ export default function StaffPage() {
                                 className={cn(
                                     "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
                                     activeTab === 'login'
-                                        ? "border-blue-600 text-foreground"
+                                        ? "border-rb-gold text-foreground"
                                         : "border-transparent text-muted-foreground hover:text-foreground"
                                 )}
                             >
@@ -348,20 +325,6 @@ export default function StaffPage() {
                                             onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
                                         />
                                     </div>
-
-                                    <div>
-                                        <label className={labelClass}>Rol</label>
-                                        <select
-                                            className={inputClass}
-                                            value={form.role}
-                                            onChange={e => setForm({ ...form, role: Number(e.target.value) })}
-                                        >
-                                            <option value={1}>Admin</option>
-                                            <option value={2}>Garson</option>
-                                            <option value={3}>Kasiyer</option>
-                                            <option value={4}>Mutfak</option>
-                                        </select>
-                                    </div>
                                 </>
                             )}
 
@@ -382,7 +345,7 @@ export default function StaffPage() {
                                         <label className={labelClass}>Kullanıcı Kodu</label>
                                         <input
                                             className={cn(inputClass, fieldErrors.userCode && "border-destructive")}
-                                            placeholder="USR-001"
+                                            placeholder="ADM-001"
                                             value={form.userCode}
                                             onChange={e => setForm({ ...form, userCode: e.target.value })}
                                         />
@@ -390,11 +353,11 @@ export default function StaffPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Şifre {editUser && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
+                                        <label className={labelClass}>Şifre {editAdmin && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
                                         <input
                                             type="text"
                                             className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}
-                                            placeholder={editUser ? "Yeni şifre..." : "Şifre..."}
+                                            placeholder={editAdmin ? "Yeni şifre..." : "Şifre..."}
                                             value={form.passwordHash}
                                             onChange={e => setForm({ ...form, passwordHash: e.target.value })}
                                         />
@@ -421,7 +384,7 @@ export default function StaffPage() {
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors"
                             >
                                 Kaydet
                             </button>
@@ -434,9 +397,9 @@ export default function StaffPage() {
             <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && closeDeleteDialog()}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Çalışanı sil</AlertDialogTitle>
+                        <AlertDialogTitle>Admini sil</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {deleteError ?? "Bu çalışanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
+                            {deleteError ?? "Bu admini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

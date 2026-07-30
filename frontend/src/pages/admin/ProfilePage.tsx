@@ -115,15 +115,15 @@ export default function Profile() {
 
             <div className="space-y-4">
                 {/* User Header Card */}
-                <div className="rounded-xl bg-[#1c1917] dark:bg-[#0f0e0d] p-5 flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full border-2 border-purple-400 flex items-center justify-center shrink-0 bg-purple-900/40">
-                        <span className="text-purple-300 text-lg font-bold">{initials}</span>
+                <div className="rounded-xl bg-sidebar p-5 flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full border-2 border-rb-purple flex items-center justify-center shrink-0 bg-rb-purple-bg">
+                        <span className="text-rb-purple text-lg font-bold">{initials}</span>
                     </div>
                     <div>
-                        <p className="text-white font-bold text-lg leading-tight">
+                        <p className="text-sidebar-foreground font-bold text-lg leading-tight">
                             {profileForm.watch("fullName") || "—"}
                         </p>
-                        <p className="text-purple-400 text-[10px] font-semibold tracking-widest uppercase mt-0.5">
+                        <p className="text-rb-purple text-[10px] font-semibold tracking-widest uppercase mt-0.5">
                             {roleLabel[role] ?? "Yönetici"}
                         </p>
                     </div>
@@ -152,7 +152,7 @@ export default function Profile() {
                                 <button
                                     type="submit"
                                     disabled={profileForm.formState.isSubmitting}
-                                    className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                                    className="px-5 py-2 rounded-lg bg-rb-accent hover:opacity-90 disabled:opacity-60 text-white text-sm font-medium transition-colors"
                                 >
                                     {profileForm.formState.isSubmitting ? "Kaydediliyor..." : "Bilgileri Kaydet →"}
                                 </button>
@@ -201,7 +201,7 @@ export default function Profile() {
                                 <button
                                     type="submit"
                                     disabled={passwordLoading}
-                                    className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                                    className="px-5 py-2 rounded-lg bg-rb-accent hover:opacity-90 disabled:opacity-60 text-white text-sm font-medium transition-colors"
                                 >
                                     {passwordLoading ? "Güncelleniyor..." : "Şifreyi Güncelle →"}
                                 </button>

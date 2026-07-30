@@ -86,7 +86,7 @@ export default function KitchenOrderCard({ order, visibleItems, showBatches, onA
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        className="h-7 px-2 text-xs gap-1 text-green-600 border-green-500/30 hover:bg-green-500/10"
+                                                        className="h-7 px-2 text-xs gap-1 text-rb-green border-rb-green/30 hover:bg-rb-green-bg"
                                                         onClick={() => onItemReady(order.id, item.id)}
                                                     >
                                                         <CheckCircle2 className="h-3 w-3" />

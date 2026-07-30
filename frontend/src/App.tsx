@@ -15,20 +15,24 @@ import CashierLayout from './pages/cashier/Layout';
 import CashierDashboardPage from './pages/cashier/DashboardPage';
 
 import OwnerLayout from './pages/owner/Layout';
-import OwnerSettingsPage from './pages/owner/SettingsPage';
+import OwnerBrandingPage from './pages/owner/SettingsPage';
 import OwnerMembershipPage from './pages/owner/MembershipPage';
+import OwnerBranchesPage from './pages/owner/BranchesPage';
+import OwnerAdminsPage from './pages/owner/AdminsPage';
+import OwnerReportsPage from './pages/owner/ReportsPage';
+import OwnerAuditLogPage from './pages/owner/AuditLogPage';
 import SlugSetupPage from './pages/owner/SlugSetupPage';
 
 import AdminLayout from './pages/admin/Layout';
 import CategoriesPage from './pages/admin/CategoriesPage';
 import AdminRestaurantPage from './pages/admin/RestaurantPage';
+import StaffPage from './pages/admin/StaffPage';
+import TablesPage from './pages/admin/TablesPage';
+import MenuPage from './pages/admin/MenuPage';
+import CashRegistersPage from './pages/admin/CashRegistersPage';
+import ProfilePage from './pages/admin/ProfilePage';
 
 import OverViewPage from './pages/shared/OverViewPage';
-import StaffPage from './pages/shared/StaffPage';
-import TablesPage from './pages/shared/TablesPage';
-import MenuPage from './pages/shared/MenuPage';
-import CashRegistersPage from './pages/shared/CashRegistersPage';
-import ProfilePage from './pages/shared/ProfilePage';
 
 function App() {
     return (
@@ -54,13 +58,12 @@ function App() {
                 <Route path="/owner" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerLayout /></PrivateRoute>}>
                     <Route index element={<Navigate to="/owner/overview" replace />} />
                     <Route path="overview" element={<OverViewPage />} />
-                    <Route path="staff" element={<StaffPage />} />
-                    <Route path="tables" element={<TablesPage />} />
-                    <Route path="menu" element={<MenuPage />} />
-                    <Route path="cash-registers" element={<CashRegistersPage />} />
-                    <Route path="settings" element={<OwnerSettingsPage />} />
+                    <Route path="branches" element={<OwnerBranchesPage />} />
+                    <Route path="admins" element={<OwnerAdminsPage />} />
                     <Route path="membership" element={<OwnerMembershipPage />} />
-                    <Route path="profile" element={<ProfilePage />} />
+                    <Route path="branding" element={<OwnerBrandingPage />} />
+                    <Route path="reports" element={<OwnerReportsPage />} />
+                    <Route path="audit-log" element={<OwnerAuditLogPage />} />
                 </Route>
 
                 {/* Admin */}

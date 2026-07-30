@@ -8,9 +8,9 @@ import PaymentPanel from './components/PaymentPanel';
 
 const MOCK_PAYMENT_LABELS = ['KART', 'NAKİT', 'QR / TEMASSIZ'] as const;
 const MOCK_PAYMENT_COLORS = [
-    'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
-    'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
-    'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+    'bg-rb-accent-bg text-rb-accent',
+    'bg-rb-green-bg text-rb-green',
+    'bg-rb-amber-bg text-rb-amber',
 ];
 
 export default function CashierDashboardPage() {
@@ -76,24 +76,24 @@ export default function CashierDashboardPage() {
     return (
         <>
             {/* Dark stats bar */}
-            <div className="bg-[#1c1917] dark:bg-[#0f0e0d] px-6 py-4 flex items-center gap-8 shrink-0">
+            <div className="bg-sidebar px-6 py-4 flex items-center gap-8 shrink-0">
                 <div>
-                    <p className="text-lg font-serif font-bold text-white">₺{todayRevenue.toFixed(0)}</p>
+                    <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{todayRevenue.toFixed(0)}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">Bugünkü Ciro</p>
                 </div>
                 <div className="w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-bold text-white">{totalCount}</p>
+                    <p className="text-lg font-bold text-sidebar-foreground">{totalCount}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">İşlem</p>
                 </div>
                 <div className="w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-bold text-white">₺{avgTicket.toFixed(0)}</p>
+                    <p className="text-lg font-bold text-sidebar-foreground">₺{avgTicket.toFixed(0)}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">Ortalama</p>
                 </div>
                 <div className="w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-bold text-amber-400">{servedOrders.length}</p>
+                    <p className="text-lg font-bold text-rb-amber">{servedOrders.length}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">Açık Masa</p>
                 </div>
             </div>
@@ -107,7 +107,7 @@ export default function CashierDashboardPage() {
                             Açık Masalar
                         </h2>
                         {servedOrders.length > 0 && (
-                            <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 text-xs font-bold px-1.5 py-0.5 rounded">
+                            <span className="bg-rb-amber-bg text-rb-amber text-xs font-bold px-1.5 py-0.5 rounded">
                                 {servedOrders.length}
                             </span>
                         )}
@@ -140,7 +140,7 @@ export default function CashierDashboardPage() {
 
                                     <button
                                         onClick={() => setSelectedOrder(order)}
-                                        className="w-full bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl py-2 transition-colors"
+                                        className="w-full bg-rb-accent hover:opacity-90 text-white text-sm font-semibold rounded-xl py-2 transition-colors"
                                     >
                                         Ödeme Al
                                     </button>

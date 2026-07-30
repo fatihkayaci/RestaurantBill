@@ -26,15 +26,15 @@ export default function RestaurantPage() {
             </div>
 
             {/* Restaurant Header Card */}
-            <div className="rounded-xl bg-[#1c1917] dark:bg-[#0f0e0d] p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full border-2 border-amber-400 flex items-center justify-center shrink-0">
-                    <div className="w-3.5 h-3.5 rounded-full border-2 border-amber-400" />
+            <div className="rounded-xl bg-sidebar p-5 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full border-2 border-rb-amber flex items-center justify-center shrink-0">
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-rb-amber" />
                 </div>
                 <div>
-                    <p className="text-white font-serif font-bold text-base leading-tight">
+                    <p className="text-sidebar-foreground font-serif font-bold text-base leading-tight">
                         {restaurant?.name || "—"}
                     </p>
-                    <p className="text-white/50 text-xs mt-0.5">{restaurantLocation || "—"}</p>
+                    <p className="text-sidebar-foreground/50 text-xs mt-0.5">{restaurantLocation || "—"}</p>
                 </div>
             </div>
 

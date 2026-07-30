@@ -24,8 +24,8 @@ const statusLabel: Record<MembershipStatus, string> = {
 };
 
 const statusBadgeClass: Record<MembershipStatus, string> = {
-    [MembershipStatus.Active]: 'bg-green-500/15 text-green-400 border-green-500/30',
-    [MembershipStatus.Expired]: 'bg-red-500/15 text-red-400 border-red-500/30',
+    [MembershipStatus.Active]: 'bg-rb-green-bg text-rb-green border-rb-green/30',
+    [MembershipStatus.Expired]: 'bg-rb-red-bg text-rb-red border-rb-red/30',
     [MembershipStatus.Cancelled]: 'bg-white/10 text-white/50 border-white/20',
 };
 
@@ -98,14 +98,14 @@ export default function MembershipPage() {
             </div>
 
             {/* Current Plan Card */}
-            <div className="rounded-xl bg-[#1c1917] dark:bg-[#0f0e0d] p-6 flex items-center justify-between gap-4 flex-wrap">
+            <div className="rounded-xl bg-sidebar p-6 flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-4">
                     <div className="w-11 h-11 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-                        <Gem className="w-5 h-5 text-blue-400" />
+                        <Gem className="w-5 h-5 text-rb-accent" />
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <p className="text-white font-serif font-bold text-lg leading-none">
+                            <p className="text-sidebar-foreground font-serif font-bold text-lg leading-none">
                                 {loading ? '—' : planName}
                             </p>
                             <span className={cn(
@@ -115,16 +115,16 @@ export default function MembershipPage() {
                                 {statusLabel[status]}
                             </span>
                         </div>
-                        <p className="text-white/30 text-xs mt-1.5">
+                        <p className="text-sidebar-foreground/30 text-xs mt-1.5">
                             {loading ? '—' : `Sonraki yenileme: ${nextRenewal}`}
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button className="px-4 py-2 rounded-lg border border-white/15 text-white/80 text-sm font-medium hover:bg-white/5 transition-colors">
+                    <button className="px-4 py-2 rounded-lg border border-white/15 text-sidebar-foreground/80 text-sm font-medium hover:bg-white/5 transition-colors">
                         İptal Et
                     </button>
-                    <button className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors">
+                    <button className="px-4 py-2 rounded-lg bg-rb-accent hover:opacity-90 text-white text-sm font-medium transition-colors">
                         Plan Değiştir
                     </button>
                 </div>
@@ -176,7 +176,7 @@ export default function MembershipPage() {
                                 <p className="text-xs text-muted-foreground mt-0.5">Son Kullanma: {paymentMethod.expiry}</p>
                             </div>
                         </div>
-                        <span className="text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/30 shrink-0">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 bg-rb-accent-bg text-rb-accent border border-rb-accent/30 shrink-0">
                             Varsayılan
                         </span>
                     </div>
@@ -204,7 +204,7 @@ export default function MembershipPage() {
                         Bir üst plana geçerek sınırsız masa, daha fazla kullanıcı ve 7/24 destek kazanın.
                     </p>
                 </div>
-                <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors shrink-0">
+                <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rb-accent hover:opacity-90 text-white text-sm font-medium transition-colors shrink-0">
                     Planı Yükselt <ArrowRight className="w-3.5 h-3.5" />
                 </button>
             </div>
