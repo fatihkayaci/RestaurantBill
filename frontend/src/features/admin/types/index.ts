@@ -7,6 +7,8 @@ export interface User {
     userCode: string;
     role: number;
     isActive: boolean;
+    restaurantId: number;
+    restaurantName?: string | null;
 }
 
 export interface CreateUser {
@@ -17,6 +19,7 @@ export interface CreateUser {
     passwordHash: string;
     userCode: string;
     role: number;
+    restaurantId?: number;
 }
 
 export interface UpdateUser {
@@ -29,6 +32,7 @@ export interface UpdateUser {
     userCode: string;
     role: number;
     isActive?: boolean;
+    restaurantId?: number;
 }
 
 export interface TopProduct {

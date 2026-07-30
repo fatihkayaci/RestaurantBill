@@ -5,6 +5,7 @@ using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Shared;
+using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantId
 {
@@ -29,14 +30,32 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
         /// <exception cref="BusinessException">Thrown when the extracted restaurant ID from the claims is zero or negative.</exception>
         public async Task<Result<IEnumerable<UserDto>>> Handle(GetUserByRestaurantIdCommand request, CancellationToken cancellationToken)
         {
-            var restaurantId = _currentUser.RestaurantId;
-            if(restaurantId <= 0) return Result<IEnumerable<UserDto>>.Failure("ID değeri 0 veya negatif olamaz.");
-
             var currentUserId = _currentUser.UserId;
-            var userRestaurants = await _uow.UserRestaurant.GetAllAsync(
-                ur => ur.RestaurantId == restaurantId && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
-                false,
-                nameof(RestaurantBill.Domain.Entities.UserRestaurant.User));
+            var includeProperties = $"{nameof(User)},{nameof(Restaurant)}";
+
+            IEnumerable<UserRestaurant> userRestaurants;
+
+            if (_currentUser.Role == "Owner")
+            {
+                List<int> restaurantIds = (await _uow.Restaurant.GetAllAsync(r => r.OwnerUserId == currentUserId && !r.IsDeleted, false))
+                    .Select(r => r.Id)
+                    .ToList();
+
+                userRestaurants = await _uow.UserRestaurant.GetAllAsync(
+                    ur => restaurantIds.Contains(ur.RestaurantId) && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
+                    false,
+                    includeProperties);
+            }
+            else
+            {
+                var restaurantId = _currentUser.RestaurantId;
+                if (restaurantId <= 0) return Result<IEnumerable<UserDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+
+                userRestaurants = await _uow.UserRestaurant.GetAllAsync(
+                    ur => ur.RestaurantId == restaurantId && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
+                    false,
+                    includeProperties);
+            }
 
             return Result<IEnumerable<UserDto>>.Success(userRestaurants.OrderBy(ur => ur.User.FullName).Select(ur => ur.User.ToDto(ur)));
         }

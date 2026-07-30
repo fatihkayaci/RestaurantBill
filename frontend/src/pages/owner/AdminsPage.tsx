@@ -3,7 +3,7 @@ import { X, Pencil } from 'lucide-react';
 import { userService } from "@/features/admin/api/userService";
 import { restaurantService } from "@/features/admin/api/restaurantService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import type { CreateUser, User } from "@/features/admin/types";
+import type { Branch, CreateUser, User } from "@/features/admin/types";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 
@@ -14,13 +14,13 @@ const labelClass = "block text-[11px] font-semibold tracking-widest uppercase te
 
 export default function AdminsPage() {
     const [admins, setAdmins] = useState<User[]>([]);
-    const [restaurantName, setRestaurantName] = useState('');
+    const [branches, setBranches] = useState<Branch[]>([]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editAdmin, setEditAdmin] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', userCode: '', role: ADMIN_ROLE
+        passwordHash: '', userCode: '', role: ADMIN_ROLE, restaurantId: undefined
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [generalError, setGeneralError] = useState<string | null>(null);
@@ -36,9 +36,9 @@ export default function AdminsPage() {
 
     useEffect(() => {
         loadAdmins();
-        restaurantService.getMyRestaurant()
-            .then(r => setRestaurantName(r.name))
-            .catch(() => {});
+        restaurantService.getMyBranches()
+            .then(setBranches)
+            .catch(console.error);
     }, []);
 
     const generatePassword = () => {
@@ -54,7 +54,7 @@ export default function AdminsPage() {
 
     const openCreateModal = () => {
         setEditAdmin(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: ADMIN_ROLE });
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: ADMIN_ROLE, restaurantId: branches[0]?.id });
         setFieldErrors({});
         setGeneralError(null);
         setActiveTab('personal');
@@ -63,14 +63,14 @@ export default function AdminsPage() {
 
     const openEditModal = (admin: User) => {
         setEditAdmin(admin);
-        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', userCode: admin.userCode, role: ADMIN_ROLE });
+        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', userCode: admin.userCode, role: ADMIN_ROLE, restaurantId: admin.restaurantId });
         setFieldErrors({});
         setGeneralError(null);
         setActiveTab('personal');
         setIsModalOpen(true);
     };
 
-    const personalFields = ['fullName', 'email', 'phoneNumber'];
+    const personalFields = ['fullName', 'email', 'phoneNumber', 'restaurantId'];
     const loginFields = ['userName', 'userCode', 'passwordHash'];
 
     const closeDeleteDialog = () => {
@@ -107,6 +107,7 @@ export default function AdminsPage() {
         if (!form.userName.trim()) errors.userName = 'Kullanıcı adı boş bırakılamaz.';
         else if (form.userName.length > 50) errors.userName = 'En fazla 50 karakter.';
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
+        if (!form.restaurantId) errors.restaurantId = 'Şube seçilmelidir.';
         if (!editAdmin) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
             else if (form.passwordHash.length < 6) errors.passwordHash = 'En az 6 karakter.';
@@ -200,7 +201,7 @@ export default function AdminsPage() {
                                             <span className="font-medium text-foreground">{admin.fullName}</span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">{restaurantName || '—'}</td>
+                                    <td className="px-4 py-3.5 text-muted-foreground">{admin.restaurantName || '—'}</td>
                                     <td className="px-4 py-3.5 text-muted-foreground">{admin.email || '—'}</td>
                                     <td className="px-4 py-3.5">
                                         <button
@@ -293,6 +294,21 @@ export default function AdminsPage() {
                         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
                             {activeTab === 'personal' && (
                                 <>
+                                    <div>
+                                        <label className={labelClass}>Şube</label>
+                                        <select
+                                            className={cn(inputClass, fieldErrors.restaurantId && "border-destructive")}
+                                            value={form.restaurantId ?? ''}
+                                            onChange={e => setForm({ ...form, restaurantId: e.target.value ? Number(e.target.value) : undefined })}
+                                        >
+                                            <option value="">Şube seçiniz...</option>
+                                            {branches.map(branch => (
+                                                <option key={branch.id} value={branch.id}>{branch.name}</option>
+                                            ))}
+                                        </select>
+                                        {fieldErrors.restaurantId && <p className="text-xs text-destructive mt-1">{fieldErrors.restaurantId}</p>}
+                                    </div>
+
                                     <div>
                                         <label className={labelClass}>Ad Soyad</label>
                                         <input

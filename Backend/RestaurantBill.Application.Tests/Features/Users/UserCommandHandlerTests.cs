@@ -111,7 +111,7 @@ public class UserCommandHandlerTests
             UserRestaurant userRestaurant = UserRestaurant.Create(user, restaurant, "eski", "OLD01", UserRole.Waiter);
             await uow.UserRestaurantRepo.AddAsync(userRestaurant);
 
-            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher());
+            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService());
             var command = new UpdateUserCommand
             {
                 UserId = user.Id,
@@ -138,7 +138,7 @@ public class UserCommandHandlerTests
             await uow.UserRepo.AddAsync(user);
             await uow.UserRestaurantRepo.AddAsync(UserRestaurant.Create(user, restaurant, "fatih", "USR01", UserRole.Waiter));
 
-            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher());
+            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService());
             var command = new UpdateUserCommand
             {
                 UserId = user.Id,
@@ -157,7 +157,7 @@ public class UserCommandHandlerTests
         public async Task Handle_WithNonExistingUser_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher());
+            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService());
 
             var result = await handler.Handle(new UpdateUserCommand { UserId = 99, FullName = "Ad", UserName = "un", UserCode = "UC" }, CancellationToken.None);
 
