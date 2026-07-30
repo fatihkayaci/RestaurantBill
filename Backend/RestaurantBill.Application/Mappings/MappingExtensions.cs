@@ -130,6 +130,8 @@ public static class MappingExtensions
         PhoneNumber = u.PhoneNumber ?? string.Empty,
         UserCode = ur.UserCode,
         Role = ur.Role,
-        IsActive = u.IsActive
+        IsActive = u.IsActive,
+        RestaurantId = ur.RestaurantId,
+        RestaurantName = ur.Restaurant?.Name
     };
 }

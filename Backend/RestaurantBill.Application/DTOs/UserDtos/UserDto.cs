@@ -11,4 +11,6 @@ public class UserDto
     public required string UserCode { get; set; }
     public UserRole Role { get; set; }
     public bool IsActive { get; set; }
+    public int RestaurantId { get; set; }
+    public string? RestaurantName { get; set; }
 }

@@ -18,7 +18,8 @@ export const userService = {
             PhoneNumber: data.phoneNumber,
             PasswordHash: data.passwordHash,
             UserCode: data.userCode,
-            Role: data.role
+            Role: data.role,
+            RestaurantId: data.restaurantId
         });
     },
     updateUser: async (data: UpdateUser) => {
@@ -31,7 +32,8 @@ export const userService = {
             Password: data.password,
             UserCode: data.userCode,
             Role: data.role,
-            IsActive: data.isActive
+            IsActive: data.isActive,
+            RestaurantId: data.restaurantId
         });
     },
     deleteUser: async (id: string) => {

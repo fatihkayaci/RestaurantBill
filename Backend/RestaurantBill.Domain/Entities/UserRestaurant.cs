@@ -52,5 +52,14 @@ namespace RestaurantBill.Domain.Entities
             UserCode = userCode;
             Role = role;
         }
+
+        public void ChangeRestaurant(Restaurant restaurant)
+        {
+            if (restaurant == null)
+                throw new DomainException("Geçersiz restoran.");
+
+            Restaurant = restaurant;
+            RestaurantId = restaurant.Id;
+        }
     }
 }

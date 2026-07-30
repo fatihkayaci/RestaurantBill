@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
@@ -25,6 +26,19 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         public async Task<Result> Handle(CreateUserCommand request, CancellationToken cancellationToken)
         {
             int restaurantId = _currentUser.RestaurantId;
+
+            if (request.RestaurantId.HasValue && request.RestaurantId.Value != restaurantId)
+            {
+                if (_currentUser.Role != nameof(UserRole.Owner))
+                    return Result.Failure("Bu şubeye kullanıcı ekleme yetkiniz yok.");
+
+                bool ownsRestaurant = (await _uow.Restaurant.GetAllAsync(
+                    r => r.Id == request.RestaurantId.Value && r.OwnerUserId == _currentUser.UserId && !r.IsDeleted, false)).Any();
+                if (!ownsRestaurant)
+                    return Result.Failure("Şube bulunamadı.");
+
+                restaurantId = request.RestaurantId.Value;
+            }
 
             Restaurant? restaurant = await _uow.Restaurant.GetByIdAsync(restaurantId, true);
             if (restaurant is null)
