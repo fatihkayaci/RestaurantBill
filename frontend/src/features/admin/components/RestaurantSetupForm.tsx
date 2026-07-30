@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Utensils } from "lucide-react";
 
 interface Props {
+    restaurantId: number;
     onComplete?: (name: string) => void;
 }
 
-export default function RestaurantSetupForm({ onComplete }: Props) {
+export default function RestaurantSetupForm({ restaurantId, onComplete }: Props) {
     const [form, setForm] = useState<CreateRestaurant>({
         name: '',
         phoneNumber: '',
@@ -26,7 +27,7 @@ export default function RestaurantSetupForm({ onComplete }: Props) {
         e.preventDefault();
         try {
             setIsSubmitting(true);
-            await restaurantService.update(form);
+            await restaurantService.updateBranch(restaurantId, form);
             onComplete?.(form.name);
         } catch (error) {
             console.error(error);

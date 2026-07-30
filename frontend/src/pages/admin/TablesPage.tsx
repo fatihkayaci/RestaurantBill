@@ -28,30 +28,30 @@ const ORDER_ITEM_STATUS_LABELS: Record<number, string> = {
     1: "Bekliyor", 2: "Hazırlanıyor", 3: "Hazır", 4: "Servis Edildi",
 };
 const ORDER_ITEM_STATUS_TEXT_COLOR: Record<number, string> = {
-    1: "text-amber-500", 2: "text-blue-500", 3: "text-green-500", 4: "text-muted-foreground",
+    1: "text-rb-amber", 2: "text-rb-accent", 3: "text-rb-green", 4: "text-muted-foreground",
 };
 
 // Masa grid kartlarının renk/etiket şeması — waiter tarafındaki tasarımla birebir aynı.
 const STATUS_CARD = {
     1: {
         bg:     'bg-[#ECECE2] dark:bg-[rgba(69,200,122,0.05)]',
-        border: 'border-[#b8e8cd] dark:border-[rgba(69,200,122,0.25)]',
-        badge:  'bg-[#d0f2e3] text-[#1f8a52] dark:bg-[rgba(69,200,122,0.14)] dark:text-[#45c87a]',
-        hint:   'text-[#2b7fff] font-semibold',
+        border: 'border-[#b8e8cd] dark:border-rb-green/25',
+        badge:  'bg-rb-green-bg text-rb-green',
+        hint:   'text-rb-accent font-semibold',
         label:  'BOŞ',
     },
     2: {
-        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,120,64,0.05)]',
-        border: 'border-[#f5c5aa] dark:border-[rgba(240,120,64,0.25)]',
-        badge:  'bg-[#fce0d0] text-[#c85010] dark:bg-[rgba(240,120,64,0.14)] dark:text-[#f07840]',
+        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,96,96,0.05)]',
+        border: 'border-[#f5c5aa] dark:border-rb-red/25',
+        badge:  'bg-rb-red-bg text-rb-red',
         hint:   'text-muted-foreground',
         label:  'DOLU',
     },
     3: {
         bg:     'bg-white dark:bg-[rgba(232,184,53,0.05)]',
-        border: 'border-[#f0d98a] dark:border-[rgba(232,184,53,0.25)]',
-        badge:  'bg-[#fef3c7] text-[#b8880a] dark:bg-[rgba(232,184,53,0.14)] dark:text-[#e8b835]',
-        hint:   'text-[#b8880a] dark:text-[#e8b835] font-medium',
+        border: 'border-[#f0d98a] dark:border-rb-amber/25',
+        badge:  'bg-rb-amber-bg text-rb-amber',
+        hint:   'text-rb-amber font-medium',
         label:  'REZERVE',
     },
 } as const;
@@ -64,9 +64,9 @@ function formatElapsed(occupiedSince: string, now: number): string {
 }
 
 const PANEL_STATUS_CONFIG: Record<number, { label: string; cls: string }> = {
-    1: { label: 'BOŞ', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
-    2: { label: 'DOLU', cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' },
-    3: { label: 'REZERVE', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' },
+    1: { label: 'BOŞ', cls: 'bg-rb-green-bg text-rb-green' },
+    2: { label: 'DOLU', cls: 'bg-rb-red-bg text-rb-red' },
+    3: { label: 'REZERVE', cls: 'bg-rb-amber-bg text-rb-amber' },
 };
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
@@ -525,7 +525,7 @@ export default function Tables() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Masa Ekle
                 </button>
@@ -538,7 +538,7 @@ export default function Tables() {
                     className={cn(
                         "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                         selectedRegionId === 'all'
-                            ? "bg-blue-600 text-white"
+                            ? "bg-rb-accent text-white"
                             : "border border-border text-muted-foreground hover:text-foreground"
                     )}
                 >
@@ -550,7 +550,7 @@ export default function Tables() {
                         className={cn(
                             "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
                             selectedRegionId === region.id
-                                ? "bg-blue-600 text-white"
+                                ? "bg-rb-accent text-white"
                                 : "border border-border text-muted-foreground hover:text-foreground"
                         )}
                     >
@@ -707,7 +707,7 @@ export default function Tables() {
                             </button>
                             <button
                                 onClick={handleSubmit}
-                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors"
                             >
                                 Kaydet
                             </button>
@@ -753,7 +753,7 @@ export default function Tables() {
                             <button
                                 onClick={handleSaveRegion}
                                 disabled={savingRegion}
-                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-60"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-60"
                             >
                                 {savingRegion ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>
@@ -831,7 +831,7 @@ export default function Tables() {
                                     onClick={() => setActiveTab(tab)}
                                     className={`flex-1 py-3 text-sm font-medium transition-colors ${
                                         activeTab === tab
-                                            ? 'text-foreground border-b-2 border-blue-500'
+                                            ? 'text-foreground border-b-2 border-rb-accent'
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
@@ -855,7 +855,7 @@ export default function Tables() {
                                             onClick={() => setSelectedCategoryId(cat.id)}
                                             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
                                                 selectedCategoryId === cat.id
-                                                    ? 'bg-blue-500 text-white'
+                                                    ? 'bg-rb-accent text-white'
                                                     : 'bg-muted text-muted-foreground hover:bg-muted/70'
                                             }`}
                                         >
@@ -891,7 +891,7 @@ export default function Tables() {
                                                         )}
                                                         <button
                                                             onClick={() => increaseNewItem(product)}
-                                                            className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xl font-bold hover:bg-blue-600 transition-colors"
+                                                            className="w-7 h-7 rounded-full bg-rb-accent flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-colors"
                                                         >
                                                             +
                                                         </button>
@@ -914,12 +914,12 @@ export default function Tables() {
                                             onChange={e => setOrderNote(e.target.value)}
                                             placeholder="Sipariş notu (isteğe bağlı) — örn. acısız, az pişmiş..."
                                             rows={2}
-                                            className="w-full mb-3 rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full mb-3 rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-rb-accent"
                                         />
                                         <Button
                                             onClick={handleSendOrder}
                                             disabled={isSendingOrder}
-                                            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl h-11"
+                                            className="w-full bg-rb-accent hover:opacity-90 text-white font-semibold rounded-xl h-11"
                                         >
                                             {isSendingOrder ? 'Gönderiliyor...' : 'Siparişi Gönder →'}
                                         </Button>
@@ -929,7 +929,7 @@ export default function Tables() {
                         ) : activeTab === 'reservation' ? (
                             selectedTable.status === 3 ? (
                                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                                    <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs px-4 py-3">
+                                    <div className="rounded-xl bg-rb-amber-bg text-rb-amber text-xs px-4 py-3">
                                         Bu masa rezerve edilmiştir.
                                     </div>
 
@@ -941,7 +941,7 @@ export default function Tables() {
                                             </div>
                                             <div className="flex justify-between items-center px-4 py-3">
                                                 <span className="text-xs text-muted-foreground font-medium">Saat</span>
-                                                <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                                                <span className="text-sm font-bold text-rb-amber">
                                                     {new Date(activeReservation.reservationTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
@@ -963,7 +963,7 @@ export default function Tables() {
                                     <Button
                                         onClick={handleCustomerArrived}
                                         disabled={arriving}
-                                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl h-11 disabled:opacity-60"
+                                        className="w-full bg-rb-green hover:opacity-90 text-white font-semibold rounded-xl h-11 disabled:opacity-60"
                                     >
                                         {arriving ? 'Açılıyor...' : 'Müşteri Geldi (Masayı Aç)'}
                                     </Button>
@@ -979,7 +979,7 @@ export default function Tables() {
                                 </div>
                             ) : (
                                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                                    <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs px-4 py-3">
+                                    <div className="rounded-xl bg-rb-amber-bg text-rb-amber text-xs px-4 py-3">
                                         Bu masayı belirli bir saat için ayırın. Rezervasyon kaydedildiğinde masa durumu "Rezerve" olarak güncellenir.
                                     </div>
 
@@ -989,7 +989,7 @@ export default function Tables() {
                                             value={reservationName}
                                             onChange={e => setReservationName(e.target.value)}
                                             placeholder="Misafir adı..."
-                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
                                         />
                                     </div>
 
@@ -999,7 +999,7 @@ export default function Tables() {
                                             value={reservationContact}
                                             onChange={e => setReservationContact(e.target.value)}
                                             placeholder="Telefon numarası..."
-                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
                                         />
                                     </div>
 
@@ -1011,7 +1011,7 @@ export default function Tables() {
                                             placeholder="19:30"
                                             inputMode="numeric"
                                             maxLength={5}
-                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
                                         />
                                     </div>
 
@@ -1021,14 +1021,14 @@ export default function Tables() {
                                             value={reservationNote}
                                             onChange={e => setReservationNote(e.target.value)}
                                             placeholder="Doğum günü, özel istek..."
-                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
                                         />
                                     </div>
 
                                     <Button
                                         onClick={handleSaveReservation}
                                         disabled={savingReservation}
-                                        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl h-11"
+                                        className="w-full bg-rb-amber hover:opacity-90 text-white font-semibold rounded-xl h-11"
                                     >
                                         {savingReservation ? 'Kaydediliyor...' : 'Rezervasyonu Kaydet'}
                                     </Button>
@@ -1062,7 +1062,7 @@ export default function Tables() {
                                                 <span className="text-sm text-muted-foreground">₺</span>
                                             </div>
                                         </div>
-                                        <div className="flex justify-between text-lg font-bold pt-2 border-t"><span>Toplam</span><span className="text-blue-500">₺{calculateTotal().toFixed(2)}</span></div>
+                                        <div className="flex justify-between text-lg font-bold pt-2 border-t"><span>Toplam</span><span className="text-rb-accent">₺{calculateTotal().toFixed(2)}</span></div>
 
                                         <div>
                                             <p className="text-sm text-muted-foreground mb-2">Kasa Seç</p>
@@ -1073,10 +1073,10 @@ export default function Tables() {
                                                     {cashRegisters.map(register => {
                                                         const isSelected = selectedCashRegisterId === String(register.id);
                                                         return (
-                                                            <button key={register.id} onClick={() => setSelectedCashRegisterId(String(register.id))} className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${isSelected ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500' : 'border-border bg-card hover:bg-muted/50'}`}>
-                                                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-blue-500 text-white' : 'bg-muted'}`}><Landmark className="h-4 w-4" /></div>
+                                                            <button key={register.id} onClick={() => setSelectedCashRegisterId(String(register.id))} className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${isSelected ? 'border-rb-accent bg-rb-accent-bg ring-1 ring-rb-accent' : 'border-border bg-card hover:bg-muted/50'}`}>
+                                                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-rb-accent text-white' : 'bg-muted'}`}><Landmark className="h-4 w-4" /></div>
                                                                 <div className="min-w-0">
-                                                                    <p className={`text-sm font-semibold truncate ${isSelected ? 'text-blue-500' : ''}`}>{register.name}</p>
+                                                                    <p className={`text-sm font-semibold truncate ${isSelected ? 'text-rb-accent' : ''}`}>{register.name}</p>
                                                                     <p className="text-xs text-muted-foreground">{register.balance.toFixed(2)} ₺</p>
                                                                 </div>
                                                             </button>
@@ -1086,7 +1086,7 @@ export default function Tables() {
                                             )}
                                         </div>
 
-                                        <Button className="w-full gap-2 bg-blue-500 hover:bg-blue-600" size="lg" disabled={!selectedCashRegisterId || completingPayment} onClick={handleCompletePayment}>
+                                        <Button className="w-full gap-2 bg-rb-accent hover:opacity-90" size="lg" disabled={!selectedCashRegisterId || completingPayment} onClick={handleCompletePayment}>
                                             <CheckCircle className="h-4 w-4" />{completingPayment ? 'Tamamlanıyor...' : 'Ödemeyi Tamamla'}
                                         </Button>
                                     </div>
@@ -1102,7 +1102,7 @@ export default function Tables() {
                                 ) : (
                                     <>
                                         {tableOrder.note && (
-                                            <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs px-4 py-3 mb-3">
+                                            <div className="rounded-xl bg-rb-amber-bg text-rb-amber text-xs px-4 py-3 mb-3">
                                                 <span className="font-bold">Not: </span>{tableOrder.note}
                                             </div>
                                         )}

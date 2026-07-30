@@ -3,26 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import axios from "axios";
-import { QRCodeSVG } from "qrcode.react";
 import { restaurantService } from "@/features/admin/api/restaurantService";
 import type { CreateRestaurant } from "@/features/admin/types";
-import { ROOT_DOMAIN } from "@/lib/tenant";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-
-const slugify = (value: string) =>
-    value
-        .toLowerCase()
-        .replace(/[şŞ]/g, "s")
-        .replace(/[ğĞ]/g, "g")
-        .replace(/[üÜ]/g, "u")
-        .replace(/[öÖ]/g, "o")
-        .replace(/[çÇ]/g, "c")
-        .replace(/[ıİ]/g, "i")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
 
 const restaurantSchema = z.object({
     name: z.string().min(1, "Restoran adı zorunludur."),
@@ -39,12 +22,9 @@ const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)]
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function SettingsPage() {
+    const [restaurantId, setRestaurantId] = useState<number | null>(null);
     const [restaurantName, setRestaurantName] = useState("");
     const [restaurantLocation, setRestaurantLocation] = useState("");
-    const [slug, setSlug] = useState("");
-    const [isEditingSlug, setIsEditingSlug] = useState(false);
-    const [slugInput, setSlugInput] = useState("");
-    const [slugSaving, setSlugSaving] = useState(false);
 
     const restaurantForm = useForm<RestaurantForm>({
         resolver: zodResolver(restaurantSchema),
@@ -53,9 +33,9 @@ export default function SettingsPage() {
 
     useEffect(() => {
         restaurantService.getMyRestaurant().then(r => {
+            setRestaurantId(r.id);
             setRestaurantName(r.name);
             setRestaurantLocation([r.district, r.city].filter(Boolean).join(', '));
-            setSlug(r.slug);
             restaurantForm.reset({
                 name: r.name,
                 phoneNumber: r.phoneNumber,
@@ -68,6 +48,7 @@ export default function SettingsPage() {
     }, []);
 
     const onRestaurantSubmit = async (data: RestaurantForm) => {
+        if (restaurantId === null) return;
         try {
             const payload: CreateRestaurant = {
                 name: data.name,
@@ -77,7 +58,7 @@ export default function SettingsPage() {
                 city: data.city ?? "",
                 district: data.district ?? "",
             };
-            await restaurantService.update(payload);
+            await restaurantService.updateBranch(restaurantId, payload);
             setRestaurantName(data.name);
             setRestaurantLocation([data.district, data.city].filter(Boolean).join(', '));
             toast.success("Restoran bilgileri güncellendi.");
@@ -86,164 +67,70 @@ export default function SettingsPage() {
         }
     };
 
-    const restaurantUrl = slug ? `https://${slug}.${ROOT_DOMAIN}` : "";
-    const cleanSlugInput = slugify(slugInput);
-
-    const handleStartEditSlug = () => {
-        setSlugInput(slug);
-        setIsEditingSlug(true);
-    };
-
-    const handleSaveSlug = async () => {
-        if (!cleanSlugInput) {
-            toast.error("Geçerli bir adres girin.");
-            return;
-        }
-        try {
-            setSlugSaving(true);
-            await restaurantService.setSlug(cleanSlugInput);
-            setSlug(cleanSlugInput);
-            setIsEditingSlug(false);
-            toast.success("Restoran adresi güncellendi.");
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                toast.error(error.response?.data?.error ?? "Adres güncellenirken bir hata oluştu.");
-            } else {
-                toast.error("Adres güncellenirken bir hata oluştu.");
-            }
-        } finally {
-            setSlugSaving(false);
-        }
-    };
-
     return (
         <div className="space-y-4">
             <div className="mb-2">
-                <h1 className="text-2xl font-serif font-bold text-foreground">Ayarlar</h1>
+                <h1 className="text-2xl font-serif font-bold text-foreground">Marka Ayarları</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">Restoran bilgileri</p>
             </div>
 
             {/* Restaurant Header Card */}
-            <div className="rounded-xl bg-[#1c1917] dark:bg-[#0f0e0d] p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full border-2 border-amber-400 flex items-center justify-center shrink-0">
-                    <div className="w-3.5 h-3.5 rounded-full border-2 border-amber-400" />
+            <div className="rounded-xl bg-sidebar p-5 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full border-2 border-rb-gold flex items-center justify-center shrink-0">
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-rb-gold" />
                 </div>
                 <div>
-                    <p className="text-white font-serif font-bold text-base leading-tight">
+                    <p className="text-sidebar-foreground font-serif font-bold text-base leading-tight">
                         {restaurantName || "—"}
                     </p>
-                    <p className="text-white/50 text-xs mt-0.5">{restaurantLocation || "—"}</p>
+                    <p className="text-sidebar-foreground/50 text-xs mt-0.5">{restaurantLocation || "—"}</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                {/* Restoran Bilgileri */}
-                <div className="rounded-xl border border-border bg-card p-5">
-                    <h2 className="text-base font-semibold text-foreground mb-4">Restoran Bilgileri</h2>
-                    <form onSubmit={restaurantForm.handleSubmit(onRestaurantSubmit)} className="space-y-4">
-                        <div>
-                            <label className={labelClass}>Restoran Adı</label>
-                            <input className={cn(inputClass, restaurantForm.formState.errors.name && "border-destructive")} {...restaurantForm.register("name")} />
-                            {restaurantForm.formState.errors.name && <p className="text-xs text-destructive mt-1">{restaurantForm.formState.errors.name.message}</p>}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className={labelClass}>Sabit Telefon</label>
-                                <input className={inputClass} placeholder="0212 000 00 00" {...restaurantForm.register("phoneNumber")} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Cep Telefonu</label>
-                                <input className={inputClass} placeholder="0532 000 00 00" {...restaurantForm.register("mobilePhoneNumber")} />
-                            </div>
-                        </div>
-                        <div>
-                            <label className={labelClass}>E-posta</label>
-                            <input type="email" className={cn(inputClass, restaurantForm.formState.errors.email && "border-destructive")} {...restaurantForm.register("email")} />
-                            {restaurantForm.formState.errors.email && <p className="text-xs text-destructive mt-1">{restaurantForm.formState.errors.email.message}</p>}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className={labelClass}>Şehir</label>
-                                <input className={inputClass} {...restaurantForm.register("city")} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>İlçe</label>
-                                <input className={inputClass} {...restaurantForm.register("district")} />
-                            </div>
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={restaurantForm.formState.isSubmitting}
-                                className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
-                            >
-                                {restaurantForm.formState.isSubmitting ? "Kaydediliyor..." : "Restoran Bilgilerini Kaydet →"}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                {/* Restoran QR Kodu */}
-                <div className="rounded-xl border border-border bg-card p-5">
-                    <h2 className="text-base font-semibold text-foreground mb-4">Restoran QR Kodu</h2>
-                    <div className="flex flex-col items-center gap-3 py-2">
-                        {restaurantUrl ? (
-                            <div className="p-3 rounded-lg bg-white">
-                                <QRCodeSVG value={restaurantUrl} size={176} />
-                            </div>
-                        ) : (
-                            <div className="w-44 h-44 rounded-lg border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground text-center px-3">
-                                Adres belirlenince QR kod burada görünecek
-                            </div>
-                        )}
-                        {!isEditingSlug && (
-                            <p className="text-sm text-foreground font-medium break-all text-center">
-                                {restaurantUrl || "—"}
-                            </p>
-                        )}
-
-                        {isEditingSlug ? (
-                            <div className="w-full space-y-2">
-                                <Input
-                                    value={slugInput}
-                                    onChange={(e) => setSlugInput(e.target.value)}
-                                    placeholder="restoran-adiniz"
-                                    className="border-border text-sm h-9"
-                                />
-                                <p className="text-xs text-muted-foreground truncate text-center">
-                                    {cleanSlugInput ? `${cleanSlugInput}.${ROOT_DOMAIN}` : `—.${ROOT_DOMAIN}`}
-                                </p>
-                                <div className="flex gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="flex-1 h-9 text-sm"
-                                        onClick={() => setIsEditingSlug(false)}
-                                        disabled={slugSaving}
-                                    >
-                                        Vazgeç
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        className="flex-1 h-9 text-sm bg-blue-600 hover:bg-blue-700 text-white"
-                                        onClick={handleSaveSlug}
-                                        disabled={slugSaving}
-                                    >
-                                        {slugSaving ? "Kaydediliyor..." : "Kaydet"}
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={handleStartEditSlug}
-                                className="text-xs font-medium text-blue-500 hover:underline"
-                            >
-                                Adresi Değiştir
-                            </button>
-                        )}
+            {/* Restoran Bilgileri */}
+            <div className="rounded-xl border border-border bg-card p-5 max-w-2xl">
+                <h2 className="text-base font-semibold text-foreground mb-4">Restoran Bilgileri</h2>
+                <form onSubmit={restaurantForm.handleSubmit(onRestaurantSubmit)} className="space-y-4">
+                    <div>
+                        <label className={labelClass}>Restoran Adı</label>
+                        <input className={cn(inputClass, restaurantForm.formState.errors.name && "border-destructive")} {...restaurantForm.register("name")} />
+                        {restaurantForm.formState.errors.name && <p className="text-xs text-destructive mt-1">{restaurantForm.formState.errors.name.message}</p>}
                     </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className={labelClass}>Sabit Telefon</label>
+                            <input className={inputClass} placeholder="0212 000 00 00" {...restaurantForm.register("phoneNumber")} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Cep Telefonu</label>
+                            <input className={inputClass} placeholder="0532 000 00 00" {...restaurantForm.register("mobilePhoneNumber")} />
+                        </div>
+                    </div>
+                    <div>
+                        <label className={labelClass}>E-posta</label>
+                        <input type="email" className={cn(inputClass, restaurantForm.formState.errors.email && "border-destructive")} {...restaurantForm.register("email")} />
+                        {restaurantForm.formState.errors.email && <p className="text-xs text-destructive mt-1">{restaurantForm.formState.errors.email.message}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className={labelClass}>Şehir</label>
+                            <input className={inputClass} {...restaurantForm.register("city")} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>İlçe</label>
+                            <input className={inputClass} {...restaurantForm.register("district")} />
+                        </div>
+                    </div>
+                    <div className="flex justify-end">
+                        <button
+                            type="submit"
+                            disabled={restaurantForm.formState.isSubmitting}
+                            className="px-5 py-2 rounded-lg bg-rb-gold hover:opacity-90 disabled:opacity-60 text-rb-gold-foreground text-sm font-medium transition-colors"
+                        >
+                            {restaurantForm.formState.isSubmitting ? "Kaydediliyor..." : "Restoran Bilgilerini Kaydet →"}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );

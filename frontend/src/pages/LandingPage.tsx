@@ -216,7 +216,7 @@ export default function LandingPage() {
                     <button
                         onClick={() => setTheme(isDark ? "light" : "dark")}
                         className={`relative inline-flex h-5 w-9.5 items-center rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${
-                            isDark ? "bg-blue-500" : "bg-black/10"
+                            isDark ? "bg-rb-accent" : "bg-black/10"
                         }`}
                     >
                         <span

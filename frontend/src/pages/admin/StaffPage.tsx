@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils";
 const roleMap: Record<number, string> = { 1: "Admin", 2: "Garson", 3: "Kasiyer", 4: "Mutfak" };
 
 const roleStyle: Record<number, { avatar: string; badge: string }> = {
-    1: { avatar: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
-    2: { avatar: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-    3: { avatar: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
-    4: { avatar: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+    1: { avatar: 'bg-rb-purple-bg text-rb-purple', badge: 'bg-rb-purple-bg text-rb-purple' },
+    2: { avatar: 'bg-rb-accent-bg text-rb-accent', badge: 'bg-rb-accent-bg text-rb-accent' },
+    3: { avatar: 'bg-rb-green-bg text-rb-green', badge: 'bg-rb-green-bg text-rb-green' },
+    4: { avatar: 'bg-rb-amber-bg text-rb-amber', badge: 'bg-rb-amber-bg text-rb-amber' },
 };
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
@@ -171,7 +171,7 @@ export default function StaffPage() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Çalışan Ekle
                 </button>
@@ -230,7 +230,7 @@ export default function StaffPage() {
                                             onClick={() => toggleActive(user)}
                                             className={cn(
                                                 "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none",
-                                                isActive ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                                                isActive ? "bg-rb-green" : "bg-gray-300 dark:bg-gray-600"
                                             )}
                                         >
                                             <span className={cn(
@@ -293,7 +293,7 @@ export default function StaffPage() {
                                 className={cn(
                                     "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
                                     activeTab === 'personal'
-                                        ? "border-blue-600 text-foreground"
+                                        ? "border-rb-accent text-foreground"
                                         : "border-transparent text-muted-foreground hover:text-foreground"
                                 )}
                             >
@@ -305,7 +305,7 @@ export default function StaffPage() {
                                 className={cn(
                                     "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
                                     activeTab === 'login'
-                                        ? "border-blue-600 text-foreground"
+                                        ? "border-rb-accent text-foreground"
                                         : "border-transparent text-muted-foreground hover:text-foreground"
                                 )}
                             >
@@ -421,7 +421,7 @@ export default function StaffPage() {
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors"
                             >
                                 Kaydet
                             </button>

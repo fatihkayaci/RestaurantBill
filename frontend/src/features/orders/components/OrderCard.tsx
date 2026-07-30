@@ -23,13 +23,13 @@ export default function OrderCard({ item, increaseQuantity, decreaseQuantity, on
                 );
             case 2:
                 return (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0 text-amber-500 border-amber-500/30 bg-amber-500/10 animate-pulse">
+                    <Badge variant="outline" className="text-[10px] px-2 py-0 text-rb-amber border-rb-amber/30 bg-rb-amber-bg animate-pulse">
                         Hazırlanıyor
                     </Badge>
                 );
             case 3:
                 return (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0 text-green-500 border-green-500/30 bg-green-500/10 shadow-[0_0_8px_rgba(34,197,94,0.2)]">
+                    <Badge variant="outline" className="text-[10px] px-2 py-0 text-rb-green border-rb-green/30 bg-rb-green-bg shadow-[0_0_8px_rgba(34,197,94,0.2)]">
                         HAZIR
                     </Badge>
                 );
@@ -67,7 +67,7 @@ export default function OrderCard({ item, increaseQuantity, decreaseQuantity, on
                     {item.productName}
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                    <span className="text-sm font-black text-rb-green">
                         {item.unitPrice} ₺
                     </span>
                     {getStatusBadge(item.status)}
@@ -97,7 +97,7 @@ export default function OrderCard({ item, increaseQuantity, decreaseQuantity, on
                     onClick={handleIncrease}
                     disabled={isLocked}
                     className={`h-8 w-8 rounded-lg border transition-all active:scale-95 ${
-                        !isLocked && "text-blue-500 hover:bg-blue-500 hover:text-white border-blue-500/30"
+                        !isLocked && "text-rb-accent hover:bg-rb-accent hover:text-white border-rb-accent/30"
                     }`}
                 >
                     <Plus className="h-4 w-4" />

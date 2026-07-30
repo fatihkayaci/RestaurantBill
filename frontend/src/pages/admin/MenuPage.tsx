@@ -170,7 +170,7 @@ export default function Menu() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Ürün Ekle
                 </button>
@@ -183,7 +183,7 @@ export default function Menu() {
                     className={cn(
                         "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                         selectedCategory === 'all'
-                            ? "bg-blue-600 text-white"
+                            ? "bg-rb-accent text-white"
                             : "border border-border text-muted-foreground hover:text-foreground"
                     )}
                 >
@@ -195,7 +195,7 @@ export default function Menu() {
                         className={cn(
                             "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
                             selectedCategory === cat.id
-                                ? "bg-blue-600 text-white"
+                                ? "bg-rb-accent text-white"
                                 : "border border-border text-muted-foreground hover:text-foreground"
                         )}
                     >
@@ -256,7 +256,7 @@ export default function Menu() {
                                         onClick={() => handleToggleActive(product)}
                                         className={cn(
                                             "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none",
-                                            product.isActive ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                                            product.isActive ? "bg-rb-green" : "bg-gray-300 dark:bg-gray-600"
                                         )}
                                     >
                                         <span className={cn(
@@ -362,7 +362,7 @@ export default function Menu() {
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors"
                             >
                                 Kaydet
                             </button>
@@ -408,7 +408,7 @@ export default function Menu() {
                             <button
                                 onClick={handleSaveCategory}
                                 disabled={savingCategory}
-                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-60"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-60"
                             >
                                 {savingCategory ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>

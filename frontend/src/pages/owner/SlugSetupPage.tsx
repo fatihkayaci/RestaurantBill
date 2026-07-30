@@ -34,7 +34,8 @@ export default function SlugSetupPage() {
         }
         try {
             setLoading(true);
-            await restaurantService.setSlug(cleanSlug);
+            const restaurant = await restaurantService.getMyRestaurant();
+            await restaurantService.setBranchSlug(restaurant.id, cleanSlug);
             toast.success(`Restoran adresiniz ayarlandı: ${cleanSlug}.${ROOT_DOMAIN}`);
             navigate("/owner");
         } catch (error) {
@@ -50,7 +51,7 @@ export default function SlugSetupPage() {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-[#f5f0e8] dark:bg-[#18140f] p-6">
-            <div className="w-full max-w-md bg-[#fdfaf5] dark:bg-[#221d16] rounded-2xl border border-[#e8e0d0] dark:border-[#3d3528] shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)] p-7">
+            <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)] p-7">
                 <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-[#f2ede4]">
                     Restoran Adresinizi Belirleyin
                 </h1>
@@ -67,7 +68,7 @@ export default function SlugSetupPage() {
                             value={slug}
                             onChange={(e) => setSlug(e.target.value)}
                             placeholder="restoran-adiniz"
-                            className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
                         />
                         <p className="text-xs text-muted-foreground mt-1 truncate">
                             {cleanSlug ? `${cleanSlug}.${ROOT_DOMAIN}` : `—.${ROOT_DOMAIN}`}
@@ -77,7 +78,7 @@ export default function SlugSetupPage() {
                     <Button
                         type="submit"
                         disabled={loading}
-                        className="w-full h-11.5 rounded-xl bg-[#2b7fff] hover:bg-blue-600 text-white font-bold text-sm"
+                        className="w-full h-11.5 rounded-xl bg-rb-accent hover:opacity-90 text-white font-bold text-sm"
                     >
                         {loading ? "Kaydediliyor..." : "Adresi Kaydet →"}
                     </Button>

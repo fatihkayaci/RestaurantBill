@@ -77,12 +77,28 @@ public static class MappingExtensions
 
     public static RestaurantDto ToDto(this Restaurant r) => new()
     {
+        Id = r.Id,
         Name = r.Name,
         PhoneNumber = r.PhoneNumber,
         Email = r.Email,
         City = r.City,
         District = r.District,
         Slug = r.Slug
+    };
+
+    public static BranchDto ToBranchDto(this Restaurant r, int tableCount, int staffCount, decimal revenue, string? managerName) => new()
+    {
+        Id = r.Id,
+        Name = r.Name,
+        PhoneNumber = r.PhoneNumber,
+        Email = r.Email,
+        City = r.City,
+        District = r.District,
+        Slug = r.Slug,
+        TableCount = tableCount,
+        StaffCount = staffCount,
+        Revenue = revenue,
+        ManagerName = managerName
     };
 
     public static TableDto ToDto(this Table t) => new()

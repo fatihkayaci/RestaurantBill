@@ -108,7 +108,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                             onClick={() => setPaymentMethod(key)}
                             className={`py-2 px-2 border-2 rounded-lg text-sm font-medium transition-colors ${
                                 paymentMethod === key
-                                    ? 'border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-400'
+                                    ? 'border-rb-accent text-rb-accent bg-rb-accent-bg'
                                     : 'border-border text-muted-foreground hover:border-muted-foreground'
                             }`}
                         >
@@ -120,7 +120,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                 <button
                     onClick={handleComplete}
                     disabled={submitting}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-xl py-3.5 text-sm transition-colors"
+                    className="w-full bg-rb-green hover:opacity-90 disabled:opacity-50 text-white font-semibold rounded-xl py-3.5 text-sm transition-colors"
                 >
                     {submitting ? 'İşleniyor...' : 'Ödemeyi Tamamla ✓'}
                 </button>

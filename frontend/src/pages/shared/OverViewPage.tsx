@@ -29,8 +29,8 @@ export default function OverViewPage() {
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Toplam Gelir */}
-                <div className="rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/40 p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-amber-600 dark:text-amber-400">
+                <div className="rounded-xl border border-rb-amber/30 bg-rb-amber-bg p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-amber">
                         Toplam Gelir
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
@@ -40,8 +40,8 @@ export default function OverViewPage() {
                 </div>
 
                 {/* Toplam Sipariş */}
-                <div className="rounded-xl border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/40 p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-blue-600 dark:text-blue-400">
+                <div className="rounded-xl border border-rb-accent/30 bg-rb-accent-bg p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-accent">
                         Toplam Sipariş
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
@@ -51,8 +51,8 @@ export default function OverViewPage() {
                 </div>
 
                 {/* Ort. Sipariş */}
-                <div className="rounded-xl border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-950/40 p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400">
+                <div className="rounded-xl border border-rb-green/30 bg-rb-green-bg p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-green">
                         Ort. Sipariş
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
@@ -97,7 +97,7 @@ export default function OverViewPage() {
                                 <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-30} textAnchor="end" height={60} />
                                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                                 <Tooltip formatter={(value) => [value, 'Satış Adedi']} />
-                                <Bar dataKey="adet" fill="#d97706" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="adet" fill="var(--rb-amber)" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     )}
@@ -117,7 +117,7 @@ export default function OverViewPage() {
                             {stats.topProducts.map((item, idx) => (
                                 <div key={item.name} className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-xs font-bold">
+                                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rb-amber-bg text-rb-amber text-xs font-bold">
                                             {idx + 1}
                                         </span>
                                         <span className="text-sm font-medium text-foreground">{item.name}</span>

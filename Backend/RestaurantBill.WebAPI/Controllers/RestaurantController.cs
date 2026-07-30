@@ -2,8 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Features.Restaurants.Commands.SetRestaurantSlug;
-using RestaurantBill.Application.Features.Restaurants.Commands.UpdateRestaurant;
+using RestaurantBill.Application.Features.Restaurants.Commands.CreateBranch;
+using RestaurantBill.Application.Features.Restaurants.Commands.SetBranchSlug;
+using RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranch;
+using RestaurantBill.Application.Features.Restaurants.Queries.GetMyBranches;
 using RestaurantBill.Application.Features.Restaurants.Queries.GetRestaurantByUserId;
 
 namespace RestaurantBill.WebAPI.Controllers;
@@ -30,33 +32,63 @@ public class RestaurantController : BaseController
         var result = await _mediator.Send(new GetRestaurantByUserIdQuery(), cancellationToken);
         return HandleResult(result);
     }
-        
+
+    /// <summary>
+    /// Returns all restaurants (branches) owned by the authenticated Owner.
+    /// </summary>
+    /// <returns>200 OK with the list of branches on success.</returns>
+    [Authorize(Roles = "Owner")]
+    [HttpGet("branches")]
+    public async Task<IActionResult> GetMyBranches(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetMyBranchesQuery(), cancellationToken);
+        return HandleResult(result);
+    }
+
     #endregion
     #region post methods
     /// <summary>
-    /// Creates a new restaurant and associates it with the authenticated user. Only accessible by Admin.
+    /// Creates a new branch (restaurant) owned by the authenticated Owner.
     /// </summary>
-    /// <param name="command">Restaurant creation details containing Name, PhoneNumber, MobilePhoneNumber, Email, City and District.</param>
+    /// <param name="command">Branch creation details containing Name.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-    /// <returns>200 OK with success message on creation.</returns>
+    /// <returns>200 OK with the created branch on success.</returns>
     [Authorize(Roles = "Owner")]
-    [HttpPost]
-    public async Task<IActionResult> UpdateRestaurant([FromBody] UpdateRestaurantCommand command, CancellationToken cancellationToken)
+    [HttpPost("branches")]
+    public async Task<IActionResult> CreateBranch([FromBody] CreateBranchCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }
 
     /// <summary>
-    /// Sets or updates the subdomain slug for the authenticated user's restaurant.
+    /// Sets or updates the subdomain slug for a specific branch owned by the authenticated Owner.
     /// </summary>
+    /// <param name="id">The ID of the branch (restaurant) to set the slug for.</param>
     /// <param name="command">Slug creation details containing the desired Slug.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
     /// <returns>200 OK with the assigned slug on success.</returns>
     [Authorize(Roles = "Owner")]
-    [HttpPost("slug")]
-    public async Task<IActionResult> SetSlug([FromBody] SetRestaurantSlugCommand command, CancellationToken cancellationToken)
+    [HttpPost("branches/{id}/slug")]
+    public async Task<IActionResult> SetBranchSlug([FromRoute] int id, [FromBody] SetBranchSlugCommand command, CancellationToken cancellationToken)
     {
+        command.RestaurantId = id;
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Updates the details (name, contact info) of a specific branch owned by the authenticated Owner.
+    /// </summary>
+    /// <param name="id">The ID of the branch (restaurant) to update.</param>
+    /// <param name="command">Branch details containing Name, PhoneNumber, Email, City and District.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>200 OK on success.</returns>
+    [Authorize(Roles = "Owner")]
+    [HttpPost("branches/{id}")]
+    public async Task<IActionResult> UpdateBranch([FromRoute] int id, [FromBody] UpdateBranchCommand command, CancellationToken cancellationToken)
+    {
+        command.RestaurantId = id;
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }

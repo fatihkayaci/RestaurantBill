@@ -14,32 +14,32 @@ interface Counts {
 }
 
 const FILTER_CONFIG = [
-    { key: 'all'      as FilterType, label: (c: Counts) => `Tümü (${c.total})`,       activeClass: 'bg-[#2b7fff] text-white' },
-    { key: 'empty'    as FilterType, label: (c: Counts) => `Boş (${c.empty})`,         activeClass: 'bg-[#1f8a52] dark:bg-[#45c87a] text-white' },
-    { key: 'occupied' as FilterType, label: (c: Counts) => `Dolu (${c.occupied})`,     activeClass: 'bg-[#c85010] dark:bg-[#f07840] text-white' },
-    { key: 'reserved' as FilterType, label: (c: Counts) => `Rezerve (${c.reserved})`, activeClass: 'bg-[#b8880a] dark:bg-[#e8b835] text-white' },
+    { key: 'all'      as FilterType, label: (c: Counts) => `Tümü (${c.total})`,       activeClass: 'bg-rb-accent text-white' },
+    { key: 'empty'    as FilterType, label: (c: Counts) => `Boş (${c.empty})`,         activeClass: 'bg-rb-green text-white' },
+    { key: 'occupied' as FilterType, label: (c: Counts) => `Dolu (${c.occupied})`,     activeClass: 'bg-rb-red text-white' },
+    { key: 'reserved' as FilterType, label: (c: Counts) => `Rezerve (${c.reserved})`, activeClass: 'bg-rb-amber text-white' },
 ];
 
 const STATUS_CARD = {
     1: {
         bg:     'bg-[#ECECE2] dark:bg-[rgba(69,200,122,0.05)]',
-        border: 'border-[#b8e8cd] dark:border-[rgba(69,200,122,0.25)]',
-        badge:  'bg-[#d0f2e3] text-[#1f8a52] dark:bg-[rgba(69,200,122,0.14)] dark:text-[#45c87a]',
-        hint:   'text-[#2b7fff] font-semibold',
+        border: 'border-[#b8e8cd] dark:border-rb-green/25',
+        badge:  'bg-rb-green-bg text-rb-green',
+        hint:   'text-rb-accent font-semibold',
         label:  'BOŞ',
     },
     2: {
-        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,120,64,0.05)]',
-        border: 'border-[#f5c5aa] dark:border-[rgba(240,120,64,0.25)]',
-        badge:  'bg-[#fce0d0] text-[#c85010] dark:bg-[rgba(240,120,64,0.14)] dark:text-[#f07840]',
+        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,96,96,0.05)]',
+        border: 'border-[#f5c5aa] dark:border-rb-red/25',
+        badge:  'bg-rb-red-bg text-rb-red',
         hint:   'text-muted-foreground',
         label:  'DOLU',
     },
     3: {
         bg:     'bg-white dark:bg-[rgba(232,184,53,0.05)]',
-        border: 'border-[#f0d98a] dark:border-[rgba(232,184,53,0.25)]',
-        badge:  'bg-[#fef3c7] text-[#b8880a] dark:bg-[rgba(232,184,53,0.14)] dark:text-[#e8b835]',
-        hint:   'text-[#b8880a] dark:text-[#e8b835] font-medium',
+        border: 'border-[#f0d98a] dark:border-rb-amber/25',
+        badge:  'bg-rb-amber-bg text-rb-amber',
+        hint:   'text-rb-amber font-medium',
         label:  'REZERVE',
     },
 } as const;
@@ -71,7 +71,7 @@ function TableCard({
                 transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]
                 dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]
                 ${cfg.bg} ${cfg.border}
-                ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-background' : ''}
+                ${isSelected ? 'ring-2 ring-rb-accent ring-offset-2 dark:ring-offset-background' : ''}
             `}
         >
             <div className="flex items-start justify-between gap-1">
@@ -199,7 +199,7 @@ export default function WaiterTablesPage() {
     return (
         <div className="min-h-full">
             {/* Stats + Filter Bar */}
-            <div className="sticky top-0 z-10 bg-[#F1ECE4]/95 dark:bg-background/95 backdrop-blur-sm border-b border-[#e8e0d0] dark:border-[#3d3528] px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="sticky top-0 z-10 bg-[#F1ECE4]/95 dark:bg-background/95 backdrop-blur-sm border-b border-border px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 {/* Stats */}
                 <div className="flex items-center gap-2 text-sm flex-wrap">
                     <div className="flex items-center gap-1.5">
@@ -208,17 +208,17 @@ export default function WaiterTablesPage() {
                     </div>
                     <div className="w-px h-4.5 bg-border mx-0.5" />
                     <div className="flex items-center gap-1.5">
-                        <span className="font-serif text-xl font-bold leading-none text-[#1f8a52] dark:text-[#45c87a]">{counts.empty}</span>
+                        <span className="font-serif text-xl font-bold leading-none text-rb-green">{counts.empty}</span>
                         <span className="text-xs text-muted-foreground">Boş</span>
                     </div>
                     <div className="w-px h-4.5 bg-border mx-0.5" />
                     <div className="flex items-center gap-1.5">
-                        <span className="font-serif text-xl font-bold leading-none text-[#c85010] dark:text-[#f07840]">{counts.occupied}</span>
+                        <span className="font-serif text-xl font-bold leading-none text-rb-red">{counts.occupied}</span>
                         <span className="text-xs text-muted-foreground">Dolu</span>
                     </div>
                     <div className="w-px h-4.5 bg-border mx-0.5" />
                     <div className="flex items-center gap-1.5">
-                        <span className="font-serif text-xl font-bold leading-none text-[#b8880a] dark:text-[#e8b835]">{counts.reserved}</span>
+                        <span className="font-serif text-xl font-bold leading-none text-rb-amber">{counts.reserved}</span>
                         <span className="text-xs text-muted-foreground">Rezerve</span>
                     </div>
                 </div>
@@ -232,7 +232,7 @@ export default function WaiterTablesPage() {
                             className={`px-3.25 py-1.25 rounded-full text-xs font-medium transition-all duration-150 ${
                                 filter === key
                                     ? activeClass
-                                    : 'text-[#a39080] dark:text-[#7a6e60] border border-[#e8e0d0] dark:border-[#3d3528] hover:border-[#c8b09a] dark:hover:border-[#5a4e40]'
+                                    : 'text-rb-text-muted border border-border hover:border-[#c8b09a] dark:hover:border-[#5a4e40]'
                             }`}
                         >
                             {label(counts)}

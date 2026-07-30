@@ -142,7 +142,7 @@ export default function LoginPage() {
                 <button
                     onClick={() => setTheme(isDark ? "light" : "dark")}
                     className={`relative inline-flex h-5.5 w-10.5 items-center rounded-full transition-colors duration-300 focus:outline-none ${
-                        isDark ? "bg-blue-500" : "bg-white/15"
+                        isDark ? "bg-rb-accent" : "bg-white/15"
                     }`}
                 >
                     <span
@@ -173,7 +173,7 @@ export default function LoginPage() {
                             </button>
                         ))}
                         <div
-                            className={`absolute bottom-0 h-0.5 w-1/2 bg-blue-500 rounded-t-sm transition-all duration-250 ease-in-out ${
+                            className={`absolute bottom-0 h-0.5 w-1/2 bg-rb-accent rounded-t-sm transition-all duration-250 ease-in-out ${
                                 activeTab === "login" ? "left-0" : "left-1/2"
                             }`}
                         />
@@ -200,7 +200,7 @@ export default function LoginPage() {
                                         value={loginField}
                                         onChange={(e) => setLoginField(e.target.value)}
                                         placeholder="kullanici_adi veya e-posta"
-                                        className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
                                     />
                                 </div>
 
@@ -209,7 +209,7 @@ export default function LoginPage() {
                                         <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                             ŞİFRE
                                         </label>
-                                        <button type="button" className="text-[11px] font-semibold text-blue-500 hover:underline">
+                                        <button type="button" className="text-[11px] font-semibold text-rb-accent hover:underline">
                                             Şifremi unuttum
                                         </button>
                                     </div>
@@ -219,7 +219,7 @@ export default function LoginPage() {
                                             value={loginPassword}
                                             onChange={(e) => setLoginPassword(e.target.value)}
                                             placeholder="Şifreniz..."
-                                            className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 pr-10 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 pr-10 text-sm"
                                         />
                                         <button
                                             type="button"
@@ -234,7 +234,7 @@ export default function LoginPage() {
                                 <Button
                                     type="submit"
                                     disabled={loginLoading}
-                                    className="w-full h-11.5 rounded-xl bg-[#2b7fff] hover:bg-blue-600 text-white font-bold text-sm mt-0.5"
+                                    className="w-full h-11.5 rounded-xl bg-rb-accent hover:opacity-90 text-white font-bold text-sm mt-0.5"
                                 >
                                     {loginLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
                                 </Button>
@@ -244,7 +244,7 @@ export default function LoginPage() {
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("register")}
-                                        className="text-blue-500 font-semibold hover:underline"
+                                        className="text-rb-accent font-semibold hover:underline"
                                     >
                                         Kayıt olun
                                     </button>
@@ -273,7 +273,7 @@ export default function LoginPage() {
                                             value={firstName}
                                             onChange={(e) => setFirstName(e.target.value)}
                                             placeholder="Adınız..."
-                                            className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
                                         />
                                     </div>
                                     <div className="flex flex-col gap-1.5">
@@ -284,7 +284,7 @@ export default function LoginPage() {
                                             value={lastName}
                                             onChange={(e) => setLastName(e.target.value)}
                                             placeholder="Soyadınız..."
-                                            className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
                                         />
                                     </div>
                                 </div>
@@ -297,7 +297,7 @@ export default function LoginPage() {
                                         value={restaurantName}
                                         onChange={(e) => setRestaurantName(e.target.value)}
                                         placeholder="Restoranınızın adı..."
-                                        className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
                                     />
                                 </div>
 
@@ -310,7 +310,7 @@ export default function LoginPage() {
                                         value={regPhoneNumber}
                                         onChange={(e) => setRegPhoneNumber(e.target.value)}
                                         placeholder="05XX XXX XX XX"
-                                        className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
                                     />
                                 </div>
 
@@ -323,7 +323,7 @@ export default function LoginPage() {
                                         value={regEmail}
                                         onChange={(e) => setRegEmail(e.target.value)}
                                         placeholder="ornek@restoran.com"
-                                        className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
                                     />
                                 </div>
 
@@ -338,7 +338,7 @@ export default function LoginPage() {
                                                 value={regPassword}
                                                 onChange={(e) => setRegPassword(e.target.value)}
                                                 placeholder="Şifreniz..."
-                                                className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 pr-10 text-sm"
+                                                className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 pr-10 text-sm"
                                             />
                                             <button
                                                 type="button"
@@ -358,7 +358,7 @@ export default function LoginPage() {
                                             value={regConfirm}
                                             onChange={(e) => setRegConfirm(e.target.value)}
                                             placeholder="Tekrar girin..."
-                                            className="border-[#e8e0d0] dark:border-[#3d3528] dark:bg-white/5 dark:text-[#f2ede4] focus:border-blue-400 rounded-2.5 h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
                                         />
                                     </div>
                                 </div>
@@ -366,7 +366,7 @@ export default function LoginPage() {
                                 <Button
                                     type="submit"
                                     disabled={regLoading}
-                                    className="w-full h-11.5 rounded-xl bg-[#2b7fff] hover:bg-blue-600 text-white font-bold text-sm mt-0.5"
+                                    className="w-full h-11.5 rounded-xl bg-rb-accent hover:opacity-90 text-white font-bold text-sm mt-0.5"
                                 >
                                     {regLoading ? "Hesap oluşturuluyor..." : "Hesap Oluştur"}
                                 </Button>
@@ -376,7 +376,7 @@ export default function LoginPage() {
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("login")}
-                                        className="text-blue-500 font-semibold hover:underline"
+                                        className="text-rb-accent font-semibold hover:underline"
                                     >
                                         Giriş yapın
                                     </button>

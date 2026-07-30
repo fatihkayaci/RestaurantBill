@@ -38,9 +38,9 @@ interface CartItem {
 }
 
 const STATUS_CONFIG = {
-    1: { label: 'BOŞ', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' },
-    2: { label: 'DOLU', cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' },
-    3: { label: 'REZERVE', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' },
+    1: { label: 'BOŞ', cls: 'bg-rb-green-bg text-rb-green' },
+    2: { label: 'DOLU', cls: 'bg-rb-red-bg text-rb-red' },
+    3: { label: 'REZERVE', cls: 'bg-rb-amber-bg text-rb-amber' },
 } as const;
 
 interface Props {
@@ -388,7 +388,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                         onClick={() => setActiveTab(tab)}
                         className={`flex-1 py-3 text-sm font-medium transition-colors ${
                             activeTab === tab
-                                ? 'text-foreground border-b-2 border-blue-500'
+                                ? 'text-foreground border-b-2 border-rb-accent'
                                 : 'text-muted-foreground hover:text-foreground'
                         }`}
                     >
@@ -412,7 +412,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 onClick={() => setSelectedCategoryId(cat.id)}
                                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
                                     selectedCategoryId === cat.id
-                                        ? 'bg-blue-500 text-white'
+                                        ? 'bg-rb-accent text-white'
                                         : 'bg-muted text-muted-foreground hover:bg-muted/70'
                                 }`}
                             >
@@ -448,7 +448,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                             )}
                                             <button
                                                 onClick={() => addToCart(product)}
-                                                className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xl font-bold hover:bg-blue-600 transition-colors"
+                                                className="w-7 h-7 rounded-full bg-rb-accent flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-colors"
                                             >
                                                 +
                                             </button>
@@ -471,12 +471,12 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 onChange={e => setOrderNote(e.target.value)}
                                 placeholder="Sipariş notu (isteğe bağlı) — örn. acısız, az pişmiş..."
                                 rows={2}
-                                className="w-full mb-3 rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full mb-3 rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-rb-accent"
                             />
                             <Button
                                 onClick={handleSendOrder}
                                 disabled={submitting}
-                                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl h-11"
+                                className="w-full bg-rb-accent hover:opacity-90 text-white font-semibold rounded-xl h-11"
                             >
                                 {submitting ? 'Gönderiliyor...' : 'Siparişi Gönder →'}
                             </Button>
@@ -486,7 +486,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             ) : activeTab === 'reservation' ? (
                 table.status === 3 ? (
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                        <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs px-4 py-3">
+                        <div className="rounded-xl bg-rb-amber-bg text-rb-amber text-xs px-4 py-3">
                             Bu masa rezerve edilmiştir.
                         </div>
 
@@ -498,7 +498,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 </div>
                                 <div className="flex justify-between items-center px-4 py-3">
                                     <span className="text-xs text-muted-foreground font-medium">Saat</span>
-                                    <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                                    <span className="text-sm font-bold text-rb-amber">
                                         {new Date(activeReservation.reservationTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
@@ -520,7 +520,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                         <Button
                             onClick={handleCustomerArrived}
                             disabled={arriving}
-                            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl h-11 disabled:opacity-60"
+                            className="w-full bg-rb-green hover:opacity-90 text-white font-semibold rounded-xl h-11 disabled:opacity-60"
                         >
                             {arriving ? 'Açılıyor...' : 'Müşteri Geldi (Masayı Aç)'}
                         </Button>
@@ -536,7 +536,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                     </div>
                 ) : (
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                        <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs px-4 py-3">
+                        <div className="rounded-xl bg-rb-amber-bg text-rb-amber text-xs px-4 py-3">
                             Bu masayı belirli bir saat için ayırın. Rezervasyon kaydedildiğinde masa durumu "Rezerve" olarak güncellenir.
                         </div>
 
@@ -546,7 +546,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 value={reservationName}
                                 onChange={e => setReservationName(e.target.value)}
                                 placeholder="Misafir adı..."
-                                className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
                             />
                         </div>
 
@@ -556,7 +556,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 value={reservationContact}
                                 onChange={e => setReservationContact(e.target.value)}
                                 placeholder="Telefon numarası..."
-                                className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
                             />
                         </div>
 
@@ -568,7 +568,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 placeholder="19:30"
                                 inputMode="numeric"
                                 maxLength={5}
-                                className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
                             />
                         </div>
 
@@ -578,14 +578,14 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 value={reservationNote}
                                 onChange={e => setReservationNote(e.target.value)}
                                 placeholder="Doğum günü, özel istek..."
-                                className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
                             />
                         </div>
 
                         <Button
                             onClick={handleSaveReservation}
                             disabled={savingReservation}
-                            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl h-11"
+                            className="w-full bg-rb-amber hover:opacity-90 text-white font-semibold rounded-xl h-11"
                         >
                             {savingReservation ? 'Kaydediliyor...' : 'Rezervasyonu Kaydet'}
                         </Button>
@@ -601,7 +601,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                     ) : (
                         <>
                             {activeOrder.note && (
-                                <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs px-4 py-3 mb-3">
+                                <div className="rounded-xl bg-rb-amber-bg text-rb-amber text-xs px-4 py-3 mb-3">
                                     <span className="font-bold">Not: </span>{activeOrder.note}
                                 </div>
                             )}
@@ -609,11 +609,11 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 {activeOrder.orderItems.map((item) => {
                                     const statusLabel = item.status === 1 ? 'Bekliyor' : item.status === 2 ? 'Hazırlanıyor' : item.status === 3 ? 'Hazır' : 'Servis Edildi';
                                     const statusColor = item.status === 1
-                                        ? 'text-amber-500'
+                                        ? 'text-rb-amber'
                                         : item.status === 2
-                                        ? 'text-blue-500'
+                                        ? 'text-rb-accent'
                                         : item.status === 3
-                                        ? 'text-green-500'
+                                        ? 'text-rb-green'
                                         : 'text-muted-foreground';
                                     return (
                                         <div key={item.id} className="flex items-center justify-between py-3 gap-3">
@@ -626,7 +626,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                     <button
                                                         onClick={() => handleMarkServed(item.id)}
                                                         disabled={servingItemId === item.id}
-                                                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-60 transition-colors"
+                                                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-rb-green text-white hover:opacity-90 disabled:opacity-60 transition-colors"
                                                     >
                                                         {servingItemId === item.id ? '...' : 'Servis Et'}
                                                     </button>
@@ -651,7 +651,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 <button
                                     onClick={handleServeAll}
                                     disabled={servingAll}
-                                    className="flex-1 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm py-2.5 disabled:opacity-60 transition-colors"
+                                    className="flex-1 rounded-xl bg-rb-green hover:opacity-90 text-white font-semibold text-sm py-2.5 disabled:opacity-60 transition-colors"
                                 >
                                     {servingAll ? 'İşleniyor...' : 'Servis Et'}
                                 </button>

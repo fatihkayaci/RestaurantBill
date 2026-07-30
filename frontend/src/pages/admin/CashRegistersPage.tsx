@@ -181,7 +181,7 @@ export default function CashRegisters() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Kasa Ekle
                 </button>
@@ -189,18 +189,18 @@ export default function CashRegisters() {
 
             {/* Stat Cards */}
             <div className="grid grid-cols-3 gap-4">
-                <div className="rounded-xl border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-950/40 p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400">Toplam Bakiye</p>
+                <div className="rounded-xl border border-rb-green/30 bg-rb-green-bg p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-green">Toplam Bakiye</p>
                     <p className="text-3xl font-bold text-foreground mt-2">₺{totalBalance.toFixed(0)}</p>
                     <p className="text-xs text-muted-foreground mt-1">tüm kasalar</p>
                 </div>
-                <div className="rounded-xl border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-950/40 p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-blue-600 dark:text-blue-400">Toplam Kasa</p>
+                <div className="rounded-xl border border-rb-accent/30 bg-rb-accent-bg p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-accent">Toplam Kasa</p>
                     <p className="text-3xl font-bold text-foreground mt-2">{registers.length}</p>
                     <p className="text-xs text-muted-foreground mt-1">kayıtlı</p>
                 </div>
-                <div className="rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/40 p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-amber-600 dark:text-amber-400">Açık Kasa</p>
+                <div className="rounded-xl border border-rb-amber/30 bg-rb-amber-bg p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-amber">Açık Kasa</p>
                     <p className="text-3xl font-bold text-foreground mt-2">{openCount}</p>
                     <p className="text-xs text-muted-foreground mt-1">aktif</p>
                 </div>
@@ -223,9 +223,9 @@ export default function CashRegisters() {
                             <div className="flex items-center gap-2.5">
                                 <div className={cn(
                                     "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                                    r.status === 1 ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-muted"
+                                    r.status === 1 ? "bg-rb-green-bg" : "bg-muted"
                                 )}>
-                                    <Wallet className={cn("h-4 w-4", r.status === 1 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")} />
+                                    <Wallet className={cn("h-4 w-4", r.status === 1 ? "text-rb-green" : "text-muted-foreground")} />
                                 </div>
                                 <p className="font-semibold text-foreground">{r.name}</p>
                             </div>
@@ -250,7 +250,7 @@ export default function CashRegisters() {
                             <span className={cn(
                                 "text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded",
                                 r.status === 1
-                                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                    ? "bg-rb-green-bg text-rb-green"
                                     : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
                             )}>
                                 {r.status === 1 ? 'Açık' : 'Kapalı'}
@@ -259,7 +259,7 @@ export default function CashRegisters() {
                                 <button
                                     disabled={r.status !== 1}
                                     onClick={() => openTxDialog(r, 1)}
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs font-medium text-rb-green hover:bg-rb-green-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
                                     <ArrowDownCircle className="h-3.5 w-3.5" />
                                     Giriş
@@ -267,7 +267,7 @@ export default function CashRegisters() {
                                 <button
                                     disabled={r.status !== 1}
                                     onClick={() => openTxDialog(r, 2)}
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs font-medium text-rb-red hover:bg-rb-red-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
                                     <ArrowUpCircle className="h-3.5 w-3.5" />
                                     Çıkış
@@ -275,7 +275,7 @@ export default function CashRegisters() {
                                 <button
                                     disabled={r.status !== 1 || registers.filter(x => x.id !== r.id && x.status === 1).length === 0}
                                     onClick={() => openTransferDialog(r)}
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs font-medium text-rb-accent hover:bg-rb-accent-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
                                     <ArrowLeftRight className="h-3.5 w-3.5" />
                                     Aktar
@@ -342,7 +342,7 @@ export default function CashRegisters() {
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
-                            <button type="button" onClick={handleSubmit} className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">
+                            <button type="button" onClick={handleSubmit} className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors">
                                 {editTarget ? 'Kaydet' : 'Ekle'}
                             </button>
                         </div>
@@ -392,7 +392,7 @@ export default function CashRegisters() {
                                 onClick={handleTxSubmit}
                                 className={cn(
                                     "px-4 py-2 text-sm rounded-lg text-white font-medium transition-colors",
-                                    txType === 1 ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+                                    txType === 1 ? "bg-rb-green hover:opacity-90" : "bg-rb-red hover:opacity-90"
                                 )}
                             >
                                 Onayla
@@ -438,7 +438,7 @@ export default function CashRegisters() {
                                     <button
                                         type="button"
                                         onClick={() => setTransferAmount(transferSource.balance.toString())}
-                                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                                        className="text-[11px] font-semibold text-rb-accent hover:opacity-80 transition-colors"
                                     >
                                         Tümünü Yaz
                                     </button>
@@ -466,7 +466,7 @@ export default function CashRegisters() {
                                 type="button"
                                 onClick={handleTransferSubmit}
                                 disabled={transferDestinationId === ''}
-                                className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 Aktar
                             </button>
