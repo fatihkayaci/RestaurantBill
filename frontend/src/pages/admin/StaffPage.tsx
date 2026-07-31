@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Search, X, Pencil } from 'lucide-react';
+import { toast } from "sonner";
 import { userService } from "@/features/admin/api/userService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { CreateUser, User } from "@/features/admin/types";
@@ -29,9 +30,7 @@ export default function StaffPage() {
         passwordHash: '', userCode: '', role: 1
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const [generalError, setGeneralError] = useState<string | null>(null);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-    const [deleteError, setDeleteError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'login'>('personal');
 
     useEffect(() => {
@@ -55,7 +54,6 @@ export default function StaffPage() {
         setEditUser(null);
         setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: 1 });
         setFieldErrors({});
-        setGeneralError(null);
         setActiveTab('personal');
         setIsModalOpen(true);
     };
@@ -64,7 +62,6 @@ export default function StaffPage() {
         setEditUser(user);
         setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', userCode: user.userCode, role: user.role });
         setFieldErrors({});
-        setGeneralError(null);
         setActiveTab('personal');
         setIsModalOpen(true);
     };
@@ -72,30 +69,34 @@ export default function StaffPage() {
     const personalFields = ['fullName', 'email', 'phoneNumber'];
     const loginFields = ['userName', 'userCode', 'passwordHash'];
 
-    const closeDeleteDialog = () => {
-        setDeleteTargetId(null);
-        setDeleteError(null);
-    };
-
     const handleDelete = async () => {
         if (!deleteTargetId) return;
         try {
             await userService.deleteUser(deleteTargetId);
             setUsers(prev => prev.filter(u => u.id !== deleteTargetId));
-            setDeleteTargetId(null);
+            toast.success('Çalışan silindi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Çalışan silinemedi.');
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Çalışan silinemedi.');
             }
+        } finally {
+            setDeleteTargetId(null);
         }
     };
 
     const toggleActive = async (user: User) => {
-        await userService.updateUser({
-            id: user.id, fullName: user.fullName, userName: user.userName, email: user.email,
-            phoneNumber: user.phoneNumber, userCode: user.userCode, role: user.role, isActive: !user.isActive
-        });
-        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
+        try {
+            await userService.updateUser({
+                id: user.id, fullName: user.fullName, userName: user.userName, email: user.email,
+                phoneNumber: user.phoneNumber, userCode: user.userCode, role: user.role, isActive: !user.isActive
+            });
+            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
+            toast.success(user.isActive ? 'Çalışan pasif yapıldı.' : 'Çalışan aktif yapıldı.');
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Durum güncellenemedi.');
+            }
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -120,7 +121,6 @@ export default function StaffPage() {
             return;
         }
         setFieldErrors({});
-        setGeneralError(null);
         try {
             if (editUser) {
                 await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash, isActive: editUser.isActive });
@@ -130,6 +130,7 @@ export default function StaffPage() {
             const updated = await userService.getUsersByRestaurantId();
             setUsers(updated);
             setIsModalOpen(false);
+            toast.success(editUser ? 'Çalışan güncellendi.' : 'Çalışan eklendi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 const data = err.response?.data;
@@ -152,8 +153,10 @@ export default function StaffPage() {
                         setFieldErrors({ [duplicateField]: message });
                         setActiveTab(personalFields.includes(duplicateField) ? 'personal' : 'login');
                     } else {
-                        setGeneralError(message);
+                        toast.error(message);
                     }
+                } else {
+                    toast.error('Bir hata oluştu.');
                 }
             }
         }
@@ -402,12 +405,6 @@ export default function StaffPage() {
                                     </div>
                                 </>
                             )}
-
-                            {generalError && (
-                                <p className="text-xs text-destructive rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
-                                    {generalError}
-                                </p>
-                            )}
                         </form>
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
@@ -431,21 +428,19 @@ export default function StaffPage() {
             )}
 
             {/* Delete Confirm */}
-            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && closeDeleteDialog()}>
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Çalışanı sil</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {deleteError ?? "Bu çalışanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
+                            Bu çalışanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
-                        {!deleteError && (
-                            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Sil
-                            </AlertDialogAction>
-                        )}
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Sil
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

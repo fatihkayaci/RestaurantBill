@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X, Pencil } from 'lucide-react';
+import { toast } from "sonner";
 import { userService } from "@/features/admin/api/userService";
 import { restaurantService } from "@/features/admin/api/restaurantService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -23,9 +24,7 @@ export default function AdminsPage() {
         passwordHash: '', userCode: '', role: ADMIN_ROLE, restaurantId: undefined
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const [generalError, setGeneralError] = useState<string | null>(null);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-    const [deleteError, setDeleteError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'login'>('personal');
 
     const loadAdmins = () => {
@@ -56,7 +55,6 @@ export default function AdminsPage() {
         setEditAdmin(null);
         setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: ADMIN_ROLE, restaurantId: branches[0]?.id });
         setFieldErrors({});
-        setGeneralError(null);
         setActiveTab('personal');
         setIsModalOpen(true);
     };
@@ -65,7 +63,6 @@ export default function AdminsPage() {
         setEditAdmin(admin);
         setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', userCode: admin.userCode, role: ADMIN_ROLE, restaurantId: admin.restaurantId });
         setFieldErrors({});
-        setGeneralError(null);
         setActiveTab('personal');
         setIsModalOpen(true);
     };
@@ -73,30 +70,34 @@ export default function AdminsPage() {
     const personalFields = ['fullName', 'email', 'phoneNumber', 'restaurantId'];
     const loginFields = ['userName', 'userCode', 'passwordHash'];
 
-    const closeDeleteDialog = () => {
-        setDeleteTargetId(null);
-        setDeleteError(null);
-    };
-
     const handleDelete = async () => {
         if (!deleteTargetId) return;
         try {
             await userService.deleteUser(deleteTargetId);
             setAdmins(prev => prev.filter(u => u.id !== deleteTargetId));
-            setDeleteTargetId(null);
+            toast.success('Admin silindi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setDeleteError(err.response?.data?.error ?? err.response?.data?.message ?? 'Admin silinemedi.');
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Admin silinemedi.');
             }
+        } finally {
+            setDeleteTargetId(null);
         }
     };
 
     const toggleActive = async (admin: User) => {
-        await userService.updateUser({
-            id: admin.id, fullName: admin.fullName, userName: admin.userName, email: admin.email,
-            phoneNumber: admin.phoneNumber, userCode: admin.userCode, role: ADMIN_ROLE, isActive: !admin.isActive
-        });
-        setAdmins(prev => prev.map(u => u.id === admin.id ? { ...u, isActive: !u.isActive } : u));
+        try {
+            await userService.updateUser({
+                id: admin.id, fullName: admin.fullName, userName: admin.userName, email: admin.email,
+                phoneNumber: admin.phoneNumber, userCode: admin.userCode, role: ADMIN_ROLE, isActive: !admin.isActive
+            });
+            setAdmins(prev => prev.map(u => u.id === admin.id ? { ...u, isActive: !u.isActive } : u));
+            toast.success(admin.isActive ? 'Admin pasif yapıldı.' : 'Admin aktif yapıldı.');
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Durum güncellenemedi.');
+            }
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -122,7 +123,6 @@ export default function AdminsPage() {
             return;
         }
         setFieldErrors({});
-        setGeneralError(null);
         try {
             if (editAdmin) {
                 await userService.updateUser({ id: editAdmin.id, ...form, role: ADMIN_ROLE, password: form.passwordHash, isActive: editAdmin.isActive });
@@ -131,6 +131,7 @@ export default function AdminsPage() {
             }
             loadAdmins();
             setIsModalOpen(false);
+            toast.success(editAdmin ? 'Admin güncellendi.' : 'Admin eklendi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 const data = err.response?.data;
@@ -153,8 +154,10 @@ export default function AdminsPage() {
                         setFieldErrors({ [duplicateField]: message });
                         setActiveTab(personalFields.includes(duplicateField) ? 'personal' : 'login');
                     } else {
-                        setGeneralError(message);
+                        toast.error(message);
                     }
+                } else {
+                    toast.error('Bir hata oluştu.');
                 }
             }
         }
@@ -381,12 +384,6 @@ export default function AdminsPage() {
                                     </div>
                                 </>
                             )}
-
-                            {generalError && (
-                                <p className="text-xs text-destructive rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
-                                    {generalError}
-                                </p>
-                            )}
                         </form>
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
@@ -410,21 +407,19 @@ export default function AdminsPage() {
             )}
 
             {/* Delete Confirm */}
-            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && closeDeleteDialog()}>
+            <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Admini sil</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {deleteError ?? "Bu admini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."}
+                            Bu admini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
-                        {!deleteError && (
-                            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Sil
-                            </AlertDialogAction>
-                        )}
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Sil
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
