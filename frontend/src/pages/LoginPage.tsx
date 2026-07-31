@@ -91,7 +91,7 @@ export default function LoginPage() {
         }
         try {
             setRegLoading(true);
-            await authService.register({
+            const response = await authService.register({
                 fullName: `${firstName} ${lastName}`,
                 phoneNumber: regPhoneNumber,
                 email: regEmail,
@@ -99,7 +99,13 @@ export default function LoginPage() {
                 restaurantName,
             });
             toast.success("Hesap oluşturuldu!");
-            setActiveTab("login");
+            if (!response.token) {
+                toast.error("Bu hesap birden fazla restorana bağlı, bu ekran henüz desteklenmiyor.");
+                return;
+            }
+            localStorage.setItem("token", response.token);
+            navigate("/verify-phone");
+
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 toast.error(error.response?.data?.error ?? "Kayıt başarısız.");

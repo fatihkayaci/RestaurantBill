@@ -1,10 +1,11 @@
 using MediatR;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.Register
 {
-    public class RegisterCommand: IRequest<Result<int>>, IIdempotent
+    public class RegisterCommand: IRequest<Result<RegisterResponseDto>>, IIdempotent
     {
         public required string FullName { get; set; }
         public required string RestaurantName { get; set; }

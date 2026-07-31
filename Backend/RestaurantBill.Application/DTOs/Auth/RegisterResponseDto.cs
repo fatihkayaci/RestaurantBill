@@ -1,7 +1,6 @@
 namespace RestaurantBill.Application.DTOs;
 
-public class LoginResponseDto
+public class RegisterResponseDto
 {
     public string? Token { get; set; }
-    public bool NeedsSlugSetup { get; set; }
 }

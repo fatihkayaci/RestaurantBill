@@ -4,6 +4,7 @@ import PrivateRoute from './components/PrivateRoute';
 
 import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
+import PhoneVerificationPage from './pages/PhoneVerificationPage';
 
 import WaiterLayout from './pages/waiter/Layout';
 import WaiterTablesPage from './pages/waiter/TablesPage';
@@ -38,6 +39,7 @@ function App() {
     return (
         <>
             <Routes>
+                
                 {/* Waiter */}
                 <Route element={<PrivateRoute allowedRoles={["Waiter"]}><WaiterLayout /></PrivateRoute>}>
                     <Route path="/waiter" element={<WaiterTablesPage />} />
@@ -82,6 +84,7 @@ function App() {
                 {/* Auth */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<Navigate to="/login" replace />} />
+                <Route path="/verify-phone" element={<PhoneVerificationPage />} />
 
                 {/* Landing */}
                 <Route path="/" element={<LandingPage />} />

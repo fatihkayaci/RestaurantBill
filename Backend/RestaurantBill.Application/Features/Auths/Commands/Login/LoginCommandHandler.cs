@@ -70,28 +70,11 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             if (accessible.Count == 0)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
-            if (accessible.Count == 1)
-            {
-                var single = accessible.Values.First();
-                return Result<LoginResponseDto>.Success(new LoginResponseDto
-                {
-                    Token = _jwtTokenGenerator.GenerateToken(emailUser, single.Restaurant.Id, single.Role, single.UserName),
-                    NeedsSlugSetup = string.IsNullOrWhiteSpace(single.Restaurant.Slug)
-                });
-            }
-
-            List<RestaurantSelectionDto> options = accessible.Values.Select(x => new RestaurantSelectionDto
-            {
-                RestaurantId = x.Restaurant.Id,
-                RestaurantName = x.Restaurant.Name,
-                Slug = x.Restaurant.Slug,
-                Role = x.Role.ToString()
-            }).ToList();
-
+            var single = accessible.Values.First();
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
-                TransitionToken = _jwtTokenGenerator.GenerateTransitionToken(emailUser.Id),
-                Restaurants = options
+                Token = _jwtTokenGenerator.GenerateToken(emailUser, single.Restaurant.Id, single.Role, single.UserName),
+                NeedsSlugSetup = string.IsNullOrWhiteSpace(single.Restaurant.Slug)
             });
         }
 

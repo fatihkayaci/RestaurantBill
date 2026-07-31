@@ -16,6 +16,25 @@ export interface RestaurantSelection {
 export interface LoginResponse {
     token?: string;
     needsSlugSetup?: boolean;
-    transitionToken?: string;
-    restaurants?: RestaurantSelection[];
+}
+export interface RegisterResponse {
+    token: string;
+}
+export const VerificationCodeType = {
+    Phone: 1,
+    Email: 2,
+} as const;
+
+export type VerificationCodeType = typeof VerificationCodeType[keyof typeof VerificationCodeType];
+export interface VerificationCode {
+    userId: string;
+    verificationCodeType: VerificationCodeType;
+}
+export interface Code {
+    userId: string;
+    Code: string;
+}
+export interface VerifyCodeResponse {
+    token: string;
+    needsSlugSetup?: boolean;
 }
