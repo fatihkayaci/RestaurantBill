@@ -3,3 +3,7 @@ export interface Company {
     name: string;
     slug: string;
 }
+
+export interface UpdateCompany {
+    name: string;
+}

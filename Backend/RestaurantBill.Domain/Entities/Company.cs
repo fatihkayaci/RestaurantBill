@@ -26,4 +26,12 @@ public class Company : BaseEntity
             OwnerUserId = ownerUser.Id
         };
     }
+
+    public void UpdateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Marka adı boş olamaz.");
+
+        Name = name;
+    }
 }
