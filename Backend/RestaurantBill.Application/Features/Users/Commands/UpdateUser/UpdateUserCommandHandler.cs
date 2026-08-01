@@ -27,7 +27,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
             User? user = await _uow.User.GetByIdAsync(request.UserId, true);
             if (user is null) return Result.Failure("Kullanıcı bulunamadı.");
 
-            UserBranch? userBranch = (await _uow.UserBranch.GetAllAsync(ur => ur.UserId == request.UserId && !ur.IsDeleted, true)).FirstOrDefault();
+            UserBranch? userBranch = (await _uow.UserBranch.GetAllAsync(ur => ur.UserId == request.UserId && !ur.IsDeleted, true, nameof(UserBranch.Branch))).FirstOrDefault();
             if (userBranch is null)
             {
                 bool isOwner = (await _uow.Company.GetAllAsync(c => c.OwnerUserId == request.UserId && !c.IsDeleted, false)).Any();
@@ -41,6 +41,8 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
                     return Result.Failure("Bu e-posta adresi zaten kullanımda.");
             }
 
+            Guid? companyId = userBranch?.Branch.CompanyId;
+
             if (userBranch is not null && request.BranchId.HasValue && request.BranchId.Value != userBranch.BranchId)
             {
                 if (_currentUser.Role != nameof(UserRole.Owner))
@@ -51,17 +53,21 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
                 if (targetBranch is null)
                     return Result.Failure("Şube bulunamadı.");
 
+                companyId = targetBranch.CompanyId;
+                userBranch.ChangeBranch(targetBranch);
+            }
+
+            if (userBranch is not null && companyId.HasValue)
+            {
                 bool userNameExists = (await _uow.UserBranch.GetAllAsync(
-                    ur => ur.UserName == request.UserName && ur.BranchId == targetBranch.Id && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
+                    ur => ur.UserName == request.UserName && ur.Branch.CompanyId == companyId.Value && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
                 if (userNameExists)
                     return Result.Failure("Bu kullanıcı adı zaten kullanımda.");
 
                 bool userCodeExists = (await _uow.UserBranch.GetAllAsync(
-                    ur => ur.UserCode == request.UserCode && ur.BranchId == targetBranch.Id && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
+                    ur => ur.UserCode == request.UserCode && ur.Branch.CompanyId == companyId.Value && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
                 if (userCodeExists)
                     return Result.Failure("Bu kullanıcı kodu zaten kullanımda.");
-
-                userBranch.ChangeBranch(targetBranch);
             }
 
             user.Update(request.FullName, request.Email ?? string.Empty, request.PhoneNumber ?? string.Empty, request.IsActive ?? user.IsActive);

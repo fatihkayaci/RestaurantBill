@@ -44,11 +44,11 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
             if (branch is null)
                 return Result.Failure("Restoran bulunamadı.");
 
-            bool userNameExists = (await _uow.UserBranch.GetAllAsync(ur => ur.UserName == request.UserName && ur.BranchId == restaurantId && !ur.IsDeleted, false)).Any();
+            bool userNameExists = (await _uow.UserBranch.GetAllAsync(ur => ur.UserName == request.UserName && ur.Branch.CompanyId == branch.CompanyId && !ur.IsDeleted, false)).Any();
             if (userNameExists)
                 return Result.Failure("Bu kullanıcı adı zaten kullanımda.");
 
-            bool userCodeExists = (await _uow.UserBranch.GetAllAsync(ur => ur.UserCode == request.UserCode && ur.BranchId == restaurantId && !ur.IsDeleted, false)).Any();
+            bool userCodeExists = (await _uow.UserBranch.GetAllAsync(ur => ur.UserCode == request.UserCode && ur.Branch.CompanyId == branch.CompanyId && !ur.IsDeleted, false)).Any();
             if (userCodeExists)
                 return Result.Failure("Bu kullanıcı kodu zaten kullanımda.");
 
