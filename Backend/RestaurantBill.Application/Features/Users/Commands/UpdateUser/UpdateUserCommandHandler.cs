@@ -64,7 +64,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
                 userBranch.ChangeBranch(targetBranch);
             }
 
-            user.Update(request.FullName, request.Email, request.PhoneNumber, request.IsActive ?? user.IsActive);
+            user.Update(request.FullName, request.Email ?? string.Empty, request.PhoneNumber ?? string.Empty, request.IsActive ?? user.IsActive);
             userBranch?.Update(request.UserName, request.UserCode, request.Role);
 
             if (!string.IsNullOrWhiteSpace(request.Password))

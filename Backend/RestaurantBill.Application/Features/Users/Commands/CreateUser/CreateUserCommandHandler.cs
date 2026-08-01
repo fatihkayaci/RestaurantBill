@@ -59,7 +59,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
                     return Result.Failure("Bu e-posta adresi zaten kullanımda.");
             }
 
-            User user = User.Create(request.FullName, request.Email, request.PhoneNumber);
+            User user = User.Create(request.FullName, request.Email ?? string.Empty, request.PhoneNumber ?? string.Empty);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.PasswordHash));
             UserBranch userBranch = UserBranch.Create(user, branch, request.UserName, request.UserCode, request.Role);
 

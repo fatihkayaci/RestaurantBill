@@ -8,6 +8,7 @@ import type { Branch } from "@/features/branches/types";
 import type { CreateUser, User } from "@/features/users/types";
 import axios from "axios";
 import { cn } from "@/lib/utils";
+import { isValidEmail, isValidPhone } from "@/lib/validators";
 
 const ADMIN_ROLE = 1;
 
@@ -108,7 +109,9 @@ export default function AdminsPage() {
         else if (form.fullName.length > 100) errors.fullName = 'En fazla 100 karakter.';
         if (!form.userName.trim()) errors.userName = 'Kullanıcı adı boş bırakılamaz.';
         else if (form.userName.length > 50) errors.userName = 'En fazla 50 karakter.';
-        if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
+        if (form.email && !isValidEmail(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
+        if (!form.phoneNumber.trim()) errors.phoneNumber = 'Telefon numarası boş bırakılamaz.';
+        else if (!isValidPhone(form.phoneNumber)) errors.phoneNumber = 'Geçerli bir telefon numarası giriniz.';
         if (!form.branchId) errors.branchId = 'Şube seçilmelidir.';
         if (!editAdmin) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
@@ -299,7 +302,7 @@ export default function AdminsPage() {
                             {activeTab === 'personal' && (
                                 <>
                                     <div>
-                                        <label className={labelClass}>Şube</label>
+                                        <label className={labelClass}>Şube *</label>
                                         <select
                                             className={cn(inputClass, fieldErrors.branchId && "border-destructive")}
                                             value={form.branchId ?? ''}
@@ -314,7 +317,7 @@ export default function AdminsPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Ad Soyad</label>
+                                        <label className={labelClass}>Ad Soyad *</label>
                                         <input
                                             className={cn(inputClass, fieldErrors.fullName && "border-destructive")}
                                             placeholder="Ad Soyad..."
@@ -337,13 +340,14 @@ export default function AdminsPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Telefon</label>
+                                        <label className={labelClass}>Telefon *</label>
                                         <input
-                                            className={inputClass}
+                                            className={cn(inputClass, fieldErrors.phoneNumber && "border-destructive")}
                                             placeholder="0532 000 00 00"
                                             value={form.phoneNumber}
                                             onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
                                         />
+                                        {fieldErrors.phoneNumber && <p className="text-xs text-destructive mt-1">{fieldErrors.phoneNumber}</p>}
                                     </div>
                                 </>
                             )}
@@ -351,7 +355,7 @@ export default function AdminsPage() {
                             {activeTab === 'login' && (
                                 <>
                                     <div>
-                                        <label className={labelClass}>Kullanıcı Adı</label>
+                                        <label className={labelClass}>Kullanıcı Adı *</label>
                                         <input
                                             className={cn(inputClass, fieldErrors.userName && "border-destructive")}
                                             placeholder="kullanici_adi"
@@ -373,7 +377,7 @@ export default function AdminsPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Şifre {editAdmin && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
+                                        <label className={labelClass}>Şifre * {editAdmin && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
                                         <input
                                             type="text"
                                             className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}
