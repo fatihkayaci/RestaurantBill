@@ -68,24 +68,22 @@ export default function AdminLayout() {
 
                 {/* Nav */}
                 <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-                    {navItems.map(({ to, label }) => (
+                    {navItems.map(({ to, icon: Icon, label }) => (
                         <NavLink
                             key={to}
                             to={to}
                             className={({ isActive }) =>
                                 cn(
-                                    'flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors',
+                                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
                                     isActive
-                                        ? 'text-sidebar-foreground'
+                                        ? 'bg-white/10 text-sidebar-foreground'
                                         : 'text-sidebar-foreground/40 hover:text-sidebar-foreground/70'
                                 )
                             }
                         >
                             {({ isActive }) => (
                                 <>
-                                    <span className={cn('text-[10px] leading-none', isActive ? 'text-rb-amber' : 'text-sidebar-foreground/25')}>
-                                        {isActive ? '◆' : '○'}
-                                    </span>
+                                    <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-rb-amber' : 'text-sidebar-foreground/30')} />
                                     {label}
                                 </>
                             )}

@@ -23,7 +23,7 @@ export default function AdminsPage() {
     const [editAdmin, setEditAdmin] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', userCode: '', role: ADMIN_ROLE, branchId: undefined
+        passwordHash: '', role: ADMIN_ROLE, branchId: undefined
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -47,15 +47,9 @@ export default function AdminsPage() {
         return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     };
 
-    const generateUserCode = () => {
-        const numbers = admins.map(u => parseInt(u.userCode.replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
-        const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
-        return `ADM-${String(next).padStart(3, '0')}`;
-    };
-
     const openCreateModal = () => {
         setEditAdmin(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: ADMIN_ROLE, branchId: branches[0]?.id });
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: ADMIN_ROLE, branchId: branches[0]?.id });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -63,14 +57,14 @@ export default function AdminsPage() {
 
     const openEditModal = (admin: User) => {
         setEditAdmin(admin);
-        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', userCode: admin.userCode, role: ADMIN_ROLE, branchId: admin.branchId });
+        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', role: ADMIN_ROLE, branchId: admin.branchId });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
     };
 
     const personalFields = ['fullName', 'email', 'phoneNumber', 'branchId'];
-    const loginFields = ['userName', 'userCode', 'passwordHash'];
+    const loginFields = ['userName', 'passwordHash'];
 
     const handleDelete = async () => {
         if (!deleteTargetId) return;
@@ -91,7 +85,7 @@ export default function AdminsPage() {
         try {
             await userService.updateUser({
                 id: admin.id, fullName: admin.fullName, userName: admin.userName, email: admin.email,
-                phoneNumber: admin.phoneNumber, userCode: admin.userCode, role: ADMIN_ROLE, isActive: !admin.isActive
+                phoneNumber: admin.phoneNumber, role: ADMIN_ROLE, isActive: !admin.isActive
             });
             setAdmins(prev => prev.map(u => u.id === admin.id ? { ...u, isActive: !u.isActive } : u));
             toast.success(admin.isActive ? 'Admin pasif yapıldı.' : 'Admin aktif yapıldı.');
@@ -116,7 +110,6 @@ export default function AdminsPage() {
         if (!editAdmin) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
             else if (form.passwordHash.length < 6) errors.passwordHash = 'En az 6 karakter.';
-            if (!form.userCode.trim()) errors.userCode = 'Kullanıcı kodu boş bırakılamaz.';
         } else if (form.passwordHash && form.passwordHash.length < 6) {
             errors.passwordHash = 'En az 6 karakter.';
         }
@@ -150,7 +143,6 @@ export default function AdminsPage() {
                     const message = (data.error ?? data.message) as string;
                     const duplicateFieldMap: Record<string, string> = {
                         'kullanıcı adı': 'userName',
-                        'kullanıcı kodu': 'userCode',
                         'e-posta': 'email',
                     };
                     const duplicateField = Object.entries(duplicateFieldMap).find(([phrase]) => message.includes(phrase))?.[1];
@@ -363,17 +355,6 @@ export default function AdminsPage() {
                                             onChange={e => setForm({ ...form, userName: e.target.value })}
                                         />
                                         {fieldErrors.userName && <p className="text-xs text-destructive mt-1">{fieldErrors.userName}</p>}
-                                    </div>
-
-                                    <div>
-                                        <label className={labelClass}>Kullanıcı Kodu</label>
-                                        <input
-                                            className={cn(inputClass, fieldErrors.userCode && "border-destructive")}
-                                            placeholder="ADM-001"
-                                            value={form.userCode}
-                                            onChange={e => setForm({ ...form, userCode: e.target.value })}
-                                        />
-                                        {fieldErrors.userCode && <p className="text-xs text-destructive mt-1">{fieldErrors.userCode}</p>}
                                     </div>
 
                                     <div>

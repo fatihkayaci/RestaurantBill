@@ -25,6 +25,9 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
 
         public async Task<Result> Handle(CreateUserCommand request, CancellationToken cancellationToken)
         {
+            if (request.Role == UserRole.Admin && _currentUser.Role != nameof(UserRole.Owner))
+                return Result.Failure("Admin rolü atama yetkiniz yok.");
+
             Guid restaurantId = _currentUser.BranchId;
 
             if (request.BranchId.HasValue && request.BranchId.Value != restaurantId)
@@ -48,9 +51,12 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
             if (userNameExists)
                 return Result.Failure("Bu kullanıcı adı zaten kullanımda.");
 
-            bool userCodeExists = (await _uow.UserBranch.GetAllAsync(ur => ur.UserCode == request.UserCode && ur.Branch.CompanyId == branch.CompanyId && !ur.IsDeleted, false)).Any();
-            if (userCodeExists)
-                return Result.Failure("Bu kullanıcı kodu zaten kullanımda.");
+            if (!string.IsNullOrWhiteSpace(request.UserCode))
+            {
+                bool userCodeExists = (await _uow.UserBranch.GetAllAsync(ur => ur.UserCode == request.UserCode && ur.Branch.CompanyId == branch.CompanyId && !ur.IsDeleted, false)).Any();
+                if (userCodeExists)
+                    return Result.Failure("Bu kullanıcı kodu zaten kullanımda.");
+            }
 
             if (!string.IsNullOrWhiteSpace(request.Email))
             {

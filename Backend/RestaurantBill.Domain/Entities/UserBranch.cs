@@ -16,7 +16,7 @@ namespace RestaurantBill.Domain.Entities
 
         protected UserBranch() { }
 
-        public static UserBranch Create(User user, Branch branch, string userName, string userCode, UserRole role)
+        public static UserBranch Create(User user, Branch branch, string userName, string? userCode, UserRole role)
         {
             if (user == null)
                 throw new DomainException("Geçersiz kullanıcı.");
@@ -27,9 +27,6 @@ namespace RestaurantBill.Domain.Entities
             if (string.IsNullOrWhiteSpace(userName))
                 throw new DomainException("Kullanıcı adı boş bırakılamaz.");
 
-            if (string.IsNullOrWhiteSpace(userCode))
-                throw new DomainException("Kullanıcı kodu boş bırakılamaz.");
-
             return new UserBranch
             {
                 User = user,
@@ -37,21 +34,19 @@ namespace RestaurantBill.Domain.Entities
                 Branch = branch,
                 BranchId = branch.Id,
                 UserName = userName,
-                UserCode = userCode,
+                UserCode = userCode ?? string.Empty,
                 Role = role
             };
         }
 
-        public void Update(string userName, string userCode, UserRole role)
+        public void Update(string userName, string? userCode, UserRole role)
         {
             if (string.IsNullOrWhiteSpace(userName))
                 throw new DomainException("Kullanıcı adı boş bırakılamaz.");
 
-            if (string.IsNullOrWhiteSpace(userCode))
-                throw new DomainException("Kullanıcı kodu boş bırakılamaz.");
-
             UserName = userName;
-            UserCode = userCode;
+            if (!string.IsNullOrWhiteSpace(userCode))
+                UserCode = userCode;
             Role = role;
         }
 

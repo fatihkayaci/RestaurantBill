@@ -17,7 +17,7 @@ export interface CreateUser {
     email?: string;
     phoneNumber: string;
     passwordHash: string;
-    userCode: string;
+    userCode?: string;
     role: number;
     branchId?: string;
 }
@@ -29,7 +29,7 @@ export interface UpdateUser {
     email?: string;
     phoneNumber: string;
     password?: string;
-    userCode: string;
+    userCode?: string;
     role: number;
     isActive?: boolean;
     branchId?: string;

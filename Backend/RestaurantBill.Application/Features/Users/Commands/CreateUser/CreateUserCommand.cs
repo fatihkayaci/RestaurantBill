@@ -12,7 +12,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         public string? Email { get; set; }
         public string? PhoneNumber { get; set; }
         public required string PasswordHash { get; set; }
-        public required string UserCode { get; set; }
+        public string? UserCode { get; set; }
         public UserRole Role { get; set; } = UserRole.Waiter;
         public Guid? BranchId { get; set; }
 

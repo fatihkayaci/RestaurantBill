@@ -32,8 +32,8 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
             .MinimumLength(6).WithMessage("Şifre en az 6 karakter olmalıdır.");
 
         RuleFor(x => x.UserCode)
-            .NotEmpty().WithMessage("Kullanıcı kodu boş bırakılamaz.")
-            .MaximumLength(20).WithMessage("Kullanıcı kodu en fazla 20 karakter olabilir.");
+            .MaximumLength(20).WithMessage("Kullanıcı kodu en fazla 20 karakter olabilir.")
+            .When(x => !string.IsNullOrEmpty(x.UserCode));
 
         RuleFor(x => x.Role)
             .IsInEnum().WithMessage("Geçerli bir kullanıcı rolü seçilmelidir.");
