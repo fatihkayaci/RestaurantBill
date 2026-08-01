@@ -11,18 +11,19 @@ public class Company : BaseEntity
 
     protected Company(){ }
 
-    public static Company Create(string name, Guid ownerUserId)
+    public static Company Create(string name, User ownerUser)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("Kategori adı boş olamaz.");
 
-        if (ownerUserId == Guid.Empty)
+        if (ownerUser == null)
             throw new DomainException("Geçersiz Kullanıcı.");
         
         return new Company
         {
             Name = name,
-            OwnerUserId = ownerUserId
+            OwnerUser = ownerUser,
+            OwnerUserId = ownerUser.Id
         };
     }
 }

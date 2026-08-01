@@ -3,8 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { restaurantService } from "@/features/admin/api/restaurantService";
-import type { CreateRestaurant } from "@/features/admin/types";
+import { branchService } from "@/features/branches/api/branchService";
+import type { UpdateBranch } from "@/features/branches/types";
 import { cn } from "@/lib/utils";
 
 const restaurantSchema = z.object({
@@ -22,9 +22,11 @@ const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)]
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function SettingsPage() {
-    const [restaurantId, setRestaurantId] = useState<number | null>(null);
+    const [restaurantId, setRestaurantId] = useState<string | null>(null);
     const [restaurantName, setRestaurantName] = useState("");
     const [restaurantLocation, setRestaurantLocation] = useState("");
+    const [managerName, setManagerName] = useState("");
+    const [openAddress, setOpenAddress] = useState("");
 
     const restaurantForm = useForm<RestaurantForm>({
         resolver: zodResolver(restaurantSchema),
@@ -32,14 +34,18 @@ export default function SettingsPage() {
     });
 
     useEffect(() => {
-        restaurantService.getMyRestaurant().then(r => {
+        branchService.getMyBranches().then(branches => {
+            const r = branches[0];
+            if (!r) return;
             setRestaurantId(r.id);
-            setRestaurantName(r.name);
+            setRestaurantName(r.branchName);
             setRestaurantLocation([r.district, r.city].filter(Boolean).join(', '));
+            setManagerName(r.managerName);
+            setOpenAddress(r.openAddress);
             restaurantForm.reset({
-                name: r.name,
-                phoneNumber: r.phoneNumber,
-                mobilePhoneNumber: r.mobilePhoneNumber,
+                name: r.branchName,
+                phoneNumber: r.number,
+                mobilePhoneNumber: '',
                 email: r.email,
                 city: r.city,
                 district: r.district,
@@ -50,15 +56,16 @@ export default function SettingsPage() {
     const onRestaurantSubmit = async (data: RestaurantForm) => {
         if (restaurantId === null) return;
         try {
-            const payload: CreateRestaurant = {
+            const payload: UpdateBranch = {
                 name: data.name,
+                managerName,
                 phoneNumber: data.phoneNumber ?? "",
-                mobilePhoneNumber: data.mobilePhoneNumber ?? "",
                 email: data.email,
                 city: data.city ?? "",
                 district: data.district ?? "",
+                openAddress,
             };
-            await restaurantService.updateBranch(restaurantId, payload);
+            await branchService.updateBranch(restaurantId, payload);
             setRestaurantName(data.name);
             setRestaurantLocation([data.district, data.city].filter(Boolean).join(', '));
             toast.success("Restoran bilgileri güncellendi.");

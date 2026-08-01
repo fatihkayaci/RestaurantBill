@@ -20,6 +20,21 @@ namespace RestaurantBill.Domain.Entities
             return new Branch { BranchName = name };
         }
 
+        public static Branch Create(Guid companyId, string branchName, string managerName, string number, string email, string city, string district, string openAddress)
+        {
+            return new Branch
+            {
+                CompanyId = companyId,
+                BranchName = branchName,
+                ManagerName = managerName,
+                Number = number,
+                Email = email,
+                City = city,
+                District = district,
+                OpenAddress = openAddress
+            };
+        }
+
         public void Update(string branchName, string managerName, string number, string email, string city, string district, string openAddress)
         {
             BranchName = branchName;

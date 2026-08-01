@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Gem, CreditCard, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { membershipService } from '@/features/admin/api/membershipService';
-import { userService } from '@/features/admin/api/userService';
-import { statsService } from '@/features/admin/api/statsService';
+import { membershipService } from '@/features/memberships/api/membershipService';
+import { userService } from '@/features/users/api/userService';
+import { statsService } from '@/features/stats/api/statsService';
 import { tableService } from '@/features/tables/api/tableService';
 import { productService } from '@/features/products/api/productService';
-import { MembershipPlanType, MembershipStatus, type Membership } from '@/features/admin/types';
+import { MembershipPlanType, MembershipStatus, type Membership } from '@/features/memberships/types';
 
 const inputLikeCard = 'rounded-xl border border-border bg-card p-5';
 const sectionLabelClass = 'text-[11px] font-semibold tracking-widest uppercase text-muted-foreground';

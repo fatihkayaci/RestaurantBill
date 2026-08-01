@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { X, Pencil } from 'lucide-react';
 import { toast } from "sonner";
-import { userService } from "@/features/admin/api/userService";
-import { restaurantService } from "@/features/admin/api/restaurantService";
+import { userService } from "@/features/users/api/userService";
+import { branchService } from "@/features/branches/api/branchService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import type { Branch, CreateUser, User } from "@/features/admin/types";
+import type { Branch } from "@/features/branches/types";
+import type { CreateUser, User } from "@/features/users/types";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,7 @@ export default function AdminsPage() {
     const [editAdmin, setEditAdmin] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', userCode: '', role: ADMIN_ROLE, restaurantId: undefined
+        passwordHash: '', userCode: '', role: ADMIN_ROLE, branchId: undefined
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export default function AdminsPage() {
 
     useEffect(() => {
         loadAdmins();
-        restaurantService.getMyBranches()
+        branchService.getMyBranches()
             .then(setBranches)
             .catch(console.error);
     }, []);
@@ -53,7 +54,7 @@ export default function AdminsPage() {
 
     const openCreateModal = () => {
         setEditAdmin(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: ADMIN_ROLE, restaurantId: branches[0]?.id });
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: ADMIN_ROLE, branchId: branches[0]?.id });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -61,13 +62,13 @@ export default function AdminsPage() {
 
     const openEditModal = (admin: User) => {
         setEditAdmin(admin);
-        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', userCode: admin.userCode, role: ADMIN_ROLE, restaurantId: admin.restaurantId });
+        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', userCode: admin.userCode, role: ADMIN_ROLE, branchId: admin.branchId });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
     };
 
-    const personalFields = ['fullName', 'email', 'phoneNumber', 'restaurantId'];
+    const personalFields = ['fullName', 'email', 'phoneNumber', 'branchId'];
     const loginFields = ['userName', 'userCode', 'passwordHash'];
 
     const handleDelete = async () => {
@@ -108,7 +109,7 @@ export default function AdminsPage() {
         if (!form.userName.trim()) errors.userName = 'Kullanıcı adı boş bırakılamaz.';
         else if (form.userName.length > 50) errors.userName = 'En fazla 50 karakter.';
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
-        if (!form.restaurantId) errors.restaurantId = 'Şube seçilmelidir.';
+        if (!form.branchId) errors.branchId = 'Şube seçilmelidir.';
         if (!editAdmin) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
             else if (form.passwordHash.length < 6) errors.passwordHash = 'En az 6 karakter.';
@@ -204,7 +205,7 @@ export default function AdminsPage() {
                                             <span className="font-medium text-foreground">{admin.fullName}</span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">{admin.restaurantName || '—'}</td>
+                                    <td className="px-4 py-3.5 text-muted-foreground">{admin.branchName || '—'}</td>
                                     <td className="px-4 py-3.5 text-muted-foreground">{admin.email || '—'}</td>
                                     <td className="px-4 py-3.5">
                                         <button
@@ -300,16 +301,16 @@ export default function AdminsPage() {
                                     <div>
                                         <label className={labelClass}>Şube</label>
                                         <select
-                                            className={cn(inputClass, fieldErrors.restaurantId && "border-destructive")}
-                                            value={form.restaurantId ?? ''}
-                                            onChange={e => setForm({ ...form, restaurantId: e.target.value ? Number(e.target.value) : undefined })}
+                                            className={cn(inputClass, fieldErrors.branchId && "border-destructive")}
+                                            value={form.branchId ?? ''}
+                                            onChange={e => setForm({ ...form, branchId: e.target.value || undefined })}
                                         >
                                             <option value="">Şube seçiniz...</option>
                                             {branches.map(branch => (
-                                                <option key={branch.id} value={branch.id}>{branch.name}</option>
+                                                <option key={branch.id} value={branch.id}>{branch.branchName}</option>
                                             ))}
                                         </select>
-                                        {fieldErrors.restaurantId && <p className="text-xs text-destructive mt-1">{fieldErrors.restaurantId}</p>}
+                                        {fieldErrors.branchId && <p className="text-xs text-destructive mt-1">{fieldErrors.branchId}</p>}
                                     </div>
 
                                     <div>

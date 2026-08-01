@@ -26,14 +26,14 @@ export const authService = {
     },
     sendCode: async (request: VerificationCode) => {
         const response = await api.post(`/auth/send-verification-code`, {
-            UserId: Number(request.userId),
+            UserId: request.userId,
             Type: request.verificationCodeType
         });
         return response.data;
     },
     verifyCode: async (request: Code) => {
         const response = await api.post<VerifyCodeResponse>(`/auth/verify-code`, {
-            UserId: Number(request.userId),
+            UserId: request.userId,
             Code: request.Code
         });
         return response.data;

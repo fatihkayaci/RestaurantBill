@@ -3,8 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { userService } from "@/features/admin/api/userService";
-import type { UpdateUser } from "@/features/admin/types";
+import { userService } from "@/features/users/api/userService";
+import type { UpdateUser } from "@/features/users/types";
 import { jwtDecode } from "jwt-decode";
 import { cn } from "@/lib/utils";
 

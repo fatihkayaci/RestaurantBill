@@ -33,7 +33,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
 
             User user = User.Create(request.FullName, request.Email, request.PhoneNumber);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));
-            Company company = Company.Create(request.RestaurantName, user.Id);
+            Company company = Company.Create(request.RestaurantName, user);
 
             await _uow.User.AddAsync(user);
             await _uow.Company.AddAsync(company);

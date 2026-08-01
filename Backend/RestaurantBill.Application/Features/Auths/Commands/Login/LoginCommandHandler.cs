@@ -26,7 +26,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
         public async Task<Result<LoginResponseDto>> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
-            string? slug = _tenantResolver.Slug;
+            string? slug = null;
 
             if (string.IsNullOrWhiteSpace(slug))
             {

@@ -3,7 +3,6 @@ using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
@@ -22,26 +21,22 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetMyBranches
 
         public async Task<Result<List<BranchDto>>> Handle(GetMyBranchesQuery request, CancellationToken cancellationToken)
         {
-            IEnumerable<Branch> branches = await _uow.Branch.GetAllAsync(b => b.Company.OwnerUserId == _currentUser.UserId, false, nameof(Branch.Company));
+            IEnumerable<Branch> branches = (await _uow.Branch.GetAllAsync(b => b.Company.OwnerUserId == _currentUser.UserId, false, nameof(Branch.Company)))
+                .OrderBy(b => b.CreatedAt);
             List<Guid> branchIds = branches.Select(b => b.Id).ToList();
 
             IEnumerable<Table> tables = await _uow.Table.GetAllAsync(t => branchIds.Contains(t.Region.BranchId), false);
-            IEnumerable<UserBranch> staff = await _uow.UserBranch.GetAllAsync(ur => branchIds.Contains(ur.BranchId), false, "User");
+            IEnumerable<UserBranch> staff = await _uow.UserBranch.GetAllAsync(ur => branchIds.Contains(ur.BranchId), false);
             IEnumerable<Order> orders = await _uow.Order.GetAllAsync(o => branchIds.Contains(o.Table.Region.BranchId), false);
 
             Dictionary<Guid, int> tableCounts = tables.GroupBy(t => t.Region.BranchId).ToDictionary(g => g.Key, g => g.Count());
             Dictionary<Guid, int> staffCounts = staff.GroupBy(s => s.BranchId).ToDictionary(g => g.Key, g => g.Count());
             Dictionary<Guid, decimal> revenueByRestaurant = orders.GroupBy(o => o.Table.Region.BranchId).ToDictionary(g => g.Key, g => g.Sum(o => o.TotalPrice));
-            Dictionary<Guid, string> managerNames = staff
-                .Where(s => s.Role == UserRole.Admin)
-                .GroupBy(s => s.BranchId)
-                .ToDictionary(g => g.Key, g => g.First().User.FullName);
 
             List<BranchDto> result = branches.Select(b => b.ToBranchDto(
                 tableCounts.GetValueOrDefault(b.Id),
                 staffCounts.GetValueOrDefault(b.Id),
-                revenueByRestaurant.GetValueOrDefault(b.Id),
-                managerNames.GetValueOrDefault(b.Id)
+                revenueByRestaurant.GetValueOrDefault(b.Id)
             )).ToList();
 
             return Result<List<BranchDto>>.Success(result);

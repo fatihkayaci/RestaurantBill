@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Search, X, Pencil } from 'lucide-react';
 import { toast } from "sonner";
-import { userService } from "@/features/admin/api/userService";
+import { userService } from "@/features/users/api/userService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import type { CreateUser, User } from "@/features/admin/types";
+import type { CreateUser, User } from "@/features/users/types";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 

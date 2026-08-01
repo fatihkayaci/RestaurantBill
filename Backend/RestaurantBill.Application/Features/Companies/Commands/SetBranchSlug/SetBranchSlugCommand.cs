@@ -1,7 +1,7 @@
 using MediatR;
 using RestaurantBill.Domain.Shared;
 
-namespace RestaurantBill.Application.Features.Restaurants.Commands.SetBranchSlug
+namespace RestaurantBill.Application.Features.Companies.Commands.SetBranchSlug
 {
     public class SetBranchSlugCommand : IRequest<Result<string>>
     {

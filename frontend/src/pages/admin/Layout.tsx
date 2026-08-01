@@ -6,10 +6,8 @@ import {
     LayoutGrid, Wallet, BarChart3, UserCircle, Store
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
-import { restaurantService } from '@/features/admin/api/restaurantService';
-import { userService } from '@/features/admin/api/userService';
-import RestaurantSetupForm from '@/features/admin/components/RestaurantSetupForm';
-import type { User } from '@/features/admin/types';
+import { userService } from '@/features/users/api/userService';
+import type { User } from '@/features/users/types';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -28,27 +26,15 @@ export default function AdminLayout() {
     const isDark = theme === 'dark';
     const navigate = useNavigate();
 
-    const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
-    const [restaurantId, setRestaurantId] = useState<number | null>(null);
     const [restaurantName, setRestaurantName] = useState('');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token) {
-            setNeedsSetup(false);
-            return;
-        }
-        restaurantService.getMyRestaurant()
-            .then((restaurant) => {
-                setRestaurantId(restaurant.id);
-                setRestaurantName(restaurant.name);
-                setNeedsSetup(!restaurant.name);
-            })
-            .catch(() => setNeedsSetup(false));
+        if (!token) return;
 
         userService.getCurrentUser()
-            .then(u => setCurrentUser(u))
+            .then(u => { setCurrentUser(u); setRestaurantName(u.branchName ?? ''); })
             .catch(() => {});
     }, []);
 
@@ -61,14 +47,6 @@ export default function AdminLayout() {
         ?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() ?? 'A';
 
     const displayName = currentUser?.fullName ?? 'Admin';
-
-    if (needsSetup === null) return null;
-    if (needsSetup && restaurantId !== null) return (
-        <RestaurantSetupForm
-            restaurantId={restaurantId}
-            onComplete={(name: string) => { setRestaurantName(name); setNeedsSetup(false); }}
-        />
-    );
 
     return (
         <div className="flex h-screen bg-background">

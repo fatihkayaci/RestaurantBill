@@ -75,6 +75,13 @@ public static class MappingExtensions
         EndDate = m.EndDate
     };
 
+    public static CompanyDto ToDto(this Company c) => new()
+    {
+        Id = c.Id,
+        Name = c.Name,
+        Slug = c.Slug
+    };
+
     public static RestaurantDto ToDto(this Branch b) => new()
     {
         Id = b.Id,
@@ -86,19 +93,19 @@ public static class MappingExtensions
         Slug = b.Company?.Slug ?? string.Empty
     };
 
-    public static BranchDto ToBranchDto(this Branch b, int tableCount, int staffCount, decimal revenue, string? managerName) => new()
+    public static BranchDto ToBranchDto(this Branch b, int tableCount, int staffCount, decimal revenue) => new()
     {
         Id = b.Id,
-        Name = b.BranchName,
-        PhoneNumber = b.Number,
+        BranchName = b.BranchName,
+        ManagerName = b.ManagerName,
+        Number = b.Number,
         Email = b.Email,
         City = b.City,
         District = b.District,
-        Slug = b.Company?.Slug ?? string.Empty,
+        OpenAddress = b.OpenAddress,
         TableCount = tableCount,
         StaffCount = staffCount,
-        Revenue = revenue,
-        ManagerName = managerName
+        Revenue = revenue
     };
 
     public static TableDto ToDto(this Table t) => new()

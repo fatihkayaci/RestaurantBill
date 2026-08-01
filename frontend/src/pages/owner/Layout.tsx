@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { LayoutDashboard, Building2, UserCog, CreditCard, Palette, BarChart3, History } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
-import { restaurantService } from '@/features/admin/api/restaurantService';
-import { userService } from '@/features/admin/api/userService';
-import type { User } from '@/features/admin/types';
+import { companyService } from '@/features/companies/api/companyService';
+import { userService } from '@/features/users/api/userService';
+import type { User } from '@/features/users/types';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -27,8 +27,8 @@ export default function OwnerLayout() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     useEffect(() => {
-        restaurantService.getMyRestaurant()
-            .then((restaurant) => setRestaurantName(restaurant.name))
+        companyService.getMyCompany()
+            .then((company) => setRestaurantName(company.name))
             .catch(() => {});
 
         userService.getCurrentUser()

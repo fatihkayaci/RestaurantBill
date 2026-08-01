@@ -18,6 +18,7 @@ export default function PhoneVerificationPage() {
 
     const sendCode = async () => {
         const token = localStorage.getItem("token");
+        console.log(token);
         if (!token) return;
 
         const decoded: Record<string, string> = jwtDecode(token);

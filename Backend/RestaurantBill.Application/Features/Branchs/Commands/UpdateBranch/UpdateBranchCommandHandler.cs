@@ -23,7 +23,7 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranch
             if (branch is null || branch.Company.OwnerUserId != _currentUser.UserId)
                 return Result.Failure("Şube bulunamadı.");
 
-            branch.Update(request.Name, branch.ManagerName, request.PhoneNumber, request.Email, request.City, request.District, branch.OpenAddress);
+            branch.Update(request.Name, request.ManagerName, request.PhoneNumber, request.Email, request.City, request.District, request.OpenAddress);
 
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();

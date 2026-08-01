@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { restaurantService } from "@/features/admin/api/restaurantService";
-import type { Restaurant } from "@/features/admin/types";
+// TODO: Admin'in kendi şubesini görebileceği bir endpoint (BranchController.GetMyBranch) backend'de aktif değil. Aktif edilince buradaki fetch geri açılacak.
+// import { restaurantService } from "@/features/admin/api/companyService";
+import type { Restaurant } from "@/features/branches/types";
 import { ROOT_DOMAIN } from "@/lib/tenant";
 
 const infoRowClass = "flex items-center justify-between text-sm py-2 border-b border-border last:border-0";
@@ -9,11 +10,9 @@ const labelClass = "text-muted-foreground";
 const valueClass = "text-foreground font-medium";
 
 export default function RestaurantPage() {
-    const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+    const [restaurant] = useState<Restaurant | null>(null);
 
-    useEffect(() => {
-        restaurantService.getMyRestaurant().then(setRestaurant).catch(console.error);
-    }, []);
+    // TODO: restaurantService.getMyRestaurant().then(setRestaurant).catch(console.error);
 
     const restaurantLocation = restaurant ? [restaurant.district, restaurant.city].filter(Boolean).join(', ') : '';
     const restaurantUrl = restaurant?.slug ? `https://${restaurant.slug}.${ROOT_DOMAIN}` : "";

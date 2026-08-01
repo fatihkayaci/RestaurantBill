@@ -5,7 +5,7 @@ using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
-namespace RestaurantBill.Application.Features.Restaurants.Commands.SetBranchSlug
+namespace RestaurantBill.Application.Features.Companies.Commands.SetBranchSlug
 {
     public class SetBranchSlugCommandHandler : IRequestHandler<SetBranchSlugCommand, Result<string>>
     {
