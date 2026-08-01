@@ -20,13 +20,13 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
 
         public async Task<Result> Handle(CreateTableCommand request, CancellationToken cancellationToken)
         {
-            int restaurantId = _currentUser.RestaurantId;
+            Guid restaurantId = _currentUser.BranchId;
 
-            bool nameExistsInRegion = (await _uow.Table.GetAllAsync(t => t.Name == request.Name && t.RegionId == request.RegionId && t.RestaurantId == restaurantId, false)).Any();
+            bool nameExistsInRegion = (await _uow.Table.GetAllAsync(t => t.Name == request.Name && t.RegionId == request.RegionId && t.Region.BranchId == restaurantId, false)).Any();
             if (nameExistsInRegion)
                 return Result.Failure("Bu bölgede bu isimde bir masa zaten mevcut.");
 
-            Table table = Table.Create(request.Name, string.Empty, restaurantId);
+            Table table = Table.Create(request.Name, string.Empty, request.RegionId);
             table.AssignRegion(request.RegionId);
             await _uow.Table.AddAsync(table);
             await _uow.SaveChangesAsync(cancellationToken);

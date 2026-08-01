@@ -21,7 +21,7 @@ public class ProductCommandHandlerTests
                 Price = 15m,
                 IsActive = true,
                 ImageUrl = "img.png",
-                CategoryId = 1
+                CategoryId = Guid.NewGuid()
             };
 
             var result = await handler.Handle(command, CancellationToken.None);
@@ -37,11 +37,11 @@ public class ProductCommandHandlerTests
         public async Task Handle_WithExistingProduct_UpdatesAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            Product existing = Product.Create("Eski", 10m, true, "img.png", categoryId: 1);
+            Product existing = Product.Create("Eski", 10m, "img.png", Guid.NewGuid());
             await uow.ProductRepo.AddAsync(existing);
 
             var handler = new UpdateProductCommandHandler(uow);
-            var command = new UpdateProductCommand { Id = existing.Id, Name = "Yeni", Price = 25m, IsActive = false, CategoryId = 2 };
+            var command = new UpdateProductCommand { Id = existing.Id, Name = "Yeni", Price = 25m, IsActive = false, CategoryId = Guid.NewGuid() };
 
             await handler.Handle(command, CancellationToken.None);
 
@@ -56,7 +56,7 @@ public class ProductCommandHandlerTests
             var uow = new FakeUnitOfWork();
             var handler = new UpdateProductCommandHandler(uow);
 
-            var result = await handler.Handle(new UpdateProductCommand { Id = 99, Name = "Ad", Price = 10m, CategoryId = 1 }, CancellationToken.None);
+            var result = await handler.Handle(new UpdateProductCommand { Id = Guid.NewGuid(), Name = "Ad", Price = 10m, CategoryId = Guid.NewGuid() }, CancellationToken.None);
 
             Assert.True(result.IsFailure);
         }
@@ -68,7 +68,7 @@ public class ProductCommandHandlerTests
         public async Task Handle_WithExistingProduct_DeletesAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            Product existing = Product.Create("Çay", 15m, true, "img.png", categoryId: 1);
+            Product existing = Product.Create("Çay", 15m, "img.png", Guid.NewGuid());
             await uow.ProductRepo.AddAsync(existing);
 
             var handler = new DeleteProductCommandHandler(uow);
@@ -84,7 +84,7 @@ public class ProductCommandHandlerTests
             var uow = new FakeUnitOfWork();
             var handler = new DeleteProductCommandHandler(uow);
 
-            var result = await handler.Handle(new DeleteProductCommand { Id = 99 }, CancellationToken.None);
+            var result = await handler.Handle(new DeleteProductCommand { Id = Guid.NewGuid() }, CancellationToken.None);
 
             Assert.True(result.IsFailure);
         }

@@ -23,8 +23,8 @@ public static class DefaultData
             new { FullName = "Demo Cashier",         UserName = "cashier", Email = "cashier@demo.com", Phone = "05000000003", UserCode = "1003", Password = "Cashier123*", Role = UserRole.Cashier },
         };
 
-        // Restaurant (owner = admin demo user)
-        if (!await context.Restaurants.AnyAsync())
+        // Company + Branch (owner = admin demo user)
+        if (!await context.Companies.AnyAsync())
         {
             var adminData = demoUsers[0];
             User adminUser = User.Create(adminData.FullName, adminData.Email, adminData.Phone);
@@ -32,18 +32,22 @@ public static class DefaultData
             await context.Users.AddAsync(adminUser);
             await context.SaveChangesAsync();
 
-            Restaurant restaurant = Restaurant.Create("Demo Restaurant", adminUser);
-            restaurant.Update("Demo Restaurant", "0212 000 00 00", "info@demorestaurant.com", "Istanbul", "Kadikoy");
-            restaurant.AssignSlug("demo");
-            await context.Restaurants.AddAsync(restaurant);
+            Company company = Company.Create("Demo Restaurant", adminUser.Id);
+            company.Slug = "demo";
+            await context.Companies.AddAsync(company);
             await context.SaveChangesAsync();
 
-            UserRestaurant adminUserRestaurant = UserRestaurant.Create(adminUser, restaurant, adminData.UserName, adminData.UserCode, adminData.Role);
-            await context.UserRestaurants.AddAsync(adminUserRestaurant);
+            Branch branch = Branch.Create("Demo Restaurant");
+            branch.Update("Demo Restaurant", string.Empty, "0212 000 00 00", "info@demorestaurant.com", "Istanbul", "Kadikoy", string.Empty);
+            await context.Branches.AddAsync(branch);
+            await context.SaveChangesAsync();
+
+            UserBranch adminUserBranch = UserBranch.Create(adminUser, branch, adminData.UserName, adminData.UserCode, adminData.Role);
+            await context.UserBranches.AddAsync(adminUserBranch);
             await context.SaveChangesAsync();
         }
 
-        Restaurant demoRestaurant = await context.Restaurants.FirstAsync();
+        Branch demoRestaurant = await context.Branches.FirstAsync();
 
         // Remaining users
         if (await context.Users.CountAsync() < demoUsers.Length)
@@ -55,8 +59,8 @@ public static class DefaultData
                 await context.Users.AddAsync(user);
                 await context.SaveChangesAsync();
 
-                UserRestaurant userRestaurant = UserRestaurant.Create(user, demoRestaurant, u.UserName, u.UserCode, u.Role);
-                await context.UserRestaurants.AddAsync(userRestaurant);
+                UserBranch userBranch = UserBranch.Create(user, demoRestaurant, u.UserName, u.UserCode, u.Role);
+                await context.UserBranches.AddAsync(userBranch);
                 await context.SaveChangesAsync();
             }
         }
@@ -83,18 +87,18 @@ public static class DefaultData
 
             Product[] products = new[]
             {
-                Product.Create("Garden Salad",      85m,  true, string.Empty, starter.Id),
-                Product.Create("Lentil Soup",       75m,  true, string.Empty, starter.Id),
-                Product.Create("Hummus",            90m,  true, string.Empty, starter.Id),
-                Product.Create("Beyti Wrap",        220m, true, string.Empty, main.Id),
-                Product.Create("Adana Kebab",       240m, true, string.Empty, main.Id),
-                Product.Create("Grilled Meatballs", 200m, true, string.Empty, main.Id),
-                Product.Create("Chicken Skewer",    180m, true, string.Empty, main.Id),
-                Product.Create("Mixed Pide",        160m, true, string.Empty, main.Id),
-                Product.Create("Water (500ml)",     20m,  true, string.Empty, drink.Id),
-                Product.Create("Ayran",             35m,  true, string.Empty, drink.Id),
-                Product.Create("Cola",              55m,  true, string.Empty, drink.Id),
-                Product.Create("Turkish Coffee",    65m,  true, string.Empty, drink.Id),
+                Product.Create("Garden Salad",      85m,  string.Empty, starter.Id),
+                Product.Create("Lentil Soup",       75m,  string.Empty, starter.Id),
+                Product.Create("Hummus",            90m,  string.Empty, starter.Id),
+                Product.Create("Beyti Wrap",        220m, string.Empty, main.Id),
+                Product.Create("Adana Kebab",       240m, string.Empty, main.Id),
+                Product.Create("Grilled Meatballs", 200m, string.Empty, main.Id),
+                Product.Create("Chicken Skewer",    180m, string.Empty, main.Id),
+                Product.Create("Mixed Pide",        160m, string.Empty, main.Id),
+                Product.Create("Water (500ml)",     20m,  string.Empty, drink.Id),
+                Product.Create("Ayran",             35m,  string.Empty, drink.Id),
+                Product.Create("Cola",              55m,  string.Empty, drink.Id),
+                Product.Create("Turkish Coffee",    65m,  string.Empty, drink.Id),
             };
             await context.Products.AddRangeAsync(products);
             await context.SaveChangesAsync();
@@ -105,8 +109,8 @@ public static class DefaultData
         {
             CashRegister[] cashRegisters = new[]
             {
-                CashRegister.Create("Cash", 0m, CashRegisterStatus.Open, demoRestaurant.Id),
-                CashRegister.Create("Card", 0m, CashRegisterStatus.Open, demoRestaurant.Id),
+                CashRegister.Create("Cash", 0m, demoRestaurant.Id),
+                CashRegister.Create("Card", 0m, demoRestaurant.Id),
             };
             await context.CashRegisters.AddRangeAsync(cashRegisters);
             await context.SaveChangesAsync();

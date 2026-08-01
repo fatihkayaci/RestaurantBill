@@ -6,10 +6,10 @@ public class RemoveProductFromOrderCommandValidator : AbstractValidator<RemovePr
     public RemoveProductFromOrderCommandValidator()
     {
         RuleFor(x => x.OrderId)
-            .GreaterThan(0).WithMessage("Geçerli bir sipariş seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir sipariş seçilmelidir.");
 
         RuleFor(x => x.ProductId)
-            .GreaterThan(0).WithMessage("Geçerli bir ürün seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir ürün seçilmelidir.");
 
     }
 }

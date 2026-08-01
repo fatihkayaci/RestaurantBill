@@ -12,7 +12,7 @@ public static class RepositoryExtensions
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
-        services.AddScoped<IRestaurantRepository, RestaurantRepository>();
+        services.AddScoped<IBranchRepository, BranchRepository>();
         services.AddScoped<ITableRepository, TableRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 

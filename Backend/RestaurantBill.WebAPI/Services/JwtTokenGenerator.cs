@@ -17,7 +17,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         _configuration = configuration;
     }
 
-    public string GenerateToken(User user, int restaurantId, UserRole role, string userName)
+    public string GenerateToken(User user, Guid restaurantId, UserRole role, string userName)
     {
         var claims = new List<Claim>
         {
@@ -42,7 +42,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         return new JwtSecurityTokenHandler().WriteToken(tokenOptions);
     }
 
-    public string GenerateTransitionToken(int userId, UserRole role)
+    public string GenerateTransitionToken(Guid userId, UserRole role)
     {
         var claims = new List<Claim>
         {

@@ -6,7 +6,7 @@ namespace RestaurantBill.Application.Features.Categories.Commands.UpdateCategory
 {
     public class UpdateCategoryCommand : IRequest<Result>, IInvalidatesCache
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public required string Name { get; set; }
 
         public string[] CacheKeysToInvalidate => ["categories:all"];

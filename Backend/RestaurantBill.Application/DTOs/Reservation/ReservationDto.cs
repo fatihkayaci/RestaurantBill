@@ -2,8 +2,8 @@ namespace RestaurantBill.Application.DTOs;
 
 public class ReservationDto
 {
-    public int Id { get; set; }
-    public int TableId { get; set; }
+    public Guid Id { get; set; }
+    public Guid TableId { get; set; }
     public string GuestName { get; set; } = string.Empty;
     public string Contact { get; set; } = string.Empty;
     public DateTime ReservationTime { get; set; }

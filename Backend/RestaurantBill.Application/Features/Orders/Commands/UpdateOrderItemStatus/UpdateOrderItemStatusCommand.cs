@@ -5,8 +5,8 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemSta
 {
     public class UpdateOrderItemStatusCommand : IRequest<Result>
     {
-        public int OrderId { get; set; }
-        public int OrderItemId { get; set; }
+        public Guid OrderId { get; set; }
+        public Guid OrderItemId { get; set; }
         public int Status { get; set; }
     }
 }

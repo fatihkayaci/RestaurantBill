@@ -44,9 +44,9 @@ namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
             if (user is null)
                 return Result<VerifyCodeResponseDto>.Failure("Kullanıcı bulunamadı.");
 
-            Restaurant? restaurant = (await _uow.Restaurant.GetAllAsync(
-                r => r.OwnerUserId == request.UserId && !r.IsDeleted, false)).FirstOrDefault();
-            if (restaurant is null)
+            Company? company = (await _uow.Company.GetAllAsync(
+                c => c.OwnerUserId == request.UserId && !c.IsDeleted, false)).FirstOrDefault();
+            if (company is null)
                 return Result<VerifyCodeResponseDto>.Failure("Restoran bulunamadı.");
 
             verificationCode.MarkAsVerified();
@@ -54,8 +54,8 @@ namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
 
             return Result<VerifyCodeResponseDto>.Success(new VerifyCodeResponseDto
             {
-                Token = _jwtTokenGenerator.GenerateToken(user, restaurant.Id, UserRole.Owner, user.Email!),
-                NeedsSlugSetup = string.IsNullOrWhiteSpace(restaurant.Slug),
+                Token = _jwtTokenGenerator.GenerateToken(user, company.Id, UserRole.Owner, user.Email!),
+                NeedsSlugSetup = string.IsNullOrWhiteSpace(company.Slug),
             });
         }
     }

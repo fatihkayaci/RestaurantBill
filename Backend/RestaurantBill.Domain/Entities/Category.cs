@@ -3,24 +3,24 @@ using RestaurantBill.Domain.Exceptions;
 namespace RestaurantBill.Domain.Entities;
 public class Category : BaseEntity
 {
+    public Guid BranchId { get; private set; }
+    public Branch Branch { get; private set; } = default!;
     public string Name { get; private set; } = string.Empty;
-    public int RestaurantId { get; private set; }
-    public Restaurant Restaurant { get; private set; } = default!;
 
     protected Category() { }
 
-    public static Category Create(string name, int restaurantId)
+    public static Category Create(string name, Guid branchId)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("Kategori adı boş olamaz.");
 
-        if (restaurantId <= 0)
-            throw new DomainException("Geçersiz restoran ID'si.");
+        if (branchId == Guid.Empty)
+            throw new DomainException("Geçersiz şube.");
 
         return new Category
         {
             Name = name,
-            RestaurantId = restaurantId
+            BranchId = branchId
         };
     }
 

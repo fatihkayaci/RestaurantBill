@@ -1,7 +1,7 @@
 namespace RestaurantBill.Application.Interfaces;
 public interface ITableNotificationService
 {
-    Task SendTableStatusChangedAsync(int restaurantId, int tableId, int status);
-    Task SendOrderUpdatedAsync(int restaurantId, int tableId, decimal totalPrice);
-    Task SendOrderClosedAsync(int restaurantId, int tableId, int orderId);
+    Task SendTableStatusChangedAsync(Guid restaurantId, Guid tableId, int status);
+    Task SendOrderUpdatedAsync(Guid restaurantId, Guid tableId, decimal totalPrice);
+    Task SendOrderClosedAsync(Guid restaurantId, Guid tableId, Guid orderId);
 }

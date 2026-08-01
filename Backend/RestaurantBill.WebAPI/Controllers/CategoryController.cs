@@ -76,7 +76,7 @@ namespace RestaurantBill.WebAPI.Controllers
         
         [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCategory([FromRoute]int id, CancellationToken cancellationToken)
+        public async Task<IActionResult> DeleteCategory([FromRoute]Guid id, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new DeleteCategoryCommand{Id= id}, cancellationToken);
             return HandleResult(result);

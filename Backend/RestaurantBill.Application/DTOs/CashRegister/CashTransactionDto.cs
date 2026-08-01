@@ -4,11 +4,11 @@ namespace RestaurantBill.Application.DTOs;
 
 public class CashTransactionDto
 {
-    public int Id { get; set; }
-    public int CashRegisterId { get; set; }
+    public Guid Id { get; set; }
+    public Guid CashRegisterId { get; set; }
     public CashTransactionType Type { get; set; }
     public decimal Amount { get; set; }
-    public int UserId { get; set; }
-    public int? RelatedCashRegisterId { get; set; }
+    public Guid UserId { get; set; }
+    public Guid? RelatedCashRegisterId { get; set; }
     public DateTime CreatedAt { get; set; }
 }

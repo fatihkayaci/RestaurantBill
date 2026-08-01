@@ -6,7 +6,7 @@ public class ReservationTableCommandValidator : AbstractValidator<ReservationTab
     public ReservationTableCommandValidator()
     {
         RuleFor(x => x.TableId)
-            .GreaterThan(0).WithMessage("Geçerli bir masa seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir masa seçilmelidir.");
 
         RuleFor(x => x.GuestName)
             .NotEmpty().WithMessage("Misafir adı boş olamaz.")

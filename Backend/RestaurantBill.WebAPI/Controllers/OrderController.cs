@@ -49,7 +49,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="cancellationToken"></param>
         [Authorize(Roles = "Owner,Admin,Waiter,Kitchen")]
         [HttpGet("table/{tableId:int}")]
-        public async Task<IActionResult> GetActiveOrderByTableId([FromRoute]int tableId, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetActiveOrderByTableId([FromRoute]Guid tableId, CancellationToken cancellationToken)
         {
             var query = new GetActiveOrderByTableIdQuery{TableId = tableId};
             var result = await _mediator.Send(query, cancellationToken);
@@ -126,7 +126,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="cancellationToken"></param>
         [Authorize(Roles = "Owner, Admin, Kitchen, Waiter")]
         [HttpPost("{id}/status")]
-        public async Task<IActionResult> UpdateStatus([FromRoute] int id, [FromBody] UpdateOrderStatusCommand command, CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdateStatus([FromRoute] Guid id, [FromBody] UpdateOrderStatusCommand command, CancellationToken cancellationToken)
         {
             command.OrderId = id;
             var result = await _mediator.Send(command, cancellationToken);
@@ -136,7 +136,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Updates the status of a single order item (Kitchen and Waiter use). </summary>
         [Authorize(Roles = "Owner,Admin,Kitchen,Waiter")]
         [HttpPost("{orderId}/item/{itemId}/status")]
-        public async Task<IActionResult> UpdateItemStatus([FromRoute] int orderId, [FromRoute] int itemId, [FromBody] UpdateOrderItemStatusCommand command, CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdateItemStatus([FromRoute] Guid orderId, [FromRoute] Guid itemId, [FromBody] UpdateOrderItemStatusCommand command, CancellationToken cancellationToken)
         {
             command.OrderId = orderId;
             command.OrderItemId = itemId;

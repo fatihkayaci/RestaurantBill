@@ -7,14 +7,14 @@ namespace RestaurantBill.Domain.Tests.Entities;
 
 public class OrderTests
 {
-    private static Product CreateProduct(int id = 1, decimal price = 10m)
+    private static Product CreateProduct(Guid? id = null, decimal price = 10m)
     {
-        Product product = Product.Create("Test Product", price, true, "img.png", categoryId: 1);
-        SetId(product, id);
+        Product product = Product.Create("Test Product", price, "img.png", Guid.NewGuid());
+        SetId(product, id ?? Guid.NewGuid());
         return product;
     }
 
-    private static void SetId(BaseEntity entity, int id)
+    private static void SetId(BaseEntity entity, Guid id)
     {
         PropertyInfo idProperty = typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!;
         idProperty.SetValue(entity, id);
@@ -25,19 +25,18 @@ public class OrderTests
         [Fact]
         public void WithValidTableId_ReturnsActiveOrder()
         {
-            Order order = Order.Create(tableId: 5);
+            Guid tableId = Guid.NewGuid();
+            Order order = Order.Create(tableId);
 
-            Assert.Equal(5, order.TableId);
+            Assert.Equal(tableId, order.TableId);
             Assert.Equal(OrderStatus.Active, order.Status);
             Assert.Empty(order.OrderItems);
         }
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void WithInvalidTableId_ThrowsDomainException(int invalidTableId)
+        [Fact]
+        public void WithInvalidTableId_ThrowsDomainException()
         {
-            Assert.Throws<DomainException>(() => Order.Create(invalidTableId));
+            Assert.Throws<DomainException>(() => Order.Create(Guid.Empty));
         }
     }
 
@@ -46,7 +45,7 @@ public class OrderTests
         [Fact]
         public void WithZeroQuantity_ThrowsDomainException()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
             Product product = OrderTests.CreateProduct();
 
             Assert.Throws<DomainException>(() => order.AddItem(product, 0));
@@ -55,7 +54,7 @@ public class OrderTests
         [Fact]
         public void WithSingleProduct_AddsItemAndCalculatesTotal()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
             Product product = OrderTests.CreateProduct(price: 25m);
 
             order.AddItem(product, 2);
@@ -68,7 +67,7 @@ public class OrderTests
         [Fact]
         public void SameProductTwice_MergesQuantityInsteadOfDuplicating()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
             Product product = OrderTests.CreateProduct(price: 10m);
 
             order.AddItem(product, 1);
@@ -84,11 +83,11 @@ public class OrderTests
         [Fact]
         public void WithExistingProduct_RemovesItemAndRecalculatesTotal()
         {
-            Order order = Order.Create(1);
-            Product product = OrderTests.CreateProduct(id: 1, price: 20m);
+            Order order = Order.Create(Guid.NewGuid());
+            Product product = OrderTests.CreateProduct(price: 20m);
             order.AddItem(product, 3);
 
-            order.RemoveItem(productId: 1);
+            order.RemoveItem(product.Id);
 
             Assert.Empty(order.OrderItems);
             Assert.Equal(0m, order.TotalPrice);
@@ -97,9 +96,9 @@ public class OrderTests
         [Fact]
         public void WithNonExistingProduct_ThrowsDomainException()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
 
-            Assert.Throws<DomainException>(() => order.RemoveItem(productId: 99));
+            Assert.Throws<DomainException>(() => order.RemoveItem(Guid.NewGuid()));
         }
     }
 
@@ -108,11 +107,11 @@ public class OrderTests
         [Fact]
         public void WithExistingProduct_UpdatesQuantityAndRecalculatesTotal()
         {
-            Order order = Order.Create(1);
-            Product product = OrderTests.CreateProduct(id: 1, price: 15m);
+            Order order = Order.Create(Guid.NewGuid());
+            Product product = OrderTests.CreateProduct(price: 15m);
             order.AddItem(product, 2);
 
-            order.UpdateItemQuantity(productId: 1, quantity: 5);
+            order.UpdateItemQuantity(product.Id, quantity: 5);
 
             Assert.Equal(75m, order.TotalPrice);
         }
@@ -120,9 +119,9 @@ public class OrderTests
         [Fact]
         public void WithNonExistingProduct_ThrowsDomainException()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
 
-            Assert.Throws<DomainException>(() => order.UpdateItemQuantity(productId: 99, quantity: 1));
+            Assert.Throws<DomainException>(() => order.UpdateItemQuantity(Guid.NewGuid(), quantity: 1));
         }
     }
 
@@ -131,7 +130,7 @@ public class OrderTests
         [Fact]
         public void ToPreparing_MovesPendingItemsToPreparing()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
             order.AddItem(OrderTests.CreateProduct(), 1);
 
             order.UpdateStatus(OrderStatus.Preparing);
@@ -143,7 +142,7 @@ public class OrderTests
         [Fact]
         public void ToReady_MovesPreparingItemsToReady()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
             order.AddItem(OrderTests.CreateProduct(), 1);
             order.UpdateStatus(OrderStatus.Preparing);
 
@@ -156,7 +155,7 @@ public class OrderTests
         [Fact]
         public void ToServed_MovesReadyItemsToServed()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
             order.AddItem(OrderTests.CreateProduct(), 1);
             order.UpdateStatus(OrderStatus.Preparing);
             order.UpdateStatus(OrderStatus.Ready);
@@ -170,7 +169,7 @@ public class OrderTests
         [Fact]
         public void WithInvalidStatus_ThrowsDomainException()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
 
             Assert.Throws<DomainException>(() => order.UpdateStatus((OrderStatus)999));
         }
@@ -181,12 +180,13 @@ public class OrderTests
         [Fact]
         public void WithExistingItem_UpdatesStatus()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
             order.AddItem(OrderTests.CreateProduct(), 1);
             OrderItem item = order.OrderItems.First();
-            OrderTests.SetId(item, 7);
+            Guid itemId = Guid.NewGuid();
+            OrderTests.SetId(item, itemId);
 
-            order.UpdateItemStatus(orderItemId: 7, OrderItemStatus.Preparing);
+            order.UpdateItemStatus(itemId, OrderItemStatus.Preparing);
 
             Assert.Equal(OrderItemStatus.Preparing, item.Status);
         }
@@ -194,19 +194,19 @@ public class OrderTests
         [Fact]
         public void WithNonExistingItem_ThrowsDomainException()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
 
             Assert.Throws<DomainException>(() =>
-                order.UpdateItemStatus(orderItemId: 99, OrderItemStatus.Preparing));
+                order.UpdateItemStatus(Guid.NewGuid(), OrderItemStatus.Preparing));
         }
 
         [Fact]
         public void WithInvalidStatus_ThrowsDomainException()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
 
             Assert.Throws<DomainException>(() =>
-                order.UpdateItemStatus(orderItemId: 1, (OrderItemStatus)999));
+                order.UpdateItemStatus(Guid.NewGuid(), (OrderItemStatus)999));
         }
     }
 
@@ -215,7 +215,7 @@ public class OrderTests
         [Fact]
         public void SetsStatusToCancelled()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
 
             order.Cancel();
 
@@ -228,7 +228,7 @@ public class OrderTests
         [Fact]
         public void SetsStatusToPaid()
         {
-            Order order = Order.Create(1);
+            Order order = Order.Create(Guid.NewGuid());
 
             order.Close();
 

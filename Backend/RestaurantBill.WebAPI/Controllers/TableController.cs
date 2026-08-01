@@ -42,7 +42,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="id">TableId</param>
         [Authorize(Roles = "Owner,Admin,Waiter,Kitchen")]
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetTableById([FromRoute]int id)
+        public async Task<IActionResult> GetTableById([FromRoute]Guid id)
         {
             var query = new GetTableByIdQuery
             {
@@ -57,7 +57,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="id">TableId</param>
         [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpGet("{id}/reservation")]
-        public async Task<IActionResult> GetActiveReservation([FromRoute] int id)
+        public async Task<IActionResult> GetActiveReservation([FromRoute] Guid id)
         {
             var query = new GetActiveReservationByTableIdQuery { TableId = id };
             var result = await _mediator.Send(query);
@@ -139,7 +139,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <returns>200 OK with success message on deletion.</returns>
         [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken cancellationToken)
+        public async Task<IActionResult> Delete([FromRoute] Guid id, CancellationToken cancellationToken)
         {
             var command = new DeleteTableCommand
             {

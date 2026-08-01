@@ -4,5 +4,5 @@ namespace RestaurantBill.Domain.Interfaces;
 
 public interface IReservationRepository : IGenericRepository<Reservation>
 {
-    Task<Reservation?> GetActiveReservationByTableId(int tableId, bool trackChanges = false);
+    Task<Reservation?> GetActiveReservationByTableId(Guid tableId, bool trackChanges = false);
 }

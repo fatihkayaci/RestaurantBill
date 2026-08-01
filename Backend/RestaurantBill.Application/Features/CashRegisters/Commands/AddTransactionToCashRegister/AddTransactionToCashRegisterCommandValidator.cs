@@ -6,7 +6,7 @@ public class AddTransactionToCashRegisterCommandValidator : AbstractValidator<Ad
 {
     public AddTransactionToCashRegisterCommandValidator()
     {
-        RuleFor(x => x.CashRegisterId).GreaterThan(0).WithMessage("Geçersiz kasa Id.");
+        RuleFor(x => x.CashRegisterId).NotEqual(Guid.Empty).WithMessage("Geçersiz kasa Id.");
         RuleFor(x => x.Type).IsInEnum().WithMessage("Geçersiz işlem tipi.");
         RuleFor(x => x.Amount).GreaterThan(0).WithMessage("Tutar sıfırdan büyük olmalı.");
     }

@@ -24,7 +24,7 @@ public class CacheInvalidationPostProcessor<TRequest, TResponse>
         if (request is IInvalidatesCache invalidator)
             foreach (string key in invalidator.CacheKeysToInvalidate)
             {
-                string fullKey = $"{key}:{_currentUser.RestaurantId}";
+                string fullKey = $"{key}:{_currentUser.BranchId}";
                 _cache.Remove(fullKey);
                 _logger.LogInformation("[Cache INVALIDATED] Key: {Key}", fullKey);
             }

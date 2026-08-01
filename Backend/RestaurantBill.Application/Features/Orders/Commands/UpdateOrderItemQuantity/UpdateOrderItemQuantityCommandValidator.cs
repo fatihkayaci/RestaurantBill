@@ -6,10 +6,10 @@ public class UpdateOrderItemQuantityCommandValidator : AbstractValidator<UpdateO
     public UpdateOrderItemQuantityCommandValidator()
     {
         RuleFor(x => x.OrderId)
-            .GreaterThan(0).WithMessage("Geçerli bir sipariş seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir sipariş seçilmelidir.");
 
         RuleFor(x => x.ProductId)
-            .GreaterThan(0).WithMessage("Geçerli bir ürün seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir ürün seçilmelidir.");
             
         RuleFor(x => x.Quantity)
             .GreaterThan(0).WithMessage("Miktar 0'dan büyük olmalı!");

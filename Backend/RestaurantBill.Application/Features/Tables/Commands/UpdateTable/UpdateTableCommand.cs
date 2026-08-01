@@ -7,10 +7,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
 {
     public class UpdateTableCommand : IRequest<Result>, IInvalidatesCache
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public TableStatus? Status { get; set; }
-        public int RegionId { get; set; }
+        public Guid RegionId { get; set; }
 
         public string[] CacheKeysToInvalidate => ["tables:all"];
     }

@@ -35,7 +35,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQua
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.RestaurantId, order.TableId, order.TotalPrice);
+            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, order.TableId, order.TotalPrice);
             return Result.Success();
         }
     }

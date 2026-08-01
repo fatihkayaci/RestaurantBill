@@ -20,10 +20,10 @@ public class GetCashTransactionsQueryHandler : IRequestHandler<GetCashTransactio
 
     public async Task<Result<List<CashTransactionDto>>> Handle(GetCashTransactionsQuery request, CancellationToken cancellationToken)
     {
-        var restaurantId = _currentUser.RestaurantId;
-        if(restaurantId <= 0) return Result<List<CashTransactionDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+        var restaurantId = _currentUser.BranchId;
+        if(restaurantId == Guid.Empty) return Result<List<CashTransactionDto>>.Failure("ID değeri 0 veya negatif olamaz.");
 
-        var entities = await _uow.CashTransaction.GetAllAsync(t => t.CashRegister.RestaurantId == restaurantId);
+        var entities = await _uow.CashTransaction.GetAllAsync(t => t.CashRegister.BranchId == restaurantId);
         return Result<List<CashTransactionDto>>.Success(entities.OrderByDescending(t => t.CreatedAt).Take(50).Select(t => t.ToDto()).ToList());
     }
 }

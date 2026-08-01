@@ -5,7 +5,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
 {
     public class ReservationTableCommand : IRequest<Result>
     {
-        public int TableId { get; set; }
+        public Guid TableId { get; set; }
         public string GuestName { get; set; } = string.Empty;
         public string Contact { get; set; } = string.Empty;
         public string ReservationTime { get; set; } = string.Empty;

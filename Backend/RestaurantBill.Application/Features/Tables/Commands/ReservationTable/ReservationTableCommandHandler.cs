@@ -35,7 +35,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
+            await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.BranchId, table.Id, (int)table.Status);
             return Result.Success();
         }
     }

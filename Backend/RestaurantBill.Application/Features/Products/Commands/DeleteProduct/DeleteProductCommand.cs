@@ -6,7 +6,7 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
 {
     public class DeleteProductCommand : IRequest<Result>, IInvalidatesCache
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
         public string[] CacheKeysToInvalidate => ["products:all"];
     }

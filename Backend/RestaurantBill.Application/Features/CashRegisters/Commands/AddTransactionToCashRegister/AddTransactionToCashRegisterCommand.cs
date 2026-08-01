@@ -6,7 +6,7 @@ namespace RestaurantBill.Application.Features.CashRegisters.Commands.AddTransact
 
 public class AddTransactionToCashRegisterCommand : IRequest<Result>
 {
-    public int CashRegisterId { get; set; }
+    public Guid CashRegisterId { get; set; }
     public CashTransactionType Type { get; set; }
     public decimal Amount { get; set; }
 }

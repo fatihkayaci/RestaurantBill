@@ -5,8 +5,9 @@ namespace RestaurantBill.Domain.Entities
 {
     public class Reservation : BaseEntity
     {
-        public int TableId { get; private set; }
+        public Guid TableId { get; private set; }
         public Table Table { get; private set; } = default!;
+
         public string GuestName { get; private set; } = string.Empty;
         public string Contact { get; private set; } = string.Empty;
         public DateTime ReservationTime { get; private set; }

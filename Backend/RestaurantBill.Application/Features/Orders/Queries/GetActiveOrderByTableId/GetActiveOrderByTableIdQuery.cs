@@ -6,6 +6,6 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTab
 {
     public class GetActiveOrderByTableIdQuery : IRequest<Result<OrderDto>> 
     {
-        public int TableId { get; set; }
+        public Guid TableId { get; set; }
     }
 }

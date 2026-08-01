@@ -2,7 +2,7 @@ namespace RestaurantBill.Application.Interfaces;
 
 public interface ICurrentUserService
 {
-    int RestaurantId { get; }
-    int UserId { get; }
+    Guid BranchId { get; }
+    Guid UserId { get; }
     string Role { get; }
 }

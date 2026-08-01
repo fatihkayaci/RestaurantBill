@@ -25,9 +25,9 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
         /// </summary>
         public async Task<Result<List<TableDto>>> Handle(GetAllTableQuery request, CancellationToken cancellationToken)
         {
-            int restaurantId = _currentUser.RestaurantId;
-            if(restaurantId <= 0) return Result<List<TableDto>>.Failure("ID değeri 0 veya negatif olamaz.");
-            var entities = await _uow.Table.GetAllAsync(t => t.RestaurantId == restaurantId, includeProperties: "Region");
+            Guid restaurantId = _currentUser.BranchId;
+            if(restaurantId == Guid.Empty) return Result<List<TableDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+            var entities = await _uow.Table.GetAllAsync(t => t.Region.BranchId == restaurantId, includeProperties: "Region");
 
             var tableIds = entities.Select(t => t.Id).ToList();
             var activeOrders = await _uow.Order.GetAllAsync(o =>

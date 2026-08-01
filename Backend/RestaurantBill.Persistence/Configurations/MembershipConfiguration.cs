@@ -8,6 +8,6 @@ public class MembershipConfiguration : IEntityTypeConfiguration<Membership>
 {
     public void Configure(EntityTypeBuilder<Membership> builder)
     {
-        builder.HasIndex(m => m.RestaurantId);
+        builder.HasIndex(m => m.BranchId);
     }
 }

@@ -5,29 +5,27 @@ namespace RestaurantBill.Domain.Entities
 {
     public class Table : BaseEntity
     {
+        public Guid RegionId { get; private set; }
+        public Region Region { get; private set; } = default!;
         public string Name { get; private set; } = string.Empty;
         public string Note { get; private set; } = string.Empty;
         public TableStatus Status { get; private set; } = TableStatus.Available;
-        public int RestaurantId { get; private set; }
-        public Restaurant Restaurant { get; private set; } = default!;
-        public int RegionId { get; private set; }
-        public Region Region { get; private set; } = default!;
 
         protected Table() { }
 
-        public static Table Create(string name, string note, int restaurantId)
+        public static Table Create(string name, string note, Guid regionId)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new DomainException("Masa adı boş olamaz.");
 
-            if (restaurantId <= 0)
-                throw new DomainException("Geçersiz restoran ID'si.");
+            if (regionId == Guid.Empty)
+                throw new DomainException("Geçersiz bölge ID'si.");
 
             return new Table
             {
                 Name = name,
                 Note = note,
-                RestaurantId = restaurantId
+                RegionId = regionId
             };
         }
 
@@ -40,9 +38,9 @@ namespace RestaurantBill.Domain.Entities
             Note = note;
         }
 
-        public void AssignRegion(int regionId)
+        public void AssignRegion(Guid regionId)
         {
-            if (regionId <= 0)
+            if (regionId == Guid.Empty)
                 throw new DomainException("Geçersiz bölge ID'si.");
 
             RegionId = regionId;

@@ -7,7 +7,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
     public class CreateTableCommand : IRequest<Result>, IInvalidatesCache
     {
         public string Name { get; set; } = string.Empty;
-        public int RegionId { get; set; }
+        public Guid RegionId { get; set; }
 
         public string[] CacheKeysToInvalidate => new[] { "tables:all" };
     }

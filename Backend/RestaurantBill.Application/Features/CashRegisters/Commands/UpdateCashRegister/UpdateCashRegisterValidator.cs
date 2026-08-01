@@ -6,7 +6,7 @@ public class UpdateCashRegisterValidator : AbstractValidator<UpdateCashRegisterC
 {
     public UpdateCashRegisterValidator()
     {
-        RuleFor(x => x.Id).GreaterThan(0).WithMessage("Geçersiz kasa Id.");
+        RuleFor(x => x.Id).NotEqual(Guid.Empty).WithMessage("Geçersiz kasa Id.");
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Kasa adı boş olamaz.")

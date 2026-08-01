@@ -13,12 +13,12 @@ public abstract class IntegrationTestBase : IDisposable
     protected readonly IUnitOfWork UnitOfWork;
     protected readonly ICurrentUserService CurrentUser;
 
-    protected const int RestaurantId = 1;
-    protected const int OtherRestaurantId = 2;
-    protected const int UserId = 1;
+    protected static readonly Guid RestaurantId = Guid.NewGuid();
+    protected static readonly Guid OtherRestaurantId = Guid.NewGuid();
+    protected static readonly Guid UserId = Guid.NewGuid();
 
-    protected readonly int DefaultRegionId;
-    protected readonly int OtherDefaultRegionId;
+    protected readonly Guid DefaultRegionId;
+    protected readonly Guid OtherDefaultRegionId;
 
     protected IntegrationTestBase()
     {
@@ -28,7 +28,7 @@ public abstract class IntegrationTestBase : IDisposable
 
         DbContext = new RestaurantBillDbContext(options);
         UnitOfWork = new UnitOfWork(DbContext);
-        CurrentUser = new FakeCurrentUserService { RestaurantId = RestaurantId, UserId = UserId };
+        CurrentUser = new FakeCurrentUserService { BranchId = RestaurantId, UserId = UserId };
 
         Region defaultRegion = Region.Create("Genel", RestaurantId);
         Region otherDefaultRegion = Region.Create("Genel", OtherRestaurantId);

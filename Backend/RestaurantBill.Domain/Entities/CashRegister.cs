@@ -5,15 +5,15 @@ namespace RestaurantBill.Domain.Entities;
 
 public class CashRegister : BaseEntity
 {
+    public Guid BranchId { get; private set; }
+    public Branch Branch { get; private set; } = default!;
+
     public string Name { get; private set; } = string.Empty;
     public decimal Balance { get; private set; }
-    public CashRegisterStatus Status { get; private set; }
-    public int RestaurantId { get; private set; }
-    public Restaurant Restaurant { get; private set; } = default!;
-
+    public CashRegisterStatus Status { get; private set; } = CashRegisterStatus.Open;
     protected CashRegister() { }
 
-    public static CashRegister Create(string name, decimal openingBalance, CashRegisterStatus status, int restaurantId)
+    public static CashRegister Create(string name, decimal openingBalance, Guid branchId)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("Kasa adı boş olamaz.");
@@ -21,15 +21,14 @@ public class CashRegister : BaseEntity
         if (openingBalance < 0)
             throw new DomainException("Açılış bakiyesi negatif olamaz.");
 
-        if (restaurantId <= 0)
-            throw new DomainException("Geçersiz restoran ID'si.");
+        if (branchId == Guid.Empty)
+            throw new DomainException("Geçersiz şube ID'si.");
 
         return new CashRegister
         {
             Name = name,
             Balance = openingBalance,
-            Status = status,
-            RestaurantId = restaurantId
+            BranchId = branchId
         };
     }
 
@@ -52,7 +51,7 @@ public class CashRegister : BaseEntity
             throw new DomainException("Bu kasada bakiye bulunmaktadır. Lütfen silmeden önce bakiyeyi sıfırlayın.");
     }
 
-    public CashTransaction AddTransaction(CashTransactionType type, decimal amount, int userId, int? relatedCashRegisterId = null)
+    public CashTransaction AddTransaction(CashTransactionType type, decimal amount, Guid userId, Guid? relatedCashRegisterId = null)
     {
         if (Status != CashRegisterStatus.Open)
             throw new DomainException("Kapalı bir kasaya işlem eklenemez.");
@@ -68,7 +67,7 @@ public class CashRegister : BaseEntity
     }
 
     public static (CashTransaction SourceTransaction, CashTransaction DestinationTransaction) Transfer(
-        CashRegister source, CashRegister destination, decimal amount, int userId)
+        CashRegister source, CashRegister destination, decimal amount, Guid userId)
     {
         if (source.Id == destination.Id)
             throw new DomainException("Aynı kasaya aktarım yapılamaz.");

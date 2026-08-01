@@ -17,10 +17,11 @@ public class UnitOfWork : IUnitOfWork
     private ICategoryRepository? _categoryRepository;
     private ITableRepository? _tableRepository;
     private IRegionRepository? _regionRepository;
-    private IRestaurantRepository? _restaurantRepository;
+    private ICompanyRepository? _companyRepository;
+    private IBranchRepository? _branchRepository;
     private IMembershipRepository? _membershipRepository;
     private IUserRepository? _userRepository;
-    private IUserRestaurantRepository? _userRestaurantRepository;
+    private IUserBranchRepository? _userBranchRepository;
     private IVerificationCodeRepository? _verificationCodeRepository;
     private ICashRegisterRepository? _cashRegisterRepository;
     private ICashTransactionRepository? _cashTransactionRepository;
@@ -33,10 +34,11 @@ public class UnitOfWork : IUnitOfWork
     public ICategoryRepository Category => _categoryRepository ??= new CategoryRepository(_context);
     public ITableRepository Table => _tableRepository ??= new TableRepository(_context);
     public IRegionRepository Region => _regionRepository ??= new RegionRepository(_context);
-    public IRestaurantRepository Restaurant => _restaurantRepository ??= new RestaurantRepository(_context);
+    public ICompanyRepository Company => _companyRepository ??= new CompanyRepository(_context);
+    public IBranchRepository Branch => _branchRepository ??= new BranchRepository(_context);
     public IMembershipRepository Membership => _membershipRepository ??= new MembershipRepository(_context);
     public IUserRepository User => _userRepository ??= new UserRepository(_context);
-    public IUserRestaurantRepository UserRestaurant => _userRestaurantRepository ??= new UserRestaurantRepository(_context);
+    public IUserBranchRepository UserBranch => _userBranchRepository ??= new UserBranchRepository(_context);
     public IVerificationCodeRepository VerificationCode => _verificationCodeRepository ??= new VerificationCodeRepository(_context);
     public ICashRegisterRepository CashRegister => _cashRegisterRepository ??= new CashRegisterRepository(_context);
     public ICashTransactionRepository CashTransaction => _cashTransactionRepository ??= new CashTransactionRepository(_context);

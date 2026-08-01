@@ -22,14 +22,14 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitch
 
         public async Task<Result<List<OrderDto>>> Handle(GetAllOrdersToKitchenQuery request, CancellationToken cancellationToken)
         {
-            int restaurantId = _currentUser.RestaurantId;
-            if(restaurantId <= 0) 
+            Guid restaurantId = _currentUser.BranchId;
+            if(restaurantId == Guid.Empty) 
                 return Result<List<OrderDto>>.Failure("ID değeri 0 veya negatif olamaz.");
 
             var excludedStatuses = new[] { OrderStatus.Paid, OrderStatus.Cancelled };
 
             var entities = await _uow.Order.GetAllAsync(
-                o => !excludedStatuses.Contains(o.Status) && o.Table.RestaurantId == restaurantId,
+                o => !excludedStatuses.Contains(o.Status) && o.Table.Region.BranchId == restaurantId,
                 false,
                 "OrderItems,OrderItems.Product"
             );

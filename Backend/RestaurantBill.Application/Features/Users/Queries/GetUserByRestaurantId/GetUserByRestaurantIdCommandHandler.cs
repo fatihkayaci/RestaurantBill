@@ -31,33 +31,33 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
         public async Task<Result<IEnumerable<UserDto>>> Handle(GetUserByRestaurantIdCommand request, CancellationToken cancellationToken)
         {
             var currentUserId = _currentUser.UserId;
-            var includeProperties = $"{nameof(User)},{nameof(Restaurant)}";
+            var includeProperties = $"{nameof(User)},{nameof(Branch)}";
 
-            IEnumerable<UserRestaurant> userRestaurants;
+            IEnumerable<UserBranch> userBranches;
 
             if (_currentUser.Role == "Owner")
             {
-                List<int> restaurantIds = (await _uow.Restaurant.GetAllAsync(r => r.OwnerUserId == currentUserId && !r.IsDeleted, false))
-                    .Select(r => r.Id)
+                List<Guid> restaurantIds = (await _uow.Branch.GetAllAsync(b => b.Company.OwnerUserId == currentUserId && !b.IsDeleted, false, nameof(Branch.Company)))
+                    .Select(b => b.Id)
                     .ToList();
 
-                userRestaurants = await _uow.UserRestaurant.GetAllAsync(
-                    ur => restaurantIds.Contains(ur.RestaurantId) && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
+                userBranches = await _uow.UserBranch.GetAllAsync(
+                    ur => restaurantIds.Contains(ur.BranchId) && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
                     false,
                     includeProperties);
             }
             else
             {
-                var restaurantId = _currentUser.RestaurantId;
-                if (restaurantId <= 0) return Result<IEnumerable<UserDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+                var restaurantId = _currentUser.BranchId;
+                if (restaurantId == Guid.Empty) return Result<IEnumerable<UserDto>>.Failure("ID değeri 0 veya negatif olamaz.");
 
-                userRestaurants = await _uow.UserRestaurant.GetAllAsync(
-                    ur => ur.RestaurantId == restaurantId && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
+                userBranches = await _uow.UserBranch.GetAllAsync(
+                    ur => ur.BranchId == restaurantId && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
                     false,
                     includeProperties);
             }
 
-            return Result<IEnumerable<UserDto>>.Success(userRestaurants.OrderBy(ur => ur.User.FullName).Select(ur => ur.User.ToDto(ur)));
+            return Result<IEnumerable<UserDto>>.Success(userBranches.OrderBy(ur => ur.User.FullName).Select(ur => ur.User.ToDto(ur)));
         }
     }
 }

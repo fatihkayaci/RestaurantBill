@@ -20,7 +20,7 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
             if (nameExistsInCategory)
                 return Result.Failure("Bu kategoride bu isimde bir ürün zaten mevcut.");
 
-            Product product = Product.Create(request.Name, request.Price, request.IsActive, request.ImageUrl, request.CategoryId);
+            Product product = Product.Create(request.Name, request.Price, request.ImageUrl, request.CategoryId);
             await _uow.Product.AddAsync(product);
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();

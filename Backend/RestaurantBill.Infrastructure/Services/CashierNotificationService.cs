@@ -12,7 +12,7 @@ public class CashierNotificationService : ICashierNotificationService
         _hubContext = hubContext;
     }
 
-    public async Task SendOrdersChangedAsync(int restaurantId)
+    public async Task SendOrdersChangedAsync(Guid restaurantId)
     {
         await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("OrdersChanged");
     }

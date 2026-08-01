@@ -5,5 +5,5 @@ namespace RestaurantBill.Application.Features.CashRegisters.Commands.DeleteCashR
 
 public class DeleteCashRegisterCommand : IRequest<Result>
 {
-    public int CashRegisterId { get; set; }
+    public Guid CashRegisterId { get; set; }
 }

@@ -28,7 +28,7 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
         if (request is not IIdempotent idempotent)
             return await next();
 
-        var key = $"idempotency:r{_currentUser.RestaurantId}:{idempotent.IdempotencyKey}";
+        var key = $"idempotency:r{_currentUser.BranchId}:{idempotent.IdempotencyKey}";
 
         if (_cache.TryGetValue(key, out _))
         {

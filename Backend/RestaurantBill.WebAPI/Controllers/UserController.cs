@@ -84,7 +84,7 @@ namespace RestaurantBill.WebAPI.Controllers
         
         [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser([FromRoute]int id, CancellationToken cancellationToken)
+        public async Task<IActionResult> DeleteUser([FromRoute]Guid id, CancellationToken cancellationToken)
         {
             var command = new DeleteUserCommand
             {

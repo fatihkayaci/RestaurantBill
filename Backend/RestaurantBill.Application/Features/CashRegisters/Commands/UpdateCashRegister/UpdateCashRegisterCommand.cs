@@ -6,7 +6,7 @@ namespace RestaurantBill.Application.Features.CashRegisters.Commands.UpdateCashR
 
 public class UpdateCashRegisterCommand : IRequest<Result>
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public decimal Balance { get; set; }
     public CashRegisterStatus Status { get; set; }

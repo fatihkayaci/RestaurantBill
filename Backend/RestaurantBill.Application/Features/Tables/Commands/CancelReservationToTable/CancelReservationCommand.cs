@@ -5,6 +5,6 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservationT
 {
     public class CancelReservationCommand : IRequest<Result>
     {
-        public int TableId { get; set; }
+        public Guid TableId { get; set; }
     }
 }

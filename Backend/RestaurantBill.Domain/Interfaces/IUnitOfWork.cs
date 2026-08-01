@@ -8,10 +8,11 @@ public interface IUnitOfWork : IDisposable
     ICategoryRepository Category { get; }
     ITableRepository Table { get; }
     IRegionRepository Region { get; }
-    IRestaurantRepository Restaurant { get; }
+    ICompanyRepository Company { get; }
+    IBranchRepository Branch { get; }
     IMembershipRepository Membership { get; }
     IUserRepository User { get; }
-    IUserRestaurantRepository UserRestaurant { get; }
+    IUserBranchRepository UserBranch { get; }
     IVerificationCodeRepository VerificationCode { get; }
     ICashRegisterRepository CashRegister { get; }
     ICashTransactionRepository CashTransaction { get; }

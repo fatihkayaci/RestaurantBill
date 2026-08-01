@@ -19,8 +19,8 @@ public class CreateCashRegisterHandler : IRequestHandler<CreateCashRegisterComma
 
     public async Task<Result> Handle(CreateCashRegisterCommand request, CancellationToken cancellationToken)
     {
-        int restaurantId = _currentUser.RestaurantId;
-        CashRegister register = CashRegister.Create(request.Name, request.OpeningBalance, request.Status, restaurantId);
+        Guid restaurantId = _currentUser.BranchId;
+        CashRegister register = CashRegister.Create(request.Name, request.OpeningBalance, restaurantId);
 
         await _uow.CashRegister.AddAsync(register);
         await _uow.SaveChangesAsync(cancellationToken);

@@ -31,8 +31,8 @@ public class GetAllProductsQueryTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         await DbContext.Products.AddRangeAsync(
-            Product.Create("Cay", 10m, true, "", myCategory.Id),
-            Product.Create("Kahve", 20m, true, "", otherCategory.Id)
+            Product.Create("Cay", 10m, "", myCategory.Id),
+            Product.Create("Kahve", 20m, "", otherCategory.Id)
         );
         await DbContext.SaveChangesAsync();
 
@@ -51,9 +51,9 @@ public class GetAllProductsQueryTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         await DbContext.Products.AddRangeAsync(
-            Product.Create("C Urun", 30m, true, "", category.Id),
-            Product.Create("A Urun", 10m, true, "", category.Id),
-            Product.Create("B Urun", 20m, true, "", category.Id)
+            Product.Create("C Urun", 30m, "", category.Id),
+            Product.Create("A Urun", 10m, "", category.Id),
+            Product.Create("B Urun", 20m, "", category.Id)
         );
         await DbContext.SaveChangesAsync();
 
@@ -73,7 +73,7 @@ public class GetAllProductsQueryTests : IntegrationTestBase
         await DbContext.Categories.AddAsync(category);
         await DbContext.SaveChangesAsync();
 
-        await DbContext.Products.AddAsync(Product.Create("Baklava", 35m, true, "", category.Id));
+        await DbContext.Products.AddAsync(Product.Create("Baklava", 35m, "", category.Id));
         await DbContext.SaveChangesAsync();
 
         var result = await _handler.Handle(new GetAllProductQuery(), CancellationToken.None);

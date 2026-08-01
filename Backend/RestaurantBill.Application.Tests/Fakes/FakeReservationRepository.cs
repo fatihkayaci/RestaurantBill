@@ -6,6 +6,6 @@ namespace RestaurantBill.Application.Tests.Fakes;
 
 public class FakeReservationRepository : FakeGenericRepository<Reservation>, IReservationRepository
 {
-    public Task<Reservation?> GetActiveReservationByTableId(int tableId, bool trackChanges = false)
+    public Task<Reservation?> GetActiveReservationByTableId(Guid tableId, bool trackChanges = false)
         => Task.FromResult(Data.FirstOrDefault(r => r.TableId == tableId && r.Status == ReservationStatus.Active));
 }

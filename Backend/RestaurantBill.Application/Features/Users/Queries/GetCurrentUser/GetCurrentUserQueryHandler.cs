@@ -26,11 +26,11 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, R
         User? user = await _uow.User.GetByIdAsync(_currentUser.UserId);
         if (user is null) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
 
-        UserRestaurant? userRestaurant = (await _uow.UserRestaurant.GetAllAsync(ur => ur.UserId == user.Id, false)).FirstOrDefault();
-        if (userRestaurant is not null)
-            return Result<UserDto>.Success(user.ToDto(userRestaurant));
+        UserBranch? userBranch = (await _uow.UserBranch.GetAllAsync(ur => ur.UserId == user.Id, false)).FirstOrDefault();
+        if (userBranch is not null)
+            return Result<UserDto>.Success(user.ToDto(userBranch));
 
-        bool isOwner = (await _uow.Restaurant.GetAllAsync(r => r.OwnerUserId == user.Id && !r.IsDeleted, false)).Any();
+        bool isOwner = (await _uow.Company.GetAllAsync(c => c.OwnerUserId == user.Id && !c.IsDeleted, false)).Any();
         if (!isOwner) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
 
         return Result<UserDto>.Success(new UserDto

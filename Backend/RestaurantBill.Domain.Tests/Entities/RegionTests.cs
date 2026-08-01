@@ -10,10 +10,11 @@ public class RegionTests
         [Fact]
         public void WithValidParameters_ReturnsRegion()
         {
-            Region region = Region.Create("Teras", restaurantId: 1);
+            Guid branchId = Guid.NewGuid();
+            Region region = Region.Create("Teras", branchId);
 
             Assert.Equal("Teras", region.Name);
-            Assert.Equal(1, region.RestaurantId);
+            Assert.Equal(branchId, region.BranchId);
         }
 
         [Theory]
@@ -22,16 +23,14 @@ public class RegionTests
         public void WithEmptyName_ThrowsDomainException(string invalidName)
         {
             Assert.Throws<DomainException>(() =>
-                Region.Create(invalidName, restaurantId: 1));
+                Region.Create(invalidName, Guid.NewGuid()));
         }
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void WithInvalidRestaurantId_ThrowsDomainException(int invalidId)
+        [Fact]
+        public void WithInvalidBranchId_ThrowsDomainException()
         {
             Assert.Throws<DomainException>(() =>
-                Region.Create("Teras", invalidId));
+                Region.Create("Teras", Guid.Empty));
         }
     }
 
@@ -40,7 +39,7 @@ public class RegionTests
         [Fact]
         public void WithValidName_UpdatesName()
         {
-            Region region = Region.Create("Eski Ad", restaurantId: 1);
+            Region region = Region.Create("Eski Ad", Guid.NewGuid());
 
             region.Rename("Yeni Ad");
 
@@ -52,7 +51,7 @@ public class RegionTests
         [InlineData("   ")]
         public void WithEmptyName_ThrowsDomainException(string invalidName)
         {
-            Region region = Region.Create("Teras", restaurantId: 1);
+            Region region = Region.Create("Teras", Guid.NewGuid());
 
             Assert.Throws<DomainException>(() => region.Rename(invalidName));
         }
@@ -63,7 +62,7 @@ public class RegionTests
         [Fact]
         public void WithNoLinkedTables_DoesNotThrow()
         {
-            Region region = Region.Create("Teras", restaurantId: 1);
+            Region region = Region.Create("Teras", Guid.NewGuid());
 
             var exception = Record.Exception(() =>
                 region.EnsureCanBeDeleted([]));
@@ -74,8 +73,8 @@ public class RegionTests
         [Fact]
         public void WithLinkedTables_ThrowsDomainException()
         {
-            Region region = Region.Create("Teras", restaurantId: 1);
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Region region = Region.Create("Teras", Guid.NewGuid());
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
 
             Assert.Throws<DomainException>(() =>
                 region.EnsureCanBeDeleted([table]));

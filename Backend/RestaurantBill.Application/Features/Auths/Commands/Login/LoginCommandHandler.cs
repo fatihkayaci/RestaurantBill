@@ -36,16 +36,16 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 return await LoginAsOwnerWithoutSlugAsync(request);
             }
 
-            Restaurant? restaurant = (await _uow.Restaurant
-                .GetAllAsync(r => r.Slug == slug && !r.IsDeleted, false)).FirstOrDefault();
+            Company? company = (await _uow.Company
+                .GetAllAsync(c => c.Slug == slug && !c.IsDeleted, false)).FirstOrDefault();
 
-            if (restaurant is null)
+            if (company is null)
                 return Result<LoginResponseDto>.Failure("Böyle bir Restaurant bulunamadı. Url i değiştirip tekrar deneyiniz");
 
             if (!string.IsNullOrWhiteSpace(request.UserName))
-                return await LoginAsEmployeeAsync(request, restaurant);
+                return await LoginAsEmployeeAsync(request, company);
 
-            return await LoginAsOwnerAsync(request, restaurant);
+            return await LoginAsOwnerAsync(request, company);
         }
 
         private async Task<Result<LoginResponseDto>> LoginAsOwnerWithoutSlugAsync(LoginCommand request)
@@ -61,10 +61,10 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             if (_passwordHasher.VerifyHashedPassword(emailUser, emailUser.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
-            IEnumerable<Restaurant> owneds = await _uow.Restaurant.GetAllAsync(r => r.OwnerUserId == emailUser.Id && !r.IsDeleted, false);
+            IEnumerable<Company> owneds = await _uow.Company.GetAllAsync(c => c.OwnerUserId == emailUser.Id && !c.IsDeleted, false);
 
-            var accessible = new Dictionary<int, (Restaurant Restaurant, UserRole Role, string UserName)>();
-            foreach (Restaurant owned in owneds)
+            var accessible = new Dictionary<Guid, (Company Company, UserRole Role, string UserName)>();
+            foreach (Company owned in owneds)
                 accessible[owned.Id] = (owned, UserRole.Owner, emailUser.Email!);
 
             if (accessible.Count == 0)
@@ -73,15 +73,15 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             var single = accessible.Values.First();
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
-                Token = _jwtTokenGenerator.GenerateToken(emailUser, single.Restaurant.Id, single.Role, single.UserName),
-                NeedsSlugSetup = string.IsNullOrWhiteSpace(single.Restaurant.Slug)
+                Token = _jwtTokenGenerator.GenerateToken(emailUser, single.Company.Id, single.Role, single.UserName),
+                NeedsSlugSetup = string.IsNullOrWhiteSpace(single.Company.Slug)
             });
         }
 
-        private async Task<Result<LoginResponseDto>> LoginAsEmployeeAsync(LoginCommand request, Restaurant restaurant)
+        private async Task<Result<LoginResponseDto>> LoginAsEmployeeAsync(LoginCommand request, Company company)
         {
-            UserRestaurant? membership = (await _uow.UserRestaurant.GetAllAsync(
-                ur => ur.RestaurantId == restaurant.Id
+            UserBranch? membership = (await _uow.UserBranch.GetAllAsync(
+                ur => ur.Branch.CompanyId == company.Id
                    && ur.UserName == request.UserName
                    && !ur.IsDeleted
                    && !ur.User.IsDeleted,
@@ -98,11 +98,11 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
-                Token = _jwtTokenGenerator.GenerateToken(membership.User, restaurant.Id, membership.Role, membership.UserName)
+                Token = _jwtTokenGenerator.GenerateToken(membership.User, membership.BranchId, membership.Role, membership.UserName)
             });
         }
 
-        private async Task<Result<LoginResponseDto>> LoginAsOwnerAsync(LoginCommand request, Restaurant restaurant)
+        private async Task<Result<LoginResponseDto>> LoginAsOwnerAsync(LoginCommand request, Company company)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
@@ -115,12 +115,12 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
-            if (restaurant.OwnerUserId != user.Id)
+            if (company.OwnerUserId != user.Id)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
-                Token = _jwtTokenGenerator.GenerateToken(user, restaurant.Id, UserRole.Owner, user.Email!)
+                Token = _jwtTokenGenerator.GenerateToken(user, company.Id, UserRole.Owner, user.Email!)
             });
         }
     }

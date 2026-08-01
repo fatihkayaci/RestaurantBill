@@ -6,6 +6,6 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetTableById
 {
     public class GetTableByIdQuery : IRequest<Result<TableDto>> 
     {
-        public int TableId { get; set; }
+        public Guid TableId { get; set; }
     }
 }

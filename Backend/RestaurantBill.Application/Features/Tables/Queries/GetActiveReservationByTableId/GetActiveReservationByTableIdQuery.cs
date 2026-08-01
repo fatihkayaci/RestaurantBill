@@ -6,6 +6,6 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetActiveReservatio
 {
     public class GetActiveReservationByTableIdQuery : IRequest<Result<ReservationDto>>
     {
-        public int TableId { get; set; }
+        public Guid TableId { get; set; }
     }
 }

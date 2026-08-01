@@ -6,7 +6,7 @@ namespace RestaurantBill.Application.Features.Regions.Commands.UpdateRegion
 {
     public class UpdateRegionCommand : IRequest<Result>, IInvalidatesCache
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public required string Name { get; set; }
 
         public string[] CacheKeysToInvalidate => ["regions:all"];

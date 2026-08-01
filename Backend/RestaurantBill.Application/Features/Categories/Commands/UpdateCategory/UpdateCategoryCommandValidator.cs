@@ -6,7 +6,7 @@ public class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategoryCo
     public UpdateCategoryCommandValidator()
     {
         RuleFor(x => x.Id)
-            .GreaterThan(0).WithMessage("Geçerli bir kategori seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir kategori seçilmelidir.");
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Kategori adı boş olamaz.")

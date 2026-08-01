@@ -6,7 +6,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CancelOrder
 {
     public class CancelOrderCommand : IRequest<Result>, IIdempotent
     {
-        public int OrderId { get; set; }
+        public Guid OrderId { get; set; }
 
         public string IdempotencyKey => $"cancel-order:{OrderId}";
     }

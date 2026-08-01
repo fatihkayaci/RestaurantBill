@@ -6,7 +6,7 @@ namespace RestaurantBill.Application.Features.Categories.Commands.DeleteCategory
 {
     public class DeleteCategoryCommand : IRequest<Result>, IInvalidatesCache
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
         public string[] CacheKeysToInvalidate => ["categories:all"];
     }

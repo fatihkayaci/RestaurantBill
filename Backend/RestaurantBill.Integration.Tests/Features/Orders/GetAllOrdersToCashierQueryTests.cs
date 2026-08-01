@@ -14,10 +14,10 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
         _handler = new GetAllOrdersToCashierQueryHandler(UnitOfWork, CurrentUser);
     }
 
-    private async Task<Table> SeedTableAsync(int restaurantId)
+    private async Task<Table> SeedTableAsync(Guid restaurantId)
     {
-        var table = Table.Create("Masa", "", restaurantId);
-        table.AssignRegion(restaurantId == RestaurantId ? DefaultRegionId : OtherDefaultRegionId);
+        Guid regionId = restaurantId == RestaurantId ? DefaultRegionId : OtherDefaultRegionId;
+        var table = Table.Create("Masa", "", regionId);
         await DbContext.Tables.AddAsync(table);
         await DbContext.SaveChangesAsync();
         return table;
