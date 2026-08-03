@@ -15,7 +15,7 @@ import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
-import { CheckCircle, Landmark, X, Pencil } from 'lucide-react';
+import { CheckCircle, Check, Landmark, X, Pencil } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
 import axios from "axios";
@@ -102,6 +102,7 @@ export default function Tables() {
     const [regions, setRegions] = useState<Region[]>([]);
     const [selectedRegionId, setSelectedRegionId] = useState<string | 'all'>('all');
     const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
+    const [isAddingRegion, setIsAddingRegion] = useState(false);
     const [editRegion, setEditRegion] = useState<Region | null>(null);
     const [newRegionName, setNewRegionName] = useState('');
     const [regionFieldError, setRegionFieldError] = useState('');
@@ -177,8 +178,8 @@ export default function Tables() {
         connection.on("TableStatusChanged", (changedTableId: string, status: number) => {
             setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, status } : t));
         });
-        connection.on("OrderUpdated", (changedTableId: string, totalPrice: number) => {
-            setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, activeOrderTotal: totalPrice } : t));
+        connection.on("OrderUpdated", (changedTableId: string, totalPrice: number, createdByUserName: string) => {
+            setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, activeOrderTotal: totalPrice, createdByUserName } : t));
             if (selectedTableIdRef.current === changedTableId) {
                 orderService.getOrderByTableId(changedTableId).then(data => { if (data) setTableOrder(data); });
             }
@@ -246,15 +247,31 @@ export default function Tables() {
         }
     };
 
-    const openRegionModal = (region?: Region) => {
-        setEditRegion(region ?? null);
-        setNewRegionName(region?.name ?? '');
+    const openRegionModal = (region: Region) => {
+        setEditRegion(region);
+        setNewRegionName(region.name);
         setRegionFieldError('');
         setIsRegionModalOpen(true);
     };
 
+    const startAddRegion = () => {
+        setEditRegion(null);
+        setNewRegionName('');
+        setRegionFieldError('');
+        setIsAddingRegion(true);
+    };
+
+    const cancelAddRegion = () => {
+        setIsAddingRegion(false);
+        setNewRegionName('');
+    };
+
     const handleSaveRegion = async () => {
-        if (!newRegionName.trim()) { setRegionFieldError('Bölge adı boş olamaz.'); return; }
+        if (!newRegionName.trim()) {
+            if (isAddingRegion) { toast.error('Bölge adı boş olamaz.'); return; }
+            setRegionFieldError('Bölge adı boş olamaz.');
+            return;
+        }
         setRegionFieldError('');
         setSavingRegion(true);
         try {
@@ -265,9 +282,13 @@ export default function Tables() {
             }
             await refreshRegions();
             setIsRegionModalOpen(false);
+            setIsAddingRegion(false);
+            setNewRegionName('');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setRegionFieldError(err.response?.data?.error ?? err.response?.data?.message ?? 'Bölge kaydedilemedi.');
+                const message = err.response?.data?.error ?? err.response?.data?.message ?? 'Bölge kaydedilemedi.';
+                if (isAddingRegion) toast.error(message);
+                else setRegionFieldError(message);
             }
         } finally {
             setSavingRegion(false);
@@ -577,12 +598,41 @@ export default function Tables() {
                         </button>
                     </div>
                 ))}
-                <button
-                    onClick={() => openRegionModal()}
-                    className="px-4 py-1.5 rounded-full text-sm font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
-                >
-                    + Bölge Ekle
-                </button>
+                {isAddingRegion ? (
+                    <div className="flex items-center gap-1.5">
+                        <input
+                            autoFocus
+                            value={newRegionName}
+                            onChange={e => setNewRegionName(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') handleSaveRegion();
+                                if (e.key === 'Escape') cancelAddRegion();
+                            }}
+                            placeholder="Bölge adı..."
+                            className="px-4 py-1.5 rounded-full text-sm border border-rb-accent bg-background text-foreground focus:outline-none w-40"
+                        />
+                        <button
+                            onClick={handleSaveRegion}
+                            disabled={savingRegion}
+                            className="p-1.5 rounded-full bg-rb-green-bg text-rb-green hover:opacity-80 transition-colors disabled:opacity-50"
+                        >
+                            <Check className="h-4 w-4" />
+                        </button>
+                        <button
+                            onClick={cancelAddRegion}
+                            className="p-1.5 rounded-full bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={startAddRegion}
+                        className="px-4 py-1.5 rounded-full text-sm font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                    >
+                        + Bölge Ekle
+                    </button>
+                )}
             </div>
 
             {/* Table Grid — waiter tarafındaki tasarımla aynı renk/hover davranışı */}
