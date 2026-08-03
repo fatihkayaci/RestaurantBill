@@ -16,7 +16,7 @@ interface Counts {
 const FILTER_CONFIG = [
     { key: 'all'      as FilterType, label: (c: Counts) => `Tümü (${c.total})`,       activeClass: 'bg-rb-accent text-white' },
     { key: 'empty'    as FilterType, label: (c: Counts) => `Boş (${c.empty})`,         activeClass: 'bg-rb-green text-white' },
-    { key: 'occupied' as FilterType, label: (c: Counts) => `Dolu (${c.occupied})`,     activeClass: 'bg-rb-red text-white' },
+    { key: 'occupied' as FilterType, label: (c: Counts) => `Dolu (${c.occupied})`,     activeClass: 'bg-rb-orange text-white' },
     { key: 'reserved' as FilterType, label: (c: Counts) => `Rezerve (${c.reserved})`, activeClass: 'bg-rb-amber text-white' },
 ];
 
@@ -29,14 +29,14 @@ const STATUS_CARD = {
         label:  'BOŞ',
     },
     2: {
-        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,96,96,0.05)]',
-        border: 'border-[#f5c5aa] dark:border-rb-red/25',
-        badge:  'bg-rb-red-bg text-rb-red',
+        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,120,64,0.05)]',
+        border: 'border-[#f5c5aa] dark:border-rb-orange/25',
+        badge:  'bg-rb-orange-bg text-rb-orange',
         hint:   'text-muted-foreground',
         label:  'DOLU',
     },
     3: {
-        bg:     'bg-white dark:bg-[rgba(232,184,53,0.05)]',
+        bg:     'bg-[#F5EEDA] dark:bg-[rgba(232,184,53,0.05)]',
         border: 'border-[#f0d98a] dark:border-rb-amber/25',
         badge:  'bg-rb-amber-bg text-rb-amber',
         hint:   'text-rb-amber font-medium',
@@ -218,7 +218,7 @@ export default function WaiterTablesPage() {
                     </div>
                     <div className="w-px h-4.5 bg-border mx-0.5" />
                     <div className="flex items-center gap-1.5">
-                        <span className="font-serif text-xl font-bold leading-none text-rb-red">{counts.occupied}</span>
+                        <span className="font-serif text-xl font-bold leading-none text-rb-orange">{counts.occupied}</span>
                         <span className="text-xs text-muted-foreground">Dolu</span>
                     </div>
                     <div className="w-px h-4.5 bg-border mx-0.5" />

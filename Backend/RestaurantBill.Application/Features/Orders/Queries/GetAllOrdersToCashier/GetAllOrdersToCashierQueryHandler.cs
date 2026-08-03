@@ -32,7 +32,16 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashi
                 "OrderItems,OrderItems.Product,Table"
             );
 
-            return Result<List<OrderDto>>.Success(entities.Select(o => o.ToDto()).ToList());
+            var creatorIds = entities.Select(o => o.CreatedUser).Distinct().ToList();
+            var creators = await _uow.User.GetAllAsync(u => creatorIds.Contains(u.Id));
+            var creatorNameById = creators.ToDictionary(u => u.Id, u => u.FullName);
+
+            return Result<List<OrderDto>>.Success(entities.Select(o =>
+            {
+                var dto = o.ToDto();
+                dto.CreatedByUserName = creatorNameById.GetValueOrDefault(o.CreatedUser, string.Empty);
+                return dto;
+            }).ToList());
         }
     }
 }

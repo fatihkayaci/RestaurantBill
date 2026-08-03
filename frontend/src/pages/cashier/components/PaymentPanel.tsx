@@ -23,18 +23,23 @@ interface Props {
 export default function PaymentPanel({ order, onClose, onComplete }: Props) {
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('kart');
     const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
+    const [selectedRegisterId, setSelectedRegisterId] = useState<number | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         cashRegisterService.getCashRegisters()
-            .then(data => setCashRegisters(data.filter(r => r.status === 1)))
+            .then(data => {
+                const open = data.filter(r => r.status === 1);
+                setCashRegisters(open);
+                setSelectedRegisterId(open[0]?.id ?? null);
+            })
             .catch(() => {});
     }, []);
 
     const handleComplete = async () => {
-        const register = cashRegisters[0];
+        const register = cashRegisters.find(r => r.id === selectedRegisterId);
         if (!register) {
-            toast.error('Açık kasa bulunamadı.');
+            toast.error('Ödeme almak için bir kasa seçin.');
             return;
         }
         try {
@@ -99,6 +104,23 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                 <p className="text-xs text-muted-foreground mb-5">KDV Dahil</p>
 
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+                    Kasa
+                </p>
+                {cashRegisters.length === 0 ? (
+                    <p className="text-sm text-muted-foreground mb-5">Açık kasa bulunamadı.</p>
+                ) : (
+                    <select
+                        value={selectedRegisterId ?? ''}
+                        onChange={e => setSelectedRegisterId(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground mb-5 focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                        {cashRegisters.map(register => (
+                            <option key={register.id} value={register.id}>{register.name}</option>
+                        ))}
+                    </select>
+                )}
+
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
                     Ödeme Yöntemi
                 </p>
                 <div className="grid grid-cols-3 gap-2 mb-5">
@@ -119,7 +141,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
 
                 <button
                     onClick={handleComplete}
-                    disabled={submitting}
+                    disabled={submitting || !selectedRegisterId}
                     className="w-full bg-rb-green hover:opacity-90 disabled:opacity-50 text-white font-semibold rounded-xl py-3.5 text-sm transition-colors"
                 >
                     {submitting ? 'İşleniyor...' : 'Ödemeyi Tamamla ✓'}
