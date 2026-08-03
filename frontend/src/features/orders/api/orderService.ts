@@ -40,7 +40,7 @@ export const orderService = {
         });
         return response.data;
     },
-    removeOrderItem: async (productId: number, orderId: number) => {
+    removeOrderItem: async (productId: string, orderId: number) => {
         const response = await api.post(`/order/item/remove`, {
             ProductId: productId,
             OrderId: orderId
@@ -55,7 +55,7 @@ export const orderService = {
         const response = await api.post(`/order/${orderId}/item/${itemId}/status`, { status });
         return response.data;
     },
-    updateOrderItemQuantity: async (orderId: number, productId: number, quantity: number) => {
+    updateOrderItemQuantity: async (orderId: number, productId: string, quantity: number) => {
         const response = await api.post(`/order/item/quantity`, {
             orderId,
             productId,

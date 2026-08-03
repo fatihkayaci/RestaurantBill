@@ -25,7 +25,7 @@ export const productService = {
             CategoryId: form.categoryId
         });
     },
-    deleteProduct: async (id: number) => {
+    deleteProduct: async (id: string) => {
         await api.delete(`/product/${id}`);
     },
 };

@@ -1,16 +1,17 @@
 export interface Table {
-    id: number;
+    id: string;
     name: string;
     status: number;
     activeOrderTotal: number;
     occupiedSince: string | null;
-    regionId: number;
+    createdByUserName: string;
+    regionId: string;
     regionName: string;
 }
 
 export interface Reservation {
-    id: number;
-    tableId: number;
+    id: string;
+    tableId: string;
     guestName: string;
     contact: string;
     reservationTime: string;

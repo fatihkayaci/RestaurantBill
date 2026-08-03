@@ -12,8 +12,8 @@ using RestaurantBill.Persistence.Context;
 namespace RestaurantBill.Persistence.Migrations
 {
     [DbContext(typeof(RestaurantBillDbContext))]
-    [Migration("20260801132758_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260802203515_changed created user type")]
+    partial class changedcreatedusertype
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -45,8 +45,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("District")
                         .IsRequired()
@@ -96,8 +96,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -134,8 +134,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -171,8 +171,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -200,8 +200,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -239,8 +239,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
@@ -276,8 +276,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -314,8 +314,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -359,8 +359,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
@@ -403,8 +403,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -436,8 +436,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("GuestName")
                         .IsRequired()
@@ -478,8 +478,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -517,8 +517,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -562,8 +562,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -615,8 +615,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");

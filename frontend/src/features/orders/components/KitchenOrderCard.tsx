@@ -28,7 +28,7 @@ function splitIntoBatches(items: OrderItem[]): OrderItem[][] {
 }
 
 function mergeByProduct(items: OrderItem[]): OrderItem[] {
-    const map = new Map<number, OrderItem>();
+    const map = new Map<string, OrderItem>();
     for (const item of items) {
         const existing = map.get(item.productId);
         if (existing) {

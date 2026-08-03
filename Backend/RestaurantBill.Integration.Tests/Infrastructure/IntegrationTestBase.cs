@@ -26,9 +26,9 @@ public abstract class IntegrationTestBase : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
-        DbContext = new RestaurantBillDbContext(options);
-        UnitOfWork = new UnitOfWork(DbContext);
         CurrentUser = new FakeCurrentUserService { BranchId = RestaurantId, UserId = UserId };
+        DbContext = new RestaurantBillDbContext(options, CurrentUser);
+        UnitOfWork = new UnitOfWork(DbContext);
 
         Region defaultRegion = Region.Create("Genel", RestaurantId);
         Region otherDefaultRegion = Region.Create("Genel", OtherRestaurantId);

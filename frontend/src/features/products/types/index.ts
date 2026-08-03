@@ -1,9 +1,9 @@
 export interface Product {
-    id: number;
+    id: string;
     name: string;
     price: number;
     isActive: boolean;
-    categoryId: number;
+    categoryId: string;
     categoryName: string;
 }
 
@@ -11,13 +11,13 @@ export interface CreateProduct {
     name: string;
     price: number;
     isActive: boolean;
-    categoryId: number;
+    categoryId: string;
 }
 
 export interface UpdateProduct {
-    id: number;
+    id: string;
     name: string;
     price: number;
     isActive: boolean;
-    categoryId: number;
+    categoryId: string;
 }

@@ -31,7 +31,7 @@ function formatTimeDigits(rawValue: string): string {
 }
 
 interface CartItem {
-    productId: number;
+    productId: string;
     productName: string;
     unitPrice: number;
     quantity: number;
@@ -46,14 +46,14 @@ const STATUS_CONFIG = {
 interface Props {
     table: Table;
     onClose: () => void;
-    onTableUpdated?: (tableId: number, status: number) => void;
+    onTableUpdated?: (tableId: string, status: number) => void;
 }
 
 export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
     const [activeTab, setActiveTab] = useState<PanelTab>('new-order');
     const [categories, setCategories] = useState<Category[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
-    const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
     const [activeOrder, setActiveOrder] = useState<Order | null>(null);
     const [cart, setCart] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -144,11 +144,11 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             }).catch(() => {});
         };
 
-        connection.on('OrderUpdated', (changedTableId: number) => {
+        connection.on('OrderUpdated', (changedTableId: string) => {
             if (changedTableId === table.id) refreshOrder();
         });
 
-        connection.on('OrderClosed', (changedTableId: number) => {
+        connection.on('OrderClosed', (changedTableId: string) => {
             if (changedTableId === table.id) setActiveOrder(null);
         });
 
@@ -167,7 +167,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
         p.isActive && (selectedCategoryId === null || p.categoryId === selectedCategoryId)
     );
 
-    const getCartQty = (productId: number) =>
+    const getCartQty = (productId: string) =>
         cart.find(c => c.productId === productId)?.quantity ?? 0;
 
     const addToCart = (product: Product) => {
@@ -178,7 +178,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
         });
     };
 
-    const decreaseCart = (productId: number) => {
+    const decreaseCart = (productId: string) => {
         setCart(prev => {
             const existing = prev.find(c => c.productId === productId);
             if (!existing) return prev;

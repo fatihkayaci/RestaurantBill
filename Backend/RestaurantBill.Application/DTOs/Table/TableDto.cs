@@ -9,6 +9,7 @@ public class TableDto
     public TableStatus Status { get; set; }
     public decimal ActiveOrderTotal { get; set; }
     public DateTime? OccupiedSince { get; set; }
+    public string CreatedByUserName { get; set; } = string.Empty;
     public Guid RegionId { get; set; }
     public string RegionName { get; set; } = string.Empty;
 }

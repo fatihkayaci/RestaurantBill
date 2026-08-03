@@ -35,6 +35,11 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
             var totalsByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.TotalPrice);
             var occupiedSinceByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.CreatedAt);
 
+            var creatorIds = activeOrders.Select(o => o.CreatedUser).Distinct().ToList();
+            var creators = await _uow.User.GetAllAsync(u => creatorIds.Contains(u.Id));
+            var creatorNameById = creators.ToDictionary(u => u.Id, u => u.FullName);
+            var creatorNameByTableId = activeOrders.ToDictionary(o => o.TableId, o => creatorNameById.GetValueOrDefault(o.CreatedUser, string.Empty));
+
             return Result<List<TableDto>>.Success(entities
                 .OrderBy(t => t.Name)
                 .Select(t =>
@@ -42,6 +47,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
                     var dto = t.ToDto();
                     dto.ActiveOrderTotal = totalsByTableId.GetValueOrDefault(t.Id);
                     dto.OccupiedSince = occupiedSinceByTableId.TryGetValue(t.Id, out var createdAt) ? createdAt : null;
+                    dto.CreatedByUserName = creatorNameByTableId.GetValueOrDefault(t.Id, string.Empty);
                     return dto;
                 })
                 .ToList());

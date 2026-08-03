@@ -16,7 +16,7 @@ export default function CategoriesPanel() {
     const [editCategory, setEditCategory] = useState<Category | null>(null);
     const [name, setName] = useState('');
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
     useEffect(() => {

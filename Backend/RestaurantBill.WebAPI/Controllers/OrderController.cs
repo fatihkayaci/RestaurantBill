@@ -48,7 +48,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="tableId">Table ID</param>
         /// <param name="cancellationToken"></param>
         [Authorize(Roles = "Owner,Admin,Waiter,Kitchen")]
-        [HttpGet("table/{tableId:int}")]
+        [HttpGet("table/{tableId:guid}")]
         public async Task<IActionResult> GetActiveOrderByTableId([FromRoute]Guid tableId, CancellationToken cancellationToken)
         {
             var query = new GetActiveOrderByTableIdQuery{TableId = tableId};
