@@ -40,9 +40,11 @@ public static class MappingExtensions
     {
         Id = o.Id,
         TableId = o.TableId,
+        TableName = o.Table?.Name ?? string.Empty,
         Note = o.Note,
         TotalPrice = o.TotalPrice,
         Status = o.Status,
+        CreatedAt = o.CreatedAt,
         OrderItems = o.OrderItems.Select(i => i.ToDto()).ToList()
     };
 

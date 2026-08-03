@@ -1,4 +1,5 @@
 using FluentValidation;
+using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemStatus;
 
@@ -13,6 +14,7 @@ public class UpdateOrderItemStatusCommandValidator : AbstractValidator<UpdateOrd
             .NotEqual(Guid.Empty).WithMessage("Geçerli bir sipariş kalemi seçilmelidir.");
 
         RuleFor(x => x.Status)
-            .IsInEnum().WithMessage("Geçerli bir durum seçilmelidir.");
+            .Must(s => Enum.IsDefined(typeof(OrderItemStatus), s))
+            .WithMessage("Geçerli bir durum seçilmelidir.");
     }
 }

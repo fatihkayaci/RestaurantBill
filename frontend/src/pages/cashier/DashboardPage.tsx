@@ -124,7 +124,7 @@ export default function CashierDashboardPage() {
                                 >
                                     <div className="flex items-start justify-between">
                                         <span className="font-serif font-bold text-lg text-foreground">
-                                            Masa {order.tableId}
+                                            Masa {order.tableName}
                                         </span>
                                         <span className="text-xs text-muted-foreground">— kişilik</span>
                                     </div>

@@ -29,7 +29,7 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashi
             var entities = await _uow.Order.GetAllAsync(
                 o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.Table.Region.BranchId == restaurantId,
                 false,
-                "OrderItems,OrderItems.Product"
+                "OrderItems,OrderItems.Product,Table"
             );
 
             return Result<List<OrderDto>>.Success(entities.Select(o => o.ToDto()).ToList());
