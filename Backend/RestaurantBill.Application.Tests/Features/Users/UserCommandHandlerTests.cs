@@ -53,7 +53,7 @@ public class UserCommandHandlerTests
             Branch branch = CreateBranchWithId(branchId);
             await uow.RestaurantRepo.AddAsync(branch);
 
-            User existing = User.Create("Ali Veli", null, null);
+            User existing = User.Create("Ali Veli", "", "");
             await uow.UserRepo.AddAsync(existing);
             await uow.UserRestaurantRepo.AddAsync(UserBranch.Create(existing, branch, "fatih", "USR01", UserRole.Waiter));
 
@@ -78,7 +78,7 @@ public class UserCommandHandlerTests
         public async Task Handle_WithExistingUser_MarksAsDeletedAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            User user = User.Create("Fatih", null, null);
+            User user = User.Create("Fatih", "", "");
             await uow.UserRepo.AddAsync(user);
 
             var handler = new DeleteUserCommandHandler(uow);
@@ -107,12 +107,12 @@ public class UserCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             Branch branch = CreateBranchWithId(Guid.NewGuid());
-            User user = User.Create("Eski Ad", null, null);
+            User user = User.Create("Eski Ad", "", "");
             await uow.UserRepo.AddAsync(user);
             UserBranch userBranch = UserBranch.Create(user, branch, "eski", "OLD01", UserRole.Waiter);
             await uow.UserRestaurantRepo.AddAsync(userBranch);
 
-            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService());
+            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService { Role = "Owner" });
             var command = new UpdateUserCommand
             {
                 UserId = user.Id,
@@ -135,7 +135,7 @@ public class UserCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             Branch branch = CreateBranchWithId(Guid.NewGuid());
-            User user = User.Create("Fatih", null, null);
+            User user = User.Create("Fatih", "", "");
             await uow.UserRepo.AddAsync(user);
             await uow.UserRestaurantRepo.AddAsync(UserBranch.Create(user, branch, "fatih", "USR01", UserRole.Waiter));
 

@@ -13,7 +13,7 @@ namespace RestaurantBill.Persistence.Migrations
 {
     [DbContext(typeof(RestaurantBillDbContext))]
     [Migration("20260802203515_changed created user type")]
-    partial class changedcreatedusertype
+    partial class ChangedCreatedUserType
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

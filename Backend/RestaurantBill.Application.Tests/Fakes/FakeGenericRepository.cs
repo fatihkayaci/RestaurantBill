@@ -16,7 +16,7 @@ public class FakeGenericRepository<T> : IGenericRepository<T> where T : BaseEnti
         => Task.FromResult(Data.FirstOrDefault(e => e.Id == id));
 
     public Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool trackChanges = false, string? includeProperties = null)
-        => Task.FromResult(Data.AsEnumerable());
+        => Task.FromResult(filter != null ? Data.Where(filter.Compile()) : Data.AsEnumerable());
 
     public IReadOnlyList<T> Added => Data;
 }

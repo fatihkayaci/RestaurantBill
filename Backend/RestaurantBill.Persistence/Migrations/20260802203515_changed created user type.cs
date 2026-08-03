@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace RestaurantBill.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class changedcreatedusertype : Migration
+    public partial class ChangedCreatedUserType : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

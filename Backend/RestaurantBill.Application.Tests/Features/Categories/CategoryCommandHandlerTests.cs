@@ -82,8 +82,9 @@ public class CategoryCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             Category existing = Category.Create("İçecekler", Guid.NewGuid());
+            typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(existing, Guid.NewGuid());
             await uow.CategoryRepo.AddAsync(existing);
-            await uow.ProductRepo.AddAsync(Product.Create("Çay", 10m, "img.png", Guid.NewGuid()));
+            await uow.ProductRepo.AddAsync(Product.Create("Çay", 10m, "img.png", existing.Id));
 
             var handler = new DeleteCategoryCommandHandler(uow);
             var command = new DeleteCategoryCommand { Id = existing.Id };
