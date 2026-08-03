@@ -214,9 +214,12 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             const payload: Order = {
                 id: orderId,
                 tableId: table.id,
+                tableName: table.name,
                 note: orderNote,
                 totalPrice: cartTotal,
                 status: 1,
+                createdAt: new Date().toISOString(),
+                createdByUserName: '',
                 orderItems: cart.map(c => ({
                     id: 0,
                     productId: c.productId,
