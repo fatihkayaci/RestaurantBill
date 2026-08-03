@@ -22,13 +22,24 @@ interface OrderGroup {
     colStatus: number;
 }
 
+const URGENT_THRESHOLD_MINUTES = 30;
+
+function formatElapsed(createdAt: string, now: number): string {
+    const minutes = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 60000));
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
+}
+
 /* ── Tek kart bileşeni ── */
 function KitchenCard({
     group,
+    now,
     onItemUpdate,
     onBulkUpdate,
 }: {
     group: OrderGroup;
+    now: number;
     onItemUpdate: (orderId: number, itemId: number, newStatus: number) => void;
     onBulkUpdate: (orderId: number, newOrderStatus: number) => void;
 }) {
@@ -42,17 +53,27 @@ function KitchenCard({
 
     const itemNextStatus = colStatus === 1 ? 2 : colStatus === 2 ? 3 : null;
 
+    const elapsedMinutes = Math.max(0, Math.floor((now - new Date(order.createdAt).getTime()) / 60000));
+    const isUrgent = elapsedMinutes >= URGENT_THRESHOLD_MINUTES;
+
     return (
-        <div className="bg-background border rounded-2xl overflow-hidden">
+        <div className={`bg-background border rounded-2xl overflow-hidden ${isUrgent ? 'border-rb-amber/40' : ''}`}>
             {/* Kart başlığı */}
             <div className="px-4 pt-4 pb-3 flex items-start justify-between">
                 <div>
                     <p className="font-serif font-bold text-lg text-foreground leading-none">
-                        Masa {order.tableId}
+                        Masa {order.tableName}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">— · 0dk</p>
+                    {order.createdByUserName && (
+                        <p className="text-xs text-muted-foreground mt-1">{order.createdByUserName}</p>
+                    )}
                 </div>
-                <span className="text-xs text-muted-foreground">0dk</span>
+                <span className={isUrgent
+                    ? 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-rb-amber-bg text-rb-amber'
+                    : 'text-xs text-muted-foreground'
+                }>
+                    {formatElapsed(order.createdAt, now)}
+                </span>
             </div>
 
             {/* Ürün listesi */}
@@ -98,12 +119,12 @@ function KitchenCard({
 }
 
 /* ── Column başlığı ── */
-function ColumnHeader({ dot, label, count }: { dot: string; label: string; count: number }) {
+function ColumnHeader({ dot, text, bg, label, count }: { dot: string; text: string; bg: string; label: string; count: number }) {
     return (
-        <div className="sticky top-0 z-10 flex items-center gap-2 px-5 py-3 bg-background/95 backdrop-blur-sm border-b mb-0">
+        <div className={`sticky top-0 z-10 flex items-center gap-2 px-5 py-3 backdrop-blur-sm border-b mb-0 ${bg}`}>
             <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
-            <span className="text-xs font-bold tracking-widest uppercase text-muted-foreground">{label}</span>
-            <span className="ml-auto text-xs font-bold text-muted-foreground">{count}</span>
+            <span className={`text-xs font-bold tracking-widest uppercase ${text}`}>{label}</span>
+            <span className={`ml-auto text-xs font-bold ${text}`}>{count}</span>
         </div>
     );
 }
@@ -120,6 +141,12 @@ function StatsChip({ label, count, color }: { label: string; count: number; colo
 
 export default function KitchenDashboardPage() {
     const [orders, setOrders] = useState<Order[]>([]);
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const orderGroups: OrderGroup[] = orders.flatMap(order => {
         return [1, 2, 3].map(s => ({
@@ -237,13 +264,13 @@ export default function KitchenDashboardPage() {
             <div className="flex-1 grid grid-cols-3 divide-x divide-border overflow-hidden">
                 {/* BEKLIYOR */}
                 <div className="overflow-y-auto flex flex-col">
-                    <ColumnHeader dot="bg-rb-amber" label="Bekliyor" count={pendingGroups.length} />
+                    <ColumnHeader dot="bg-rb-amber" text="text-rb-amber" bg="bg-rb-amber-bg" label="Bekliyor" count={pendingGroups.length} />
                     <div className="p-4 space-y-3 flex-1">
                         {pendingGroups.length === 0 ? (
                             <p className="text-xs text-muted-foreground text-center py-8">Bekleyen sipariş yok</p>
                         ) : (
                             pendingGroups.map(g => (
-                                <KitchenCard key={`${g.order.id}-pending`} group={g} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
+                                <KitchenCard key={`${g.order.id}-pending`} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
                             ))
                         )}
                     </div>
@@ -251,13 +278,13 @@ export default function KitchenDashboardPage() {
 
                 {/* HAZIRLANIYOR */}
                 <div className="overflow-y-auto flex flex-col">
-                    <ColumnHeader dot="bg-rb-accent" label="Hazırlanıyor" count={preparingGroups.length} />
+                    <ColumnHeader dot="bg-rb-accent" text="text-rb-accent" bg="bg-rb-accent-bg" label="Hazırlanıyor" count={preparingGroups.length} />
                     <div className="p-4 space-y-3 flex-1">
                         {preparingGroups.length === 0 ? (
                             <p className="text-xs text-muted-foreground text-center py-8">Hazırlanan sipariş yok</p>
                         ) : (
                             preparingGroups.map(g => (
-                                <KitchenCard key={`${g.order.id}-preparing`} group={g} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
+                                <KitchenCard key={`${g.order.id}-preparing`} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
                             ))
                         )}
                     </div>
@@ -265,13 +292,13 @@ export default function KitchenDashboardPage() {
 
                 {/* HAZIR */}
                 <div className="overflow-y-auto flex flex-col">
-                    <ColumnHeader dot="bg-rb-green" label="Hazır" count={readyGroups.length} />
+                    <ColumnHeader dot="bg-rb-green" text="text-rb-green" bg="bg-rb-green-bg" label="Hazır" count={readyGroups.length} />
                     <div className="p-4 space-y-3 flex-1">
                         {readyGroups.length === 0 ? (
                             <p className="text-xs text-muted-foreground text-center py-8">Hazır sipariş yok</p>
                         ) : (
                             readyGroups.map(g => (
-                                <KitchenCard key={`${g.order.id}-ready`} group={g} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
+                                <KitchenCard key={`${g.order.id}-ready`} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
                             ))
                         )}
                     </div>

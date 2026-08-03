@@ -57,7 +57,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="text-xl font-serif font-bold text-foreground">
-                            Masa {order.tableId} — Hesap
+                            Masa {order.tableName} — Hesap
                         </h2>
                         <p className="text-sm text-muted-foreground mt-1">— · 0dk</p>
                     </div>

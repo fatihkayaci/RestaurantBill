@@ -11,8 +11,11 @@ export interface OrderItem {
 export interface Order {
     id: number;
     tableId: string;
+    tableName: string;
     note: string;
     totalPrice: number;
     status: number;
+    createdAt: string;
+    createdByUserName: string;
     orderItems: OrderItem[];
 }
