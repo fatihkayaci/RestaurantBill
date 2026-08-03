@@ -25,7 +25,9 @@ public class UserCommandHandlerTests
             Guid branchId = Guid.NewGuid();
             await uow.RestaurantRepo.AddAsync(CreateBranchWithId(branchId));
 
-            var handler = new CreateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService { BranchId = branchId });
+            var currentUser = new FakeCurrentUserService { BranchId = branchId };
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new CreateUserCommandHandler(uow, new FakePasswordHasher(), currentUser);
             var command = new CreateUserCommand
             {
                 FullName = "Fatih Kayacı",
@@ -37,8 +39,8 @@ public class UserCommandHandlerTests
 
             await handler.Handle(command, CancellationToken.None);
 
-            Assert.Single(uow.UserRepo.Added);
-            Assert.Equal("hashed_123456", uow.UserRepo.Added[0].PasswordHash);
+            Assert.Equal(2, uow.UserRepo.Added.Count);
+            Assert.Equal("hashed_123456", uow.UserRepo.Added[1].PasswordHash);
             Assert.Single(uow.UserRestaurantRepo.Added);
             Assert.Equal("fatih", uow.UserRestaurantRepo.Added[0].UserName);
             Assert.Equal(UserRole.Waiter, uow.UserRestaurantRepo.Added[0].Role);
@@ -81,7 +83,7 @@ public class UserCommandHandlerTests
             User user = User.Create("Fatih", "", "");
             await uow.UserRepo.AddAsync(user);
 
-            var handler = new DeleteUserCommandHandler(uow);
+            var handler = new DeleteUserCommandHandler(uow, new FakeCurrentUserService());
             await handler.Handle(new DeleteUserCommand { UserId = user.Id }, CancellationToken.None);
 
             Assert.True(user.IsDeleted);
@@ -92,7 +94,7 @@ public class UserCommandHandlerTests
         public async Task Handle_WithNonExistingUser_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new DeleteUserCommandHandler(uow);
+            var handler = new DeleteUserCommandHandler(uow, new FakeCurrentUserService());
 
             var result = await handler.Handle(new DeleteUserCommand { UserId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -112,7 +114,9 @@ public class UserCommandHandlerTests
             UserBranch userBranch = UserBranch.Create(user, branch, "eski", "OLD01", UserRole.Waiter);
             await uow.UserRestaurantRepo.AddAsync(userBranch);
 
-            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService { Role = "Owner" });
+            var currentUser = new FakeCurrentUserService { Role = "Owner" };
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), currentUser);
             var command = new UpdateUserCommand
             {
                 UserId = user.Id,
@@ -139,7 +143,9 @@ public class UserCommandHandlerTests
             await uow.UserRepo.AddAsync(user);
             await uow.UserRestaurantRepo.AddAsync(UserBranch.Create(user, branch, "fatih", "USR01", UserRole.Waiter));
 
-            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService());
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), currentUser);
             var command = new UpdateUserCommand
             {
                 UserId = user.Id,

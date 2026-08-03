@@ -85,6 +85,21 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
             if (!string.IsNullOrWhiteSpace(request.Password))
                 user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));
 
+            if (userBranch is not null)
+            {
+                User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+                AuditLog log = AuditLog.Create(
+                    userBranch.BranchId,
+                    actor?.FullName ?? string.Empty,
+                    AuditLogCategory.Staff,
+                    AuditLogSeverity.Info,
+                    "StaffUpdated",
+                    $"{actor?.FullName} {user.FullName} bilgilerini güncelledi.",
+                    nameof(User),
+                    user.Id);
+                await _uow.AuditLog.AddAsync(log);
+            }
+
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }

@@ -3,6 +3,7 @@ using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
@@ -27,6 +28,19 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.CreateBranch
 
             Branch branch = Branch.Create(company.Id, request.Name, request.ManagerName, request.PhoneNumber, request.Email, request.City, request.District, request.OpenAddress);
             await _uow.Branch.AddAsync(branch);
+
+            User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+            AuditLog log = AuditLog.Create(
+                branch.Id,
+                actor?.FullName ?? string.Empty,
+                AuditLogCategory.System,
+                AuditLogSeverity.Info,
+                "BranchCreated",
+                $"{actor?.FullName} {branch.BranchName} adında yeni bir şube ekledi.",
+                nameof(Branch),
+                branch.Id);
+            await _uow.AuditLog.AddAsync(log);
+
             await _uow.SaveChangesAsync(cancellationToken);
 
             return Result<RestaurantDto>.Success(branch.ToDto());

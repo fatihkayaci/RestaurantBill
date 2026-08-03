@@ -51,7 +51,9 @@ public class OrderCommandHandlerTests
             Table table = CreateTable();
             await uow.TableRepo.AddAsync(table);
 
-            var handler = new CreateOrderCommandHandler(uow);
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new CreateOrderCommandHandler(uow, currentUser);
             var command = new CreateOrderCommand { TableId = table.Id };
 
             var result = await handler.Handle(command, CancellationToken.None);
@@ -65,7 +67,7 @@ public class OrderCommandHandlerTests
         public async Task Handle_WithNonExistingTable_ThrowsException()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new CreateOrderCommandHandler(uow);
+            var handler = new CreateOrderCommandHandler(uow, new FakeCurrentUserService());
             var result = await handler.Handle(new CreateOrderCommand { TableId = Guid.NewGuid() }, CancellationToken.None);
             Assert.False(result.IsSuccess);
         }
@@ -84,7 +86,9 @@ public class OrderCommandHandlerTests
             await uow.TableRepo.AddAsync(table);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new CancelOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new CancelOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), currentUser);
             await handler.Handle(new CancelOrderCommand { OrderId = order.Id }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Cancelled, order.Status);
@@ -116,7 +120,9 @@ public class OrderCommandHandlerTests
             await uow.TableRepo.AddAsync(table);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new CloseOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new CloseOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), currentUser);
             await handler.Handle(new DeleteCommand { OrderId = order.Id }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Paid, order.Status);
@@ -221,7 +227,9 @@ public class OrderCommandHandlerTests
             order.AddItem(OrderCommandHandlerTests.CreateProduct(), 1);
             await uow.OrderRepo.AddAsync(order);
 
-            var handler = new UpdateOrderStatusCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new UpdateOrderStatusCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), currentUser);
             await handler.Handle(new UpdateOrderStatusCommand { OrderId = order.Id, Status = (int)OrderStatus.Preparing }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Preparing, order.Status);

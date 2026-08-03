@@ -43,7 +43,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 return Result<LoginResponseDto>.Failure("Böyle bir Restaurant bulunamadı. Url i değiştirip tekrar deneyiniz");
 
             if (!string.IsNullOrWhiteSpace(request.UserName))
-                return await LoginAsEmployeeAsync(request, company);
+                return await LoginAsEmployeeAsync(request, company, cancellationToken);
 
             return await LoginAsOwnerAsync(request, company);
         }
@@ -78,7 +78,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             });
         }
 
-        private async Task<Result<LoginResponseDto>> LoginAsEmployeeAsync(LoginCommand request, Company company)
+        private async Task<Result<LoginResponseDto>> LoginAsEmployeeAsync(LoginCommand request, Company company, CancellationToken cancellationToken)
         {
             UserBranch? membership = (await _uow.UserBranch.GetAllAsync(
                 ur => ur.Branch.CompanyId == company.Id
@@ -91,10 +91,36 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
             if (_passwordHasher.VerifyHashedPassword(membership.User, membership.User.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
+            {
+                AuditLog failedLog = AuditLog.Create(
+                    membership.BranchId,
+                    membership.User.FullName,
+                    AuditLogCategory.Auth,
+                    AuditLogSeverity.Warning,
+                    "EmployeeLoginFailed",
+                    $"{membership.User.FullName} için hatalı şifre denemesi.",
+                    nameof(User),
+                    membership.UserId);
+                await _uow.AuditLog.AddAsync(failedLog);
+                await _uow.SaveChangesAsync(cancellationToken);
+
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
+            }
 
             if (!membership.IsActive)
                 return Result<LoginResponseDto>.Failure("Hesabınız pasif durumda. Giriş yapabilmek için yöneticinizle iletişime geçin.");
+
+            AuditLog log = AuditLog.Create(
+                membership.BranchId,
+                membership.User.FullName,
+                AuditLogCategory.Auth,
+                AuditLogSeverity.Info,
+                "EmployeeLogin",
+                $"{membership.User.FullName} giriş yaptı.",
+                nameof(User),
+                membership.UserId);
+            await _uow.AuditLog.AddAsync(log);
+            await _uow.SaveChangesAsync(cancellationToken);
 
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {

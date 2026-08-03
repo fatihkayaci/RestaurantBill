@@ -1,6 +1,7 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
@@ -24,6 +25,18 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranch
                 return Result.Failure("Şube bulunamadı.");
 
             branch.Update(request.Name, request.ManagerName, request.PhoneNumber, request.Email, request.City, request.District, request.OpenAddress);
+
+            User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+            AuditLog log = AuditLog.Create(
+                branch.Id,
+                actor?.FullName ?? string.Empty,
+                AuditLogCategory.System,
+                AuditLogSeverity.Info,
+                "BranchUpdated",
+                $"{actor?.FullName} {branch.BranchName} şubesini güncelledi.",
+                nameof(Branch),
+                branch.Id);
+            await _uow.AuditLog.AddAsync(log);
 
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();

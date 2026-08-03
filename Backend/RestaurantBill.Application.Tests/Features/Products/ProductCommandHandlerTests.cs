@@ -14,7 +14,9 @@ public class ProductCommandHandlerTests
         public async Task Handle_WithValidCommand_AddsProductAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new CreateProductCommandHandler(uow);
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new CreateProductCommandHandler(uow, currentUser);
             var command = new CreateProductCommand
             {
                 Name = "Çay",
@@ -40,7 +42,9 @@ public class ProductCommandHandlerTests
             Product existing = Product.Create("Eski", 10m, "img.png", Guid.NewGuid());
             await uow.ProductRepo.AddAsync(existing);
 
-            var handler = new UpdateProductCommandHandler(uow);
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new UpdateProductCommandHandler(uow, currentUser);
             var command = new UpdateProductCommand { Id = existing.Id, Name = "Yeni", Price = 25m, IsActive = false, CategoryId = Guid.NewGuid() };
 
             await handler.Handle(command, CancellationToken.None);
@@ -54,7 +58,7 @@ public class ProductCommandHandlerTests
         public async Task Handle_WithNonExistingProduct_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new UpdateProductCommandHandler(uow);
+            var handler = new UpdateProductCommandHandler(uow, new FakeCurrentUserService());
 
             var result = await handler.Handle(new UpdateProductCommand { Id = Guid.NewGuid(), Name = "Ad", Price = 10m, CategoryId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -71,7 +75,9 @@ public class ProductCommandHandlerTests
             Product existing = Product.Create("Çay", 15m, "img.png", Guid.NewGuid());
             await uow.ProductRepo.AddAsync(existing);
 
-            var handler = new DeleteProductCommandHandler(uow);
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new DeleteProductCommandHandler(uow, currentUser);
             await handler.Handle(new DeleteProductCommand { Id = existing.Id }, CancellationToken.None);
 
             Assert.Empty(uow.ProductRepo.Added);
@@ -82,7 +88,7 @@ public class ProductCommandHandlerTests
         public async Task Handle_WithNonExistingProduct_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new DeleteProductCommandHandler(uow);
+            var handler = new DeleteProductCommandHandler(uow, new FakeCurrentUserService());
 
             var result = await handler.Handle(new DeleteProductCommand { Id = Guid.NewGuid() }, CancellationToken.None);
 

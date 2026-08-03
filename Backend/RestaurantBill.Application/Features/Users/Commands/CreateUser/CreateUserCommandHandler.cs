@@ -72,6 +72,19 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
 
             await _uow.User.AddAsync(user);
             await _uow.UserBranch.AddAsync(userBranch);
+
+            User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+            AuditLog log = AuditLog.Create(
+                restaurantId,
+                actor?.FullName ?? string.Empty,
+                AuditLogCategory.Staff,
+                AuditLogSeverity.Info,
+                "StaffCreated",
+                $"{actor?.FullName} {user.FullName} adında yeni bir {request.Role} ekledi.",
+                nameof(User),
+                user.Id);
+            await _uow.AuditLog.AddAsync(log);
+
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }

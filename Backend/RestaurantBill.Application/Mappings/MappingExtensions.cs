@@ -5,6 +5,21 @@ namespace RestaurantBill.Application.Mappings;
 
 public static class MappingExtensions
 {
+    public static AuditLogDto ToDto(this AuditLog log) => new()
+    {
+        Id = log.Id,
+        BranchId = log.BranchId,
+        BranchName = log.Branch?.BranchName,
+        ActorName = log.ActorName,
+        Category = log.Category,
+        Severity = log.Severity,
+        Action = log.Action,
+        Message = log.Message,
+        EntityType = log.EntityType,
+        EntityId = log.EntityId,
+        CreatedAt = log.CreatedAt
+    };
+
     public static CashRegisterDto ToDto(this CashRegister r) => new()
     {
         Id = r.Id,

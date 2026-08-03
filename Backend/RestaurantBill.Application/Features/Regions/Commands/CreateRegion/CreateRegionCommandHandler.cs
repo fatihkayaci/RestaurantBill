@@ -1,6 +1,7 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
@@ -28,6 +29,19 @@ namespace RestaurantBill.Application.Features.Regions.Commands.CreateRegion
 
             Region region = Region.Create(command.Name, restaurantId);
             await _uow.Region.AddAsync(region);
+
+            User? actor = await _uow.User.GetByIdAsync(_userService.UserId);
+            AuditLog log = AuditLog.Create(
+                restaurantId,
+                actor?.FullName ?? string.Empty,
+                AuditLogCategory.System,
+                AuditLogSeverity.Info,
+                "RegionCreated",
+                $"{actor?.FullName} {region.Name} adında yeni bir bölge ekledi.",
+                nameof(Region),
+                region.Id);
+            await _uow.AuditLog.AddAsync(log);
+
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }

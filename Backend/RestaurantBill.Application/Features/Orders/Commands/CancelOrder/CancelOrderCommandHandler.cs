@@ -2,6 +2,7 @@ using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.Common;
 using MediatR;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Shared;
 
@@ -37,6 +38,18 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CancelOrder
 
             order.Cancel();
             table.Release();
+
+            User? actor = await _uow.User.GetByIdAsync(_currentUserService.UserId);
+            AuditLog log = AuditLog.Create(
+                _currentUserService.BranchId,
+                actor?.FullName ?? string.Empty,
+                AuditLogCategory.Order,
+                AuditLogSeverity.Warning,
+                "OrderCancelled",
+                $"{actor?.FullName} {table.Name} siparişini iptal etti.",
+                nameof(Order),
+                order.Id);
+            await _uow.AuditLog.AddAsync(log);
 
             await _uow.SaveChangesAsync(cancellationToken);
 

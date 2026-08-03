@@ -1,6 +1,7 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
@@ -27,6 +28,19 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
 
             Category category = Category.Create(command.Name, restaurantId);
             await _uow.Category.AddAsync(category);
+
+            User? actor = await _uow.User.GetByIdAsync(_userService.UserId);
+            AuditLog log = AuditLog.Create(
+                restaurantId,
+                actor?.FullName ?? string.Empty,
+                AuditLogCategory.Product,
+                AuditLogSeverity.Info,
+                "CategoryCreated",
+                $"{actor?.FullName} {category.Name} adında yeni bir kategori ekledi.",
+                nameof(Category),
+                category.Id);
+            await _uow.AuditLog.AddAsync(log);
+
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }

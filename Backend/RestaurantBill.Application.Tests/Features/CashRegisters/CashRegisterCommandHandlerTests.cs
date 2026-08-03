@@ -20,6 +20,7 @@ public class CashRegisterCommandHandlerTests
             var uow = new FakeUnitOfWork();
             Guid branchId = Guid.NewGuid();
             var currentUser = new FakeCurrentUserService { BranchId = branchId };
+            TestActor.Seed(uow, currentUser.UserId);
 
             var handler = new CreateCashRegisterHandler(uow, currentUser);
             var command = new CreateCashRegisterCommand
@@ -48,7 +49,9 @@ public class CashRegisterCommandHandlerTests
             CashRegister existing = CashRegister.Create("Eski Ad", 500m, Guid.NewGuid());
             await uow.CashRegisterRepo.AddAsync(existing);
 
-            var handler = new UpdateCashRegisterHandler(uow);
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new UpdateCashRegisterHandler(uow, currentUser);
             var command = new UpdateCashRegisterCommand
             {
                 Id = existing.Id,
@@ -71,7 +74,7 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithNonExistingRegister_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new UpdateCashRegisterHandler(uow);
+            var handler = new UpdateCashRegisterHandler(uow, new FakeCurrentUserService());
             var command = new UpdateCashRegisterCommand { Id = Guid.NewGuid(), Name = "Ad", Balance = 0m, Status = CashRegisterStatus.Open };
 
             var result = await handler.Handle(command, CancellationToken.None);
@@ -88,7 +91,9 @@ public class CashRegisterCommandHandlerTests
             CashRegister existing = CashRegister.Create("Kasa", 0m, Guid.NewGuid());
             await uow.CashRegisterRepo.AddAsync(existing);
 
-            var handler = new DeleteCashRegisterHandler(uow);
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new DeleteCashRegisterHandler(uow, currentUser);
             var command = new DeleteCashRegisterCommand { CashRegisterId = existing.Id };
 
             var result = await handler.Handle(command, CancellationToken.None);
@@ -105,7 +110,7 @@ public class CashRegisterCommandHandlerTests
             CashRegister existing = CashRegister.Create("Kasa", 100m, Guid.NewGuid());
             await uow.CashRegisterRepo.AddAsync(existing);
 
-            var handler = new DeleteCashRegisterHandler(uow);
+            var handler = new DeleteCashRegisterHandler(uow, new FakeCurrentUserService());
             var command = new DeleteCashRegisterCommand { CashRegisterId = existing.Id };
 
             await Assert.ThrowsAsync<DomainException>(() => handler.Handle(command, CancellationToken.None));
@@ -115,7 +120,7 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithNonExistingRegister_ReturnResultIsFailure()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new DeleteCashRegisterHandler(uow);
+            var handler = new DeleteCashRegisterHandler(uow, new FakeCurrentUserService());
             var command = new DeleteCashRegisterCommand { CashRegisterId = Guid.NewGuid() };
 
             var result = await handler.Handle(command, CancellationToken.None);
@@ -132,7 +137,9 @@ public class CashRegisterCommandHandlerTests
             CashRegister register = CashRegister.Create("Kasa", 500m, Guid.NewGuid());
             await uow.CashRegisterRepo.AddAsync(register);
 
-            var handler = new AddTransactionToCashRegisterCommandHandler(uow, new FakeCurrentUserService { UserId = Guid.NewGuid() });
+            var currentUser = new FakeCurrentUserService { UserId = Guid.NewGuid() };
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new AddTransactionToCashRegisterCommandHandler(uow, currentUser);
             var command = new AddTransactionToCashRegisterCommand
             {
                 CashRegisterId = register.Id,
@@ -189,7 +196,9 @@ public class CashRegisterCommandHandlerTests
             await uow.CashRegisterRepo.AddAsync(source);
             await uow.CashRegisterRepo.AddAsync(destination);
 
-            var handler = new TransferBetweenCashRegistersCommandHandler(uow, new FakeCurrentUserService { BranchId = branchId, UserId = Guid.NewGuid() });
+            var currentUser = new FakeCurrentUserService { BranchId = branchId, UserId = Guid.NewGuid() };
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new TransferBetweenCashRegistersCommandHandler(uow, currentUser);
             var command = new TransferBetweenCashRegistersCommand
             {
                 SourceCashRegisterId = sourceId,

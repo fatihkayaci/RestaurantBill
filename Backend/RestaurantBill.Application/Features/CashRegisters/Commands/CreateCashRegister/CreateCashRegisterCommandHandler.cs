@@ -1,6 +1,7 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
@@ -23,6 +24,19 @@ public class CreateCashRegisterHandler : IRequestHandler<CreateCashRegisterComma
         CashRegister register = CashRegister.Create(request.Name, request.OpeningBalance, restaurantId);
 
         await _uow.CashRegister.AddAsync(register);
+
+        User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+        AuditLog log = AuditLog.Create(
+            restaurantId,
+            actor?.FullName ?? string.Empty,
+            AuditLogCategory.System,
+            AuditLogSeverity.Info,
+            "CashRegisterCreated",
+            $"{actor?.FullName} {register.Name} adında yeni bir kasa ekledi.",
+            nameof(CashRegister),
+            register.Id);
+        await _uow.AuditLog.AddAsync(log);
+
         await _uow.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
