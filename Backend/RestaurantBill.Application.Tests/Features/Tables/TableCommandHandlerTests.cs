@@ -26,7 +26,9 @@ public class TableCommandHandlerTests
         public async Task Handle_WithValidCommand_AddsTableAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new CreateTableCommandHandler(uow, new FakeCurrentUserService { BranchId = Guid.NewGuid() });
+            var currentUser = new FakeCurrentUserService { BranchId = Guid.NewGuid() };
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new CreateTableCommandHandler(uow, currentUser);
             Guid regionId = Guid.NewGuid();
 
             await handler.Handle(new CreateTableCommand { Name = "Masa 1", RegionId = regionId }, CancellationToken.None);
@@ -46,7 +48,9 @@ public class TableCommandHandlerTests
             Table table = CreateTable();
             await uow.TableRepo.AddAsync(table);
 
-            var handler = new UpdateCommandHandler(uow);
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new UpdateCommandHandler(uow, currentUser);
             var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved, RegionId = Guid.NewGuid() };
 
             await handler.Handle(command, CancellationToken.None);
@@ -60,7 +64,7 @@ public class TableCommandHandlerTests
         public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new UpdateCommandHandler(uow);
+            var handler = new UpdateCommandHandler(uow, new FakeCurrentUserService());
 
             var result = await handler.Handle(new UpdateTableCommand { Id = Guid.NewGuid(), Name = "Ad" }, CancellationToken.None);
 
@@ -77,7 +81,9 @@ public class TableCommandHandlerTests
             Table table = CreateTable();
             await uow.TableRepo.AddAsync(table);
 
-            var handler = new DeleteHandler(uow);
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new DeleteHandler(uow, currentUser);
             await handler.Handle(new DeleteTableCommand { TableId = table.Id }, CancellationToken.None);
 
             Assert.Empty(uow.TableRepo.Added);
@@ -88,7 +94,7 @@ public class TableCommandHandlerTests
         public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new DeleteHandler(uow);
+            var handler = new DeleteHandler(uow, new FakeCurrentUserService());
 
             var result = await handler.Handle(new DeleteTableCommand { TableId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -105,7 +111,9 @@ public class TableCommandHandlerTests
             Table table = CreateTable();
             await uow.TableRepo.AddAsync(table);
 
-            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
+            var currentUser = new FakeCurrentUserService();
+            TestActor.Seed(uow, currentUser.UserId);
+            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), currentUser);
             await handler.Handle(new OpenTableCommand { TableId = table.Id }, CancellationToken.None);
 
             Assert.Equal(TableStatus.Occupied, table.Status);

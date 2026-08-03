@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import type { Product } from "@/features/products/types";
 import type { Category } from "@/features/categories/types";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Pencil } from 'lucide-react';
+import { X, Check, Pencil } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import axios from "axios";
 
@@ -25,6 +26,7 @@ export default function Menu() {
     const [productDeleteError, setProductDeleteError] = useState<string | null>(null);
 
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [editCategory, setEditCategory] = useState<Category | null>(null);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [categoryFieldError, setCategoryFieldError] = useState('');
@@ -87,15 +89,31 @@ export default function Menu() {
         }
     };
 
-    const openCategoryModal = (category?: Category) => {
-        setEditCategory(category ?? null);
-        setNewCategoryName(category?.name ?? '');
+    const openCategoryModal = (category: Category) => {
+        setEditCategory(category);
+        setNewCategoryName(category.name);
         setCategoryFieldError('');
         setIsCategoryModalOpen(true);
     };
 
+    const startAddCategory = () => {
+        setEditCategory(null);
+        setNewCategoryName('');
+        setCategoryFieldError('');
+        setIsAddingCategory(true);
+    };
+
+    const cancelAddCategory = () => {
+        setIsAddingCategory(false);
+        setNewCategoryName('');
+    };
+
     const handleSaveCategory = async () => {
-        if (!newCategoryName.trim()) { setCategoryFieldError('Kategori adı boş olamaz.'); return; }
+        if (!newCategoryName.trim()) {
+            if (isAddingCategory) { toast.error('Kategori adı boş olamaz.'); return; }
+            setCategoryFieldError('Kategori adı boş olamaz.');
+            return;
+        }
         setCategoryFieldError('');
         setSavingCategory(true);
         try {
@@ -107,9 +125,13 @@ export default function Menu() {
             const updated = await categoryService.getCategories();
             setCategories(updated);
             setIsCategoryModalOpen(false);
+            setIsAddingCategory(false);
+            setNewCategoryName('');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setCategoryFieldError(err.response?.data?.error ?? err.response?.data?.message ?? 'Kategori kaydedilemedi.');
+                const message = err.response?.data?.error ?? err.response?.data?.message ?? 'Kategori kaydedilemedi.';
+                if (isAddingCategory) toast.error(message);
+                else setCategoryFieldError(message);
             }
         } finally {
             setSavingCategory(false);
@@ -222,12 +244,41 @@ export default function Menu() {
                         </button>
                     </div>
                 ))}
-                <button
-                    onClick={() => openCategoryModal()}
-                    className="px-4 py-1.5 rounded-full text-sm font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
-                >
-                    + Kategori Ekle
-                </button>
+                {isAddingCategory ? (
+                    <div className="flex items-center gap-1.5">
+                        <input
+                            autoFocus
+                            value={newCategoryName}
+                            onChange={e => setNewCategoryName(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') handleSaveCategory();
+                                if (e.key === 'Escape') cancelAddCategory();
+                            }}
+                            placeholder="Kategori adı..."
+                            className="px-4 py-1.5 rounded-full text-sm border border-rb-accent bg-background text-foreground focus:outline-none w-40"
+                        />
+                        <button
+                            onClick={handleSaveCategory}
+                            disabled={savingCategory}
+                            className="p-1.5 rounded-full bg-rb-green-bg text-rb-green hover:opacity-80 transition-colors disabled:opacity-50"
+                        >
+                            <Check className="h-4 w-4" />
+                        </button>
+                        <button
+                            onClick={cancelAddCategory}
+                            className="p-1.5 rounded-full bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={startAddCategory}
+                        className="px-4 py-1.5 rounded-full text-sm font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                    >
+                        + Kategori Ekle
+                    </button>
+                )}
             </div>
 
             {/* Table */}

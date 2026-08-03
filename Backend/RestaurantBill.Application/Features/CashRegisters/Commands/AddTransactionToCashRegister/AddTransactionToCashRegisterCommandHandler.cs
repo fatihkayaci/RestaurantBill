@@ -1,7 +1,7 @@
 using MediatR;
-using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
@@ -28,6 +28,19 @@ public class AddTransactionToCashRegisterCommandHandler : IRequestHandler<AddTra
 
         await _uow.CashTransaction.AddAsync(transaction);
         await _uow.CashRegister.UpdateAsync(register);
+
+        User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+        AuditLog log = AuditLog.Create(
+            _currentUser.BranchId,
+            actor?.FullName ?? string.Empty,
+            AuditLogCategory.Payment,
+            AuditLogSeverity.Info,
+            "CashTransactionAdded",
+            $"{actor?.FullName} {register.Name} kasasına ₺{request.Amount} tutarında {request.Type} işlemi ekledi.",
+            nameof(CashRegister),
+            register.Id);
+        await _uow.AuditLog.AddAsync(log);
+
         await _uow.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

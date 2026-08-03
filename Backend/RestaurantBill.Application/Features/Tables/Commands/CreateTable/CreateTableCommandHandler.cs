@@ -1,6 +1,7 @@
 using MediatR;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Shared;
@@ -29,6 +30,19 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
             Table table = Table.Create(request.Name, string.Empty, request.RegionId);
             table.AssignRegion(request.RegionId);
             await _uow.Table.AddAsync(table);
+
+            User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+            AuditLog log = AuditLog.Create(
+                restaurantId,
+                actor?.FullName ?? string.Empty,
+                AuditLogCategory.System,
+                AuditLogSeverity.Info,
+                "TableCreated",
+                $"{actor?.FullName} {table.Name} adında yeni bir masa ekledi.",
+                nameof(Table),
+                table.Id);
+            await _uow.AuditLog.AddAsync(log);
+
             await _uow.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }

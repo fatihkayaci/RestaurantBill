@@ -2,6 +2,7 @@ using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.Common;
 using MediatR;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Shared;
 
@@ -39,6 +40,18 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
 
             order.Close();
             table.Release();
+
+            User? actor = await _uow.User.GetByIdAsync(_currentUserService.UserId);
+            AuditLog log = AuditLog.Create(
+                _currentUserService.BranchId,
+                actor?.FullName ?? string.Empty,
+                AuditLogCategory.Order,
+                AuditLogSeverity.Info,
+                "OrderPaid",
+                $"{actor?.FullName} {table.Name} siparişini kapattı (₺{order.TotalPrice}).",
+                nameof(Order),
+                order.Id);
+            await _uow.AuditLog.AddAsync(log);
 
             await _uow.SaveChangesAsync(cancellationToken);
 

@@ -159,8 +159,8 @@ export default function WaiterTablesPage() {
             ));
         });
 
-        conn.on('OrderUpdated', (tableId: string, totalPrice: number) => {
-            setTables(prev => prev.map(t => t.id === tableId ? { ...t, activeOrderTotal: totalPrice } : t));
+        conn.on('OrderUpdated', (tableId: string, totalPrice: number, createdByUserName: string) => {
+            setTables(prev => prev.map(t => t.id === tableId ? { ...t, activeOrderTotal: totalPrice, createdByUserName } : t));
         });
 
         let cancelled = false;

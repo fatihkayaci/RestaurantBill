@@ -1,6 +1,7 @@
 using MediatR;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
@@ -35,6 +36,19 @@ public class TransferBetweenCashRegistersCommandHandler : IRequestHandler<Transf
         await _uow.CashTransaction.AddAsync(destinationTransaction);
         await _uow.CashRegister.UpdateAsync(source);
         await _uow.CashRegister.UpdateAsync(destination);
+
+        User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+        AuditLog log = AuditLog.Create(
+            _currentUser.BranchId,
+            actor?.FullName ?? string.Empty,
+            AuditLogCategory.Payment,
+            AuditLogSeverity.Info,
+            "CashTransferred",
+            $"{actor?.FullName} {source.Name} kasasından {destination.Name} kasasına ₺{request.Amount} aktardı.",
+            nameof(CashRegister),
+            source.Id);
+        await _uow.AuditLog.AddAsync(log);
+
         await _uow.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

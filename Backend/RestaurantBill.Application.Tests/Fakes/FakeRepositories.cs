@@ -3,6 +3,7 @@ using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Tests.Fakes;
 
+public class FakeAuditLogRepository : FakeGenericRepository<AuditLog>, IAuditLogRepository { }
 public class FakeCashRegisterRepository : FakeGenericRepository<CashRegister>, ICashRegisterRepository { }
 public class FakeCashTransactionRepository : FakeGenericRepository<CashTransaction>, ICashTransactionRepository { }
 public class FakeCategoryRepository : FakeGenericRepository<Category>, ICategoryRepository { }

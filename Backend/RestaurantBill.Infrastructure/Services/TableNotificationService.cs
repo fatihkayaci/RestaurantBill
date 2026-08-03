@@ -18,9 +18,9 @@ namespace RestaurantBill.Infrastructure.Services
             await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("TableStatusChanged", tableId, status);
         }
 
-        public async Task SendOrderUpdatedAsync(Guid restaurantId, Guid tableId, decimal totalPrice)
+        public async Task SendOrderUpdatedAsync(Guid restaurantId, Guid tableId, decimal totalPrice, string createdByUserName)
         {
-            await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("OrderUpdated", tableId, totalPrice);
+            await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("OrderUpdated", tableId, totalPrice, createdByUserName);
         }
 
         public async Task SendOrderClosedAsync(Guid restaurantId, Guid tableId, Guid orderId)
