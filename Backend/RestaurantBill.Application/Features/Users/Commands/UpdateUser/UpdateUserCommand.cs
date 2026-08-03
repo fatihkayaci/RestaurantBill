@@ -16,5 +16,6 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
         public UserRole Role { get; set; } = UserRole.Waiter;
         public bool? IsActive { get; set; }
         public Guid? BranchId { get; set; }
+        public DateTime? HireDate { get; set; }
     }
 }

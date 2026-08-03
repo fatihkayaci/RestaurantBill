@@ -141,6 +141,7 @@ public static class MappingExtensions
         Role = ub.Role,
         IsActive = u.IsActive,
         BranchId = ub.BranchId,
-        BranchName = ub.Branch?.BranchName
+        BranchName = ub.Branch?.BranchName,
+        HireDate = ub.HireDate
     };
 }

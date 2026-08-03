@@ -13,6 +13,7 @@ namespace RestaurantBill.Domain.Entities
         public string UserCode { get; private set; } = string.Empty;
         public UserRole Role { get; private set; }
         public bool IsActive { get; private set; } = true;
+        public DateTime? HireDate { get; private set; }
 
         protected UserBranch() { }
 
@@ -57,6 +58,13 @@ namespace RestaurantBill.Domain.Entities
 
             Branch = branch;
             BranchId = branch.Id;
+        }
+
+        public void SetHireDate(DateTime hireDate)
+        {
+            HireDate = hireDate.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(hireDate, DateTimeKind.Utc)
+                : hireDate.ToUniversalTime();
         }
     }
 }

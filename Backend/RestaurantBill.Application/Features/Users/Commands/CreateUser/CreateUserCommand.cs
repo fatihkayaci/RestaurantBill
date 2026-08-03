@@ -15,6 +15,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         public string? UserCode { get; set; }
         public UserRole Role { get; set; } = UserRole.Waiter;
         public Guid? BranchId { get; set; }
+        public DateTime? HireDate { get; set; }
 
         public string[] CacheKeysToInvalidate => ["stuff:all"];
         public string IdempotencyKey => $"create-user:{UserName}";
