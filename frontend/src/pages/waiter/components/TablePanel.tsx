@@ -39,7 +39,7 @@ interface CartItem {
 
 const STATUS_CONFIG = {
     1: { label: 'BOŞ', cls: 'bg-rb-green-bg text-rb-green' },
-    2: { label: 'DOLU', cls: 'bg-rb-red-bg text-rb-red' },
+    2: { label: 'DOLU', cls: 'bg-rb-orange-bg text-rb-orange' },
     3: { label: 'REZERVE', cls: 'bg-rb-amber-bg text-rb-amber' },
 } as const;
 

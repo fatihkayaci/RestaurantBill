@@ -3,7 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { orderService } from '@/features/orders/api/orderService';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
 import type { Order } from '@/features/orders/types';
-import type { CashTransaction } from '@/features/cashier/types';
+import type { CashRegister, CashTransaction } from '@/features/cashier/types';
 import PaymentPanel from './components/PaymentPanel';
 
 const MOCK_PAYMENT_LABELS = ['KART', 'NAKİT', 'QR / TEMASSIZ'] as const;
@@ -13,12 +13,26 @@ const MOCK_PAYMENT_COLORS = [
     'bg-rb-amber-bg text-rb-amber',
 ];
 
+function formatElapsed(createdAt: string, now: number): string {
+    const minutes = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 60000));
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
+}
+
 export default function CashierDashboardPage() {
     const [servedOrders, setServedOrders] = useState<Order[]>([]);
     const [transactions, setTransactions] = useState<CashTransaction[]>([]);
+    const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
     const [completedCount, setCompletedCount] = useState(0);
     const [completedRevenue, setCompletedRevenue] = useState(0);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const refreshTransactions = () => {
         cashRegisterService.getTransactions()
@@ -35,8 +49,13 @@ export default function CashierDashboardPage() {
         orderService.getAllOrdersToCashier()
             .then(setServedOrders)
             .catch(() => {});
+        cashRegisterService.getCashRegisters()
+            .then(setCashRegisters)
+            .catch(() => {});
         refreshTransactions();
     }, []);
+
+    const registerNameById = new Map(cashRegisters.map(r => [r.id, r.name]));
 
     useEffect(() => {
         const conn = new signalR.HubConnectionBuilder()
@@ -93,18 +112,18 @@ export default function CashierDashboardPage() {
                 </div>
                 <div className="w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-bold text-rb-amber">{servedOrders.length}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Açık Masa</p>
+                    <p className="text-lg font-bold text-sidebar-foreground">{servedOrders.length}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Bekleyen Masa</p>
                 </div>
             </div>
 
             {/* İçerik */}
             <div className="flex flex-1 overflow-hidden">
-                {/* Sol: Açık masalar */}
+                {/* Sol: Ödeme bekleyen masalar */}
                 <div className="flex-1 overflow-y-auto p-6">
                     <div className="flex items-center gap-2 mb-5">
                         <h2 className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
-                            Açık Masalar
+                            Ödeme Bekleyen Masalar
                         </h2>
                         {servedOrders.length > 0 && (
                             <span className="bg-rb-amber-bg text-rb-amber text-xs font-bold px-1.5 py-0.5 rounded">
@@ -120,7 +139,7 @@ export default function CashierDashboardPage() {
                             {servedOrders.map(order => (
                                 <div
                                     key={order.id}
-                                    className="bg-background border rounded-2xl p-4 flex flex-col gap-3 hover:shadow-md transition-shadow"
+                                    className="bg-card border rounded-2xl p-4 flex flex-col gap-3 hover:shadow-md transition-shadow"
                                 >
                                     <div className="flex items-start justify-between">
                                         <span className="font-serif font-bold text-lg text-foreground">
@@ -134,13 +153,13 @@ export default function CashierDashboardPage() {
                                     </p>
 
                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                        <span>— · 0dk</span>
+                                        <span>{order.createdByUserName} · {formatElapsed(order.createdAt, now)}</span>
                                         <span>{order.orderItems.length} ürün</span>
                                     </div>
 
                                     <button
                                         onClick={() => setSelectedOrder(order)}
-                                        className="w-full bg-rb-accent hover:opacity-90 text-white text-sm font-semibold rounded-xl py-2 transition-colors"
+                                        className="w-full bg-rb-accent-bg hover:opacity-80 text-rb-accent text-sm font-semibold rounded-xl py-2 transition-colors"
                                     >
                                         Ödeme Al
                                     </button>
@@ -172,7 +191,7 @@ export default function CashierDashboardPage() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-2">
                                                 <span className="text-sm font-medium text-foreground truncate">
-                                                    Kasa #{txn.cashRegisterId}
+                                                    {registerNameById.get(txn.cashRegisterId) ?? 'Bilinmeyen Kasa'}
                                                 </span>
                                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${MOCK_PAYMENT_COLORS[methodIdx]}`}>
                                                     {MOCK_PAYMENT_LABELS[methodIdx]}
