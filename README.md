@@ -1,8 +1,8 @@
 <h1 align="center">🍽️ RestaurantBill</h1>
 
 <p align="center">
-  <strong>A Production-Ready, Multi-Client Restaurant POS & Kitchen Display System</strong><br/>
-  Architected for scalability and real-time synchronization using .NET 9, Clean Architecture, CQRS (MediatR), and SignalR. Designed to handle concurrent operations across waitstaff, kitchen, and cashier environments without data inconsistency.
+  <strong>A Production-Ready, Multi-Tenant Restaurant POS & Kitchen Display System</strong><br/>
+  Architected for scalability and real-time synchronization using .NET 9, Clean Architecture, CQRS (MediatR), and SignalR. Supports a Company → Branch hierarchy so a single owner can run multiple restaurant locations, each with its own staff, menu, tables, and cash registers — all synchronized in real time without data inconsistency.
 </p>
 
 <p align="center">
@@ -30,30 +30,46 @@
 
 ## 📸 Screenshots & Demo
 
-### Waiter & Kitchen Flow
-![Waiter and Kitchen](docs/screenshots/WaiterAndKitchen.gif)
-
-### Cashier
-![Cashier](docs/screenshots/Cashier.gif)
+### Owner Portal
+![Owner Portal](docs/screenshots/owner-dark-mode.png#gh-dark-mode-only)
+![Owner Portal](docs/screenshots/owner-light.png#gh-light-mode-only)
 
 ### Admin Panel
-![Admin](docs/screenshots/Admin.gif)
+![Admin Panel](docs/screenshots/admin-dark-mode.png#gh-dark-mode-only)
+![Admin Panel](docs/screenshots/admin-light-mode.png#gh-light-mode-only)
+
+### Waiter (POS)
+![Waiter POS](docs/screenshots/waiter-dark-mode.png#gh-dark-mode-only)
+![Waiter POS](docs/screenshots/waiter-light-mode.png#gh-light-mode-only)
+
+### Kitchen Display System
+![Kitchen Display System](docs/screenshots/kitchen-dark.png#gh-dark-mode-only)
+![Kitchen Display System](docs/screenshots/kitchen-light.png#gh-light-mode-only)
+
+### Cashier
+![Cashier](docs/screenshots/cashier-dark.png#gh-dark-mode-only)
+![Cashier](docs/screenshots/cashier-light.png#gh-light-mode-only)
 
 ---
 
 ## 📋 Overview
 
-RestaurantBill is a Point of Sale (POS) application built for restaurant operations. Waitstaff manage tables and orders, the kitchen tracks incoming items on a dedicated display, and cashiers handle payments through a register system. Order and status changes propagate to every screen in real time over SignalR — no manual communication needed between the floor, the kitchen, and the cashier.
+RestaurantBill is a multi-tenant Point of Sale (POS) application built for restaurant operations. A **Company** (the account an Owner registers) can operate multiple **Branches** — each Branch is a self-contained restaurant location with its own staff, menu, tables, and cash registers. Within a Branch, waitstaff manage tables and orders, the kitchen tracks incoming items on a dedicated display, and cashiers handle payments through a register system. Order and status changes propagate to every screen in real time over SignalR — no manual communication needed between the floor, the kitchen, and the cashier.
 
 ### Key Highlights
 
 - **Clean Architecture** — strict separation of Domain, Application, Infrastructure, Persistence, and Presentation layers
 - **CQRS with MediatR** — Commands and Queries are fully decoupled, with cross-cutting concerns handled in the pipeline
-- **Real-time updates over SignalR** — three dedicated hubs push live changes to the Kitchen, Tables, and Cashier screens
-- **Role-Based Authorization** — JWT authentication with `Admin`, `Waiter`, `Cashier`, and `Kitchen` roles enforced per endpoint
-- **Cashier & Cash Register** — payment processing with cash-register sessions and transaction history
-- **Admin Panel** — manage products, categories, tables, users, and view overview statistics
+- **Multi-tenant Company → Branch model** — one Owner account can manage several branches, each isolated by `BranchId`/`CompanyId`, with staff assigned per branch via `UserBranch`
+- **Owner Portal** — a dedicated portal for branch management, admin assignment, membership/billing, branding (company name + slug/QR), financial reports, and audit log review
+- **Audit Log** — every meaningful action (auth, orders, payments, staff, products, system) is recorded and reviewable by Owners
+- **Phone Verification** — SMS-based verification step required after registration, before branch/slug setup
+- **Real-time updates over SignalR** — dedicated hubs push live changes to the Kitchen, Tables, and Cashier screens, including the name of the staff member who created/updated an order
+- **Role-Based Authorization** — JWT authentication with `Owner`, `Admin`, `Waiter`, `Cashier`, and `Kitchen` roles enforced per endpoint
+- **Cashier & Cash Register** — payment processing with cash-register sessions, inter-register transfers, and transaction history
+- **Admin Panel** — manage products, categories, regions, tables, staff, and view overview statistics (scoped to the admin's branch)
 - **MediatR Pipeline Behaviors** — Validation, Caching, Idempotency, Logging, and Performance monitoring as cross-cutting concerns
+- **`Result<T>` pattern** — handlers and controllers return a uniform `Result<T>` instead of throwing for expected failures
 - **Modern UI** — responsive React frontend with Tailwind CSS
 
 ---
@@ -70,9 +86,13 @@ RestaurantBill/
 │   └── RestaurantBill.WebAPI          # Controllers, Middleware, Program.cs
 └── frontend/
     └── src/
-        ├── pages/                     # Login, Register, Tables, Pos, Kitchen, Cashier, Admin
+        ├── pages/
+        │   ├── owner/                 # Branches, Admins, Membership, Branding, Reports, Audit Log
+        │   ├── admin/                 # Staff, Tables, Menu, Profile (branch-scoped)
+        │   ├── waiter/ kitchen/ cashier/
+        │   └── LoginPage, LandingPage, PhoneVerificationPage…
         ├── features/                  # Feature-sliced: order, tables, products, categories, stats…
-        ├── components/                # Shared components (AdminDashboard, PrivateRoute…)
+        ├── components/                # Shared components (PrivateRoute…)
         └── api/                       # Axios service layer
 ```
 
@@ -121,7 +141,6 @@ Command handler tests using hand-written fake implementations (`FakeUnitOfWork`,
 | **Product** | Create, Update, Delete |
 | **Table** | Create, Update, Delete, Open, Reserve, CancelReservation |
 | **User** | Create (duplicate username guard), Update, Delete |
-| **Restaurant** | Update |
 
 ### Integration Tests (`RestaurantBill.Integration.Tests`)
 
@@ -147,11 +166,27 @@ dotnet test Backend/RestaurantBill.sln
 
 ### Handling Realistic Concurrency & Table Contention
 - **Challenge:** During initial k6 load testing with 20 concurrent virtual users, the p(95) response time spiked to 2.95s. The bottleneck wasn't the database speed, but a logical flaw in the test scenario: virtual users were occupying all available tables without freeing them, causing subsequent requests to fail or stall due to table exhaustion.
-- **Solution:** I updated the load test lifecycle to mirror real-world restaurant operations by enforcing an order settlement (`POST /api/order/close`) at the end of each user iteration. This freed up the tables dynamically, resolving the artificial contention and instantly dropping the p(95) response time down to 1.46s.
+- **Solution:** I updated the load test lifecycle to mirror real-world restaurant operations by enforcing an order settlement (`POST /api/Order/close`) at the end of each user iteration. This freed up the tables dynamically, resolving the artificial contention and instantly dropping the p(95) response time down to 1.46s.
 
 ---
 
 ## ✨ Features
+
+### Owner Portal & Multi-Branch Management
+- Manage multiple **Branches** under a single **Company**, each with its own staff, menu, and cash registers
+- Assign and move **Admins** across branches
+- Company branding (name, slug/QR code) used for public ordering/login
+- Membership/billing overview per branch
+- Financial reports across the company
+
+### Audit Log
+- Every meaningful action across **Auth, Order, Payment, Staff, Product,** and **System** categories is recorded with actor, severity, and message
+- Owners review the full activity trail for their branches from a dedicated Audit Log page
+
+### Authentication & Onboarding
+- Registration is followed by **SMS-based phone verification** before an Owner can set up their company slug
+- JWT Bearer token authentication with a custom `User` entity (no ASP.NET Identity)
+- Staff (`Waiter`/`Cashier`/`Kitchen`/`Admin`) log in per-branch via `UserBranch`, with username/usercode uniqueness enforced per company
 
 ### Table Management
 - Visual salon view with real-time table status (Available / Occupied / Reserved / OutOfService)
@@ -172,18 +207,19 @@ dotnet test Backend/RestaurantBill.sln
 ### Cashier & Cash Register
 - Open/close cash-register sessions
 - Process payments and close orders from the cashier screen
-- Record cash transactions (In / Out) and view recent transaction history
+- Record cash transactions (In / Out) and transfer balances between registers
+- View recent transaction history
 
-### Admin Panel
+### Admin Panel (branch-scoped)
 - Manage **Products** and **Categories** (create, update, delete with FK-safe deletion)
-- Manage **Tables** (create, update, delete)
-- Manage **Users** (create, update, delete, role assignment)
+- Manage **Regions** and **Tables** (create, update, delete)
+- Manage **Staff** (create, update, delete, role assignment within the branch)
 - **Overview dashboard** with summary statistics and charts
 
-### Authentication & Authorization
-- JWT Bearer token authentication with a custom `User` entity (no ASP.NET Identity)
+### Security
 - Password hashing via `IPasswordHasher<User>`
-- Role-based access enforced per endpoint: `Admin`, `Waiter`, `Cashier`, `Kitchen`
+- Role-based access enforced per endpoint: `Owner`, `Admin`, `Waiter`, `Cashier`, `Kitchen`
+- Rate limiting on auth endpoints (brute-force protection)
 
 ---
 
@@ -249,16 +285,17 @@ I deployed the application to different environments to measure the breaking poi
 ---
 ## 🔑 Demo Credentials
 
-After the API starts, the following demo accounts are seeded automatically:
+After the API starts, the following demo accounts are seeded automatically into a "Demo Restoran" company with one branch, sample tables, categories, products, and cash registers:
 
-| Role | Username | Password |
-|------|----------|----------|
-| **Admin** | `admin` | `Admin123*` |
-| **Waiter** | `waiter` | `Waiter123*` |
-| **Kitchen** | `kitchen` | `Kitchen123*` |
-| **Cashier** | `cashier` | `Cashier123*` |
+| Role | Login | Password |
+|------|-------|----------|
+| **Owner** | email `owner@demo.com` (no slug/subdomain needed) | `Owner123*` |
+| **Admin** | username `admin` (on the `demo` company slug) | `Admin123*` |
+| **Waiter** | username `waiter` | `Waiter123*` |
+| **Kitchen** | username `kitchen` | `Kitchen123*` |
+| **Cashier** | username `cashier` | `Cashier123*` |
 
-> The demo restaurant comes pre-loaded with sample tables, categories, and products.
+> Staff logins are scoped to the `demo` company slug — locally, either send an `X-Restaurant-Slug: demo` header, use a `demo.*` subdomain, or set `Tenancy:DevDefaultSlug` to `demo` in `appsettings.Development.json`. The Owner logs in with just email/password, no slug required.
 
 ---
 
@@ -354,81 +391,99 @@ The frontend dev server runs on `http://localhost:5173`.
 ### Authentication
 | Method | Endpoint | Roles | Description |
 |--------|----------|-------|-------------|
-| `POST` | `/api/auth/login` | — | Login with username or email, receive a JWT |
-| `POST` | `/api/auth/register` | — | Register a new user |
+| `POST` | `/api/Auth/login` | — | Login with username (staff) or email (owner), receive a JWT |
+| `POST` | `/api/Auth/register` | — | Register a new Owner + Company |
+| `POST` | `/api/Auth/send-verification-code` | — | Send an SMS/email verification code |
+| `POST` | `/api/Auth/verify-code` | — | Verify a phone/email code |
+
+### Company & Branch
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `GET` | `/api/company` | Owner | Get the current company |
+| `POST` | `/api/company` | Owner | Update company name |
+| `POST` | `/api/company/branches/{id}/slug` | Owner | Set the company's public slug/QR |
+| `GET` | `/api/branch/branches` | Owner | List branches |
+| `POST` | `/api/branch/branches` | Owner | Create a branch |
+| `POST` | `/api/branch/branches/{id}` | Owner | Update a branch |
+
+### Audit Log
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `GET` | `/api/AuditLog` | Owner | List activity across the owner's branches, newest first |
+
+### Membership
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| `GET` | `/api/Membership` | Any authenticated | Get the branch's membership/plan info |
 
 ### Orders
 | Method | Endpoint | Roles | Description |
 |--------|----------|-------|-------------|
-| `GET` | `/api/order/kitchen` | Admin, Kitchen | Orders for the kitchen display |
-| `GET` | `/api/order/cashier` | Cashier | Orders for the cashier screen |
-| `GET` | `/api/order/table/{tableId}` | Admin, Waiter, Kitchen | Active order for a table |
-| `POST` | `/api/order` | Admin, Waiter | Create a new order |
-| `POST` | `/api/order/add-product` | Admin, Waiter | Add items to an order |
-| `POST` | `/api/order/item/quantity` | Admin, Waiter | Update an order item's quantity |
-| `POST` | `/api/order/item/remove` | Admin, Waiter | Remove an item from an order |
-| `POST` | `/api/order/cancel` | Admin, Waiter | Cancel an order |
-| `POST` | `/api/order/close` | Admin, Waiter, Cashier | Close/settle an order |
-| `POST` | `/api/order/{id}/status` | Admin, Kitchen, Waiter | Update order status |
-| `POST` | `/api/order/{orderId}/item/{itemId}/status` | Admin, Kitchen | Update an order item's status |
+| `GET` | `/api/Order/kitchen` | Owner, Admin, Kitchen | Orders for the kitchen display |
+| `GET` | `/api/Order/cashier` | Owner, Admin, Cashier | Orders for the cashier screen |
+| `GET` | `/api/Order/table/{tableId}` | Owner, Admin, Waiter, Kitchen | Active order for a table |
+| `POST` | `/api/Order` | Owner, Admin, Waiter | Create a new order |
+| `POST` | `/api/Order/add-product` | Owner, Admin, Waiter | Add items to an order |
+| `POST` | `/api/Order/item/quantity` | Owner, Admin, Waiter | Update an order item's quantity |
+| `POST` | `/api/Order/item/remove` | Owner, Admin, Waiter | Remove an item from an order |
+| `POST` | `/api/Order/cancel` | Owner, Admin, Waiter | Cancel an order |
+| `POST` | `/api/Order/close` | Owner, Admin, Waiter, Cashier | Close/settle an order |
+| `POST` | `/api/Order/{id}/status` | Owner, Admin, Kitchen, Waiter | Update order status |
+| `POST` | `/api/Order/{orderId}/item/{itemId}/status` | Owner, Admin, Kitchen | Update an order item's status |
 
-### Tables
+### Tables & Regions
 | Method | Endpoint | Roles | Description |
 |--------|----------|-------|-------------|
-| `GET` | `/api/table` | Admin, Waiter, Kitchen | Get all tables |
-| `GET` | `/api/table/{id}` | Admin, Waiter, Kitchen | Get a table by id |
-| `POST` | `/api/table/create` | Admin | Create a table |
-| `POST` | `/api/table/update` | Admin | Update a table |
-| `POST` | `/api/table/open` | Admin, Waiter | Open table (set Occupied) |
-| `POST` | `/api/table/reservation` | Admin, Waiter | Reserve a table |
-| `POST` | `/api/table/cancel-reservation` | Admin, Waiter | Cancel a reservation |
-| `DELETE` | `/api/table/{id}` | Admin | Delete a table |
+| `GET` | `/api/Table` | Owner, Admin, Waiter, Kitchen | Get all tables |
+| `POST` | `/api/Table` | Owner, Admin | Create a table |
+| `POST` | `/api/Table/{id}` | Owner, Admin | Update a table |
+| `POST` | `/api/Table/open` | Owner, Admin, Waiter | Open table (set Occupied) |
+| `POST` | `/api/Table/reservation` | Owner, Admin, Waiter | Reserve a table |
+| `POST` | `/api/Table/cancel-reservation` | Owner, Admin, Waiter | Cancel a reservation |
+| `DELETE` | `/api/Table/{id}` | Owner, Admin | Delete a table |
+| `GET` | `/api/Region` | Owner, Admin, Waiter, Kitchen, Cashier | Get all regions |
+| `POST` | `/api/Region` | Owner, Admin | Create/update a region |
+| `DELETE` | `/api/Region/{id}` | Owner, Admin | Delete a region (blocked if tables are assigned) |
 
 ### Products & Categories
 | Method | Endpoint | Roles | Description |
 |--------|----------|-------|-------------|
-| `GET` | `/api/product` | Admin, Waiter, Kitchen | Get all products |
-| `POST` | `/api/product` | Admin, Kitchen | Create a product |
-| `POST` | `/api/product/update` | Admin, Kitchen | Update a product |
-| `DELETE` | `/api/product/{id}` | Admin, Kitchen | Delete a product |
-| `GET` | `/api/category` | Admin, Waiter, Kitchen | Get all categories |
-| `POST` | `/api/category/create` | Admin | Create a category |
-| `POST` | `/api/category/update` | Admin | Update a category |
-| `DELETE` | `/api/category/{id}` | Admin | Delete a category (FK-safe) |
+| `GET` | `/api/Product` | Owner, Admin, Waiter, Kitchen | Get all products |
+| `POST` | `/api/Product` | Owner, Admin, Kitchen | Create a product |
+| `POST` | `/api/Product/{id}` | Owner, Admin, Kitchen | Update a product |
+| `DELETE` | `/api/Product/{id}` | Owner, Admin, Kitchen | Delete a product |
+| `GET` | `/api/Category` | Owner, Admin, Waiter, Kitchen | Get all categories |
+| `POST` | `/api/Category` | Owner, Admin | Create/update a category |
+| `DELETE` | `/api/Category/{id}` | Owner, Admin | Delete a category (FK-safe) |
 
 ### Cash Register
 | Method | Endpoint | Roles | Description |
 |--------|----------|-------|-------------|
-| `GET` | `/api/cashregister` | Admin, Cashier | List cash registers |
-| `GET` | `/api/cashregister/{id}` | Admin, Cashier | Get a cash register by id |
-| `GET` | `/api/cashregister/transactions` | Admin, Cashier | List cash transactions |
-| `POST` | `/api/cashregister/create` | Admin | Create a cash register |
-| `POST` | `/api/cashregister/update` | Admin | Update a cash register |
-| `POST` | `/api/cashregister/transaction` | Admin, Cashier | Record a cash transaction (In/Out) |
-| `DELETE` | `/api/cashregister/{id}` | Admin | Delete a cash register |
+| `GET` | `/api/CashRegister` | Owner, Admin, Cashier | List cash registers |
+| `GET` | `/api/CashRegister/transactions` | Owner, Admin, Cashier | List cash transactions |
+| `POST` | `/api/CashRegister` | Owner, Admin | Create/update a cash register |
+| `POST` | `/api/CashRegister/transaction` | Owner, Admin, Cashier | Record a cash transaction (In/Out) |
+| `POST` | `/api/CashRegister/transfer` | Owner, Admin, Cashier | Transfer balance between registers |
+| `DELETE` | `/api/CashRegister/{id}` | Owner, Admin | Delete a cash register (blocked if balance > 0) |
 
-### Users
+### Users & Stats
 | Method | Endpoint | Roles | Description |
 |--------|----------|-------|-------------|
-| `GET` | `/api/user/me` | Any authenticated | Get the current user |
-| `GET` | `/api/user` | Admin | Get all users |
-| `POST` | `/api/user/create` | Admin | Create a user |
-| `POST` | `/api/user/update` | Admin | Update a user |
-| `DELETE` | `/api/user/{id}` | Admin | Delete a user |
-
-### Restaurant & Stats
-| Method | Endpoint | Roles | Description |
-|--------|----------|-------|-------------|
-| `GET` | `/api/restaurant` | Admin, Cashier, Waiter, Kitchen | Get restaurant info |
-| `POST` | `/api/restaurant` | Admin | Create the restaurant (onboarding) |
-| `GET` | `/api/stats/overview` | Admin | Overview statistics for the dashboard |
+| `GET` | `/api/User/me` | Any authenticated | Get the current user |
+| `GET` | `/api/User` | Owner, Admin | Get all staff for the branch |
+| `POST` | `/api/User/create` | Owner, Admin | Create a staff user |
+| `POST` | `/api/User/update` | Owner, Admin | Update a staff user |
+| `DELETE` | `/api/User/{id}` | Owner, Admin | Delete a staff user |
+| `GET` | `/api/Stats/overview` | Owner, Admin | Overview statistics for the dashboard |
 
 ### SignalR Hubs
 | Hub | Path | Purpose |
 |-----|------|---------|
 | **KitchenHub** | `/kitchen-hub` | New orders & item status updates to the kitchen |
-| **TableHub** | `/table-hub` | Table status changes to all clients |
+| **TableHub** | `/table-hub` | Table status changes; order-updated events include the acting staff member's name |
 | **CashierHub** | `/cashier-hub` | Order/payment updates to the cashier |
+
+> Clients join a `restaurant-{id}` SignalR group based on the `RestaurantId` claim in their JWT (`Company.Id` for an Owner, `Branch.Id` for staff), keeping real-time updates isolated per branch.
 
 ---
 
@@ -455,17 +510,22 @@ Waiter (POS)              Backend                  Kitchen (KDS)        Cashier
 ## 🗄️ Data Model
 
 ```
-Restaurant
-  ├── Tables ........... (Available / Occupied / Reserved / OutOfService)
-  │     └── Orders ..... (Active / Pending / Preparing / Ready / Served / Paid / Cancelled)
-  │           └── OrderItems (Pending / Preparing / Ready / Delivered)
-  │                 └── Product ──► Category
-  ├── CashRegisters ... (Open / Closed)
-  │     └── CashTransactions (In / Out)
-  └── Users ........... (Admin / Waiter / Cashier / Kitchen)
+Company ............. (Slug for public login/QR, owned by a User via OwnerUserId)
+  └── Branch .......... (a single restaurant location)
+        ├── Regions
+        │     └── Tables ........... (Available / Occupied / Reserved / OutOfService)
+        │           └── Orders ..... (Active / Pending / Preparing / Ready / Served / Paid / Cancelled)
+        │                 └── OrderItems (Pending / Preparing / Ready / Delivered)
+        │                       └── Product ──► Category
+        ├── CashRegisters ... (Open / Closed)
+        │     └── CashTransactions (In / Out / Transfer)
+        ├── Membership ...... (PlanType / Status)
+        ├── AuditLog ........ (Auth / Order / Payment / Staff / Product / System)
+        └── UserBranch ...... (links a User to this Branch with Role / UserCode / HireDate)
+              └── User
 ```
 
-All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`, `CreatedUser`, and `IsDeleted` (soft delete). Domain entities expose `Create` / `Update` factory methods with built-in validation guards.
+A `User` can own a Company and/or be linked to one or more Branches through `UserBranch`, which carries the per-branch `Role` (`Owner` / `Admin` / `Waiter` / `Cashier` / `Kitchen`), username, and hire date. All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`, `CreatedUser`, and `IsDeleted` (soft delete). Domain entities expose `Create` / `Update` factory methods with built-in validation guards.
 
 ---
 
@@ -473,10 +533,13 @@ All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`,
 
 | Role | Access |
 |------|--------|
-| **Admin** | Full system access — admin panel, all management endpoints |
+| **Owner** | Company-level access — manage branches, assign admins, membership, branding, financial reports, and the audit log |
+| **Admin** | Branch-scoped management — staff, products, categories, regions, tables, cash registers, overview stats |
 | **Waiter** | Table & order management via POS |
 | **Cashier** | Payments, cash register, order settlement |
 | **Kitchen** | Order queue and item status updates |
+
+> Roles are assigned per-branch via `UserBranch`, so the same person can hold different roles (or none) in different branches. A JWT's `RestaurantId` claim carries the `Company.Id` for an `Owner` or the `Branch.Id` for staff roles.
 
 ---
 
@@ -489,9 +552,9 @@ All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`,
 - [x] Table lifecycle management
 - [x] Full order & order-item status tracking
 - [x] JWT authentication & role-based authorization
-- [x] SignalR real-time updates (Kitchen / Table / Cashier hubs)
-- [x] Cashier & cash register with payment/transaction flow
-- [x] Admin panel (products, categories, tables, users)
+- [x] SignalR real-time updates (Kitchen / Table / Cashier hubs), including order-creator name broadcast
+- [x] Cashier & cash register with payment/transaction flow, plus inter-register transfers
+- [x] Admin panel (products, categories, regions, tables, staff)
 - [x] Overview statistics dashboard
 - [x] MediatR Pipeline Behaviors (Validation, Caching, Idempotency, Logging, Performance)
 - [x] Domain exceptions & validation guards
@@ -499,6 +562,12 @@ All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`,
 - [x] Unit & Integration tests — Domain entity tests, Application command handler tests, EF Core InMemory integration tests (xUnit)
 - [x] Health check endpoint (`/health`) with DB connectivity check
 - [x] Rate limiting on auth endpoints (brute-force protection)
+- [x] Multi-tenant Company/Branch domain model with Guid-based ids
+- [x] Owner role & portal (branches, admin assignment, membership, branding, reports, audit log)
+- [x] SMS-based phone verification after registration
+- [x] Audit log system across Auth/Order/Payment/Staff/Product/System actions
+- [x] `Result<T>` return pattern across handlers, controllers, and tests
+- [x] Per-company unique username/usercode enforcement across branches
 
 **Planned:** (see [TODO.md](TODO.md))
 - [ ] Configurable VAT rate
@@ -506,6 +575,7 @@ All entities extend `BaseEntity`, which provides `Id`, `CreatedAt`, `UpdatedAt`,
 - [ ] Reports page contents & richer analytics
 - [ ] Mobile-responsive POS & KDS
 - [ ] Client-side form validation polish (remaining non-admin pages)
+- [ ] Move audit log search/filtering to the backend
 
 ---
 

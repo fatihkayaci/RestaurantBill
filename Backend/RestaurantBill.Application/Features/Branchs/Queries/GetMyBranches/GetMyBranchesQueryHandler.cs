@@ -25,9 +25,9 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetMyBranches
                 .OrderBy(b => b.CreatedAt);
             List<Guid> branchIds = branches.Select(b => b.Id).ToList();
 
-            IEnumerable<Table> tables = await _uow.Table.GetAllAsync(t => branchIds.Contains(t.Region.BranchId), false);
+            IEnumerable<Table> tables = await _uow.Table.GetAllAsync(t => branchIds.Contains(t.Region.BranchId), false, nameof(Table.Region));
             IEnumerable<UserBranch> staff = await _uow.UserBranch.GetAllAsync(ur => branchIds.Contains(ur.BranchId), false);
-            IEnumerable<Order> orders = await _uow.Order.GetAllAsync(o => branchIds.Contains(o.Table.Region.BranchId), false);
+            IEnumerable<Order> orders = await _uow.Order.GetAllAsync(o => branchIds.Contains(o.Table.Region.BranchId), false, $"{nameof(Order.Table)}.{nameof(Table.Region)}");
 
             Dictionary<Guid, int> tableCounts = tables.GroupBy(t => t.Region.BranchId).ToDictionary(g => g.Key, g => g.Count());
             Dictionary<Guid, int> staffCounts = staff.GroupBy(s => s.BranchId).ToDictionary(g => g.Key, g => g.Count());
