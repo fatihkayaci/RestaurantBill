@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { statsService } from '@/features/admin/api/statsService';
-import type { OverviewStats } from '@/features/admin/types';
+import { statsService } from '@/features/stats/api/statsService';
+import type { OverviewStats } from '@/features/stats/types';
 
 export default function OverViewPage() {
     const [stats, setStats] = useState<OverviewStats | null>(null);

@@ -101,6 +101,11 @@ function TableCard({
                                 <span>{formatElapsed(table.occupiedSince, now)}</span>
                             </div>
                         )}
+                        {table.createdByUserName && (
+                            <div className="text-[10px] text-muted-foreground/80">
+                                Alan: {table.createdByUserName}
+                            </div>
+                        )}
                     </>
                 )}
                 {table.status === 3 && (
@@ -117,7 +122,7 @@ export default function WaiterTablesPage() {
     const [tables, setTables] = useState<Table[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<FilterType>('all');
-    const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
+    const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
@@ -147,14 +152,14 @@ export default function WaiterTablesPage() {
             })
             .build();
 
-        conn.on('TableStatusChanged', (tableId: number, status: number) => {
+        conn.on('TableStatusChanged', (tableId: string, status: number) => {
             setTables(prev => prev.map(t => t.id === tableId
                 ? { ...t, status, occupiedSince: status === 2 ? new Date().toISOString() : null }
                 : t
             ));
         });
 
-        conn.on('OrderUpdated', (tableId: number, totalPrice: number) => {
+        conn.on('OrderUpdated', (tableId: string, totalPrice: number) => {
             setTables(prev => prev.map(t => t.id === tableId ? { ...t, activeOrderTotal: totalPrice } : t));
         });
 
@@ -163,7 +168,7 @@ export default function WaiterTablesPage() {
         return () => { cancelled = true; conn.stop(); };
     }, []);
 
-    const handleTableUpdated = (tableId: number, status: number) => {
+    const handleTableUpdated = (tableId: string, status: number) => {
         setTables(prev => prev.map(t => t.id === tableId
             ? { ...t, status, occupiedSince: status === 2 ? new Date().toISOString() : null }
             : t

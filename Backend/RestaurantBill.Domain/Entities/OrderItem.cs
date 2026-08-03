@@ -5,18 +5,21 @@ namespace RestaurantBill.Domain.Entities
 {
     public class OrderItem : BaseEntity
     {
+        public Guid ProductId { get; private set; }
+        public Product Product { get; internal set; } = default!;
+        public Guid OrderId { get; private set; }
+        public Order Order { get; private set; } = default!;
+
         public decimal UnitPrice { get; private set; }
         public int Quantity { get; private set; }
-        public int ProductId { get; private set; }
-        public Product? Product { get; internal set; }
         public OrderItemStatus Status { get; private set; } = OrderItemStatus.Pending;
-        public int OrderId { get; private set; }
+
 
         protected OrderItem() { }
 
-        internal static OrderItem Create(int productId, decimal unitPrice, int quantity, Product product)
+        internal static OrderItem Create(decimal unitPrice, int quantity, Product product)
         {
-            if (productId <= 0)
+            if (product == null)
                 throw new DomainException("Geçersiz ürün ID'si.");
 
             if (unitPrice < 0)
@@ -27,10 +30,10 @@ namespace RestaurantBill.Domain.Entities
 
             return new OrderItem
             {
-                ProductId = productId,
+                Product = product,
+                ProductId = product.Id,
                 UnitPrice = unitPrice,
                 Quantity = quantity,
-                Product = product,
                 Status = OrderItemStatus.Pending
             };
         }

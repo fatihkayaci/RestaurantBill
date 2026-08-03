@@ -18,8 +18,9 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithValidCommand_AddsCashRegisterAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            var currentUser = new FakeCurrentUserService { RestaurantId = 5 };
-            
+            Guid branchId = Guid.NewGuid();
+            var currentUser = new FakeCurrentUserService { BranchId = branchId };
+
             var handler = new CreateCashRegisterHandler(uow, currentUser);
             var command = new CreateCashRegisterCommand
             {
@@ -32,7 +33,7 @@ public class CashRegisterCommandHandlerTests
             Assert.Single(uow.CashRegisterRepo.Added);
             Assert.Equal("Ana Kasa", uow.CashRegisterRepo.Added[0].Name);
             Assert.Equal(1000m, uow.CashRegisterRepo.Added[0].Balance);
-            Assert.Equal(5, uow.CashRegisterRepo.Added[0].RestaurantId);
+            Assert.Equal(branchId, uow.CashRegisterRepo.Added[0].BranchId);
             Assert.True(uow.SaveChangesCalled);
             Assert.True(result.IsSuccess);
         }
@@ -44,7 +45,7 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithExistingRegister_UpdatesAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister existing = CashRegister.Create("Eski Ad", 500m, CashRegisterStatus.Open, restaurantId: 1);
+            CashRegister existing = CashRegister.Create("Eski Ad", 500m, Guid.NewGuid());
             await uow.CashRegisterRepo.AddAsync(existing);
 
             var handler = new UpdateCashRegisterHandler(uow);
@@ -71,7 +72,7 @@ public class CashRegisterCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             var handler = new UpdateCashRegisterHandler(uow);
-            var command = new UpdateCashRegisterCommand { Id = 99, Name = "Ad", Balance = 0m, Status = CashRegisterStatus.Open };
+            var command = new UpdateCashRegisterCommand { Id = Guid.NewGuid(), Name = "Ad", Balance = 0m, Status = CashRegisterStatus.Open };
 
             var result = await handler.Handle(command, CancellationToken.None);
             Assert.True(result.IsFailure);
@@ -84,7 +85,7 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithExistingRegister_DeletesAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister existing = CashRegister.Create("Kasa", 0m, CashRegisterStatus.Open, restaurantId: 1);
+            CashRegister existing = CashRegister.Create("Kasa", 0m, Guid.NewGuid());
             await uow.CashRegisterRepo.AddAsync(existing);
 
             var handler = new DeleteCashRegisterHandler(uow);
@@ -101,7 +102,7 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithPositiveBalance_ThrowsDomainException()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister existing = CashRegister.Create("Kasa", 100m, CashRegisterStatus.Open, restaurantId: 1);
+            CashRegister existing = CashRegister.Create("Kasa", 100m, Guid.NewGuid());
             await uow.CashRegisterRepo.AddAsync(existing);
 
             var handler = new DeleteCashRegisterHandler(uow);
@@ -115,7 +116,7 @@ public class CashRegisterCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             var handler = new DeleteCashRegisterHandler(uow);
-            var command = new DeleteCashRegisterCommand { CashRegisterId = 99 };
+            var command = new DeleteCashRegisterCommand { CashRegisterId = Guid.NewGuid() };
 
             var result = await handler.Handle(command, CancellationToken.None);
             Assert.True(result.IsFailure);
@@ -128,10 +129,10 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithOpenRegister_AddsTransactionAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister register = CashRegister.Create("Kasa", 500m, CashRegisterStatus.Open, restaurantId: 1);
+            CashRegister register = CashRegister.Create("Kasa", 500m, Guid.NewGuid());
             await uow.CashRegisterRepo.AddAsync(register);
 
-            var handler = new AddTransactionToCashRegisterCommandHandler(uow, new FakeCurrentUserService { UserId = 3 });
+            var handler = new AddTransactionToCashRegisterCommandHandler(uow, new FakeCurrentUserService { UserId = Guid.NewGuid() });
             var command = new AddTransactionToCashRegisterCommand
             {
                 CashRegisterId = register.Id,
@@ -151,7 +152,8 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithClosedRegister_ThrowsDomainException()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister register = CashRegister.Create("Kasa", 500m, CashRegisterStatus.Closed, restaurantId: 1);
+            CashRegister register = CashRegister.Create("Kasa", 500m, Guid.NewGuid());
+            register.Update("Kasa", 500m, CashRegisterStatus.Closed);
             await uow.CashRegisterRepo.AddAsync(register);
 
             var handler = new AddTransactionToCashRegisterCommandHandler(uow, new FakeCurrentUserService());
@@ -168,7 +170,7 @@ public class CashRegisterCommandHandlerTests
 
     public class TransferBetweenCashRegistersHandlerTests
     {
-        private static void SetId(CashRegister register, int id)
+        private static void SetId(CashRegister register, Guid id)
         {
             typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(register, id);
         }
@@ -177,18 +179,21 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithValidCommand_MovesBalanceAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister source = CashRegister.Create("Kasa A", 300m, CashRegisterStatus.Open, restaurantId: 5);
-            CashRegister destination = CashRegister.Create("Kasa B", 100m, CashRegisterStatus.Open, restaurantId: 5);
-            SetId(source, 1);
-            SetId(destination, 2);
+            Guid branchId = Guid.NewGuid();
+            CashRegister source = CashRegister.Create("Kasa A", 300m, branchId);
+            CashRegister destination = CashRegister.Create("Kasa B", 100m, branchId);
+            Guid sourceId = Guid.NewGuid();
+            Guid destinationId = Guid.NewGuid();
+            SetId(source, sourceId);
+            SetId(destination, destinationId);
             await uow.CashRegisterRepo.AddAsync(source);
             await uow.CashRegisterRepo.AddAsync(destination);
 
-            var handler = new TransferBetweenCashRegistersCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 5, UserId = 3 });
+            var handler = new TransferBetweenCashRegistersCommandHandler(uow, new FakeCurrentUserService { BranchId = branchId, UserId = Guid.NewGuid() });
             var command = new TransferBetweenCashRegistersCommand
             {
-                SourceCashRegisterId = 1,
-                DestinationCashRegisterId = 2,
+                SourceCashRegisterId = sourceId,
+                DestinationCashRegisterId = destinationId,
                 Amount = 120m
             };
 
@@ -204,18 +209,21 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithInsufficientSourceBalance_ThrowsDomainException()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister source = CashRegister.Create("Kasa A", 50m, CashRegisterStatus.Open, restaurantId: 5);
-            CashRegister destination = CashRegister.Create("Kasa B", 100m, CashRegisterStatus.Open, restaurantId: 5);
-            SetId(source, 1);
-            SetId(destination, 2);
+            Guid branchId = Guid.NewGuid();
+            CashRegister source = CashRegister.Create("Kasa A", 50m, branchId);
+            CashRegister destination = CashRegister.Create("Kasa B", 100m, branchId);
+            Guid sourceId = Guid.NewGuid();
+            Guid destinationId = Guid.NewGuid();
+            SetId(source, sourceId);
+            SetId(destination, destinationId);
             await uow.CashRegisterRepo.AddAsync(source);
             await uow.CashRegisterRepo.AddAsync(destination);
 
-            var handler = new TransferBetweenCashRegistersCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 5 });
+            var handler = new TransferBetweenCashRegistersCommandHandler(uow, new FakeCurrentUserService { BranchId = branchId });
             var command = new TransferBetweenCashRegistersCommand
             {
-                SourceCashRegisterId = 1,
-                DestinationCashRegisterId = 2,
+                SourceCashRegisterId = sourceId,
+                DestinationCashRegisterId = destinationId,
                 Amount = 100m
             };
 
@@ -226,18 +234,22 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithRegisterFromAnotherRestaurant_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister source = CashRegister.Create("Kasa A", 300m, CashRegisterStatus.Open, restaurantId: 5);
-            CashRegister destination = CashRegister.Create("Kasa B", 100m, CashRegisterStatus.Open, restaurantId: 9);
-            SetId(source, 1);
-            SetId(destination, 2);
+            Guid branchId = Guid.NewGuid();
+            Guid otherBranchId = Guid.NewGuid();
+            CashRegister source = CashRegister.Create("Kasa A", 300m, branchId);
+            CashRegister destination = CashRegister.Create("Kasa B", 100m, otherBranchId);
+            Guid sourceId = Guid.NewGuid();
+            Guid destinationId = Guid.NewGuid();
+            SetId(source, sourceId);
+            SetId(destination, destinationId);
             await uow.CashRegisterRepo.AddAsync(source);
             await uow.CashRegisterRepo.AddAsync(destination);
 
-            var handler = new TransferBetweenCashRegistersCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 5 });
+            var handler = new TransferBetweenCashRegistersCommandHandler(uow, new FakeCurrentUserService { BranchId = branchId });
             var command = new TransferBetweenCashRegistersCommand
             {
-                SourceCashRegisterId = 1,
-                DestinationCashRegisterId = 2,
+                SourceCashRegisterId = sourceId,
+                DestinationCashRegisterId = destinationId,
                 Amount = 50m
             };
 
@@ -250,15 +262,17 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithNonExistingDestinationRegister_ReturnsFailureResult()
         {
             var uow = new FakeUnitOfWork();
-            CashRegister source = CashRegister.Create("Kasa A", 300m, CashRegisterStatus.Open, restaurantId: 5);
-            SetId(source, 1);
+            Guid branchId = Guid.NewGuid();
+            CashRegister source = CashRegister.Create("Kasa A", 300m, branchId);
+            Guid sourceId = Guid.NewGuid();
+            SetId(source, sourceId);
             await uow.CashRegisterRepo.AddAsync(source);
 
-            var handler = new TransferBetweenCashRegistersCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 5 });
+            var handler = new TransferBetweenCashRegistersCommandHandler(uow, new FakeCurrentUserService { BranchId = branchId });
             var command = new TransferBetweenCashRegistersCommand
             {
-                SourceCashRegisterId = 1,
-                DestinationCashRegisterId = 99,
+                SourceCashRegisterId = sourceId,
+                DestinationCashRegisterId = Guid.NewGuid(),
                 Amount = 50m
             };
 

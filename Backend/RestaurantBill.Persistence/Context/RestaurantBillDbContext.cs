@@ -1,22 +1,27 @@
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Persistence.Context;
 
 public class RestaurantBillDbContext : DbContext
 {
-    public RestaurantBillDbContext(DbContextOptions<RestaurantBillDbContext> options)
+    private readonly ICurrentUserService _currentUser;
+
+    public RestaurantBillDbContext(DbContextOptions<RestaurantBillDbContext> options, ICurrentUserService currentUser)
     : base(options)
     {
+        _currentUser = currentUser;
     }
 
     public DbSet<User> Users { get; set; }
-    public DbSet<UserRestaurant> UserRestaurants { get; set; }
+    public DbSet<UserBranch> UserBranches { get; set; }
     public DbSet<Product> Products { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<Category> Categories { get; set; }
-    public DbSet<Restaurant> Restaurants { get; set; }
+    public DbSet<Company> Companies { get; set; }
+    public DbSet<Branch> Branches { get; set; }
     public DbSet<Membership> Memberships { get; set; }
     public DbSet<Table> Tables { get; set; }
     public DbSet<Region> Regions { get; set; }
@@ -41,6 +46,7 @@ public class RestaurantBillDbContext : DbContext
             {
                 case EntityState.Added:
                     data.Entity.SetCreatedAt();
+                    data.Entity.SetCreatedUser(_currentUser.UserId);
                     break;
                 case EntityState.Modified:
                     data.Entity.SetUpdatedAt();

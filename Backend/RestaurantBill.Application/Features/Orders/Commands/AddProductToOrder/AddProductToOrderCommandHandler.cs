@@ -42,8 +42,8 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.RestaurantId, order.TableId, order.TotalPrice);
-            await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.RestaurantId);
+            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, order.TableId, order.TotalPrice);
+            await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.BranchId);
             return Result.Success();
         }
     }

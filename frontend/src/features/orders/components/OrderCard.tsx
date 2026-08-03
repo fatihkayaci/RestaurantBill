@@ -5,10 +5,10 @@ import { Minus, Plus, Trash2 } from 'lucide-react';
 
 interface OrderCardProps {
     item: OrderItem;
-    increaseQuantity: (productId: number) => void;
-    decreaseQuantity: (productId: number) => void;
-    onUpdateQuantity: (productId: number, quantity: number) => void;
-    removeItem: (productId: number) => void;
+    increaseQuantity: (productId: string) => void;
+    decreaseQuantity: (productId: string) => void;
+    onUpdateQuantity: (productId: string, quantity: number) => void;
+    removeItem: (productId: string) => void;
 }
 
 export default function OrderCard({ item, increaseQuantity, decreaseQuantity, onUpdateQuantity, removeItem }: OrderCardProps) {

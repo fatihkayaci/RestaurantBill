@@ -11,13 +11,13 @@ export const regionService = {
             Name: name
         });
     },
-    updateRegion: async (id: number, name: string) => {
+    updateRegion: async (id: string, name: string) => {
         await api.post('/region/update', {
             Id: id,
             Name: name
         });
     },
-    deleteRegion: async (id: number) => {
+    deleteRegion: async (id: string) => {
         await api.delete(`/region/${id}`);
     },
 };

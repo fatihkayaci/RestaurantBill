@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 interface ProductCardProps {
     product: Product;
-    onAdd: (productId: number) => void;
+    onAdd: (productId: string) => void;
 }
 
 export default function ProductCard({ product, onAdd }: ProductCardProps) {

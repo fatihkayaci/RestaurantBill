@@ -4,16 +4,17 @@ namespace RestaurantBill.Domain.Entities;
 
 public class CashTransaction : BaseEntity
 {
+    public Guid CashRegisterId { get; private set; }
+    public CashRegister CashRegister { get; private set; } = default!;
+    
     public CashTransactionType Type { get; private set; }
     public decimal Amount { get; private set; }
-    public int UserId { get; private set; }
-    public int CashRegisterId { get; private set; }
-    public CashRegister CashRegister { get; private set; } = default!;
-    public int? RelatedCashRegisterId { get; private set; }
+    public Guid UserId { get; private set; }
+    public Guid? RelatedCashRegisterId { get; private set; }
 
     protected CashTransaction() { }
 
-    internal static CashTransaction Create(int cashRegisterId, CashTransactionType type, decimal amount, int userId, int? relatedCashRegisterId = null)
+    public static CashTransaction Create(Guid cashRegisterId, CashTransactionType type, decimal amount, Guid userId, Guid? relatedCashRegisterId = null)
     {
         return new CashTransaction
         {
@@ -24,4 +25,5 @@ public class CashTransaction : BaseEntity
             RelatedCashRegisterId = relatedCashRegisterId
         };
     }
+    
 }

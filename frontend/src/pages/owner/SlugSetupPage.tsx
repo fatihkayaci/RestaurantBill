@@ -2,22 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
-import { restaurantService } from "@/features/admin/api/restaurantService";
+import { companyService } from "@/features/companies/api/companyService";
 import { ROOT_DOMAIN } from "@/lib/tenant";
+import { slugify } from "@/lib/slug";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const slugify = (value: string) =>
-    value
-        .toLowerCase()
-        .replace(/[şŞ]/g, "s")
-        .replace(/[ğĞ]/g, "g")
-        .replace(/[üÜ]/g, "u")
-        .replace(/[öÖ]/g, "o")
-        .replace(/[çÇ]/g, "c")
-        .replace(/[ıİ]/g, "i")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
 
 export default function SlugSetupPage() {
     const navigate = useNavigate();
@@ -34,8 +23,8 @@ export default function SlugSetupPage() {
         }
         try {
             setLoading(true);
-            const restaurant = await restaurantService.getMyRestaurant();
-            await restaurantService.setBranchSlug(restaurant.id, cleanSlug);
+            const company = await companyService.getMyCompany();
+            await companyService.setBranchSlug(company.id, cleanSlug);
             toast.success(`Restoran adresiniz ayarlandı: ${cleanSlug}.${ROOT_DOMAIN}`);
             navigate("/owner");
         } catch (error) {

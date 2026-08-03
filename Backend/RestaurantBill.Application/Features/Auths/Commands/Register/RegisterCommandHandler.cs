@@ -33,10 +33,10 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
 
             User user = User.Create(request.FullName, request.Email, request.PhoneNumber);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));
-            Restaurant restaurant = Restaurant.Create(request.RestaurantName, user);
+            Company company = Company.Create(request.RestaurantName, user);
 
             await _uow.User.AddAsync(user);
-            await _uow.Restaurant.AddAsync(restaurant);
+            await _uow.Company.AddAsync(company);
             await _uow.SaveChangesAsync(cancellationToken);
 
             return Result<RegisterResponseDto>.Success(

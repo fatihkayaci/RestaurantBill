@@ -10,17 +10,17 @@ export const tableService = {
         const response = await api.get<Table>(`/table/${tableId}`);
         return response.data;
     },
-    deleteTable: async (id: number) => {
+    deleteTable: async (id: string) => {
         await api.delete(`/table/${id}`);
     },
-    createTable: async (name: string, regionId: number) => {
+    createTable: async (name: string, regionId: string) => {
         const response = await api.post(`/table/create`, {
             Name: name,
             RegionId: regionId
         });
         return response.data;
     },
-    updateTable: async (id: number, name: string, regionId: number, status?: number) => {
+    updateTable: async (id: string, name: string, regionId: string, status?: number) => {
         const response = await api.post(`/table/update`, {
             Id: id,
             Name: name,

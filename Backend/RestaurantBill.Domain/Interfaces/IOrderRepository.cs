@@ -4,6 +4,6 @@ using RestaurantBill.Domain.Entities;
 
 public interface IOrderRepository : IGenericRepository<Order>
 {
-    Task<Order?> GetActiveOrderByTableId(int tableId, bool trackChanges = false);
-    Task CreateMultiplierOrderItems(int tableId, OrderItem[] items);
+    Task<Order?> GetActiveOrderByTableId(Guid tableId, bool trackChanges = false);
+    Task CreateMultiplierOrderItems(Guid tableId, OrderItem[] items);
 }

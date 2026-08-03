@@ -9,7 +9,7 @@ namespace RestaurantBill.Infrastructure.Hubs
         public override async Task OnConnectedAsync()
         {
             string? restaurantId = Context.User?.FindFirst("RestaurantId")?.Value;
-            if (int.TryParse(restaurantId, out int id))
+            if (Guid.TryParse(restaurantId, out Guid id))
                 await Groups.AddToGroupAsync(Context.ConnectionId, HubGroups.Restaurant(id));
 
             await base.OnConnectedAsync();

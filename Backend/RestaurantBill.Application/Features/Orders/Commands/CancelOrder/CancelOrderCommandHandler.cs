@@ -40,9 +40,9 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CancelOrder
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
-            await _tableNotificationService.SendOrderClosedAsync(_currentUserService.RestaurantId, table.Id, order.Id);
-            await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.RestaurantId);
+            await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.BranchId, table.Id, (int)table.Status);
+            await _tableNotificationService.SendOrderClosedAsync(_currentUserService.BranchId, table.Id, order.Id);
+            await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.BranchId);
             return Result.Success();
         }
     }

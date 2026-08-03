@@ -3,7 +3,7 @@ using RestaurantBill.Domain.Enums;
 namespace RestaurantBill.Application.DTOs;
 public class UserDto
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public required string FullName { get; set; }
     public required string UserName { get; set; }
     public string? Email { get; set; }
@@ -11,6 +11,6 @@ public class UserDto
     public required string UserCode { get; set; }
     public UserRole Role { get; set; }
     public bool IsActive { get; set; }
-    public int RestaurantId { get; set; }
-    public string? RestaurantName { get; set; }
+    public Guid BranchId { get; set; }
+    public string? BranchName { get; set; }
 }

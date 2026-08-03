@@ -3,8 +3,8 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
 {
-    public class OpenTableCommand : IRequest<Result<int>>
+    public class OpenTableCommand : IRequest<Result<Guid>>
     {
-        public int TableId { get; set; }
+        public Guid TableId { get; set; }
     }
 }

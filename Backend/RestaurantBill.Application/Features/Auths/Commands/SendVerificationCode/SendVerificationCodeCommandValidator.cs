@@ -7,7 +7,7 @@ public class SendVerificationCodeCommandValidator : AbstractValidator<SendVerifi
     public SendVerificationCodeCommandValidator()
     {
         RuleFor(x => x.UserId)
-            .GreaterThan(0).WithMessage("Geçersiz kullanıcı.");
+            .NotEqual(Guid.Empty).WithMessage("Geçersiz kullanıcı.");
 
         RuleFor(x => x.Type)
             .IsInEnum().WithMessage("Geçerli bir doğrulama tipi seçilmelidir.");

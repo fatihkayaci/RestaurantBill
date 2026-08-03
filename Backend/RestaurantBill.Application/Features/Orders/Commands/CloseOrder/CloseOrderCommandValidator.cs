@@ -7,6 +7,6 @@ public class CloseOrderCommandValidator : AbstractValidator<DeleteCommand>
     public CloseOrderCommandValidator()
     {
         RuleFor(x => x.OrderId)
-            .GreaterThan(0).WithMessage("Geçerli bir sipariş numarası girmelisiniz.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir sipariş numarası girmelisiniz.");
     }
 }

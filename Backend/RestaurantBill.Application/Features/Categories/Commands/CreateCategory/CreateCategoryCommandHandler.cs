@@ -19,9 +19,9 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
 
         public async Task<Result> Handle(CreateCategoryCommand command, CancellationToken cancellationToken)
         {
-            int restaurantId = _userService.RestaurantId;
+            Guid restaurantId = _userService.BranchId;
 
-            bool nameExists = (await _uow.Category.GetAllAsync(c => c.Name == command.Name && c.RestaurantId == restaurantId, false)).Any();
+            bool nameExists = (await _uow.Category.GetAllAsync(c => c.Name == command.Name && c.BranchId == restaurantId, false)).Any();
             if (nameExists)
                 return Result.Failure("Bu isimde bir kategori zaten mevcut.");
 

@@ -27,12 +27,16 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
             User? user = await _uow.User.GetByIdAsync(request.UserId, true);
             if (user is null) return Result.Failure("Kullanıcı bulunamadı.");
 
-            UserRestaurant? userRestaurant = (await _uow.UserRestaurant.GetAllAsync(ur => ur.UserId == request.UserId && !ur.IsDeleted, true)).FirstOrDefault();
-            if (userRestaurant is null)
+            UserBranch? userBranch = (await _uow.UserBranch.GetAllAsync(ur => ur.UserId == request.UserId && !ur.IsDeleted, true, nameof(UserBranch.Branch))).FirstOrDefault();
+            if (userBranch is null)
             {
-                bool isOwner = (await _uow.Restaurant.GetAllAsync(r => r.OwnerUserId == request.UserId && !r.IsDeleted, false)).Any();
+                bool isOwner = (await _uow.Company.GetAllAsync(c => c.OwnerUserId == request.UserId && !c.IsDeleted, false)).Any();
                 if (!isOwner) return Result.Failure("Kullanıcı bulunamadı.");
             }
+
+            bool isPromotingToAdmin = request.Role == UserRole.Admin && userBranch?.Role != UserRole.Admin;
+            if (isPromotingToAdmin && _currentUser.Role != nameof(UserRole.Owner))
+                return Result.Failure("Admin rolü atama yetkiniz yok.");
 
             if (!string.IsNullOrWhiteSpace(request.Email))
             {
@@ -41,31 +45,40 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
                     return Result.Failure("Bu e-posta adresi zaten kullanımda.");
             }
 
-            if (userRestaurant is not null && request.RestaurantId.HasValue && request.RestaurantId.Value != userRestaurant.RestaurantId)
+            Guid? companyId = userBranch?.Branch.CompanyId;
+
+            if (userBranch is not null && request.BranchId.HasValue && request.BranchId.Value != userBranch.BranchId)
             {
                 if (_currentUser.Role != nameof(UserRole.Owner))
                     return Result.Failure("Bu şubeye kullanıcı taşıma yetkiniz yok.");
 
-                Restaurant? targetRestaurant = (await _uow.Restaurant.GetAllAsync(
-                    r => r.Id == request.RestaurantId.Value && r.OwnerUserId == _currentUser.UserId && !r.IsDeleted, false)).FirstOrDefault();
-                if (targetRestaurant is null)
+                Branch? targetBranch = (await _uow.Branch.GetAllAsync(
+                    b => b.Id == request.BranchId.Value && b.Company.OwnerUserId == _currentUser.UserId && !b.IsDeleted, false, nameof(Branch.Company))).FirstOrDefault();
+                if (targetBranch is null)
                     return Result.Failure("Şube bulunamadı.");
 
-                bool userNameExists = (await _uow.UserRestaurant.GetAllAsync(
-                    ur => ur.UserName == request.UserName && ur.RestaurantId == targetRestaurant.Id && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
+                companyId = targetBranch.CompanyId;
+                userBranch.ChangeBranch(targetBranch);
+            }
+
+            if (userBranch is not null && companyId.HasValue)
+            {
+                bool userNameExists = (await _uow.UserBranch.GetAllAsync(
+                    ur => ur.UserName == request.UserName && ur.Branch.CompanyId == companyId.Value && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
                 if (userNameExists)
                     return Result.Failure("Bu kullanıcı adı zaten kullanımda.");
 
-                bool userCodeExists = (await _uow.UserRestaurant.GetAllAsync(
-                    ur => ur.UserCode == request.UserCode && ur.RestaurantId == targetRestaurant.Id && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
-                if (userCodeExists)
-                    return Result.Failure("Bu kullanıcı kodu zaten kullanımda.");
-
-                userRestaurant.ChangeRestaurant(targetRestaurant);
+                if (!string.IsNullOrWhiteSpace(request.UserCode))
+                {
+                    bool userCodeExists = (await _uow.UserBranch.GetAllAsync(
+                        ur => ur.UserCode == request.UserCode && ur.Branch.CompanyId == companyId.Value && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
+                    if (userCodeExists)
+                        return Result.Failure("Bu kullanıcı kodu zaten kullanımda.");
+                }
             }
 
-            user.Update(request.FullName, request.Email, request.PhoneNumber, request.IsActive ?? user.IsActive);
-            userRestaurant?.Update(request.UserName, request.UserCode, request.Role);
+            user.Update(request.FullName, request.Email ?? string.Empty, request.PhoneNumber ?? string.Empty, request.IsActive ?? user.IsActive);
+            userBranch?.Update(request.UserName, request.UserCode, request.Role);
 
             if (!string.IsNullOrWhiteSpace(request.Password))
                 user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));

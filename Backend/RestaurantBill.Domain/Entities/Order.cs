@@ -5,21 +5,21 @@ namespace RestaurantBill.Domain.Entities
 {
     public class Order : BaseEntity
     {
+        public Guid TableId { get; private set; }
+        public Table Table { get; private set; } = default!;
+
         public string Note { get; private set; } = string.Empty;
         public decimal TotalPrice { get; private set; }
         public OrderStatus Status { get; private set; } = OrderStatus.Active;
-        public int TableId { get; private set; }
-        public Table Table { get; private set; } = default!;
-
         private readonly List<OrderItem> _orderItems = new();
         public IReadOnlyCollection<OrderItem> OrderItems => _orderItems.AsReadOnly();
 
         protected Order() { }
 
-        public static Order Create(int tableId)
+        public static Order Create(Guid tableId)
         {
-            if (tableId <= 0)
-                throw new DomainException("Geçersiz masa ID'si.");
+            if (tableId == Guid.Empty)
+                throw new DomainException("Geçersiz masa.");
 
             return new Order
             {
@@ -42,7 +42,7 @@ namespace RestaurantBill.Domain.Entities
             }
             else
             {
-                _orderItems.Add(OrderItem.Create(product.Id, product.Price, quantity, product));
+                _orderItems.Add(OrderItem.Create(product.Price, quantity, product));
             }
 
             RecalculateTotal();
@@ -56,7 +56,7 @@ namespace RestaurantBill.Domain.Entities
             Note = note ?? string.Empty;
         }
 
-        public void RemoveItem(int productId)
+        public void RemoveItem(Guid productId)
         {
             OrderItem? item = _orderItems.FirstOrDefault(x => x.ProductId == productId);
             if (item == null)
@@ -66,7 +66,7 @@ namespace RestaurantBill.Domain.Entities
             RecalculateTotal();
         }
 
-        public void UpdateItemQuantity(int productId, int quantity)
+        public void UpdateItemQuantity(Guid productId, int quantity)
         {
             OrderItem? item = _orderItems.FirstOrDefault(x => x.ProductId == productId);
             if (item == null)
@@ -97,7 +97,7 @@ namespace RestaurantBill.Domain.Entities
             }
         }
 
-        public void UpdateItemStatus(int orderItemId, OrderItemStatus status)
+        public void UpdateItemStatus(Guid orderItemId, OrderItemStatus status)
         {
             if (!Enum.IsDefined(typeof(OrderItemStatus), status))
                 throw new DomainException("Geçersiz ürün durumu.");
@@ -123,5 +123,6 @@ namespace RestaurantBill.Domain.Entities
         {
             TotalPrice = _orderItems.Sum(x => x.UnitPrice * x.Quantity);
         }
+        
     }
 }

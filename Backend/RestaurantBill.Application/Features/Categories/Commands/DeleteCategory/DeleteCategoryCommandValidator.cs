@@ -7,6 +7,6 @@ public class DeleteCategoryCommandValidator : AbstractValidator<DeleteCategoryCo
     public DeleteCategoryCommandValidator()
     {
         RuleFor(x => x.Id)
-            .GreaterThan(0).WithMessage("Geçerli bir kategori seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir kategori seçilmelidir.");
     }
 }

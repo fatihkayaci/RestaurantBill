@@ -5,7 +5,7 @@ namespace RestaurantBill.Application.Features.CashRegisters.Commands.TransferBet
 
 public class TransferBetweenCashRegistersCommand : IRequest<Result>
 {
-    public int SourceCashRegisterId { get; set; }
-    public int DestinationCashRegisterId { get; set; }
+    public Guid SourceCashRegisterId { get; set; }
+    public Guid DestinationCashRegisterId { get; set; }
     public decimal Amount { get; set; }
 }

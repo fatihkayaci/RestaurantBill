@@ -18,7 +18,7 @@ export const categoryService = {
             Name: data.name
         });
     },
-    deleteCategory: async (id: number) => {
+    deleteCategory: async (id: string) => {
         await api.delete(`/category/${id}`);
     },
 };

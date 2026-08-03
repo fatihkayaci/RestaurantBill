@@ -5,6 +5,6 @@ namespace RestaurantBill.Application.Interfaces;
 
 public interface IJwtTokenGenerator
 {
-    string GenerateToken(User user, int restaurantId, UserRole role, string userName);
-    string GenerateTransitionToken(int userId, UserRole role);
+    string GenerateToken(User user, Guid restaurantId, UserRole role, string userName);
+    string GenerateTransitionToken(Guid userId, UserRole role);
 }

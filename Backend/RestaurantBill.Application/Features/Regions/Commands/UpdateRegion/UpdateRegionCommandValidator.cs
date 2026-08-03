@@ -6,7 +6,7 @@ public class UpdateRegionCommandValidator : AbstractValidator<UpdateRegionComman
     public UpdateRegionCommandValidator()
     {
         RuleFor(x => x.Id)
-            .GreaterThan(0).WithMessage("Geçerli bir bölge seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir bölge seçilmelidir.");
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Bölge adı boş olamaz.")

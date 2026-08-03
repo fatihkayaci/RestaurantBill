@@ -22,22 +22,79 @@ namespace RestaurantBill.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.CashRegister", b =>
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.Branch", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<string>("BranchName")
+                        .IsRequired()
+                        .HasColumnType("text");
 
-                    b.Property<decimal>("Balance")
-                        .HasColumnType("numeric");
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ManagerName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OpenAddress")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.ToTable("Branches");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.CashRegister", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -45,9 +102,6 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("RestaurantId")
-                        .HasColumnType("integer");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -57,36 +111,34 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RestaurantId");
+                    b.HasIndex("BranchId");
 
                     b.ToTable("CashRegisters");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.CashTransaction", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("numeric");
 
-                    b.Property<int>("CashRegisterId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CashRegisterId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<int?>("RelatedCashRegisterId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("RelatedCashRegisterId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
@@ -94,8 +146,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -106,17 +158,18 @@ namespace RestaurantBill.Persistence.Migrations
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Category", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -125,32 +178,66 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("RestaurantId")
-                        .HasColumnType("integer");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.Company", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RestaurantId");
+                    b.HasIndex("OwnerUserId");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Companies");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Membership", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
@@ -159,9 +246,6 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<int>("PlanType")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RestaurantId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("StartDate")
@@ -175,24 +259,22 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RestaurantId");
+                    b.HasIndex("BranchId");
 
                     b.ToTable("Memberships");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Order", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -204,8 +286,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TableId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TableId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("numeric");
@@ -222,26 +304,24 @@ namespace RestaurantBill.Persistence.Migrations
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderItem", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("OrderId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("ProductId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
@@ -266,20 +346,18 @@ namespace RestaurantBill.Persistence.Migrations
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Product", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
@@ -312,17 +390,18 @@ namespace RestaurantBill.Persistence.Migrations
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Region", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -331,26 +410,21 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("RestaurantId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RestaurantId");
+                    b.HasIndex("BranchId");
 
                     b.ToTable("Regions");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Reservation", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Contact")
                         .IsRequired()
@@ -359,8 +433,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("GuestName")
                         .IsRequired()
@@ -379,8 +453,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TableId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TableId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -392,73 +466,17 @@ namespace RestaurantBill.Persistence.Migrations
                     b.ToTable("Reservations");
                 });
 
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.Restaurant", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("District")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("OwnerUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OwnerUserId");
-
-                    b.ToTable("Restaurants");
-                });
-
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Table", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -471,11 +489,8 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("RegionId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RestaurantId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("RegionId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -487,26 +502,23 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasIndex("RegionId");
 
-                    b.HasIndex("RestaurantId");
-
                     b.ToTable("Tables");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("FullName")
@@ -524,6 +536,7 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("PhoneNumber")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -534,28 +547,26 @@ namespace RestaurantBill.Persistence.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.UserRestaurant", b =>
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.UserBranch", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
-
-                    b.Property<int>("RestaurantId")
-                        .HasColumnType("integer");
 
                     b.Property<int>("Role")
                         .HasColumnType("integer");
@@ -567,8 +578,8 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("UserName")
                         .IsRequired()
@@ -576,22 +587,20 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RestaurantId", "UserName")
+                    b.HasIndex("BranchId", "UserName")
                         .IsUnique();
 
-                    b.HasIndex("UserId", "RestaurantId")
+                    b.HasIndex("UserId", "BranchId")
                         .IsUnique();
 
-                    b.ToTable("UserRestaurants");
+                    b.ToTable("UserBranches");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.VerificationCode", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Attempts")
                         .HasColumnType("integer");
@@ -603,8 +612,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreatedUser")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
@@ -621,8 +630,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -631,15 +640,26 @@ namespace RestaurantBill.Persistence.Migrations
                     b.ToTable("VerificationCodes");
                 });
 
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.CashRegister", b =>
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.Branch", b =>
                 {
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
+                    b.HasOne("RestaurantBill.Domain.Entities.Company", "Company")
                         .WithMany()
-                        .HasForeignKey("RestaurantId")
+                        .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Restaurant");
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.CashRegister", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.CashTransaction", b =>
@@ -655,24 +675,35 @@ namespace RestaurantBill.Persistence.Migrations
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Category", b =>
                 {
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", "Branch")
                         .WithMany()
-                        .HasForeignKey("RestaurantId")
+                        .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Restaurant");
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.Company", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.User", "OwnerUser")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OwnerUser");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Membership", b =>
                 {
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", "Branch")
                         .WithMany()
-                        .HasForeignKey("RestaurantId")
+                        .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Restaurant");
+                    b.Navigation("Branch");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Order", b =>
@@ -688,7 +719,7 @@ namespace RestaurantBill.Persistence.Migrations
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderItem", b =>
                 {
-                    b.HasOne("RestaurantBill.Domain.Entities.Order", null)
+                    b.HasOne("RestaurantBill.Domain.Entities.Order", "Order")
                         .WithMany("OrderItems")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -699,6 +730,8 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Order");
 
                     b.Navigation("Product");
                 });
@@ -716,13 +749,13 @@ namespace RestaurantBill.Persistence.Migrations
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Region", b =>
                 {
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", "Branch")
                         .WithMany()
-                        .HasForeignKey("RestaurantId")
+                        .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Restaurant");
+                    b.Navigation("Branch");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Reservation", b =>
@@ -736,17 +769,6 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Navigation("Table");
                 });
 
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.Restaurant", b =>
-                {
-                    b.HasOne("RestaurantBill.Domain.Entities.User", "OwnerUser")
-                        .WithMany()
-                        .HasForeignKey("OwnerUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("OwnerUser");
-                });
-
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Table", b =>
                 {
                     b.HasOne("RestaurantBill.Domain.Entities.Region", "Region")
@@ -755,22 +777,14 @@ namespace RestaurantBill.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
-                        .WithMany()
-                        .HasForeignKey("RestaurantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Region");
-
-                    b.Navigation("Restaurant");
                 });
 
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.UserRestaurant", b =>
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.UserBranch", b =>
                 {
-                    b.HasOne("RestaurantBill.Domain.Entities.Restaurant", "Restaurant")
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", "Branch")
                         .WithMany()
-                        .HasForeignKey("RestaurantId")
+                        .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -780,7 +794,7 @@ namespace RestaurantBill.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Restaurant");
+                    b.Navigation("Branch");
 
                     b.Navigation("User");
                 });

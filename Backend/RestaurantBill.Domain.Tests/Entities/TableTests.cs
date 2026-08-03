@@ -11,11 +11,12 @@ public class TableTests
         [Fact]
         public void WithValidParameters_ReturnsTable()
         {
-            Table table = Table.Create("Masa 1", "Pencere kenarı", restaurantId: 1);
+            Guid regionId = Guid.NewGuid();
+            Table table = Table.Create("Masa 1", "Pencere kenarı", regionId);
 
             Assert.Equal("Masa 1", table.Name);
             Assert.Equal("Pencere kenarı", table.Note);
-            Assert.Equal(1, table.RestaurantId);
+            Assert.Equal(regionId, table.RegionId);
             Assert.Equal(TableStatus.Available, table.Status);
         }
 
@@ -25,16 +26,14 @@ public class TableTests
         public void WithEmptyName_ThrowsDomainException(string invalidName)
         {
             Assert.Throws<DomainException>(() =>
-                Table.Create(invalidName, "not", restaurantId: 1));
+                Table.Create(invalidName, "not", Guid.NewGuid()));
         }
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void WithInvalidRestaurantId_ThrowsDomainException(int invalidId)
+        [Fact]
+        public void WithInvalidRegionId_ThrowsDomainException()
         {
             Assert.Throws<DomainException>(() =>
-                Table.Create("Masa 1", "not", invalidId));
+                Table.Create("Masa 1", "not", Guid.Empty));
         }
     }
 
@@ -43,7 +42,7 @@ public class TableTests
         [Fact]
         public void WithValidParameters_UpdatesFields()
         {
-            Table table = Table.Create("Eski Ad", "eski not", restaurantId: 1);
+            Table table = Table.Create("Eski Ad", "eski not", Guid.NewGuid());
 
             table.Update("Yeni Ad", "yeni not");
 
@@ -56,7 +55,7 @@ public class TableTests
         [InlineData("   ")]
         public void WithEmptyName_ThrowsDomainException(string invalidName)
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
 
             Assert.Throws<DomainException>(() => table.Update(invalidName, ""));
         }
@@ -67,7 +66,7 @@ public class TableTests
         [Fact]
         public void WhenAvailable_SetsStatusToOccupied()
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
 
             table.Occupy();
 
@@ -77,7 +76,7 @@ public class TableTests
         [Fact]
         public void WhenAlreadyOccupied_ThrowsDomainException()
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
             table.Occupy();
 
             Assert.Throws<DomainException>(() => table.Occupy());
@@ -86,7 +85,7 @@ public class TableTests
         [Fact]
         public void WhenReserved_ThrowsDomainException()
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
             table.Reserve();
 
             Assert.Throws<DomainException>(() => table.Occupy());
@@ -98,7 +97,7 @@ public class TableTests
         [Fact]
         public void SetsStatusToAvailable()
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
             table.Occupy();
 
             table.Release();
@@ -112,7 +111,7 @@ public class TableTests
         [Fact]
         public void SetsStatusToReserved()
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
 
             table.Reserve();
 
@@ -125,21 +124,20 @@ public class TableTests
         [Fact]
         public void WithValidRegionId_SetsRegionId()
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
+            Guid newRegionId = Guid.NewGuid();
 
-            table.AssignRegion(5);
+            table.AssignRegion(newRegionId);
 
-            Assert.Equal(5, table.RegionId);
+            Assert.Equal(newRegionId, table.RegionId);
         }
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void WithInvalidRegionId_ThrowsDomainException(int invalidRegionId)
+        [Fact]
+        public void WithInvalidRegionId_ThrowsDomainException()
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
 
-            Assert.Throws<DomainException>(() => table.AssignRegion(invalidRegionId));
+            Assert.Throws<DomainException>(() => table.AssignRegion(Guid.Empty));
         }
     }
 
@@ -148,7 +146,7 @@ public class TableTests
         [Fact]
         public void WithNoActiveOrders_DoesNotThrow()
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
 
             var exception = Record.Exception(() =>
                 table.EnsureCanBeDeleted([]));
@@ -159,8 +157,8 @@ public class TableTests
         [Fact]
         public void WithActiveOrders_ThrowsDomainException()
         {
-            Table table = Table.Create("Masa 1", "", restaurantId: 1);
-            Order[] orders = [Order.Create(tableId: 1)];
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
+            Order[] orders = [Order.Create(Guid.NewGuid())];
 
             Assert.Throws<DomainException>(() =>
                 table.EnsureCanBeDeleted(orders));

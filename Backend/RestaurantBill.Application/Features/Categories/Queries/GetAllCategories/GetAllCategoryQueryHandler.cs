@@ -21,9 +21,9 @@ namespace RestaurantBill.Application.Features.Categories.Queries.GetAllCategorie
         /// </summary>
         public async Task<Result<List<CategoryDto>>> Handle(GetAllCategoryQuery request, CancellationToken cancellationToken)
         {
-            int restaurantId = _currentUser.RestaurantId;
-            if(restaurantId <= 0) return Result<List<CategoryDto>>.Failure("ID değeri 0 veya negatif olamaz.");
-            var entities = await _uow.Category.GetAllAsync(c => c.RestaurantId == restaurantId, false, null);
+            Guid restaurantId = _currentUser.BranchId;
+            if(restaurantId == Guid.Empty) return Result<List<CategoryDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+            var entities = await _uow.Category.GetAllAsync(c => c.BranchId == restaurantId, false, null);
 
             return Result<List<CategoryDto>>.Success(entities.OrderBy(c => c.Name).Select(c => c.ToDto()).ToList());
         }

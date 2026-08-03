@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { X, Pencil } from 'lucide-react';
 import { toast } from "sonner";
-import { userService } from "@/features/admin/api/userService";
-import { restaurantService } from "@/features/admin/api/restaurantService";
+import { userService } from "@/features/users/api/userService";
+import { branchService } from "@/features/branches/api/branchService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import type { Branch, CreateUser, User } from "@/features/admin/types";
+import type { Branch } from "@/features/branches/types";
+import type { CreateUser, User } from "@/features/users/types";
 import axios from "axios";
 import { cn } from "@/lib/utils";
+import { isValidEmail, isValidPhone } from "@/lib/validators";
 
 const ADMIN_ROLE = 1;
 
@@ -21,7 +23,7 @@ export default function AdminsPage() {
     const [editAdmin, setEditAdmin] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', userCode: '', role: ADMIN_ROLE, restaurantId: undefined
+        passwordHash: '', role: ADMIN_ROLE, branchId: undefined
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export default function AdminsPage() {
 
     useEffect(() => {
         loadAdmins();
-        restaurantService.getMyBranches()
+        branchService.getMyBranches()
             .then(setBranches)
             .catch(console.error);
     }, []);
@@ -45,15 +47,9 @@ export default function AdminsPage() {
         return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     };
 
-    const generateUserCode = () => {
-        const numbers = admins.map(u => parseInt(u.userCode.replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
-        const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
-        return `ADM-${String(next).padStart(3, '0')}`;
-    };
-
     const openCreateModal = () => {
         setEditAdmin(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: ADMIN_ROLE, restaurantId: branches[0]?.id });
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: ADMIN_ROLE, branchId: branches[0]?.id });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -61,14 +57,14 @@ export default function AdminsPage() {
 
     const openEditModal = (admin: User) => {
         setEditAdmin(admin);
-        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', userCode: admin.userCode, role: ADMIN_ROLE, restaurantId: admin.restaurantId });
+        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', role: ADMIN_ROLE, branchId: admin.branchId });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
     };
 
-    const personalFields = ['fullName', 'email', 'phoneNumber', 'restaurantId'];
-    const loginFields = ['userName', 'userCode', 'passwordHash'];
+    const personalFields = ['fullName', 'email', 'phoneNumber', 'branchId'];
+    const loginFields = ['userName', 'passwordHash'];
 
     const handleDelete = async () => {
         if (!deleteTargetId) return;
@@ -89,7 +85,7 @@ export default function AdminsPage() {
         try {
             await userService.updateUser({
                 id: admin.id, fullName: admin.fullName, userName: admin.userName, email: admin.email,
-                phoneNumber: admin.phoneNumber, userCode: admin.userCode, role: ADMIN_ROLE, isActive: !admin.isActive
+                phoneNumber: admin.phoneNumber, role: ADMIN_ROLE, isActive: !admin.isActive
             });
             setAdmins(prev => prev.map(u => u.id === admin.id ? { ...u, isActive: !u.isActive } : u));
             toast.success(admin.isActive ? 'Admin pasif yapıldı.' : 'Admin aktif yapıldı.');
@@ -107,12 +103,13 @@ export default function AdminsPage() {
         else if (form.fullName.length > 100) errors.fullName = 'En fazla 100 karakter.';
         if (!form.userName.trim()) errors.userName = 'Kullanıcı adı boş bırakılamaz.';
         else if (form.userName.length > 50) errors.userName = 'En fazla 50 karakter.';
-        if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
-        if (!form.restaurantId) errors.restaurantId = 'Şube seçilmelidir.';
+        if (form.email && !isValidEmail(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
+        if (!form.phoneNumber.trim()) errors.phoneNumber = 'Telefon numarası boş bırakılamaz.';
+        else if (!isValidPhone(form.phoneNumber)) errors.phoneNumber = 'Geçerli bir telefon numarası giriniz.';
+        if (!form.branchId) errors.branchId = 'Şube seçilmelidir.';
         if (!editAdmin) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
             else if (form.passwordHash.length < 6) errors.passwordHash = 'En az 6 karakter.';
-            if (!form.userCode.trim()) errors.userCode = 'Kullanıcı kodu boş bırakılamaz.';
         } else if (form.passwordHash && form.passwordHash.length < 6) {
             errors.passwordHash = 'En az 6 karakter.';
         }
@@ -146,7 +143,6 @@ export default function AdminsPage() {
                     const message = (data.error ?? data.message) as string;
                     const duplicateFieldMap: Record<string, string> = {
                         'kullanıcı adı': 'userName',
-                        'kullanıcı kodu': 'userCode',
                         'e-posta': 'email',
                     };
                     const duplicateField = Object.entries(duplicateFieldMap).find(([phrase]) => message.includes(phrase))?.[1];
@@ -204,7 +200,7 @@ export default function AdminsPage() {
                                             <span className="font-medium text-foreground">{admin.fullName}</span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">{admin.restaurantName || '—'}</td>
+                                    <td className="px-4 py-3.5 text-muted-foreground">{admin.branchName || '—'}</td>
                                     <td className="px-4 py-3.5 text-muted-foreground">{admin.email || '—'}</td>
                                     <td className="px-4 py-3.5">
                                         <button
@@ -298,22 +294,22 @@ export default function AdminsPage() {
                             {activeTab === 'personal' && (
                                 <>
                                     <div>
-                                        <label className={labelClass}>Şube</label>
+                                        <label className={labelClass}>Şube *</label>
                                         <select
-                                            className={cn(inputClass, fieldErrors.restaurantId && "border-destructive")}
-                                            value={form.restaurantId ?? ''}
-                                            onChange={e => setForm({ ...form, restaurantId: e.target.value ? Number(e.target.value) : undefined })}
+                                            className={cn(inputClass, fieldErrors.branchId && "border-destructive")}
+                                            value={form.branchId ?? ''}
+                                            onChange={e => setForm({ ...form, branchId: e.target.value || undefined })}
                                         >
                                             <option value="">Şube seçiniz...</option>
                                             {branches.map(branch => (
-                                                <option key={branch.id} value={branch.id}>{branch.name}</option>
+                                                <option key={branch.id} value={branch.id}>{branch.branchName}</option>
                                             ))}
                                         </select>
-                                        {fieldErrors.restaurantId && <p className="text-xs text-destructive mt-1">{fieldErrors.restaurantId}</p>}
+                                        {fieldErrors.branchId && <p className="text-xs text-destructive mt-1">{fieldErrors.branchId}</p>}
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Ad Soyad</label>
+                                        <label className={labelClass}>Ad Soyad *</label>
                                         <input
                                             className={cn(inputClass, fieldErrors.fullName && "border-destructive")}
                                             placeholder="Ad Soyad..."
@@ -336,13 +332,14 @@ export default function AdminsPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Telefon</label>
+                                        <label className={labelClass}>Telefon *</label>
                                         <input
-                                            className={inputClass}
+                                            className={cn(inputClass, fieldErrors.phoneNumber && "border-destructive")}
                                             placeholder="0532 000 00 00"
                                             value={form.phoneNumber}
                                             onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
                                         />
+                                        {fieldErrors.phoneNumber && <p className="text-xs text-destructive mt-1">{fieldErrors.phoneNumber}</p>}
                                     </div>
                                 </>
                             )}
@@ -350,7 +347,7 @@ export default function AdminsPage() {
                             {activeTab === 'login' && (
                                 <>
                                     <div>
-                                        <label className={labelClass}>Kullanıcı Adı</label>
+                                        <label className={labelClass}>Kullanıcı Adı *</label>
                                         <input
                                             className={cn(inputClass, fieldErrors.userName && "border-destructive")}
                                             placeholder="kullanici_adi"
@@ -361,18 +358,7 @@ export default function AdminsPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Kullanıcı Kodu</label>
-                                        <input
-                                            className={cn(inputClass, fieldErrors.userCode && "border-destructive")}
-                                            placeholder="ADM-001"
-                                            value={form.userCode}
-                                            onChange={e => setForm({ ...form, userCode: e.target.value })}
-                                        />
-                                        {fieldErrors.userCode && <p className="text-xs text-destructive mt-1">{fieldErrors.userCode}</p>}
-                                    </div>
-
-                                    <div>
-                                        <label className={labelClass}>Şifre {editAdmin && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
+                                        <label className={labelClass}>Şifre * {editAdmin && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
                                         <input
                                             type="text"
                                             className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}

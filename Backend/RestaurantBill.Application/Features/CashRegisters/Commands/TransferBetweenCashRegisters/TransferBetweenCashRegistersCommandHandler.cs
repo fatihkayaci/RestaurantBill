@@ -25,7 +25,7 @@ public class TransferBetweenCashRegistersCommandHandler : IRequestHandler<Transf
         CashRegister? destination = await _uow.CashRegister.GetByIdAsync(request.DestinationCashRegisterId, true);
         if (destination is null) return Result.Failure("Hedef kasa bulunamadı.");
 
-        if (source.RestaurantId != _currentUser.RestaurantId || destination.RestaurantId != _currentUser.RestaurantId)
+        if (source.BranchId != _currentUser.BranchId || destination.BranchId != _currentUser.BranchId)
             return Result.Failure("Kasa bulunamadı.");
 
         (CashTransaction sourceTransaction, CashTransaction destinationTransaction) =

@@ -1,84 +1,76 @@
 import { useEffect, useState } from "react";
-import { X, Pencil } from 'lucide-react';
+import { X } from 'lucide-react';
 import axios from "axios";
 import { toast } from "sonner";
-import { QRCodeSVG } from "qrcode.react";
-import { restaurantService } from "@/features/admin/api/restaurantService";
-import type { Branch, CreateRestaurant } from "@/features/admin/types";
-import { ROOT_DOMAIN } from "@/lib/tenant";
+import { branchService } from "@/features/branches/api/branchService";
+import type { Branch, CreateBranch, UpdateBranch } from "@/features/branches/types";
+import { getTurkeyProvinces, type Province } from "@/lib/turkeyLocations";
 import { cn } from "@/lib/utils";
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
-const slugify = (value: string) =>
-    value
-        .toLowerCase()
-        .replace(/[şŞ]/g, "s")
-        .replace(/[ğĞ]/g, "g")
-        .replace(/[üÜ]/g, "u")
-        .replace(/[öÖ]/g, "o")
-        .replace(/[çÇ]/g, "c")
-        .replace(/[ıİ]/g, "i")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
+const isValidPhone = (value: string) => {
+    if (!value.trim()) return true;
+    const digits = value.replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
+    return /^\d{10}$/.test(digits);
+};
 
 export default function BranchesPage() {
     const [branches, setBranches] = useState<Branch[]>([]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [name, setName] = useState('');
-    const [nameError, setNameError] = useState<string | null>(null);
+    const [createForm, setCreateForm] = useState<CreateBranch>({ name: '', managerName: '', phoneNumber: '', email: '', city: '', district: '', openAddress: '' });
+    const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
     const [saving, setSaving] = useState(false);
 
-    const [slugTarget, setSlugTarget] = useState<Branch | null>(null);
-    const [isEditingSlug, setIsEditingSlug] = useState(false);
-    const [slugInput, setSlugInput] = useState('');
-    const [slugError, setSlugError] = useState<string | null>(null);
-    const [slugSaving, setSlugSaving] = useState(false);
+    const [editTarget, setEditTarget] = useState<Branch | null>(null);
 
-    const [infoForm, setInfoForm] = useState<CreateRestaurant>({ name: '', phoneNumber: '', mobilePhoneNumber: '', email: '', city: '', district: '' });
+    const [infoForm, setInfoForm] = useState<UpdateBranch>({ name: '', managerName: '', phoneNumber: '', email: '', city: '', district: '', openAddress: '' });
     const [infoErrors, setInfoErrors] = useState<Record<string, string>>({});
     const [infoSaving, setInfoSaving] = useState(false);
 
+    const [provinces, setProvinces] = useState<Province[]>([]);
+    const districtsFor = (cityName: string) => provinces.find(p => p.name === cityName)?.districts ?? [];
+
     const loadBranches = () => {
-        restaurantService.getMyBranches()
+        branchService.getMyBranches()
             .then(setBranches)
             .catch(console.error);
     };
 
     useEffect(() => {
         loadBranches();
+        getTurkeyProvinces().then(setProvinces).catch(console.error);
     }, []);
 
     const openCreateModal = () => {
-        setName('');
-        setNameError(null);
+        setCreateForm({ name: '', managerName: '', phoneNumber: '', email: '', city: '', district: '', openAddress: '' });
+        setCreateErrors({});
         setIsModalOpen(true);
     };
 
-    const openSlugModal = (branch: Branch) => {
-        setSlugTarget(branch);
-        setIsEditingSlug(false);
-        setSlugInput('');
-        setSlugError(null);
+    const openEditModal = (branch: Branch) => {
+        setEditTarget(branch);
         setInfoForm({
-            name: branch.name,
-            phoneNumber: branch.phoneNumber,
-            mobilePhoneNumber: branch.mobilePhoneNumber,
+            name: branch.branchName,
+            managerName: branch.managerName,
+            phoneNumber: branch.number,
             email: branch.email,
             city: branch.city,
             district: branch.district,
+            openAddress: branch.openAddress,
         });
         setInfoErrors({});
     };
 
     const handleInfoSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!slugTarget) return;
+        if (!editTarget) return;
         const errors: Record<string, string> = {};
         if (!infoForm.name.trim()) errors.name = 'Şube adı boş bırakılamaz.';
         if (infoForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(infoForm.email)) errors.email = 'Geçerli bir e-posta giriniz.';
+        if (!isValidPhone(infoForm.phoneNumber)) errors.phoneNumber = 'Geçerli bir telefon numarası giriniz.';
         if (Object.keys(errors).length > 0) {
             setInfoErrors(errors);
             return;
@@ -86,8 +78,17 @@ export default function BranchesPage() {
         setInfoErrors({});
         setInfoSaving(true);
         try {
-            await restaurantService.updateBranch(slugTarget.id, infoForm);
-            setSlugTarget(prev => prev ? { ...prev, ...infoForm } : null);
+            await branchService.updateBranch(editTarget.id, infoForm);
+            setEditTarget(prev => prev ? {
+                ...prev,
+                branchName: infoForm.name,
+                managerName: infoForm.managerName,
+                number: infoForm.phoneNumber,
+                email: infoForm.email,
+                city: infoForm.city,
+                district: infoForm.district,
+                openAddress: infoForm.openAddress,
+            } : null);
             loadBranches();
             toast.success('Şube bilgileri güncellendi.');
         } catch (err: unknown) {
@@ -99,52 +100,25 @@ export default function BranchesPage() {
         }
     };
 
-    const startEditSlug = () => {
-        if (!slugTarget) return;
-        setSlugInput(slugTarget.slug);
-        setSlugError(null);
-        setIsEditingSlug(true);
-    };
-
-    const cleanSlugInput = slugify(slugInput);
-
-    const handleSlugSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!slugTarget) return;
-        if (!cleanSlugInput) {
-            setSlugError('Geçerli bir adres girin.');
-            return;
-        }
-        setSlugError(null);
-        setSlugSaving(true);
-        try {
-            await restaurantService.setBranchSlug(slugTarget.id, cleanSlugInput);
-            loadBranches();
-            setSlugTarget(null);
-        } catch (err: unknown) {
-            if (axios.isAxiosError(err)) {
-                setSlugError(err.response?.data?.error ?? err.response?.data?.message ?? 'Adres ayarlanırken bir hata oluştu.');
-            }
-        } finally {
-            setSlugSaving(false);
-        }
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim()) {
-            setNameError('Şube adı boş bırakılamaz.');
+        const errors: Record<string, string> = {};
+        if (!createForm.name.trim()) errors.name = 'Şube adı boş bırakılamaz.';
+        if (createForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createForm.email)) errors.email = 'Geçerli bir e-posta giriniz.';
+        if (!isValidPhone(createForm.phoneNumber)) errors.phoneNumber = 'Geçerli bir telefon numarası giriniz.';
+        if (Object.keys(errors).length > 0) {
+            setCreateErrors(errors);
             return;
         }
-        setNameError(null);
+        setCreateErrors({});
         setSaving(true);
         try {
-            await restaurantService.createBranch(name.trim());
+            await branchService.createBranch(createForm);
             loadBranches();
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                setNameError(err.response?.data?.error ?? err.response?.data?.message ?? 'Şube eklenirken bir hata oluştu.');
+                setCreateErrors({ name: err.response?.data?.error ?? err.response?.data?.message ?? 'Şube eklenirken bir hata oluştu.' });
             }
         } finally {
             setSaving(false);
@@ -170,25 +144,14 @@ export default function BranchesPage() {
             {/* Branch Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {branches.map(branch => {
-                    const isActive = !!branch.slug;
                     const address = [branch.district, branch.city].filter(Boolean).join(', ');
                     return (
                         <div
                             key={branch.id}
-                            onClick={() => openSlugModal(branch)}
+                            onClick={() => openEditModal(branch)}
                             className="rounded-xl border border-border bg-card p-5 cursor-pointer hover:border-rb-gold/50 transition-colors"
                         >
-                            <div className="flex items-start justify-between gap-2">
-                                <h2 className="text-lg font-serif font-bold text-foreground">{branch.name}</h2>
-                                <span className={cn(
-                                    "shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 border",
-                                    isActive
-                                        ? "bg-rb-green-bg text-rb-green border-rb-green/30"
-                                        : "bg-rb-amber-bg text-rb-amber border-rb-amber/30"
-                                )}>
-                                    {isActive ? 'AKTİF' : 'KURULUM AŞAMASINDA'}
-                                </span>
-                            </div>
+                            <h2 className="text-lg font-serif font-bold text-foreground">{branch.branchName}</h2>
                             <p className="mt-1 text-sm text-muted-foreground">
                                 {address || '—'}
                             </p>
@@ -210,11 +173,6 @@ export default function BranchesPage() {
                                 <span className="text-muted-foreground">Yönetici</span>
                                 <span className="font-semibold text-foreground">{branch.managerName || '—'}</span>
                             </div>
-                            {!isActive && (
-                                <p className="mt-3 text-xs font-medium text-rb-accent">
-                                    Kurulumu tamamlamak için lütfen tıklayın
-                                </p>
-                            )}
                         </div>
                     );
                 })}
@@ -240,16 +198,87 @@ export default function BranchesPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+                        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Şube Adı</label>
+                                    <input
+                                        className={cn(inputClass, createErrors.name && "border-destructive")}
+                                        placeholder="Örn. Kadıköy Şubesi"
+                                        value={createForm.name}
+                                        onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
+                                    />
+                                    {createErrors.name && <p className="text-xs text-destructive mt-1">{createErrors.name}</p>}
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Yönetici Adı</label>
+                                    <input
+                                        className={inputClass}
+                                        placeholder="Şube yöneticisi..."
+                                        value={createForm.managerName}
+                                        onChange={e => setCreateForm({ ...createForm, managerName: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Telefon</label>
+                                    <input
+                                        className={cn(inputClass, createErrors.phoneNumber && "border-destructive")}
+                                        placeholder="0212 000 00 00"
+                                        value={createForm.phoneNumber}
+                                        onChange={e => setCreateForm({ ...createForm, phoneNumber: e.target.value })}
+                                    />
+                                    {createErrors.phoneNumber && <p className="text-xs text-destructive mt-1">{createErrors.phoneNumber}</p>}
+                                </div>
+                                <div>
+                                    <label className={labelClass}>E-posta</label>
+                                    <input
+                                        type="email"
+                                        className={cn(inputClass, createErrors.email && "border-destructive")}
+                                        value={createForm.email}
+                                        onChange={e => setCreateForm({ ...createForm, email: e.target.value })}
+                                    />
+                                    {createErrors.email && <p className="text-xs text-destructive mt-1">{createErrors.email}</p>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Şehir</label>
+                                    <select
+                                        className={inputClass}
+                                        value={createForm.city}
+                                        onChange={e => setCreateForm({ ...createForm, city: e.target.value, district: '' })}
+                                    >
+                                        <option value="">Seçiniz...</option>
+                                        {provinces.map(p => (
+                                            <option key={p.name} value={p.name}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={labelClass}>İlçe</label>
+                                    <select
+                                        className={inputClass}
+                                        value={createForm.district}
+                                        onChange={e => setCreateForm({ ...createForm, district: e.target.value })}
+                                        disabled={!createForm.city}
+                                    >
+                                        <option value="">Seçiniz...</option>
+                                        {districtsFor(createForm.city).map(d => (
+                                            <option key={d.id} value={d.name}>{d.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
                             <div>
-                                <label className={labelClass}>Şube Adı</label>
+                                <label className={labelClass}>Açık Adres</label>
                                 <input
-                                    className={cn(inputClass, nameError && "border-destructive")}
-                                    placeholder="Örn. Kadıköy Şubesi"
-                                    value={name}
-                                    onChange={e => setName(e.target.value)}
+                                    className={inputClass}
+                                    placeholder="Cadde, sokak, no..."
+                                    value={createForm.openAddress}
+                                    onChange={e => setCreateForm({ ...createForm, openAddress: e.target.value })}
                                 />
-                                {nameError && <p className="text-xs text-destructive mt-1">{nameError}</p>}
                             </div>
                         </form>
 
@@ -274,15 +303,15 @@ export default function BranchesPage() {
                 </div>
             )}
 
-            {/* Branch Detail / Slug Setup Modal */}
-            {slugTarget && (
+            {/* Branch Detail Modal */}
+            {editTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSlugTarget(null)} />
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setEditTarget(null)} />
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden max-h-[85vh] flex flex-col">
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
-                            <h2 className="text-xl font-bold text-foreground">{slugTarget.name}</h2>
+                            <h2 className="text-xl font-bold text-foreground">{editTarget.branchName}</h2>
                             <button
-                                onClick={() => setSlugTarget(null)}
+                                onClick={() => setEditTarget(null)}
                                 className="text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 <X className="h-5 w-5" />
@@ -290,27 +319,38 @@ export default function BranchesPage() {
                         </div>
 
                         <div className="overflow-y-auto">
-                        {/* Şube Bilgileri */}
-                        <form onSubmit={handleInfoSubmit} className="px-6 pb-5 space-y-3">
+                        <form onSubmit={handleInfoSubmit} className="px-6 pb-6 space-y-3">
                             <p className={labelClass}>Şube Bilgileri</p>
-                            <div>
-                                <label className={labelClass}>Şube Adı</label>
-                                <input
-                                    className={cn(inputClass, infoErrors.name && "border-destructive")}
-                                    value={infoForm.name}
-                                    onChange={e => setInfoForm({ ...infoForm, name: e.target.value })}
-                                />
-                                {infoErrors.name && <p className="text-xs text-destructive mt-1">{infoErrors.name}</p>}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Şube Adı</label>
+                                    <input
+                                        className={cn(inputClass, infoErrors.name && "border-destructive")}
+                                        value={infoForm.name}
+                                        onChange={e => setInfoForm({ ...infoForm, name: e.target.value })}
+                                    />
+                                    {infoErrors.name && <p className="text-xs text-destructive mt-1">{infoErrors.name}</p>}
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Yönetici Adı</label>
+                                    <input
+                                        className={inputClass}
+                                        placeholder="Şube yöneticisi..."
+                                        value={infoForm.managerName}
+                                        onChange={e => setInfoForm({ ...infoForm, managerName: e.target.value })}
+                                    />
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelClass}>Telefon</label>
                                     <input
-                                        className={inputClass}
+                                        className={cn(inputClass, infoErrors.phoneNumber && "border-destructive")}
                                         placeholder="0212 000 00 00"
                                         value={infoForm.phoneNumber}
                                         onChange={e => setInfoForm({ ...infoForm, phoneNumber: e.target.value })}
                                     />
+                                    {infoErrors.phoneNumber && <p className="text-xs text-destructive mt-1">{infoErrors.phoneNumber}</p>}
                                 </div>
                                 <div>
                                     <label className={labelClass}>E-posta</label>
@@ -326,20 +366,40 @@ export default function BranchesPage() {
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelClass}>Şehir</label>
-                                    <input
+                                    <select
                                         className={inputClass}
                                         value={infoForm.city}
-                                        onChange={e => setInfoForm({ ...infoForm, city: e.target.value })}
-                                    />
+                                        onChange={e => setInfoForm({ ...infoForm, city: e.target.value, district: '' })}
+                                    >
+                                        <option value="">Seçiniz...</option>
+                                        {provinces.map(p => (
+                                            <option key={p.name} value={p.name}>{p.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div>
                                     <label className={labelClass}>İlçe</label>
-                                    <input
+                                    <select
                                         className={inputClass}
                                         value={infoForm.district}
                                         onChange={e => setInfoForm({ ...infoForm, district: e.target.value })}
-                                    />
+                                        disabled={!infoForm.city}
+                                    >
+                                        <option value="">Seçiniz...</option>
+                                        {districtsFor(infoForm.city).map(d => (
+                                            <option key={d.id} value={d.name}>{d.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Açık Adres</label>
+                                <input
+                                    className={inputClass}
+                                    placeholder="Cadde, sokak, no..."
+                                    value={infoForm.openAddress}
+                                    onChange={e => setInfoForm({ ...infoForm, openAddress: e.target.value })}
+                                />
                             </div>
                             <div className="flex justify-end">
                                 <button
@@ -351,67 +411,16 @@ export default function BranchesPage() {
                                 </button>
                             </div>
                         </form>
-
-                        <div className="border-t border-border" />
-
-                        {slugTarget.slug && !isEditingSlug ? (
-                            <div className="px-6 pb-6 flex flex-col items-center gap-3">
-                                <div className="p-3 rounded-lg bg-white">
-                                    <QRCodeSVG value={`https://${slugTarget.slug}.${ROOT_DOMAIN}`} size={176} />
-                                </div>
-                                <p className="text-sm text-foreground font-medium break-all text-center">
-                                    {slugTarget.slug}.{ROOT_DOMAIN}
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={startEditSlug}
-                                    className="flex items-center gap-1.5 text-xs font-medium text-rb-accent hover:underline"
-                                >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                    Adresi Değiştir
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <p className="px-6 text-sm text-muted-foreground">
-                                    {slugTarget.name} şubesine bu adresten erişilecek.
-                                </p>
-
-                                <form onSubmit={handleSlugSubmit} className="px-6 py-5 space-y-2">
-                                    <label className={labelClass}>Adres</label>
-                                    <input
-                                        className={cn(inputClass, slugError && "border-destructive")}
-                                        placeholder="sube-adresi"
-                                        value={slugInput}
-                                        onChange={e => setSlugInput(e.target.value)}
-                                    />
-                                    <p className="text-xs text-muted-foreground truncate">
-                                        {cleanSlugInput ? `${cleanSlugInput}.${ROOT_DOMAIN}` : `—.${ROOT_DOMAIN}`}
-                                    </p>
-                                    {slugError && <p className="text-xs text-destructive">{slugError}</p>}
-                                </form>
-                            </>
-                        )}
                         </div>
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3 shrink-0">
                             <button
                                 type="button"
-                                onClick={() => (isEditingSlug ? setIsEditingSlug(false) : setSlugTarget(null))}
+                                onClick={() => setEditTarget(null)}
                                 className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
                             >
-                                {slugTarget.slug && !isEditingSlug ? 'Kapat' : 'İptal'}
+                                Kapat
                             </button>
-                            {(!slugTarget.slug || isEditingSlug) && (
-                                <button
-                                    type="button"
-                                    onClick={handleSlugSubmit}
-                                    disabled={slugSaving}
-                                    className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 disabled:opacity-60 text-rb-gold-foreground font-medium transition-colors"
-                                >
-                                    {slugSaving ? 'Kaydediliyor...' : 'Kaydet'}
-                                </button>
-                            )}
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,6 @@
 export interface OrderItem {
     id: number;
-    productId: number;
+    productId: string;
     productName: string;
     unitPrice: number;
     quantity: number;
@@ -10,7 +10,7 @@ export interface OrderItem {
 
 export interface Order {
     id: number;
-    tableId: number;
+    tableId: string;
     note: string;
     totalPrice: number;
     status: number;

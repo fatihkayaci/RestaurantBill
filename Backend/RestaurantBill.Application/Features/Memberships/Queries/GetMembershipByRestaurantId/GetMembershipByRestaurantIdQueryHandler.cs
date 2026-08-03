@@ -21,8 +21,8 @@ namespace RestaurantBill.Application.Features.Memberships.Queries.GetMembershipB
 
         public async Task<Result<MembershipDto>> Handle(GetMembershipByRestaurantIdQuery request, CancellationToken cancellationToken)
         {
-            int restaurantId = _currentUser.RestaurantId;
-            IEnumerable<Membership> memberships = await _uow.Membership.GetAllAsync(x => x.RestaurantId == restaurantId, false);
+            Guid restaurantId = _currentUser.BranchId;
+            IEnumerable<Membership> memberships = await _uow.Membership.GetAllAsync(x => x.BranchId == restaurantId, false);
             Membership? membership = memberships.FirstOrDefault();
             if (membership is null)
             {

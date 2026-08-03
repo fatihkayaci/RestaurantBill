@@ -94,24 +94,24 @@ export default function Tables() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editTable, setEditTable] = useState<Table | null>(null);
     const [newTableName, setNewTableName] = useState('');
-    const [newTableRegionId, setNewTableRegionId] = useState<number | null>(null);
+    const [newTableRegionId, setNewTableRegionId] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [tableDeleteError, setTableDeleteError] = useState<string | null>(null);
 
     const [regions, setRegions] = useState<Region[]>([]);
-    const [selectedRegionId, setSelectedRegionId] = useState<number | 'all'>('all');
+    const [selectedRegionId, setSelectedRegionId] = useState<string | 'all'>('all');
     const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
     const [editRegion, setEditRegion] = useState<Region | null>(null);
     const [newRegionName, setNewRegionName] = useState('');
     const [regionFieldError, setRegionFieldError] = useState('');
     const [savingRegion, setSavingRegion] = useState(false);
-    const [regionDeleteTargetId, setRegionDeleteTargetId] = useState<number | null>(null);
+    const [regionDeleteTargetId, setRegionDeleteTargetId] = useState<string | null>(null);
     const [regionDeleteError, setRegionDeleteError] = useState<string | null>(null);
 
-    const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
+    const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const selectedTable = tables.find(t => t.id === selectedTableId) ?? null;
-    const selectedTableIdRef = useRef<number | null>(null);
+    const selectedTableIdRef = useRef<string | null>(null);
     useEffect(() => { selectedTableIdRef.current = selectedTableId; }, [selectedTableId]);
 
     const [activeTab, setActiveTab] = useState<PanelTab>('new-order');
@@ -119,7 +119,7 @@ export default function Tables() {
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
-    const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
     const [tableOrder, setTableOrder] = useState<Order | null>(null);
     const [newItems, setNewItems] = useState<OrderItem[]>([]);
     const [orderNote, setOrderNote] = useState('');
@@ -174,13 +174,13 @@ export default function Tables() {
             })
             .build();
 
-        connection.on("TableStatusChanged", (changedTableId: number, status: number) => {
+        connection.on("TableStatusChanged", (changedTableId: string, status: number) => {
             setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, status } : t));
         });
-        connection.on("OrderUpdated", (changedTableId: number, totalPrice: number) => {
+        connection.on("OrderUpdated", (changedTableId: string, totalPrice: number) => {
             setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, activeOrderTotal: totalPrice } : t));
             if (selectedTableIdRef.current === changedTableId) {
-                orderService.getOrderByTableId(changedTableId.toString()).then(data => { if (data) setTableOrder(data); });
+                orderService.getOrderByTableId(changedTableId).then(data => { if (data) setTableOrder(data); });
             }
         });
         connection.start().catch((err: Error) => {
@@ -366,7 +366,7 @@ export default function Tables() {
             return [...prev, { id: 0, productId: product.id, productName: product.name, unitPrice: product.price, quantity: 1, status: 1, is_load: false }];
         });
     };
-    const decreaseNewItem = (productId: number) => {
+    const decreaseNewItem = (productId: string) => {
         setNewItems(prev => {
             const item = prev.find(i => i.productId === productId);
             if (!item) return prev;
@@ -645,6 +645,11 @@ export default function Tables() {
                                                 <span>{formatElapsed(table.occupiedSince, now)}</span>
                                             </div>
                                         )}
+                                        {table.createdByUserName && (
+                                            <div className="text-[10px] text-muted-foreground/80">
+                                                Alan: {table.createdByUserName}
+                                            </div>
+                                        )}
                                     </>
                                 )}
                                 {table.status === 3 && (
@@ -688,7 +693,7 @@ export default function Tables() {
                                 <select
                                     className={cn(inputClass, fieldErrors.regionId && "border-destructive")}
                                     value={newTableRegionId ?? ''}
-                                    onChange={e => setNewTableRegionId(e.target.value ? Number(e.target.value) : null)}
+                                    onChange={e => setNewTableRegionId(e.target.value || null)}
                                 >
                                     <option value="">Bölge seçin</option>
                                     {regions.map(r => (

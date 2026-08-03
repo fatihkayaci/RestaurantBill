@@ -11,12 +11,12 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
     {
     }
 
-    public async Task CreateMultiplierOrderItems(int tableId, OrderItem[] items)
+    public async Task CreateMultiplierOrderItems(Guid tableId, OrderItem[] items)
     {
         IQueryable<Order> query = _context.Set<Order>();
     }
 
-    public async Task<Order?> GetActiveOrderByTableId(int tableId, bool trackChanges = false)
+    public async Task<Order?> GetActiveOrderByTableId(Guid tableId, bool trackChanges = false)
     {
         IQueryable<Order> query = _context.Set<Order>();
 

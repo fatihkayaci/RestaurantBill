@@ -6,6 +6,6 @@ public class CancelReservationCommandValidator : AbstractValidator<CancelReserva
     public CancelReservationCommandValidator()
     {
         RuleFor(x => x.TableId)
-            .GreaterThan(0).WithMessage("Geçerli bir masa seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir masa seçilmelidir.");
     }
 }

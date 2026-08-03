@@ -32,7 +32,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.SendVerificationCod
                 return Result.Failure("Kullanıcının e-posta adresi yok.");
 
             string code = Random.Shared.Next(100000, 999999).ToString();
-            VerificationCode verificationCode = VerificationCode.Create(user, code, request.Type, DateTime.UtcNow.AddMinutes(5));
+            VerificationCode verificationCode = VerificationCode.Create(user.Id, code, request.Type, DateTime.UtcNow.AddMinutes(5));
 
             await _uow.VerificationCode.AddAsync(verificationCode);
             await _uow.SaveChangesAsync(cancellationToken);

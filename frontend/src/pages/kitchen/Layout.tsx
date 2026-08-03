@@ -2,7 +2,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { authService } from '@/features/auth/api/authService';
-import { restaurantService } from '@/features/admin/api/restaurantService';
+import { userService } from '@/features/users/api/userService';
 
 export default function KitchenLayout() {
     const { theme, setTheme } = useTheme();
@@ -15,8 +15,8 @@ export default function KitchenLayout() {
         const token = localStorage.getItem('token');
         if (!token) { navigate('/login'); return; }
 
-        restaurantService.getMyRestaurant()
-            .then(r => setRestaurantName(r.name))
+        userService.getCurrentUser()
+            .then(u => setRestaurantName(u.branchName ?? ''))
             .catch(() => {});
     }, [navigate]);
 

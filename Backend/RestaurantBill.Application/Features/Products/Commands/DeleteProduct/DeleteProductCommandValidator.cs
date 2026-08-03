@@ -6,6 +6,6 @@ public class DeleteProductCommandValidator : AbstractValidator<DeleteProductComm
     public DeleteProductCommandValidator()
     {
         RuleFor(x => x.Id)
-            .GreaterThan(0).WithMessage("Geçerli bir ürün seçilmelidir.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir ürün seçilmelidir.");
     }
 }

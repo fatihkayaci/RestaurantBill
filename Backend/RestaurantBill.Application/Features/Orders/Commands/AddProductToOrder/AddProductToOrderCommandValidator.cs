@@ -7,7 +7,7 @@ public class AddProductToOrderCommandValidator : AbstractValidator<AddProductToO
     public AddProductToOrderCommandValidator()
     {
         RuleFor(x => x.OrderId)
-            .GreaterThan(0).WithMessage("Geçerli bir sipariş numarası girmelisiniz.");
+            .NotEqual(Guid.Empty).WithMessage("Geçerli bir sipariş numarası girmelisiniz.");
 
         RuleFor(x => x.Note)
             .MaximumLength(500).WithMessage("Not alanı en fazla 500 karakter olabilir.");

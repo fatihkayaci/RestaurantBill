@@ -20,9 +20,9 @@ namespace RestaurantBill.Application.Features.Regions.Commands.CreateRegion
 
         public async Task<Result> Handle(CreateRegionCommand command, CancellationToken cancellationToken)
         {
-            int restaurantId = _userService.RestaurantId;
+            Guid restaurantId = _userService.BranchId;
 
-            bool nameExists = (await _uow.Region.GetAllAsync(r => r.Name == command.Name && r.RestaurantId == restaurantId, false)).Any();
+            bool nameExists = (await _uow.Region.GetAllAsync(r => r.Name == command.Name && r.BranchId == restaurantId, false)).Any();
             if (nameExists)
                 return Result.Failure("Bu isimde bir bölge zaten mevcut.");
 

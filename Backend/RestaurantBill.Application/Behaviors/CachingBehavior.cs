@@ -22,7 +22,7 @@ public class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
         if (request is not ICacheable cacheable)
             return await next();
 
-        string cacheKey = $"{cacheable.CacheKey}:{_currentUser.RestaurantId}";
+        string cacheKey = $"{cacheable.CacheKey}:{_currentUser.BranchId}";
 
         if (_cache.TryGetValue(cacheKey, out TResponse? cached))
         {

@@ -12,11 +12,11 @@ namespace RestaurantBill.Application.Tests.Features.Tables;
 
 public class TableCommandHandlerTests
 {
-    private static Table CreateTable(int id = 1)
+    private static Table CreateTable(Guid? id = null)
     {
-        var table = Table.Create("Masa 1", "", restaurantId: 1);
+        var table = Table.Create("Masa 1", "", Guid.NewGuid());
         var prop = typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!;
-        prop.SetValue(table, id);
+        prop.SetValue(table, id ?? Guid.NewGuid());
         return table;
     }
 
@@ -26,12 +26,13 @@ public class TableCommandHandlerTests
         public async Task Handle_WithValidCommand_AddsTableAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new CreateTableCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 2 });
+            var handler = new CreateTableCommandHandler(uow, new FakeCurrentUserService { BranchId = Guid.NewGuid() });
+            Guid regionId = Guid.NewGuid();
 
-            await handler.Handle(new CreateTableCommand { Name = "Masa 1", RegionId = 1 }, CancellationToken.None);
+            await handler.Handle(new CreateTableCommand { Name = "Masa 1", RegionId = regionId }, CancellationToken.None);
 
             Assert.Single(uow.TableRepo.Added);
-            Assert.Equal(2, uow.TableRepo.Added[0].RestaurantId);
+            Assert.Equal(regionId, uow.TableRepo.Added[0].RegionId);
             Assert.True(uow.SaveChangesCalled);
         }
     }
@@ -46,7 +47,7 @@ public class TableCommandHandlerTests
             await uow.TableRepo.AddAsync(table);
 
             var handler = new UpdateCommandHandler(uow);
-            var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved, RegionId = 1 };
+            var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved, RegionId = Guid.NewGuid() };
 
             await handler.Handle(command, CancellationToken.None);
 
@@ -61,7 +62,7 @@ public class TableCommandHandlerTests
             var uow = new FakeUnitOfWork();
             var handler = new UpdateCommandHandler(uow);
 
-            var result = await handler.Handle(new UpdateTableCommand { Id = 99, Name = "Ad" }, CancellationToken.None);
+            var result = await handler.Handle(new UpdateTableCommand { Id = Guid.NewGuid(), Name = "Ad" }, CancellationToken.None);
 
             Assert.True(result.IsFailure);
         }
@@ -89,7 +90,7 @@ public class TableCommandHandlerTests
             var uow = new FakeUnitOfWork();
             var handler = new DeleteHandler(uow);
 
-            var result = await handler.Handle(new DeleteTableCommand { TableId = 99 }, CancellationToken.None);
+            var result = await handler.Handle(new DeleteTableCommand { TableId = Guid.NewGuid() }, CancellationToken.None);
 
             Assert.True(result.IsFailure);
         }
@@ -118,7 +119,7 @@ public class TableCommandHandlerTests
             var uow = new FakeUnitOfWork();
             var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
 
-            var result = await handler.Handle(new OpenTableCommand { TableId = 99 }, CancellationToken.None);
+            var result = await handler.Handle(new OpenTableCommand { TableId = Guid.NewGuid() }, CancellationToken.None);
 
             Assert.True(result.IsFailure);
         }
@@ -171,7 +172,7 @@ public class TableCommandHandlerTests
             var uow = new FakeUnitOfWork();
             var handler = new CancelReservationCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
 
-            var result = await handler.Handle(new CancelReservationCommand { TableId = 99 }, CancellationToken.None);
+            var result = await handler.Handle(new CancelReservationCommand { TableId = Guid.NewGuid() }, CancellationToken.None);
 
             Assert.True(result.IsFailure);
         }

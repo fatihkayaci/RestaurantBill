@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Search, X, Pencil } from 'lucide-react';
 import { toast } from "sonner";
-import { userService } from "@/features/admin/api/userService";
+import { userService } from "@/features/users/api/userService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import type { CreateUser, User } from "@/features/admin/types";
+import type { CreateUser, User } from "@/features/users/types";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,7 @@ export default function StaffPage() {
     const [editUser, setEditUser] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', userCode: '', role: 1
+        passwordHash: '', role: 2
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -44,15 +44,9 @@ export default function StaffPage() {
         return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     };
 
-    const generateUserCode = () => {
-        const numbers = users.map(u => parseInt(u.userCode.replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
-        const next = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
-        return `USR-${String(next).padStart(3, '0')}`;
-    };
-
     const openCreateModal = () => {
         setEditUser(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), userCode: generateUserCode(), role: 1 });
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: 2 });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -60,14 +54,14 @@ export default function StaffPage() {
 
     const openEditModal = (user: User) => {
         setEditUser(user);
-        setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', userCode: user.userCode, role: user.role });
+        setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', role: user.role });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
     };
 
     const personalFields = ['fullName', 'email', 'phoneNumber'];
-    const loginFields = ['userName', 'userCode', 'passwordHash'];
+    const loginFields = ['userName', 'passwordHash'];
 
     const handleDelete = async () => {
         if (!deleteTargetId) return;
@@ -88,7 +82,7 @@ export default function StaffPage() {
         try {
             await userService.updateUser({
                 id: user.id, fullName: user.fullName, userName: user.userName, email: user.email,
-                phoneNumber: user.phoneNumber, userCode: user.userCode, role: user.role, isActive: !user.isActive
+                phoneNumber: user.phoneNumber, role: user.role, isActive: !user.isActive
             });
             setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
             toast.success(user.isActive ? 'Çalışan pasif yapıldı.' : 'Çalışan aktif yapıldı.');
@@ -110,7 +104,6 @@ export default function StaffPage() {
         if (!editUser) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
             else if (form.passwordHash.length < 6) errors.passwordHash = 'En az 6 karakter.';
-            if (!form.userCode.trim()) errors.userCode = 'Kullanıcı kodu boş bırakılamaz.';
         } else if (form.passwordHash && form.passwordHash.length < 6) {
             errors.passwordHash = 'En az 6 karakter.';
         }
@@ -145,7 +138,6 @@ export default function StaffPage() {
                     const message = (data.error ?? data.message) as string;
                     const duplicateFieldMap: Record<string, string> = {
                         'kullanıcı adı': 'userName',
-                        'kullanıcı kodu': 'userCode',
                         'e-posta': 'email',
                     };
                     const duplicateField = Object.entries(duplicateFieldMap).find(([phrase]) => message.includes(phrase))?.[1];
@@ -320,7 +312,7 @@ export default function StaffPage() {
                             {activeTab === 'personal' && (
                                 <>
                                     <div>
-                                        <label className={labelClass}>Ad Soyad</label>
+                                        <label className={labelClass}>Ad Soyad *</label>
                                         <input
                                             className={cn(inputClass, fieldErrors.fullName && "border-destructive")}
                                             placeholder="Ad Soyad..."
@@ -351,27 +343,13 @@ export default function StaffPage() {
                                             onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
                                         />
                                     </div>
-
-                                    <div>
-                                        <label className={labelClass}>Rol</label>
-                                        <select
-                                            className={inputClass}
-                                            value={form.role}
-                                            onChange={e => setForm({ ...form, role: Number(e.target.value) })}
-                                        >
-                                            <option value={1}>Admin</option>
-                                            <option value={2}>Garson</option>
-                                            <option value={3}>Kasiyer</option>
-                                            <option value={4}>Mutfak</option>
-                                        </select>
-                                    </div>
                                 </>
                             )}
 
                             {activeTab === 'login' && (
                                 <>
                                     <div>
-                                        <label className={labelClass}>Kullanıcı Adı</label>
+                                        <label className={labelClass}>Kullanıcı Adı *</label>
                                         <input
                                             className={cn(inputClass, fieldErrors.userName && "border-destructive")}
                                             placeholder="kullanici_adi"
@@ -382,18 +360,20 @@ export default function StaffPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Kullanıcı Kodu</label>
-                                        <input
-                                            className={cn(inputClass, fieldErrors.userCode && "border-destructive")}
-                                            placeholder="USR-001"
-                                            value={form.userCode}
-                                            onChange={e => setForm({ ...form, userCode: e.target.value })}
-                                        />
-                                        {fieldErrors.userCode && <p className="text-xs text-destructive mt-1">{fieldErrors.userCode}</p>}
+                                        <label className={labelClass}>Rol *</label>
+                                        <select
+                                            className={inputClass}
+                                            value={form.role}
+                                            onChange={e => setForm({ ...form, role: Number(e.target.value) })}
+                                        >
+                                            <option value={2}>Garson</option>
+                                            <option value={3}>Kasiyer</option>
+                                            <option value={4}>Mutfak</option>
+                                        </select>
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Şifre {editUser && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
+                                        <label className={labelClass}>Şifre * {editUser && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
                                         <input
                                             type="text"
                                             className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}

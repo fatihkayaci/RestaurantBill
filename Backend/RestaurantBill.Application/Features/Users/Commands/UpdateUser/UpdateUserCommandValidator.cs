@@ -1,4 +1,6 @@
+using System.Text.RegularExpressions;
 using FluentValidation;
+using RestaurantBill.Domain.Enums;
 namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser;
 
 public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
@@ -6,7 +8,7 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
     public UpdateUserCommandValidator()
     {
         RuleFor(x => x.UserId)
-            .GreaterThan(0).WithMessage("Geçersiz bir kullanıcı seçtiniz.");
+            .NotEqual(Guid.Empty).WithMessage("Geçersiz bir kullanıcı seçtiniz.");
 
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage("Ad soyad boş bırakılamaz.")
@@ -21,8 +23,12 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
             .When(x => !string.IsNullOrEmpty(x.Email));
 
         RuleFor(x => x.PhoneNumber)
+            .NotEmpty().WithMessage("Telefon numarası boş bırakılamaz.")
+            .When(x => x.Role == UserRole.Admin);
+
+        RuleFor(x => x.PhoneNumber)
             .MaximumLength(20).WithMessage("Telefon numarası en fazla 20 karakter olabilir.")
-            .When(x => !string.IsNullOrEmpty(x.PhoneNumber));
+            .Must(BeAValidPhoneNumber).WithMessage("Geçerli bir telefon numarası giriniz.");
 
         RuleFor(x => x.Password)
             .MinimumLength(6).WithMessage("Şifre en az 6 karakter olmalıdır.")
@@ -30,5 +36,23 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
 
         RuleFor(x => x.Role)
             .IsInEnum().WithMessage("Geçerli bir kullanıcı rolü seçilmelidir.");
+
+        RuleFor(x => x.BranchId)
+            .NotEmpty().WithMessage("Şube seçilmelidir.")
+            .When(x => x.Role == UserRole.Admin);
+    }
+
+    private static bool BeAValidPhoneNumber(string? phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            return true;
+
+        string digits = Regex.Replace(phoneNumber, @"\D", "");
+        if (digits.StartsWith("90"))
+            digits = digits[2..];
+        if (digits.StartsWith("0"))
+            digits = digits[1..];
+
+        return digits.Length == 10;
     }
 }

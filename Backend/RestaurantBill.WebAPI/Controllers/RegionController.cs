@@ -73,7 +73,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <returns>200 OK with success message on deletion.</returns>
         [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteRegion([FromRoute]int id, CancellationToken cancellationToken)
+        public async Task<IActionResult> DeleteRegion([FromRoute]Guid id, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new DeleteRegionCommand{Id = id}, cancellationToken);
             return HandleResult(result);

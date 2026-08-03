@@ -26,8 +26,9 @@ public static class DatabaseExtensions
             var context = services.GetRequiredService<RestaurantBillDbContext>();
             context.Database.Migrate();
 
-            var passwordHasher = services.GetRequiredService<IPasswordHasher<User>>();
-            await RestaurantBill.Persistence.Seeds.DefaultData.SeedAsync(context, passwordHasher);
+            // Seed geçici olarak devre dışı: Branch.Create henüz CompanyId almıyor.
+            // var passwordHasher = services.GetRequiredService<IPasswordHasher<User>>();
+            // await RestaurantBill.Persistence.Seeds.DefaultData.SeedAsync(context, passwordHasher);
         }
         catch (Exception ex)
         {

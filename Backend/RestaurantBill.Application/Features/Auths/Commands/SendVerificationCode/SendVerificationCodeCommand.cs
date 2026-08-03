@@ -6,7 +6,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.SendVerificationCod
 {
     public class SendVerificationCodeCommand : IRequest<Result>
     {
-        public int UserId { get; set; }
+        public Guid UserId { get; set; }
         public VerificationCodeType Type { get; set; }
     }
 }

@@ -5,7 +5,7 @@ namespace RestaurantBill.Domain.Entities
 {
     public class VerificationCode : BaseEntity
     {
-        public int UserId { get; private set; }
+        public Guid UserId { get; private set; }
         public User User { get; private set; } = default!;
         public string Code { get; private set; } = string.Empty;
         public VerificationCodeType Type { get; private set; }
@@ -15,9 +15,9 @@ namespace RestaurantBill.Domain.Entities
 
         protected VerificationCode() { }
 
-        public static VerificationCode Create(User user, string code, VerificationCodeType type, DateTime expiresAt)
+        public static VerificationCode Create(Guid userId, string code, VerificationCodeType type, DateTime expiresAt)
         {
-            if (user == null)
+            if (userId == Guid.Empty)
                 throw new DomainException("Geçersiz kullanıcı.");
 
             if (string.IsNullOrWhiteSpace(code))
@@ -25,7 +25,7 @@ namespace RestaurantBill.Domain.Entities
 
             return new VerificationCode
             {
-                UserId = user.Id,
+                UserId = userId,
                 Code = code,
                 Type = type,
                 Status = VerificationCodeStatus.Pending,

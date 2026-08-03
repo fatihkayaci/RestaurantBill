@@ -5,8 +5,8 @@ namespace RestaurantBill.Domain.Entities
 {
     public class Membership : BaseEntity
     {
-        public int RestaurantId { get; private set; }
-        public Restaurant Restaurant { get; private set; } = default!;
+        public Guid BranchId { get; private set; }
+        public Branch Branch { get; private set; } = default!;
         public MembershipPlanType PlanType { get; private set; }
         public MembershipStatus Status { get; private set; } = MembershipStatus.Active;
         public DateTime StartDate { get; private set; }
@@ -14,17 +14,17 @@ namespace RestaurantBill.Domain.Entities
 
         protected Membership() { }
 
-        public static Membership Create(Restaurant restaurant, MembershipPlanType planType, DateTime startDate, DateTime endDate)
+        public static Membership Create(Guid branchId, MembershipPlanType planType, DateTime startDate, DateTime endDate)
         {
-            if (restaurant == null)
-                throw new DomainException("Geçersiz restoran.");
+            if (branchId == Guid.Empty)
+                throw new DomainException("Geçersiz şube.");
 
             if (endDate <= startDate)
                 throw new DomainException("Bitiş tarihi başlangıç tarihinden sonra olmalı.");
 
             return new Membership
             {
-                Restaurant = restaurant,
+                BranchId = branchId,
                 PlanType = planType,
                 StartDate = startDate,
                 EndDate = endDate,

@@ -12,11 +12,11 @@ public class FakeGenericRepository<T> : IGenericRepository<T> where T : BaseEnti
     public Task UpdateAsync(T entity) => Task.CompletedTask;
     public void Delete(T entity) => Data.Remove(entity);
 
-    public Task<T?> GetByIdAsync(int id, bool trackChanges = false, params Expression<Func<T, object>>[] includes)
+    public Task<T?> GetByIdAsync(Guid id, bool trackChanges = false, params Expression<Func<T, object>>[] includes)
         => Task.FromResult(Data.FirstOrDefault(e => e.Id == id));
 
     public Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool trackChanges = false, string? includeProperties = null)
-        => Task.FromResult(Data.AsEnumerable());
+        => Task.FromResult(filter != null ? Data.Where(filter.Compile()) : Data.AsEnumerable());
 
     public IReadOnlyList<T> Added => Data;
 }

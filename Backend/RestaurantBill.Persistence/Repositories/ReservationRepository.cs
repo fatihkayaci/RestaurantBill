@@ -12,7 +12,7 @@ public class ReservationRepository : GenericRepository<Reservation>, IReservatio
     {
     }
 
-    public async Task<Reservation?> GetActiveReservationByTableId(int tableId, bool trackChanges = false)
+    public async Task<Reservation?> GetActiveReservationByTableId(Guid tableId, bool trackChanges = false)
     {
         IQueryable<Reservation> query = _context.Set<Reservation>();
 

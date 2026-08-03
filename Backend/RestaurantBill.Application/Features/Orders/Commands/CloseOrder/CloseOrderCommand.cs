@@ -6,7 +6,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
 {
     public class DeleteCommand : IRequest<Result>, IIdempotent
     {
-        public int OrderId { get; set; }
+        public Guid OrderId { get; set; }
 
         public string IdempotencyKey => $"close-order:{OrderId}";
     }

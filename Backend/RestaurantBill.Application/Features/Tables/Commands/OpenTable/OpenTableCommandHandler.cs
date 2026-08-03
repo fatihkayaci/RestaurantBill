@@ -7,7 +7,7 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
 {
-    public class OpenTableHandler : IRequestHandler<OpenTableCommand, Result<int>>
+    public class OpenTableHandler : IRequestHandler<OpenTableCommand, Result<Guid>>
     {
         private readonly IUnitOfWork _uow;
         private readonly ITableNotificationService _tableNotificationService;
@@ -22,10 +22,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
             _currentUserService = currentUserService;
         }
 
-        public async Task<Result<int>> Handle(OpenTableCommand request, CancellationToken cancellationToken)
+        public async Task<Result<Guid>> Handle(OpenTableCommand request, CancellationToken cancellationToken)
         {
             Table? table = await _uow.Table.GetByIdAsync(request.TableId, true);
-            if (table is null) return Result<int>.Failure("Böyle bir masa bulunamadı.");
+            if (table is null) return Result<Guid>.Failure("Böyle bir masa bulunamadı.");
 
             table.Occupy();
 
@@ -34,10 +34,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
             await _uow.Order.AddAsync(order);
             await _uow.SaveChangesAsync(cancellationToken);
 
-            await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.RestaurantId, table.Id, (int)table.Status);
-            await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.RestaurantId);
+            await _tableNotificationService.SendTableStatusChangedAsync(_currentUserService.BranchId, table.Id, (int)table.Status);
+            await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.BranchId);
 
-            return Result<int>.Success(order.Id);
+            return Result<Guid>.Success(order.Id);
         }
     }
 }

@@ -35,7 +35,7 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         return await query.ToListAsync();
     }
 
-    public async Task<T?> GetByIdAsync(int id, bool trackChanges = false, params Expression<Func<T, object>>[] includes)
+    public async Task<T?> GetByIdAsync(Guid id, bool trackChanges = false, params Expression<Func<T, object>>[] includes)
     {
         IQueryable<T> query = _table;
 
@@ -51,7 +51,7 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
                 query = query.Include(include);
             }
         }
-        return await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
+        return await query.FirstOrDefaultAsync(e => EF.Property<Guid>(e, "Id") == id);
     }
     public async Task AddAsync(T entity)
     {

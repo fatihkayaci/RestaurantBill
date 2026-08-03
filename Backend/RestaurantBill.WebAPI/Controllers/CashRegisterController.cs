@@ -42,7 +42,7 @@ public class CashRegisterController : BaseController
     /// <param name="id">CashRegisterId</param>
     [Authorize(Roles = "Owner,Admin,Cashier")]
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById([FromRoute] int id)
+    public async Task<IActionResult> GetById([FromRoute] Guid id)
     {
         var query = new GetCashRegisterByIdQuery
         {
@@ -116,7 +116,7 @@ public class CashRegisterController : BaseController
     /// </summary>
     [Authorize(Roles = "Owner,Admin")]
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete([FromRoute] Guid id, CancellationToken cancellationToken)
     {
         var command = new DeleteCashRegisterCommand
         {

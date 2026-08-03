@@ -10,10 +10,11 @@ public class CategoryTests
         [Fact]
         public void WithValidParameters_ReturnsCategory()
         {
-            Category category = Category.Create("İçecekler", restaurantId: 1);
+            Guid branchId = Guid.NewGuid();
+            Category category = Category.Create("İçecekler", branchId);
 
             Assert.Equal("İçecekler", category.Name);
-            Assert.Equal(1, category.RestaurantId);
+            Assert.Equal(branchId, category.BranchId);
         }
 
         [Theory]
@@ -22,16 +23,14 @@ public class CategoryTests
         public void WithEmptyName_ThrowsDomainException(string invalidName)
         {
             Assert.Throws<DomainException>(() =>
-                Category.Create(invalidName, restaurantId: 1));
+                Category.Create(invalidName, Guid.NewGuid()));
         }
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void WithInvalidRestaurantId_ThrowsDomainException(int invalidId)
+        [Fact]
+        public void WithInvalidBranchId_ThrowsDomainException()
         {
             Assert.Throws<DomainException>(() =>
-                Category.Create("İçecekler", invalidId));
+                Category.Create("İçecekler", Guid.Empty));
         }
     }
 
@@ -40,7 +39,7 @@ public class CategoryTests
         [Fact]
         public void WithValidName_UpdatesName()
         {
-            Category category = Category.Create("Eski Ad", restaurantId: 1);
+            Category category = Category.Create("Eski Ad", Guid.NewGuid());
 
             category.Rename("Yeni Ad");
 
@@ -52,7 +51,7 @@ public class CategoryTests
         [InlineData("   ")]
         public void WithEmptyName_ThrowsDomainException(string invalidName)
         {
-            Category category = Category.Create("İçecekler", restaurantId: 1);
+            Category category = Category.Create("İçecekler", Guid.NewGuid());
 
             Assert.Throws<DomainException>(() => category.Rename(invalidName));
         }
@@ -63,7 +62,7 @@ public class CategoryTests
         [Fact]
         public void WithNoLinkedProducts_DoesNotThrow()
         {
-            Category category = Category.Create("İçecekler", restaurantId: 1);
+            Category category = Category.Create("İçecekler", Guid.NewGuid());
 
             var exception = Record.Exception(() =>
                 category.EnsureCanBeDeleted([]));
@@ -74,8 +73,8 @@ public class CategoryTests
         [Fact]
         public void WithLinkedProducts_ThrowsDomainException()
         {
-            Category category = Category.Create("İçecekler", restaurantId: 1);
-            Product[] products = [Product.Create("Çay", 10m, true, "img.png", categoryId: 1)];
+            Category category = Category.Create("İçecekler", Guid.NewGuid());
+            Product[] products = [Product.Create("Çay", 10m, "img.png", Guid.NewGuid())];
 
             Assert.Throws<DomainException>(() =>
                 category.EnsureCanBeDeleted(products));

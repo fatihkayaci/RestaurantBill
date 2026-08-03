@@ -17,12 +17,12 @@ public class UserTests
             Assert.Equal("05001234567", user.PhoneNumber);
         }
         [Fact]
-        public void WithNullEmailAndPhone_Succeeds()
+        public void WithEmptyEmailAndPhone_Succeeds()
         {
-            User user = User.Create("Fatih", null, null);
+            User user = User.Create("Fatih", "", "");
 
-            Assert.Null(user.Email);
-            Assert.Null(user.PhoneNumber);
+            Assert.Equal(string.Empty, user.Email);
+            Assert.Equal(string.Empty, user.PhoneNumber);
         }
 
         [Theory]
@@ -31,7 +31,7 @@ public class UserTests
         public void WithEmptyFullName_ThrowsDomainException(string invalidName)
         {
             Assert.Throws<DomainException>(() =>
-                User.Create(invalidName, null, null));
+                User.Create(invalidName, "", ""));
         }
     }
 
@@ -40,7 +40,7 @@ public class UserTests
         [Fact]
         public void WithValidParameters_UpdatesFields()
         {
-            User user = User.Create("Eski Ad", null, null);
+            User user = User.Create("Eski Ad", "", "");
 
             user.Update("Yeni Ad", "y@mail.com", "05009999999", false);
 
@@ -55,10 +55,10 @@ public class UserTests
         [InlineData("   ")]
         public void WithEmptyFullName_ThrowsDomainException(string invalidName)
         {
-            User user = User.Create("Fatih", null, null);
+            User user = User.Create("Fatih", "", "");
 
             Assert.Throws<DomainException>(() =>
-                user.Update(invalidName, null, null, true));
+                user.Update(invalidName, "", "", true));
         }
     }
 
@@ -67,7 +67,7 @@ public class UserTests
         [Fact]
         public void SetsPasswordHash()
         {
-            User user = User.Create("Fatih", null, null);
+            User user = User.Create("Fatih", "", "");
 
             user.SetPasswordHash("hashed_password_123");
 

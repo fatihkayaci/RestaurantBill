@@ -6,5 +6,5 @@ namespace RestaurantBill.Application.Features.CashRegisters.Queries.GetCashRegis
 
 public class GetCashRegisterByIdQuery : IRequest<Result<CashRegisterDto>>
 {
-    public int CashRegisterId { get; set; }
+    public Guid CashRegisterId { get; set; }
 }

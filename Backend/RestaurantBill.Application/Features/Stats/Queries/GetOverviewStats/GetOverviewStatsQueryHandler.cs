@@ -20,11 +20,11 @@ namespace RestaurantBill.Application.Features.Stats.Queries.GetOverviewStats
 
         public async Task<Result<OverviewStatsDto>> Handle(GetOverviewStatsQuery request, CancellationToken cancellationToken)
         {
-            int restaurantId = _currentUser.RestaurantId;
-            if(restaurantId <= 0) return Result<OverviewStatsDto>.Failure("ID değeri 0 veya negatif olamaz.");
+            Guid restaurantId = _currentUser.BranchId;
+            if(restaurantId == Guid.Empty) return Result<OverviewStatsDto>.Failure("ID değeri 0 veya negatif olamaz.");
             
-            var orders = await _uow.Order.GetAllAsync(o => o.Table.RestaurantId == restaurantId, false, "OrderItems,OrderItems.Product");
-            var tables = await _uow.Table.GetAllAsync(t => t.RestaurantId == restaurantId);
+            var orders = await _uow.Order.GetAllAsync(o => o.Table.Region.BranchId == restaurantId, false, "OrderItems,OrderItems.Product");
+            var tables = await _uow.Table.GetAllAsync(t => t.Region.BranchId == restaurantId);
 
             decimal totalRevenue = orders.Sum(o => o.TotalPrice);
             int totalOrders = orders.Count();

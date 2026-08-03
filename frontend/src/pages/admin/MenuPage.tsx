@@ -15,13 +15,13 @@ const labelClass = "block text-[11px] font-semibold tracking-widest uppercase te
 export default function Menu() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<number | 'all'>('all');
+    const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editProduct, setEditProduct] = useState<Product | null>(null);
-    const [form, setForm] = useState({ name: '', price: 0, categoryId: 0, isActive: true, id: 0 });
+    const [form, setForm] = useState({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [productDeleteError, setProductDeleteError] = useState<string | null>(null);
 
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -29,7 +29,7 @@ export default function Menu() {
     const [newCategoryName, setNewCategoryName] = useState('');
     const [categoryFieldError, setCategoryFieldError] = useState('');
     const [savingCategory, setSavingCategory] = useState(false);
-    const [categoryDeleteTargetId, setCategoryDeleteTargetId] = useState<number | null>(null);
+    const [categoryDeleteTargetId, setCategoryDeleteTargetId] = useState<string | null>(null);
     const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null);
 
     const filteredProducts = products.filter(p =>
@@ -48,7 +48,7 @@ export default function Menu() {
 
     const openCreateModal = () => {
         setEditProduct(null);
-        setForm({ name: '', price: 0, categoryId: 0, isActive: true, id: 0 });
+        setForm({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
         setFieldErrors({});
         setIsModalOpen(true);
     };
@@ -140,7 +140,7 @@ export default function Menu() {
         const errors: Record<string, string> = {};
         if (!form.name.trim()) errors.name = 'Ürün ismi boş bırakılamaz.';
         if (form.price <= 0) errors.price = "Fiyat 0'dan büyük olmalıdır.";
-        if (form.categoryId <= 0) errors.categoryId = 'Kategori seçiniz.';
+        if (!form.categoryId) errors.categoryId = 'Kategori seçiniz.';
         if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
         try {
@@ -340,9 +340,9 @@ export default function Menu() {
                                 <select
                                     className={cn(inputClass, fieldErrors.categoryId && "border-destructive")}
                                     value={form.categoryId}
-                                    onChange={e => setForm({ ...form, categoryId: Number(e.target.value) })}
+                                    onChange={e => setForm({ ...form, categoryId: e.target.value })}
                                 >
-                                    <option value={0}>Kategori seçin</option>
+                                    <option value="">Kategori seçin</option>
                                     {categories.map(c => (
                                         <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}

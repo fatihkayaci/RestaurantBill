@@ -25,15 +25,20 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
         /// </summary>
         public async Task<Result<List<TableDto>>> Handle(GetAllTableQuery request, CancellationToken cancellationToken)
         {
-            int restaurantId = _currentUser.RestaurantId;
-            if(restaurantId <= 0) return Result<List<TableDto>>.Failure("ID değeri 0 veya negatif olamaz.");
-            var entities = await _uow.Table.GetAllAsync(t => t.RestaurantId == restaurantId, includeProperties: "Region");
+            Guid restaurantId = _currentUser.BranchId;
+            if(restaurantId == Guid.Empty) return Result<List<TableDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+            var entities = await _uow.Table.GetAllAsync(t => t.Region.BranchId == restaurantId, includeProperties: "Region");
 
             var tableIds = entities.Select(t => t.Id).ToList();
             var activeOrders = await _uow.Order.GetAllAsync(o =>
                 tableIds.Contains(o.TableId) && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled);
             var totalsByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.TotalPrice);
             var occupiedSinceByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.CreatedAt);
+
+            var creatorIds = activeOrders.Select(o => o.CreatedUser).Distinct().ToList();
+            var creators = await _uow.User.GetAllAsync(u => creatorIds.Contains(u.Id));
+            var creatorNameById = creators.ToDictionary(u => u.Id, u => u.FullName);
+            var creatorNameByTableId = activeOrders.ToDictionary(o => o.TableId, o => creatorNameById.GetValueOrDefault(o.CreatedUser, string.Empty));
 
             return Result<List<TableDto>>.Success(entities
                 .OrderBy(t => t.Name)
@@ -42,6 +47,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
                     var dto = t.ToDto();
                     dto.ActiveOrderTotal = totalsByTableId.GetValueOrDefault(t.Id);
                     dto.OccupiedSince = occupiedSinceByTableId.TryGetValue(t.Id, out var createdAt) ? createdAt : null;
+                    dto.CreatedByUserName = creatorNameByTableId.GetValueOrDefault(t.Id, string.Empty);
                     return dto;
                 })
                 .ToList());

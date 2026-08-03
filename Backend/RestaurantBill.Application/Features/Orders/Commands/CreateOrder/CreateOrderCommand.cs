@@ -7,7 +7,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
 {
     public class CreateOrderCommand : IRequest<Result<OrderDto>>, IIdempotent
     {
-        public int TableId { get; set; }
+        public Guid TableId { get; set; }
 
         public string IdempotencyKey => $"create-order:table:{TableId}";
     }

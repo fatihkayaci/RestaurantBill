@@ -6,10 +6,10 @@ public class UpdateProductCommandValidator : AbstractValidator<UpdateProductComm
     public UpdateProductCommandValidator()
     {
         RuleFor(x => x.Id)
-            .GreaterThan(0).WithMessage("Geçersiz bir ürün seçtiniz.");
+            .NotEqual(Guid.Empty).WithMessage("Geçersiz bir ürün seçtiniz.");
 
         RuleFor(x => x.CategoryId)
-            .GreaterThan(0).WithMessage("Geçersiz bir kategori seçtiniz.");
+            .NotEqual(Guid.Empty).WithMessage("Geçersiz bir kategori seçtiniz.");
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Ürün ismi boş bırakılamaz.")

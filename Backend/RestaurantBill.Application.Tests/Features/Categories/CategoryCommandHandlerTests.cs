@@ -15,14 +15,15 @@ public class CategoryCommandHandlerTests
         public async Task Handle_WithValidCommand_AddsCategoryAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            var handler = new CreateCategoryCommandHandler(uow, new FakeCurrentUserService { RestaurantId = 3 });
+            Guid branchId = Guid.NewGuid();
+            var handler = new CreateCategoryCommandHandler(uow, new FakeCurrentUserService { BranchId = branchId });
             var command = new CreateCategoryCommand { Name = "İçecekler" };
 
             var result = await handler.Handle(command, CancellationToken.None);
             Assert.True(result.IsSuccess);
 
             Assert.Single(uow.CategoryRepo.Added);
-            Assert.Equal(3, uow.CategoryRepo.Added[0].RestaurantId);
+            Assert.Equal(branchId, uow.CategoryRepo.Added[0].BranchId);
             Assert.True(uow.SaveChangesCalled);
         }
     }
@@ -33,7 +34,7 @@ public class CategoryCommandHandlerTests
         public async Task Handle_WithExistingCategory_RenamesAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            Category existing = Category.Create("Eski Ad", restaurantId: 1);
+            Category existing = Category.Create("Eski Ad", Guid.NewGuid());
             await uow.CategoryRepo.AddAsync(existing);
 
             var handler = new UpdateCategoryCommandHandler(uow);
@@ -50,7 +51,7 @@ public class CategoryCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             var handler = new UpdateCategoryCommandHandler(uow);
-            var command = new UpdateCategoryCommand { Id = 99, Name = "Ad" };
+            var command = new UpdateCategoryCommand { Id = Guid.NewGuid(), Name = "Ad" };
 
             var result = await handler.Handle(command, CancellationToken.None);
 
@@ -64,7 +65,7 @@ public class CategoryCommandHandlerTests
         public async Task Handle_WithNoLinkedProducts_DeletesAndSaves()
         {
             var uow = new FakeUnitOfWork();
-            Category existing = Category.Create("İçecekler", restaurantId: 1);
+            Category existing = Category.Create("İçecekler", Guid.NewGuid());
             await uow.CategoryRepo.AddAsync(existing);
 
             var handler = new DeleteCategoryCommandHandler(uow);
@@ -80,9 +81,10 @@ public class CategoryCommandHandlerTests
         public async Task Handle_WithLinkedProducts_ThrowsDomainException()
         {
             var uow = new FakeUnitOfWork();
-            Category existing = Category.Create("İçecekler", restaurantId: 1);
+            Category existing = Category.Create("İçecekler", Guid.NewGuid());
+            typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(existing, Guid.NewGuid());
             await uow.CategoryRepo.AddAsync(existing);
-            await uow.ProductRepo.AddAsync(Product.Create("Çay", 10m, true, "img.png", categoryId: 1));
+            await uow.ProductRepo.AddAsync(Product.Create("Çay", 10m, "img.png", existing.Id));
 
             var handler = new DeleteCategoryCommandHandler(uow);
             var command = new DeleteCategoryCommand { Id = existing.Id };
@@ -95,7 +97,7 @@ public class CategoryCommandHandlerTests
         {
             var uow = new FakeUnitOfWork();
             var handler = new DeleteCategoryCommandHandler(uow);
-            var command = new DeleteCategoryCommand { Id = 99 };
+            var command = new DeleteCategoryCommand { Id = Guid.NewGuid() };
 
             var result = await handler.Handle(command, CancellationToken.None);
 
