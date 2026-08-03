@@ -12,6 +12,8 @@ import { isValidEmail, isValidPhone } from "@/lib/validators";
 
 const ADMIN_ROLE = 1;
 
+const todayDateString = () => new Date().toISOString().slice(0, 10);
+
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
@@ -23,7 +25,7 @@ export default function AdminsPage() {
     const [editAdmin, setEditAdmin] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', role: ADMIN_ROLE, branchId: undefined
+        passwordHash: '', role: ADMIN_ROLE, branchId: undefined, hireDate: todayDateString()
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function AdminsPage() {
 
     const openCreateModal = () => {
         setEditAdmin(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: ADMIN_ROLE, branchId: branches[0]?.id });
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: ADMIN_ROLE, branchId: branches[0]?.id, hireDate: todayDateString() });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -57,7 +59,7 @@ export default function AdminsPage() {
 
     const openEditModal = (admin: User) => {
         setEditAdmin(admin);
-        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', role: ADMIN_ROLE, branchId: admin.branchId });
+        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', role: ADMIN_ROLE, branchId: admin.branchId, hireDate: admin.hireDate ? admin.hireDate.slice(0, 10) : todayDateString() });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -340,6 +342,16 @@ export default function AdminsPage() {
                                             onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
                                         />
                                         {fieldErrors.phoneNumber && <p className="text-xs text-destructive mt-1">{fieldErrors.phoneNumber}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className={labelClass}>İşe Giriş Tarihi</label>
+                                        <input
+                                            type="date"
+                                            className={inputClass}
+                                            value={form.hireDate ?? ''}
+                                            onChange={e => setForm({ ...form, hireDate: e.target.value })}
+                                        />
                                     </div>
                                 </>
                             )}

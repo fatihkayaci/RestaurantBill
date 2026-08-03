@@ -68,6 +68,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
             User user = User.Create(request.FullName, request.Email ?? string.Empty, request.PhoneNumber ?? string.Empty);
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.PasswordHash));
             UserBranch userBranch = UserBranch.Create(user, branch, request.UserName, request.UserCode, request.Role);
+            userBranch.SetHireDate(request.HireDate ?? DateTime.UtcNow);
 
             await _uow.User.AddAsync(user);
             await _uow.UserBranch.AddAsync(userBranch);

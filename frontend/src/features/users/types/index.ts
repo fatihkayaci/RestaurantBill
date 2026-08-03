@@ -9,6 +9,7 @@ export interface User {
     isActive: boolean;
     branchId: string;
     branchName?: string | null;
+    hireDate?: string | null;
 }
 
 export interface CreateUser {
@@ -20,6 +21,7 @@ export interface CreateUser {
     userCode?: string;
     role: number;
     branchId?: string;
+    hireDate?: string;
 }
 
 export interface UpdateUser {
@@ -33,4 +35,5 @@ export interface UpdateUser {
     role: number;
     isActive?: boolean;
     branchId?: string;
+    hireDate?: string;
 }

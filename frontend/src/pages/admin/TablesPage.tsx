@@ -41,14 +41,14 @@ const STATUS_CARD = {
         label:  'BOŞ',
     },
     2: {
-        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,96,96,0.05)]',
-        border: 'border-[#f5c5aa] dark:border-rb-red/25',
-        badge:  'bg-rb-red-bg text-rb-red',
+        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,120,64,0.05)]',
+        border: 'border-[#f5c5aa] dark:border-rb-orange/25',
+        badge:  'bg-rb-orange-bg text-rb-orange',
         hint:   'text-muted-foreground',
         label:  'DOLU',
     },
     3: {
-        bg:     'bg-white dark:bg-[rgba(232,184,53,0.05)]',
+        bg:     'bg-[#F5EEDA] dark:bg-[rgba(232,184,53,0.05)]',
         border: 'border-[#f0d98a] dark:border-rb-amber/25',
         badge:  'bg-rb-amber-bg text-rb-amber',
         hint:   'text-rb-amber font-medium',
@@ -65,7 +65,7 @@ function formatElapsed(occupiedSince: string, now: number): string {
 
 const PANEL_STATUS_CONFIG: Record<number, { label: string; cls: string }> = {
     1: { label: 'BOŞ', cls: 'bg-rb-green-bg text-rb-green' },
-    2: { label: 'DOLU', cls: 'bg-rb-red-bg text-rb-red' },
+    2: { label: 'DOLU', cls: 'bg-rb-orange-bg text-rb-orange' },
     3: { label: 'REZERVE', cls: 'bg-rb-amber-bg text-rb-amber' },
 };
 

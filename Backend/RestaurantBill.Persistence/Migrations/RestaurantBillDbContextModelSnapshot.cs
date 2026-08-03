@@ -562,6 +562,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid>("CreatedUser")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("HireDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 

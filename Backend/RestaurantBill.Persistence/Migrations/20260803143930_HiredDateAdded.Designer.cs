@@ -12,8 +12,8 @@ using RestaurantBill.Persistence.Context;
 namespace RestaurantBill.Persistence.Migrations
 {
     [DbContext(typeof(RestaurantBillDbContext))]
-    [Migration("20260802203515_changed created user type")]
-    partial class ChangedCreatedUserType
+    [Migration("20260803143930_HiredDateAdded")]
+    partial class HiredDateAdded
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -564,6 +564,9 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<Guid>("CreatedUser")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("HireDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");

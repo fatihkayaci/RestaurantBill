@@ -79,6 +79,8 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 
             user.Update(request.FullName, request.Email ?? string.Empty, request.PhoneNumber ?? string.Empty, request.IsActive ?? user.IsActive);
             userBranch?.Update(request.UserName, request.UserCode, request.Role);
+            if (request.HireDate.HasValue)
+                userBranch?.SetHireDate(request.HireDate.Value);
 
             if (!string.IsNullOrWhiteSpace(request.Password))
                 user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));

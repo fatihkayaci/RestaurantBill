@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 
 const roleMap: Record<number, string> = { 1: "Admin", 2: "Garson", 3: "Kasiyer", 4: "Mutfak" };
 
+const todayDateString = () => new Date().toISOString().slice(0, 10);
+
 const roleStyle: Record<number, { avatar: string; badge: string }> = {
     1: { avatar: 'bg-rb-purple-bg text-rb-purple', badge: 'bg-rb-purple-bg text-rb-purple' },
     2: { avatar: 'bg-rb-accent-bg text-rb-accent', badge: 'bg-rb-accent-bg text-rb-accent' },
@@ -27,7 +29,7 @@ export default function StaffPage() {
     const [editUser, setEditUser] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', role: 2
+        passwordHash: '', role: 2, hireDate: todayDateString()
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export default function StaffPage() {
 
     const openCreateModal = () => {
         setEditUser(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: 2 });
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: 2, hireDate: todayDateString() });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -54,7 +56,7 @@ export default function StaffPage() {
 
     const openEditModal = (user: User) => {
         setEditUser(user);
-        setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', role: user.role });
+        setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', role: user.role, hireDate: user.hireDate ? user.hireDate.slice(0, 10) : todayDateString() });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -219,7 +221,9 @@ export default function StaffPage() {
                                             {roleMap[user.role] ?? 'Bilinmiyor'}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">—</td>
+                                    <td className="px-4 py-3.5 text-muted-foreground">
+                                        {user.hireDate ? new Date(user.hireDate).toLocaleDateString('tr-TR') : '—'}
+                                    </td>
                                     <td className="px-4 py-3.5">
                                         <button
                                             onClick={() => toggleActive(user)}
@@ -341,6 +345,16 @@ export default function StaffPage() {
                                             placeholder="0532 000 00 00"
                                             value={form.phoneNumber}
                                             onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className={labelClass}>İşe Giriş Tarihi</label>
+                                        <input
+                                            type="date"
+                                            className={inputClass}
+                                            value={form.hireDate ?? ''}
+                                            onChange={e => setForm({ ...form, hireDate: e.target.value })}
                                         />
                                     </div>
                                 </>

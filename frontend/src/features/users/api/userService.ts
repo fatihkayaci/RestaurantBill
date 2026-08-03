@@ -19,7 +19,8 @@ export const userService = {
             PasswordHash: data.passwordHash,
             UserCode: data.userCode,
             Role: data.role,
-            BranchId: data.branchId
+            BranchId: data.branchId,
+            HireDate: data.hireDate
         });
     },
     updateUser: async (data: UpdateUser) => {
@@ -33,7 +34,8 @@ export const userService = {
             UserCode: data.userCode,
             Role: data.role,
             IsActive: data.isActive,
-            BranchId: data.branchId
+            BranchId: data.branchId,
+            HireDate: data.hireDate
         });
     },
     deleteUser: async (id: string) => {
