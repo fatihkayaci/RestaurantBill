@@ -13,5 +13,6 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.CreateBranch
         public string City { get; set; } = string.Empty;
         public string District { get; set; } = string.Empty;
         public string OpenAddress { get; set; } = string.Empty;
+        public decimal TaxRate { get; set; }
     }
 }

@@ -6,10 +6,11 @@ public class Category : BaseEntity
     public Guid BranchId { get; private set; }
     public Branch Branch { get; private set; } = default!;
     public string Name { get; private set; } = string.Empty;
+    public decimal? TaxRate { get; private set; }
 
     protected Category() { }
 
-    public static Category Create(string name, Guid branchId)
+    public static Category Create(string name, Guid branchId, decimal? taxRate = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("Kategori adı boş olamaz.");
@@ -20,7 +21,8 @@ public class Category : BaseEntity
         return new Category
         {
             Name = name,
-            BranchId = branchId
+            BranchId = branchId,
+            TaxRate = taxRate
         };
     }
 
@@ -30,6 +32,16 @@ public class Category : BaseEntity
             throw new DomainException("Kategori adı boş olamaz.");
 
         Name = name;
+    }
+
+    public void SetTaxRate(decimal? taxRate)
+    {
+        TaxRate = taxRate;
+    }
+
+    public decimal GetEffectiveTaxRate()
+    {
+        return TaxRate ?? Branch.TaxRate;
     }
 
     public void EnsureCanBeDeleted(IEnumerable<Product> linkedProducts)

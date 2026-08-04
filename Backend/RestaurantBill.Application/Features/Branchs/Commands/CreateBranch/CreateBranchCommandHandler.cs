@@ -26,7 +26,7 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.CreateBranch
             if (company is null)
                 return Result<RestaurantDto>.Failure("Şirket bulunamadı.");
 
-            Branch branch = Branch.Create(company.Id, request.Name, request.ManagerName, request.PhoneNumber, request.Email, request.City, request.District, request.OpenAddress);
+            Branch branch = Branch.Create(company.Id, request.Name, request.ManagerName, request.PhoneNumber, request.Email, request.City, request.District, request.OpenAddress, request.TaxRate);
             await _uow.Branch.AddAsync(branch);
 
             User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);

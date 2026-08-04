@@ -24,7 +24,7 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranch
             if (branch is null || branch.Company.OwnerUserId != _currentUser.UserId)
                 return Result.Failure("Şube bulunamadı.");
 
-            branch.Update(request.Name, request.ManagerName, request.PhoneNumber, request.Email, request.City, request.District, request.OpenAddress);
+            branch.Update(request.Name, request.ManagerName, request.PhoneNumber, request.Email, request.City, request.District, request.OpenAddress, request.TaxRate);
 
             User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
             AuditLog log = AuditLog.Create(

@@ -25,14 +25,17 @@ export default function Menu() {
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [productDeleteError, setProductDeleteError] = useState<string | null>(null);
 
-    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [editCategory, setEditCategory] = useState<Category | null>(null);
     const [newCategoryName, setNewCategoryName] = useState('');
-    const [categoryFieldError, setCategoryFieldError] = useState('');
     const [savingCategory, setSavingCategory] = useState(false);
     const [categoryDeleteTargetId, setCategoryDeleteTargetId] = useState<string | null>(null);
     const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null);
+
+    const [isEditingBannerTaxRate, setIsEditingBannerTaxRate] = useState(false);
+    const [bannerTaxRateInput, setBannerTaxRateInput] = useState('');
+    const [bannerUseGeneralTaxRate, setBannerUseGeneralTaxRate] = useState(false);
+    const [bannerTaxRateSaving, setBannerTaxRateSaving] = useState(false);
 
     const filteredProducts = products.filter(p =>
         selectedCategory === 'all' || p.categoryId === selectedCategory
@@ -47,6 +50,46 @@ export default function Menu() {
         productService.getProducts().then(setProducts).catch(console.error);
         categoryService.getCategories().then(setCategories).catch(console.error);
     }, []);
+
+    useEffect(() => {
+        setIsEditingBannerTaxRate(false);
+    }, [selectedCategory]);
+
+    const startBannerTaxRateEdit = (cat: Category) => {
+        setBannerUseGeneralTaxRate(cat.taxRate === null);
+        setBannerTaxRateInput(cat.taxRate !== null ? String(cat.taxRate) : '');
+        setIsEditingBannerTaxRate(true);
+    };
+
+    const cancelBannerTaxRateEdit = () => {
+        setIsEditingBannerTaxRate(false);
+        setBannerTaxRateInput('');
+    };
+
+    const saveBannerTaxRate = async (cat: Category) => {
+        let taxRateValue: number | null = null;
+        if (!bannerUseGeneralTaxRate) {
+            const parsed = Number(bannerTaxRateInput);
+            if (bannerTaxRateInput.trim() === '' || Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
+                toast.error('KDV oranı 0 ile 100 arasında olmalıdır.');
+                return;
+            }
+            taxRateValue = parsed;
+        }
+        setBannerTaxRateSaving(true);
+        try {
+            await categoryService.updateCategory({ ...cat, taxRate: taxRateValue });
+            const updated = await categoryService.getCategories();
+            setCategories(updated);
+            setIsEditingBannerTaxRate(false);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'KDV oranı kaydedilemedi.');
+            }
+        } finally {
+            setBannerTaxRateSaving(false);
+        }
+    };
 
     const openCreateModal = () => {
         setEditProduct(null);
@@ -89,49 +132,45 @@ export default function Menu() {
         }
     };
 
-    const openCategoryModal = (category: Category) => {
+    const branchTaxRate = categories.find(c => c.taxRate === null)?.effectiveTaxRate ?? null;
+
+    const startEditCategory = (category: Category) => {
+        setIsAddingCategory(false);
         setEditCategory(category);
         setNewCategoryName(category.name);
-        setCategoryFieldError('');
-        setIsCategoryModalOpen(true);
     };
 
     const startAddCategory = () => {
         setEditCategory(null);
         setNewCategoryName('');
-        setCategoryFieldError('');
         setIsAddingCategory(true);
     };
 
-    const cancelAddCategory = () => {
+    const cancelCategoryEdit = () => {
         setIsAddingCategory(false);
+        setEditCategory(null);
         setNewCategoryName('');
     };
 
     const handleSaveCategory = async () => {
         if (!newCategoryName.trim()) {
-            if (isAddingCategory) { toast.error('Kategori adı boş olamaz.'); return; }
-            setCategoryFieldError('Kategori adı boş olamaz.');
+            toast.error('Kategori adı boş olamaz.');
             return;
         }
-        setCategoryFieldError('');
+
         setSavingCategory(true);
         try {
             if (editCategory) {
-                await categoryService.updateCategory({ id: editCategory.id, name: newCategoryName.trim() });
+                await categoryService.updateCategory({ ...editCategory, name: newCategoryName.trim() });
             } else {
-                await categoryService.createCategory(newCategoryName.trim());
+                await categoryService.createCategory(newCategoryName.trim(), null);
             }
             const updated = await categoryService.getCategories();
             setCategories(updated);
-            setIsCategoryModalOpen(false);
-            setIsAddingCategory(false);
-            setNewCategoryName('');
+            cancelCategoryEdit();
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                const message = err.response?.data?.error ?? err.response?.data?.message ?? 'Kategori kaydedilemedi.';
-                if (isAddingCategory) toast.error(message);
-                else setCategoryFieldError(message);
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Kategori kaydedilemedi.');
             }
         } finally {
             setSavingCategory(false);
@@ -198,6 +237,77 @@ export default function Menu() {
                 </button>
             </div>
 
+            {/* Applied Tax Rate Info */}
+            {(() => {
+                const activeCat = selectedCategory !== 'all' ? categories.find(c => c.id === selectedCategory) : null;
+                const rate = activeCat ? activeCat.effectiveTaxRate : branchTaxRate;
+                if (rate === null || rate === undefined) return null;
+                const isInherited = activeCat ? activeCat.taxRate === null : true;
+                return (
+                    <div className="flex items-center gap-3 flex-wrap rounded-xl border border-border bg-card px-5 py-3.5">
+                        <span className="text-sm text-foreground">
+                            {activeCat ? `"${activeCat.name}" için KDV:` : 'Genel KDV Oranı:'}
+                        </span>
+                        {activeCat && isEditingBannerTaxRate ? (
+                            <>
+                                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none whitespace-nowrap">
+                                    <input
+                                        type="checkbox"
+                                        checked={bannerUseGeneralTaxRate}
+                                        onChange={e => setBannerUseGeneralTaxRate(e.target.checked)}
+                                        className="h-3.5 w-3.5 rounded border-border"
+                                    />
+                                    Genel KDV'i kullan
+                                </label>
+                                {!bannerUseGeneralTaxRate && (
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        step="0.01"
+                                        autoFocus
+                                        value={bannerTaxRateInput}
+                                        onChange={e => setBannerTaxRateInput(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') saveBannerTaxRate(activeCat);
+                                            if (e.key === 'Escape') cancelBannerTaxRateEdit();
+                                        }}
+                                        className="w-24 px-3 py-1.5 rounded-full text-sm border border-rb-accent bg-background text-foreground focus:outline-none"
+                                    />
+                                )}
+                                <button
+                                    onClick={() => saveBannerTaxRate(activeCat)}
+                                    disabled={bannerTaxRateSaving}
+                                    className="p-1.5 rounded-full bg-rb-green-bg text-rb-green hover:opacity-80 transition-colors disabled:opacity-50"
+                                >
+                                    <Check className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={cancelBannerTaxRateEdit}
+                                    className="p-1.5 rounded-full bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-rb-green-bg text-rb-green">
+                                    %{rate} — {isInherited ? 'Genel Orandan' : 'Kategoriye Özel'}
+                                </span>
+                                {activeCat && (
+                                    <button
+                                        onClick={() => startBannerTaxRateEdit(activeCat)}
+                                        className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                                    >
+                                        {isInherited ? 'Bu Kategori İçin Özel KDV' : "KDV'yi Düzenle"}
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </div>
+                );
+            })()}
+
             {/* Category Pills */}
             <div className="flex gap-2 flex-wrap">
                 <button
@@ -212,37 +322,65 @@ export default function Menu() {
                     Tümü ({products.length})
                 </button>
                 {categoryCounts.map(({ category: cat, count }) => (
-                    <div
-                        key={cat.id}
-                        className={cn(
-                            "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
-                            selectedCategory === cat.id
-                                ? "bg-rb-accent text-white"
-                                : "border border-border text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <button onClick={() => setSelectedCategory(cat.id)} className="py-0.5">
-                            {cat.name} ({count})
-                        </button>
-                        <button
-                            onClick={() => openCategoryModal(cat)}
+                    editCategory?.id === cat.id ? (
+                        <div key={cat.id} className="flex items-center gap-1.5">
+                            <input
+                                autoFocus
+                                value={newCategoryName}
+                                onChange={e => setNewCategoryName(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') handleSaveCategory();
+                                    if (e.key === 'Escape') cancelCategoryEdit();
+                                }}
+                                className="px-4 py-1.5 rounded-full text-sm border border-rb-accent bg-background text-foreground focus:outline-none w-40"
+                            />
+                            <button
+                                onClick={handleSaveCategory}
+                                disabled={savingCategory}
+                                className="p-1.5 rounded-full bg-rb-green-bg text-rb-green hover:opacity-80 transition-colors disabled:opacity-50"
+                            >
+                                <Check className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={cancelCategoryEdit}
+                                className="p-1.5 rounded-full bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div
+                            key={cat.id}
                             className={cn(
-                                "p-1 rounded-full transition-colors",
-                                selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
+                                "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
+                                selectedCategory === cat.id
+                                    ? "bg-rb-accent text-white"
+                                    : "border border-border text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            <Pencil className="h-3 w-3" />
-                        </button>
-                        <button
-                            onClick={() => setCategoryDeleteTargetId(cat.id)}
-                            className={cn(
-                                "p-1 rounded-full transition-colors",
-                                selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
-                            )}
-                        >
-                            <X className="h-3 w-3" />
-                        </button>
-                    </div>
+                            <button onClick={() => setSelectedCategory(cat.id)} className="py-0.5">
+                                {cat.name} ({count})
+                            </button>
+                            <button
+                                onClick={() => startEditCategory(cat)}
+                                className={cn(
+                                    "p-1 rounded-full transition-colors",
+                                    selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
+                                )}
+                            >
+                                <Pencil className="h-3 w-3" />
+                            </button>
+                            <button
+                                onClick={() => setCategoryDeleteTargetId(cat.id)}
+                                className={cn(
+                                    "p-1 rounded-full transition-colors",
+                                    selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
+                                )}
+                            >
+                                <X className="h-3 w-3" />
+                            </button>
+                        </div>
+                    )
                 ))}
                 {isAddingCategory ? (
                     <div className="flex items-center gap-1.5">
@@ -252,7 +390,7 @@ export default function Menu() {
                             onChange={e => setNewCategoryName(e.target.value)}
                             onKeyDown={e => {
                                 if (e.key === 'Enter') handleSaveCategory();
-                                if (e.key === 'Escape') cancelAddCategory();
+                                if (e.key === 'Escape') cancelCategoryEdit();
                             }}
                             placeholder="Kategori adı..."
                             className="px-4 py-1.5 rounded-full text-sm border border-rb-accent bg-background text-foreground focus:outline-none w-40"
@@ -265,7 +403,7 @@ export default function Menu() {
                             <Check className="h-4 w-4" />
                         </button>
                         <button
-                            onClick={cancelAddCategory}
+                            onClick={cancelCategoryEdit}
                             className="p-1.5 rounded-full bg-muted text-muted-foreground hover:text-foreground transition-colors"
                         >
                             <X className="h-4 w-4" />
@@ -416,52 +554,6 @@ export default function Menu() {
                                 className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors"
                             >
                                 Kaydet
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Kategori Ekle Modal */}
-            {isCategoryModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsCategoryModalOpen(false)} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-foreground">
-                                {editCategory ? 'Kategoriyi Düzenle' : 'Kategori Ekle'}
-                            </h2>
-                            <button onClick={() => setIsCategoryModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-                        <div className="px-6 py-5">
-                            <div>
-                                <label className={labelClass}>Kategori Adı</label>
-                                <input
-                                    className={cn(inputClass, categoryFieldError && "border-destructive")}
-                                    value={newCategoryName}
-                                    onChange={e => setNewCategoryName(e.target.value)}
-                                    placeholder="Çorbalar"
-                                    autoFocus
-                                    onKeyDown={e => e.key === 'Enter' && handleSaveCategory()}
-                                />
-                                {categoryFieldError && <p className="text-xs text-destructive mt-1">{categoryFieldError}</p>}
-                            </div>
-                        </div>
-                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
-                            <button
-                                onClick={() => setIsCategoryModalOpen(false)}
-                                className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
-                            >
-                                İptal
-                            </button>
-                            <button
-                                onClick={handleSaveCategory}
-                                disabled={savingCategory}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-60"
-                            >
-                                {savingCategory ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>
                         </div>
                     </div>

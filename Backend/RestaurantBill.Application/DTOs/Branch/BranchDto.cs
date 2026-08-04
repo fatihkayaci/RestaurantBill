@@ -10,6 +10,7 @@ namespace RestaurantBill.Application.DTOs
         public string City { get; set; } = string.Empty;
         public string District { get; set; } = string.Empty;
         public string OpenAddress { get; set; } = string.Empty;
+        public decimal TaxRate { get; set; }
         public int TableCount { get; set; }
         public int StaffCount { get; set; }
         public decimal Revenue { get; set; }

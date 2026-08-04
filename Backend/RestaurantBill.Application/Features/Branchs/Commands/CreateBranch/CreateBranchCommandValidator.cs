@@ -30,6 +30,9 @@ public class CreateBranchCommandValidator : AbstractValidator<CreateBranchComman
 
         RuleFor(x => x.OpenAddress)
             .MaximumLength(250).WithMessage("Açık adres en fazla 250 karakter olabilir.");
+
+        RuleFor(x => x.TaxRate)
+            .InclusiveBetween(0, 100).WithMessage("KDV oranı 0 ile 100 arasında olmalıdır.");
     }
 
     private static bool BeAValidPhoneNumber(string phoneNumber)

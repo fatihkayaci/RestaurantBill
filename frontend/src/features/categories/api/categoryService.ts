@@ -6,16 +6,18 @@ export const categoryService = {
         const response = await api.get<Category[]>('/category');
         return response.data;
     },
-    createCategory: async (name: string) => {
+    createCategory: async (name: string, taxRate: number | null) => {
         await api.post('/category/create', {
             Name: name,
+            TaxRate: taxRate,
             IdempotencyKey: crypto.randomUUID()
         });
     },
     updateCategory: async (data: Category) => {
         await api.post('/category/update', {
             Id: data.id,
-            Name: data.name
+            Name: data.name,
+            TaxRate: data.taxRate
         });
     },
     deleteCategory: async (id: string) => {

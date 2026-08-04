@@ -7,6 +7,7 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
     public class CreateCategoryCommand : IRequest<Result>, IInvalidatesCache, IIdempotent
     {
         public required string Name { get; set; }
+        public decimal? TaxRate { get; set; }
 
         public string IdempotencyKey => $"create-category:{Name}";
         public string[] CacheKeysToInvalidate => ["categories:all"];

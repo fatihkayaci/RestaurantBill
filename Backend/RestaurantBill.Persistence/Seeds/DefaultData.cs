@@ -37,7 +37,8 @@ public static class DefaultData
             "info@demorestoran.com",
             "İstanbul",
             "Kadıköy",
-            string.Empty);
+            string.Empty,
+            20m);
         await context.Branches.AddAsync(branch);
         await context.SaveChangesAsync();
 
