@@ -12,6 +12,7 @@ namespace RestaurantBill.Domain.Entities
         public string City { get; private set; } = string.Empty;
         public string District { get; private set; } = string.Empty;
         public string OpenAddress { get; private set; } = string.Empty;
+        public decimal TaxRate { get; private set; }
 
         protected Branch() { }
 
@@ -20,7 +21,7 @@ namespace RestaurantBill.Domain.Entities
             return new Branch { BranchName = name };
         }
 
-        public static Branch Create(Guid companyId, string branchName, string managerName, string number, string email, string city, string district, string openAddress)
+        public static Branch Create(Guid companyId, string branchName, string managerName, string number, string email, string city, string district, string openAddress, decimal taxRate)
         {
             return new Branch
             {
@@ -31,11 +32,12 @@ namespace RestaurantBill.Domain.Entities
                 Email = email,
                 City = city,
                 District = district,
-                OpenAddress = openAddress
+                OpenAddress = openAddress,
+                TaxRate = taxRate
             };
         }
 
-        public void Update(string branchName, string managerName, string number, string email, string city, string district, string openAddress)
+        public void Update(string branchName, string managerName, string number, string email, string city, string district, string openAddress, decimal taxRate)
         {
             BranchName = branchName;
             ManagerName = managerName;
@@ -44,6 +46,7 @@ namespace RestaurantBill.Domain.Entities
             City = city;
             District = district;
             OpenAddress = openAddress;
+            TaxRate = taxRate;
         }
     }
 }

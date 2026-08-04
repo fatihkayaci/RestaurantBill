@@ -42,7 +42,9 @@ public static class MappingExtensions
     public static CategoryDto ToDto(this Category c) => new()
     {
         Id = c.Id,
-        Name = c.Name
+        Name = c.Name,
+        TaxRate = c.TaxRate,
+        EffectiveTaxRate = c.GetEffectiveTaxRate()
     };
 
     public static RegionDto ToDto(this Region r) => new()
@@ -70,7 +72,9 @@ public static class MappingExtensions
         ProductName = i.Product?.Name ?? string.Empty,
         UnitPrice = i.UnitPrice,
         Quantity = i.Quantity,
-        Status = i.Status
+        Status = i.Status,
+        CategoryName = i.Product?.Category?.Name ?? string.Empty,
+        TaxRate = i.Product?.Category?.GetEffectiveTaxRate() ?? 0
     };
 
     public static ProductDto ToDto(this Product p) => new()
@@ -107,7 +111,8 @@ public static class MappingExtensions
         Email = b.Email,
         City = b.City,
         District = b.District,
-        Slug = b.Company?.Slug ?? string.Empty
+        Slug = b.Company?.Slug ?? string.Empty,
+        TaxRate = b.TaxRate
     };
 
     public static BranchDto ToBranchDto(this Branch b, int tableCount, int staffCount, decimal revenue) => new()
@@ -120,6 +125,7 @@ public static class MappingExtensions
         City = b.City,
         District = b.District,
         OpenAddress = b.OpenAddress,
+        TaxRate = b.TaxRate,
         TableCount = tableCount,
         StaffCount = staffCount,
         Revenue = revenue

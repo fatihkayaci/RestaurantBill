@@ -6,7 +6,7 @@ export const cashRegisterService = {
         const response = await api.get<CashRegister[]>('/cashregister');
         return response.data;
     },
-    getCashRegisterById: async (id: number) => {
+    getCashRegisterById: async (id: string) => {
         const response = await api.get<CashRegister>(`/cashregister/${id}`);
         return response.data;
     },
@@ -22,7 +22,7 @@ export const cashRegisterService = {
         });
         return response.data;
     },
-    updateCashRegister: async (id: number, name: string, balance: number, status: CashRegisterStatus) => {
+    updateCashRegister: async (id: string, name: string, balance: number, status: CashRegisterStatus) => {
         const response = await api.post('/cashregister/update', {
             Id: id,
             Name: name,
@@ -31,10 +31,10 @@ export const cashRegisterService = {
         });
         return response.data;
     },
-    deleteCashRegister: async (id: number) => {
+    deleteCashRegister: async (id: string) => {
         await api.delete(`/cashregister/${id}`);
     },
-    addTransaction: async (cashRegisterId: number, type: CashTransactionType, amount: number) => {
+    addTransaction: async (cashRegisterId: string, type: CashTransactionType, amount: number) => {
         const response = await api.post('/cashregister/transaction', {
             CashRegisterId: cashRegisterId,
             Type: type,
@@ -42,7 +42,7 @@ export const cashRegisterService = {
         });
         return response.data;
     },
-    transferBetweenCashRegisters: async (sourceCashRegisterId: number, destinationCashRegisterId: number, amount: number) => {
+    transferBetweenCashRegisters: async (sourceCashRegisterId: string, destinationCashRegisterId: string, amount: number) => {
         const response = await api.post('/cashregister/transfer', {
             SourceCashRegisterId: sourceCashRegisterId,
             DestinationCashRegisterId: destinationCashRegisterId,

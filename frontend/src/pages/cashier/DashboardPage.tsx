@@ -214,10 +214,10 @@ export default function CashierDashboardPage() {
             {selectedOrder && (
                 <>
                     <div
-                        className="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+                        className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[3px] animate-in fade-in duration-200"
                         onClick={() => setSelectedOrder(null)}
                     />
-                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-105 shadow-2xl animate-in slide-in-from-right duration-300">
+                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-190 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
                         <PaymentPanel
                             order={selectedOrder}
                             onClose={() => setSelectedOrder(null)}

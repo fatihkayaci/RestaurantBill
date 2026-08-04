@@ -26,7 +26,7 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
             if (nameExists)
                 return Result.Failure("Bu isimde bir kategori zaten mevcut.");
 
-            Category category = Category.Create(command.Name, restaurantId);
+            Category category = Category.Create(command.Name, restaurantId, command.TaxRate);
             await _uow.Category.AddAsync(category);
 
             User? actor = await _uow.User.GetByIdAsync(_userService.UserId);

@@ -18,6 +18,7 @@ export interface Branch {
     city: string;
     district: string;
     openAddress: string;
+    taxRate: number;
     tableCount: number;
     staffCount: number;
     revenue: number;
@@ -40,6 +41,7 @@ export interface CreateBranch {
     city: string;
     district: string;
     openAddress: string;
+    taxRate: string;
 }
 
 export interface UpdateBranch {
@@ -50,4 +52,5 @@ export interface UpdateBranch {
     city: string;
     district: string;
     openAddress: string;
+    taxRate: string;
 }

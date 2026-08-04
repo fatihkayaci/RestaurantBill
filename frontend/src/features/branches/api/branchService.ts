@@ -15,6 +15,7 @@ export const branchService = {
             City: data.city,
             District: data.district,
             OpenAddress: data.openAddress,
+            TaxRate: Number(data.taxRate),
         });
         return response.data;
     },
@@ -27,6 +28,7 @@ export const branchService = {
             City: data.city,
             District: data.district,
             OpenAddress: data.openAddress,
+            TaxRate: Number(data.taxRate),
         });
     },
 };

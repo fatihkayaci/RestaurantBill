@@ -15,6 +15,9 @@ export default function CategoriesPanel() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editCategory, setEditCategory] = useState<Category | null>(null);
     const [name, setName] = useState('');
+    const [useCustomTaxRate, setUseCustomTaxRate] = useState(false);
+    const [taxRate, setTaxRate] = useState('');
+    const [branchTaxRate, setBranchTaxRate] = useState<number | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -26,6 +29,10 @@ export default function CategoriesPanel() {
     const openCreateModal = () => {
         setEditCategory(null);
         setName('');
+        setUseCustomTaxRate(false);
+        setTaxRate('');
+        const inherited = categories.find(c => c.taxRate === null);
+        setBranchTaxRate(inherited ? inherited.effectiveTaxRate : null);
         setFieldErrors({});
         setIsModalOpen(true);
     };
@@ -33,6 +40,9 @@ export default function CategoriesPanel() {
     const openEditModal = (category: Category) => {
         setEditCategory(category);
         setName(category.name);
+        setUseCustomTaxRate(category.taxRate !== null);
+        setTaxRate(category.taxRate !== null ? String(category.taxRate) : '');
+        setBranchTaxRate(category.taxRate !== null ? null : category.effectiveTaxRate);
         setFieldErrors({});
         setIsModalOpen(true);
     };
@@ -60,13 +70,22 @@ export default function CategoriesPanel() {
         const errors: Record<string, string> = {};
         if (!name.trim()) errors.name = 'Kategori adı boş olamaz.';
         else if (name.length > 50) errors.name = 'En fazla 50 karakter.';
+
+        let taxRateValue: number | null = null;
+        if (useCustomTaxRate) {
+            const parsed = Number(taxRate);
+            if (taxRate.trim() === '' || Number.isNaN(parsed)) errors.taxRate = 'Geçerli bir KDV oranı giriniz.';
+            else if (parsed < 0 || parsed > 100) errors.taxRate = 'KDV oranı 0 ile 100 arasında olmalıdır.';
+            else taxRateValue = parsed;
+        }
+
         if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
         try {
             if (editCategory) {
-                await categoryService.updateCategory({ id: editCategory.id, name });
+                await categoryService.updateCategory({ ...editCategory, name, taxRate: taxRateValue });
             } else {
-                await categoryService.createCategory(name);
+                await categoryService.createCategory(name, taxRateValue);
             }
             const updated = await categoryService.getCategories();
             setCategories(updated);
@@ -105,6 +124,7 @@ export default function CategoriesPanel() {
                     <thead>
                         <tr className="border-b border-border">
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kategori</th>
+                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">KDV</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">İşlem</th>
                         </tr>
                     </thead>
@@ -113,6 +133,10 @@ export default function CategoriesPanel() {
                             <tr key={category.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                                 <td className="px-5 py-3.5 font-medium text-foreground">
                                     {category.name}
+                                </td>
+                                <td className="px-5 py-3.5 text-muted-foreground">
+                                    %{category.effectiveTaxRate}
+                                    {category.taxRate === null && <span className="text-[10px] ml-1">(şube)</span>}
                                 </td>
                                 <td className="px-5 py-3.5">
                                     <div className="flex items-center gap-2">
@@ -134,7 +158,7 @@ export default function CategoriesPanel() {
                         ))}
                         {categories.length === 0 && (
                             <tr>
-                                <td colSpan={2} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                                <td colSpan={3} className="px-5 py-10 text-center text-sm text-muted-foreground">
                                     Kategori bulunamadı.
                                 </td>
                             </tr>
@@ -157,16 +181,50 @@ export default function CategoriesPanel() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="px-6 py-5">
-                            <label className={labelClass}>Kategori Adı</label>
-                            <input
-                                className={cn(inputClass, fieldErrors.name && "border-destructive")}
-                                placeholder="Ana Yemekler"
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                                autoFocus
-                            />
-                            {fieldErrors.name && <p className="text-xs text-destructive mt-1">{fieldErrors.name}</p>}
+                        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+                            <div>
+                                <label className={labelClass}>Kategori Adı</label>
+                                <input
+                                    className={cn(inputClass, fieldErrors.name && "border-destructive")}
+                                    placeholder="Ana Yemekler"
+                                    value={name}
+                                    onChange={e => setName(e.target.value)}
+                                    autoFocus
+                                />
+                                {fieldErrors.name && <p className="text-xs text-destructive mt-1">{fieldErrors.name}</p>}
+                            </div>
+
+                            <div>
+                                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={useCustomTaxRate}
+                                        onChange={e => setUseCustomTaxRate(e.target.checked)}
+                                        className="h-4 w-4 rounded border-border"
+                                    />
+                                    Bu kategori için özel KDV kullan
+                                </label>
+
+                                {useCustomTaxRate ? (
+                                    <div className="mt-2">
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            max={100}
+                                            step="0.01"
+                                            className={cn(inputClass, fieldErrors.taxRate && "border-destructive")}
+                                            placeholder="Örn. 10"
+                                            value={taxRate}
+                                            onChange={e => setTaxRate(e.target.value)}
+                                        />
+                                        {fieldErrors.taxRate && <p className="text-xs text-destructive mt-1">{fieldErrors.taxRate}</p>}
+                                    </div>
+                                ) : (
+                                    <p className="mt-1.5 text-xs text-muted-foreground">
+                                        {branchTaxRate !== null ? `Şube varsayılanı kullanılacak: %${branchTaxRate}` : 'Şube varsayılanı kullanılacak.'}
+                                    </p>
+                                )}
+                            </div>
                         </form>
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">

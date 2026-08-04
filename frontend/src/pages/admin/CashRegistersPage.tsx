@@ -18,7 +18,7 @@ export default function CashRegisters() {
     const [balanceInput, setBalanceInput] = useState<string>('');
     const [status, setStatus] = useState<CashRegisterStatus>(1);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
     const [txTarget, setTxTarget] = useState<CashRegister | null>(null);
@@ -27,7 +27,7 @@ export default function CashRegisters() {
     const [txError, setTxError] = useState<string | null>(null);
 
     const [transferSource, setTransferSource] = useState<CashRegister | null>(null);
-    const [transferDestinationId, setTransferDestinationId] = useState<number | ''>('');
+    const [transferDestinationId, setTransferDestinationId] = useState<string | ''>('');
     const [transferAmount, setTransferAmount] = useState<string>('');
     const [transferError, setTransferError] = useState<string | null>(null);
 
@@ -423,7 +423,7 @@ export default function CashRegisters() {
                                 <select
                                     className={inputClass}
                                     value={transferDestinationId}
-                                    onChange={e => setTransferDestinationId(e.target.value === '' ? '' : Number(e.target.value))}
+                                    onChange={e => setTransferDestinationId(e.target.value)}
                                 >
                                     <option value="">Seçiniz</option>
                                     {registers.filter(x => x.id !== transferSource.id && x.status === 1).map(x => (

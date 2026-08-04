@@ -384,7 +384,7 @@ export default function Tables() {
         setNewItems(prev => {
             const existing = prev.find(i => i.productId === product.id);
             if (existing) return prev.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
-            return [...prev, { id: 0, productId: product.id, productName: product.name, unitPrice: product.price, quantity: 1, status: 1, is_load: false }];
+            return [...prev, { id: 0, productId: product.id, productName: product.name, unitPrice: product.price, quantity: 1, status: 1, is_load: false, categoryName: product.categoryName, taxRate: 0 }];
         });
     };
     const decreaseNewItem = (productId: string) => {
@@ -430,7 +430,7 @@ export default function Tables() {
         if (!tableOrder || !selectedCashRegisterId) return;
         setCompletingPayment(true);
         try {
-            await cashRegisterService.addTransaction(Number(selectedCashRegisterId), 1, calculateTotal());
+            await cashRegisterService.addTransaction(selectedCashRegisterId, 1, calculateTotal());
             await orderService.closeOrder(tableOrder.id);
             await refreshTables();
             toast.success('Ödeme tamamlandı.');

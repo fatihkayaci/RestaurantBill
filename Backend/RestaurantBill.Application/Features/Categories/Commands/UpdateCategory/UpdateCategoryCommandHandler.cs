@@ -24,6 +24,7 @@ namespace RestaurantBill.Application.Features.Categories.Commands.UpdateCategory
             if (category is null) return Result.Failure("Böyle bir kategori bulunamadı");
 
             category.Rename(command.Name);
+            category.SetTaxRate(command.TaxRate);
             await _uow.Category.UpdateAsync(category);
 
             User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);

@@ -20,13 +20,13 @@ export default function BranchesPage() {
     const [branches, setBranches] = useState<Branch[]>([]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [createForm, setCreateForm] = useState<CreateBranch>({ name: '', managerName: '', phoneNumber: '', email: '', city: '', district: '', openAddress: '' });
+    const [createForm, setCreateForm] = useState<CreateBranch>({ name: '', managerName: '', phoneNumber: '', email: '', city: '', district: '', openAddress: '', taxRate: '' });
     const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
     const [saving, setSaving] = useState(false);
 
     const [editTarget, setEditTarget] = useState<Branch | null>(null);
 
-    const [infoForm, setInfoForm] = useState<UpdateBranch>({ name: '', managerName: '', phoneNumber: '', email: '', city: '', district: '', openAddress: '' });
+    const [infoForm, setInfoForm] = useState<UpdateBranch>({ name: '', managerName: '', phoneNumber: '', email: '', city: '', district: '', openAddress: '', taxRate: '' });
     const [infoErrors, setInfoErrors] = useState<Record<string, string>>({});
     const [infoSaving, setInfoSaving] = useState(false);
 
@@ -45,7 +45,7 @@ export default function BranchesPage() {
     }, []);
 
     const openCreateModal = () => {
-        setCreateForm({ name: '', managerName: '', phoneNumber: '', email: '', city: '', district: '', openAddress: '' });
+        setCreateForm({ name: '', managerName: '', phoneNumber: '', email: '', city: '', district: '', openAddress: '', taxRate: '' });
         setCreateErrors({});
         setIsModalOpen(true);
     };
@@ -60,6 +60,7 @@ export default function BranchesPage() {
             city: branch.city,
             district: branch.district,
             openAddress: branch.openAddress,
+            taxRate: String(branch.taxRate),
         });
         setInfoErrors({});
     };
@@ -71,6 +72,10 @@ export default function BranchesPage() {
         if (!infoForm.name.trim()) errors.name = 'Şube adı boş bırakılamaz.';
         if (infoForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(infoForm.email)) errors.email = 'Geçerli bir e-posta giriniz.';
         if (!isValidPhone(infoForm.phoneNumber)) errors.phoneNumber = 'Geçerli bir telefon numarası giriniz.';
+        const infoTaxRate = Number(infoForm.taxRate);
+        if (infoForm.taxRate.trim() === '' || Number.isNaN(infoTaxRate) || infoTaxRate < 0 || infoTaxRate > 100) {
+            errors.taxRate = 'KDV oranı 0 ile 100 arasında olmalıdır.';
+        }
         if (Object.keys(errors).length > 0) {
             setInfoErrors(errors);
             return;
@@ -88,6 +93,7 @@ export default function BranchesPage() {
                 city: infoForm.city,
                 district: infoForm.district,
                 openAddress: infoForm.openAddress,
+                taxRate: infoTaxRate,
             } : null);
             loadBranches();
             toast.success('Şube bilgileri güncellendi.');
@@ -106,6 +112,10 @@ export default function BranchesPage() {
         if (!createForm.name.trim()) errors.name = 'Şube adı boş bırakılamaz.';
         if (createForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createForm.email)) errors.email = 'Geçerli bir e-posta giriniz.';
         if (!isValidPhone(createForm.phoneNumber)) errors.phoneNumber = 'Geçerli bir telefon numarası giriniz.';
+        const createTaxRate = Number(createForm.taxRate);
+        if (createForm.taxRate.trim() === '' || Number.isNaN(createTaxRate) || createTaxRate < 0 || createTaxRate > 100) {
+            errors.taxRate = 'KDV oranı 0 ile 100 arasında olmalıdır.';
+        }
         if (Object.keys(errors).length > 0) {
             setCreateErrors(errors);
             return;
@@ -271,14 +281,30 @@ export default function BranchesPage() {
                                     </select>
                                 </div>
                             </div>
-                            <div>
-                                <label className={labelClass}>Açık Adres</label>
-                                <input
-                                    className={inputClass}
-                                    placeholder="Cadde, sokak, no..."
-                                    value={createForm.openAddress}
-                                    onChange={e => setCreateForm({ ...createForm, openAddress: e.target.value })}
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Açık Adres</label>
+                                    <input
+                                        className={inputClass}
+                                        placeholder="Cadde, sokak, no..."
+                                        value={createForm.openAddress}
+                                        onChange={e => setCreateForm({ ...createForm, openAddress: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>KDV Oranı (%)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        step="0.01"
+                                        className={cn(inputClass, createErrors.taxRate && "border-destructive")}
+                                        placeholder="Örn. 10"
+                                        value={createForm.taxRate}
+                                        onChange={e => setCreateForm({ ...createForm, taxRate: e.target.value })}
+                                    />
+                                    {createErrors.taxRate && <p className="text-xs text-destructive mt-1">{createErrors.taxRate}</p>}
+                                </div>
                             </div>
                         </form>
 
@@ -392,14 +418,30 @@ export default function BranchesPage() {
                                     </select>
                                 </div>
                             </div>
-                            <div>
-                                <label className={labelClass}>Açık Adres</label>
-                                <input
-                                    className={inputClass}
-                                    placeholder="Cadde, sokak, no..."
-                                    value={infoForm.openAddress}
-                                    onChange={e => setInfoForm({ ...infoForm, openAddress: e.target.value })}
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Açık Adres</label>
+                                    <input
+                                        className={inputClass}
+                                        placeholder="Cadde, sokak, no..."
+                                        value={infoForm.openAddress}
+                                        onChange={e => setInfoForm({ ...infoForm, openAddress: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>KDV Oranı (%)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        step="0.01"
+                                        className={cn(inputClass, infoErrors.taxRate && "border-destructive")}
+                                        placeholder="Örn. 10"
+                                        value={infoForm.taxRate}
+                                        onChange={e => setInfoForm({ ...infoForm, taxRate: e.target.value })}
+                                    />
+                                    {infoErrors.taxRate && <p className="text-xs text-destructive mt-1">{infoErrors.taxRate}</p>}
+                                </div>
                             </div>
                             <div className="flex justify-end">
                                 <button
