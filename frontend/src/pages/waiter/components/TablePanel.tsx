@@ -228,6 +228,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                     quantity: c.quantity,
                     status: 1,
                     is_load: false,
+                    categoryName: '',
+                    taxRate: 0,
                 })),
             };
 

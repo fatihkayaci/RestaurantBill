@@ -6,6 +6,8 @@ export interface OrderItem {
     quantity: number;
     status: number;
     is_load: boolean;
+    categoryName: string;
+    taxRate: number;
 }
 
 export interface Order {

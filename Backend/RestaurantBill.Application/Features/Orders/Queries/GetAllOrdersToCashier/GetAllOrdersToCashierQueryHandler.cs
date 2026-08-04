@@ -29,7 +29,7 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashi
             var entities = await _uow.Order.GetAllAsync(
                 o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.Table.Region.BranchId == restaurantId,
                 false,
-                "OrderItems,OrderItems.Product,Table"
+                "OrderItems,OrderItems.Product,OrderItems.Product.Category,OrderItems.Product.Category.Branch,Table"
             );
 
             var creatorIds = entities.Select(o => o.CreatedUser).Distinct().ToList();

@@ -10,4 +10,6 @@ public class OrderItemDto
     public decimal UnitPrice { get; set; }
     public int Quantity { get; set; }
     public OrderItemStatus Status { get; set; }
+    public string CategoryName { get; set; } = string.Empty;
+    public decimal TaxRate { get; set; }
 }

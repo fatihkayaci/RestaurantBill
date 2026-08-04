@@ -72,7 +72,9 @@ public static class MappingExtensions
         ProductName = i.Product?.Name ?? string.Empty,
         UnitPrice = i.UnitPrice,
         Quantity = i.Quantity,
-        Status = i.Status
+        Status = i.Status,
+        CategoryName = i.Product?.Category?.Name ?? string.Empty,
+        TaxRate = i.Product?.Category?.GetEffectiveTaxRate() ?? 0
     };
 
     public static ProductDto ToDto(this Product p) => new()
