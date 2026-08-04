@@ -179,8 +179,8 @@ export default function CashierDashboardPage() {
                         <p className="text-sm text-muted-foreground">Henüz işlem yok.</p>
                     ) : (
                         <div className="space-y-4">
-                            {transactions.map(txn => {
-                                const methodIdx = txn.id % 3;
+                            {transactions.map((txn, idx) => {
+                                const methodIdx = idx % 3;
                                 const time = new Date(txn.createdAt)
                                     .toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
                                 return (
