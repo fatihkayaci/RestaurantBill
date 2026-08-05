@@ -9,6 +9,7 @@ public class FakeCashTransactionRepository : FakeGenericRepository<CashTransacti
 public class FakeCategoryRepository : FakeGenericRepository<Category>, ICategoryRepository { }
 public class FakeMembershipRepository : FakeGenericRepository<Membership>, IMembershipRepository { }
 public class FakeOrderItemRepository : FakeGenericRepository<OrderItem>, IOrderItemRepository { }
+public class FakePaymentRepository : FakeGenericRepository<Payment>, IPaymentRepository { }
 public class FakeProductRepository : FakeGenericRepository<Product>, IProductRepository { }
 public class FakeRegionRepository : FakeGenericRepository<Region>, IRegionRepository { }
 public class FakeCompanyRepository : FakeGenericRepository<Company>, ICompanyRepository { }

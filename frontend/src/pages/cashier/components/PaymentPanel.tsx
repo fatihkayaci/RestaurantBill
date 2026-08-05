@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown, ChevronLeft, ChevronRight, CreditCard, QrCode, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
-import { orderService } from '@/features/orders/api/orderService';
+import { paymentService } from '@/features/cashier/api/paymentService';
 import type { Order } from '@/features/orders/types';
 import type { CashRegister } from '@/features/cashier/types';
 
@@ -13,6 +13,8 @@ const PAYMENT_METHODS: { key: PaymentMethod; label: string; icon: React.ReactNod
     { key: 'nakit', label: 'Nakit', icon: <span className="text-sm font-bold leading-none">₺</span>, selectedClass: 'border-rb-green text-rb-green bg-rb-green-bg' },
     { key: 'qr', label: 'QR', icon: <QrCode className="w-4 h-4" />, selectedClass: 'border-rb-amber text-rb-amber bg-rb-amber-bg' },
 ];
+
+const PAYMENT_METHOD_VALUES: Record<PaymentMethod, number> = { kart: 1, nakit: 2, qr: 3 };
 
 interface Props {
     order: Order;
@@ -84,8 +86,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
         }
         try {
             setSubmitting(true);
-            await cashRegisterService.addTransaction(register.id, 1, order.totalPrice);
-            await orderService.closeOrder(order.id);
+            await paymentService.createPayment(order.id, register.id, PAYMENT_METHOD_VALUES[paymentMethod]);
             toast.success('Ödeme tamamlandı!');
             onComplete(order.id);
         } catch (err: any) {
