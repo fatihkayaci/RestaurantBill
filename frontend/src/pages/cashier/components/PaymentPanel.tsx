@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, ChevronDown, ChevronRight, CreditCard, QrCode, Landmark } from 'lucide-react';
+import { X, ChevronDown, ChevronLeft, ChevronRight, CreditCard, QrCode, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
 import { orderService } from '@/features/orders/api/orderService';
@@ -33,6 +33,8 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
     const [selectedRegisterId, setSelectedRegisterId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
     const registerScrollRef = useRef<HTMLDivElement>(null);
 
     const taxGroups = Object.values(
@@ -54,6 +56,23 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
             })
             .catch(() => {});
     }, []);
+
+    useEffect(() => {
+        const el = registerScrollRef.current;
+        if (!el) return;
+        const checkOverflow = () => {
+            setCanScrollLeft(el.scrollLeft > 0);
+            setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+        };
+        checkOverflow();
+        const observer = new ResizeObserver(checkOverflow);
+        observer.observe(el);
+        el.addEventListener('scroll', checkOverflow);
+        return () => {
+            observer.disconnect();
+            el.removeEventListener('scroll', checkOverflow);
+        };
+    }, [cashRegisters]);
 
     const canComplete = !submitting && !!selectedRegisterId;
 
@@ -127,27 +146,44 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                             ₺{order.totalPrice.toFixed(0)}
                         </p>
                         {taxGroups.length > 1 ? (
-                            <div className="mt-2 text-left">
+                            <div className="mt-2">
                                 <button
                                     onClick={() => setShowTaxBreakdown(v => !v)}
-                                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                    className="mx-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     KDV Dahil — Detay
                                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showTaxBreakdown ? 'rotate-180' : ''}`} />
                                 </button>
                                 {showTaxBreakdown && (
-                                    <div className="mt-2 space-y-1">
-                                        {taxGroups.map(group => (
-                                            <div key={group.rate} className="flex items-center justify-between text-xs text-muted-foreground">
-                                                <span>{Array.from(group.categories).join(', ') || 'Diğer'} — %{group.rate}</span>
-                                                <span className="text-foreground">₺{group.total.toFixed(0)}</span>
-                                            </div>
-                                        ))}
+                                    <div className="mt-3 rounded-lg border border-border divide-y divide-border text-left overflow-hidden">
+                                        {taxGroups.map(group => {
+                                            const matrah = group.total / (1 + group.rate / 100);
+                                            const kdvTutari = group.total - matrah;
+                                            return (
+                                                <div key={group.rate} className="px-3 py-2.5 space-y-1">
+                                                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                                                        {Array.from(group.categories).join(', ') || 'Diğer'} · %{group.rate}
+                                                    </p>
+                                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                        <span>Matrah</span>
+                                                        <span className="tabular-nums">₺{matrah.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                        <span>KDV Tutarı</span>
+                                                        <span className="tabular-nums">₺{kdvTutari.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-xs font-medium text-foreground pt-0.5">
+                                                        <span>Ara Toplam</span>
+                                                        <span className="tabular-nums">₺{group.total.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <p className="mt-2 text-sm text-muted-foreground text-left">KDV Dahil</p>
+                            <p className="mt-2 text-sm text-muted-foreground text-center">KDV Dahil</p>
                         )}
                     </div>
 
@@ -182,7 +218,15 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                                         );
                                     })}
                                 </div>
-                                {cashRegisters.length > 3 && (
+                                {canScrollLeft && (
+                                    <button
+                                        onClick={() => registerScrollRef.current?.scrollBy({ left: -140, behavior: 'smooth' })}
+                                        className="absolute left-0 top-1/2 translate-y-1.5 w-6 h-6 rounded-full bg-background border border-border shadow flex items-center justify-center text-muted-foreground hover:text-foreground"
+                                    >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                                {canScrollRight && (
                                     <button
                                         onClick={() => registerScrollRef.current?.scrollBy({ left: 140, behavior: 'smooth' })}
                                         className="absolute right-0 top-1/2 translate-y-1.5 w-6 h-6 rounded-full bg-background border border-border shadow flex items-center justify-center text-muted-foreground hover:text-foreground"

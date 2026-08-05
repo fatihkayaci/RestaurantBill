@@ -28,7 +28,7 @@ namespace RestaurantBill.Domain.Entities
             };
         }
 
-        public void AddItem(Product product, int quantity)
+        public void AddItem(Product product, int quantity, decimal taxRate = 0m)
         {
             if (quantity <= 0)
                 throw new DomainException("Miktar 0'dan büyük olmalı.");
@@ -42,7 +42,7 @@ namespace RestaurantBill.Domain.Entities
             }
             else
             {
-                _orderItems.Add(OrderItem.Create(product.Price, quantity, product));
+                _orderItems.Add(OrderItem.Create(product.Price, quantity, product, taxRate));
             }
 
             RecalculateTotal();
