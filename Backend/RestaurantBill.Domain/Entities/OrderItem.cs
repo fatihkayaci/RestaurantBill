@@ -45,6 +45,11 @@ namespace RestaurantBill.Domain.Entities
             Quantity += quantity;
         }
 
+        internal void ReduceQuantity(int quantity)
+        {
+            Quantity -= quantity;
+        }
+
         public void UpdateQuantity(int quantity)
         {
             if (Status != OrderItemStatus.Pending)

@@ -76,6 +76,26 @@ namespace RestaurantBill.Domain.Entities
             RecalculateTotal();
         }
 
+        public void SettleItem(Guid orderItemId, int paidQuantity)
+        {
+            OrderItem? item = _orderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (item == null)
+                throw new DomainException("Ödenmek istenen ürün bu siparişte yok.");
+
+            if (paidQuantity <= 0)
+                throw new DomainException("Ödenen miktar 0'dan büyük olmalı.");
+
+            if (paidQuantity > item.Quantity)
+                throw new DomainException("Ödenen miktar sipariş kalemindeki miktardan fazla olamaz.");
+
+            if (paidQuantity == item.Quantity)
+                _orderItems.Remove(item);
+            else
+                item.ReduceQuantity(paidQuantity);
+
+            RecalculateTotal();
+        }
+
         public void UpdateStatus(OrderStatus newStatus)
         {
             if (!Enum.IsDefined(typeof(OrderStatus), newStatus))
