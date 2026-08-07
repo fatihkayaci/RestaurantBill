@@ -33,6 +33,7 @@ public class OrderCommandHandlerTests
     {
         var product = Product.Create("Ürün", price, "img.png", Guid.NewGuid());
         SetId(product, id ?? Guid.NewGuid());
+        SetCategory(product, Category.Create("Test Category", Guid.NewGuid(), taxRate: 0m));
         return product;
     }
 
@@ -40,6 +41,12 @@ public class OrderCommandHandlerTests
     {
         var prop = typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!;
         prop.SetValue(entity, id);
+    }
+
+    private static void SetCategory(Product product, Category category)
+    {
+        var prop = typeof(Product).GetProperty(nameof(Product.Category))!;
+        prop.SetValue(product, category);
     }
 
     public class CreateOrderHandlerTests

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, ChevronDown, ChevronRight, CreditCard, QrCode, Landmark } from 'lucide-react';
+import { X, ChevronDown, ChevronLeft, ChevronRight, CreditCard, QrCode, Landmark, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
-import { orderService } from '@/features/orders/api/orderService';
+import { paymentService } from '@/features/cashier/api/paymentService';
 import type { Order } from '@/features/orders/types';
 import type { CashRegister } from '@/features/cashier/types';
 
@@ -13,6 +13,8 @@ const PAYMENT_METHODS: { key: PaymentMethod; label: string; icon: React.ReactNod
     { key: 'nakit', label: 'Nakit', icon: <span className="text-sm font-bold leading-none">₺</span>, selectedClass: 'border-rb-green text-rb-green bg-rb-green-bg' },
     { key: 'qr', label: 'QR', icon: <QrCode className="w-4 h-4" />, selectedClass: 'border-rb-amber text-rb-amber bg-rb-amber-bg' },
 ];
+
+const PAYMENT_METHOD_VALUES: Record<PaymentMethod, number> = { kart: 1, nakit: 2, qr: 3 };
 
 interface Props {
     order: Order;
@@ -33,7 +35,28 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
     const [selectedRegisterId, setSelectedRegisterId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+    const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
     const registerScrollRef = useRef<HTMLDivElement>(null);
+
+    const selectedTotal = order.orderItems.reduce(
+        (sum, item) => sum + (selectedQuantities[item.id] ?? 0) * item.unitPrice,
+        0
+    );
+    const hasSelection = selectedTotal > 0;
+
+    const adjustSelection = (itemId: number, maxQuantity: number, delta: number) => {
+        setSelectedQuantities(prev => {
+            const next = Math.min(Math.max((prev[itemId] ?? 0) + delta, 0), maxQuantity);
+            return { ...prev, [itemId]: next };
+        });
+    };
+
+    const setSelectionValue = (itemId: number, maxQuantity: number, value: number) => {
+        const next = Math.min(Math.max(Number.isFinite(value) ? Math.trunc(value) : 0, 0), maxQuantity);
+        setSelectedQuantities(prev => ({ ...prev, [itemId]: next }));
+    };
 
     const taxGroups = Object.values(
         order.orderItems.reduce((acc, item) => {
@@ -55,6 +78,23 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
             .catch(() => {});
     }, []);
 
+    useEffect(() => {
+        const el = registerScrollRef.current;
+        if (!el) return;
+        const checkOverflow = () => {
+            setCanScrollLeft(el.scrollLeft > 0);
+            setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+        };
+        checkOverflow();
+        const observer = new ResizeObserver(checkOverflow);
+        observer.observe(el);
+        el.addEventListener('scroll', checkOverflow);
+        return () => {
+            observer.disconnect();
+            el.removeEventListener('scroll', checkOverflow);
+        };
+    }, [cashRegisters]);
+
     const canComplete = !submitting && !!selectedRegisterId;
 
     const handleComplete = async () => {
@@ -63,12 +103,22 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
             toast.error('Ödeme almak için bir kasa seçin.');
             return;
         }
+        const itemsToPay = hasSelection
+            ? order.orderItems
+                .filter(item => (selectedQuantities[item.id] ?? 0) > 0)
+                .map(item => ({ orderItemId: item.id, quantity: selectedQuantities[item.id] }))
+            : order.orderItems.map(item => ({ orderItemId: item.id, quantity: item.quantity }));
+
         try {
             setSubmitting(true);
-            await cashRegisterService.addTransaction(register.id, 1, order.totalPrice);
-            await orderService.closeOrder(order.id);
-            toast.success('Ödeme tamamlandı!');
-            onComplete(order.id);
+            const fullyPaid: boolean = await paymentService.createPayment(order.id, register.id, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay);
+            setSelectedQuantities({});
+            if (fullyPaid) {
+                toast.success('Ödeme tamamlandı!');
+                onComplete(order.id);
+            } else {
+                toast.success('Kısmi ödeme alındı, kalan tutar için masa açık kalıyor.');
+            }
         } catch (err: any) {
             toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Ödeme tamamlanamadı.');
         } finally {
@@ -104,20 +154,54 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
                         Sipariş Kalemleri
                     </p>
-                    {order.orderItems.map((item, i) => (
-                        <div key={i} className="flex items-center justify-between gap-4 py-3.5 border-b border-dashed border-border">
-                            <div className="flex items-start gap-3">
-                                <span className="text-sm text-muted-foreground mt-0.5 w-7 shrink-0">×{item.quantity}</span>
-                                <div>
-                                    <p className="text-sm font-medium text-foreground">{item.productName}</p>
-                                    <p className="text-xs text-muted-foreground">₺{item.unitPrice} / adet</p>
+                    {order.orderItems.map((item, i) => {
+                        const selectedQty = selectedQuantities[item.id] ?? 0;
+                        return (
+                            <div
+                                key={i}
+                                className="flex items-center justify-between gap-4 py-3.5 border-b border-dashed border-border"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <span className="text-sm text-muted-foreground mt-0.5 w-7 shrink-0">×{item.quantity}</span>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">{item.productName}</p>
+                                        <p className="text-xs text-muted-foreground">₺{item.unitPrice} / adet</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                    <div
+                                        className={`flex items-center gap-2 rounded-lg border-[1.5px] px-1 py-1 transition-colors ${selectedQty > 0 ? 'border-rb-accent' : 'border-border'}`}
+                                    >
+                                        <button
+                                            onClick={() => adjustSelection(item.id, item.quantity, -1)}
+                                            disabled={selectedQty === 0}
+                                            className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <Minus className="w-3.5 h-3.5" />
+                                        </button>
+                                        <input
+                                            type="number"
+                                            value={selectedQty}
+                                            min={0}
+                                            max={item.quantity}
+                                            onChange={(e) => setSelectionValue(item.id, item.quantity, e.target.valueAsNumber)}
+                                            className={`w-9 text-center text-sm font-semibold tabular-nums bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${selectedQty > 0 ? 'text-rb-accent' : 'text-muted-foreground'}`}
+                                        />
+                                        <button
+                                            onClick={() => adjustSelection(item.id, item.quantity, 1)}
+                                            disabled={selectedQty >= item.quantity}
+                                            className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                    <span className="text-sm font-semibold text-foreground tabular-nums w-14 text-right">
+                                        ₺{(item.unitPrice * item.quantity).toFixed(0)}
+                                    </span>
                                 </div>
                             </div>
-                            <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
-                                ₺{(item.unitPrice * item.quantity).toFixed(0)}
-                            </span>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* Sağ: Toplam + Ödeme */}
@@ -127,27 +211,50 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                             ₺{order.totalPrice.toFixed(0)}
                         </p>
                         {taxGroups.length > 1 ? (
-                            <div className="mt-2 text-left">
+                            <div className="mt-2">
                                 <button
                                     onClick={() => setShowTaxBreakdown(v => !v)}
-                                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                    className="mx-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     KDV Dahil — Detay
                                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showTaxBreakdown ? 'rotate-180' : ''}`} />
                                 </button>
                                 {showTaxBreakdown && (
-                                    <div className="mt-2 space-y-1">
-                                        {taxGroups.map(group => (
-                                            <div key={group.rate} className="flex items-center justify-between text-xs text-muted-foreground">
-                                                <span>{Array.from(group.categories).join(', ') || 'Diğer'} — %{group.rate}</span>
-                                                <span className="text-foreground">₺{group.total.toFixed(0)}</span>
-                                            </div>
-                                        ))}
+                                    <div className="mt-3 rounded-lg border border-border divide-y divide-border text-left overflow-hidden">
+                                        {taxGroups.map(group => {
+                                            const matrah = group.total / (1 + group.rate / 100);
+                                            const kdvTutari = group.total - matrah;
+                                            return (
+                                                <div key={group.rate} className="px-3 py-2.5 space-y-1">
+                                                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                                                        {Array.from(group.categories).join(', ') || 'Diğer'} · %{group.rate}
+                                                    </p>
+                                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                        <span>Matrah</span>
+                                                        <span className="tabular-nums">₺{matrah.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                        <span>KDV Tutarı</span>
+                                                        <span className="tabular-nums">₺{kdvTutari.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-xs font-medium text-foreground pt-0.5">
+                                                        <span>Ara Toplam</span>
+                                                        <span className="tabular-nums">₺{group.total.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <p className="mt-2 text-sm text-muted-foreground text-left">KDV Dahil</p>
+                            <p className="mt-2 text-sm text-muted-foreground text-center">KDV Dahil</p>
+                        )}
+                        {hasSelection && (
+                            <div className="mt-3 rounded-lg bg-rb-accent-bg border border-rb-accent px-3 py-2 flex items-center justify-between">
+                                <span className="text-xs font-medium text-rb-accent">Seçili Tutar</span>
+                                <span className="text-sm font-semibold text-rb-accent tabular-nums">₺{selectedTotal.toFixed(0)}</span>
+                            </div>
                         )}
                     </div>
 
@@ -182,7 +289,15 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                                         );
                                     })}
                                 </div>
-                                {cashRegisters.length > 3 && (
+                                {canScrollLeft && (
+                                    <button
+                                        onClick={() => registerScrollRef.current?.scrollBy({ left: -140, behavior: 'smooth' })}
+                                        className="absolute left-0 top-1/2 translate-y-1.5 w-6 h-6 rounded-full bg-background border border-border shadow flex items-center justify-center text-muted-foreground hover:text-foreground"
+                                    >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                                {canScrollRight && (
                                     <button
                                         onClick={() => registerScrollRef.current?.scrollBy({ left: 140, behavior: 'smooth' })}
                                         className="absolute right-0 top-1/2 translate-y-1.5 w-6 h-6 rounded-full bg-background border border-border shadow flex items-center justify-center text-muted-foreground hover:text-foreground"
@@ -217,7 +332,11 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                                     : 'bg-black/12 text-muted-foreground cursor-not-allowed'
                             }`}
                         >
-                            {submitting ? 'İşleniyor...' : 'Ödemeyi Tamamla ✓'}
+                            {submitting
+                                ? 'İşleniyor...'
+                                : hasSelection
+                                    ? `Seçilenleri Öde (₺${selectedTotal.toFixed(0)}) ✓`
+                                    : 'Tümünü Öde ✓'}
                         </button>
                     </div>
                 </div>

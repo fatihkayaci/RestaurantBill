@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RestaurantBill.Persistence.Context;
@@ -11,9 +12,11 @@ using RestaurantBill.Persistence.Context;
 namespace RestaurantBill.Persistence.Migrations
 {
     [DbContext(typeof(RestaurantBillDbContext))]
-    partial class RestaurantBillDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260805123452_AddTaxRateToOrderItem")]
+    partial class AddTaxRateToOrderItem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -411,54 +414,6 @@ namespace RestaurantBill.Persistence.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("OrderItems");
-                });
-
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.Payment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CashRegisterId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("CreatedUser")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal>("Matrah")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("PaymentMethod")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("TaxAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CashRegisterId");
-
-                    b.HasIndex("OrderId");
-
-                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Product", b =>
@@ -865,25 +820,6 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("RestaurantBill.Domain.Entities.Payment", b =>
-                {
-                    b.HasOne("RestaurantBill.Domain.Entities.CashRegister", "CashRegister")
-                        .WithMany()
-                        .HasForeignKey("CashRegisterId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("RestaurantBill.Domain.Entities.Order", "Order")
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CashRegister");
-
-                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Product", b =>

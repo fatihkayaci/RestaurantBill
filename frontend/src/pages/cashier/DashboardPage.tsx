@@ -58,6 +58,13 @@ export default function CashierDashboardPage() {
     const registerNameById = new Map(cashRegisters.map(r => [r.id, r.name]));
 
     useEffect(() => {
+        setSelectedOrder(prev => {
+            if (!prev) return prev;
+            return servedOrders.find(o => o.id === prev.id) ?? null;
+        });
+    }, [servedOrders]);
+
+    useEffect(() => {
         const conn = new signalR.HubConnectionBuilder()
             .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/cashier-hub`, {
                 accessTokenFactory: () => localStorage.getItem('token') ?? '',

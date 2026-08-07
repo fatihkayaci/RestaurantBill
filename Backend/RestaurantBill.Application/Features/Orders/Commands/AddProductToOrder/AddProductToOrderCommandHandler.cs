@@ -34,7 +34,10 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
                 if (product is null)
                     return Result.Failure("Böyle bir ürün bulunamadı.");
 
-                order.AddItem(product, item.Quantity);
+                Category? category = await _uow.Category.GetByIdAsync(product.CategoryId, false, c => c.Branch);
+                decimal taxRate = category?.GetEffectiveTaxRate() ?? 0m;
+
+                order.AddItem(product, item.Quantity, taxRate);
             }
 
             if (!string.IsNullOrWhiteSpace(request.Note))

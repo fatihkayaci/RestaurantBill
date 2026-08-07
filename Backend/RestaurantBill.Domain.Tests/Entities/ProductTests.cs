@@ -112,6 +112,7 @@ public class ProductTests
         {
             Product product = Product.Create("Çay", 15m, "img.png", Guid.NewGuid());
             typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(product, Guid.NewGuid());
+            typeof(Product).GetProperty(nameof(Product.Category))!.SetValue(product, Category.Create("Test Category", Guid.NewGuid(), taxRate: 0m));
             Order order = Order.Create(Guid.NewGuid());
             order.AddItem(product, 1);
 

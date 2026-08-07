@@ -12,12 +12,13 @@ namespace RestaurantBill.Domain.Entities
 
         public decimal UnitPrice { get; private set; }
         public int Quantity { get; private set; }
+        public decimal TaxRate { get; private set; }
         public OrderItemStatus Status { get; private set; } = OrderItemStatus.Pending;
 
 
         protected OrderItem() { }
 
-        internal static OrderItem Create(decimal unitPrice, int quantity, Product product)
+        internal static OrderItem Create(decimal unitPrice, int quantity, Product product, decimal taxRate)
         {
             if (product == null)
                 throw new DomainException("Geçersiz ürün ID'si.");
@@ -34,6 +35,7 @@ namespace RestaurantBill.Domain.Entities
                 ProductId = product.Id,
                 UnitPrice = unitPrice,
                 Quantity = quantity,
+                TaxRate = taxRate,
                 Status = OrderItemStatus.Pending
             };
         }
@@ -41,6 +43,11 @@ namespace RestaurantBill.Domain.Entities
         internal void AddQuantity(int quantity)
         {
             Quantity += quantity;
+        }
+
+        internal void ReduceQuantity(int quantity)
+        {
+            Quantity -= quantity;
         }
 
         public void UpdateQuantity(int quantity)

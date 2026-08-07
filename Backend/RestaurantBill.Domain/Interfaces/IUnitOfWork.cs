@@ -18,5 +18,6 @@ public interface IUnitOfWork : IDisposable
     ICashTransactionRepository CashTransaction { get; }
     IReservationRepository Reservation { get; }
     IAuditLogRepository AuditLog { get; }
+    IPaymentRepository Payment { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -11,6 +11,7 @@ public class OrderTests
     {
         Product product = Product.Create("Test Product", price, "img.png", Guid.NewGuid());
         SetId(product, id ?? Guid.NewGuid());
+        SetCategory(product, Category.Create("Test Category", Guid.NewGuid(), taxRate: 0m));
         return product;
     }
 
@@ -18,6 +19,12 @@ public class OrderTests
     {
         PropertyInfo idProperty = typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!;
         idProperty.SetValue(entity, id);
+    }
+
+    private static void SetCategory(Product product, Category category)
+    {
+        PropertyInfo categoryProperty = typeof(Product).GetProperty(nameof(Product.Category))!;
+        categoryProperty.SetValue(product, category);
     }
 
     public class Create
