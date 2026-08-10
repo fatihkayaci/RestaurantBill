@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, ChevronDown, ChevronLeft, ChevronRight, CreditCard, QrCode, Landmark, Minus, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, ChevronDown, CreditCard, QrCode, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
+import { shiftService } from '@/features/cashier/api/shiftService';
 import { paymentService } from '@/features/cashier/api/paymentService';
 import type { Order } from '@/features/orders/types';
-import type { CashRegister } from '@/features/cashier/types';
+import type { CurrentShift } from '@/features/cashier/types';
 
 type PaymentMethod = 'kart' | 'nakit' | 'qr';
 
@@ -31,14 +31,11 @@ function formatElapsed(createdAt: string): string {
 
 export default function PaymentPanel({ order, onClose, onComplete }: Props) {
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('kart');
-    const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
-    const [selectedRegisterId, setSelectedRegisterId] = useState<string | null>(null);
+    const [activeShift, setActiveShift] = useState<CurrentShift | null>(null);
+    const [loadingShift, setLoadingShift] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
-    const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(false);
     const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
-    const registerScrollRef = useRef<HTMLDivElement>(null);
 
     const selectedTotal = order.orderItems.reduce(
         (sum, item) => sum + (selectedQuantities[item.id] ?? 0) * item.unitPrice,
@@ -69,38 +66,17 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
     ).sort((a, b) => a.rate - b.rate);
 
     useEffect(() => {
-        cashRegisterService.getCashRegisters()
-            .then(data => {
-                const open = data.filter(r => r.status === 1);
-                setCashRegisters(open);
-                setSelectedRegisterId(open[0]?.id ?? null);
-            })
-            .catch(() => {});
+        shiftService.getMyCurrent()
+            .then(setActiveShift)
+            .catch(() => {})
+            .finally(() => setLoadingShift(false));
     }, []);
 
-    useEffect(() => {
-        const el = registerScrollRef.current;
-        if (!el) return;
-        const checkOverflow = () => {
-            setCanScrollLeft(el.scrollLeft > 0);
-            setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-        };
-        checkOverflow();
-        const observer = new ResizeObserver(checkOverflow);
-        observer.observe(el);
-        el.addEventListener('scroll', checkOverflow);
-        return () => {
-            observer.disconnect();
-            el.removeEventListener('scroll', checkOverflow);
-        };
-    }, [cashRegisters]);
-
-    const canComplete = !submitting && !!selectedRegisterId;
+    const canComplete = !submitting && !loadingShift && !!activeShift;
 
     const handleComplete = async () => {
-        const register = cashRegisters.find(r => r.id === selectedRegisterId);
-        if (!register) {
-            toast.error('Ödeme almak için bir kasa seçin.');
+        if (!activeShift) {
+            toast.error('Ödeme almak için açık bir vardiyanız olmalı.');
             return;
         }
         const itemsToPay = hasSelection
@@ -111,7 +87,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
 
         try {
             setSubmitting(true);
-            const fullyPaid: boolean = await paymentService.createPayment(order.id, register.id, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay);
+            const fullyPaid: boolean = await paymentService.createPayment(order.id, activeShift.cashRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay);
             setSelectedQuantities({});
             if (fullyPaid) {
                 toast.success('Ödeme tamamlandı!');
@@ -259,52 +235,12 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                     </div>
 
                     <div className="px-6 py-5 space-y-4">
-                        {cashRegisters.length === 0 ? (
-                            <p className="text-sm text-destructive">Açık kasa bulunamadı.</p>
-                        ) : cashRegisters.length > 1 ? (
-                            <div className="relative">
-                                <p className="text-xs text-muted-foreground mb-1.5">Kasa</p>
-                                <div
-                                    ref={registerScrollRef}
-                                    className="flex gap-2 overflow-x-auto scroll-smooth"
-                                    style={{ scrollbarWidth: 'none' }}
-                                >
-                                    {cashRegisters.map(register => {
-                                        const isSelected = register.id === selectedRegisterId;
-                                        return (
-                                            <button
-                                                key={register.id}
-                                                onClick={() => setSelectedRegisterId(register.id)}
-                                                className={`flex flex-col items-center gap-1 w-17 shrink-0 py-2 rounded-lg border-[1.5px] transition-colors ${
-                                                    isSelected ? 'border-rb-accent bg-rb-accent-bg' : 'border-border hover:border-muted-foreground'
-                                                }`}
-                                            >
-                                                <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isSelected ? 'bg-rb-accent text-white' : 'bg-muted text-muted-foreground'}`}>
-                                                    <Landmark className="h-4 w-4" />
-                                                </div>
-                                                <span className={`text-[11px] font-medium truncate max-w-full px-1 ${isSelected ? 'text-rb-accent' : 'text-muted-foreground'}`}>
-                                                    {register.name}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                {canScrollLeft && (
-                                    <button
-                                        onClick={() => registerScrollRef.current?.scrollBy({ left: -140, behavior: 'smooth' })}
-                                        className="absolute left-0 top-1/2 translate-y-1.5 w-6 h-6 rounded-full bg-background border border-border shadow flex items-center justify-center text-muted-foreground hover:text-foreground"
-                                    >
-                                        <ChevronLeft className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                                {canScrollRight && (
-                                    <button
-                                        onClick={() => registerScrollRef.current?.scrollBy({ left: 140, behavior: 'smooth' })}
-                                        className="absolute right-0 top-1/2 translate-y-1.5 w-6 h-6 rounded-full bg-background border border-border shadow flex items-center justify-center text-muted-foreground hover:text-foreground"
-                                    >
-                                        <ChevronRight className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
+                        {!loadingShift && !activeShift ? (
+                            <p className="text-sm text-destructive">Açık bir vardiyanız yok, ödeme alınamaz.</p>
+                        ) : activeShift ? (
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Kasa</span>
+                                <span className="text-sm font-medium text-foreground">{activeShift.cashRegisterName}</span>
                             </div>
                         ) : null}
 

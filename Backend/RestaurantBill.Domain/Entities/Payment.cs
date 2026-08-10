@@ -14,10 +14,11 @@ public class Payment : BaseEntity
     public decimal Matrah { get; private set; }
     public decimal TaxAmount { get; private set; }
     public PaymentMethod PaymentMethod { get; private set; }
+    public int ItemCount { get; private set; }
 
     protected Payment() { }
 
-    public static Payment Create(Guid orderId, Guid cashRegisterId, decimal totalAmount, decimal matrah, decimal taxAmount, PaymentMethod paymentMethod)
+    public static Payment Create(Guid orderId, Guid cashRegisterId, decimal totalAmount, decimal matrah, decimal taxAmount, PaymentMethod paymentMethod, int itemCount)
     {
         if (orderId == Guid.Empty)
             throw new DomainException("Geçersiz sipariş.");
@@ -28,6 +29,9 @@ public class Payment : BaseEntity
         if (totalAmount < 0)
             throw new DomainException("Toplam tutar negatif olamaz.");
 
+        if (itemCount < 0)
+            throw new DomainException("Ürün sayısı negatif olamaz.");
+
         return new Payment
         {
             OrderId = orderId,
@@ -35,7 +39,8 @@ public class Payment : BaseEntity
             TotalAmount = totalAmount,
             Matrah = matrah,
             TaxAmount = taxAmount,
-            PaymentMethod = paymentMethod
+            PaymentMethod = paymentMethod,
+            ItemCount = itemCount
         };
     }
 }

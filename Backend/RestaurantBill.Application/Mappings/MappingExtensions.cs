@@ -28,6 +28,26 @@ public static class MappingExtensions
         Status = r.Status
     };
 
+    public static ShiftDto ToDto(this Shift s) => new()
+    {
+        Id = s.Id,
+        BranchId = s.BranchId,
+        CashRegisterId = s.CashRegisterId,
+        CashRegisterName = s.CashRegister?.Name ?? string.Empty,
+        OpenedByUserId = s.OpenedByUserId,
+        ClosedByUserId = s.ClosedByUserId,
+        ExpectedOpeningBalance = s.ExpectedOpeningBalance,
+        OpeningBalance = s.OpeningBalance,
+        OpeningDifference = s.OpeningDifference,
+        ExpectedClosingBalance = s.ExpectedClosingBalance,
+        CountedClosingBalance = s.CountedClosingBalance,
+        Difference = s.Difference,
+        OpenedAt = s.OpenedAt,
+        ClosedAt = s.ClosedAt,
+        Status = s.Status,
+        Note = s.Note
+    };
+
     public static CashTransactionDto ToDto(this CashTransaction t) => new()
     {
         Id = t.Id,

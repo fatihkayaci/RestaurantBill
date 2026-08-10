@@ -19,5 +19,6 @@ public interface IUnitOfWork : IDisposable
     IReservationRepository Reservation { get; }
     IAuditLogRepository AuditLog { get; }
     IPaymentRepository Payment { get; }
+    IShiftRepository Shift { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
