@@ -62,7 +62,8 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
             decimal groupMatrah = groupTotal / (1 + group.Key / 100);
             decimal groupTaxAmount = groupTotal - groupMatrah;
 
-            Payment payment = Payment.Create(order.Id, register.Id, groupTotal, groupMatrah, groupTaxAmount, request.PaymentMethod);
+            int groupItemCount = group.Sum(p => p.Quantity);
+            Payment payment = Payment.Create(order.Id, register.Id, groupTotal, groupMatrah, groupTaxAmount, request.PaymentMethod, groupItemCount);
             await _uow.Payment.AddAsync(payment);
         }
 

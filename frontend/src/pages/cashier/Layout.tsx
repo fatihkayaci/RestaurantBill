@@ -4,6 +4,8 @@ import { useTheme } from 'next-themes';
 import { authService } from '@/features/auth/api/authService';
 import { userService } from '@/features/users/api/userService';
 import type { User } from '@/features/users/types';
+import ShiftStartGate from './components/ShiftStartGate';
+import EndShiftModal from './components/EndShiftModal';
 
 export default function CashierLayout() {
     const { theme, setTheme } = useTheme();
@@ -12,6 +14,8 @@ export default function CashierLayout() {
 
     const [restaurantName, setRestaurantName] = useState('');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [shiftGateResolved, setShiftGateResolved] = useState(false);
+    const [showEndShiftModal, setShowEndShiftModal] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -55,6 +59,15 @@ export default function CashierLayout() {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    {shiftGateResolved && (
+                        <button
+                            onClick={() => setShowEndShiftModal(true)}
+                            className="text-xs font-semibold text-rb-red border border-rb-red/40 bg-rb-red-bg rounded-full px-3 py-1.5 hover:opacity-80 transition-opacity"
+                        >
+                            Vardiyayı Bitir
+                        </button>
+                    )}
+
                     <button
                         onClick={() => setTheme(isDark ? 'light' : 'dark')}
                         className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none ${isDark ? 'bg-rb-accent' : 'bg-gray-600'}`}
@@ -78,8 +91,20 @@ export default function CashierLayout() {
             </header>
 
             <div className="flex-1 overflow-auto flex flex-col">
-                <Outlet />
+                {shiftGateResolved
+                    ? <Outlet />
+                    : <ShiftStartGate onResolved={() => setShiftGateResolved(true)} />}
             </div>
+
+            {showEndShiftModal && (
+                <EndShiftModal
+                    onClose={() => setShowEndShiftModal(false)}
+                    onShiftClosed={() => {
+                        setShowEndShiftModal(false);
+                        setShiftGateResolved(false);
+                    }}
+                />
+            )}
         </div>
     );
 }

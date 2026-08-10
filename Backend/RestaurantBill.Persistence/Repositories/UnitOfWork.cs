@@ -28,6 +28,7 @@ public class UnitOfWork : IUnitOfWork
     private IReservationRepository? _reservationRepository;
     private IAuditLogRepository? _auditLogRepository;
     private IPaymentRepository? _paymentRepository;
+    private IShiftRepository? _shiftRepository;
 
 
     public IProductRepository Product => _productRepository ??= new ProductRepository(_context);
@@ -47,6 +48,7 @@ public class UnitOfWork : IUnitOfWork
     public IReservationRepository Reservation => _reservationRepository ??= new ReservationRepository(_context);
     public IAuditLogRepository AuditLog => _auditLogRepository ??= new AuditLogRepository(_context);
     public IPaymentRepository Payment => _paymentRepository ??= new PaymentRepository(_context);
+    public IShiftRepository Shift => _shiftRepository ??= new ShiftRepository(_context);
 
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

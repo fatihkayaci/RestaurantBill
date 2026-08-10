@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RestaurantBill.Persistence.Context;
@@ -11,9 +12,11 @@ using RestaurantBill.Persistence.Context;
 namespace RestaurantBill.Persistence.Migrations
 {
     [DbContext(typeof(RestaurantBillDbContext))]
-    partial class RestaurantBillDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260808104047_AddShift")]
+    partial class AddShift
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -431,9 +434,6 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("ItemCount")
-                        .HasColumnType("integer");
-
                     b.Property<decimal>("Matrah")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -619,9 +619,6 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<decimal>("ExpectedClosingBalance")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal>("ExpectedOpeningBalance")
-                        .HasColumnType("numeric");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -635,9 +632,6 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("OpeningBalance")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("OpeningDifference")
                         .HasColumnType("numeric");
 
                     b.Property<int>("Status")

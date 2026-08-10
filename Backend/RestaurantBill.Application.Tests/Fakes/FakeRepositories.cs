@@ -12,6 +12,7 @@ public class FakeOrderItemRepository : FakeGenericRepository<OrderItem>, IOrderI
 public class FakePaymentRepository : FakeGenericRepository<Payment>, IPaymentRepository { }
 public class FakeProductRepository : FakeGenericRepository<Product>, IProductRepository { }
 public class FakeRegionRepository : FakeGenericRepository<Region>, IRegionRepository { }
+public class FakeShiftRepository : FakeGenericRepository<Shift>, IShiftRepository { }
 public class FakeCompanyRepository : FakeGenericRepository<Company>, ICompanyRepository { }
 public class FakeRestaurantRepository : FakeGenericRepository<Branch>, IBranchRepository { }
 public class FakeTableRepository : FakeGenericRepository<Table>, ITableRepository { }

@@ -31,6 +31,7 @@ public class RestaurantBillDbContext : DbContext
     public DbSet<VerificationCode> VerificationCodes { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Payment> Payments { get; set; }
+    public DbSet<Shift> Shifts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

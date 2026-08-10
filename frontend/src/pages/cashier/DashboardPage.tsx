@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { orderService } from '@/features/orders/api/orderService';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
+import { shiftService } from '@/features/cashier/api/shiftService';
 import type { Order } from '@/features/orders/types';
-import type { CashRegister, CashTransaction } from '@/features/cashier/types';
+import type { PaymentMethod, ShiftTransaction } from '@/features/cashier/types';
 import PaymentPanel from './components/PaymentPanel';
+import TransactionDetailPanel from './components/TransactionDetailPanel';
 
-const MOCK_PAYMENT_LABELS = ['KART', 'NAKİT', 'QR / TEMASSIZ'] as const;
-const MOCK_PAYMENT_COLORS = [
-    'bg-rb-accent-bg text-rb-accent',
-    'bg-rb-green-bg text-rb-green',
-    'bg-rb-amber-bg text-rb-amber',
-];
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'KART', 2: 'NAKİT', 3: 'QR' };
+const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
+    1: 'bg-rb-accent-bg text-rb-accent',
+    2: 'bg-rb-green-bg text-rb-green',
+    3: 'bg-rb-amber-bg text-rb-amber',
+};
 
 function formatElapsed(createdAt: string, now: number): string {
     const minutes = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 60000));
@@ -20,13 +22,19 @@ function formatElapsed(createdAt: string, now: number): string {
     return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
 }
 
+function formatShortName(fullName: string): string {
+    const parts = fullName.trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return '';
+    return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
+}
+
 export default function CashierDashboardPage() {
     const [servedOrders, setServedOrders] = useState<Order[]>([]);
-    const [transactions, setTransactions] = useState<CashTransaction[]>([]);
-    const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
+    const [shiftTransactions, setShiftTransactions] = useState<ShiftTransaction[]>([]);
     const [completedCount, setCompletedCount] = useState(0);
     const [completedRevenue, setCompletedRevenue] = useState(0);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [selectedTransaction, setSelectedTransaction] = useState<ShiftTransaction | null>(null);
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
@@ -40,8 +48,10 @@ export default function CashierDashboardPage() {
                 const income = data.filter(t => t.type === 1);
                 setCompletedCount(income.length);
                 setCompletedRevenue(income.reduce((s, t) => s + t.amount, 0));
-                setTransactions(income.slice(0, 10));
             })
+            .catch(() => {});
+        shiftService.getMyCurrentTransactions()
+            .then(data => setShiftTransactions(data.slice(0, 10)))
             .catch(() => {});
     };
 
@@ -49,13 +59,8 @@ export default function CashierDashboardPage() {
         orderService.getAllOrdersToCashier()
             .then(setServedOrders)
             .catch(() => {});
-        cashRegisterService.getCashRegisters()
-            .then(setCashRegisters)
-            .catch(() => {});
         refreshTransactions();
     }, []);
-
-    const registerNameById = new Map(cashRegisters.map(r => [r.id, r.name]));
 
     useEffect(() => {
         setSelectedOrder(prev => {
@@ -63,6 +68,13 @@ export default function CashierDashboardPage() {
             return servedOrders.find(o => o.id === prev.id) ?? null;
         });
     }, [servedOrders]);
+
+    useEffect(() => {
+        setSelectedTransaction(prev => {
+            if (!prev) return prev;
+            return shiftTransactions.find(t => t.id === prev.id) ?? prev;
+        });
+    }, [shiftTransactions]);
 
     useEffect(() => {
         const conn = new signalR.HubConnectionBuilder()
@@ -82,6 +94,7 @@ export default function CashierDashboardPage() {
             orderService.getAllOrdersToCashier()
                 .then(setServedOrders)
                 .catch(() => {});
+            refreshTransactions();
         });
 
         let cancelled = false;
@@ -176,39 +189,50 @@ export default function CashierDashboardPage() {
                     )}
                 </div>
 
-                {/* Sağ: Son işlemler */}
+                {/* Sağ: Vardiya işlemleri */}
                 <div className="w-72 xl:w-80 border-l shrink-0 overflow-y-auto p-6">
                     <h2 className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-5">
-                        Son İşlemler
+                        Vardiya İşlemleri
                     </h2>
 
-                    {transactions.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Henüz işlem yok.</p>
+                    {shiftTransactions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Bu vardiyada henüz işlem yok.</p>
                     ) : (
-                        <div className="space-y-4">
-                            {transactions.map((txn, idx) => {
-                                const methodIdx = idx % 3;
+                        <div className="divide-y divide-border">
+                            {shiftTransactions.map(txn => {
                                 const time = new Date(txn.createdAt)
                                     .toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                                const hasMultipleDetails = txn.details.length > 1;
                                 return (
-                                    <div key={txn.id} className="flex items-start gap-3">
-                                        <span className="text-xs text-muted-foreground w-10 shrink-0 mt-0.5">
-                                            {time}
-                                        </span>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="text-sm font-medium text-foreground truncate">
-                                                    {registerNameById.get(txn.cashRegisterId) ?? 'Bilinmeyen Kasa'}
-                                                </span>
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${MOCK_PAYMENT_COLORS[methodIdx]}`}>
-                                                    {MOCK_PAYMENT_LABELS[methodIdx]}
-                                                </span>
+                                    <div key={txn.id} className="py-3.5 first:pt-0 last:pb-0">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-1.5 shrink-0 tabular-nums">
+                                                {time}
+                                            </span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold text-foreground truncate">
+                                                    {txn.tableName ? `Masa ${txn.tableName}` : 'Masa —'}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground truncate">
+                                                    {[formatShortName(txn.createdByUserName), `${txn.itemCount} ürün`].filter(Boolean).join(' · ')}
+                                                </p>
                                             </div>
-                                            <div className="flex items-center justify-between mt-0.5">
-                                                <span className="text-xs text-muted-foreground">— · — ürün</span>
-                                                <span className="text-sm font-bold text-foreground">₺{txn.amount.toFixed(0)}</span>
+                                            <div className="flex flex-col items-end gap-1 shrink-0">
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${PAYMENT_METHOD_COLORS[txn.method]}`}>
+                                                    {PAYMENT_METHOD_LABELS[txn.method]}
+                                                </span>
+                                                <span className="text-base font-serif font-bold text-foreground">₺{txn.amount.toFixed(0)}</span>
                                             </div>
                                         </div>
+
+                                        {hasMultipleDetails && (
+                                            <button
+                                                onClick={() => setSelectedTransaction(txn)}
+                                                className="mt-1.5 ml-13 text-xs text-rb-accent hover:underline"
+                                            >
+                                                Detay görmek için tıklayın
+                                            </button>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -229,6 +253,22 @@ export default function CashierDashboardPage() {
                             order={selectedOrder}
                             onClose={() => setSelectedOrder(null)}
                             onComplete={handlePaymentComplete}
+                        />
+                    </div>
+                </>
+            )}
+
+            {/* İşlem detay paneli overlay */}
+            {selectedTransaction && (
+                <>
+                    <div
+                        className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[3px] animate-in fade-in duration-200"
+                        onClick={() => setSelectedTransaction(null)}
+                    />
+                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-110 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
+                        <TransactionDetailPanel
+                            transaction={selectedTransaction}
+                            onClose={() => setSelectedTransaction(null)}
                         />
                     </div>
                 </>
