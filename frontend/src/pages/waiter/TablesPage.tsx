@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import * as signalR from '@microsoft/signalr';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Table } from '@/features/tables/types';
 import TablePanel from './components/TablePanel';
+import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 
 type FilterType = 'all' | 'empty' | 'occupied' | 'reserved';
 
@@ -191,6 +193,8 @@ export default function WaiterTablesPage() {
 
     const selectedTable = tables.find(t => t.id === selectedTableId) ?? null;
 
+    const statsSlot = document.getElementById('waiter-stats-slot');
+
     if (loading) {
         return (
             <div className="p-6 grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2.5">
@@ -203,6 +207,16 @@ export default function WaiterTablesPage() {
 
     return (
         <div className="min-h-full">
+            {/* Header stats portal */}
+            {statsSlot && createPortal(
+                <>
+                    <HeaderStatCounter label="Aktif Sipariş" count={counts.occupied} color="text-rb-accent" />
+                    <HeaderStatCounter label="Açık Masa" count={counts.occupied} color="text-rb-amber" />
+                    <HeaderStatCounter label="Bekleyen" count={counts.reserved} color="text-rb-red" />
+                </>,
+                statsSlot
+            )}
+
             {/* Stats + Filter Bar */}
             <div className="sticky top-0 z-10 bg-[#F1ECE4]/95 dark:bg-background/95 backdrop-blur-sm border-b border-border px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 {/* Stats */}

@@ -183,6 +183,7 @@ public static class MappingExtensions
         IsActive = u.IsActive,
         BranchId = ub.BranchId,
         BranchName = ub.Branch?.BranchName,
+        RestaurantName = ub.Branch?.Company?.Name,
         HireDate = ub.HireDate
     };
 }

@@ -28,7 +28,8 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
         if (shift is null) return Result<ShiftSummaryDto>.Failure("Açık bir vardiyanız yok.");
 
         var payments = await _uow.Payment.GetAllAsync(
-            p => p.CashRegisterId == shift.CashRegisterId && p.CreatedAt >= shift.OpenedAt);
+            p => p.CashRegisterId == shift.CashRegisterId && p.CreatedAt >= shift.OpenedAt,
+            false, "Order");
 
         var breakdown = payments
             .GroupBy(p => p.PaymentMethod)
@@ -44,11 +45,19 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
             o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.Table.Region.BranchId == restaurantId);
         int openTablesCount = openOrders.Select(o => o.TableId).Distinct().Count();
 
+        // Bir masayı kapatmak, KDV oranına göre birden fazla Payment satırı oluşturabiliyor;
+        // "tamamlanan" sayısı masa/sipariş kapatma olayını saymalı, ham Payment satırını değil.
+        int completedOrdersCount = payments
+            .Where(p => p.Order.Status == OrderStatus.Paid)
+            .Select(p => p.OrderId)
+            .Distinct()
+            .Count();
+
         return Result<ShiftSummaryDto>.Success(new ShiftSummaryDto
         {
             ShiftId = shift.Id,
             OpenedAt = shift.OpenedAt,
-            TransactionCount = payments.Count(),
+            TransactionCount = completedOrdersCount,
             Breakdown = breakdown,
             Total = payments.Sum(p => p.TotalAmount),
             OpenTablesCount = openTablesCount

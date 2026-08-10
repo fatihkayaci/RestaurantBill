@@ -26,7 +26,7 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, R
         User? user = await _uow.User.GetByIdAsync(_currentUser.UserId);
         if (user is null) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
 
-        UserBranch? userBranch = (await _uow.UserBranch.GetAllAsync(ur => ur.UserId == user.Id, false)).FirstOrDefault();
+        UserBranch? userBranch = (await _uow.UserBranch.GetAllAsync(ur => ur.UserId == user.Id, false, "Branch.Company")).FirstOrDefault();
         if (userBranch is not null)
             return Result<UserDto>.Success(user.ToDto(userBranch));
 

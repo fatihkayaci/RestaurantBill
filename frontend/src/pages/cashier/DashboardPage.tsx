@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import * as signalR from '@microsoft/signalr';
 import { orderService } from '@/features/orders/api/orderService';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { Order } from '@/features/orders/types';
-import type { PaymentMethod, ShiftTransaction } from '@/features/cashier/types';
+import type { PaymentMethod, ShiftSummary, ShiftTransaction } from '@/features/cashier/types';
 import PaymentPanel from './components/PaymentPanel';
 import TransactionDetailPanel from './components/TransactionDetailPanel';
+import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
+
+const OrderStatus = { Served: 5 } as const;
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'KART', 2: 'NAKİT', 3: 'QR' };
 const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
@@ -33,6 +37,7 @@ export default function CashierDashboardPage() {
     const [shiftTransactions, setShiftTransactions] = useState<ShiftTransaction[]>([]);
     const [completedCount, setCompletedCount] = useState(0);
     const [completedRevenue, setCompletedRevenue] = useState(0);
+    const [shiftSummary, setShiftSummary] = useState<ShiftSummary | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [selectedTransaction, setSelectedTransaction] = useState<ShiftTransaction | null>(null);
     const [now, setNow] = useState(() => Date.now());
@@ -52,6 +57,9 @@ export default function CashierDashboardPage() {
             .catch(() => {});
         shiftService.getMyCurrentTransactions()
             .then(data => setShiftTransactions(data.slice(0, 10)))
+            .catch(() => {});
+        shiftService.getMyCurrentSummary()
+            .then(setShiftSummary)
             .catch(() => {});
     };
 
@@ -112,8 +120,20 @@ export default function CashierDashboardPage() {
     const totalCount = completedCount + servedOrders.length;
     const avgTicket = totalCount > 0 ? todayRevenue / totalCount : 0;
 
+    const statsSlot = document.getElementById('cashier-stats-slot');
+
     return (
         <>
+            {/* Header stats portal */}
+            {statsSlot && createPortal(
+                <>
+                    <HeaderStatCounter label="Açık Masa" count={servedOrders.length} color="text-rb-amber" />
+                    <HeaderStatCounter label="Bekleyen Ödeme" count={servedOrders.filter(o => o.status === OrderStatus.Served).length} color="text-rb-accent" />
+                    <HeaderStatCounter label="Tamamlanan" count={shiftSummary?.transactionCount ?? 0} color="text-rb-green" />
+                </>,
+                statsSlot
+            )}
+
             {/* Dark stats bar */}
             <div className="bg-sidebar px-6 py-4 flex items-center gap-8 shrink-0">
                 <div>
@@ -202,7 +222,6 @@ export default function CashierDashboardPage() {
                             {shiftTransactions.map(txn => {
                                 const time = new Date(txn.createdAt)
                                     .toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-                                const hasMultipleDetails = txn.details.length > 1;
                                 return (
                                     <div key={txn.id} className="py-3.5 first:pt-0 last:pb-0">
                                         <div className="flex items-center gap-3">
@@ -225,14 +244,12 @@ export default function CashierDashboardPage() {
                                             </div>
                                         </div>
 
-                                        {hasMultipleDetails && (
-                                            <button
-                                                onClick={() => setSelectedTransaction(txn)}
-                                                className="mt-1.5 ml-13 text-xs text-rb-accent hover:underline"
-                                            >
-                                                Detay görmek için tıklayın
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={() => setSelectedTransaction(txn)}
+                                            className="mt-1.5 ml-13 text-xs text-rb-accent hover:underline"
+                                        >
+                                            Detay görmek için tıklayın
+                                        </button>
                                     </div>
                                 );
                             })}

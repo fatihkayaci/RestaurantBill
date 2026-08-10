@@ -13,5 +13,6 @@ public class UserDto
     public bool IsActive { get; set; }
     public Guid BranchId { get; set; }
     public string? BranchName { get; set; }
+    public string? RestaurantName { get; set; }
     public DateTime? HireDate { get; set; }
 }
