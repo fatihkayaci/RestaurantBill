@@ -9,6 +9,7 @@ export interface User {
     isActive: boolean;
     branchId: string;
     branchName?: string | null;
+    restaurantName?: string | null;
     hireDate?: string | null;
 }
 

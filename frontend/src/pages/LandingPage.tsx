@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useState } from "react";
+import sophramLogo from "@/assets/sophram-logo.svg";
 
 const ACCENT = { color: "var(--rb-accent)", bg: "var(--rb-accent-bg)" };
 const GREEN = { color: "var(--rb-green)", bg: "var(--rb-green-bg)" };
@@ -189,15 +190,10 @@ export default function LandingPage() {
     return (
         <div className="min-h-screen bg-[#f5f0e8] dark:bg-[#18140f] text-[#2a1f14] dark:text-[#f2ede4] font-sans">
             {/* ── NAVBAR ── */}
-            <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#f5f0e8]/96 dark:bg-[#18140f]/96 border-b border-[#e8e0d0] dark:border-[#3d3528] px-6 md:px-15 py-3.5 flex items-center justify-between gap-6">
-                <Link to="/" className="flex items-center gap-2.5 shrink-0">
-                    <div className="w-8 h-8 rounded-lg bg-[rgba(200,169,110,0.1)] border border-[rgba(200,169,110,0.25)] flex items-center justify-center">
-                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                            <circle cx="9" cy="9" r="8" stroke="#C8A96E" strokeWidth="1.5" />
-                            <circle cx="9" cy="9" r="3.5" fill="#C8A96E" />
-                        </svg>
-                    </div>
-                    <span className="font-serif text-xl font-bold">RestaurantBill</span>
+            <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#f5f0e8]/96 dark:bg-[#18140f]/96 border-b border-[#e8e0d0] dark:border-[#3d3528] px-6 md:px-15 py-1.5 flex items-center justify-between gap-6">
+                <Link to="/" className="flex items-center gap-0 shrink-0">
+                    <img src={sophramLogo} alt="Sophram" className="h-14 w-auto" />
+                    <span className="font-serif text-xl font-bold">Sophram</span>
                 </Link>
 
                 <div className="hidden lg:flex items-center gap-7 flex-1 justify-center">
@@ -785,10 +781,10 @@ export default function LandingPage() {
                 <div className="flex justify-between items-center flex-wrap gap-3">
                     <div className="flex items-center gap-2">
                         <span className="font-serif text-[17px] font-bold" style={{ color: "rgba(242,237,228,0.6)" }}>
-                            RestaurantBill
+                            Sophram
                         </span>
                         <span className="text-xs ml-3" style={{ color: "rgba(242,237,228,0.25)" }}>
-                            © {new Date().getFullYear()} RestaurantBill
+                            © {new Date().getFullYear()} Sophram
                         </span>
                     </div>
                     <div className="flex gap-5">

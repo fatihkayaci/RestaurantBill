@@ -8,6 +8,7 @@ import { getRoleFromToken, getRoleHomePath } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
+import sophramLogo from "@/assets/sophram-logo-yazisiz.svg";
 
 type TabType = "login" | "register";
 
@@ -120,21 +121,10 @@ export default function LoginPage() {
     return (
         <div className="flex min-h-screen">
             {/* ── Sol Sidebar ── */}
-            <aside className="hidden lg:flex w-100 shrink-0 flex-col bg-[#1c1510] text-white px-10 pt-12 pb-8">
+            <aside className="hidden lg:flex w-100 shrink-0 flex-col items-center text-center bg-[#1c1510] text-white px-10 pt-12 pb-8">
                 <div className="flex items-center gap-3 mb-6">
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                        <circle cx="16" cy="16" r="14" stroke="#C8A96E" strokeWidth="2"/>
-                        <circle cx="16" cy="16" r="6" fill="#C8A96E"/>
-                        <circle cx="16" cy="16" r="10" stroke="#C8A96E" strokeWidth="1" strokeDasharray="3 4"/>
-                    </svg>
+                    <img src={sophramLogo} alt="Sophram" className="h-44 w-auto" />
                 </div>
-
-                <h1 className="text-4xl font-serif font-bold leading-none tracking-[0.5px]">
-                    RestaurantBill
-                </h1>
-                <p className="text-[13px] italic mt-1.5" style={{ color: "rgba(242,237,228,0.45)" }}>Restoran Yönetim Sistemi</p>
-
-                <div className="w-10 h-0.5 my-7" style={{ background: "rgba(200,169,110,0.4)" }} />
 
                 <ul className="space-y-1 flex-1">
                     {SIDEBAR_FEATURES.map((feature) => (

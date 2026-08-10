@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { Order } from '@/features/orders/types';
 import * as signalR from '@microsoft/signalr';
 import { orderService } from '@/features/orders/api/orderService';
+import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 
 const OrderStatus = {
     Preparing: 3,
@@ -129,16 +130,6 @@ function ColumnHeader({ dot, text, bg, label, count }: { dot: string; text: stri
     );
 }
 
-/* ── Stats portal chip ── */
-function StatsChip({ label, count, color }: { label: string; count: number; color: string }) {
-    return (
-        <div className={`flex flex-col items-center px-3 py-1 rounded-lg ${color}`}>
-            <span className="text-sm font-bold leading-none">{count}</span>
-            <span className="text-[9px] font-semibold tracking-widest uppercase mt-0.5 opacity-80">{label}</span>
-        </div>
-    );
-}
-
 export default function KitchenDashboardPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [now, setNow] = useState(() => Date.now());
@@ -253,9 +244,9 @@ export default function KitchenDashboardPage() {
             {/* Header stats portal */}
             {statsSlot && createPortal(
                 <>
-                    <StatsChip label="Bekliyor"      count={pendingGroups.length}   color="text-rb-amber" />
-                    <StatsChip label="Hazırlanıyor"  count={preparingGroups.length} color="text-rb-accent" />
-                    <StatsChip label="Hazır"         count={readyGroups.length}     color="text-rb-green" />
+                    <HeaderStatCounter label="Bekliyor"      count={pendingGroups.length}   color="text-rb-amber" />
+                    <HeaderStatCounter label="Hazırlanıyor"  count={preparingGroups.length} color="text-rb-accent" />
+                    <HeaderStatCounter label="Hazır"         count={readyGroups.length}     color="text-rb-green" />
                 </>,
                 statsSlot
             )}
