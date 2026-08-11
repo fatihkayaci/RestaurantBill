@@ -17,9 +17,14 @@ public class Shift : BaseEntity
     public decimal ExpectedOpeningBalance { get; private set; }
     public decimal OpeningBalance { get; private set; }
     public decimal OpeningDifference { get; private set; }
+    public DateTime? OpeningDifferenceApprovedAt { get; private set; }
+    public Guid? OpeningDifferenceApprovedByUserId { get; private set; }
     public decimal ExpectedClosingBalance { get; private set; }
     public decimal? CountedClosingBalance { get; private set; }
     public decimal? Difference { get; private set; }
+
+    public DateTime? ClosingDifferenceApprovedAt { get; private set; }
+    public Guid? ClosingDifferenceApprovedByUserId { get; private set; }
 
     public DateTime OpenedAt { get; private set; }
     public DateTime? ClosedAt { get; private set; }
@@ -74,5 +79,38 @@ public class Shift : BaseEntity
         ClosedAt = DateTime.UtcNow;
         Status = ShiftStatus.Closed;
         Note = note;
+    }
+
+    public void ApproveOpeningDifference(Guid approvedByUserId)
+    {
+        if (OpeningDifference == 0)
+            throw new DomainException("Bu vardiyada onaylanacak bir açılış farkı yok.");
+
+        if (OpeningDifferenceApprovedAt is not null)
+            throw new DomainException("Bu vardiyanın açılış farkı zaten onaylanmış.");
+
+        if (approvedByUserId == Guid.Empty)
+            throw new DomainException("Geçersiz kullanıcı ID'si.");
+
+        OpeningDifferenceApprovedAt = DateTime.UtcNow;
+        OpeningDifferenceApprovedByUserId = approvedByUserId;
+    }
+
+    public void ApproveDifference(Guid approvedByUserId)
+    {
+        if (Status != ShiftStatus.Closed)
+            throw new DomainException("Sadece kapanmış vardiyaların farkı onaylanabilir.");
+
+        if (Difference is null or 0)
+            throw new DomainException("Bu vardiyada onaylanacak bir fark yok.");
+
+        if (ClosingDifferenceApprovedAt is not null)
+            throw new DomainException("Bu vardiyanın farkı zaten onaylanmış.");
+
+        if (approvedByUserId == Guid.Empty)
+            throw new DomainException("Geçersiz kullanıcı ID'si.");
+
+        ClosingDifferenceApprovedAt = DateTime.UtcNow;
+        ClosingDifferenceApprovedByUserId = approvedByUserId;
     }
 }

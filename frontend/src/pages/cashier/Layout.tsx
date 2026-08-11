@@ -51,7 +51,6 @@ export default function CashierLayout() {
                     </div>
                 </div>
 
-                {/* Sayaçlar, CashierDashboardPage tarafından portal ile buraya enjekte edilir */}
                 <div id="cashier-stats-slot" className="hidden lg:flex items-center gap-0.5" />
 
                 <div className="flex items-center gap-3">

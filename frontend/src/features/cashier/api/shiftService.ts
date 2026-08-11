@@ -1,7 +1,21 @@
 import { api } from '@/lib/axiosInstance';
-import type { CurrentShift, ShiftStartCandidate, ShiftSummary, ShiftTransaction } from '../types';
+import type { CurrentShift, Shift, ShiftStartCandidate, ShiftSummary, ShiftTransaction } from '../types';
 
 export const shiftService = {
+    getAll: async (cashRegisterId?: string) => {
+        const response = await api.get<Shift[]>('/shift', {
+            params: cashRegisterId ? { cashRegisterId } : undefined,
+        });
+        return response.data;
+    },
+    approveDifference: async (shiftId: string) => {
+        const response = await api.post(`/shift/${shiftId}/approve-difference`);
+        return response.data;
+    },
+    approveOpeningDifference: async (shiftId: string) => {
+        const response = await api.post(`/shift/${shiftId}/approve-opening-difference`);
+        return response.data;
+    },
     getStartCandidates: async () => {
         const response = await api.get<ShiftStartCandidate[]>('/shift/start-candidates');
         return response.data;

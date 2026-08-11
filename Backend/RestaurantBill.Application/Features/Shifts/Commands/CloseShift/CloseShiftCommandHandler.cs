@@ -29,7 +29,7 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
         decimal expectedClosingBalance = shift.OpeningBalance;
         foreach (var transaction in transactions)
         {
-            bool isOutgoing = transaction.Type is CashTransactionType.Out or CashTransactionType.TransferOut;
+            bool isOutgoing = transaction.Type is CashTransactionType.Out or CashTransactionType.TransferOut or CashTransactionType.AdjustmentOut;
             expectedClosingBalance += isOutgoing ? -transaction.Amount : transaction.Amount;
         }
 

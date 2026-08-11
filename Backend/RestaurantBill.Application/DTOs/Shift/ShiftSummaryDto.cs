@@ -9,6 +9,7 @@ public class ShiftSummaryDto
     public int TransactionCount { get; set; }
     public List<ShiftPaymentBreakdownDto> Breakdown { get; set; } = new();
     public decimal Total { get; set; }
+    public decimal ExpectedCashInRegister { get; set; }
     public int OpenTablesCount { get; set; }
 }
 

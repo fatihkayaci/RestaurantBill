@@ -113,6 +113,11 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                             <span className="font-serif text-2xl font-bold text-foreground tabular-nums">{formatTL(summary.total)}</span>
                         </div>
 
+                        <div className="mt-2 rounded-lg bg-muted px-4 py-3 flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground uppercase tracking-wide">Kasada Olması Gereken Nakit</span>
+                            <span className="font-serif text-lg font-bold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister)}</span>
+                        </div>
+
                         <div className="mt-5">
                             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
                                 Kasada Sayılan Nakit
@@ -125,6 +130,16 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 placeholder="Sayım tutarı..."
                                 className="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
                             />
+                            {countedAmount !== '' && !Number.isNaN(parseFloat(countedAmount)) && (
+                                (() => {
+                                    const diff = parseFloat(countedAmount.replace(',', '.')) - summary.expectedCashInRegister;
+                                    return (
+                                        <p className={`mt-1.5 text-sm font-medium ${diff < 0 ? 'text-red-500' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
+                                            {diff === 0 ? 'Fark yok.' : diff < 0 ? `${formatTL(Math.abs(diff))} eksik` : `${formatTL(diff)} fazla`}
+                                        </p>
+                                    );
+                                })()
+                            )}
                         </div>
 
                         <button

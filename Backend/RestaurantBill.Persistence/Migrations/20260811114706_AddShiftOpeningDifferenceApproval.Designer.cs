@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RestaurantBill.Persistence.Context;
@@ -11,9 +12,11 @@ using RestaurantBill.Persistence.Context;
 namespace RestaurantBill.Persistence.Migrations
 {
     [DbContext(typeof(RestaurantBillDbContext))]
-    partial class RestaurantBillDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260811114706_AddShiftOpeningDifferenceApproval")]
+    partial class AddShiftOpeningDifferenceApproval
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -604,12 +607,6 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid?>("ClosedByUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ClosingDifferenceApprovedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ClosingDifferenceApprovedByUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<decimal?>("CountedClosingBalance")
                         .HasColumnType("numeric");
 
@@ -621,6 +618,12 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<decimal?>("Difference")
                         .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("DifferenceApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DifferenceApprovedByUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("ExpectedClosingBalance")
                         .HasColumnType("numeric");

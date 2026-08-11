@@ -13,9 +13,13 @@ public class ShiftDto
     public decimal ExpectedOpeningBalance { get; set; }
     public decimal OpeningBalance { get; set; }
     public decimal OpeningDifference { get; set; }
+    public DateTime? OpeningDifferenceApprovedAt { get; set; }
+    public Guid? OpeningDifferenceApprovedByUserId { get; set; }
     public decimal ExpectedClosingBalance { get; set; }
     public decimal? CountedClosingBalance { get; set; }
     public decimal? Difference { get; set; }
+    public DateTime? ClosingDifferenceApprovedAt { get; set; }
+    public Guid? ClosingDifferenceApprovedByUserId { get; set; }
     public DateTime OpenedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
     public ShiftStatus Status { get; set; }

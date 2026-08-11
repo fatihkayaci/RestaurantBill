@@ -32,11 +32,7 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
         if (existingShifts.Any(s => s.Status == ShiftStatus.Open))
             return Result.Failure("Bu kasada zaten açık bir vardiya var.");
 
-        decimal expectedOpeningBalance = existingShifts
-            .Where(s => s.Status == ShiftStatus.Closed)
-            .OrderByDescending(s => s.ClosedAt)
-            .Select(s => s.CountedClosingBalance ?? 0)
-            .FirstOrDefault();
+        decimal expectedOpeningBalance = register.Balance;
 
         Shift shift = Shift.Create(restaurantId, request.CashRegisterId, _currentUser.UserId, expectedOpeningBalance, request.OpeningBalance);
         await _uow.Shift.AddAsync(shift);

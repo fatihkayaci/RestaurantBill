@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantBill.Application.Features.Shifts.Commands.ApproveShiftDifference;
+using RestaurantBill.Application.Features.Shifts.Commands.ApproveShiftOpeningDifference;
 using RestaurantBill.Application.Features.Shifts.Commands.CloseShift;
 using RestaurantBill.Application.Features.Shifts.Commands.OpenShift;
 using RestaurantBill.Application.Features.Shifts.Queries.GetAllShifts;
@@ -142,6 +144,30 @@ public class ShiftController : BaseController
     [HttpPost("close")]
     public async Task<IActionResult> Close([FromBody] CloseShiftCommand command, CancellationToken cancellationToken)
     {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Approves a closed shift's counted/expected difference, adjusting the cash register's live balance to match the physical count.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/approve-difference")]
+    public async Task<IActionResult> ApproveDifference([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var command = new ApproveShiftDifferenceCommand { ShiftId = id };
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Approves a shift's counted/expected opening difference, adjusting the cash register's live balance to match the physical count.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/approve-opening-difference")]
+    public async Task<IActionResult> ApproveOpeningDifference([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var command = new ApproveShiftOpeningDifferenceCommand { ShiftId = id };
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }
