@@ -26,6 +26,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [now] = useState(() => new Date().toISOString());
+    const [closedAt, setClosedAt] = useState<string | null>(null);
 
     useEffect(() => {
         shiftService.getMyCurrentSummary()
@@ -34,7 +35,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
             .finally(() => setLoading(false));
     }, []);
 
-    const handleCloseShift = async () => {
+    const handleCloseShift = async (showReport: boolean) => {
         if (!summary) return;
         const amount = parseFloat(countedAmount.replace(',', '.'));
         if (countedAmount === '' || Number.isNaN(amount) || amount < 0) {
@@ -45,7 +46,11 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
         try {
             await shiftService.closeShift(summary.shiftId, amount);
             toast.success('Vardiya kapatıldı.');
-            onShiftClosed();
+            if (showReport) {
+                setClosedAt(new Date().toISOString());
+            } else {
+                onShiftClosed();
+            }
         } catch (err: any) {
             toast.error(err.response?.data?.error ?? 'Vardiya kapatılamadı.');
         } finally {
@@ -59,28 +64,80 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
             .filter((b): b is NonNullable<typeof b> => !!b)
         : [];
 
+    const countedNum = parseFloat(countedAmount.replace(',', '.'));
+    const hasValidCounted = countedAmount !== '' && !Number.isNaN(countedNum);
+    const diff = summary && hasValidCounted ? countedNum - summary.expectedCashInRegister : 0;
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[3px] p-4">
             <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
                 <div className="flex items-start justify-between mb-1">
                     <div>
-                        <h2 className="font-serif text-xl font-bold text-foreground">Vardiyayı Bitir</h2>
+                        <h2 className="font-serif text-xl font-bold text-foreground">
+                            {closedAt ? 'Z Raporu' : 'Vardiyayı Bitir'}
+                        </h2>
                         <p className="text-sm text-muted-foreground mt-0.5">
-                            {summary ? `${formatTime(summary.openedAt)} — ${formatTime(now)} · Kasiyer` : 'Kasiyer'}
+                            {summary ? `${formatTime(summary.openedAt)} — ${formatTime(closedAt ?? now)} · Kasiyer` : 'Kasiyer'}
                         </p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                    {!closedAt && (
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    )}
                 </div>
 
                 {loading ? (
                     <p className="text-sm text-muted-foreground mt-6 text-center">Yükleniyor...</p>
                 ) : !summary ? (
                     <p className="text-sm text-destructive mt-6 text-center">Açık bir vardiyanız bulunamadı.</p>
+                ) : closedAt ? (
+                    <>
+                        <div className="mt-4 flex flex-col gap-2.5">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">İşlem Sayısı</span>
+                                <span className="font-medium text-foreground tabular-nums">{summary.transactionCount}</span>
+                            </div>
+                            {orderedBreakdown.map(item => (
+                                <div key={item.method} className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">{METHOD_LABELS[item.method]} ({item.count})</span>
+                                    <span className="font-medium text-foreground tabular-nums">{formatTL(item.amount)}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-dashed border-border flex items-center justify-between">
+                            <span className="font-semibold text-foreground">Vardiya Toplamı</span>
+                            <span className="font-serif text-2xl font-bold text-foreground tabular-nums">{formatTL(summary.total)}</span>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-dashed border-border flex flex-col gap-2.5">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Kasada Olması Gereken Nakit</span>
+                                <span className="font-medium text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Kasada Sayılan Nakit</span>
+                                <span className="font-medium text-foreground tabular-nums">{formatTL(countedNum)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Fark</span>
+                                <span className={`font-semibold tabular-nums ${diff < 0 ? 'text-red-500' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
+                                    {diff === 0 ? 'Fark yok' : diff < 0 ? `-${formatTL(Math.abs(diff))}` : `+${formatTL(diff)}`}
+                                </span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={onShiftClosed}
+                            className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-white bg-rb-accent hover:opacity-90 transition-opacity"
+                        >
+                            Tamam
+                        </button>
+                    </>
                 ) : (
                     <>
                         {summary.openTablesCount > 0 && (
@@ -130,25 +187,29 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 placeholder="Sayım tutarı..."
                                 className="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
                             />
-                            {countedAmount !== '' && !Number.isNaN(parseFloat(countedAmount)) && (
-                                (() => {
-                                    const diff = parseFloat(countedAmount.replace(',', '.')) - summary.expectedCashInRegister;
-                                    return (
-                                        <p className={`mt-1.5 text-sm font-medium ${diff < 0 ? 'text-red-500' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
-                                            {diff === 0 ? 'Fark yok.' : diff < 0 ? `${formatTL(Math.abs(diff))} eksik` : `${formatTL(diff)} fazla`}
-                                        </p>
-                                    );
-                                })()
+                            {hasValidCounted && (
+                                <p className={`mt-1.5 text-sm font-medium ${diff < 0 ? 'text-red-500' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
+                                    {diff === 0 ? 'Fark yok.' : diff < 0 ? `${formatTL(Math.abs(diff))} eksik` : `${formatTL(diff)} fazla`}
+                                </p>
                             )}
                         </div>
 
-                        <button
-                            onClick={handleCloseShift}
-                            disabled={submitting}
-                            className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-white bg-rb-red hover:opacity-90 transition-opacity disabled:opacity-50"
-                        >
-                            {submitting ? 'Kapatılıyor...' : 'Vardiyayı Kapat & Z Raporu Al'}
-                        </button>
+                        <div className="mt-5 flex flex-col gap-2">
+                            <button
+                                onClick={() => handleCloseShift(true)}
+                                disabled={submitting}
+                                className="w-full rounded-xl py-3.5 text-sm font-semibold text-white bg-rb-red hover:opacity-90 transition-opacity disabled:opacity-50"
+                            >
+                                {submitting ? 'Kapatılıyor...' : 'Vardiyayı Kapat, Z Raporu Al'}
+                            </button>
+                            <button
+                                onClick={() => handleCloseShift(false)}
+                                disabled={submitting}
+                                className="w-full rounded-xl py-3.5 text-sm font-semibold text-foreground border border-border hover:bg-muted transition-colors disabled:opacity-50"
+                            >
+                                {submitting ? 'Kapatılıyor...' : 'Vardiyayı Kapat'}
+                            </button>
+                        </div>
                     </>
                 )}
             </div>
