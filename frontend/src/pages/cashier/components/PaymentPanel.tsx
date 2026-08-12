@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, ChevronDown, CreditCard, QrCode, Minus, Plus } from 'lucide-react';
+import { X, ChevronDown, CreditCard, QrCode, Minus, Plus, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import { paymentService } from '@/features/cashier/api/paymentService';
+import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
+import { orderService } from '@/features/orders/api/orderService';
 import type { Order } from '@/features/orders/types';
-import type { CurrentShift } from '@/features/cashier/types';
+import type { CurrentShift, CashRegister } from '@/features/cashier/types';
 
 type PaymentMethod = 'kart' | 'nakit' | 'qr';
 
@@ -20,6 +22,7 @@ interface Props {
     order: Order;
     onClose: () => void;
     onComplete: (orderId: number) => void;
+    cashRegisterMode?: 'shift' | 'manual';
 }
 
 function formatElapsed(createdAt: string): string {
@@ -29,15 +32,21 @@ function formatElapsed(createdAt: string): string {
     return hours > 0 ? `${hours}sa ${minutes}dk` : `${minutes}dk`;
 }
 
-export default function PaymentPanel({ order, onClose, onComplete }: Props) {
+export default function PaymentPanel({ order, onClose, onComplete, cashRegisterMode = 'shift' }: Props) {
+    const [displayOrder, setDisplayOrder] = useState<Order>(order);
+    useEffect(() => setDisplayOrder(order), [order]);
+
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('kart');
     const [activeShift, setActiveShift] = useState<CurrentShift | null>(null);
-    const [loadingShift, setLoadingShift] = useState(true);
+    const [loadingShift, setLoadingShift] = useState(cashRegisterMode === 'shift');
+    const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
+    const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>('');
+    const [loadingCashRegisters, setLoadingCashRegisters] = useState(cashRegisterMode === 'manual');
     const [submitting, setSubmitting] = useState(false);
     const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
     const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
 
-    const selectedTotal = order.orderItems.reduce(
+    const selectedTotal = displayOrder.orderItems.reduce(
         (sum, item) => sum + (selectedQuantities[item.id] ?? 0) * item.unitPrice,
         0
     );
@@ -56,7 +65,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
     };
 
     const taxGroups = Object.values(
-        order.orderItems.reduce((acc, item) => {
+        displayOrder.orderItems.reduce((acc, item) => {
             const key = item.taxRate;
             if (!acc[key]) acc[key] = { rate: key, total: 0, categories: new Set<string>() };
             acc[key].total += item.unitPrice * item.quantity;
@@ -66,34 +75,44 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
     ).sort((a, b) => a.rate - b.rate);
 
     useEffect(() => {
-        shiftService.getMyCurrent()
-            .then(setActiveShift)
-            .catch(() => {})
-            .finally(() => setLoadingShift(false));
-    }, []);
+        if (cashRegisterMode === 'shift') {
+            shiftService.getMyCurrent()
+                .then(setActiveShift)
+                .catch(() => {})
+                .finally(() => setLoadingShift(false));
+        } else {
+            cashRegisterService.getCashRegisters()
+                .then(registers => setCashRegisters(registers.filter(r => r.status === 1)))
+                .catch(() => {})
+                .finally(() => setLoadingCashRegisters(false));
+        }
+    }, [cashRegisterMode]);
 
-    const canComplete = !submitting && !loadingShift && !!activeShift;
+    const cashRegisterId = cashRegisterMode === 'shift' ? activeShift?.cashRegisterId : selectedCashRegisterId;
+    const canComplete = !submitting && !!cashRegisterId;
 
     const handleComplete = async () => {
-        if (!activeShift) {
-            toast.error('Ödeme almak için açık bir vardiyanız olmalı.');
+        if (!cashRegisterId) {
+            toast.error(cashRegisterMode === 'shift' ? 'Ödeme almak için açık bir vardiyanız olmalı.' : 'Ödeme almak için bir kasa seçmelisiniz.');
             return;
         }
         const itemsToPay = hasSelection
-            ? order.orderItems
+            ? displayOrder.orderItems
                 .filter(item => (selectedQuantities[item.id] ?? 0) > 0)
                 .map(item => ({ orderItemId: item.id, quantity: selectedQuantities[item.id] }))
-            : order.orderItems.map(item => ({ orderItemId: item.id, quantity: item.quantity }));
+            : displayOrder.orderItems.map(item => ({ orderItemId: item.id, quantity: item.quantity }));
 
         try {
             setSubmitting(true);
-            const fullyPaid: boolean = await paymentService.createPayment(order.id, activeShift.cashRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay);
+            const fullyPaid: boolean = await paymentService.createPayment(displayOrder.id, cashRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay);
             setSelectedQuantities({});
             if (fullyPaid) {
                 toast.success('Ödeme tamamlandı!');
-                onComplete(order.id);
+                onComplete(displayOrder.id);
             } else {
                 toast.success('Kısmi ödeme alındı, kalan tutar için masa açık kalıyor.');
+                const refreshed = await orderService.getOrderByTableId(displayOrder.tableId);
+                if (refreshed) setDisplayOrder(refreshed);
             }
         } catch (err: any) {
             toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Ödeme tamamlanamadı.');
@@ -109,10 +128,10 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="text-2xl font-serif font-bold text-foreground">
-                            Masa {order.tableName} — Hesap
+                            Masa {displayOrder.tableName} — Hesap
                         </h2>
                         <p className="text-sm text-muted-foreground mt-1">
-                            {order.createdByUserName || '—'} · {formatElapsed(order.createdAt)}
+                            {displayOrder.createdByUserName || '—'} · {formatElapsed(displayOrder.createdAt)}
                         </p>
                     </div>
                     <button
@@ -130,7 +149,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
                         Sipariş Kalemleri
                     </p>
-                    {order.orderItems.map((item, i) => {
+                    {displayOrder.orderItems.map((item, i) => {
                         const selectedQty = selectedQuantities[item.id] ?? 0;
                         return (
                             <div
@@ -184,7 +203,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                 <div className="w-90 shrink-0 border-l border-border overflow-y-auto flex flex-col">
                     <div className="px-6 py-6 text-center border-b border-border">
                         <p className="text-4xl font-serif font-bold text-foreground">
-                            ₺{order.totalPrice.toFixed(0)}
+                            ₺{displayOrder.totalPrice.toFixed(0)}
                         </p>
                         {taxGroups.length > 1 ? (
                             <div className="mt-2">
@@ -203,7 +222,7 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                                             return (
                                                 <div key={group.rate} className="px-3 py-2.5 space-y-1">
                                                     <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                                                        {Array.from(group.categories).join(', ') || 'Diğer'} · %{group.rate}
+                                                        {Array.from(group.categories).join(', ') || 'Diğer'} · KDV %{group.rate}
                                                     </p>
                                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                         <span>Matrah</span>
@@ -235,14 +254,46 @@ export default function PaymentPanel({ order, onClose, onComplete }: Props) {
                     </div>
 
                     <div className="px-6 py-5 space-y-4">
-                        {!loadingShift && !activeShift ? (
-                            <p className="text-sm text-destructive">Açık bir vardiyanız yok, ödeme alınamaz.</p>
-                        ) : activeShift ? (
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">Kasa</span>
-                                <span className="text-sm font-medium text-foreground">{activeShift.cashRegisterName}</span>
+                        {cashRegisterMode === 'shift' ? (
+                            !loadingShift && !activeShift ? (
+                                <p className="text-sm text-destructive">Açık bir vardiyanız yok, ödeme alınamaz.</p>
+                            ) : activeShift ? (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-muted-foreground">Kasa</span>
+                                    <span className="text-sm font-medium text-foreground">{activeShift.cashRegisterName}</span>
+                                </div>
+                            ) : null
+                        ) : (
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-2">Kasa Seç</p>
+                                {loadingCashRegisters ? (
+                                    <p className="text-sm text-muted-foreground">Yükleniyor...</p>
+                                ) : cashRegisters.length === 0 ? (
+                                    <p className="text-sm text-destructive">Açık kasa bulunamadı.</p>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {cashRegisters.map(register => {
+                                            const isSelected = selectedCashRegisterId === String(register.id);
+                                            return (
+                                                <button
+                                                    key={register.id}
+                                                    onClick={() => setSelectedCashRegisterId(String(register.id))}
+                                                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${isSelected ? 'border-rb-accent bg-rb-accent-bg ring-1 ring-rb-accent' : 'border-border bg-card hover:bg-muted/50'}`}
+                                                >
+                                                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-rb-accent text-white' : 'bg-muted'}`}>
+                                                        <Landmark className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-rb-accent' : ''}`}>{register.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{register.balance.toFixed(2)} ₺</p>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                        ) : null}
+                        )}
 
                         <div className="flex gap-2">
                             {PAYMENT_METHODS.map(({ key, label, icon, selectedClass }) => (

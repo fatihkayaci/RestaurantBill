@@ -26,6 +26,7 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
         return await query
             .Include(o => o.OrderItems)
             .ThenInclude(i => i.Product)
+            .ThenInclude(p => p.Category)
             .OrderByDescending(o => o.Id)
             .FirstOrDefaultAsync(o => o.TableId == tableId &&
                 (o.Status == OrderStatus.Active ||
