@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 type ReviewTarget = { shift: Shift; type: 'opening' | 'closing'; action: 'approve' | 'reject' };
 
 const REVIEW_PENDING = 1;
-const REVIEW_APPROVED = 2;
 const REVIEW_REJECTED = 3;
 
 export default function ShiftsPage() {
