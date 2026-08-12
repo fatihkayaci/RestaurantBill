@@ -1,8 +1,12 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantBill.Application.Features.Shifts.Commands.ApproveShiftDifference;
+using RestaurantBill.Application.Features.Shifts.Commands.ApproveShiftOpeningDifference;
 using RestaurantBill.Application.Features.Shifts.Commands.CloseShift;
 using RestaurantBill.Application.Features.Shifts.Commands.OpenShift;
+using RestaurantBill.Application.Features.Shifts.Commands.RejectShiftDifference;
+using RestaurantBill.Application.Features.Shifts.Commands.RejectShiftOpeningDifference;
 using RestaurantBill.Application.Features.Shifts.Queries.GetAllShifts;
 using RestaurantBill.Application.Features.Shifts.Queries.GetCurrentShift;
 using RestaurantBill.Application.Features.Shifts.Queries.GetMyCurrentShift;
@@ -142,6 +146,54 @@ public class ShiftController : BaseController
     [HttpPost("close")]
     public async Task<IActionResult> Close([FromBody] CloseShiftCommand command, CancellationToken cancellationToken)
     {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Acknowledges a closed shift's kapanış farkı. The cash register balance was already adjusted when the shift closed; this only marks it reviewed.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/approve-difference")]
+    public async Task<IActionResult> ApproveDifference([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var command = new ApproveShiftDifferenceCommand { ShiftId = id };
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Acknowledges a shift's açılış farkı. The cash register balance was already adjusted when the shift opened; this only marks it reviewed.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/approve-opening-difference")]
+    public async Task<IActionResult> ApproveOpeningDifference([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var command = new ApproveShiftOpeningDifferenceCommand { ShiftId = id };
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Rejects a closed shift's kapanış farkı, reversing the earlier automatic cash register adjustment.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/reject-difference")]
+    public async Task<IActionResult> RejectDifference([FromRoute] Guid id, [FromBody] RejectShiftDifferenceCommand command, CancellationToken cancellationToken)
+    {
+        command.ShiftId = id;
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Rejects a shift's açılış farkı, reversing the earlier automatic cash register adjustment.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/reject-opening-difference")]
+    public async Task<IActionResult> RejectOpeningDifference([FromRoute] Guid id, [FromBody] RejectShiftOpeningDifferenceCommand command, CancellationToken cancellationToken)
+    {
+        command.ShiftId = id;
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }

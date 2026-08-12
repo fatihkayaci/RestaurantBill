@@ -56,7 +56,7 @@ public class CashRegister : BaseEntity
         if (Status != CashRegisterStatus.Open)
             throw new DomainException("Kapalı bir kasaya işlem eklenemez.");
 
-        bool isOutgoing = type is CashTransactionType.Out or CashTransactionType.TransferOut;
+        bool isOutgoing = type is CashTransactionType.Out or CashTransactionType.TransferOut or CashTransactionType.AdjustmentOut;
 
         if (isOutgoing && Balance < amount)
             throw new DomainException("Kasa bakiyesi bu çıkışı karşılamak için yetersiz.");
@@ -64,6 +64,15 @@ public class CashRegister : BaseEntity
         Balance += isOutgoing ? -amount : amount;
 
         return CashTransaction.Create(Id, type, amount, userId, relatedCashRegisterId);
+    }
+
+    public CashTransaction ApplyShiftDifference(decimal difference, Guid userId)
+    {
+        if (difference == 0)
+            throw new DomainException("Sıfır fark için düzeltme yapılamaz.");
+
+        CashTransactionType type = difference > 0 ? CashTransactionType.AdjustmentIn : CashTransactionType.AdjustmentOut;
+        return AddTransaction(type, Math.Abs(difference), userId);
     }
 
     public static (CashTransaction SourceTransaction, CashTransaction DestinationTransaction) Transfer(

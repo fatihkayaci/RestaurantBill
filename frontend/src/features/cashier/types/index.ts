@@ -8,7 +8,7 @@ export interface CashRegister {
     openedAt?: string;
 }
 
-export type CashTransactionType = 1 | 2 | 3 | 4;
+export type CashTransactionType = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface CashTransaction {
     id: string;
@@ -39,6 +39,7 @@ export interface ShiftSummary {
     transactionCount: number;
     breakdown: ShiftPaymentBreakdown[];
     total: number;
+    expectedCashInRegister: number;
     openTablesCount: number;
 }
 
@@ -47,6 +48,37 @@ export interface CurrentShift {
     cashRegisterId: string;
     cashRegisterName: string;
     openedAt: string;
+}
+
+export type ShiftStatus = 1 | 2;
+
+export type DifferenceReviewStatus = 1 | 2 | 3; // Pending | Approved | Rejected
+
+export interface Shift {
+    id: string;
+    branchId: string;
+    cashRegisterId: string;
+    cashRegisterName: string;
+    openedByUserId: string;
+    closedByUserId?: string | null;
+    expectedOpeningBalance: number;
+    openingBalance: number;
+    openingDifference: number;
+    openingDifferenceReviewStatus: DifferenceReviewStatus;
+    openingDifferenceReviewedAt?: string | null;
+    openingDifferenceReviewedByUserId?: string | null;
+    openingDifferenceReviewNote?: string | null;
+    expectedClosingBalance: number;
+    countedClosingBalance?: number | null;
+    difference?: number | null;
+    closingDifferenceReviewStatus?: DifferenceReviewStatus | null;
+    closingDifferenceReviewedAt?: string | null;
+    closingDifferenceReviewedByUserId?: string | null;
+    closingDifferenceReviewNote?: string | null;
+    openedAt: string;
+    closedAt?: string | null;
+    status: ShiftStatus;
+    note?: string | null;
 }
 
 export interface ShiftTransactionDetail {

@@ -38,15 +38,11 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
             {
                 CashRegisterId = r.Id,
                 CashRegisterName = r.Name,
-                ExpectedOpeningBalance = shifts
-                    .Where(s => s.CashRegisterId == r.Id && s.Status == ShiftStatus.Closed)
-                    .OrderByDescending(s => s.ClosedAt)
-                    .Select(s => s.CountedClosingBalance ?? 0)
-                    .FirstOrDefault()
+                ExpectedOpeningBalance = r.Balance
             })
             .OrderBy(c => c.CashRegisterName)
             .ToList();
 
         return Result<List<ShiftStartCandidateDto>>.Success(candidates);
-    } 
+    }
 }

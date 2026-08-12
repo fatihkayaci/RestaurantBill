@@ -22,7 +22,7 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
     {
         Guid restaurantId = _currentUser.BranchId;
 
-        CashRegister? register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId);
+        CashRegister? register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId, true);
         if (register is null) return Result.Failure("Kasa bulunamadı.");
 
         if (register.Status != CashRegisterStatus.Open)
@@ -32,17 +32,21 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
         if (existingShifts.Any(s => s.Status == ShiftStatus.Open))
             return Result.Failure("Bu kasada zaten açık bir vardiya var.");
 
-        decimal expectedOpeningBalance = existingShifts
-            .Where(s => s.Status == ShiftStatus.Closed)
-            .OrderByDescending(s => s.ClosedAt)
-            .Select(s => s.CountedClosingBalance ?? 0)
-            .FirstOrDefault();
+        decimal expectedOpeningBalance = register.Balance;
 
         Shift shift = Shift.Create(restaurantId, request.CashRegisterId, _currentUser.UserId, expectedOpeningBalance, request.OpeningBalance);
         await _uow.Shift.AddAsync(shift);
 
-        User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
         bool hasDifference = shift.OpeningDifference != 0;
+        if (hasDifference)
+        {
+            CashTransaction adjustment = register.ApplyShiftDifference(shift.OpeningDifference, _currentUser.UserId);
+            await _uow.CashTransaction.AddAsync(adjustment);
+            await _uow.CashRegister.UpdateAsync(register);
+            shift.LinkOpeningAdjustmentTransaction(adjustment.Id);
+        }
+
+        User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
         AuditLog log = AuditLog.Create(
             restaurantId,
             actor?.FullName ?? string.Empty,
@@ -50,7 +54,7 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
             hasDifference ? AuditLogSeverity.Warning : AuditLogSeverity.Info,
             "ShiftOpened",
             hasDifference
-                ? $"{actor?.FullName} {register.Name} kasasında ₺{request.OpeningBalance} açılış bakiyesiyle vardiya açtı. Beklenen ₺{expectedOpeningBalance} idi, ₺{shift.OpeningDifference} fark var."
+                ? $"{actor?.FullName} {register.Name} kasasında ₺{request.OpeningBalance} açılış bakiyesiyle vardiya açtı. Beklenen ₺{expectedOpeningBalance} idi, ₺{shift.OpeningDifference} fark var. Kasa bakiyesi anında düzeltildi, admin incelemesi bekliyor."
                 : $"{actor?.FullName} {register.Name} kasasında ₺{request.OpeningBalance} açılış bakiyesiyle vardiya açtı.",
             nameof(Shift),
             shift.Id);

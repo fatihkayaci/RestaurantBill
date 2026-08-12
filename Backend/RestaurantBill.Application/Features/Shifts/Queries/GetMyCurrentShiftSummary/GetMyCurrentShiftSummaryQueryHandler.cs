@@ -53,6 +53,17 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
             .Distinct()
             .Count();
 
+        var transactions = await _uow.CashTransaction.GetAllAsync(
+            t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt
+                && t.Id != shift.OpeningAdjustmentTransactionId);
+
+        decimal expectedCashInRegister = shift.OpeningBalance;
+        foreach (var transaction in transactions)
+        {
+            bool isOutgoing = transaction.Type is CashTransactionType.Out or CashTransactionType.TransferOut or CashTransactionType.AdjustmentOut;
+            expectedCashInRegister += isOutgoing ? -transaction.Amount : transaction.Amount;
+        }
+
         return Result<ShiftSummaryDto>.Success(new ShiftSummaryDto
         {
             ShiftId = shift.Id,
@@ -60,6 +71,7 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
             TransactionCount = completedOrdersCount,
             Breakdown = breakdown,
             Total = payments.Sum(p => p.TotalAmount),
+            ExpectedCashInRegister = expectedCashInRegister,
             OpenTablesCount = openTablesCount
         });
     }

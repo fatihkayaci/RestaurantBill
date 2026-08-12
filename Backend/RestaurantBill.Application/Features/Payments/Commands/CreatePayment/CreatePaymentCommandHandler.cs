@@ -51,9 +51,12 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
         decimal totalAmount = paidItems.Sum(p => p.Item.UnitPrice * p.Quantity);
 
-        CashTransaction transaction = register.AddTransaction(CashTransactionType.In, totalAmount, _currentUserService.UserId);
-        await _uow.CashTransaction.AddAsync(transaction);
-        await _uow.CashRegister.UpdateAsync(register);
+        if (request.PaymentMethod == PaymentMethod.Nakit)
+        {
+            CashTransaction transaction = register.AddTransaction(CashTransactionType.In, totalAmount, _currentUserService.UserId);
+            await _uow.CashTransaction.AddAsync(transaction);
+            await _uow.CashRegister.UpdateAsync(register);
+        }
 
         var taxGroups = paidItems.GroupBy(p => p.Item.TaxRate);
         foreach (var group in taxGroups)

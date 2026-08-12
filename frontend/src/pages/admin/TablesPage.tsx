@@ -3,26 +3,22 @@ import * as signalR from "@microsoft/signalr";
 import { toast } from "sonner";
 import type { Table, Reservation } from "@/features/tables/types";
 import type { Order, OrderItem } from "@/features/orders/types";
-import type { CashRegister } from "@/features/cashier/types";
 import type { Product } from "@/features/products/types";
 import type { Category } from "@/features/categories/types";
 import type { Region } from "@/features/regions/types";
 import { tableService } from "@/features/tables/api/tableService";
 import { orderService } from "@/features/orders/api/orderService";
-import { cashRegisterService } from "@/features/cashier/api/cashRegisterService";
 import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Input } from "@/components/ui/input";
-import { CheckCircle, Check, Landmark, X, Pencil } from 'lucide-react';
+import { Check, X, Pencil } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
 import axios from "axios";
+import PaymentPanel from '../cashier/components/PaymentPanel';
 
-const TAX_RATE = 0.08;
-
-type PanelTab = 'orders' | 'new-order' | 'reservation' | 'payment';
+type PanelTab = 'orders' | 'new-order' | 'reservation';
 
 const ORDER_ITEM_STATUS_LABELS: Record<number, string> = {
     1: "Bekliyor", 2: "Hazırlanıyor", 3: "Hazır", 4: "Servis Edildi",
@@ -126,11 +122,8 @@ export default function Tables() {
     const [orderNote, setOrderNote] = useState('');
     const [isSendingOrder, setIsSendingOrder] = useState(false);
 
-    const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
-    const [tip, setTip] = useState<number>(0);
-    const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>('');
+    const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
     const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
-    const [completingPayment, setCompletingPayment] = useState(false);
 
     const [reservationName, setReservationName] = useState('');
     const [reservationContact, setReservationContact] = useState('');
@@ -322,8 +315,6 @@ export default function Tables() {
         setNewItems([]);
         setOrderNote('');
         setTableOrder(null);
-        setTip(0);
-        setSelectedCashRegisterId('');
         setActiveTab(selectedTable.status === 3 ? 'reservation' : 'new-order');
         setReservationName('');
         setReservationContact('');
@@ -353,9 +344,6 @@ export default function Tables() {
                     // Aktif sipariş yok, "Yeni Sipariş" sekmesi açık kalır
                 }
 
-                const registers = await cashRegisterService.getCashRegisters();
-                setCashRegisters(registers.filter(r => r.status === 1));
-
                 if (selectedTable.status === 3) {
                     const reservation = await tableService.getActiveReservation(selectedTable.id.toString());
                     setActiveReservation(reservation);
@@ -373,8 +361,7 @@ export default function Tables() {
         setTableOrder(null);
         setNewItems([]);
         setOrderNote('');
-        setTip(0);
-        setSelectedCashRegisterId('');
+        setPaymentOrder(null);
         setProducts([]);
         setCategories([]);
         setActiveReservation(null);
@@ -421,25 +408,6 @@ export default function Tables() {
             toast.error('Sipariş gönderilemedi.');
         } finally {
             setIsSendingOrder(false);
-        }
-    };
-
-    const calculateTotal = () => !tableOrder ? 0 : tableOrder.totalPrice + tableOrder.totalPrice * TAX_RATE + tip;
-
-    const handleCompletePayment = async () => {
-        if (!tableOrder || !selectedCashRegisterId) return;
-        setCompletingPayment(true);
-        try {
-            await cashRegisterService.addTransaction(selectedCashRegisterId, 1, calculateTotal());
-            await orderService.closeOrder(tableOrder.id);
-            await refreshTables();
-            toast.success('Ödeme tamamlandı.');
-            closePanel();
-        } catch (err) {
-            console.error(err);
-            toast.error('Ödeme tamamlanamadı.');
-        } finally {
-            setCompletingPayment(false);
         }
     };
 
@@ -534,7 +502,7 @@ export default function Tables() {
             ? ['reservation']
             : selectedTable.status === 1
                 ? ['orders', 'new-order', 'reservation']
-                : ['orders', 'new-order', 'payment'];
+                : ['orders', 'new-order'];
 
     return (
         <div className="space-y-5">
@@ -890,7 +858,7 @@ export default function Tables() {
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
-                                    {tab === 'orders' ? 'Siparişler' : tab === 'new-order' ? 'Yeni Sipariş' : tab === 'payment' ? 'Ödeme' : 'Rezervasyon'}
+                                    {tab === 'orders' ? 'Siparişler' : tab === 'new-order' ? 'Yeni Sipariş' : 'Rezervasyon'}
                                 </button>
                             ))}
                         </div>
@@ -1089,64 +1057,6 @@ export default function Tables() {
                                     </Button>
                                 </div>
                             )
-                        ) : activeTab === 'payment' ? (
-                            /* Ödeme tab */
-                            <div className="flex-1 overflow-y-auto px-4 py-4">
-                                {!tableOrder || tableOrder.orderItems.length === 0 ? (
-                                    <p className="text-center text-muted-foreground text-sm py-10">Ödeme için aktif sipariş kalemi yok</p>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Ara Toplam</span>
-                                            <span>₺{tableOrder.totalPrice.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm text-muted-foreground">
-                                            <span>KDV (%{(TAX_RATE * 100).toFixed(0)})</span>
-                                            <span>₺{(tableOrder.totalPrice * TAX_RATE).toFixed(2)}</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground mb-2">Bahşiş Ekle</p>
-                                            <div className="grid grid-cols-4 gap-2">
-                                                {[0, 5, 10, 15].map(pct => (
-                                                    <Button key={pct} variant={tip === tableOrder.totalPrice * (pct / 100) ? 'default' : 'outline'} size="sm" onClick={() => setTip(tableOrder.totalPrice * (pct / 100))}>%{pct}</Button>
-                                                ))}
-                                            </div>
-                                            <div className="flex items-center gap-2 mt-2">
-                                                <span className="text-sm text-muted-foreground">Özel:</span>
-                                                <Input type="number" placeholder="0.00" className="w-24 h-8" value={tip || ''} onChange={e => setTip(Number(e.target.value) || 0)} />
-                                                <span className="text-sm text-muted-foreground">₺</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between text-lg font-bold pt-2 border-t"><span>Toplam</span><span className="text-rb-accent">₺{calculateTotal().toFixed(2)}</span></div>
-
-                                        <div>
-                                            <p className="text-sm text-muted-foreground mb-2">Kasa Seç</p>
-                                            {cashRegisters.length === 0 ? (
-                                                <p className="text-sm text-destructive">Açık kasa bulunamadı.</p>
-                                            ) : (
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {cashRegisters.map(register => {
-                                                        const isSelected = selectedCashRegisterId === String(register.id);
-                                                        return (
-                                                            <button key={register.id} onClick={() => setSelectedCashRegisterId(String(register.id))} className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${isSelected ? 'border-rb-accent bg-rb-accent-bg ring-1 ring-rb-accent' : 'border-border bg-card hover:bg-muted/50'}`}>
-                                                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-rb-accent text-white' : 'bg-muted'}`}><Landmark className="h-4 w-4" /></div>
-                                                                <div className="min-w-0">
-                                                                    <p className={`text-sm font-semibold truncate ${isSelected ? 'text-rb-accent' : ''}`}>{register.name}</p>
-                                                                    <p className="text-xs text-muted-foreground">{register.balance.toFixed(2)} ₺</p>
-                                                                </div>
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <Button className="w-full gap-2 bg-rb-accent hover:opacity-90" size="lg" disabled={!selectedCashRegisterId || completingPayment} onClick={handleCompletePayment}>
-                                            <CheckCircle className="h-4 w-4" />{completingPayment ? 'Tamamlanıyor...' : 'Ödemeyi Tamamla'}
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
                         ) : (
                             /* Siparişler tab */
                             <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col">
@@ -1181,9 +1091,17 @@ export default function Tables() {
                                     </>
                                 )}
 
-                                {/* Masayı Kapat — masa dolu olduğu sürece her zaman görünür */}
+                                {/* Ödeme Al + Masayı Kapat — masa dolu olduğu sürece görünür */}
                                 {selectedTable.status === 2 && tableOrder && (
-                                    <div className={tableOrder.orderItems.length === 0 ? 'mt-4 pt-4 border-t' : 'mt-3'}>
+                                    <div className={tableOrder.orderItems.length === 0 ? 'mt-4 pt-4 border-t space-y-2' : 'mt-3 space-y-2'}>
+                                        {tableOrder.orderItems.length > 0 && (
+                                            <button
+                                                onClick={() => setPaymentOrder(tableOrder)}
+                                                className="w-full rounded-xl bg-rb-accent-bg text-rb-accent font-semibold text-sm py-2.5 hover:opacity-80 transition-colors"
+                                            >
+                                                Ödeme Al
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => setCancelConfirmOpen(true)}
                                             className="w-full rounded-xl border border-destructive/30 text-destructive font-semibold text-sm py-2.5 hover:bg-destructive/10 transition-colors"
@@ -1194,6 +1112,28 @@ export default function Tables() {
                                 )}
                             </div>
                         )}
+                    </div>
+                </>
+            )}
+
+            {/* Ödeme paneli overlay */}
+            {paymentOrder && (
+                <>
+                    <div
+                        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[3px] animate-in fade-in duration-200"
+                        onClick={() => setPaymentOrder(null)}
+                    />
+                    <div className="fixed top-0 right-0 bottom-0 z-40 w-full sm:w-190 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
+                        <PaymentPanel
+                            order={paymentOrder}
+                            cashRegisterMode="manual"
+                            onClose={() => setPaymentOrder(null)}
+                            onComplete={async () => {
+                                setPaymentOrder(null);
+                                await refreshTables();
+                                closePanel();
+                            }}
+                        />
                     </div>
                 </>
             )}

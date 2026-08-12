@@ -17,9 +17,19 @@ public class Shift : BaseEntity
     public decimal ExpectedOpeningBalance { get; private set; }
     public decimal OpeningBalance { get; private set; }
     public decimal OpeningDifference { get; private set; }
+    public Guid? OpeningAdjustmentTransactionId { get; private set; }
+    public DifferenceReviewStatus OpeningDifferenceReviewStatus { get; private set; } = DifferenceReviewStatus.Pending;
+    public DateTime? OpeningDifferenceReviewedAt { get; private set; }
+    public Guid? OpeningDifferenceReviewedByUserId { get; private set; }
+    public string? OpeningDifferenceReviewNote { get; private set; }
+
     public decimal ExpectedClosingBalance { get; private set; }
     public decimal? CountedClosingBalance { get; private set; }
     public decimal? Difference { get; private set; }
+    public DifferenceReviewStatus? ClosingDifferenceReviewStatus { get; private set; }
+    public DateTime? ClosingDifferenceReviewedAt { get; private set; }
+    public Guid? ClosingDifferenceReviewedByUserId { get; private set; }
+    public string? ClosingDifferenceReviewNote { get; private set; }
 
     public DateTime OpenedAt { get; private set; }
     public DateTime? ClosedAt { get; private set; }
@@ -56,6 +66,11 @@ public class Shift : BaseEntity
         };
     }
 
+    public void LinkOpeningAdjustmentTransaction(Guid transactionId)
+    {
+        OpeningAdjustmentTransactionId = transactionId;
+    }
+
     public void Close(Guid closedByUserId, decimal expectedClosingBalance, decimal countedClosingBalance, string? note = null)
     {
         if (Status != ShiftStatus.Open)
@@ -71,8 +86,81 @@ public class Shift : BaseEntity
         ExpectedClosingBalance = expectedClosingBalance;
         CountedClosingBalance = countedClosingBalance;
         Difference = countedClosingBalance - expectedClosingBalance;
+        ClosingDifferenceReviewStatus = DifferenceReviewStatus.Pending;
         ClosedAt = DateTime.UtcNow;
         Status = ShiftStatus.Closed;
         Note = note;
+    }
+
+    public void ApproveOpeningDifference(Guid approvedByUserId)
+    {
+        if (OpeningDifference == 0)
+            throw new DomainException("Bu vardiyada incelenecek bir açılış farkı yok.");
+
+        if (OpeningDifferenceReviewStatus != DifferenceReviewStatus.Pending)
+            throw new DomainException("Bu vardiyanın açılış farkı zaten incelenmiş.");
+
+        if (approvedByUserId == Guid.Empty)
+            throw new DomainException("Geçersiz kullanıcı ID'si.");
+
+        OpeningDifferenceReviewStatus = DifferenceReviewStatus.Approved;
+        OpeningDifferenceReviewedAt = DateTime.UtcNow;
+        OpeningDifferenceReviewedByUserId = approvedByUserId;
+    }
+
+    public void RejectOpeningDifference(Guid rejectedByUserId, string? note)
+    {
+        if (OpeningDifference == 0)
+            throw new DomainException("Bu vardiyada incelenecek bir açılış farkı yok.");
+
+        if (OpeningDifferenceReviewStatus != DifferenceReviewStatus.Pending)
+            throw new DomainException("Bu vardiyanın açılış farkı zaten incelenmiş.");
+
+        if (rejectedByUserId == Guid.Empty)
+            throw new DomainException("Geçersiz kullanıcı ID'si.");
+
+        OpeningDifferenceReviewStatus = DifferenceReviewStatus.Rejected;
+        OpeningDifferenceReviewedAt = DateTime.UtcNow;
+        OpeningDifferenceReviewedByUserId = rejectedByUserId;
+        OpeningDifferenceReviewNote = note;
+    }
+
+    public void ApproveDifference(Guid approvedByUserId)
+    {
+        if (Status != ShiftStatus.Closed)
+            throw new DomainException("Sadece kapanmış vardiyaların farkı incelenebilir.");
+
+        if (Difference is null or 0)
+            throw new DomainException("Bu vardiyada incelenecek bir fark yok.");
+
+        if (ClosingDifferenceReviewStatus != DifferenceReviewStatus.Pending)
+            throw new DomainException("Bu vardiyanın kapanış farkı zaten incelenmiş.");
+
+        if (approvedByUserId == Guid.Empty)
+            throw new DomainException("Geçersiz kullanıcı ID'si.");
+
+        ClosingDifferenceReviewStatus = DifferenceReviewStatus.Approved;
+        ClosingDifferenceReviewedAt = DateTime.UtcNow;
+        ClosingDifferenceReviewedByUserId = approvedByUserId;
+    }
+
+    public void RejectDifference(Guid rejectedByUserId, string? note)
+    {
+        if (Status != ShiftStatus.Closed)
+            throw new DomainException("Sadece kapanmış vardiyaların farkı incelenebilir.");
+
+        if (Difference is null or 0)
+            throw new DomainException("Bu vardiyada incelenecek bir fark yok.");
+
+        if (ClosingDifferenceReviewStatus != DifferenceReviewStatus.Pending)
+            throw new DomainException("Bu vardiyanın kapanış farkı zaten incelenmiş.");
+
+        if (rejectedByUserId == Guid.Empty)
+            throw new DomainException("Geçersiz kullanıcı ID'si.");
+
+        ClosingDifferenceReviewStatus = DifferenceReviewStatus.Rejected;
+        ClosingDifferenceReviewedAt = DateTime.UtcNow;
+        ClosingDifferenceReviewedByUserId = rejectedByUserId;
+        ClosingDifferenceReviewNote = note;
     }
 }

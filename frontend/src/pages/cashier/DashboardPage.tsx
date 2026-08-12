@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as signalR from '@microsoft/signalr';
 import { orderService } from '@/features/orders/api/orderService';
-import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { Order } from '@/features/orders/types';
 import type { PaymentMethod, ShiftSummary, ShiftTransaction } from '@/features/cashier/types';
@@ -35,8 +34,6 @@ function formatShortName(fullName: string): string {
 export default function CashierDashboardPage() {
     const [servedOrders, setServedOrders] = useState<Order[]>([]);
     const [shiftTransactions, setShiftTransactions] = useState<ShiftTransaction[]>([]);
-    const [completedCount, setCompletedCount] = useState(0);
-    const [completedRevenue, setCompletedRevenue] = useState(0);
     const [shiftSummary, setShiftSummary] = useState<ShiftSummary | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [selectedTransaction, setSelectedTransaction] = useState<ShiftTransaction | null>(null);
@@ -48,13 +45,6 @@ export default function CashierDashboardPage() {
     }, []);
 
     const refreshTransactions = () => {
-        cashRegisterService.getTransactions()
-            .then(data => {
-                const income = data.filter(t => t.type === 1);
-                setCompletedCount(income.length);
-                setCompletedRevenue(income.reduce((s, t) => s + t.amount, 0));
-            })
-            .catch(() => {});
         shiftService.getMyCurrentTransactions()
             .then(data => setShiftTransactions(data.slice(0, 10)))
             .catch(() => {});
@@ -116,9 +106,10 @@ export default function CashierDashboardPage() {
         refreshTransactions();
     };
 
-    const todayRevenue = completedRevenue + servedOrders.reduce((s, o) => s + o.totalPrice, 0);
-    const totalCount = completedCount + servedOrders.length;
-    const avgTicket = totalCount > 0 ? todayRevenue / totalCount : 0;
+    const shiftRevenue = shiftSummary?.total ?? 0;
+    const shiftTransactionCount = shiftSummary?.transactionCount ?? 0;
+    const shiftAvgTicket = shiftTransactionCount > 0 ? shiftRevenue / shiftTransactionCount : 0;
+    const cashInRegister = shiftSummary?.expectedCashInRegister ?? 0;
 
     const statsSlot = document.getElementById('cashier-stats-slot');
 
@@ -137,23 +128,23 @@ export default function CashierDashboardPage() {
             {/* Dark stats bar */}
             <div className="bg-sidebar px-6 py-4 flex items-center gap-8 shrink-0">
                 <div>
-                    <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{todayRevenue.toFixed(0)}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Bugünkü Ciro</p>
+                    <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{shiftRevenue.toFixed(0)}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Vardiya Cirosu</p>
                 </div>
                 <div className="w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-bold text-sidebar-foreground">{totalCount}</p>
+                    <p className="text-lg font-bold text-sidebar-foreground">{shiftTransactionCount}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">İşlem</p>
                 </div>
                 <div className="w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-bold text-sidebar-foreground">₺{avgTicket.toFixed(0)}</p>
+                    <p className="text-lg font-bold text-sidebar-foreground">₺{shiftAvgTicket.toFixed(0)}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">Ortalama</p>
                 </div>
                 <div className="w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-bold text-sidebar-foreground">{servedOrders.length}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Bekleyen Masa</p>
+                    <p className="text-lg font-serif font-bold text-rb-green">₺{cashInRegister.toFixed(0)}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Kasadaki Para</p>
                 </div>
             </div>
 
