@@ -8,13 +8,20 @@ import { userService } from '@/features/users/api/userService';
 import type { Shift } from '@/features/cashier/types';
 import { cn } from '@/lib/utils';
 
+type ReviewTarget = { shift: Shift; type: 'opening' | 'closing'; action: 'approve' | 'reject' };
+
+const REVIEW_PENDING = 1;
+const REVIEW_APPROVED = 2;
+const REVIEW_REJECTED = 3;
+
 export default function ShiftsPage() {
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [userNames, setUserNames] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [onlyPending, setOnlyPending] = useState(false);
-    const [approveTarget, setApproveTarget] = useState<{ shift: Shift; type: 'opening' | 'closing' } | null>(null);
-    const [approving, setApproving] = useState(false);
+    const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
+    const [rejectNote, setRejectNote] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
     const refresh = async () => {
         try {
@@ -33,32 +40,48 @@ export default function ShiftsPage() {
 
     useEffect(() => { refresh(); }, []);
 
-    const requiresOpeningApproval = (s: Shift) => s.openingDifference !== 0 && !s.openingDifferenceApprovedAt;
-    const requiresClosingApproval = (s: Shift) => s.status === 2 && !!s.difference && s.difference !== 0 && !s.closingDifferenceApprovedAt;
-    const requiresAnyApproval = (s: Shift) => requiresOpeningApproval(s) || requiresClosingApproval(s);
+    const requiresOpeningReview = (s: Shift) => s.openingDifference !== 0 && s.openingDifferenceReviewStatus === REVIEW_PENDING;
+    const requiresClosingReview = (s: Shift) => s.status === 2 && !!s.difference && s.difference !== 0 && s.closingDifferenceReviewStatus === REVIEW_PENDING;
+    const requiresAnyReview = (s: Shift) => requiresOpeningReview(s) || requiresClosingReview(s);
 
-    const filtered = onlyPending ? shifts.filter(requiresAnyApproval) : shifts;
-    const pendingCount = shifts.filter(requiresAnyApproval).length;
+    const filtered = onlyPending ? shifts.filter(requiresAnyReview) : shifts;
+    const pendingCount = shifts.filter(requiresAnyReview).length;
 
-    const handleApprove = async () => {
-        if (!approveTarget) return;
-        setApproving(true);
+    const openReviewDialog = (shift: Shift, type: 'opening' | 'closing', action: 'approve' | 'reject') => {
+        setReviewTarget({ shift, type, action });
+        setRejectNote('');
+    };
+
+    const handleConfirmReview = async () => {
+        if (!reviewTarget) return;
+        setSubmitting(true);
         try {
-            if (approveTarget.type === 'opening') {
-                await shiftService.approveOpeningDifference(approveTarget.shift.id);
-                toast.success('Açılış farkı onaylandı, kasa bakiyesi güncellendi.');
+            const { shift, type, action } = reviewTarget;
+            if (type === 'opening') {
+                if (action === 'approve') {
+                    await shiftService.approveOpeningDifference(shift.id);
+                    toast.success('Açılış farkı onaylandı.');
+                } else {
+                    await shiftService.rejectOpeningDifference(shift.id, rejectNote || undefined);
+                    toast.success('Açılış farkı reddedildi, kasa bakiyesi geri alındı.');
+                }
             } else {
-                await shiftService.approveDifference(approveTarget.shift.id);
-                toast.success('Kapanış farkı onaylandı, kasa bakiyesi güncellendi.');
+                if (action === 'approve') {
+                    await shiftService.approveDifference(shift.id);
+                    toast.success('Kapanış farkı onaylandı.');
+                } else {
+                    await shiftService.rejectDifference(shift.id, rejectNote || undefined);
+                    toast.success('Kapanış farkı reddedildi, kasa bakiyesi geri alındı.');
+                }
             }
-            setApproveTarget(null);
+            setReviewTarget(null);
             await refresh();
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                toast.error(err.response?.data?.error ?? 'Fark onaylanamadı.');
+                toast.error(err.response?.data?.error ?? 'İşlem gerçekleştirilemedi.');
             }
         } finally {
-            setApproving(false);
+            setSubmitting(false);
         }
     };
 
@@ -68,7 +91,7 @@ export default function ShiftsPage() {
                 <div>
                     <h1 className="text-2xl font-serif font-bold text-foreground">Vardiyalar</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                        {shifts.length} vardiya{pendingCount > 0 && ` · ${pendingCount} onay bekliyor`}
+                        {shifts.length} vardiya{pendingCount > 0 && ` · ${pendingCount} inceleme bekliyor`}
                     </p>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
@@ -78,7 +101,7 @@ export default function ShiftsPage() {
                         onChange={e => setOnlyPending(e.target.checked)}
                         className="rounded border-border"
                     />
-                    Sadece onay bekleyenler
+                    Sadece inceleme bekleyenler
                 </label>
             </div>
 
@@ -107,8 +130,8 @@ export default function ShiftsPage() {
                             </tr>
                         ) : (
                             filtered.map(s => {
-                                const openingPending = requiresOpeningApproval(s);
-                                const closingPending = requiresClosingApproval(s);
+                                const openingPending = requiresOpeningReview(s);
+                                const closingPending = requiresClosingReview(s);
                                 const isOpen = s.status === 1;
                                 const expected = isOpen ? s.expectedOpeningBalance : s.expectedClosingBalance;
                                 const counted = isOpen ? s.openingBalance : s.countedClosingBalance;
@@ -153,39 +176,67 @@ export default function ShiftsPage() {
                                         </td>
                                         <td className="px-4 py-3.5">
                                             <div className="flex flex-col gap-1 items-start">
-                                                {isOpen && (
-                                                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rb-green-bg text-rb-green">Açık</span>
-                                                )}
-                                                {!isOpen && !closingPending && (
-                                                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rb-neutral-bg text-rb-neutral">
-                                                        {hasDifference ? 'Kapanış Onaylandı' : 'Kapalı'}
+                                                <span className={cn(
+                                                    "inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                                                    isOpen ? "bg-rb-green-bg text-rb-green" : "bg-rb-neutral-bg text-rb-neutral"
+                                                )}>
+                                                    {isOpen ? 'Açık' : 'Kapalı'}
+                                                </span>
+                                                {s.openingDifference !== 0 && (
+                                                    <span className={cn(
+                                                        "inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                                                        s.openingDifferenceReviewStatus === REVIEW_PENDING ? "bg-rb-amber-bg text-rb-amber"
+                                                            : s.openingDifferenceReviewStatus === REVIEW_REJECTED ? "bg-rb-red-bg text-red-500"
+                                                                : "bg-rb-neutral-bg text-rb-neutral"
+                                                    )}>
+                                                        Açılış {s.openingDifferenceReviewStatus === REVIEW_PENDING ? 'Onayı Bekliyor' : s.openingDifferenceReviewStatus === REVIEW_REJECTED ? 'Reddedildi' : 'Onaylandı'}
                                                     </span>
                                                 )}
-                                                {closingPending && (
-                                                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rb-amber-bg text-rb-amber">Kapanış Onayı Bekliyor</span>
-                                                )}
-                                                {openingPending && (
-                                                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rb-amber-bg text-rb-amber">Açılış Onayı Bekliyor</span>
+                                                {hasDifference && !isOpen && (
+                                                    <span className={cn(
+                                                        "inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                                                        s.closingDifferenceReviewStatus === REVIEW_PENDING ? "bg-rb-amber-bg text-rb-amber"
+                                                            : s.closingDifferenceReviewStatus === REVIEW_REJECTED ? "bg-rb-red-bg text-red-500"
+                                                                : "bg-rb-neutral-bg text-rb-neutral"
+                                                    )}>
+                                                        Kapanış {s.closingDifferenceReviewStatus === REVIEW_PENDING ? 'Onayı Bekliyor' : s.closingDifferenceReviewStatus === REVIEW_REJECTED ? 'Reddedildi' : 'Onaylandı'}
+                                                    </span>
                                                 )}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3.5 text-right">
-                                            <div className="flex flex-col gap-1 items-end">
+                                            <div className="flex flex-col gap-1.5 items-end">
                                                 {openingPending && (
-                                                    <button
-                                                        onClick={() => setApproveTarget({ shift: s, type: 'opening' })}
-                                                        className="text-xs font-semibold text-rb-accent hover:opacity-80 transition-colors"
-                                                    >
-                                                        Açılışı Onayla
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => openReviewDialog(s, 'opening', 'approve')}
+                                                            className="text-xs font-semibold text-rb-accent hover:opacity-80 transition-colors"
+                                                        >
+                                                            Açılışı Onayla
+                                                        </button>
+                                                        <button
+                                                            onClick={() => openReviewDialog(s, 'opening', 'reject')}
+                                                            className="text-xs font-semibold text-red-500 hover:opacity-80 transition-colors"
+                                                        >
+                                                            Reddet
+                                                        </button>
+                                                    </div>
                                                 )}
                                                 {closingPending && (
-                                                    <button
-                                                        onClick={() => setApproveTarget({ shift: s, type: 'closing' })}
-                                                        className="text-xs font-semibold text-rb-accent hover:opacity-80 transition-colors"
-                                                    >
-                                                        Kapanışı Onayla
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => openReviewDialog(s, 'closing', 'approve')}
+                                                            className="text-xs font-semibold text-rb-accent hover:opacity-80 transition-colors"
+                                                        >
+                                                            Kapanışı Onayla
+                                                        </button>
+                                                        <button
+                                                            onClick={() => openReviewDialog(s, 'closing', 'reject')}
+                                                            className="text-xs font-semibold text-red-500 hover:opacity-80 transition-colors"
+                                                        >
+                                                            Reddet
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </td>
@@ -197,26 +248,50 @@ export default function ShiftsPage() {
                 </table>
             </div>
 
-            <AlertDialog open={approveTarget !== null} onOpenChange={open => !open && !approving && setApproveTarget(null)}>
+            <AlertDialog open={reviewTarget !== null} onOpenChange={open => !open && !submitting && setReviewTarget(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>
-                            {approveTarget?.type === 'opening' ? 'Açılış farkını onayla' : 'Kapanış farkını onayla'}
+                            {reviewTarget?.action === 'approve'
+                                ? (reviewTarget.type === 'opening' ? 'Açılış farkını onayla' : 'Kapanış farkını onayla')
+                                : (reviewTarget?.type === 'opening' ? 'Açılış farkını reddet' : 'Kapanış farkını reddet')}
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            {approveTarget && (
+                            {reviewTarget && (
                                 <>
-                                    {approveTarget.shift.cashRegisterName} kasasında{' '}
-                                    ₺{(approveTarget.type === 'opening' ? approveTarget.shift.openingDifference : approveTarget.shift.difference)?.toFixed(2)}{' '}
-                                    tutarında {approveTarget.type === 'opening' ? 'açılış' : 'kapanış'} farkı var.
-                                    Onaylarsanız kasa bakiyesi sayılan tutara göre düzeltilecek. Bu işlem geri alınamaz.
+                                    {reviewTarget.shift.cashRegisterName} kasasında{' '}
+                                    ₺{(reviewTarget.type === 'opening' ? reviewTarget.shift.openingDifference : reviewTarget.shift.difference)?.toFixed(2)}{' '}
+                                    tutarında {reviewTarget.type === 'opening' ? 'açılış' : 'kapanış'} farkı, kasiyer bildirdiği anda kasa bakiyesine zaten işlendi.{' '}
+                                    {reviewTarget.action === 'approve'
+                                        ? 'Onaylarsanız kasa bakiyesine ek bir işlem yapılmaz, sadece incelendiği kaydedilir.'
+                                        : 'Reddederseniz kasa bakiyesi bu düzeltme öncesine geri alınır.'}
                                 </>
                             )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    {reviewTarget?.action === 'reject' && (
+                        <div className="px-1">
+                            <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                                Not (opsiyonel)
+                            </label>
+                            <textarea
+                                value={rejectNote}
+                                onChange={e => setRejectNote(e.target.value)}
+                                placeholder="Örn: Kasiyerle konuşuldu, yanlış saymış."
+                                rows={3}
+                                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+                            />
+                        </div>
+                    )}
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={approving}>İptal</AlertDialogCancel>
-                        <Button onClick={handleApprove} disabled={approving}>Onayla</Button>
+                        <AlertDialogCancel disabled={submitting}>İptal</AlertDialogCancel>
+                        <Button
+                            onClick={handleConfirmReview}
+                            disabled={submitting}
+                            variant={reviewTarget?.action === 'reject' ? 'destructive' : 'default'}
+                        >
+                            {reviewTarget?.action === 'approve' ? 'Onayla' : 'Reddet'}
+                        </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

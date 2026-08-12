@@ -44,5 +44,5 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
             .ToList();
 
         return Result<List<ShiftStartCandidateDto>>.Success(candidates);
-    } 
+    }
 }

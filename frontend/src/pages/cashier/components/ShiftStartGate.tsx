@@ -108,7 +108,7 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
                         {!reportingDifference ? (
                             <div className="flex flex-col gap-2">
                                 <Button onClick={handleConfirmExact} disabled={submitting} className="w-full">
-                                    Tutar Doğru, Onayla
+                                    Beklenen Tutar Doğru, Onayla
                                 </Button>
                                 <button
                                     onClick={() => setReportingDifference(true)}

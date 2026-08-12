@@ -24,19 +24,6 @@ public class ApproveShiftDifferenceCommandHandler : IRequestHandler<ApproveShift
         if (shift is null || shift.BranchId != _currentUser.BranchId)
             return Result.Failure("Vardiya bulunamadı.");
 
-        if (shift.Difference is null or 0)
-            return Result.Failure("Bu vardiyada onaylanacak bir fark yok.");
-
-        if (shift.ClosingDifferenceApprovedAt is not null)
-            return Result.Failure("Bu vardiyanın farkı zaten onaylanmış.");
-
-        CashRegister? register = await _uow.CashRegister.GetByIdAsync(shift.CashRegisterId, true);
-        if (register is null) return Result.Failure("Kasa bulunamadı.");
-
-        CashTransaction transaction = register.ApplyShiftDifference(shift.Difference.Value, _currentUser.UserId);
-        await _uow.CashTransaction.AddAsync(transaction);
-        await _uow.CashRegister.UpdateAsync(register);
-
         shift.ApproveDifference(_currentUser.UserId);
         await _uow.Shift.UpdateAsync(shift);
 
@@ -47,7 +34,7 @@ public class ApproveShiftDifferenceCommandHandler : IRequestHandler<ApproveShift
             AuditLogCategory.System,
             AuditLogSeverity.Info,
             "ShiftDifferenceApproved",
-            $"{actor?.FullName} {register.Name} kasasındaki ₺{shift.Difference} tutarındaki vardiya farkını onayladı. Kasa bakiyesi ₺{register.Balance} oldu.",
+            $"{actor?.FullName} ₺{shift.Difference} tutarındaki vardiya kapanış farkını onayladı. Kasa bakiyesi zaten düzeltilmişti, ek işlem yapılmadı.",
             nameof(Shift),
             shift.Id);
         await _uow.AuditLog.AddAsync(log);

@@ -54,7 +54,8 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
             .Count();
 
         var transactions = await _uow.CashTransaction.GetAllAsync(
-            t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt);
+            t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt
+                && t.Id != shift.OpeningAdjustmentTransactionId);
 
         decimal expectedCashInRegister = shift.OpeningBalance;
         foreach (var transaction in transactions)

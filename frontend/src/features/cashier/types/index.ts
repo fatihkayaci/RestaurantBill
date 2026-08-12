@@ -52,6 +52,8 @@ export interface CurrentShift {
 
 export type ShiftStatus = 1 | 2;
 
+export type DifferenceReviewStatus = 1 | 2 | 3; // Pending | Approved | Rejected
+
 export interface Shift {
     id: string;
     branchId: string;
@@ -62,13 +64,17 @@ export interface Shift {
     expectedOpeningBalance: number;
     openingBalance: number;
     openingDifference: number;
-    openingDifferenceApprovedAt?: string | null;
-    openingDifferenceApprovedByUserId?: string | null;
+    openingDifferenceReviewStatus: DifferenceReviewStatus;
+    openingDifferenceReviewedAt?: string | null;
+    openingDifferenceReviewedByUserId?: string | null;
+    openingDifferenceReviewNote?: string | null;
     expectedClosingBalance: number;
     countedClosingBalance?: number | null;
     difference?: number | null;
-    closingDifferenceApprovedAt?: string | null;
-    closingDifferenceApprovedByUserId?: string | null;
+    closingDifferenceReviewStatus?: DifferenceReviewStatus | null;
+    closingDifferenceReviewedAt?: string | null;
+    closingDifferenceReviewedByUserId?: string | null;
+    closingDifferenceReviewNote?: string | null;
     openedAt: string;
     closedAt?: string | null;
     status: ShiftStatus;

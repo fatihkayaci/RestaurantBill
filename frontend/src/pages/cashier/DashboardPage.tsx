@@ -109,6 +109,7 @@ export default function CashierDashboardPage() {
     const shiftRevenue = shiftSummary?.total ?? 0;
     const shiftTransactionCount = shiftSummary?.transactionCount ?? 0;
     const shiftAvgTicket = shiftTransactionCount > 0 ? shiftRevenue / shiftTransactionCount : 0;
+    const cashInRegister = shiftSummary?.expectedCashInRegister ?? 0;
 
     const statsSlot = document.getElementById('cashier-stats-slot');
 
@@ -139,6 +140,11 @@ export default function CashierDashboardPage() {
                 <div>
                     <p className="text-lg font-bold text-sidebar-foreground">₺{shiftAvgTicket.toFixed(0)}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">Ortalama</p>
+                </div>
+                <div className="w-px h-8 bg-gray-700" />
+                <div>
+                    <p className="text-lg font-serif font-bold text-rb-green">₺{cashInRegister.toFixed(0)}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Kasadaki Para</p>
                 </div>
             </div>
 

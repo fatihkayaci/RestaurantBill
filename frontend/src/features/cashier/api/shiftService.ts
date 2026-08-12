@@ -16,6 +16,14 @@ export const shiftService = {
         const response = await api.post(`/shift/${shiftId}/approve-opening-difference`);
         return response.data;
     },
+    rejectDifference: async (shiftId: string, note?: string) => {
+        const response = await api.post(`/shift/${shiftId}/reject-difference`, { Note: note });
+        return response.data;
+    },
+    rejectOpeningDifference: async (shiftId: string, note?: string) => {
+        const response = await api.post(`/shift/${shiftId}/reject-opening-difference`, { Note: note });
+        return response.data;
+    },
     getStartCandidates: async () => {
         const response = await api.get<ShiftStartCandidate[]>('/shift/start-candidates');
         return response.data;
