@@ -1,7 +1,10 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { LayoutDashboard, Building2, UserCog, CreditCard, Palette, BarChart3, History, Moon, ChevronRight } from 'lucide-react';
+import {
+    LayoutDashboard, Building2, UserCog, CreditCard, Palette, BarChart3, History, Moon, ChevronRight,
+    Menu, X, PanelLeftClose, PanelLeftOpen
+} from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { companyService } from '@/features/companies/api/companyService';
 import { userService } from '@/features/users/api/userService';
@@ -26,6 +29,10 @@ export default function OwnerLayout() {
 
     const [restaurantName, setRestaurantName] = useState('');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [collapsed, setCollapsed] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [hoverTip, setHoverTip] = useState<{ label: string; top: number } | null>(null);
+    const asideRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
         companyService.getMyCompany()
@@ -49,21 +56,61 @@ export default function OwnerLayout() {
 
     return (
         <div className="flex h-screen bg-background">
-            <aside className="w-52 shrink-0 bg-sidebar flex flex-col">
+            {/* Mobil üst bar */}
+            <div className="md:hidden fixed top-0 inset-x-0 z-40 h-14 flex items-center justify-between px-4 bg-sidebar border-b border-white/10">
+                <button onClick={() => setMobileOpen(true)} className="text-sidebar-foreground/70 hover:text-sidebar-foreground p-1">
+                    <Menu className="w-5 h-5" />
+                </button>
+                <img src={sophramLogo} alt="Sophram" className="h-8 w-auto" />
+                <span className="w-7" />
+            </div>
+
+            {/* Mobil arkaplan */}
+            {mobileOpen && (
+                <div
+                    className="md:hidden fixed inset-0 z-40 bg-black/50 animate-in fade-in duration-200"
+                    onClick={() => setMobileOpen(false)}
+                />
+            )}
+
+            <aside
+                ref={asideRef}
+                className={cn(
+                    "fixed md:relative inset-y-0 left-0 z-50 flex flex-col bg-sidebar transition-all duration-300 ease-in-out",
+                    "w-64",
+                    collapsed ? "md:w-20" : "md:w-52",
+                    mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                )}
+            >
                 {/* Logo */}
-                <div className="flex items-center justify-center px-5 py-5">
-                    <img src={sophramLogo} alt="Sophram" className="h-18 w-auto shrink-0" />
+                <div className="relative flex h-28 shrink-0 items-center justify-center px-5">
+                    <img src={sophramLogo} alt="Sophram" className={cn("h-18 w-auto shrink-0 transition-all duration-300", collapsed && "md:h-10")} />
+                    <button
+                        onClick={() => setMobileOpen(false)}
+                        className="md:hidden absolute right-4 top-1/2 -translate-y-1/2 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
                 {/* Nav */}
-                <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+                <nav className="sidebar-nav-scroll flex-1 px-3 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
                     {navItems.map(({ to, icon: Icon, label }) => (
                         <NavLink
                             key={to}
                             to={to}
+                            onClick={() => setMobileOpen(false)}
+                            onMouseEnter={e => {
+                                if (!collapsed || !asideRef.current) return;
+                                const asideTop = asideRef.current.getBoundingClientRect().top;
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setHoverTip({ label, top: rect.top - asideTop + rect.height / 2 });
+                            }}
+                            onMouseLeave={() => setHoverTip(null)}
                             className={({ isActive }) =>
                                 cn(
-                                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+                                    'group relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+                                    collapsed && 'md:justify-center md:px-2',
                                     isActive
                                         ? 'bg-white/10 text-sidebar-foreground'
                                         : 'text-sidebar-foreground/40 hover:text-sidebar-foreground/70'
@@ -72,19 +119,33 @@ export default function OwnerLayout() {
                         >
                             {({ isActive }) => (
                                 <>
-                                    <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-rb-gold' : 'text-sidebar-foreground/30')} />
-                                    {label}
+                                    <Icon className={cn(
+                                        'w-4 h-4 shrink-0 transition-transform duration-200',
+                                        isActive ? 'text-rb-gold' : 'text-sidebar-foreground/30',
+                                        collapsed && 'md:group-hover:scale-125'
+                                    )} />
+                                    <span className={cn(collapsed && 'md:hidden')}>{label}</span>
                                 </>
                             )}
                         </NavLink>
                     ))}
                 </nav>
 
+                {/* Daraltılmışken hover tooltip'i — nav'ın scroll clip'inden kaçması için aside seviyesinde, JS ile konumlanıyor */}
+                {collapsed && hoverTip && (
+                    <div
+                        className="pointer-events-none absolute z-50 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c1712] px-2.5 py-1.5 text-xs font-medium text-sidebar-foreground shadow-lg md:block"
+                        style={{ top: hoverTip.top, left: 84 }}
+                    >
+                        {hoverTip.label}
+                    </div>
+                )}
+
                 {/* Bottom */}
-                <div className="px-4 py-4 border-t border-white/10 space-y-3">
-                    <div className="flex items-center gap-2">
+                <div className={cn("px-4 py-4 border-t border-white/10 space-y-3", collapsed && "md:px-2")}>
+                    <div className={cn("flex items-center gap-2", collapsed && "md:justify-center")}>
                         <span className="w-2 h-2 rounded-full bg-rb-green shrink-0" />
-                        <div className="min-w-0">
+                        <div className={cn("min-w-0", collapsed && "md:hidden")}>
                             <p className="text-sidebar-foreground font-serif font-bold text-base leading-none truncate">
                                 {restaurantName || 'Sophram'}
                             </p>
@@ -94,15 +155,15 @@ export default function OwnerLayout() {
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sidebar-foreground/70 text-sm">
+                    <div className={cn("flex items-center", collapsed ? "md:justify-center" : "justify-between")}>
+                        <div className={cn("flex items-center gap-2 text-sidebar-foreground/70 text-sm", collapsed && "md:hidden")}>
                             <Moon className="w-4 h-4" />
                             Koyu Tema
                         </div>
                         <button
                             onClick={() => setTheme(isDark ? 'light' : 'dark')}
                             className={cn(
-                                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none',
+                                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0',
                                 isDark ? 'bg-rb-accent' : 'bg-gray-600'
                             )}
                         >
@@ -115,22 +176,32 @@ export default function OwnerLayout() {
 
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2.5 w-full rounded-xl bg-white/5 hover:bg-white/10 px-3 py-2.5 transition-colors"
+                        className={cn(
+                            "flex items-center gap-2.5 w-full rounded-xl bg-white/5 hover:bg-white/10 px-3 py-2.5 transition-colors",
+                            collapsed && "md:justify-center md:px-0"
+                        )}
                         title="Çıkış Yap"
                     >
                         <div className="w-8 h-8 rounded-full bg-rb-gold flex items-center justify-center shrink-0">
                             <span className="text-rb-gold-foreground text-sm font-bold">{initials}</span>
                         </div>
-                        <div className="flex-1 min-w-0 text-left">
+                        <div className={cn("flex-1 min-w-0 text-left", collapsed && "md:hidden")}>
                             <p className="text-sidebar-foreground text-sm font-medium truncate">{displayName}</p>
                             <p className="text-sidebar-foreground/40 text-xs truncate">{currentUser?.email}</p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-sidebar-foreground/30 shrink-0" />
+                        <ChevronRight className={cn("w-4 h-4 text-sidebar-foreground/30 shrink-0", collapsed && "md:hidden")} />
                     </button>
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-auto p-6">
+            <main className="flex-1 overflow-auto p-6 pt-20 md:pt-6">
+                <button
+                    onClick={() => setCollapsed(v => !v)}
+                    className="hidden md:flex items-center justify-center w-8 h-8 mb-4 -ml-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    title={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
+                >
+                    {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                </button>
                 <Outlet />
             </main>
         </div>
