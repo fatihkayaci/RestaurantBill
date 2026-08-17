@@ -76,8 +76,8 @@ function TableCard({
                 ${isSelected ? 'ring-2 ring-rb-accent ring-offset-2 dark:ring-offset-background' : ''}
             `}
         >
-            <div className="flex items-start justify-between gap-1">
-                <span className="font-serif text-[21px] font-bold text-foreground leading-none">
+            <div className="flex items-start justify-between gap-1.5">
+                <span className="font-serif text-[21px] font-bold text-foreground leading-[1.15]">
                     {table.name}
                 </span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-1.5 shrink-0 leading-tight tracking-[0.6px] uppercase ${cfg.badge}`}>
@@ -197,7 +197,7 @@ export default function WaiterTablesPage() {
 
     if (loading) {
         return (
-            <div className="p-6 grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2.5">
+            <div className="p-3 sm:p-6 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
                 {[...Array(12)].map((_, i) => (
                     <div key={i} className="h-25 rounded-2xl bg-muted animate-pulse" />
                 ))}
@@ -218,7 +218,7 @@ export default function WaiterTablesPage() {
             )}
 
             {/* Stats + Filter Bar */}
-            <div className="sticky top-0 z-10 bg-[#F1ECE4]/95 dark:bg-background/95 backdrop-blur-sm border-b border-border px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="sticky top-0 z-10 bg-[#F1ECE4]/95 dark:bg-background/95 backdrop-blur-sm border-b border-border px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 {/* Stats */}
                 <div className="flex items-center gap-2 text-sm flex-wrap">
                     <div className="flex items-center gap-1.5">
@@ -261,8 +261,8 @@ export default function WaiterTablesPage() {
             </div>
 
             {/* Masa Grid */}
-            <div className="px-6 py-4.5">
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2.5">
+            <div className="px-3 sm:px-6 py-4.5">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
                     {filtered.map(table => (
                         <TableCard
                             key={table.id}
