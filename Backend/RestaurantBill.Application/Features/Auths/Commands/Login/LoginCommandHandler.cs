@@ -71,6 +71,16 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
             var single = accessible.Values.First();
+
+            if (!emailUser.IsPhoneVerified)
+            {
+                return Result<LoginResponseDto>.Success(new LoginResponseDto
+                {
+                    Token = _jwtTokenGenerator.GenerateTransitionToken(emailUser.Id, UserRole.Owner),
+                    NeedsPhoneVerification = true
+                });
+            }
+
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
                 Token = _jwtTokenGenerator.GenerateToken(emailUser, single.Company.Id, single.Role, single.UserName),
@@ -143,6 +153,15 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
             if (company.OwnerUserId != user.Id)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
+
+            if (!user.IsPhoneVerified)
+            {
+                return Result<LoginResponseDto>.Success(new LoginResponseDto
+                {
+                    Token = _jwtTokenGenerator.GenerateTransitionToken(user.Id, UserRole.Owner),
+                    NeedsPhoneVerification = true
+                });
+            }
 
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
