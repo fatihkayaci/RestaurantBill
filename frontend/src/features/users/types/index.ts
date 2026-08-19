@@ -11,6 +11,8 @@ export interface User {
     branchName?: string | null;
     restaurantName?: string | null;
     hireDate?: string | null;
+    isPhoneVerified: boolean;
+    isEmailVerified: boolean;
 }
 
 export interface CreateUser {

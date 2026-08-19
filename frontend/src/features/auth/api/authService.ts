@@ -34,7 +34,8 @@ export const authService = {
     verifyCode: async (request: Code) => {
         const response = await api.post<VerifyCodeResponse>(`/auth/verify-code`, {
             UserId: request.userId,
-            Code: request.Code
+            Code: request.Code,
+            Type: request.type
         });
         return response.data;
     },

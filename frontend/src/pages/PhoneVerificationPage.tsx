@@ -8,17 +8,19 @@ import { authService } from "@/features/auth/api/authService";
 import { VerificationCodeType } from "@/features/auth/types";
 
 const CODE_LENGTH = 6;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function PhoneVerificationPage() {
     const navigate = useNavigate();
     const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
     const [verifyLoading, setVerifyLoading] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
     const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+    const hasSentInitialCode = useRef(false);
 
     const sendCode = async () => {
         const token = localStorage.getItem("token");
-        console.log(token);
         if (!token) return;
 
         const decoded: Record<string, string> = jwtDecode(token);
@@ -27,13 +29,32 @@ export default function PhoneVerificationPage() {
     };
 
     useEffect(() => {
-        sendCode();
+        if (hasSentInitialCode.current) return;
+        hasSentInitialCode.current = true;
+
+        sendCode()
+            .then(() => setCooldown(RESEND_COOLDOWN_SECONDS))
+            .catch((error) => {
+                if (axios.isAxiosError(error)) {
+                    toast.error(error.response?.data?.error ?? "Kod gönderilemedi.");
+                } else {
+                    console.log('Beklenmeyen hata:', error);
+                }
+            });
     }, []);
 
+    useEffect(() => {
+        if (cooldown <= 0) return;
+        const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [cooldown]);
+
     const handleResend = async () => {
+        if (cooldown > 0) return;
         try {
             setResendLoading(true);
             await sendCode();
+            setCooldown(RESEND_COOLDOWN_SECONDS);
             toast.success("Kod tekrar gönderildi.");
         } catch (error) {
             if (axios.isAxiosError(error)) {
@@ -62,7 +83,7 @@ export default function PhoneVerificationPage() {
             const decoded: Record<string, string> = jwtDecode(token);
             const userId = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
 
-            const response = await authService.verifyCode({ userId, Code: code.join("") });
+            const response = await authService.verifyCode({ userId, Code: code.join(""), type: VerificationCodeType.Phone });
             localStorage.setItem("token", response.token);
 
             toast.success("Telefon numaranız doğrulandı.");
@@ -148,10 +169,10 @@ export default function PhoneVerificationPage() {
                     <button
                         type="button"
                         onClick={handleResend}
-                        disabled={resendLoading}
-                        className="text-rb-accent font-medium hover:underline disabled:opacity-60"
+                        disabled={resendLoading || cooldown > 0}
+                        className="text-rb-accent font-medium hover:underline disabled:opacity-60 disabled:no-underline"
                     >
-                        {resendLoading ? "Gönderiliyor..." : "Tekrar Gönder"}
+                        {resendLoading ? "Gönderiliyor..." : cooldown > 0 ? `Tekrar Gönder (${cooldown}sn)` : "Tekrar Gönder"}
                     </button>
                 </p>
             </div>

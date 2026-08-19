@@ -16,6 +16,7 @@ export interface RestaurantSelection {
 export interface LoginResponse {
     token?: string;
     needsSlugSetup?: boolean;
+    needsPhoneVerification?: boolean;
 }
 export interface RegisterResponse {
     token: string;
@@ -33,6 +34,7 @@ export interface VerificationCode {
 export interface Code {
     userId: string;
     Code: string;
+    type: VerificationCodeType;
 }
 export interface VerifyCodeResponse {
     token: string;
