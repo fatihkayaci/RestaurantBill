@@ -3,10 +3,23 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import axios from "axios";
 import { userService } from "@/features/users/api/userService";
 import type { UpdateUser } from "@/features/users/types";
+import { authService } from "@/features/auth/api/authService";
+import { VerificationCodeType } from "@/features/auth/types";
 import { jwtDecode } from "jwt-decode";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
 
 const profileSchema = z.object({
     fullName: z.string().min(1, "Ad soyad zorunludur."),
@@ -36,6 +49,12 @@ export default function Profile() {
     const [passwordError, setPasswordError] = useState("");
     const [passwordLoading, setPasswordLoading] = useState(false);
 
+    const [isEmailVerified, setIsEmailVerified] = useState(false);
+    const [emailVerifyModalOpen, setEmailVerifyModalOpen] = useState(false);
+    const [emailVerifySending, setEmailVerifySending] = useState(false);
+    const [emailVerifyCode, setEmailVerifyCode] = useState("");
+    const [emailVerifySubmitting, setEmailVerifySubmitting] = useState(false);
+
     const profileForm = useForm<ProfileForm>({
         resolver: zodResolver(profileSchema),
         defaultValues: { fullName: "", email: "", phoneNumber: "" },
@@ -53,9 +72,49 @@ export default function Profile() {
             setRole(u.role);
             setUserName(u.userName);
             setInitials(u.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase());
+            setIsEmailVerified(u.isEmailVerified);
             profileForm.reset({ fullName: u.fullName, email: u.email ?? "", phoneNumber: u.phoneNumber ?? "" });
         }).catch(console.error);
     }, []);
+
+    const handleSendEmailVerification = async () => {
+        if (!userId) return;
+        try {
+            setEmailVerifySending(true);
+            await authService.sendCode({ userId, verificationCodeType: VerificationCodeType.Email });
+            setEmailVerifyCode("");
+            setEmailVerifyModalOpen(true);
+            toast.success("Doğrulama kodu e-posta adresinize gönderildi.");
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                toast.error(error.response?.data?.error ?? "Kod gönderilemedi.");
+            } else {
+                console.log('Beklenmeyen hata:', error);
+            }
+        } finally {
+            setEmailVerifySending(false);
+        }
+    };
+
+    const handleVerifyEmailCode = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!userId || emailVerifyCode.length !== 6) return;
+        try {
+            setEmailVerifySubmitting(true);
+            await authService.verifyCode({ userId, Code: emailVerifyCode, type: VerificationCodeType.Email });
+            setIsEmailVerified(true);
+            setEmailVerifyModalOpen(false);
+            toast.success("E-posta adresiniz doğrulandı.");
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                toast.error(error.response?.data?.error ?? "Doğrulama başarısız.");
+            } else {
+                console.log('Beklenmeyen hata:', error);
+            }
+        } finally {
+            setEmailVerifySubmitting(false);
+        }
+    };
 
     const onProfileSubmit = async (data: ProfileForm) => {
         if (!userId) return;
@@ -140,7 +199,26 @@ export default function Profile() {
                                 {profileForm.formState.errors.fullName && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.fullName.message}</p>}
                             </div>
                             <div>
-                                <label className={labelClass}>E-posta</label>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className={cn(labelClass, "mb-0")}>E-posta</label>
+                                    <div className="flex items-center gap-2">
+                                        {isEmailVerified ? (
+                                            <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Doğrulandı</Badge>
+                                        ) : (
+                                            <>
+                                                <Badge variant="destructive">Doğrulanmadı</Badge>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSendEmailVerification}
+                                                    disabled={emailVerifySending}
+                                                    className="text-[11px] font-semibold text-rb-accent hover:underline disabled:opacity-60"
+                                                >
+                                                    {emailVerifySending ? "Gönderiliyor..." : "Doğrula"}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
                                 <input type="email" className={cn(inputClass, profileForm.formState.errors.email && "border-destructive")} {...profileForm.register("email")} />
                                 {profileForm.formState.errors.email && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.email.message}</p>}
                             </div>
@@ -210,6 +288,38 @@ export default function Profile() {
                     </div>
                 </div>
             </div>
+
+            <Dialog open={emailVerifyModalOpen} onOpenChange={setEmailVerifyModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>E-posta Doğrulama</DialogTitle>
+                        <DialogDescription>
+                            E-posta adresinize gönderilen 6 haneli kodu girin.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleVerifyEmailCode} className="space-y-4">
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            autoFocus
+                            value={emailVerifyCode}
+                            onChange={e => setEmailVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                            placeholder="123456"
+                            className={cn(inputClass, "text-center text-lg tracking-[0.5em]")}
+                        />
+                        <DialogFooter>
+                            <Button
+                                type="submit"
+                                disabled={emailVerifyCode.length !== 6 || emailVerifySubmitting}
+                                className="bg-rb-accent hover:opacity-90 text-white"
+                            >
+                                {emailVerifySubmitting ? "Doğrulanıyor..." : "Doğrula"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

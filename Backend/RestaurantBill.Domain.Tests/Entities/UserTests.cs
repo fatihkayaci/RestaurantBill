@@ -74,4 +74,38 @@ public class UserTests
             Assert.Equal("hashed_password_123", user.PasswordHash);
         }
     }
+
+    public class Verification
+    {
+        [Fact]
+        public void NewUser_StartsUnverified()
+        {
+            User user = User.Create("Fatih", "", "");
+
+            Assert.False(user.IsPhoneVerified);
+            Assert.False(user.IsEmailVerified);
+        }
+
+        [Fact]
+        public void MarkPhoneVerified_SetsIsPhoneVerified()
+        {
+            User user = User.Create("Fatih", "", "");
+
+            user.MarkPhoneVerified();
+
+            Assert.True(user.IsPhoneVerified);
+            Assert.False(user.IsEmailVerified);
+        }
+
+        [Fact]
+        public void MarkEmailVerified_SetsIsEmailVerified()
+        {
+            User user = User.Create("Fatih", "", "");
+
+            user.MarkEmailVerified();
+
+            Assert.True(user.IsEmailVerified);
+            Assert.False(user.IsPhoneVerified);
+        }
+    }
 }

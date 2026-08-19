@@ -25,11 +25,34 @@ namespace RestaurantBill.Application.Features.Auths.Commands.SendVerificationCod
             User? user = await _uow.User.GetByIdAsync(request.UserId, true);
             if (user is null) return Result.Failure("Kullanıcı bulunamadı.");
 
+            if (request.Type == VerificationCodeType.Phone && user.IsPhoneVerified)
+                return Result.Failure("Telefon numarası zaten doğrulanmış.");
+
+            if (request.Type == VerificationCodeType.Email && user.IsEmailVerified)
+                return Result.Failure("E-posta adresi zaten doğrulanmış.");
+
             if (request.Type == VerificationCodeType.Phone && string.IsNullOrWhiteSpace(user.PhoneNumber))
                 return Result.Failure("Kullanıcının telefon numarası yok.");
 
             if (request.Type == VerificationCodeType.Email && string.IsNullOrWhiteSpace(user.Email))
                 return Result.Failure("Kullanıcının e-posta adresi yok.");
+
+            IEnumerable<VerificationCode> existingCodes = await _uow.VerificationCode.GetAllAsync(
+                vc => vc.UserId == user.Id && vc.Type == request.Type && !vc.IsDeleted, true);
+
+            VerificationCode? lastCode = existingCodes.OrderByDescending(vc => vc.CreatedAt).FirstOrDefault();
+            if (lastCode is not null)
+            {
+                double secondsSinceLastCode = (DateTime.UtcNow - lastCode.CreatedAt).TotalSeconds;
+                if (secondsSinceLastCode < 60)
+                {
+                    int remainingSeconds = (int)Math.Ceiling(60 - secondsSinceLastCode);
+                    return Result.Failure($"Yeni kod göndermek için {remainingSeconds} saniye beklemelisiniz.");
+                }
+            }
+
+            foreach (VerificationCode pendingCode in existingCodes.Where(vc => vc.Status == VerificationCodeStatus.Pending))
+                pendingCode.MarkAsExpired();
 
             string code = Random.Shared.Next(100000, 999999).ToString();
             VerificationCode verificationCode = VerificationCode.Create(user.Id, code, request.Type, DateTime.UtcNow.AddMinutes(5));

@@ -11,5 +11,8 @@ public class VerifyCodeCommandValidator : AbstractValidator<VerifyCodeCommand>
 
         RuleFor(x => x.Code)
             .NotEmpty().WithMessage("Doğrulama kodu boş bırakılamaz.");
+
+        RuleFor(x => x.Type)
+            .IsInEnum().WithMessage("Geçerli bir doğrulama tipi seçilmelidir.");
     }
 }

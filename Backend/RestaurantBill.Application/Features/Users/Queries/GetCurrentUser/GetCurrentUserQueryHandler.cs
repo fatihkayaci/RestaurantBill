@@ -42,7 +42,9 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, R
             PhoneNumber = user.PhoneNumber ?? string.Empty,
             UserCode = string.Empty,
             Role = UserRole.Owner,
-            IsActive = user.IsActive
+            IsActive = user.IsActive,
+            IsPhoneVerified = user.IsPhoneVerified,
+            IsEmailVerified = user.IsEmailVerified
         });
     }
 }

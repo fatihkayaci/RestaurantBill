@@ -57,6 +57,11 @@ export default function LoginPage() {
             }
             localStorage.setItem("token", response.token);
 
+            if (response.needsPhoneVerification) {
+                navigate("/verify-phone");
+                return;
+            }
+
             if (response.needsSlugSetup) {
                 navigate("/setup-slug");
                 return;

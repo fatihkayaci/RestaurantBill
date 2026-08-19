@@ -15,4 +15,6 @@ public class UserDto
     public string? BranchName { get; set; }
     public string? RestaurantName { get; set; }
     public DateTime? HireDate { get; set; }
+    public bool IsPhoneVerified { get; set; }
+    public bool IsEmailVerified { get; set; }
 }

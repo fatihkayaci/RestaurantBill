@@ -9,6 +9,8 @@ namespace RestaurantBill.Domain.Entities
         public string PhoneNumber { get; private set; }= string.Empty;
         public string PasswordHash { get; private set; } = string.Empty;
         public bool IsActive { get; private set; } = true;
+        public bool IsPhoneVerified { get; private set; } = false;
+        public bool IsEmailVerified { get; private set; } = false;
 
         protected User() { }
 
@@ -39,6 +41,16 @@ namespace RestaurantBill.Domain.Entities
         public void SetPasswordHash(string passwordHash)
         {
             PasswordHash = passwordHash;
+        }
+
+        public void MarkPhoneVerified()
+        {
+            IsPhoneVerified = true;
+        }
+
+        public void MarkEmailVerified()
+        {
+            IsEmailVerified = true;
         }
     }
 }

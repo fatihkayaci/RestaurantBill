@@ -43,5 +43,15 @@ namespace RestaurantBill.Domain.Entities
         {
             Attempts++;
         }
+
+        public void MarkAsExpired()
+        {
+            Status = VerificationCodeStatus.Expired;
+        }
+
+        public void MarkAsFailed()
+        {
+            Status = VerificationCodeStatus.Failed;
+        }
     }
 }

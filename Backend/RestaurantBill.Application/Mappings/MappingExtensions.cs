@@ -192,6 +192,8 @@ public static class MappingExtensions
         BranchId = ub.BranchId,
         BranchName = ub.Branch?.BranchName,
         RestaurantName = ub.Branch?.Company?.Name,
-        HireDate = ub.HireDate
+        HireDate = ub.HireDate,
+        IsPhoneVerified = u.IsPhoneVerified,
+        IsEmailVerified = u.IsEmailVerified
     };
 }
