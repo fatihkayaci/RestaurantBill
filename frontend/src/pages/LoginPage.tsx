@@ -150,11 +150,11 @@ export default function LoginPage() {
             </aside>
 
             {/* ── Sağ Alan ── */}
-            <main className="flex-1 bg-[#f5f0e8] dark:bg-[#18140f] flex items-center justify-center p-10">
+            <main className="flex-1 bg-[#f5f0e8] dark:bg-[#18140f] flex items-center justify-center p-4 sm:p-6 md:p-10">
                 <div className="w-full max-w-115 bg-[#fdfaf5] dark:bg-[#221d16] rounded-2xl border border-[#e8e0d0] dark:border-[#3d3528] shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)] overflow-hidden">
 
                     {/* Tabs */}
-                    <div className="flex border-b border-[#e8e0d0] dark:border-[#3d3528] px-6 relative">
+                    <div className="flex border-b border-[#e8e0d0] dark:border-[#3d3528] px-3 sm:px-6 relative">
                         {(["login", "register"] as TabType[]).map((tab) => (
                             <button
                                 key={tab}
@@ -175,7 +175,7 @@ export default function LoginPage() {
                         />
                     </div>
 
-                    <div className="px-7 pt-7 pb-6">
+                    <div className="px-4 sm:px-7 pt-7 pb-6">
                         {/* ── GİRİŞ FORMU ── */}
                         {activeTab === "login" && (
                             <form onSubmit={handleLogin} className="space-y-4.5">
@@ -260,7 +260,7 @@ export default function LoginPage() {
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                             AD
@@ -323,7 +323,7 @@ export default function LoginPage() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                             ŞİFRE

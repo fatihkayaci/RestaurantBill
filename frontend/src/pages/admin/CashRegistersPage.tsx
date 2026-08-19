@@ -188,7 +188,7 @@ export default function CashRegisters() {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="rounded-xl border border-rb-green/30 bg-rb-green-bg p-5">
                     <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-green">Toplam Bakiye</p>
                     <p className="text-3xl font-bold text-foreground mt-2">₺{totalBalance.toFixed(0)}</p>
@@ -246,7 +246,7 @@ export default function CashRegisters() {
                         </div>
 
                         {/* Status + actions */}
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
                             <span className={cn(
                                 "text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded",
                                 r.status === 1
@@ -255,7 +255,7 @@ export default function CashRegisters() {
                             )}>
                                 {r.status === 1 ? 'Açık' : 'Kapalı'}
                             </span>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                                 <button
                                     disabled={r.status !== 1}
                                     onClick={() => openTxDialog(r, 1)}
