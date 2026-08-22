@@ -18,7 +18,6 @@ import CashierDashboardPage from './pages/cashier/DashboardPage';
 import OwnerLayout from './pages/owner/Layout';
 import OwnerDashboardPage from './pages/owner/DashboardPage';
 import OwnerBrandingPage from './pages/owner/SettingsPage';
-import OwnerMembershipPage from './pages/owner/MembershipPage';
 import OwnerBranchesPage from './pages/owner/BranchesPage';
 import OwnerAdminsPage from './pages/owner/AdminsPage';
 import OwnerReportsPage from './pages/owner/ReportsPage';
@@ -64,7 +63,6 @@ function App() {
                     <Route path="overview" element={<OwnerDashboardPage />} />
                     <Route path="branches" element={<OwnerBranchesPage />} />
                     <Route path="admins" element={<OwnerAdminsPage />} />
-                    <Route path="membership" element={<OwnerMembershipPage />} />
                     <Route path="branding" element={<OwnerBrandingPage />} />
                     <Route path="reports" element={<OwnerReportsPage />} />
                     <Route path="audit-log" element={<OwnerAuditLogPage />} />
