@@ -42,7 +42,8 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             return Result<RegisterResponseDto>.Success(
                 new RegisterResponseDto
                 {
-                    Token = _jwtTokenGenerator.GenerateTransitionToken(user.Id, UserRole.Owner),
+                    Token = _jwtTokenGenerator.GenerateToken(user, company.Id, UserRole.Owner, user.Email!),
+                    NeedsSlugSetup = string.IsNullOrWhiteSpace(company.Slug)
                 }
             );
         }

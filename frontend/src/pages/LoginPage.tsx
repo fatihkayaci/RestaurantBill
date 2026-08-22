@@ -57,11 +57,6 @@ export default function LoginPage() {
             }
             localStorage.setItem("token", response.token);
 
-            if (response.needsPhoneVerification) {
-                navigate("/verify-phone");
-                return;
-            }
-
             if (response.needsSlugSetup) {
                 navigate("/setup-slug");
                 return;
@@ -110,7 +105,7 @@ export default function LoginPage() {
                 return;
             }
             localStorage.setItem("token", response.token);
-            navigate("/verify-phone");
+            navigate(response.needsSlugSetup ? "/setup-slug" : "/owner");
 
         } catch (error) {
             if (axios.isAxiosError(error)) {

@@ -20,6 +20,7 @@ export interface LoginResponse {
 }
 export interface RegisterResponse {
     token: string;
+    needsSlugSetup?: boolean;
 }
 export const VerificationCodeType = {
     Phone: 1,
