@@ -604,7 +604,7 @@ export default function Tables() {
             </div>
 
             {/* Table Grid — waiter tarafındaki tasarımla aynı renk/hover davranışı */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredTables.map(table => {
                     const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
                     return (
@@ -618,8 +618,8 @@ export default function Tables() {
                                 cfg.bg, cfg.border
                             )}
                         >
-                            <div className="flex items-start justify-between gap-1">
-                                <span className="font-serif text-[21px] font-bold text-foreground leading-none">
+                            <div className="flex items-start justify-between gap-1.5">
+                                <span className="font-serif text-[21px] font-bold text-foreground leading-[1.15]">
                                     {table.name}
                                 </span>
                                 <div className="flex items-center gap-2 shrink-0">

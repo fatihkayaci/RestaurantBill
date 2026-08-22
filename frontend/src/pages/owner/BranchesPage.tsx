@@ -209,7 +209,7 @@ export default function BranchesPage() {
                         </div>
 
                         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelClass}>Şube Adı</label>
                                     <input
@@ -230,7 +230,7 @@ export default function BranchesPage() {
                                     />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelClass}>Telefon</label>
                                     <input
@@ -252,7 +252,7 @@ export default function BranchesPage() {
                                     {createErrors.email && <p className="text-xs text-destructive mt-1">{createErrors.email}</p>}
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelClass}>Şehir</label>
                                     <select
@@ -281,7 +281,7 @@ export default function BranchesPage() {
                                     </select>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelClass}>Açık Adres</label>
                                     <input
