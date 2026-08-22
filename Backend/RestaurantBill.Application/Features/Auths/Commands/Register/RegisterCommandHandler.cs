@@ -1,7 +1,7 @@
 using RestaurantBill.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using RestaurantBill.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Shared;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
@@ -11,23 +11,25 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
 {
     public class RegisterCommandHandler : IRequestHandler<RegisterCommand, Result<RegisterResponseDto>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
-        public RegisterCommandHandler(IUnitOfWork uow, IPasswordHasher<User> passwordHasher, IJwtTokenGenerator jwtTokenGenerator)
+        public RegisterCommandHandler(IAppDbContext db, IPasswordHasher<User> passwordHasher, IJwtTokenGenerator jwtTokenGenerator)
         {
-            _uow = uow;
+            _db = db;
             _passwordHasher = passwordHasher;
             _jwtTokenGenerator = jwtTokenGenerator;
         }
 
         public async Task<Result<RegisterResponseDto>> Handle(RegisterCommand request, CancellationToken cancellationToken)
         {
-            bool phoneNumberExists = (await _uow.User.GetAllAsync(u => u.PhoneNumber == request.PhoneNumber && !u.IsDeleted, false)).Any();
+            bool phoneNumberExists = await _db.Users
+                .AnyAsync(u => u.PhoneNumber == request.PhoneNumber && !u.IsDeleted, cancellationToken);
             if (phoneNumberExists)
                 return Result<RegisterResponseDto>.Failure("Bu Telefon Numarası zaten kullanımda.");
 
-            bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && !u.IsDeleted, false)).Any();
+            bool emailExists = await _db.Users
+                .AnyAsync(u => u.Email == request.Email && !u.IsDeleted, cancellationToken);
             if (emailExists)
                 return Result<RegisterResponseDto>.Failure("Bu e-posta adresi zaten kullanımda.");
 
@@ -35,9 +37,9 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.Password));
             Company company = Company.Create(request.RestaurantName, user);
 
-            await _uow.User.AddAsync(user);
-            await _uow.Company.AddAsync(company);
-            await _uow.SaveChangesAsync(cancellationToken);
+            _db.Users.Add(user);
+            _db.Companies.Add(company);
+            await _db.SaveChangesAsync(cancellationToken);
 
             return Result<RegisterResponseDto>.Success(
                 new RegisterResponseDto

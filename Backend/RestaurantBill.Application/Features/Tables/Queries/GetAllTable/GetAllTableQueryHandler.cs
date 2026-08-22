@@ -1,56 +1,68 @@
-﻿using MediatR;
-using RestaurantBill.Domain.Interfaces;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
 {
     public class GetAllTableQueryHandler : IRequestHandler<GetAllTableQuery, Result<List<TableDto>>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
 
-        public GetAllTableQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+        public GetAllTableQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _currentUser = currentUser;
         }
 
-        /// <summary>
-        /// Returns all tables belonging to the authenticated user's restaurant, including the total price of each table's active order (if any).
-        /// </summary>
         public async Task<Result<List<TableDto>>> Handle(GetAllTableQuery request, CancellationToken cancellationToken)
         {
             Guid restaurantId = _currentUser.BranchId;
-            if(restaurantId == Guid.Empty) return Result<List<TableDto>>.Failure("ID değeri 0 veya negatif olamaz.");
-            var entities = await _uow.Table.GetAllAsync(t => t.Region.BranchId == restaurantId, includeProperties: "Region");
+            if (restaurantId == Guid.Empty) return Result<List<TableDto>>.Failure("Geçersiz şube bilgisi.");
 
-            var tableIds = entities.Select(t => t.Id).ToList();
-            var activeOrders = await _uow.Order.GetAllAsync(o =>
-                tableIds.Contains(o.TableId) && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled);
+            List<TableDto> tables = await _db.Tables
+                .AsNoTracking()
+                .Where(t => t.Region.BranchId == restaurantId)
+                .OrderBy(t => t.Name)
+                .Select(t => new TableDto
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Note = t.Note,
+                    Status = t.Status,
+                    RegionId = t.RegionId,
+                    RegionName = t.Region.Name
+                })
+                .ToListAsync(cancellationToken);
+
+            List<Guid> tableIds = tables.Select(t => t.Id).ToList();
+            var activeOrders = await _db.Orders
+                .AsNoTracking()
+                .Where(o => tableIds.Contains(o.TableId) && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled)
+                .Select(o => new { o.TableId, o.TotalPrice, o.CreatedAt, o.CreatedUser })
+                .ToListAsync(cancellationToken);
+
             var totalsByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.TotalPrice);
             var occupiedSinceByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.CreatedAt);
 
-            var creatorIds = activeOrders.Select(o => o.CreatedUser).Distinct().ToList();
-            var creators = await _uow.User.GetAllAsync(u => creatorIds.Contains(u.Id));
-            var creatorNameById = creators.ToDictionary(u => u.Id, u => u.FullName);
+            List<Guid> creatorIds = activeOrders.Select(o => o.CreatedUser).Distinct().ToList();
+            Dictionary<Guid, string> creatorNameById = await _db.Users
+                .AsNoTracking()
+                .Where(u => creatorIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
             var creatorNameByTableId = activeOrders.ToDictionary(o => o.TableId, o => creatorNameById.GetValueOrDefault(o.CreatedUser, string.Empty));
 
-            return Result<List<TableDto>>.Success(entities
-                .OrderBy(t => t.Name)
-                .Select(t =>
-                {
-                    var dto = t.ToDto();
-                    dto.ActiveOrderTotal = totalsByTableId.GetValueOrDefault(t.Id);
-                    dto.OccupiedSince = occupiedSinceByTableId.TryGetValue(t.Id, out var createdAt) ? createdAt : null;
-                    dto.CreatedByUserName = creatorNameByTableId.GetValueOrDefault(t.Id, string.Empty);
-                    return dto;
-                })
-                .ToList());
+            foreach (TableDto table in tables)
+            {
+                table.ActiveOrderTotal = totalsByTableId.GetValueOrDefault(table.Id);
+                table.OccupiedSince = occupiedSinceByTableId.TryGetValue(table.Id, out var createdAt) ? createdAt : null;
+                table.CreatedByUserName = creatorNameByTableId.GetValueOrDefault(table.Id, string.Empty);
+            }
+
+            return Result<List<TableDto>>.Success(tables);
         }
     }
 }

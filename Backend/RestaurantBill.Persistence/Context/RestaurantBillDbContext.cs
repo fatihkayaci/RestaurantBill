@@ -4,7 +4,7 @@ using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Persistence.Context;
 
-public class RestaurantBillDbContext : DbContext
+public class RestaurantBillDbContext : DbContext, IAppDbContext
 {
     private readonly ICurrentUserService _currentUser;
 

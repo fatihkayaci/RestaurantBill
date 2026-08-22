@@ -1,36 +1,41 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Mappings;
-using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Domain.Interfaces;
-using RestaurantBill.Domain.Shared;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Users.Queries.GetCurrentUser;
 
 public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, Result<UserDto>>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public GetCurrentUserQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public GetCurrentUserQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
     public async Task<Result<UserDto>> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
     {
-        User? user = await _uow.User.GetByIdAsync(_currentUser.UserId);
+        User? user = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         if (user is null) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
 
-        UserBranch? userBranch = (await _uow.UserBranch.GetAllAsync(ur => ur.UserId == user.Id, false, "Branch.Company")).FirstOrDefault();
+        UserBranch? userBranch = await _db.UserBranches
+            .AsNoTracking()
+            .Include(ur => ur.Branch).ThenInclude(b => b.Company)
+            .FirstOrDefaultAsync(ur => ur.UserId == user.Id, cancellationToken);
         if (userBranch is not null)
             return Result<UserDto>.Success(user.ToDto(userBranch));
 
-        bool isOwner = (await _uow.Company.GetAllAsync(c => c.OwnerUserId == user.Id && !c.IsDeleted, false)).Any();
+        bool isOwner = await _db.Companies
+            .AnyAsync(c => c.OwnerUserId == user.Id && !c.IsDeleted, cancellationToken);
         if (!isOwner) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
 
         return Result<UserDto>.Success(new UserDto

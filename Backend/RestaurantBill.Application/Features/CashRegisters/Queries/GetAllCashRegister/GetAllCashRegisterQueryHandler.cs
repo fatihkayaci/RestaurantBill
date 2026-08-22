@@ -1,29 +1,40 @@
-﻿using MediatR;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Mappings;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.CashRegisters.Queries.GetAllCashRegister;
 
 public class GetAllCashRegisterHandler : IRequestHandler<GetAllCashRegisterQuery, Result<List<CashRegisterDto>>>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public GetAllCashRegisterHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public GetAllCashRegisterHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
     public async Task<Result<List<CashRegisterDto>>> Handle(GetAllCashRegisterQuery request, CancellationToken cancellationToken)
     {
         Guid restaurantId = _currentUser.BranchId;
-        if(restaurantId == Guid.Empty) return Result<List<CashRegisterDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+        if (restaurantId == Guid.Empty) return Result<List<CashRegisterDto>>.Failure("Geçersiz şube bilgisi.");
 
-        var entities = await _uow.CashRegister.GetAllAsync(c => c.BranchId == restaurantId);
-        return Result<List<CashRegisterDto>>.Success(entities.OrderBy(r => r.Name).Select(r => r.ToDto()).ToList());
+        var registers = await _db.CashRegisters
+            .AsNoTracking()
+            .Where(c => c.BranchId == restaurantId)
+            .OrderBy(r => r.Name)
+            .Select(r => new CashRegisterDto
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Balance = r.Balance,
+                Status = r.Status
+            })
+            .ToListAsync(cancellationToken);
+
+        return Result<List<CashRegisterDto>>.Success(registers);
     }
 }

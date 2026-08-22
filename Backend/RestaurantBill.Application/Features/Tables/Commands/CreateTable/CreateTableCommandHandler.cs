@@ -1,21 +1,20 @@
 using MediatR;
-using RestaurantBill.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Exceptions;
-using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
 {
     public class CreateTableCommandHandler : IRequestHandler<CreateTableCommand, Result>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
 
-        public CreateTableCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+        public CreateTableCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _currentUser = currentUser;
         }
 
@@ -23,15 +22,16 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
         {
             Guid restaurantId = _currentUser.BranchId;
 
-            bool nameExistsInRegion = (await _uow.Table.GetAllAsync(t => t.Name == request.Name && t.RegionId == request.RegionId && t.Region.BranchId == restaurantId, false)).Any();
+            bool nameExistsInRegion = await _db.Tables
+                .AnyAsync(t => t.Name == request.Name && t.RegionId == request.RegionId && t.Region.BranchId == restaurantId, cancellationToken);
             if (nameExistsInRegion)
                 return Result.Failure("Bu bölgede bu isimde bir masa zaten mevcut.");
 
             Table table = Table.Create(request.Name, string.Empty, request.RegionId);
             table.AssignRegion(request.RegionId);
-            await _uow.Table.AddAsync(table);
+            _db.Tables.Add(table);
 
-            User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+            User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
                 restaurantId,
                 actor?.FullName ?? string.Empty,
@@ -41,9 +41,9 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
                 $"{actor?.FullName} {table.Name} adında yeni bir masa ekledi.",
                 nameof(Table),
                 table.Id);
-            await _uow.AuditLog.AddAsync(log);
+            _db.AuditLogs.Add(log);
 
-            await _uow.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
     }

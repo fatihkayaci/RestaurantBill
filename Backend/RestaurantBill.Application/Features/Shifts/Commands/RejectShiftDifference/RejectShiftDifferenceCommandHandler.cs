@@ -1,43 +1,43 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Shifts.Commands.RejectShiftDifference;
 
 public class RejectShiftDifferenceCommandHandler : IRequestHandler<RejectShiftDifferenceCommand, Result>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public RejectShiftDifferenceCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public RejectShiftDifferenceCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
     public async Task<Result> Handle(RejectShiftDifferenceCommand request, CancellationToken cancellationToken)
     {
-        Shift? shift = await _uow.Shift.GetByIdAsync(request.ShiftId, true);
+        Shift? shift = await _db.Shifts
+            .FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
         if (shift is null || shift.BranchId != _currentUser.BranchId)
             return Result.Failure("Vardiya bulunamadı.");
 
         if (shift.Difference is null or 0)
             return Result.Failure("Bu vardiyada reddedilecek bir fark yok.");
 
-        CashRegister? register = await _uow.CashRegister.GetByIdAsync(shift.CashRegisterId, true);
+        CashRegister? register = await _db.CashRegisters
+            .FirstOrDefaultAsync(c => c.Id == shift.CashRegisterId, cancellationToken);
         if (register is null) return Result.Failure("Kasa bulunamadı.");
 
         CashTransaction reversal = register.ApplyShiftDifference(-shift.Difference.Value, _currentUser.UserId);
-        await _uow.CashTransaction.AddAsync(reversal);
-        await _uow.CashRegister.UpdateAsync(register);
+        _db.CashTransactions.Add(reversal);
 
         shift.RejectDifference(_currentUser.UserId, request.Note);
-        await _uow.Shift.UpdateAsync(shift);
 
-        User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+        User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
             _currentUser.BranchId,
             actor?.FullName ?? string.Empty,
@@ -48,9 +48,9 @@ public class RejectShiftDifferenceCommandHandler : IRequestHandler<RejectShiftDi
                 (string.IsNullOrWhiteSpace(request.Note) ? string.Empty : $" Not: {request.Note}"),
             nameof(Shift),
             shift.Id);
-        await _uow.AuditLog.AddAsync(log);
+        _db.AuditLogs.Add(log);
 
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 }

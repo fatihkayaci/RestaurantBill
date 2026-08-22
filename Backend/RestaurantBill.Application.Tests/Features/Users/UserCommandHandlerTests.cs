@@ -2,6 +2,7 @@ using RestaurantBill.Application.Features.Users.Commands.CreateUser;
 using RestaurantBill.Application.Features.Users.Commands.DeleteUser;
 using RestaurantBill.Application.Features.Users.Commands.UpdateUser;
 using RestaurantBill.Application.Tests.Fakes;
+using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 
@@ -16,18 +17,17 @@ public class UserCommandHandlerTests
         return branch;
     }
 
-    public class CreateUserHandlerTests
+    public class CreateUserHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithValidCommand_AddsUserAndSaves()
         {
-            var uow = new FakeUnitOfWork();
-            Guid branchId = Guid.NewGuid();
-            await uow.RestaurantRepo.AddAsync(CreateBranchWithId(branchId));
+            Branch branch = CreateBranchWithId(CurrentUser.BranchId);
+            DbContext.Branches.Add(branch);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService { BranchId = branchId };
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new CreateUserCommandHandler(uow, new FakePasswordHasher(), currentUser);
+            var handler = new CreateUserCommandHandler(Db, new FakePasswordHasher(), CurrentUser);
             var command = new CreateUserCommand
             {
                 FullName = "Fatih Kayacı",
@@ -39,27 +39,25 @@ public class UserCommandHandlerTests
 
             await handler.Handle(command, CancellationToken.None);
 
-            Assert.Equal(2, uow.UserRepo.Added.Count);
-            Assert.Equal("hashed_123456", uow.UserRepo.Added[1].PasswordHash);
-            Assert.Single(uow.UserRestaurantRepo.Added);
-            Assert.Equal("fatih", uow.UserRestaurantRepo.Added[0].UserName);
-            Assert.Equal(UserRole.Waiter, uow.UserRestaurantRepo.Added[0].Role);
-            Assert.True(uow.SaveChangesCalled);
+            User createdUser = Assert.Single(DbContext.Users.Where(u => u.FullName == "Fatih Kayacı"));
+            Assert.Equal("hashed_123456", createdUser.PasswordHash);
+            UserBranch userBranch = Assert.Single(DbContext.UserBranches.ToList());
+            Assert.Equal("fatih", userBranch.UserName);
+            Assert.Equal(UserRole.Waiter, userBranch.Role);
         }
 
         [Fact]
         public async Task Handle_WithDuplicateUserName_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            Guid branchId = Guid.NewGuid();
-            Branch branch = CreateBranchWithId(branchId);
-            await uow.RestaurantRepo.AddAsync(branch);
+            Branch branch = CreateBranchWithId(CurrentUser.BranchId);
+            DbContext.Branches.Add(branch);
 
             User existing = User.Create("Ali Veli", "", "");
-            await uow.UserRepo.AddAsync(existing);
-            await uow.UserRestaurantRepo.AddAsync(UserBranch.Create(existing, branch, "fatih", "USR01", UserRole.Waiter));
+            DbContext.Users.Add(existing);
+            DbContext.UserBranches.Add(UserBranch.Create(existing, branch, "fatih", "USR01", UserRole.Waiter));
+            await DbContext.SaveChangesAsync();
 
-            var handler = new CreateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService { BranchId = branchId });
+            var handler = new CreateUserCommandHandler(Db, new FakePasswordHasher(), CurrentUser);
             var command = new CreateUserCommand
             {
                 FullName = "Başka Biri",
@@ -74,27 +72,25 @@ public class UserCommandHandlerTests
         }
     }
 
-    public class DeleteUserHandlerTests
+    public class DeleteUserHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingUser_MarksAsDeletedAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             User user = User.Create("Fatih", "", "");
-            await uow.UserRepo.AddAsync(user);
+            DbContext.Users.Add(user);
+            await DbContext.SaveChangesAsync();
 
-            var handler = new DeleteUserCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new DeleteUserCommandHandler(Db, CurrentUser);
             await handler.Handle(new DeleteUserCommand { UserId = user.Id }, CancellationToken.None);
 
             Assert.True(user.IsDeleted);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithNonExistingUser_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new DeleteUserCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new DeleteUserCommandHandler(Db, CurrentUser);
 
             var result = await handler.Handle(new DeleteUserCommand { UserId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -102,21 +98,23 @@ public class UserCommandHandlerTests
         }
     }
 
-    public class UpdateUserHandlerTests
+    public class UpdateUserHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingUser_UpdatesAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Branch branch = CreateBranchWithId(Guid.NewGuid());
+            DbContext.Branches.Add(branch);
             User user = User.Create("Eski Ad", "", "");
-            await uow.UserRepo.AddAsync(user);
+            DbContext.Users.Add(user);
             UserBranch userBranch = UserBranch.Create(user, branch, "eski", "OLD01", UserRole.Waiter);
-            await uow.UserRestaurantRepo.AddAsync(userBranch);
+            DbContext.UserBranches.Add(userBranch);
+            await DbContext.SaveChangesAsync();
 
-            var currentUser = new FakeCurrentUserService { Role = "Owner" };
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), currentUser);
+            var owner = new FakeCurrentUserService { Role = "Owner" };
+            await SeedActorAsync(userId: owner.UserId);
+
+            var handler = new UpdateUserCommandHandler(Db, new FakePasswordHasher(), owner);
             var command = new UpdateUserCommand
             {
                 UserId = user.Id,
@@ -131,21 +129,20 @@ public class UserCommandHandlerTests
             Assert.Equal("Yeni Ad", user.FullName);
             Assert.Equal(UserRole.Admin, userBranch.Role);
             Assert.True(user.IsActive);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithPassword_HashesAndSetsPassword()
         {
-            var uow = new FakeUnitOfWork();
             Branch branch = CreateBranchWithId(Guid.NewGuid());
+            DbContext.Branches.Add(branch);
             User user = User.Create("Fatih", "", "");
-            await uow.UserRepo.AddAsync(user);
-            await uow.UserRestaurantRepo.AddAsync(UserBranch.Create(user, branch, "fatih", "USR01", UserRole.Waiter));
+            DbContext.Users.Add(user);
+            DbContext.UserBranches.Add(UserBranch.Create(user, branch, "fatih", "USR01", UserRole.Waiter));
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), currentUser);
+            var handler = new UpdateUserCommandHandler(Db, new FakePasswordHasher(), CurrentUser);
             var command = new UpdateUserCommand
             {
                 UserId = user.Id,
@@ -163,8 +160,7 @@ public class UserCommandHandlerTests
         [Fact]
         public async Task Handle_WithNonExistingUser_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new UpdateUserCommandHandler(uow, new FakePasswordHasher(), new FakeCurrentUserService());
+            var handler = new UpdateUserCommandHandler(Db, new FakePasswordHasher(), CurrentUser);
 
             var result = await handler.Handle(new UpdateUserCommand { UserId = Guid.NewGuid(), FullName = "Ad", UserName = "un", UserCode = "UC" }, CancellationToken.None);
 

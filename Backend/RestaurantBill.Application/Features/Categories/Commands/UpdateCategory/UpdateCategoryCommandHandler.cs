@@ -1,33 +1,33 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Categories.Commands.UpdateCategory
 {
     public class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryCommand, Result>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
 
-        public UpdateCategoryCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+        public UpdateCategoryCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _currentUser = currentUser;
         }
 
         public async Task<Result> Handle(UpdateCategoryCommand command, CancellationToken cancellationToken)
         {
-            Category? category = await _uow.Category.GetByIdAsync(command.Id, true);
+            Category? category = await _db.Categories
+                .FirstOrDefaultAsync(c => c.Id == command.Id, cancellationToken);
             if (category is null) return Result.Failure("Böyle bir kategori bulunamadı");
 
             category.Rename(command.Name);
             category.SetTaxRate(command.TaxRate);
-            await _uow.Category.UpdateAsync(category);
 
-            User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+            User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
                 _currentUser.BranchId,
                 actor?.FullName ?? string.Empty,
@@ -37,9 +37,9 @@ namespace RestaurantBill.Application.Features.Categories.Commands.UpdateCategory
                 $"{actor?.FullName} {category.Name} kategorisini güncelledi.",
                 nameof(Category),
                 category.Id);
-            await _uow.AuditLog.AddAsync(log);
+            _db.AuditLogs.Add(log);
 
-            await _uow.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
     }

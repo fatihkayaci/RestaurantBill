@@ -1,34 +1,37 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Shifts.Commands.CloseShift;
 
 public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Result>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public CloseShiftCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public CloseShiftCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
     public async Task<Result> Handle(CloseShiftCommand request, CancellationToken cancellationToken)
     {
-        Shift? shift = await _uow.Shift.GetByIdAsync(request.ShiftId, true);
+        Shift? shift = await _db.Shifts
+            .FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
         if (shift is null) return Result.Failure("Vardiya bulunamadı.");
 
-        CashRegister? register = await _uow.CashRegister.GetByIdAsync(shift.CashRegisterId, true);
+        CashRegister? register = await _db.CashRegisters
+            .FirstOrDefaultAsync(c => c.Id == shift.CashRegisterId, cancellationToken);
         if (register is null) return Result.Failure("Kasa bulunamadı.");
 
-        var transactions = await _uow.CashTransaction.GetAllAsync(
-            t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt
-                && t.Id != shift.OpeningAdjustmentTransactionId);
+        List<CashTransaction> transactions = await _db.CashTransactions
+            .Where(t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt
+                && t.Id != shift.OpeningAdjustmentTransactionId)
+            .ToListAsync(cancellationToken);
 
         decimal expectedClosingBalance = shift.OpeningBalance;
         foreach (var transaction in transactions)
@@ -38,17 +41,15 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
         }
 
         shift.Close(_currentUser.UserId, expectedClosingBalance, request.CountedClosingBalance, request.Note);
-        await _uow.Shift.UpdateAsync(shift);
 
         bool hasDifference = shift.Difference != 0;
         if (hasDifference)
         {
             CashTransaction adjustment = register.ApplyShiftDifference(shift.Difference!.Value, _currentUser.UserId);
-            await _uow.CashTransaction.AddAsync(adjustment);
-            await _uow.CashRegister.UpdateAsync(register);
+            _db.CashTransactions.Add(adjustment);
         }
 
-        User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+        User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLogSeverity severity = hasDifference ? AuditLogSeverity.Warning : AuditLogSeverity.Info;
         AuditLog log = AuditLog.Create(
             _currentUser.BranchId,
@@ -61,9 +62,9 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
                 : $"{actor?.FullName} vardiyayı kapattı. Beklenen: ₺{shift.ExpectedClosingBalance}, Sayılan: ₺{shift.CountedClosingBalance}, Fark: ₺{shift.Difference}.",
             nameof(Shift),
             shift.Id);
-        await _uow.AuditLog.AddAsync(log);
+        _db.AuditLogs.Add(log);
 
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 }

@@ -1,3 +1,4 @@
+using RestaurantBill.Application.Features.Orders.Queries;
 using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -11,7 +12,7 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
 
     public GetActiveOrderByTableIdQueryTests()
     {
-        _handler = new GetActiveOrderByTableIdHandler(UnitOfWork);
+        _handler = new GetActiveOrderByTableIdHandler(new OrderQueries(AppDb));
     }
 
     [Fact]

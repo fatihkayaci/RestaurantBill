@@ -11,7 +11,7 @@ public class GetAllCategoriesQueryTests : IntegrationTestBase
 
     public GetAllCategoriesQueryTests()
     {
-        _handler = new GetAllCategoryQueryHandler(UnitOfWork, CurrentUser);
+        _handler = new GetAllCategoryQueryHandler(AppDb, CurrentUser);
     }
 
     [Fact]

@@ -1,24 +1,24 @@
 using RestaurantBill.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.Login
 {
     public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginResponseDto>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly ITenantResolver _tenantResolver;
 
-        public LoginCommandHandler(IUnitOfWork uow, IPasswordHasher<User> passwordHasher, IJwtTokenGenerator jwtTokenGenerator, ITenantResolver tenantResolver)
+        public LoginCommandHandler(IAppDbContext db, IPasswordHasher<User> passwordHasher, IJwtTokenGenerator jwtTokenGenerator, ITenantResolver tenantResolver)
         {
-            _uow = uow;
+            _db = db;
             _passwordHasher = passwordHasher;
             _jwtTokenGenerator = jwtTokenGenerator;
             _tenantResolver = tenantResolver;
@@ -33,11 +33,11 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 if (!string.IsNullOrWhiteSpace(request.UserName))
                     return Result<LoginResponseDto>.Failure("Kullanıcı adıyla giriş yapabilmek için restoran belirlenmelidir.");
 
-                return await LoginAsOwnerWithoutSlugAsync(request);
+                return await LoginAsOwnerWithoutSlugAsync(request, cancellationToken);
             }
 
-            Company? company = (await _uow.Company
-                .GetAllAsync(c => c.Slug == slug && !c.IsDeleted, false)).FirstOrDefault();
+            Company? company = await _db.Companies
+                .FirstOrDefaultAsync(c => c.Slug == slug && !c.IsDeleted, cancellationToken);
 
             if (company is null)
                 return Result<LoginResponseDto>.Failure("Böyle bir Restaurant bulunamadı. Url i değiştirip tekrar deneyiniz");
@@ -45,15 +45,16 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             if (!string.IsNullOrWhiteSpace(request.UserName))
                 return await LoginAsEmployeeAsync(request, company, cancellationToken);
 
-            return await LoginAsOwnerAsync(request, company);
+            return await LoginAsOwnerAsync(request, company, cancellationToken);
         }
 
-        private async Task<Result<LoginResponseDto>> LoginAsOwnerWithoutSlugAsync(LoginCommand request)
+        private async Task<Result<LoginResponseDto>> LoginAsOwnerWithoutSlugAsync(LoginCommand request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
-            User? emailUser = (await _uow.User.GetAllAsync(u => u.Email == request.Email && !u.IsDeleted, false)).FirstOrDefault();
+            User? emailUser = await _db.Users
+                .FirstOrDefaultAsync(u => u.Email == request.Email && !u.IsDeleted, cancellationToken);
 
             if (emailUser is null)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
@@ -61,7 +62,9 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             if (_passwordHasher.VerifyHashedPassword(emailUser, emailUser.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
-            IEnumerable<Company> owneds = await _uow.Company.GetAllAsync(c => c.OwnerUserId == emailUser.Id && !c.IsDeleted, false);
+            List<Company> owneds = await _db.Companies
+                .Where(c => c.OwnerUserId == emailUser.Id && !c.IsDeleted)
+                .ToListAsync(cancellationToken);
 
             var accessible = new Dictionary<Guid, (Company Company, UserRole Role, string UserName)>();
             foreach (Company owned in owneds)
@@ -81,12 +84,14 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
         private async Task<Result<LoginResponseDto>> LoginAsEmployeeAsync(LoginCommand request, Company company, CancellationToken cancellationToken)
         {
-            UserBranch? membership = (await _uow.UserBranch.GetAllAsync(
-                ur => ur.Branch.CompanyId == company.Id
-                   && ur.UserName == request.UserName
-                   && !ur.IsDeleted
-                   && !ur.User.IsDeleted,
-                false, nameof(User))).FirstOrDefault();
+            UserBranch? membership = await _db.UserBranches
+                .Include(ur => ur.User)
+                .FirstOrDefaultAsync(
+                    ur => ur.Branch.CompanyId == company.Id
+                       && ur.UserName == request.UserName
+                       && !ur.IsDeleted
+                       && !ur.User.IsDeleted,
+                    cancellationToken);
 
             if (membership is null)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
@@ -102,8 +107,8 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                     $"{membership.User.FullName} için hatalı şifre denemesi.",
                     nameof(User),
                     membership.UserId);
-                await _uow.AuditLog.AddAsync(failedLog);
-                await _uow.SaveChangesAsync(cancellationToken);
+                _db.AuditLogs.Add(failedLog);
+                await _db.SaveChangesAsync(cancellationToken);
 
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
             }
@@ -120,8 +125,8 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 $"{membership.User.FullName} giriş yaptı.",
                 nameof(User),
                 membership.UserId);
-            await _uow.AuditLog.AddAsync(log);
-            await _uow.SaveChangesAsync(cancellationToken);
+            _db.AuditLogs.Add(log);
+            await _db.SaveChangesAsync(cancellationToken);
 
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
@@ -129,12 +134,13 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             });
         }
 
-        private async Task<Result<LoginResponseDto>> LoginAsOwnerAsync(LoginCommand request, Company company)
+        private async Task<Result<LoginResponseDto>> LoginAsOwnerAsync(LoginCommand request, Company company, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
-            User? user = (await _uow.User.GetAllAsync(u => u.Email == request.Email && !u.IsDeleted, false)).FirstOrDefault();
+            User? user = await _db.Users
+                .FirstOrDefaultAsync(u => u.Email == request.Email && !u.IsDeleted, cancellationToken);
 
             if (user is null)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");

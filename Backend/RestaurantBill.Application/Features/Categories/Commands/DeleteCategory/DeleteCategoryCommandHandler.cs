@@ -1,25 +1,28 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Categories.Commands.DeleteCategory
 {
-    public class DeleteCategoryCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser) : IRequestHandler<DeleteCategoryCommand, Result>
+    public class DeleteCategoryCommandHandler(IAppDbContext db, ICurrentUserService currentUser) : IRequestHandler<DeleteCategoryCommand, Result>
     {
         public async Task<Result> Handle(DeleteCategoryCommand command, CancellationToken cancellationToken)
         {
-            Category? category = await uow.Category.GetByIdAsync(command.Id);
+            Category? category = await db.Categories
+                .FirstOrDefaultAsync(c => c.Id == command.Id, cancellationToken);
             if (category is null) return Result.Failure("Böyle bir kategori bulunamadı");
 
-            IEnumerable<Product> linkedProducts = await uow.Product.GetAllAsync(p => p.CategoryId == command.Id);
+            List<Product> linkedProducts = await db.Products
+                .Where(p => p.CategoryId == command.Id)
+                .ToListAsync(cancellationToken);
             category.EnsureCanBeDeleted(linkedProducts);
 
-            uow.Category.Delete(category);
+            db.Categories.Remove(category);
 
-            User? actor = await uow.User.GetByIdAsync(currentUser.UserId);
+            User? actor = await db.Users.FirstOrDefaultAsync(u => u.Id == currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
                 currentUser.BranchId,
                 actor?.FullName ?? string.Empty,
@@ -29,9 +32,9 @@ namespace RestaurantBill.Application.Features.Categories.Commands.DeleteCategory
                 $"{actor?.FullName} {category.Name} kategorisini sildi.",
                 nameof(Category),
                 category.Id);
-            await uow.AuditLog.AddAsync(log);
+            db.AuditLogs.Add(log);
 
-            await uow.SaveChangesAsync(cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
     }

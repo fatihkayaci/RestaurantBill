@@ -1,5 +1,5 @@
-using RestaurantBill.Domain.Interfaces;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -9,18 +9,19 @@ namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
 {
     public class UpdateCommandHandler : IRequestHandler<UpdateTableCommand, Result>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
 
-        public UpdateCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+        public UpdateCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _currentUser = currentUser;
         }
 
         public async Task<Result> Handle(UpdateTableCommand request, CancellationToken cancellationToken)
         {
-            Table? table = await _uow.Table.GetByIdAsync(request.Id, true);
+            Table? table = await _db.Tables
+                .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
             if (table is null) return Result.Failure("Böyle bir masa bulunamadı");
 
             table.Update(request.Name, table.Note);
@@ -28,9 +29,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
             if (request.Status.HasValue)
                 table.SetStatus(request.Status.Value);
 
-            await _uow.Table.UpdateAsync(table);
-
-            User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+            User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
                 _currentUser.BranchId,
                 actor?.FullName ?? string.Empty,
@@ -40,9 +39,9 @@ namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
                 $"{actor?.FullName} {table.Name} masasını güncelledi.",
                 nameof(Table),
                 table.Id);
-            await _uow.AuditLog.AddAsync(log);
+            _db.AuditLogs.Add(log);
 
-            await _uow.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
     }

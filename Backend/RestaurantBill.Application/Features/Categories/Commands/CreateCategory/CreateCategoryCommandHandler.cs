@@ -1,20 +1,20 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
 {
     public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryCommand, Result>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _userService;
 
-        public CreateCategoryCommandHandler(IUnitOfWork uow, ICurrentUserService userService)
+        public CreateCategoryCommandHandler(IAppDbContext db, ICurrentUserService userService)
         {
-            _uow = uow;
+            _db = db;
             _userService = userService;
         }
 
@@ -22,14 +22,15 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
         {
             Guid restaurantId = _userService.BranchId;
 
-            bool nameExists = (await _uow.Category.GetAllAsync(c => c.Name == command.Name && c.BranchId == restaurantId, false)).Any();
+            bool nameExists = await _db.Categories
+                .AnyAsync(c => c.Name == command.Name && c.BranchId == restaurantId, cancellationToken);
             if (nameExists)
                 return Result.Failure("Bu isimde bir kategori zaten mevcut.");
 
             Category category = Category.Create(command.Name, restaurantId, command.TaxRate);
-            await _uow.Category.AddAsync(category);
+            _db.Categories.Add(category);
 
-            User? actor = await _uow.User.GetByIdAsync(_userService.UserId);
+            User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _userService.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
                 restaurantId,
                 actor?.FullName ?? string.Empty,
@@ -39,9 +40,9 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
                 $"{actor?.FullName} {category.Name} adında yeni bir kategori ekledi.",
                 nameof(Category),
                 category.Id);
-            await _uow.AuditLog.AddAsync(log);
+            _db.AuditLogs.Add(log);
 
-            await _uow.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
     }

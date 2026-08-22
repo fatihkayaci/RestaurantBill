@@ -1,20 +1,21 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Shifts.Queries.GetMyCurrentShiftSummary;
 
 public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrentShiftSummaryQuery, Result<ShiftSummaryDto>>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public GetMyCurrentShiftSummaryQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public GetMyCurrentShiftSummaryQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
@@ -22,14 +23,16 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
     {
         Guid restaurantId = _currentUser.BranchId;
 
-        var openShifts = await _uow.Shift.GetAllAsync(
-            s => s.BranchId == restaurantId && s.OpenedByUserId == _currentUser.UserId && s.Status == ShiftStatus.Open);
-        var shift = openShifts.FirstOrDefault();
+        Shift? shift = await _db.Shifts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.BranchId == restaurantId && s.OpenedByUserId == _currentUser.UserId && s.Status == ShiftStatus.Open, cancellationToken);
         if (shift is null) return Result<ShiftSummaryDto>.Failure("Açık bir vardiyanız yok.");
 
-        var payments = await _uow.Payment.GetAllAsync(
-            p => p.CashRegisterId == shift.CashRegisterId && p.CreatedAt >= shift.OpenedAt,
-            false, "Order");
+        List<Payment> payments = await _db.Payments
+            .AsNoTracking()
+            .Include(p => p.Order)
+            .Where(p => p.CashRegisterId == shift.CashRegisterId && p.CreatedAt >= shift.OpenedAt)
+            .ToListAsync(cancellationToken);
 
         var breakdown = payments
             .GroupBy(p => p.PaymentMethod)
@@ -41,8 +44,10 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
             })
             .ToList();
 
-        var openOrders = await _uow.Order.GetAllAsync(
-            o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.Table.Region.BranchId == restaurantId);
+        List<Order> openOrders = await _db.Orders
+            .AsNoTracking()
+            .Where(o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.Table.Region.BranchId == restaurantId)
+            .ToListAsync(cancellationToken);
         int openTablesCount = openOrders.Select(o => o.TableId).Distinct().Count();
 
         // Bir masayı kapatmak, KDV oranına göre birden fazla Payment satırı oluşturabiliyor;
@@ -53,9 +58,11 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
             .Distinct()
             .Count();
 
-        var transactions = await _uow.CashTransaction.GetAllAsync(
-            t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt
-                && t.Id != shift.OpeningAdjustmentTransactionId);
+        List<CashTransaction> transactions = await _db.CashTransactions
+            .AsNoTracking()
+            .Where(t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt
+                && t.Id != shift.OpeningAdjustmentTransactionId)
+            .ToListAsync(cancellationToken);
 
         decimal expectedCashInRegister = shift.OpeningBalance;
         foreach (var transaction in transactions)

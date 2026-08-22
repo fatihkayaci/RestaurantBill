@@ -8,6 +8,7 @@ using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantit
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemStatus;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
 using RestaurantBill.Application.Tests.Fakes;
+using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 
@@ -33,7 +34,6 @@ public class OrderCommandHandlerTests
     {
         var product = Product.Create("Ürün", price, "img.png", Guid.NewGuid());
         SetId(product, id ?? Guid.NewGuid());
-        SetCategory(product, Category.Create("Test Category", Guid.NewGuid(), taxRate: 0m));
         return product;
     }
 
@@ -43,105 +43,90 @@ public class OrderCommandHandlerTests
         prop.SetValue(entity, id);
     }
 
-    private static void SetCategory(Product product, Category category)
-    {
-        var prop = typeof(Product).GetProperty(nameof(Product.Category))!;
-        prop.SetValue(product, category);
-    }
-
-    public class CreateOrderHandlerTests
+    public class CreateOrderHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithAvailableTable_CreatesOrderAndOccupiesTable()
         {
-            var uow = new FakeUnitOfWork();
             Table table = CreateTable();
-            await uow.TableRepo.AddAsync(table);
+            DbContext.Tables.Add(table);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new CreateOrderCommandHandler(uow, currentUser);
+            var handler = new CreateOrderCommandHandler(Db, CurrentUser);
             var command = new CreateOrderCommand { TableId = table.Id };
 
             var result = await handler.Handle(command, CancellationToken.None);
             Assert.True(result.IsSuccess);
-            Assert.Single(uow.OrderRepo.Added);
+            Assert.Single(DbContext.Orders.ToList());
             Assert.Equal(TableStatus.Occupied, table.Status);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithNonExistingTable_ThrowsException()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new CreateOrderCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new CreateOrderCommandHandler(Db, CurrentUser);
             var result = await handler.Handle(new CreateOrderCommand { TableId = Guid.NewGuid() }, CancellationToken.None);
             Assert.False(result.IsSuccess);
         }
     }
 
-    public class CancelOrderHandlerTests
+    public class CancelOrderHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingOrder_CancelsOrderAndReleasesTable()
         {
-            var uow = new FakeUnitOfWork();
             Guid tableId = Guid.NewGuid();
             Table table = OrderCommandHandlerTests.CreateTable(tableId);
             table.Occupy();
             Order order = OrderCommandHandlerTests.CreateOrder(tableId);
-            await uow.TableRepo.AddAsync(table);
-            await uow.OrderRepo.AddAsync(order);
+            DbContext.Tables.Add(table);
+            DbContext.Orders.Add(order);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new CancelOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), currentUser);
+            var handler = new CancelOrderCommandHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
             await handler.Handle(new CancelOrderCommand { OrderId = order.Id }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Cancelled, order.Status);
             Assert.Equal(TableStatus.Available, table.Status);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithNonExistingOrder_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new CancelOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
+            var handler = new CancelOrderCommandHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
 
             var result = await handler.Handle(new CancelOrderCommand { OrderId = Guid.NewGuid() }, CancellationToken.None);
             Assert.True(result.IsFailure);
         }
     }
 
-    public class CloseOrderHandlerTests
+    public class CloseOrderHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingOrder_ClosesOrderAndReleasesTable()
         {
-            var uow = new FakeUnitOfWork();
             Guid tableId = Guid.NewGuid();
             Table table = CreateTable(tableId);
             table.Occupy();
             Order order = CreateOrder(tableId);
-            await uow.TableRepo.AddAsync(table);
-            await uow.OrderRepo.AddAsync(order);
+            DbContext.Tables.Add(table);
+            DbContext.Orders.Add(order);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new CloseOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), currentUser);
+            var handler = new CloseOrderCommandHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
             await handler.Handle(new DeleteCommand { OrderId = order.Id }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Paid, order.Status);
             Assert.Equal(TableStatus.Available, table.Status);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithNonExistingOrder_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new CloseOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
+            var handler = new CloseOrderCommandHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
 
             var result = await handler.Handle(new DeleteCommand { OrderId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -149,18 +134,18 @@ public class OrderCommandHandlerTests
         }
     }
 
-    public class AddProductToOrderHandlerTests
+    public class AddProductToOrderHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithValidItems_AddsItemsToOrderAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Order order = OrderCommandHandlerTests.CreateOrder();
             Product product = OrderCommandHandlerTests.CreateProduct(price: 15m);
-            await uow.OrderRepo.AddAsync(order);
-            await uow.ProductRepo.AddAsync(product);
+            DbContext.Orders.Add(order);
+            DbContext.Products.Add(product);
+            await DbContext.SaveChangesAsync();
 
-            var handler = new AddProductToOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
+            var handler = new AddProductToOrderCommandHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
             var command = new AddProductToOrderCommand
             {
                 OrderId = order.Id,
@@ -171,33 +156,30 @@ public class OrderCommandHandlerTests
 
             Assert.Single(order.OrderItems);
             Assert.Equal(30m, order.TotalPrice);
-            Assert.True(uow.SaveChangesCalled);
         }
     }
 
-    public class RemoveProductFromOrderHandlerTests
+    public class RemoveProductFromOrderHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingProduct_RemovesItemAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Order order = OrderCommandHandlerTests.CreateOrder();
             Product product = OrderCommandHandlerTests.CreateProduct();
             order.AddItem(product, 2);
-            await uow.OrderRepo.AddAsync(order);
+            DbContext.Orders.Add(order);
+            await DbContext.SaveChangesAsync();
 
-            var handler = new RemoveProductFromOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
+            var handler = new RemoveProductFromOrderCommandHandler(Db, new FakeTableNotificationService(), CurrentUser);
             await handler.Handle(new RemoveProductFromOrderCommand { OrderId = order.Id, ProductId = product.Id }, CancellationToken.None);
 
             Assert.Empty(order.OrderItems);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithNonExistingOrder_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new RemoveProductFromOrderCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
+            var handler = new RemoveProductFromOrderCommandHandler(Db, new FakeTableNotificationService(), CurrentUser);
 
             var result = await handler.Handle(new RemoveProductFromOrderCommand { OrderId = Guid.NewGuid(), ProductId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -205,63 +187,59 @@ public class OrderCommandHandlerTests
         }
     }
 
-    public class UpdateOrderItemQuantityHandlerTests
+    public class UpdateOrderItemQuantityHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingItem_UpdatesQuantityAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Order order = OrderCommandHandlerTests.CreateOrder();
             Product product = OrderCommandHandlerTests.CreateProduct(price: 10m);
             order.AddItem(product, 2);
-            await uow.OrderRepo.AddAsync(order);
+            DbContext.Orders.Add(order);
+            await DbContext.SaveChangesAsync();
 
-            var handler = new UpdateOrderItemQuantityCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
+            var handler = new UpdateOrderItemQuantityCommandHandler(Db, new FakeTableNotificationService(), CurrentUser);
             await handler.Handle(new UpdateOrderItemQuantityCommand { OrderId = order.Id, ProductId = product.Id, Quantity = 5 }, CancellationToken.None);
 
             Assert.Equal(50m, order.TotalPrice);
-            Assert.True(uow.SaveChangesCalled);
         }
     }
 
-    public class UpdateOrderStatusHandlerTests
+    public class UpdateOrderStatusHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithValidStatus_UpdatesStatusAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Order order = OrderCommandHandlerTests.CreateOrder();
             order.AddItem(OrderCommandHandlerTests.CreateProduct(), 1);
-            await uow.OrderRepo.AddAsync(order);
+            DbContext.Orders.Add(order);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new UpdateOrderStatusCommandHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), currentUser);
+            var handler = new UpdateOrderStatusCommandHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
             await handler.Handle(new UpdateOrderStatusCommand { OrderId = order.Id, Status = (int)OrderStatus.Preparing }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Preparing, order.Status);
-            Assert.True(uow.SaveChangesCalled);
         }
     }
 
-    public class UpdateOrderItemStatusHandlerTests
+    public class UpdateOrderItemStatusHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingItem_UpdatesStatusAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Order order = OrderCommandHandlerTests.CreateOrder();
             order.AddItem(OrderCommandHandlerTests.CreateProduct(), 1);
             OrderItem item = order.OrderItems.First();
             Guid itemId = Guid.NewGuid();
             SetId(item, itemId);
-            await uow.OrderRepo.AddAsync(order);
+            DbContext.Orders.Add(order);
+            await DbContext.SaveChangesAsync();
 
-            var handler = new UpdateOrderItemStatusCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
+            var handler = new UpdateOrderItemStatusCommandHandler(Db, new FakeTableNotificationService(), CurrentUser);
             await handler.Handle(new UpdateOrderItemStatusCommand { OrderId = order.Id, OrderItemId = itemId, Status = (int)OrderItemStatus.Preparing }, CancellationToken.None);
 
             Assert.Equal(OrderItemStatus.Preparing, item.Status);
-            Assert.True(uow.SaveChangesCalled);
         }
     }
 }

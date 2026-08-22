@@ -1,11 +1,12 @@
 using RestaurantBill.Application.Features.Auths.Commands.VerifyCode;
 using RestaurantBill.Application.Tests.Fakes;
+using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.Tests.Features.Auths;
 
-public class VerifyCodeCommandHandlerTests
+public class VerifyCodeCommandHandlerTests : ApplicationTestBase
 {
     private static void SetId(BaseEntity entity, Guid id)
         => typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(entity, id);
@@ -17,20 +18,20 @@ public class VerifyCodeCommandHandlerTests
         return user;
     }
 
-    private static VerifyCodeCommandHandler CreateHandler(FakeUnitOfWork uow)
-        => new(uow, new FakeJwtTokenGenerator());
+    private VerifyCodeCommandHandler CreateHandler()
+        => new(Db, new FakeJwtTokenGenerator());
 
     [Fact]
     public async Task Handle_WrongCode_IncrementsAttemptAndReturnsFailure()
     {
-        var uow = new FakeUnitOfWork();
         User user = CreateUserWithId();
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
 
         VerificationCode code = VerificationCode.Create(user.Id, "111111", VerificationCodeType.Phone, DateTime.UtcNow.AddMinutes(5));
-        await uow.VerificationCodeRepo.AddAsync(code);
+        DbContext.VerificationCodes.Add(code);
+        await DbContext.SaveChangesAsync();
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new VerifyCodeCommand { UserId = user.Id, Code = "999999", Type = VerificationCodeType.Phone }, CancellationToken.None);
 
         Assert.True(result.IsFailure);
@@ -41,14 +42,14 @@ public class VerifyCodeCommandHandlerTests
     [Fact]
     public async Task Handle_ExpiredCode_MarksExpiredAndReturnsFailure()
     {
-        var uow = new FakeUnitOfWork();
         User user = CreateUserWithId();
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
 
         VerificationCode code = VerificationCode.Create(user.Id, "111111", VerificationCodeType.Phone, DateTime.UtcNow.AddMinutes(-1));
-        await uow.VerificationCodeRepo.AddAsync(code);
+        DbContext.VerificationCodes.Add(code);
+        await DbContext.SaveChangesAsync();
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new VerifyCodeCommand { UserId = user.Id, Code = "111111", Type = VerificationCodeType.Phone }, CancellationToken.None);
 
         Assert.True(result.IsFailure);
@@ -58,18 +59,18 @@ public class VerifyCodeCommandHandlerTests
     [Fact]
     public async Task Handle_FifthWrongAttempt_MarksFailedAndReturnsFailure()
     {
-        var uow = new FakeUnitOfWork();
         User user = CreateUserWithId();
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
 
         VerificationCode code = VerificationCode.Create(user.Id, "111111", VerificationCodeType.Phone, DateTime.UtcNow.AddMinutes(5));
         code.IncrementAttempt();
         code.IncrementAttempt();
         code.IncrementAttempt();
         code.IncrementAttempt();
-        await uow.VerificationCodeRepo.AddAsync(code);
+        DbContext.VerificationCodes.Add(code);
+        await DbContext.SaveChangesAsync();
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new VerifyCodeCommand { UserId = user.Id, Code = "999999", Type = VerificationCodeType.Phone }, CancellationToken.None);
 
         Assert.True(result.IsFailure);
@@ -80,14 +81,14 @@ public class VerifyCodeCommandHandlerTests
     [Fact]
     public async Task Handle_PendingCodeOfDifferentType_ReturnsFailure()
     {
-        var uow = new FakeUnitOfWork();
         User user = CreateUserWithId();
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
 
         VerificationCode emailCode = VerificationCode.Create(user.Id, "111111", VerificationCodeType.Email, DateTime.UtcNow.AddMinutes(5));
-        await uow.VerificationCodeRepo.AddAsync(emailCode);
+        DbContext.VerificationCodes.Add(emailCode);
+        await DbContext.SaveChangesAsync();
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new VerifyCodeCommand { UserId = user.Id, Code = "111111", Type = VerificationCodeType.Phone }, CancellationToken.None);
 
         Assert.True(result.IsFailure);
@@ -97,17 +98,17 @@ public class VerifyCodeCommandHandlerTests
     [Fact]
     public async Task Handle_PhoneHappyPath_VerifiesUserAndReturnsToken()
     {
-        var uow = new FakeUnitOfWork();
         User user = CreateUserWithId();
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
 
         Company company = Company.Create("Test Restoran", user);
-        await uow.CompanyRepo.AddAsync(company);
+        DbContext.Companies.Add(company);
 
         VerificationCode code = VerificationCode.Create(user.Id, "111111", VerificationCodeType.Phone, DateTime.UtcNow.AddMinutes(5));
-        await uow.VerificationCodeRepo.AddAsync(code);
+        DbContext.VerificationCodes.Add(code);
+        await DbContext.SaveChangesAsync();
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new VerifyCodeCommand { UserId = user.Id, Code = "111111", Type = VerificationCodeType.Phone }, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -120,14 +121,14 @@ public class VerifyCodeCommandHandlerTests
     [Fact]
     public async Task Handle_EmailHappyPath_VerifiesUserWithoutReturningToken()
     {
-        var uow = new FakeUnitOfWork();
         User user = CreateUserWithId();
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
 
         VerificationCode code = VerificationCode.Create(user.Id, "111111", VerificationCodeType.Email, DateTime.UtcNow.AddMinutes(5));
-        await uow.VerificationCodeRepo.AddAsync(code);
+        DbContext.VerificationCodes.Add(code);
+        await DbContext.SaveChangesAsync();
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new VerifyCodeCommand { UserId = user.Id, Code = "111111", Type = VerificationCodeType.Email }, CancellationToken.None);
 
         Assert.True(result.IsSuccess);

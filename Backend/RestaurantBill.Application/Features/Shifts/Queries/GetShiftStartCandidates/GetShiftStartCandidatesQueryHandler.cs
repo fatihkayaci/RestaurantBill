@@ -1,30 +1,36 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Shifts.Queries.GetShiftStartCandidates;
 
 public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStartCandidatesQuery, Result<List<ShiftStartCandidateDto>>>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public GetShiftStartCandidatesQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public GetShiftStartCandidatesQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
     public async Task<Result<List<ShiftStartCandidateDto>>> Handle(GetShiftStartCandidatesQuery request, CancellationToken cancellationToken)
     {
         Guid restaurantId = _currentUser.BranchId;
-        if (restaurantId == Guid.Empty) return Result<List<ShiftStartCandidateDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+        if (restaurantId == Guid.Empty) return Result<List<ShiftStartCandidateDto>>.Failure("Geçersiz şube bilgisi.");
 
-        var registers = await _uow.CashRegister.GetAllAsync(r => r.BranchId == restaurantId && r.Status == CashRegisterStatus.Open);
-        var shifts = await _uow.Shift.GetAllAsync(s => s.BranchId == restaurantId);
+        var registers = await _db.CashRegisters
+            .AsNoTracking()
+            .Where(r => r.BranchId == restaurantId && r.Status == CashRegisterStatus.Open)
+            .ToListAsync(cancellationToken);
+        var shifts = await _db.Shifts
+            .AsNoTracking()
+            .Where(s => s.BranchId == restaurantId)
+            .ToListAsync(cancellationToken);
 
         bool userHasOpenShift = shifts.Any(s => s.OpenedByUserId == _currentUser.UserId && s.Status == ShiftStatus.Open);
         if (userHasOpenShift)

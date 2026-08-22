@@ -1,28 +1,28 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.SendVerificationCode
 {
     public class SendVerificationCodeCommandHandler : IRequestHandler<SendVerificationCodeCommand, Result>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ISmsSender _smsSender;
         private readonly IEmailSender _emailSender;
 
-        public SendVerificationCodeCommandHandler(IUnitOfWork uow, ISmsSender smsSender, IEmailSender emailSender)
+        public SendVerificationCodeCommandHandler(IAppDbContext db, ISmsSender smsSender, IEmailSender emailSender)
         {
-            _uow = uow;
+            _db = db;
             _smsSender = smsSender;
             _emailSender = emailSender;
         }
 
         public async Task<Result> Handle(SendVerificationCodeCommand request, CancellationToken cancellationToken)
         {
-            User? user = await _uow.User.GetByIdAsync(request.UserId, true);
+            User? user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
             if (user is null) return Result.Failure("Kullanıcı bulunamadı.");
 
             if (request.Type == VerificationCodeType.Phone && user.IsPhoneVerified)
@@ -37,8 +37,9 @@ namespace RestaurantBill.Application.Features.Auths.Commands.SendVerificationCod
             if (request.Type == VerificationCodeType.Email && string.IsNullOrWhiteSpace(user.Email))
                 return Result.Failure("Kullanıcının e-posta adresi yok.");
 
-            IEnumerable<VerificationCode> existingCodes = await _uow.VerificationCode.GetAllAsync(
-                vc => vc.UserId == user.Id && vc.Type == request.Type && !vc.IsDeleted, true);
+            List<VerificationCode> existingCodes = await _db.VerificationCodes
+                .Where(vc => vc.UserId == user.Id && vc.Type == request.Type && !vc.IsDeleted)
+                .ToListAsync(cancellationToken);
 
             VerificationCode? lastCode = existingCodes.OrderByDescending(vc => vc.CreatedAt).FirstOrDefault();
             if (lastCode is not null)
@@ -57,8 +58,8 @@ namespace RestaurantBill.Application.Features.Auths.Commands.SendVerificationCod
             string code = Random.Shared.Next(100000, 999999).ToString();
             VerificationCode verificationCode = VerificationCode.Create(user.Id, code, request.Type, DateTime.UtcNow.AddMinutes(5));
 
-            await _uow.VerificationCode.AddAsync(verificationCode);
-            await _uow.SaveChangesAsync(cancellationToken);
+            _db.VerificationCodes.Add(verificationCode);
+            await _db.SaveChangesAsync(cancellationToken);
 
             if (request.Type == VerificationCodeType.Phone)
                 await _smsSender.SendAsync(user.PhoneNumber!, $"Doğrulama kodunuz: {code}");

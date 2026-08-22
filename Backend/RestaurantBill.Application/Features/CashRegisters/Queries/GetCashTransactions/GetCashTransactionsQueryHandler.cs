@@ -1,29 +1,44 @@
-﻿using MediatR;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Mappings;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.CashRegisters.Queries.GetCashTransactions;
 
 public class GetCashTransactionsQueryHandler : IRequestHandler<GetCashTransactionsQuery, Result<List<CashTransactionDto>>>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public GetCashTransactionsQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public GetCashTransactionsQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
     public async Task<Result<List<CashTransactionDto>>> Handle(GetCashTransactionsQuery request, CancellationToken cancellationToken)
     {
-        var restaurantId = _currentUser.BranchId;
-        if(restaurantId == Guid.Empty) return Result<List<CashTransactionDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+        Guid restaurantId = _currentUser.BranchId;
+        if (restaurantId == Guid.Empty) return Result<List<CashTransactionDto>>.Failure("Geçersiz şube bilgisi.");
 
-        var entities = await _uow.CashTransaction.GetAllAsync(t => t.CashRegister.BranchId == restaurantId);
-        return Result<List<CashTransactionDto>>.Success(entities.OrderByDescending(t => t.CreatedAt).Take(50).Select(t => t.ToDto()).ToList());
+        var transactions = await _db.CashTransactions
+            .AsNoTracking()
+            .Where(t => t.CashRegister.BranchId == restaurantId)
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(50)
+            .Select(t => new CashTransactionDto
+            {
+                Id = t.Id,
+                CashRegisterId = t.CashRegisterId,
+                Type = t.Type,
+                Amount = t.Amount,
+                UserId = t.UserId,
+                RelatedCashRegisterId = t.RelatedCashRegisterId,
+                CreatedAt = t.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return Result<List<CashTransactionDto>>.Success(transactions);
     }
 }

@@ -1,31 +1,40 @@
-﻿using MediatR;
-using RestaurantBill.Domain.Interfaces;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Shared;
 namespace RestaurantBill.Application.Features.Categories.Queries.GetAllCategories
 {
     public class GetAllCategoryQueryHandler : IRequestHandler<GetAllCategoryQuery, Result<List<CategoryDto>>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
 
-        public GetAllCategoryQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+        public GetAllCategoryQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _currentUser = currentUser;
         }
-        /// <summary>
-        /// Returns all orders including their items and product details.
-        /// </summary>
+
         public async Task<Result<List<CategoryDto>>> Handle(GetAllCategoryQuery request, CancellationToken cancellationToken)
         {
             Guid restaurantId = _currentUser.BranchId;
-            if(restaurantId == Guid.Empty) return Result<List<CategoryDto>>.Failure("ID değeri 0 veya negatif olamaz.");
-            var entities = await _uow.Category.GetAllAsync(c => c.BranchId == restaurantId, false, "Branch");
+            if (restaurantId == Guid.Empty) return Result<List<CategoryDto>>.Failure("Geçersiz şube bilgisi.");
 
-            return Result<List<CategoryDto>>.Success(entities.OrderBy(c => c.Name).Select(c => c.ToDto()).ToList());
+            var categories = await _db.Categories
+                .AsNoTracking()
+                .Where(c => c.BranchId == restaurantId)
+                .OrderBy(c => c.Name)
+                .Select(c => new CategoryDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    TaxRate = c.TaxRate,
+                    EffectiveTaxRate = c.TaxRate ?? c.Branch.TaxRate
+                })
+                .ToListAsync(cancellationToken);
+
+            return Result<List<CategoryDto>>.Success(categories);
         }
     }
 }

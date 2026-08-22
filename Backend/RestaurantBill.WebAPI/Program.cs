@@ -20,7 +20,6 @@ builder.Services.AddMemoryCache();
 builder.Services.AddSwaggerWithJwt()
                 .AddDatabase(builder.Configuration)
                 .AddIdentityWithJwt(builder.Configuration)
-                .AddRepositories()
                 .AddCorsPolicy()
                 .AddMediatRWithBehaviors()
                 .AddInfrastructureServices()

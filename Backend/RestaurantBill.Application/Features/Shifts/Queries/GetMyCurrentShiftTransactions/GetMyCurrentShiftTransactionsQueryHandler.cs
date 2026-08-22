@@ -1,20 +1,21 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Shifts.Queries.GetMyCurrentShiftTransactions;
 
 public class GetMyCurrentShiftTransactionsQueryHandler : IRequestHandler<GetMyCurrentShiftTransactionsQuery, Result<List<ShiftTransactionDto>>>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public GetMyCurrentShiftTransactionsQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public GetMyCurrentShiftTransactionsQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
@@ -22,19 +23,22 @@ public class GetMyCurrentShiftTransactionsQueryHandler : IRequestHandler<GetMyCu
     {
         Guid restaurantId = _currentUser.BranchId;
 
-        var openShifts = await _uow.Shift.GetAllAsync(
-            s => s.BranchId == restaurantId && s.OpenedByUserId == _currentUser.UserId && s.Status == ShiftStatus.Open);
-        var shift = openShifts.FirstOrDefault();
+        Shift? shift = await _db.Shifts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.BranchId == restaurantId && s.OpenedByUserId == _currentUser.UserId && s.Status == ShiftStatus.Open, cancellationToken);
         if (shift is null) return Result<List<ShiftTransactionDto>>.Failure("Açık bir vardiyanız yok.");
 
-        var payments = await _uow.Payment.GetAllAsync(
-            p => p.CashRegisterId == shift.CashRegisterId && p.CreatedAt >= shift.OpenedAt,
-            false,
-            "Order,Order.Table");
+        List<Payment> payments = await _db.Payments
+            .AsNoTracking()
+            .Include(p => p.Order).ThenInclude(o => o!.Table)
+            .Where(p => p.CashRegisterId == shift.CashRegisterId && p.CreatedAt >= shift.OpenedAt)
+            .ToListAsync(cancellationToken);
 
-        var creatorIds = payments.Select(p => p.Order.CreatedUser).Distinct().ToList();
-        var creators = await _uow.User.GetAllAsync(u => creatorIds.Contains(u.Id));
-        var creatorNameById = creators.ToDictionary(u => u.Id, u => u.FullName);
+        List<Guid> creatorIds = payments.Select(p => p.Order.CreatedUser).Distinct().ToList();
+        Dictionary<Guid, string> creatorNameById = await _db.Users
+            .AsNoTracking()
+            .Where(u => creatorIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
         // One Payment row is created per tax rate per checkout, and an order can be paid off
         // across multiple partial checkouts too — group everything by order so the cashier

@@ -1,42 +1,37 @@
 using MediatR;
-using RestaurantBill.Application.Common;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
 {
     public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Result<OrderDto>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
 
-        public CreateOrderCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+        public CreateOrderCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _currentUser = currentUser;
         }
-        /// <summary>
-        /// Creates a new empty order for the given table. Called when a table is opened.
-        /// </summary>
+
         public async Task<Result<OrderDto>> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
         {
-            Table? table = await _uow.Table.GetByIdAsync(request.TableId, true);
+            Table? table = await _db.Tables.FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
             if (table is null)
                 return Result<OrderDto>.Failure("Böyle bir Masa bulunamadı.");
 
             table.Occupy();
 
             Order order = Order.Create(request.TableId);
+            _db.Orders.Add(order);
 
-            await _uow.Order.AddAsync(order);
-            await _uow.SaveChangesAsync(cancellationToken);
-
-            User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+            User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
                 _currentUser.BranchId,
                 actor?.FullName ?? string.Empty,
@@ -46,8 +41,9 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
                 $"{actor?.FullName} {table.Name} için sipariş açtı.",
                 nameof(Order),
                 order.Id);
-            await _uow.AuditLog.AddAsync(log);
-            await _uow.SaveChangesAsync(cancellationToken);
+            _db.AuditLogs.Add(log);
+
+            await _db.SaveChangesAsync(cancellationToken);
 
             return Result<OrderDto>.Success(order.ToDto());
         }

@@ -1,60 +1,54 @@
-﻿using MediatR;
-using RestaurantBill.Domain.Interfaces;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Mappings;
-using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Domain.Shared;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantId
 {
     public class GetUserByRestaurantIdCommandHandler : IRequestHandler<GetUserByRestaurantIdCommand, Result<IEnumerable<UserDto>>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
 
-        public GetUserByRestaurantIdCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+        public GetUserByRestaurantIdCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _currentUser = currentUser;
         }
 
-        /// <summary>
-        /// Retrieves all users associated with the current user's restaurant asynchronously.
-        /// The restaurant ID is dynamically extracted from the HTTP context claims, and the retrieved entities are mapped to a collection of DTOs.
-        /// </summary>
-        /// <param name="request">The request object to retrieve the users associated with the restaurant.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>An enumerable collection of <see cref="UserDto"/> representing the users of the restaurant.</returns>
-        /// <exception cref="BusinessException">Thrown when the extracted restaurant ID from the claims is zero or negative.</exception>
         public async Task<Result<IEnumerable<UserDto>>> Handle(GetUserByRestaurantIdCommand request, CancellationToken cancellationToken)
         {
-            var currentUserId = _currentUser.UserId;
-            var includeProperties = $"{nameof(User)},{nameof(Branch)}";
+            Guid currentUserId = _currentUser.UserId;
 
-            IEnumerable<UserBranch> userBranches;
+            IQueryable<UserBranch> query = _db.UserBranches
+                .AsNoTracking()
+                .Include(ur => ur.User)
+                .Include(ur => ur.Branch);
+
+            List<UserBranch> userBranches;
 
             if (_currentUser.Role == "Owner")
             {
-                List<Guid> restaurantIds = (await _uow.Branch.GetAllAsync(b => b.Company.OwnerUserId == currentUserId && !b.IsDeleted, false, nameof(Branch.Company)))
+                List<Guid> restaurantIds = await _db.Branches
+                    .Where(b => b.Company.OwnerUserId == currentUserId && !b.IsDeleted)
                     .Select(b => b.Id)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
-                userBranches = await _uow.UserBranch.GetAllAsync(
-                    ur => restaurantIds.Contains(ur.BranchId) && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
-                    false,
-                    includeProperties);
+                userBranches = await query
+                    .Where(ur => restaurantIds.Contains(ur.BranchId) && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted)
+                    .ToListAsync(cancellationToken);
             }
             else
             {
-                var restaurantId = _currentUser.BranchId;
-                if (restaurantId == Guid.Empty) return Result<IEnumerable<UserDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+                Guid restaurantId = _currentUser.BranchId;
+                if (restaurantId == Guid.Empty) return Result<IEnumerable<UserDto>>.Failure("Geçersiz şube bilgisi.");
 
-                userBranches = await _uow.UserBranch.GetAllAsync(
-                    ur => ur.BranchId == restaurantId && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted,
-                    false,
-                    includeProperties);
+                userBranches = await query
+                    .Where(ur => ur.BranchId == restaurantId && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted)
+                    .ToListAsync(cancellationToken);
             }
 
             return Result<IEnumerable<UserDto>>.Success(userBranches.OrderBy(ur => ur.User.FullName).Select(ur => ur.User.ToDto(ur)));

@@ -1,22 +1,22 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Payments.Commands.CreatePayment;
 
 public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand, Result<bool>>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ITableNotificationService _tableNotificationService;
     private readonly ICashierNotificationService _cashierNotificationService;
     private readonly ICurrentUserService _currentUserService;
 
-    public CreatePaymentCommandHandler(IUnitOfWork uow, ITableNotificationService tableNotificationService, ICashierNotificationService cashierNotificationService, ICurrentUserService currentUserService)
+    public CreatePaymentCommandHandler(IAppDbContext db, ITableNotificationService tableNotificationService, ICashierNotificationService cashierNotificationService, ICurrentUserService currentUserService)
     {
-        _uow = uow;
+        _db = db;
         _tableNotificationService = tableNotificationService;
         _cashierNotificationService = cashierNotificationService;
         _currentUserService = currentUserService;
@@ -24,15 +24,19 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
     public async Task<Result<bool>> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
     {
-        Order? order = await _uow.Order.GetByIdAsync(request.OrderId, true, o => o.OrderItems);
+        Order? order = await _db.Orders
+            .Include(o => o.OrderItems).ThenInclude(i => i.Product)
+            .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
         if (order is null)
             return Result<bool>.Failure("Böyle bir sipariş bulunamadı.");
 
-        Table? table = await _uow.Table.GetByIdAsync(order.TableId, true);
+        Table? table = await _db.Tables
+            .FirstOrDefaultAsync(t => t.Id == order.TableId, cancellationToken);
         if (table is null)
             return Result<bool>.Failure("Böyle bir masa bulunamadı.");
 
-        CashRegister? register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId, true);
+        CashRegister? register = await _db.CashRegisters
+            .FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
         if (register is null)
             return Result<bool>.Failure("Böyle bir kasa bulunamadı.");
 
@@ -54,8 +58,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         if (request.PaymentMethod == PaymentMethod.Nakit)
         {
             CashTransaction transaction = register.AddTransaction(CashTransactionType.In, totalAmount, _currentUserService.UserId);
-            await _uow.CashTransaction.AddAsync(transaction);
-            await _uow.CashRegister.UpdateAsync(register);
+            _db.CashTransactions.Add(transaction);
         }
 
         var taxGroups = paidItems.GroupBy(p => p.Item.TaxRate);
@@ -67,7 +70,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
             int groupItemCount = group.Sum(p => p.Quantity);
             Payment payment = Payment.Create(order.Id, register.Id, groupTotal, groupMatrah, groupTaxAmount, request.PaymentMethod, groupItemCount);
-            await _uow.Payment.AddAsync(payment);
+            _db.Payments.Add(payment);
         }
 
         foreach (var (item, quantity) in paidItems)
@@ -80,7 +83,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
             table.Release();
         }
 
-        User? actor = await _uow.User.GetByIdAsync(_currentUserService.UserId);
+        User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUserService.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
             _currentUserService.BranchId,
             actor?.FullName ?? string.Empty,
@@ -92,9 +95,9 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
                 : $"{actor?.FullName} {table.Name} siparişinden {request.PaymentMethod} ile ₺{totalAmount} tutarında kısmi ödeme aldı.",
             nameof(Order),
             order.Id);
-        await _uow.AuditLog.AddAsync(log);
+        _db.AuditLogs.Add(log);
 
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
 
         if (fullyPaid)
         {

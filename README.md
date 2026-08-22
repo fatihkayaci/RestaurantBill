@@ -82,7 +82,7 @@ RestaurantBill/
 │   ├── RestaurantBill.Domain          # Entities, Enums, Domain Exceptions, Interfaces
 │   ├── RestaurantBill.Application     # CQRS Handlers, DTOs, Validators, Pipeline Behaviors
 │   ├── RestaurantBill.Infrastructure  # SignalR Hubs & Notification Services
-│   ├── RestaurantBill.Persistence     # EF Core, Repositories, UnitOfWork, Migrations
+│   ├── RestaurantBill.Persistence     # EF Core DbContext, Migrations, Seeding
 │   └── RestaurantBill.WebAPI          # Controllers, Middleware, Program.cs
 └── frontend/
     └── src/
@@ -103,7 +103,7 @@ RestaurantBill/
 | **Domain** | Core business entities, enums, validation guards, and domain exceptions — zero framework dependencies |
 | **Application** | Use cases via CQRS (MediatR), FluentValidation, manual DTO mapping, Pipeline Behaviors |
 | **Infrastructure** | SignalR hubs and real-time notification services |
-| **Persistence** | EF Core + PostgreSQL, Generic Repository, Unit of Work, migrations & seeding |
+| **Persistence** | EF Core + PostgreSQL, migrations & seeding — handlers query `IAppDbContext` directly, no repository layer |
 | **WebAPI** | HTTP endpoints, JWT auth, global exception middleware, hub mapping |
 
 ---
@@ -131,7 +131,7 @@ Pure unit tests for domain entity business logic — no infrastructure dependenc
 
 ### Application Tests (`RestaurantBill.Application.Tests`)
 
-Command handler tests using hand-written fake implementations (`FakeUnitOfWork`, `FakeGenericRepository<T>`, `FakeCurrentUserService`, etc.) — no mocking libraries.
+Command handler tests run against a real EF Core InMemory `DbContext` (via `ApplicationTestBase`), plus hand-written fakes for external concerns (`FakeCurrentUserService`, `FakeTableNotificationService`, etc.) — no mocking libraries.
 
 | Feature | Handlers Tested |
 |---------|----------------|
@@ -144,7 +144,7 @@ Command handler tests using hand-written fake implementations (`FakeUnitOfWork`,
 
 ### Integration Tests (`RestaurantBill.Integration.Tests`)
 
-Query handler tests using a real EF Core InMemory database with real `UnitOfWork` and `GenericRepository` implementations — verifying that LINQ filters, `Include()` chains, and ordering actually produce correct results end-to-end.
+Query handler tests using a real EF Core InMemory database via `IAppDbContext` — verifying that LINQ filters, `Include()` chains, and ordering actually produce correct results end-to-end.
 
 | Feature | Tests |
 |---------|-------|
@@ -575,7 +575,7 @@ A `User` can own a Company and/or be linked to one or more Branches through `Use
 - [ ] Reports page contents & richer analytics
 - [ ] Mobile-responsive POS & KDS
 - [ ] Client-side form validation polish (remaining non-admin pages)
-- [ ] Move audit log search/filtering to the backend
+- [x] Move audit log search/filtering to the backend
 
 ---
 

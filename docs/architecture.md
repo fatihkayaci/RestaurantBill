@@ -124,10 +124,10 @@ Out of scope for MVP: online reservations, customer-facing menus, loyalty progra
 ### Backend — Clean Architecture
 
 ```
-RestaurantBill.Domain          # Entities, Enums, Repository interfaces
-RestaurantBill.Application     # CQRS handlers (MediatR), DTOs, Validators, Mapping
+RestaurantBill.Domain          # Entities, Enums, domain exceptions — zero framework dependencies
+RestaurantBill.Application     # CQRS handlers (MediatR), DTOs, Validators, Mapping, IAppDbContext
 RestaurantBill.Infrastructure  # SignalR Hubs, external services
-RestaurantBill.Persistence     # EF Core DbContext, Repository implementations, Migrations
+RestaurantBill.Persistence     # EF Core DbContext, entity configurations, Migrations
 RestaurantBill.WebAPI          # Controllers, Middleware, DI extensions, Program.cs
 ```
 
@@ -137,7 +137,7 @@ HTTP Request
   → Controller
   → MediatR (Command or Query)
   → Handler (Application layer)
-  → Repository (Persistence layer)
+  → IAppDbContext (EF Core DbContext, injected directly — no repository layer)
   → PostgreSQL
 ```
 
@@ -233,7 +233,7 @@ API → Client           : 200 OK
 - .NET 9 + ASP.NET Core
 - Entity Framework Core + PostgreSQL
 - MediatR (CQRS), FluentValidation, manual `ToDto()` mapping extensions
-- Custom JWT authentication (`IPasswordHasher<User>` + `IUnitOfWork`, no ASP.NET Identity)
+- Custom JWT authentication (`IPasswordHasher<User>` + `IAppDbContext`, no ASP.NET Identity)
 - SignalR (real-time updates)
 - Serilog (structured logging to console + daily rolling files)
 - Built-in health check middleware (`/health`, DB connectivity)
@@ -280,11 +280,11 @@ Cross-cutting concerns (validation, caching, idempotency, logging, performance) 
 ### ADR-008: Domain exceptions instead of raw `throw`
 All errors derive from `BaseException` (`BusinessException`, `NotFoundException`, `ValidationException`) and live in the Domain layer. A single global exception middleware maps them to consistent HTTP responses, so controllers never handle error formatting.
 
-### ADR-009: Repository + Unit of Work over raw EF Core
-Abstracting persistence behind repository interfaces keeps the Application layer independent of the database technology and guarantees a single transaction per command via Unit of Work.
+### ADR-009: Direct `IAppDbContext` over Generic Repository + Unit of Work (superseded)
+Originally the Application layer went through `IGenericRepository<T>` + `IUnitOfWork` to keep persistence abstracted behind an interface. In practice this put a thinner, less capable layer on top of EF Core itself: no `IQueryable` composition, no projections, no paging, magic-string `Include`s, and a same-shaped `Update()` call on every save. It was reverted in favor of injecting `IAppDbContext` (an Application-layer interface exposing `DbSet<T>` per entity) directly into handlers, giving full LINQ/`IQueryable` access while keeping Application decoupled from the `Persistence` project — `RestaurantBillDbContext` is the only implementation, registered once in DI. Two narrowly-scoped query classes (`OrderQueries`, `ReservationQueries`) hold the handful of queries reused across handlers; there is no shared base class between them.
 
 ### ADR-010: ASP.NET Identity removed in favor of custom auth
-ASP.NET Identity's `IdentityDbContext` and role/claim infrastructure added overhead the project didn't need — a single `User` entity with four fixed roles. Custom auth (`IPasswordHasher<User>` + manual JWT issuance via `IUnitOfWork`) keeps the Domain layer free of framework dependencies and full control over the user model.
+ASP.NET Identity's `IdentityDbContext` and role/claim infrastructure added overhead the project didn't need — a single `User` entity with four fixed roles. Custom auth (`IPasswordHasher<User>` + manual JWT issuance via `IAppDbContext`) keeps the Domain layer free of framework dependencies and full control over the user model.
 
 ### ADR-011: Built-in health check over third-party solutions
 ASP.NET Core's built-in `AddHealthChecks()` with `AddDbContextCheck<T>()` covers the only critical dependency (PostgreSQL). Third-party health check packages (e.g., AspNetCore.Diagnostics.HealthChecks) would add dependency overhead with no benefit at this scale. The `/health` endpoint is also wired into Docker Compose so the frontend container only starts after the API is confirmed healthy.
@@ -310,8 +310,7 @@ RestaurantBill/
 │   │   ├── Hubs/               # SignalR hubs
 │   │   └── Services/
 │   ├── RestaurantBill.Persistence/
-│   │   ├── Configurations/     # EF Core Fluent API configs
-│   │   └── Repositories/
+│   │   └── Configurations/     # EF Core Fluent API configs
 │   ├── RestaurantBill.WebAPI/
 │   │   ├── Controllers/
 │   │   ├── Extensions/         # DI registration helpers
