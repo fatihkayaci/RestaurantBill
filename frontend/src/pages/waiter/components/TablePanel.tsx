@@ -70,6 +70,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
     const [arriving, setArriving] = useState(false);
 
     useEffect(() => {
+        // Reset panel state immediately when switching tables, before the new table's data loads.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCart([]);
         setActiveOrder(null);
         setActiveTab(table.status === 3 ? 'reservation' : 'new-order');

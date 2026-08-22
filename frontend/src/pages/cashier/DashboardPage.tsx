@@ -61,6 +61,8 @@ export default function CashierDashboardPage() {
     }, []);
 
     useEffect(() => {
+        // Keep the open detail panel in sync with the refreshed list (e.g. after a SignalR update).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedOrder(prev => {
             if (!prev) return prev;
             return servedOrders.find(o => o.id === prev.id) ?? null;
@@ -68,6 +70,8 @@ export default function CashierDashboardPage() {
     }, [servedOrders]);
 
     useEffect(() => {
+        // Keep the open detail panel in sync with the refreshed list (e.g. after a SignalR update).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedTransaction(prev => {
             if (!prev) return prev;
             return shiftTransactions.find(t => t.id === prev.id) ?? prev;

@@ -37,6 +37,7 @@ export default function ShiftsPage() {
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh() is async; its setState calls happen after the await, not synchronously.
     useEffect(() => { refresh(); }, []);
 
     const requiresOpeningReview = (s: Shift) => s.openingDifference !== 0 && s.openingDifferenceReviewStatus === REVIEW_PENDING;

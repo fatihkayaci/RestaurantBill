@@ -48,6 +48,8 @@ export default function AuditLogPage() {
     }, []);
 
     useEffect(() => {
+        // Show the loading state immediately when filters/page change, before the fetch settles.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         auditLogService.getAll({
             pageNumber: page,

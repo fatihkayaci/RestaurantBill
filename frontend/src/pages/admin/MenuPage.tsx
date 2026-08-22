@@ -52,6 +52,8 @@ export default function Menu() {
     }, []);
 
     useEffect(() => {
+        // Close the inline tax-rate editor whenever the selected category changes.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsEditingBannerTaxRate(false);
     }, [selectedCategory]);
 

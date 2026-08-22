@@ -43,6 +43,7 @@ export default function CashRegisters() {
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh() is async; its setState calls happen after the await, not synchronously.
     useEffect(() => { refresh(); }, []);
 
     const openCreateModal = () => {
