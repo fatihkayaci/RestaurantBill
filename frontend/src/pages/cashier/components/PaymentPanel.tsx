@@ -34,6 +34,8 @@ function formatElapsed(createdAt: string): string {
 
 export default function PaymentPanel({ order, onClose, onComplete, cashRegisterMode = 'shift' }: Props) {
     const [displayOrder, setDisplayOrder] = useState<Order>(order);
+    // Keep the displayed order in sync when the parent passes a freshly-updated order object.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => setDisplayOrder(order), [order]);
 
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('kart');

@@ -312,6 +312,8 @@ export default function Tables() {
     // handler'lar tarafından (ör. handleSendOrder) sekme değişimiyle birlikte yönetilir.
     useEffect(() => {
         if (!selectedTable) return;
+        // Reset panel state immediately when switching tables, before the new table's data loads.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setNewItems([]);
         setOrderNote('');
         setTableOrder(null);
