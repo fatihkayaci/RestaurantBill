@@ -18,5 +18,20 @@ public class FakeGenericRepository<T> : IGenericRepository<T> where T : BaseEnti
     public Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, bool trackChanges = false, string? includeProperties = null)
         => Task.FromResult(filter != null ? Data.Where(filter.Compile()) : Data.AsEnumerable());
 
+    public Task<(IEnumerable<T> Items, int TotalCount)> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        Expression<Func<T, bool>>? filter = null,
+        Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+        bool trackChanges = false,
+        string? includeProperties = null)
+    {
+        IQueryable<T> query = filter != null ? Data.Where(filter.Compile()).AsQueryable() : Data.AsQueryable();
+        int totalCount = query.Count();
+        if (orderBy != null) query = orderBy(query);
+        List<T> items = query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        return Task.FromResult<(IEnumerable<T>, int)>((items, totalCount));
+    }
+
     public IReadOnlyList<T> Added => Data;
 }

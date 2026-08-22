@@ -8,7 +8,7 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.AuditLogs.Queries.GetAllAuditLogs
 {
-    public class GetAllAuditLogsQueryHandler : IRequestHandler<GetAllAuditLogsQuery, Result<List<AuditLogDto>>>
+    public class GetAllAuditLogsQueryHandler : IRequestHandler<GetAllAuditLogsQuery, Result<PagedResult<AuditLogDto>>>
     {
         private readonly IUnitOfWork _uow;
         private readonly ICurrentUserService _currentUser;
@@ -19,23 +19,61 @@ namespace RestaurantBill.Application.Features.AuditLogs.Queries.GetAllAuditLogs
             _currentUser = currentUser;
         }
 
-        public async Task<Result<List<AuditLogDto>>> Handle(GetAllAuditLogsQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<AuditLogDto>>> Handle(GetAllAuditLogsQuery request, CancellationToken cancellationToken)
         {
             List<Guid> branchIds = (await _uow.Branch.GetAllAsync(b => b.Company.OwnerUserId == _currentUser.UserId, false))
                 .Select(b => b.Id)
                 .ToList();
 
             if (branchIds.Count == 0)
-                return Result<List<AuditLogDto>>.Success(new List<AuditLogDto>());
+            {
+                return Result<PagedResult<AuditLogDto>>.Success(new PagedResult<AuditLogDto>
+                {
+                    Items = new List<AuditLogDto>(),
+                    TotalCount = 0,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize
+                });
+            }
 
-            IEnumerable<AuditLog> logs = await _uow.AuditLog.GetAllAsync(l => branchIds.Contains(l.BranchId), false, nameof(AuditLog.Branch));
+            DateTime? dateFromUtc = request.DateFrom.HasValue
+                ? DateTime.SpecifyKind(request.DateFrom.Value.Date, DateTimeKind.Utc)
+                : null;
 
-            List<AuditLogDto> result = logs
-                .OrderByDescending(l => l.CreatedAt)
-                .Select(l => l.ToDto())
-                .ToList();
+            DateTime? dateToInclusive = request.DateTo.HasValue
+                ? DateTime.SpecifyKind(request.DateTo.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc)
+                : null;
 
-            return Result<List<AuditLogDto>>.Success(result);
+            string search = request.Search?.Trim().ToLower() ?? string.Empty;
+
+            (IEnumerable<AuditLog> logs, int totalCount) = await _uow.AuditLog.GetPagedAsync(
+                request.PageNumber,
+                request.PageSize,
+                l =>
+                    branchIds.Contains(l.BranchId) &&
+                    (!request.Category.HasValue || (int)l.Category == request.Category.Value) &&
+                    (!request.Severity.HasValue || (int)l.Severity == request.Severity.Value) &&
+                    (!request.BranchId.HasValue || l.BranchId == request.BranchId.Value) &&
+                    (string.IsNullOrEmpty(request.ActorName) || l.ActorName == request.ActorName) &&
+                    (!dateFromUtc.HasValue || l.CreatedAt >= dateFromUtc.Value) &&
+                    (!dateToInclusive.HasValue || l.CreatedAt <= dateToInclusive.Value) &&
+                    (search == "" ||
+                        l.ActorName.ToLower().Contains(search) ||
+                        l.Message.ToLower().Contains(search) ||
+                        l.Action.ToLower().Contains(search)),
+                q => q.OrderByDescending(l => l.CreatedAt),
+                false,
+                nameof(AuditLog.Branch));
+
+            List<AuditLogDto> items = logs.Select(l => l.ToDto()).ToList();
+
+            return Result<PagedResult<AuditLogDto>>.Success(new PagedResult<AuditLogDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize
+            });
         }
     }
 }

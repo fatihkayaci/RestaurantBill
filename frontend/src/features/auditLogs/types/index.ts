@@ -11,3 +11,11 @@ export interface AuditLog {
     entityId?: string | null;
     createdAt: string;
 }
+
+export interface PagedResult<T> {
+    items: T[];
+    totalCount: number;
+    pageNumber: number;
+    pageSize: number;
+    totalPages: number;
+}
