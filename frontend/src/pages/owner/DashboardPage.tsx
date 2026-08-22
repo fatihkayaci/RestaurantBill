@@ -1,16 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     TrendingUp, ShoppingCart, ShoppingBag, Building2, RefreshCw, AlertTriangle, X,
-    ArrowUpRight, ArrowDownRight, ArrowRight, ChevronRight, Plus, UserCog, Palette, CreditCard,
-    Calendar, ChevronDown, Table2,
+    ArrowUpRight, ArrowDownRight, ArrowRight,
+    Calendar, Table2,
     type LucideIcon,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
-import { ownerDashboardMock } from '@/features/dashboard/mock/ownerDashboardMock';
+import { statsService } from '@/features/stats/api/statsService';
+import type { BranchOperationalStatus, OwnerDashboardStats } from '@/features/stats/types';
+import { auditLogService } from '@/features/auditLogs/api/auditLogService';
+import type { AuditLog } from '@/features/auditLogs/types';
 import { SEVERITY_LABELS, SEVERITY_STYLE } from '@/features/auditLogs/constants';
-import type { BranchOperationalStatus } from '@/features/dashboard/types';
 
 const formatCurrency = (value: number, decimals = 0) =>
     `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
@@ -31,30 +33,26 @@ const STATUS_STYLE: Record<BranchOperationalStatus, string> = {
     expired: 'bg-rb-red-bg text-rb-red border border-rb-red/30',
 };
 
-const TREND_SERIES = [
-    { key: 'total', label: 'Tümü', color: 'var(--foreground)' },
-    { key: 'tarabya', label: 'Tarabya', color: 'var(--rb-orange)' },
-    { key: 'besiktas', label: 'Beşiktaş', color: 'var(--rb-accent)' },
-    { key: 'kadikoy', label: 'Kadıköy', color: 'var(--rb-green)' },
-    { key: 'uskudar', label: 'Üsküdar', color: 'var(--rb-purple)' },
-    { key: 'sariyer', label: 'Sarıyer', color: 'var(--rb-gold)' },
-] as const;
+const BRANCH_LINE_COLORS = ['var(--rb-orange)', 'var(--rb-accent)', 'var(--rb-green)', 'var(--rb-purple)', 'var(--rb-gold)', 'var(--rb-red)'];
 
-const PAYMENT_COLOR: Record<string, string> = {
-    Kart: 'var(--rb-accent)',
-    Nakit: 'var(--rb-green)',
-    Qr: 'var(--rb-gold)',
+const PAYMENT_METHOD = { Kart: 1, Nakit: 2, Qr: 3 } as const;
+const PAYMENT_COLOR: Record<number, string> = {
+    [PAYMENT_METHOD.Kart]: 'var(--rb-accent)',
+    [PAYMENT_METHOD.Nakit]: 'var(--rb-green)',
+    [PAYMENT_METHOD.Qr]: 'var(--rb-gold)',
 };
-const PAYMENT_LABEL: Record<string, string> = { Kart: 'Kart', Nakit: 'Nakit', Qr: 'QR / Mobil' };
+const PAYMENT_LABEL: Record<number, string> = {
+    [PAYMENT_METHOD.Kart]: 'Kart',
+    [PAYMENT_METHOD.Nakit]: 'Nakit',
+    [PAYMENT_METHOD.Qr]: 'QR / Mobil',
+};
 
-const QUICK_ACTIONS = [
-    { label: 'Şube Ekle', icon: Plus, to: '/owner/branches', color: 'text-rb-accent bg-rb-accent-bg' },
-    { label: 'Admin Ata', icon: UserCog, to: '/owner/admins', color: 'text-rb-purple bg-rb-purple-bg' },
-    { label: 'Marka Ayarları', icon: Palette, to: '/owner/branding', color: 'text-rb-gold bg-rb-gold-bg' },
-    { label: 'Abonelik & Faturalar', icon: CreditCard, to: '/owner/membership', color: 'text-rb-green bg-rb-green-bg' },
-] as const;
+const MEMBERSHIP_WARNING_WINDOW_DAYS = 7;
 
-const todayLabel = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' });
+const getTodayIso = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
 
 function ChangeCaption({ value, caption }: { value: number; caption?: string }) {
     const positive = value >= 0;
@@ -89,15 +87,59 @@ export default function DashboardPage() {
     const [range, setRange] = useState<7 | 30 | 90>(7);
     const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
     const [bannerVisible, setBannerVisible] = useState(true);
+    const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(getTodayIso);
+    const [dashboard, setDashboard] = useState<OwnerDashboardStats | null>(null);
+    const [recentAuditLogs, setRecentAuditLogs] = useState<AuditLog[]>([]);
+    const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
-    const { stats, membershipWarning, trend, paymentMethods, branchPerformance, recentAuditLogs } = ownerDashboardMock;
+    const loadData = useCallback((showRefreshSpinner: boolean) => {
+        if (showRefreshSpinner) setRefreshing(true);
+        const startedAt = Date.now();
+        return Promise.all([
+            statsService.getOwnerDashboard({ date: selectedDate, trendDays: 90 }),
+            auditLogService.getAll({ pageNumber: 1, pageSize: 5 }),
+        ])
+            .then(([dashboardData, auditLogPage]) => {
+                setDashboard(dashboardData);
+                setRecentAuditLogs(auditLogPage.items);
+                setLastUpdatedAt(new Date());
+            })
+            .catch(console.error)
+            .finally(async () => {
+                setLoading(false);
+                if (showRefreshSpinner) {
+                    // Let the spin icon complete at least one full 1s rotation instead of snapping to a stop mid-turn.
+                    const remaining = 1000 - (Date.now() - startedAt);
+                    if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
+                    setRefreshing(false);
+                }
+            });
+    }, [selectedDate]);
 
-    const chartData = useMemo(() => trend[range].map(point => ({
-        date: new Date(point.date).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }),
-        total: point.total,
-        ...point.byBranch,
-    })), [trend, range]);
+    const isFirstLoad = useRef(true);
+    useEffect(() => {
+        loadData(!isFirstLoad.current);
+        isFirstLoad.current = false;
+    }, [loadData]);
+
+    const branchSeries = useMemo(() => {
+        const branches = dashboard?.branchPerformance ?? [];
+        return [
+            { key: 'total', label: 'Tümü', color: 'var(--foreground)' },
+            ...branches.map((b, i) => ({ key: b.branchId, label: b.branchName, color: BRANCH_LINE_COLORS[i % BRANCH_LINE_COLORS.length] })),
+        ];
+    }, [dashboard]);
+
+    const chartData = useMemo(() => {
+        const trend = dashboard?.trend ?? [];
+        return trend.slice(-range).map(point => ({
+            date: new Date(point.date).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }),
+            total: point.total,
+            ...point.byBranch,
+        }));
+    }, [dashboard, range]);
 
     const toggleSeries = (key: string) => {
         setHiddenSeries(prev => {
@@ -108,12 +150,26 @@ export default function DashboardPage() {
     };
 
     const handleRefresh = () => {
-        setRefreshing(true);
-        setTimeout(() => setRefreshing(false), 500);
+        loadData(true);
     };
 
+    const selectedDayLabel = selectedDate === getTodayIso()
+        ? 'Bugün'
+        : new Date(selectedDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const stats = dashboard;
+    const paymentMethods = dashboard?.paymentMethods ?? [];
+    const branchPerformance = dashboard?.branchPerformance ?? [];
     const paymentTotal = paymentMethods.reduce((sum, p) => sum + p.amount, 0);
-    const activeRatio = stats.totalBranchCount > 0 ? (stats.activeBranchCount / stats.totalBranchCount) * 100 : 0;
+    const activeRatio = stats && stats.totalBranchCount > 0 ? (stats.activeBranchCount / stats.totalBranchCount) * 100 : 0;
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
+                Yükleniyor...
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-5">
@@ -124,15 +180,26 @@ export default function DashboardPage() {
                     <p className="text-sm text-muted-foreground mt-0.5">Şirket genelinizin özet performansı</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {todayLabel}
-                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    {lastUpdatedAt && (
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            Son güncelleme: {lastUpdatedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    )}
+                    <div className="relative">
+                        <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            max={getTodayIso()}
+                            onChange={e => setSelectedDate(e.target.value || getTodayIso())}
+                            className="rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
                     </div>
                     <button
                         type="button"
                         onClick={handleRefresh}
-                        className="flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/50 transition-colors"
+                        disabled={refreshing}
+                        className="flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-60"
                     >
                         <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
                     </button>
@@ -140,14 +207,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Membership warning */}
-            {bannerVisible && membershipWarning.expiringBranchCount > 0 && (
+            {bannerVisible && !!stats && stats.membershipExpiringBranchCount > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rb-amber/30 bg-rb-amber-bg px-5 py-3.5">
                     <div className="flex items-center gap-3">
                         <AlertTriangle className="h-5 w-5 text-rb-amber shrink-0" />
                         <div>
                             <span className="text-sm font-semibold text-foreground">Üyelik Uyarısı </span>
                             <span className="text-sm text-muted-foreground">
-                                {membershipWarning.expiringBranchCount} şubenizin üyeliği {membershipWarning.withinDays} gün içinde sona erecek. Lütfen yenilemeyi unutmayın.
+                                {stats.membershipExpiringBranchCount} şubenizin üyeliği {MEMBERSHIP_WARNING_WINDOW_DAYS} gün içinde sona erecek. Lütfen yenilemeyi unutmayın.
                             </span>
                         </div>
                     </div>
@@ -170,18 +237,18 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     icon={TrendingUp} colorBg="bg-rb-green-bg" colorText="text-rb-green"
-                    label="Toplam Ciro" value={formatCurrency(stats.totalRevenue, 2)}
-                    change={stats.totalRevenueChangePercent} caption="düne göre"
+                    label="Toplam Ciro" value={formatCurrency(stats?.totalRevenue ?? 0, 2)}
+                    change={stats?.totalRevenueChangePercent ?? 0} caption="düne göre"
                 />
                 <StatCard
                     icon={ShoppingCart} colorBg="bg-rb-accent-bg" colorText="text-rb-accent"
-                    label="Toplam Sipariş" value={stats.totalOrders.toLocaleString('tr-TR')}
-                    change={stats.totalOrdersChangePercent} caption="geçen haftaya göre"
+                    label="Toplam Sipariş" value={(stats?.totalOrders ?? 0).toLocaleString('tr-TR')}
+                    change={stats?.totalOrdersChangePercent ?? 0} caption="geçen haftaya göre"
                 />
                 <StatCard
                     icon={ShoppingBag} colorBg="bg-rb-purple-bg" colorText="text-rb-purple"
-                    label="Ortalama Sepet" value={formatCurrency(stats.avgOrderValue, 2)}
-                    change={stats.avgOrderValueChangePercent} caption="geçen haftaya göre"
+                    label="Ortalama Sepet" value={formatCurrency(stats?.avgOrderValue ?? 0, 2)}
+                    change={stats?.avgOrderValueChangePercent ?? 0} caption="geçen haftaya göre"
                 />
                 <div className="rounded-xl border border-border bg-card p-5">
                     <div className="flex items-center gap-3">
@@ -190,7 +257,7 @@ export default function DashboardPage() {
                         </div>
                         <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Aktif Şube Sayısı</p>
                     </div>
-                    <p className="text-3xl font-bold text-foreground mt-3">{stats.activeBranchCount} / {stats.totalBranchCount}</p>
+                    <p className="text-3xl font-bold text-foreground mt-3">{stats?.activeBranchCount ?? 0} / {stats?.totalBranchCount ?? 0}</p>
                     <p className="text-xs text-muted-foreground mt-1">%{activeRatio.toFixed(1)} aktiflik oranı</p>
                 </div>
             </div>
@@ -223,7 +290,7 @@ export default function DashboardPage() {
                             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                             <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
                             <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                            {TREND_SERIES.filter(series => !hiddenSeries.has(series.key)).map(series => (
+                            {branchSeries.filter(series => !hiddenSeries.has(series.key)).map(series => (
                                 <Line
                                     key={series.key}
                                     type="monotone"
@@ -238,7 +305,7 @@ export default function DashboardPage() {
                     </ResponsiveContainer>
 
                     <div className="flex flex-wrap items-center gap-3 mt-3">
-                        {TREND_SERIES.map(series => (
+                        {branchSeries.map(series => (
                             <button
                                 key={series.key}
                                 type="button"
@@ -257,41 +324,49 @@ export default function DashboardPage() {
 
                 <div className="rounded-xl border border-border bg-card p-5">
                     <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">Ödeme Yöntemleri</p>
-                    <div className="relative">
-                        <ResponsiveContainer width="100%" height={200}>
-                            <PieChart>
-                                <Pie
-                                    data={paymentMethods}
-                                    dataKey="amount"
-                                    nameKey="method"
-                                    innerRadius={55}
-                                    outerRadius={80}
-                                    paddingAngle={2}
-                                >
-                                    {paymentMethods.map(p => <Cell key={p.method} fill={PAYMENT_COLOR[p.method]} />)}
-                                </Pie>
-                                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <p className="text-lg font-bold text-foreground">{formatCurrency(paymentTotal)}</p>
-                            <p className="text-[10px] text-muted-foreground">Toplam Ciro</p>
+                    {paymentMethods.length === 0 ? (
+                        <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">
+                            Bugün için ödeme verisi yok.
                         </div>
-                    </div>
-                    <div className="space-y-2.5 mt-4">
-                        {paymentMethods.map(p => (
-                            <div key={p.method} className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-2">
-                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PAYMENT_COLOR[p.method] }} />
-                                    <span className="text-foreground">{PAYMENT_LABEL[p.method]}</span>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-foreground font-medium">{formatCurrency(p.amount)}</p>
-                                    <p className="text-xs text-muted-foreground">%{p.percent}</p>
+                    ) : (
+                        <>
+                            <div className="relative">
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <PieChart>
+                                        <Pie
+                                            data={paymentMethods}
+                                            dataKey="amount"
+                                            nameKey="method"
+                                            innerRadius={55}
+                                            outerRadius={80}
+                                            paddingAngle={2}
+                                        >
+                                            {paymentMethods.map(p => <Cell key={p.method} fill={PAYMENT_COLOR[p.method]} />)}
+                                        </Pie>
+                                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <p className="text-lg font-bold text-foreground">{formatCurrency(paymentTotal)}</p>
+                                    <p className="text-[10px] text-muted-foreground">Toplam Ciro</p>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                            <div className="space-y-2.5 mt-4">
+                                {paymentMethods.map(p => (
+                                    <div key={p.method} className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PAYMENT_COLOR[p.method] }} />
+                                            <span className="text-foreground">{PAYMENT_LABEL[p.method]}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-foreground font-medium">{formatCurrency(p.amount)}</p>
+                                            <p className="text-xs text-muted-foreground">%{p.percent}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -299,7 +374,7 @@ export default function DashboardPage() {
             <div className="grid lg:grid-cols-3 gap-4 items-start">
                 <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
                     <div className="px-5 py-3.5 border-b border-border">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube Performansı (Bugün)</p>
+                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube Performansı ({selectedDayLabel})</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -315,11 +390,17 @@ export default function DashboardPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {branchPerformance.map(row => (
+                                {branchPerformance.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                                            Henüz şube bulunmuyor.
+                                        </td>
+                                    </tr>
+                                ) : branchPerformance.map(row => (
                                     <tr key={row.branchId} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                                         <td className="px-5 py-3.5">
                                             <p className="font-medium text-foreground whitespace-nowrap">{row.branchName}</p>
-                                            <p className="text-xs text-muted-foreground">{row.domain}</p>
+                                            <p className="text-xs text-muted-foreground">{[row.district, row.city].filter(Boolean).join(', ') || '—'}</p>
                                         </td>
                                         <td className="px-4 py-3.5">
                                             <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold', STATUS_STYLE[row.status])}>
@@ -383,7 +464,9 @@ export default function DashboardPage() {
                             </span>
                         </div>
                         <div className="space-y-3">
-                            {branchPerformance.filter(b => b.status !== 'expired').map(row => (
+                            {branchPerformance.filter(b => b.status !== 'expired').length === 0 ? (
+                                <p className="text-sm text-muted-foreground">Aktif şube yok.</p>
+                            ) : branchPerformance.filter(b => b.status !== 'expired').map(row => (
                                 <div key={row.branchId} className="flex items-center justify-between text-sm">
                                     <div className="flex items-center gap-2 min-w-0">
                                         <Table2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -401,32 +484,13 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    {/* Quick actions */}
-                    <div className="rounded-xl border border-border bg-card p-5">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">Hızlı Aksiyonlar</p>
-                        <div className="space-y-1.5">
-                            {QUICK_ACTIONS.map(action => (
-                                <button
-                                    key={action.label}
-                                    type="button"
-                                    onClick={() => navigate(action.to)}
-                                    className="flex items-center gap-3 w-full rounded-lg px-2 py-2 text-left hover:bg-muted/50 transition-colors"
-                                >
-                                    <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', action.color)}>
-                                        <action.icon className="w-4 h-4" />
-                                    </div>
-                                    <span className="text-sm font-medium text-foreground flex-1">{action.label}</span>
-                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
                     {/* Recent audit logs */}
                     <div className="rounded-xl border border-border bg-card p-5">
                         <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">Son Denetim Kayıtları</p>
                         <div className="space-y-3">
-                            {recentAuditLogs.map(log => (
+                            {recentAuditLogs.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">Henüz kayıt yok.</p>
+                            ) : recentAuditLogs.map(log => (
                                 <div key={log.id} className="flex items-start justify-between gap-2 text-sm">
                                     <div className="min-w-0">
                                         <p className="text-foreground truncate">{log.message}</p>
