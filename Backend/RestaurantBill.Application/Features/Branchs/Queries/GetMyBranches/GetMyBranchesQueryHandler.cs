@@ -28,22 +28,24 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetMyBranches
                 .ToListAsync(cancellationToken);
             List<Guid> branchIds = branches.Select(b => b.Id).ToList();
 
-            List<Table> tables = await _db.Tables
+            List<Guid> tableBranchIds = await _db.Tables
                 .AsNoTracking()
                 .Where(t => branchIds.Contains(t.Region.BranchId))
+                .Select(t => t.Region.BranchId)
                 .ToListAsync(cancellationToken);
             List<UserBranch> staff = await _db.UserBranches
                 .AsNoTracking()
                 .Where(ur => branchIds.Contains(ur.BranchId))
                 .ToListAsync(cancellationToken);
-            List<Order> orders = await _db.Orders
+            var orderRows = await _db.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.Table.Region.BranchId))
+                .Select(o => new { BranchId = o.Table.Region.BranchId, o.TotalPrice })
                 .ToListAsync(cancellationToken);
 
-            Dictionary<Guid, int> tableCounts = tables.GroupBy(t => t.Region.BranchId).ToDictionary(g => g.Key, g => g.Count());
+            Dictionary<Guid, int> tableCounts = tableBranchIds.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
             Dictionary<Guid, int> staffCounts = staff.GroupBy(s => s.BranchId).ToDictionary(g => g.Key, g => g.Count());
-            Dictionary<Guid, decimal> revenueByRestaurant = orders.GroupBy(o => o.Table.Region.BranchId).ToDictionary(g => g.Key, g => g.Sum(o => o.TotalPrice));
+            Dictionary<Guid, decimal> revenueByRestaurant = orderRows.GroupBy(o => o.BranchId).ToDictionary(g => g.Key, g => g.Sum(o => o.TotalPrice));
 
             List<BranchDto> result = branches.Select(b => b.ToBranchDto(
                 tableCounts.GetValueOrDefault(b.Id),

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.DTOs.Stats;
 using RestaurantBill.Application.Features.Stats.Queries.GetOverviewStats;
+using RestaurantBill.Application.Features.Stats.Queries.GetOwnerDashboard;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
@@ -22,6 +23,14 @@ namespace RestaurantBill.WebAPI.Controllers
         public async Task<IActionResult> GetOverview(CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new GetOverviewStatsQuery(), cancellationToken);
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "Owner")]
+        [HttpGet("owner-dashboard")]
+        public async Task<IActionResult> GetOwnerDashboard([FromQuery] DateTime? date, [FromQuery] int trendDays, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetOwnerDashboardQuery { Date = date, TrendDays = trendDays == 0 ? 7 : trendDays }, cancellationToken);
             return HandleResult(result);
         }
     }
