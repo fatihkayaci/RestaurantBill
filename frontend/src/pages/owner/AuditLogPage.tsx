@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Search, SlidersHorizontal, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Check } from 'lucide-react';
+import { Fragment, useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 import { auditLogService } from '@/features/auditLogs/api/auditLogService';
 import type { AuditLog } from '@/features/auditLogs/types';
 import { branchService } from '@/features/branches/api/branchService';
@@ -20,27 +20,7 @@ export default function AuditLogPage() {
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState<number | 'all'>('all');
     const [severityFilter, setSeverityFilter] = useState<number | 'all'>('all');
-    const [branchFilter, setBranchFilter] = useState<string | 'all'>('all');
-    const [userFilter, setUserFilter] = useState<string | 'all'>('all');
-    const [dateFrom, setDateFrom] = useState(getToday);
-    const [dateTo, setDateTo] = useState(getToday);
-    // Draft filter values edited in the panel; only applied to the fetch on "Filtrele" click.
-    const [draftCategoryFilter, setDraftCategoryFilter] = useState<number | 'all'>('all');
-    const [draftSeverityFilter, setDraftSeverityFilter] = useState<number | 'all'>('all');
-    const [draftBranchFilter, setDraftBranchFilter] = useState<string | 'all'>('all');
-    const [draftUserFilter, setDraftUserFilter] = useState<string | 'all'>('all');
-    const [draftDateFrom, setDraftDateFrom] = useState(getToday);
-    const [draftDateTo, setDraftDateTo] = useState(getToday);
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [totalCount, setTotalCount] = useState(0);
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [actors, setActors] = useState<string[]>([]);
-
-    useEffect(() => {
-        const handle = setTimeout(() => setDebouncedSearch(search), 400);
-        return () => clearTimeout(handle);
-    }, [search]);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
 
     useEffect(() => {
         branchService.getMyBranches().then(setBranches).catch(console.error);
@@ -116,7 +96,7 @@ export default function AuditLogPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-                <div className="relative w-64">
+                <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                         className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
@@ -129,27 +109,21 @@ export default function AuditLogPage() {
                     />
                 </div>
 
-                <button
-                    type="button"
-                    onClick={() => {
-                        setFiltersOpen(open => {
-                            if (!open) {
-                                setDraftCategoryFilter(categoryFilter);
-                                setDraftSeverityFilter(severityFilter);
-                                setDraftBranchFilter(branchFilter);
-                                setDraftUserFilter(userFilter);
-                                setDraftDateFrom(dateFrom);
-                                setDraftDateTo(dateTo);
-                            }
-                            return !open;
-                        });
-                    }}
-                    className={cn(
-                        'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
-                        filtersOpen || activeFilterCount > 0
-                            ? 'border-rb-accent bg-rb-accent-bg text-rb-accent'
-                            : 'border-border bg-background text-foreground hover:bg-muted/50'
-                    )}
+                <select
+                    className="flex-1 sm:flex-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    value={categoryFilter}
+                    onChange={e => setCategoryFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                >
+                    <option value="all">Tüm Kategoriler</option>
+                    {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                    ))}
+                </select>
+
+                <select
+                    className="flex-1 sm:flex-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    value={severityFilter}
+                    onChange={e => setSeverityFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
                 >
                     <SlidersHorizontal className="h-4 w-4" />
                     Filtrele
@@ -171,144 +145,85 @@ export default function AuditLogPage() {
                 )}
             </div>
 
-            {filtersOpen && (
-                <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Başlangıç</label>
-                        <input
-                            type="date"
-                            className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={draftDateFrom}
-                            onChange={e => setDraftDateFrom(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Bitiş</label>
-                        <input
-                            type="date"
-                            className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={draftDateTo}
-                            onChange={e => setDraftDateTo(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube</label>
-                        <select
-                            className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={draftBranchFilter}
-                            onChange={e => setDraftBranchFilter(e.target.value)}
-                        >
-                            <option value="all">Tüm Şubeler</option>
-                            {branches.map(branch => (
-                                <option key={branch.id} value={branch.id}>{branch.branchName}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Kategori</label>
-                        <select
-                            className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={draftCategoryFilter}
-                            onChange={e => setDraftCategoryFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                        >
-                            <option value="all">Tüm Kategoriler</option>
-                            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                                <option key={value} value={value}>{label}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Önem</label>
-                        <select
-                            className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={draftSeverityFilter}
-                            onChange={e => setDraftSeverityFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                        >
-                            <option value="all">Tüm Önem Dereceleri</option>
-                            {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
-                                <option key={value} value={value}>{label}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Kullanıcı</label>
-                        <select
-                            className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={draftUserFilter}
-                            onChange={e => setDraftUserFilter(e.target.value)}
-                        >
-                            <option value="all">Tüm Kullanıcılar</option>
-                            {actors.map(name => (
-                                <option key={name} value={name}>{name}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={applyFilters}
-                        className="flex items-center gap-1.5 rounded-lg bg-rb-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
-                    >
-                        <Check className="h-4 w-4" />
-                        Filtrele
-                    </button>
-                </div>
-            )}
-
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <table className="w-full text-sm">
+            <div className="rounded-xl border border-border bg-card overflow-x-auto">
+                <table className="w-full text-sm md:min-w-160">
                     <thead>
                         <tr className="border-b border-border">
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Zaman</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Şube</th>
+                            <th className="hidden md:table-cell text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Zaman</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kategori</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Önem</th>
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kullanıcı</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Detay</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                                <td colSpan={4} className="px-5 py-10 text-center text-sm text-muted-foreground">
                                     Yükleniyor...
                                 </td>
                             </tr>
                         ) : logs.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                                <td colSpan={4} className="px-5 py-10 text-center text-sm text-muted-foreground">
                                     Kayıt bulunamadı.
                                 </td>
                             </tr>
                         ) : (
-                            logs.map(log => (
-                                <tr key={log.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors align-top">
-                                    <td className="px-5 py-3.5 text-muted-foreground whitespace-nowrap">
-                                        {new Date(log.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                    </td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">{log.branchName ?? '—'}</td>
-                                    <td className="px-4 py-3.5">
-                                        <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold', CATEGORY_STYLE[log.category] ?? CATEGORY_STYLE[6])}>
-                                            {CATEGORY_LABELS[log.category] ?? 'Bilinmiyor'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3.5">
-                                        <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold', SEVERITY_STYLE[log.severity] ?? SEVERITY_STYLE[1])}>
-                                            {SEVERITY_LABELS[log.severity] ?? 'Bilgi'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3.5 font-medium text-foreground whitespace-nowrap">{log.actorName || '—'}</td>
-                                    <td className="px-4 py-3.5">
-                                        <p className="text-foreground">{log.message}</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">{log.action}</p>
-                                    </td>
-                                </tr>
-                            ))
+                            filtered.map(log => {
+                                const isExpanded = expandedId === log.id;
+                                return (
+                                    <Fragment key={log.id}>
+                                        <tr
+                                            onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                                            className={cn(
+                                                "cursor-pointer transition-colors",
+                                                isExpanded ? "bg-muted/20" : "hover:bg-muted/20"
+                                            )}
+                                        >
+                                            <td className="hidden md:table-cell px-5 py-3.5 text-muted-foreground whitespace-nowrap">
+                                                {new Date(log.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td className="px-4 py-3.5">
+                                                <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap', CATEGORY_STYLE[log.category] ?? CATEGORY_STYLE[6])}>
+                                                    {CATEGORY_LABELS[log.category] ?? 'Bilinmiyor'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3.5">
+                                                <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap', SEVERITY_STYLE[log.severity] ?? SEVERITY_STYLE[1])}>
+                                                    {SEVERITY_LABELS[log.severity] ?? 'Bilgi'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3.5 font-medium text-foreground whitespace-nowrap">{log.actorName || '—'}</td>
+                                        </tr>
+                                        <tr
+                                            onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                                            className={cn(
+                                                "border-b border-border last:border-0 cursor-pointer transition-colors",
+                                                isExpanded ? "bg-muted/20" : "hover:bg-muted/20"
+                                            )}
+                                        >
+                                            <td colSpan={4} className="px-5 py-2.5">
+                                                {isExpanded ? (
+                                                    <div className="space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                        <p className="text-xs text-muted-foreground md:hidden">
+                                                            <span className="font-semibold">Zaman:</span> {new Date(log.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </p>
+                                                        <p className="text-sm text-foreground">{log.message}</p>
+                                                        <p className="text-xs text-muted-foreground">{log.action}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            <span className="font-semibold">Şube:</span> {log.branchName ?? '—'}
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <span className="inline-block text-xs font-medium text-rb-accent hover:underline mb-1">
+                                                        Detayları görmek için tıklayın
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    </Fragment>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>

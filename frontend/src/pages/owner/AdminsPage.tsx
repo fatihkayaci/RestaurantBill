@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Pencil } from 'lucide-react';
+import { X, Pencil, Store } from 'lucide-react';
 import { toast } from "sonner";
 import { userService } from "@/features/users/api/userService";
 import { branchService } from "@/features/branches/api/branchService";
@@ -177,76 +177,76 @@ export default function AdminsPage() {
                 </button>
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="border-b border-border">
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ad Soyad</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Şube</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">E-posta</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İşlem</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {admins.map(admin => {
-                            const initials = admin.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-                            return (
-                                <tr key={admin.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                                    <td className="px-5 py-3.5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-rb-purple-bg text-rb-purple">
-                                                {initials}
-                                            </div>
-                                            <span className="font-medium text-foreground">{admin.fullName}</span>
+            {/* Kartlar */}
+            {admins.length === 0 ? (
+                <div className="rounded-xl border border-border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
+                    Admin bulunamadı.
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {admins.map(admin => {
+                        const initials = admin.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+                        return (
+                            <div key={admin.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-rb-purple-bg text-rb-purple">
+                                            {initials}
                                         </div>
-                                    </td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">{admin.branchName || '—'}</td>
-                                    <td className="px-4 py-3.5 text-muted-foreground">{admin.email || '—'}</td>
-                                    <td className="px-4 py-3.5">
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-foreground text-sm truncate">{admin.fullName}</p>
+                                            <p className="text-xs text-rb-accent truncate">{admin.email || '—'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <span className={cn(
+                                            "px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase",
+                                            admin.isActive ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground"
+                                        )}>
+                                            {admin.isActive ? 'Aktif' : 'Pasif'}
+                                        </span>
                                         <button
-                                            onClick={() => toggleActive(admin)}
-                                            className={cn(
-                                                "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none",
-                                                admin.isActive ? "bg-rb-green" : "bg-gray-300 dark:bg-gray-600"
-                                            )}
+                                            onClick={() => openEditModal(admin)}
+                                            className="text-muted-foreground hover:text-foreground transition-colors"
                                         >
+                                            <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Store className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate">{admin.branchName || '—'}</span>
+                                </div>
+
+                                <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
+                                    <button
+                                        onClick={() => toggleActive(admin)}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <span className={cn(
+                                            "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0",
+                                            admin.isActive ? "bg-rb-green" : "bg-gray-300 dark:bg-gray-600"
+                                        )}>
                                             <span className={cn(
                                                 "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200",
                                                 admin.isActive ? "translate-x-4" : "translate-x-0.5"
                                             )} />
-                                        </button>
-                                    </td>
-                                    <td className="px-4 py-3.5">
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => openEditModal(admin)}
-                                                className="text-muted-foreground hover:text-foreground transition-colors"
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => setDeleteTargetId(admin.id)}
-                                                className="text-muted-foreground hover:text-destructive transition-colors"
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                        {admins.length === 0 && (
-                            <tr>
-                                <td colSpan={5} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                                    Admin bulunamadı.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">{admin.isActive ? 'Erişim açık' : 'Erişim kapalı'}</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setDeleteTargetId(admin.id)}
+                                        className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"
+                                    >
+                                        Kaldır
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Modal */}
             {isModalOpen && (
