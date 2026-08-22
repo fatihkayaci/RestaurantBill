@@ -3,7 +3,15 @@ using RestaurantBill.Domain.Interfaces;
 
 namespace RestaurantBill.Application.Tests.Fakes;
 
-public class FakeAuditLogRepository : FakeGenericRepository<AuditLog>, IAuditLogRepository { }
+public class FakeAuditLogRepository : FakeGenericRepository<AuditLog>, IAuditLogRepository
+{
+    public Task<List<string>> GetDistinctActorNamesAsync(IEnumerable<Guid> branchIds)
+    {
+        var ids = branchIds.ToHashSet();
+        var names = Data.Where(l => ids.Contains(l.BranchId)).Select(l => l.ActorName).Distinct().OrderBy(n => n).ToList();
+        return Task.FromResult(names);
+    }
+}
 public class FakeCashRegisterRepository : FakeGenericRepository<CashRegister>, ICashRegisterRepository { }
 public class FakeCashTransactionRepository : FakeGenericRepository<CashTransaction>, ICashTransactionRepository { }
 public class FakeCategoryRepository : FakeGenericRepository<Category>, ICategoryRepository { }
