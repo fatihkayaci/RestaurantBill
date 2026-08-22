@@ -1,31 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Search, SlidersHorizontal, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Check } from 'lucide-react';
 import { auditLogService } from '@/features/auditLogs/api/auditLogService';
 import type { AuditLog } from '@/features/auditLogs/types';
 import { branchService } from '@/features/branches/api/branchService';
 import type { Branch } from '@/features/branches/types';
+import { CATEGORY_LABELS, CATEGORY_STYLE, SEVERITY_LABELS, SEVERITY_STYLE } from '@/features/auditLogs/constants';
 import { cn } from '@/lib/utils';
-
-const CATEGORY_LABELS: Record<number, string> = {
-    1: 'Giriş', 2: 'Sipariş', 3: 'Ödeme', 4: 'Personel', 5: 'Ürün', 6: 'Sistem',
-};
-
-const CATEGORY_STYLE: Record<number, string> = {
-    1: 'bg-rb-purple-bg text-rb-purple',
-    2: 'bg-rb-accent-bg text-rb-accent',
-    3: 'bg-rb-green-bg text-rb-green',
-    4: 'bg-rb-gold-bg text-rb-gold',
-    5: 'bg-rb-orange-bg text-rb-orange',
-    6: 'bg-rb-neutral-bg text-rb-neutral',
-};
-
-const SEVERITY_LABELS: Record<number, string> = { 1: 'Bilgi', 2: 'Uyarı', 3: 'Kritik' };
-
-const SEVERITY_STYLE: Record<number, string> = {
-    1: 'bg-rb-neutral-bg text-rb-neutral',
-    2: 'bg-rb-amber-bg text-rb-amber',
-    3: 'bg-rb-red-bg text-rb-red',
-};
 
 const getToday = () => {
     const now = new Date();
@@ -44,6 +24,13 @@ export default function AuditLogPage() {
     const [userFilter, setUserFilter] = useState<string | 'all'>('all');
     const [dateFrom, setDateFrom] = useState(getToday);
     const [dateTo, setDateTo] = useState(getToday);
+    // Draft filter values edited in the panel; only applied to the fetch on "Filtrele" click.
+    const [draftCategoryFilter, setDraftCategoryFilter] = useState<number | 'all'>('all');
+    const [draftSeverityFilter, setDraftSeverityFilter] = useState<number | 'all'>('all');
+    const [draftBranchFilter, setDraftBranchFilter] = useState<string | 'all'>('all');
+    const [draftUserFilter, setDraftUserFilter] = useState<string | 'all'>('all');
+    const [draftDateFrom, setDraftDateFrom] = useState(getToday);
+    const [draftDateTo, setDraftDateTo] = useState(getToday);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
@@ -92,6 +79,16 @@ export default function AuditLogPage() {
         dateTo !== getToday(),
     ].filter(Boolean).length;
 
+    const applyFilters = () => {
+        setCategoryFilter(draftCategoryFilter);
+        setSeverityFilter(draftSeverityFilter);
+        setBranchFilter(draftBranchFilter);
+        setUserFilter(draftUserFilter);
+        setDateFrom(draftDateFrom);
+        setDateTo(draftDateTo);
+        setPage(1);
+    };
+
     const clearFilters = () => {
         setCategoryFilter('all');
         setSeverityFilter('all');
@@ -99,6 +96,12 @@ export default function AuditLogPage() {
         setUserFilter('all');
         setDateFrom(getToday());
         setDateTo(getToday());
+        setDraftCategoryFilter('all');
+        setDraftSeverityFilter('all');
+        setDraftBranchFilter('all');
+        setDraftUserFilter('all');
+        setDraftDateFrom(getToday());
+        setDraftDateTo(getToday());
         setPage(1);
     };
 
@@ -128,7 +131,19 @@ export default function AuditLogPage() {
 
                 <button
                     type="button"
-                    onClick={() => setFiltersOpen(open => !open)}
+                    onClick={() => {
+                        setFiltersOpen(open => {
+                            if (!open) {
+                                setDraftCategoryFilter(categoryFilter);
+                                setDraftSeverityFilter(severityFilter);
+                                setDraftBranchFilter(branchFilter);
+                                setDraftUserFilter(userFilter);
+                                setDraftDateFrom(dateFrom);
+                                setDraftDateTo(dateTo);
+                            }
+                            return !open;
+                        });
+                    }}
                     className={cn(
                         'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
                         filtersOpen || activeFilterCount > 0
@@ -163,11 +178,8 @@ export default function AuditLogPage() {
                         <input
                             type="date"
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={dateFrom}
-                            onChange={e => {
-                                setDateFrom(e.target.value);
-                                setPage(1);
-                            }}
+                            value={draftDateFrom}
+                            onChange={e => setDraftDateFrom(e.target.value)}
                         />
                     </div>
 
@@ -176,11 +188,8 @@ export default function AuditLogPage() {
                         <input
                             type="date"
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={dateTo}
-                            onChange={e => {
-                                setDateTo(e.target.value);
-                                setPage(1);
-                            }}
+                            value={draftDateTo}
+                            onChange={e => setDraftDateTo(e.target.value)}
                         />
                     </div>
 
@@ -188,11 +197,8 @@ export default function AuditLogPage() {
                         <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube</label>
                         <select
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={branchFilter}
-                            onChange={e => {
-                                setBranchFilter(e.target.value);
-                                setPage(1);
-                            }}
+                            value={draftBranchFilter}
+                            onChange={e => setDraftBranchFilter(e.target.value)}
                         >
                             <option value="all">Tüm Şubeler</option>
                             {branches.map(branch => (
@@ -205,11 +211,8 @@ export default function AuditLogPage() {
                         <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Kategori</label>
                         <select
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={categoryFilter}
-                            onChange={e => {
-                                setCategoryFilter(e.target.value === 'all' ? 'all' : Number(e.target.value));
-                                setPage(1);
-                            }}
+                            value={draftCategoryFilter}
+                            onChange={e => setDraftCategoryFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
                         >
                             <option value="all">Tüm Kategoriler</option>
                             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
@@ -222,11 +225,8 @@ export default function AuditLogPage() {
                         <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Önem</label>
                         <select
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={severityFilter}
-                            onChange={e => {
-                                setSeverityFilter(e.target.value === 'all' ? 'all' : Number(e.target.value));
-                                setPage(1);
-                            }}
+                            value={draftSeverityFilter}
+                            onChange={e => setDraftSeverityFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
                         >
                             <option value="all">Tüm Önem Dereceleri</option>
                             {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
@@ -239,11 +239,8 @@ export default function AuditLogPage() {
                         <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Kullanıcı</label>
                         <select
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                            value={userFilter}
-                            onChange={e => {
-                                setUserFilter(e.target.value);
-                                setPage(1);
-                            }}
+                            value={draftUserFilter}
+                            onChange={e => setDraftUserFilter(e.target.value)}
                         >
                             <option value="all">Tüm Kullanıcılar</option>
                             {actors.map(name => (
@@ -251,6 +248,15 @@ export default function AuditLogPage() {
                             ))}
                         </select>
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={applyFilters}
+                        className="flex items-center gap-1.5 rounded-lg bg-rb-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                    >
+                        <Check className="h-4 w-4" />
+                        Filtrele
+                    </button>
                 </div>
             )}
 

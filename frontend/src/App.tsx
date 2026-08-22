@@ -16,6 +16,7 @@ import CashierLayout from './pages/cashier/Layout';
 import CashierDashboardPage from './pages/cashier/DashboardPage';
 
 import OwnerLayout from './pages/owner/Layout';
+import OwnerDashboardPage from './pages/owner/DashboardPage';
 import OwnerBrandingPage from './pages/owner/SettingsPage';
 import OwnerMembershipPage from './pages/owner/MembershipPage';
 import OwnerBranchesPage from './pages/owner/BranchesPage';
@@ -60,7 +61,7 @@ function App() {
                 <Route path="/setup-slug" element={<PrivateRoute allowedRoles={["Owner"]}><SlugSetupPage /></PrivateRoute>} />
                 <Route path="/owner" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerLayout /></PrivateRoute>}>
                     <Route index element={<Navigate to="/owner/overview" replace />} />
-                    <Route path="overview" element={<OverViewPage />} />
+                    <Route path="overview" element={<OwnerDashboardPage />} />
                     <Route path="branches" element={<OwnerBranchesPage />} />
                     <Route path="admins" element={<OwnerAdminsPage />} />
                     <Route path="membership" element={<OwnerMembershipPage />} />
