@@ -22,7 +22,7 @@ public class LoginCommandHandlerTests
         => new(uow, new FakePasswordHasher(), new FakeJwtTokenGenerator(), tenantResolver);
 
     [Fact]
-    public async Task Handle_OwnerLoginWithoutSlug_UnverifiedPhone_ReturnsTransitionTokenAndFlag()
+    public async Task Handle_OwnerLoginWithoutSlug_UnverifiedPhone_ReturnsFullTokenWithoutFlag()
     {
         var uow = new FakeUnitOfWork();
         User owner = CreateOwnerWithId();
@@ -33,8 +33,8 @@ public class LoginCommandHandlerTests
         var result = await handler.Handle(new LoginCommand { Email = "owner@mail.com", Password = "sifre123" }, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.True(result.Value!.NeedsPhoneVerification);
-        Assert.StartsWith("transition:", result.Value!.Token);
+        Assert.False(result.Value!.NeedsPhoneVerification);
+        Assert.StartsWith("token:", result.Value!.Token);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class LoginCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_OwnerLoginWithSlug_UnverifiedPhone_ReturnsTransitionTokenAndFlag()
+    public async Task Handle_OwnerLoginWithSlug_UnverifiedPhone_ReturnsFullTokenWithoutFlag()
     {
         var uow = new FakeUnitOfWork();
         User owner = CreateOwnerWithId();
@@ -68,8 +68,8 @@ public class LoginCommandHandlerTests
         var result = await handler.Handle(new LoginCommand { Email = "owner@mail.com", Password = "sifre123" }, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.True(result.Value!.NeedsPhoneVerification);
-        Assert.StartsWith("transition:", result.Value!.Token);
+        Assert.False(result.Value!.NeedsPhoneVerification);
+        Assert.StartsWith("token:", result.Value!.Token);
     }
 
     [Fact]
