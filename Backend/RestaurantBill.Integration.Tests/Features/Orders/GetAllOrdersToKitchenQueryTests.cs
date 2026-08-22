@@ -11,7 +11,7 @@ public class GetAllOrdersToKitchenQueryTests : IntegrationTestBase
 
     public GetAllOrdersToKitchenQueryTests()
     {
-        _handler = new GetAllOrdersToKitchenQueryHandler(UnitOfWork, CurrentUser);
+        _handler = new GetAllOrdersToKitchenQueryHandler(AppDb, CurrentUser);
     }
 
     private async Task<Table> SeedTableAsync(Guid restaurantId)

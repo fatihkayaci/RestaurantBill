@@ -1,32 +1,32 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.CashRegisters.Commands.UpdateCashRegister;
 
 public class UpdateCashRegisterHandler : IRequestHandler<UpdateCashRegisterCommand, Result>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public UpdateCashRegisterHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public UpdateCashRegisterHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
     public async Task<Result> Handle(UpdateCashRegisterCommand request, CancellationToken cancellationToken)
     {
-        var register = await _uow.CashRegister.GetByIdAsync(request.Id, true);
+        CashRegister? register = await _db.CashRegisters
+            .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
         if (register is null) return Result.Failure("Böyle bir kasa bulunamadı");
 
-        register!.Update(request.Name, request.Balance, request.Status);
-        await _uow.CashRegister.UpdateAsync(register);
+        register.Update(request.Name, request.Balance, request.Status);
 
-        User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+        User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
             _currentUser.BranchId,
             actor?.FullName ?? string.Empty,
@@ -36,9 +36,9 @@ public class UpdateCashRegisterHandler : IRequestHandler<UpdateCashRegisterComma
             $"{actor?.FullName} {register.Name} kasasını güncelledi.",
             nameof(CashRegister),
             register.Id);
-        await _uow.AuditLog.AddAsync(log);
+        _db.AuditLogs.Add(log);
 
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 }

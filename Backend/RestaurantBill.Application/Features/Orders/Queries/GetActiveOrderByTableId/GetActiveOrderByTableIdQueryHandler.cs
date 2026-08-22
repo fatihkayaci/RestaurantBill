@@ -1,6 +1,6 @@
 using MediatR;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Features.Orders.Queries;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Shared;
 
@@ -8,18 +8,16 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTab
 {
     public class GetActiveOrderByTableIdHandler : IRequestHandler<GetActiveOrderByTableIdQuery, Result<OrderDto>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly OrderQueries _orderQueries;
 
-        public GetActiveOrderByTableIdHandler(IUnitOfWork uow)
+        public GetActiveOrderByTableIdHandler(OrderQueries orderQueries)
         {
-            _uow = uow;
+            _orderQueries = orderQueries;
         }
-        /// <summary>
-        /// Returns the active order for the given table, including its items and product details.
-        /// </summary>
+
         public async Task<Result<OrderDto>> Handle(GetActiveOrderByTableIdQuery request, CancellationToken cancellationToken)
         {
-            var order = await _uow.Order.GetActiveOrderByTableId(request.TableId, false);
+            var order = await _orderQueries.GetActiveOrderByTableIdAsync(request.TableId, trackChanges: false, cancellationToken);
             return Result<OrderDto>.Success(order!.ToDto());
         }
     }

@@ -4,7 +4,9 @@ using RestaurantBill.Application.Features.Tables.Commands.DeleteTable;
 using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
 using RestaurantBill.Application.Features.Tables.Commands.ReservationTable;
 using RestaurantBill.Application.Features.Tables.Commands.UpdateTable;
+using RestaurantBill.Application.Features.Tables.Queries;
 using RestaurantBill.Application.Tests.Fakes;
+using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 
@@ -20,51 +22,45 @@ public class TableCommandHandlerTests
         return table;
     }
 
-    public class CreateTableHandlerTests
+    public class CreateTableHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithValidCommand_AddsTableAndSaves()
         {
-            var uow = new FakeUnitOfWork();
-            var currentUser = new FakeCurrentUserService { BranchId = Guid.NewGuid() };
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new CreateTableCommandHandler(uow, currentUser);
+            await SeedActorAsync();
+            var handler = new CreateTableCommandHandler(Db, CurrentUser);
             Guid regionId = Guid.NewGuid();
 
             await handler.Handle(new CreateTableCommand { Name = "Masa 1", RegionId = regionId }, CancellationToken.None);
 
-            Assert.Single(uow.TableRepo.Added);
-            Assert.Equal(regionId, uow.TableRepo.Added[0].RegionId);
-            Assert.True(uow.SaveChangesCalled);
+            Table saved = Assert.Single(DbContext.Tables.ToList());
+            Assert.Equal(regionId, saved.RegionId);
         }
     }
 
-    public class UpdateTableHandlerTests
+    public class UpdateTableHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingTable_UpdatesAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Table table = CreateTable();
-            await uow.TableRepo.AddAsync(table);
+            DbContext.Tables.Add(table);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new UpdateCommandHandler(uow, currentUser);
+            var handler = new UpdateCommandHandler(Db, CurrentUser);
             var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved, RegionId = Guid.NewGuid() };
 
             await handler.Handle(command, CancellationToken.None);
 
             Assert.Equal("Yeni Ad", table.Name);
             Assert.Equal(TableStatus.Reserved, table.Status);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new UpdateCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new UpdateCommandHandler(Db, CurrentUser);
 
             var result = await handler.Handle(new UpdateTableCommand { Id = Guid.NewGuid(), Name = "Ad" }, CancellationToken.None);
 
@@ -72,29 +68,26 @@ public class TableCommandHandlerTests
         }
     }
 
-    public class DeleteTableHandlerTests
+    public class DeleteTableHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingTable_DeletesAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Table table = CreateTable();
-            await uow.TableRepo.AddAsync(table);
+            DbContext.Tables.Add(table);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new DeleteHandler(uow, currentUser);
+            var handler = new DeleteHandler(Db, CurrentUser);
             await handler.Handle(new DeleteTableCommand { TableId = table.Id }, CancellationToken.None);
 
-            Assert.Empty(uow.TableRepo.Added);
-            Assert.True(uow.SaveChangesCalled);
+            Assert.Empty(DbContext.Tables.ToList());
         }
 
         [Fact]
         public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new DeleteHandler(uow, new FakeCurrentUserService());
+            var handler = new DeleteHandler(Db, CurrentUser);
 
             var result = await handler.Handle(new DeleteTableCommand { TableId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -102,30 +95,27 @@ public class TableCommandHandlerTests
         }
     }
 
-    public class OpenTableHandlerTests
+    public class OpenTableHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithAvailableTable_CreatesOrderAndOccupiesTable()
         {
-            var uow = new FakeUnitOfWork();
             Table table = CreateTable();
-            await uow.TableRepo.AddAsync(table);
+            DbContext.Tables.Add(table);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), currentUser);
+            var handler = new OpenTableHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
             await handler.Handle(new OpenTableCommand { TableId = table.Id }, CancellationToken.None);
 
             Assert.Equal(TableStatus.Occupied, table.Status);
-            Assert.Single(uow.OrderRepo.Added);
-            Assert.True(uow.SaveChangesCalled);
+            Assert.Single(DbContext.Orders.ToList());
         }
 
         [Fact]
         public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new OpenTableHandler(uow, new FakeTableNotificationService(), new FakeCashierNotificationService(), new FakeCurrentUserService());
+            var handler = new OpenTableHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
 
             var result = await handler.Handle(new OpenTableCommand { TableId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -133,16 +123,16 @@ public class TableCommandHandlerTests
         }
     }
 
-    public class ReservationTableHandlerTests
+    public class ReservationTableHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingTable_SetsStatusToReserved()
         {
-            var uow = new FakeUnitOfWork();
             Table table = CreateTable();
-            await uow.TableRepo.AddAsync(table);
+            DbContext.Tables.Add(table);
+            await DbContext.SaveChangesAsync();
 
-            var handler = new ReservationTableCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
+            var handler = new ReservationTableCommandHandler(Db, new FakeTableNotificationService(), CurrentUser);
             await handler.Handle(new ReservationTableCommand
             {
                 TableId = table.Id,
@@ -153,32 +143,29 @@ public class TableCommandHandlerTests
             }, CancellationToken.None);
 
             Assert.Equal(TableStatus.Reserved, table.Status);
-            Assert.True(uow.SaveChangesCalled);
         }
     }
 
-    public class CancelReservationHandlerTests
+    public class CancelReservationHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithReservedTable_ReleasesTable()
         {
-            var uow = new FakeUnitOfWork();
             Table table = CreateTable();
             table.Reserve();
-            await uow.TableRepo.AddAsync(table);
+            DbContext.Tables.Add(table);
+            await DbContext.SaveChangesAsync();
 
-            var handler = new CancelReservationCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
+            var handler = new CancelReservationCommandHandler(Db, new ReservationQueries(Db), new FakeTableNotificationService(), CurrentUser);
             await handler.Handle(new CancelReservationCommand { TableId = table.Id }, CancellationToken.None);
 
             Assert.Equal(TableStatus.Available, table.Status);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithNonExistingTable_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new CancelReservationCommandHandler(uow, new FakeTableNotificationService(), new FakeCurrentUserService());
+            var handler = new CancelReservationCommandHandler(Db, new ReservationQueries(Db), new FakeTableNotificationService(), CurrentUser);
 
             var result = await handler.Handle(new CancelReservationCommand { TableId = Guid.NewGuid() }, CancellationToken.None);
 

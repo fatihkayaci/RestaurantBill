@@ -11,7 +11,7 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
 
     public GetAllOrdersToCashierQueryTests()
     {
-        _handler = new GetAllOrdersToCashierQueryHandler(UnitOfWork, CurrentUser);
+        _handler = new GetAllOrdersToCashierQueryHandler(AppDb, CurrentUser);
     }
 
     private async Task<Table> SeedTableAsync(Guid restaurantId)

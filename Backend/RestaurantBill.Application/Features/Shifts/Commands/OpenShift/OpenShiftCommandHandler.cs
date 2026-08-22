@@ -1,20 +1,20 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Shifts.Commands.OpenShift;
 
 public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public OpenShiftCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public OpenShiftCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
@@ -22,31 +22,32 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
     {
         Guid restaurantId = _currentUser.BranchId;
 
-        CashRegister? register = await _uow.CashRegister.GetByIdAsync(request.CashRegisterId, true);
+        CashRegister? register = await _db.CashRegisters
+            .FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
         if (register is null) return Result.Failure("Kasa bulunamadı.");
 
         if (register.Status != CashRegisterStatus.Open)
             return Result.Failure("Kapalı bir kasada vardiya açılamaz.");
 
-        var existingShifts = await _uow.Shift.GetAllAsync(s => s.CashRegisterId == request.CashRegisterId);
-        if (existingShifts.Any(s => s.Status == ShiftStatus.Open))
+        bool hasOpenShift = await _db.Shifts
+            .AnyAsync(s => s.CashRegisterId == request.CashRegisterId && s.Status == ShiftStatus.Open, cancellationToken);
+        if (hasOpenShift)
             return Result.Failure("Bu kasada zaten açık bir vardiya var.");
 
         decimal expectedOpeningBalance = register.Balance;
 
         Shift shift = Shift.Create(restaurantId, request.CashRegisterId, _currentUser.UserId, expectedOpeningBalance, request.OpeningBalance);
-        await _uow.Shift.AddAsync(shift);
+        _db.Shifts.Add(shift);
 
         bool hasDifference = shift.OpeningDifference != 0;
         if (hasDifference)
         {
             CashTransaction adjustment = register.ApplyShiftDifference(shift.OpeningDifference, _currentUser.UserId);
-            await _uow.CashTransaction.AddAsync(adjustment);
-            await _uow.CashRegister.UpdateAsync(register);
+            _db.CashTransactions.Add(adjustment);
             shift.LinkOpeningAdjustmentTransaction(adjustment.Id);
         }
 
-        User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+        User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
             restaurantId,
             actor?.FullName ?? string.Empty,
@@ -58,9 +59,9 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
                 : $"{actor?.FullName} {register.Name} kasasında ₺{request.OpeningBalance} açılış bakiyesiyle vardiya açtı.",
             nameof(Shift),
             shift.Id);
-        await _uow.AuditLog.AddAsync(log);
+        _db.AuditLogs.Add(log);
 
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 }

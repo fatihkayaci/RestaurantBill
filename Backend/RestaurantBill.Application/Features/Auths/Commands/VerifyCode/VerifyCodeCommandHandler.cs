@@ -1,21 +1,21 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
 {
     public class VerifyCodeCommandHandler : IRequestHandler<VerifyCodeCommand, Result<VerifyCodeResponseDto>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
 
-        public VerifyCodeCommandHandler(IUnitOfWork uow, IJwtTokenGenerator jwtTokenGenerator)
+        public VerifyCodeCommandHandler(IAppDbContext db, IJwtTokenGenerator jwtTokenGenerator)
         {
-            _uow = uow;
+            _db = db;
             _jwtTokenGenerator = jwtTokenGenerator;
         }
 
@@ -23,11 +23,10 @@ namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
 
         public async Task<Result<VerifyCodeResponseDto>> Handle(VerifyCodeCommand request, CancellationToken cancellationToken)
         {
-            VerificationCode? verificationCode = (await _uow.VerificationCode.GetAllAsync(
-                vc => vc.UserId == request.UserId && vc.Type == request.Type && vc.Status == VerificationCodeStatus.Pending && !vc.IsDeleted,
-                true))
+            VerificationCode? verificationCode = await _db.VerificationCodes
+                .Where(vc => vc.UserId == request.UserId && vc.Type == request.Type && vc.Status == VerificationCodeStatus.Pending && !vc.IsDeleted)
                 .OrderByDescending(vc => vc.CreatedAt)
-                .FirstOrDefault();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (verificationCode is null)
                 return Result<VerifyCodeResponseDto>.Failure("Doğrulama kodu bulunamadı.");
@@ -35,7 +34,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
             if (verificationCode.ExpiresAt < DateTime.UtcNow)
             {
                 verificationCode.MarkAsExpired();
-                await _uow.SaveChangesAsync(cancellationToken);
+                await _db.SaveChangesAsync(cancellationToken);
                 return Result<VerifyCodeResponseDto>.Failure("Doğrulama kodunun süresi dolmuş.");
             }
 
@@ -54,24 +53,24 @@ namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
                     errorMessage = "Doğrulama kodu hatalı.";
                 }
 
-                await _uow.SaveChangesAsync(cancellationToken);
+                await _db.SaveChangesAsync(cancellationToken);
                 return Result<VerifyCodeResponseDto>.Failure(errorMessage);
             }
 
-            User? user = await _uow.User.GetByIdAsync(request.UserId, true);
+            User? user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
             if (user is null)
                 return Result<VerifyCodeResponseDto>.Failure("Kullanıcı bulunamadı.");
 
             if (request.Type == VerificationCodeType.Phone)
             {
-                Company? company = (await _uow.Company.GetAllAsync(
-                    c => c.OwnerUserId == request.UserId && !c.IsDeleted, false)).FirstOrDefault();
+                Company? company = await _db.Companies
+                    .FirstOrDefaultAsync(c => c.OwnerUserId == request.UserId && !c.IsDeleted, cancellationToken);
                 if (company is null)
                     return Result<VerifyCodeResponseDto>.Failure("Restoran bulunamadı.");
 
                 verificationCode.MarkAsVerified();
                 user.MarkPhoneVerified();
-                await _uow.SaveChangesAsync(cancellationToken);
+                await _db.SaveChangesAsync(cancellationToken);
 
                 return Result<VerifyCodeResponseDto>.Success(new VerifyCodeResponseDto
                 {
@@ -82,7 +81,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
 
             verificationCode.MarkAsVerified();
             user.MarkEmailVerified();
-            await _uow.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
 
             return Result<VerifyCodeResponseDto>.Success(new VerifyCodeResponseDto());
         }

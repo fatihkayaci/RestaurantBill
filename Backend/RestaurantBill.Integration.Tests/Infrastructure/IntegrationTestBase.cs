@@ -1,16 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Persistence.Context;
-using RestaurantBill.Persistence.Repositories;
 
 namespace RestaurantBill.Integration.Tests.Infrastructure;
 
 public abstract class IntegrationTestBase : IDisposable
 {
     protected readonly RestaurantBillDbContext DbContext;
-    protected readonly IUnitOfWork UnitOfWork;
+    protected readonly IAppDbContext AppDb;
     protected readonly ICurrentUserService CurrentUser;
 
     protected static readonly Guid RestaurantId = Guid.NewGuid();
@@ -28,7 +26,7 @@ public abstract class IntegrationTestBase : IDisposable
 
         CurrentUser = new FakeCurrentUserService { BranchId = RestaurantId, UserId = UserId };
         DbContext = new RestaurantBillDbContext(options, CurrentUser);
-        UnitOfWork = new UnitOfWork(DbContext);
+        AppDb = DbContext;
 
         Branch branch = Branch.Create("Ana Şube");
         Branch otherBranch = Branch.Create("Diğer Şube");

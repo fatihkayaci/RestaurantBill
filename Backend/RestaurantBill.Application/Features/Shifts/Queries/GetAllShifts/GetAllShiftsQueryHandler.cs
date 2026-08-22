@@ -1,33 +1,35 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Shifts.Queries.GetAllShifts;
 
 public class GetAllShiftsQueryHandler : IRequestHandler<GetAllShiftsQuery, Result<List<ShiftDto>>>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public GetAllShiftsQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+    public GetAllShiftsQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
-        _uow = uow;
+        _db = db;
         _currentUser = currentUser;
     }
 
     public async Task<Result<List<ShiftDto>>> Handle(GetAllShiftsQuery request, CancellationToken cancellationToken)
     {
         Guid restaurantId = _currentUser.BranchId;
-        if (restaurantId == Guid.Empty) return Result<List<ShiftDto>>.Failure("ID değeri 0 veya negatif olamaz.");
+        if (restaurantId == Guid.Empty) return Result<List<ShiftDto>>.Failure("Geçersiz şube bilgisi.");
 
-        var entities = await _uow.Shift.GetAllAsync(
-            s => s.BranchId == restaurantId && (request.CashRegisterId == null || s.CashRegisterId == request.CashRegisterId),
-            false,
-            "CashRegister");
+        var shifts = await _db.Shifts
+            .AsNoTracking()
+            .Include(s => s.CashRegister)
+            .Where(s => s.BranchId == restaurantId && (request.CashRegisterId == null || s.CashRegisterId == request.CashRegisterId))
+            .OrderByDescending(s => s.OpenedAt)
+            .ToListAsync(cancellationToken);
 
-        return Result<List<ShiftDto>>.Success(entities.OrderByDescending(s => s.OpenedAt).Select(s => s.ToDto()).ToList());
+        return Result<List<ShiftDto>>.Success(shifts.Select(s => s.ToDto()).ToList());
     }
 }

@@ -1,6 +1,5 @@
-using RestaurantBill.Domain.Interfaces;
-using RestaurantBill.Application.Common;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -10,27 +9,30 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
 {
     public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand, Result>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
 
-        public DeleteProductCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+        public DeleteProductCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _currentUser = currentUser;
         }
 
         public async Task<Result> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
         {
-            Product? product = await _uow.Product.GetByIdAsync(request.Id, false);
+            Product? product = await _db.Products
+                .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
             if (product is null)
                 return Result.Failure("Böyle bir ürün bulunamadı.");
 
-            IEnumerable<OrderItem> linkedOrderItems = await _uow.OrderItem.GetAllAsync(oi => oi.ProductId == request.Id, false);
+            List<OrderItem> linkedOrderItems = await _db.OrderItems
+                .Where(oi => oi.ProductId == request.Id)
+                .ToListAsync(cancellationToken);
             product.EnsureCanBeDeleted(linkedOrderItems);
 
-            _uow.Product.Delete(product);
+            _db.Products.Remove(product);
 
-            User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+            User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
                 _currentUser.BranchId,
                 actor?.FullName ?? string.Empty,
@@ -40,9 +42,9 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
                 $"{actor?.FullName} {product.Name} ürününü sildi.",
                 nameof(Product),
                 product.Id);
-            await _uow.AuditLog.AddAsync(log);
+            _db.AuditLogs.Add(log);
 
-            await _uow.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
     }

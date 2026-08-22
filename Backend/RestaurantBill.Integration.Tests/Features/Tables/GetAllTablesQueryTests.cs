@@ -10,7 +10,7 @@ public class GetAllTablesQueryTests : IntegrationTestBase
 
     public GetAllTablesQueryTests()
     {
-        _handler = new GetAllTableQueryHandler(UnitOfWork, CurrentUser);
+        _handler = new GetAllTableQueryHandler(AppDb, CurrentUser);
     }
 
     [Fact]

@@ -1,5 +1,4 @@
 using MediatR;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Shared;
@@ -8,19 +7,16 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetActiveReservatio
 {
     public class GetActiveReservationByTableIdQueryHandler : IRequestHandler<GetActiveReservationByTableIdQuery, Result<ReservationDto>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly ReservationQueries _reservationQueries;
 
-        public GetActiveReservationByTableIdQueryHandler(IUnitOfWork uow)
+        public GetActiveReservationByTableIdQueryHandler(ReservationQueries reservationQueries)
         {
-            _uow = uow;
+            _reservationQueries = reservationQueries;
         }
 
-        /// <summary>
-        /// Returns the active reservation for the given table, or null if there is none.
-        /// </summary>
         public async Task<Result<ReservationDto>> Handle(GetActiveReservationByTableIdQuery request, CancellationToken cancellationToken)
         {
-            var reservation = await _uow.Reservation.GetActiveReservationByTableId(request.TableId, false);
+            var reservation = await _reservationQueries.GetActiveReservationByTableIdAsync(request.TableId, trackChanges: false, cancellationToken);
             if (reservation is null) return Result<ReservationDto>.Failure("Bu masaya ait bir reservasyon bulunamadı.");
             return Result<ReservationDto>.Success(reservation.ToDto());
         }

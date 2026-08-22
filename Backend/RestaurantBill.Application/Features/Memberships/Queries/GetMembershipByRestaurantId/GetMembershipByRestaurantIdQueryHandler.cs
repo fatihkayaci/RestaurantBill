@@ -1,29 +1,29 @@
 using MediatR;
-using RestaurantBill.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
-using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Memberships.Queries.GetMembershipByRestaurantId
 {
     public class GetMembershipByRestaurantIdQueryHandler : IRequestHandler<GetMembershipByRestaurantIdQuery, Result<MembershipDto>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
 
-        public GetMembershipByRestaurantIdQueryHandler(IUnitOfWork uow, ICurrentUserService currentUser)
+        public GetMembershipByRestaurantIdQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _currentUser = currentUser;
         }
 
         public async Task<Result<MembershipDto>> Handle(GetMembershipByRestaurantIdQuery request, CancellationToken cancellationToken)
         {
             Guid restaurantId = _currentUser.BranchId;
-            IEnumerable<Membership> memberships = await _uow.Membership.GetAllAsync(x => x.BranchId == restaurantId, false);
-            Membership? membership = memberships.FirstOrDefault();
+            var membership = await _db.Memberships
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.BranchId == restaurantId, cancellationToken);
             if (membership is null)
             {
                 return Result<MembershipDto>.Failure("Üyelik bulunamadı.");

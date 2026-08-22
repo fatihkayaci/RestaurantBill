@@ -1,36 +1,39 @@
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
-using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Interfaces;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 {
     public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Result>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly ICurrentUserService _currentUser;
 
-        public UpdateUserCommandHandler(IUnitOfWork uow, IPasswordHasher<User> passwordHasher, ICurrentUserService currentUser)
+        public UpdateUserCommandHandler(IAppDbContext db, IPasswordHasher<User> passwordHasher, ICurrentUserService currentUser)
         {
-            _uow = uow;
+            _db = db;
             _passwordHasher = passwordHasher;
             _currentUser = currentUser;
         }
 
         public async Task<Result> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
         {
-            User? user = await _uow.User.GetByIdAsync(request.UserId, true);
+            User? user = await _db.Users
+                .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
             if (user is null) return Result.Failure("Kullanıcı bulunamadı.");
 
-            UserBranch? userBranch = (await _uow.UserBranch.GetAllAsync(ur => ur.UserId == request.UserId && !ur.IsDeleted, true, nameof(UserBranch.Branch))).FirstOrDefault();
+            UserBranch? userBranch = await _db.UserBranches
+                .Include(ur => ur.Branch)
+                .FirstOrDefaultAsync(ur => ur.UserId == request.UserId && !ur.IsDeleted, cancellationToken);
             if (userBranch is null)
             {
-                bool isOwner = (await _uow.Company.GetAllAsync(c => c.OwnerUserId == request.UserId && !c.IsDeleted, false)).Any();
+                bool isOwner = await _db.Companies
+                    .AnyAsync(c => c.OwnerUserId == request.UserId && !c.IsDeleted, cancellationToken);
                 if (!isOwner) return Result.Failure("Kullanıcı bulunamadı.");
             }
 
@@ -40,7 +43,8 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 
             if (!string.IsNullOrWhiteSpace(request.Email))
             {
-                bool emailExists = (await _uow.User.GetAllAsync(u => u.Email == request.Email && u.Id != request.UserId && !u.IsDeleted, false)).Any();
+                bool emailExists = await _db.Users
+                    .AnyAsync(u => u.Email == request.Email && u.Id != request.UserId && !u.IsDeleted, cancellationToken);
                 if (emailExists)
                     return Result.Failure("Bu e-posta adresi zaten kullanımda.");
             }
@@ -52,8 +56,8 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
                 if (_currentUser.Role != nameof(UserRole.Owner))
                     return Result.Failure("Bu şubeye kullanıcı taşıma yetkiniz yok.");
 
-                Branch? targetBranch = (await _uow.Branch.GetAllAsync(
-                    b => b.Id == request.BranchId.Value && b.Company.OwnerUserId == _currentUser.UserId && !b.IsDeleted, false, nameof(Branch.Company))).FirstOrDefault();
+                Branch? targetBranch = await _db.Branches
+                    .FirstOrDefaultAsync(b => b.Id == request.BranchId.Value && b.Company.OwnerUserId == _currentUser.UserId && !b.IsDeleted, cancellationToken);
                 if (targetBranch is null)
                     return Result.Failure("Şube bulunamadı.");
 
@@ -63,15 +67,15 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 
             if (userBranch is not null && companyId.HasValue)
             {
-                bool userNameExists = (await _uow.UserBranch.GetAllAsync(
-                    ur => ur.UserName == request.UserName && ur.Branch.CompanyId == companyId.Value && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
+                bool userNameExists = await _db.UserBranches
+                    .AnyAsync(ur => ur.UserName == request.UserName && ur.Branch.CompanyId == companyId.Value && ur.UserId != request.UserId && !ur.IsDeleted, cancellationToken);
                 if (userNameExists)
                     return Result.Failure("Bu kullanıcı adı zaten kullanımda.");
 
                 if (!string.IsNullOrWhiteSpace(request.UserCode))
                 {
-                    bool userCodeExists = (await _uow.UserBranch.GetAllAsync(
-                        ur => ur.UserCode == request.UserCode && ur.Branch.CompanyId == companyId.Value && ur.UserId != request.UserId && !ur.IsDeleted, false)).Any();
+                    bool userCodeExists = await _db.UserBranches
+                        .AnyAsync(ur => ur.UserCode == request.UserCode && ur.Branch.CompanyId == companyId.Value && ur.UserId != request.UserId && !ur.IsDeleted, cancellationToken);
                     if (userCodeExists)
                         return Result.Failure("Bu kullanıcı kodu zaten kullanımda.");
                 }
@@ -87,7 +91,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
 
             if (userBranch is not null)
             {
-                User? actor = await _uow.User.GetByIdAsync(_currentUser.UserId);
+                User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
                 AuditLog log = AuditLog.Create(
                     userBranch.BranchId,
                     actor?.FullName ?? string.Empty,
@@ -97,10 +101,10 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
                     $"{actor?.FullName} {user.FullName} bilgilerini güncelledi.",
                     nameof(User),
                     user.Id);
-                await _uow.AuditLog.AddAsync(log);
+                _db.AuditLogs.Add(log);
             }
 
-            await _uow.SaveChangesAsync(cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
     }

@@ -1,30 +1,37 @@
 using MediatR;
-using RestaurantBill.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
-using RestaurantBill.Application.Common;
-using RestaurantBill.Application.Mappings;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Tables.Queries.GetTableById
 {
     public class GetTableByIdQueryHandler : IRequestHandler<GetTableByIdQuery, Result<TableDto>>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAppDbContext _db;
 
-        public GetTableByIdQueryHandler(IUnitOfWork uow)
+        public GetTableByIdQueryHandler(IAppDbContext db)
         {
-            _uow = uow;
+            _db = db;
         }
 
-        /// <summary>
-        /// Returns a single table by its ID.
-        /// </summary>
-        /// <exception cref="BusinessException">Thrown if the table is not found.</exception>
         public async Task<Result<TableDto>> Handle(GetTableByIdQuery request, CancellationToken cancellationToken)
         {
-            var table = await _uow.Table.GetByIdAsync(request.TableId, false, t => t.Region!);
+            TableDto? table = await _db.Tables
+                .AsNoTracking()
+                .Where(t => t.Id == request.TableId)
+                .Select(t => new TableDto
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Note = t.Note,
+                    Status = t.Status,
+                    RegionId = t.RegionId,
+                    RegionName = t.Region.Name
+                })
+                .FirstOrDefaultAsync(cancellationToken);
             if (table is null) return Result<TableDto>.Failure("Sipariş bulunamadı.");
-            return Result<TableDto>.Success(table!.ToDto());
+            return Result<TableDto>.Success(table);
         }
     }
 }

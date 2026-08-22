@@ -1,11 +1,12 @@
 using RestaurantBill.Application.Features.Auths.Commands.SendVerificationCode;
 using RestaurantBill.Application.Tests.Fakes;
+using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.Tests.Features.Auths;
 
-public class SendVerificationCodeCommandHandlerTests
+public class SendVerificationCodeCommandHandlerTests : ApplicationTestBase
 {
     private static void SetCreatedAt(BaseEntity entity, DateTime createdAt)
         => typeof(BaseEntity).GetProperty(nameof(BaseEntity.CreatedAt))!.SetValue(entity, createdAt);
@@ -13,21 +14,21 @@ public class SendVerificationCodeCommandHandlerTests
     private static void SetId(BaseEntity entity, Guid id)
         => typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(entity, id);
 
-    private static SendVerificationCodeCommandHandler CreateHandler(FakeUnitOfWork uow)
-        => new(uow, new FakeSmsSender(), new FakeEmailSender());
+    private SendVerificationCodeCommandHandler CreateHandler()
+        => new(Db, new FakeSmsSender(), new FakeEmailSender());
 
     [Fact]
     public async Task Handle_SecondRequestWithinSixtySeconds_ReturnsFailure()
     {
-        var uow = new FakeUnitOfWork();
         User user = User.Create("Fatih", "", "05001234567");
         SetId(user, Guid.NewGuid());
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
 
         VerificationCode existingCode = VerificationCode.Create(user.Id, "111111", VerificationCodeType.Phone, DateTime.UtcNow.AddMinutes(5));
-        await uow.VerificationCodeRepo.AddAsync(existingCode);
+        DbContext.VerificationCodes.Add(existingCode);
+        await DbContext.SaveChangesAsync();
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new SendVerificationCodeCommand { UserId = user.Id, Type = VerificationCodeType.Phone }, CancellationToken.None);
 
         Assert.True(result.IsFailure);
@@ -37,52 +38,55 @@ public class SendVerificationCodeCommandHandlerTests
     [Fact]
     public async Task Handle_TypeAlreadyVerified_ReturnsFailure()
     {
-        var uow = new FakeUnitOfWork();
         User user = User.Create("Fatih", "", "05001234567");
         SetId(user, Guid.NewGuid());
         user.MarkPhoneVerified();
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
+        await DbContext.SaveChangesAsync();
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new SendVerificationCodeCommand { UserId = user.Id, Type = VerificationCodeType.Phone }, CancellationToken.None);
 
         Assert.True(result.IsFailure);
-        Assert.Contains("doğrulanmış", result.Error); 
+        Assert.Contains("doğrulanmış", result.Error);
     }
 
     [Fact]
     public async Task Handle_WithOldPendingCodeOfSameType_MarksItExpiredAndCreatesNewCode()
     {
-        var uow = new FakeUnitOfWork();
         User user = User.Create("Fatih", "", "05001234567");
         SetId(user, Guid.NewGuid());
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
 
         VerificationCode oldCode = VerificationCode.Create(user.Id, "111111", VerificationCodeType.Phone, DateTime.UtcNow.AddMinutes(5));
+        DbContext.VerificationCodes.Add(oldCode);
+        await DbContext.SaveChangesAsync();
         SetCreatedAt(oldCode, DateTime.UtcNow.AddMinutes(-2));
-        await uow.VerificationCodeRepo.AddAsync(oldCode);
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new SendVerificationCodeCommand { UserId = user.Id, Type = VerificationCodeType.Phone }, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(VerificationCodeStatus.Expired, oldCode.Status);
-        Assert.Equal(2, uow.VerificationCodeRepo.Added.Count);
-        Assert.Equal(VerificationCodeStatus.Pending, uow.VerificationCodeRepo.Added[1].Status);
+
+        List<VerificationCode> codes = DbContext.VerificationCodes.ToList();
+        Assert.Equal(2, codes.Count);
+        VerificationCode newCode = Assert.Single(codes, c => c.Id != oldCode.Id);
+        Assert.Equal(VerificationCodeStatus.Pending, newCode.Status);
     }
 
     [Fact]
     public async Task Handle_PendingCodeOfDifferentType_IsNotAffected()
     {
-        var uow = new FakeUnitOfWork();
         User user = User.Create("Fatih", "f@mail.com", "05001234567");
         SetId(user, Guid.NewGuid());
-        await uow.UserRepo.AddAsync(user);
+        DbContext.Users.Add(user);
 
         VerificationCode emailCode = VerificationCode.Create(user.Id, "222222", VerificationCodeType.Email, DateTime.UtcNow.AddMinutes(5));
-        await uow.VerificationCodeRepo.AddAsync(emailCode);
+        DbContext.VerificationCodes.Add(emailCode);
+        await DbContext.SaveChangesAsync();
 
-        var handler = CreateHandler(uow);
+        var handler = CreateHandler();
         var result = await handler.Handle(new SendVerificationCodeCommand { UserId = user.Id, Type = VerificationCodeType.Phone }, CancellationToken.None);
 
         Assert.True(result.IsSuccess);

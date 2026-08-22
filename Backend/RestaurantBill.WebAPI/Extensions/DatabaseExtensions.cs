@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Features.Orders.Queries;
+using RestaurantBill.Application.Features.Tables.Queries;
+using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Persistence.Context;
 
@@ -13,6 +16,10 @@ public static class DatabaseExtensions
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
         });
+
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<RestaurantBillDbContext>());
+        services.AddScoped<ReservationQueries>();
+        services.AddScoped<OrderQueries>();
 
         return services;
     }

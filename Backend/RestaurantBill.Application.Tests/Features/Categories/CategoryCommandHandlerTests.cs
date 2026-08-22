@@ -1,7 +1,7 @@
 using RestaurantBill.Application.Features.Categories.Commands.CreateCategory;
 using RestaurantBill.Application.Features.Categories.Commands.DeleteCategory;
 using RestaurantBill.Application.Features.Categories.Commands.UpdateCategory;
-using RestaurantBill.Application.Tests.Fakes;
+using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Exceptions;
 
@@ -9,52 +9,45 @@ namespace RestaurantBill.Application.Tests.Features.Categories;
 
 public class CategoryCommandHandlerTests
 {
-    public class CreateCategoryHandlerTests
+    public class CreateCategoryHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithValidCommand_AddsCategoryAndSaves()
         {
-            var uow = new FakeUnitOfWork();
-            Guid branchId = Guid.NewGuid();
-            var currentUser = new FakeCurrentUserService { BranchId = branchId };
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new CreateCategoryCommandHandler(uow, currentUser);
+            await SeedActorAsync();
+            var handler = new CreateCategoryCommandHandler(Db, CurrentUser);
             var command = new CreateCategoryCommand { Name = "İçecekler" };
 
             var result = await handler.Handle(command, CancellationToken.None);
             Assert.True(result.IsSuccess);
 
-            Assert.Single(uow.CategoryRepo.Added);
-            Assert.Equal(branchId, uow.CategoryRepo.Added[0].BranchId);
-            Assert.True(uow.SaveChangesCalled);
+            Category saved = Assert.Single(DbContext.Categories.ToList());
+            Assert.Equal(CurrentUser.BranchId, saved.BranchId);
         }
     }
 
-    public class UpdateCategoryHandlerTests
+    public class UpdateCategoryHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingCategory_RenamesAndSaves()
         {
-            var uow = new FakeUnitOfWork();
-            Category existing = Category.Create("Eski Ad", Guid.NewGuid());
-            await uow.CategoryRepo.AddAsync(existing);
+            Category existing = Category.Create("Eski Ad", CurrentUser.BranchId);
+            DbContext.Categories.Add(existing);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new UpdateCategoryCommandHandler(uow, currentUser);
+            var handler = new UpdateCategoryCommandHandler(Db, CurrentUser);
             var command = new UpdateCategoryCommand { Id = existing.Id, Name = "Yeni Ad" };
 
             var result = await handler.Handle(command, CancellationToken.None);
             Assert.True(result.IsSuccess);
             Assert.Equal("Yeni Ad", existing.Name);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithNonExistingCategory_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new UpdateCategoryCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new UpdateCategoryCommandHandler(Db, CurrentUser);
             var command = new UpdateCategoryCommand { Id = Guid.NewGuid(), Name = "Ad" };
 
             var result = await handler.Handle(command, CancellationToken.None);
@@ -63,36 +56,34 @@ public class CategoryCommandHandlerTests
         }
     }
 
-    public class DeleteCategoryHandlerTests
+    public class DeleteCategoryHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithNoLinkedProducts_DeletesAndSaves()
         {
-            var uow = new FakeUnitOfWork();
-            Category existing = Category.Create("İçecekler", Guid.NewGuid());
-            await uow.CategoryRepo.AddAsync(existing);
+            Category existing = Category.Create("İçecekler", CurrentUser.BranchId);
+            DbContext.Categories.Add(existing);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new DeleteCategoryCommandHandler(uow, currentUser);
+            var handler = new DeleteCategoryCommandHandler(Db, CurrentUser);
             var command = new DeleteCategoryCommand { Id = existing.Id };
 
-            await handler.Handle(command, CancellationToken.None);
+            var result = await handler.Handle(command, CancellationToken.None);
 
-            Assert.Empty(uow.CategoryRepo.Added);
-            Assert.True(uow.SaveChangesCalled);
+            Assert.True(result.IsSuccess);
+            Assert.Empty(DbContext.Categories.ToList());
         }
 
         [Fact]
         public async Task Handle_WithLinkedProducts_ThrowsDomainException()
         {
-            var uow = new FakeUnitOfWork();
-            Category existing = Category.Create("İçecekler", Guid.NewGuid());
-            typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(existing, Guid.NewGuid());
-            await uow.CategoryRepo.AddAsync(existing);
-            await uow.ProductRepo.AddAsync(Product.Create("Çay", 10m, "img.png", existing.Id));
+            Category existing = Category.Create("İçecekler", CurrentUser.BranchId);
+            DbContext.Categories.Add(existing);
+            DbContext.Products.Add(Product.Create("Çay", 10m, "img.png", existing.Id));
+            await DbContext.SaveChangesAsync();
 
-            var handler = new DeleteCategoryCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new DeleteCategoryCommandHandler(Db, CurrentUser);
             var command = new DeleteCategoryCommand { Id = existing.Id };
 
             await Assert.ThrowsAsync<DomainException>(() => handler.Handle(command, CancellationToken.None));
@@ -101,8 +92,7 @@ public class CategoryCommandHandlerTests
         [Fact]
         public async Task Handle_WithNonExistingCategory_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new DeleteCategoryCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new DeleteCategoryCommandHandler(Db, CurrentUser);
             var command = new DeleteCategoryCommand { Id = Guid.NewGuid() };
 
             var result = await handler.Handle(command, CancellationToken.None);

@@ -1,22 +1,20 @@
 using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
 using RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
 using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
-using RestaurantBill.Application.Tests.Fakes;
+using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Application.Tests.Features.Products;
 
 public class ProductCommandHandlerTests
 {
-    public class CreateProductHandlerTests
+    public class CreateProductHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithValidCommand_AddsProductAndSaves()
         {
-            var uow = new FakeUnitOfWork();
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new CreateProductCommandHandler(uow, currentUser);
+            await SeedActorAsync();
+            var handler = new CreateProductCommandHandler(Db, CurrentUser);
             var command = new CreateProductCommand
             {
                 Name = "Çay",
@@ -28,37 +26,33 @@ public class ProductCommandHandlerTests
 
             var result = await handler.Handle(command, CancellationToken.None);
             Assert.True(result.IsSuccess);
-            Assert.Single(uow.ProductRepo.Added);
-            Assert.True(uow.SaveChangesCalled);
+            Assert.Single(DbContext.Products.ToList());
         }
     }
 
-    public class UpdateProductHandlerTests
+    public class UpdateProductHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingProduct_UpdatesAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Product existing = Product.Create("Eski", 10m, "img.png", Guid.NewGuid());
-            await uow.ProductRepo.AddAsync(existing);
+            DbContext.Products.Add(existing);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new UpdateProductCommandHandler(uow, currentUser);
+            var handler = new UpdateProductCommandHandler(Db, CurrentUser);
             var command = new UpdateProductCommand { Id = existing.Id, Name = "Yeni", Price = 25m, IsActive = false, CategoryId = Guid.NewGuid() };
 
             await handler.Handle(command, CancellationToken.None);
 
             Assert.Equal("Yeni", existing.Name);
             Assert.Equal(25m, existing.Price);
-            Assert.True(uow.SaveChangesCalled);
         }
 
         [Fact]
         public async Task Handle_WithNonExistingProduct_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new UpdateProductCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new UpdateProductCommandHandler(Db, CurrentUser);
 
             var result = await handler.Handle(new UpdateProductCommand { Id = Guid.NewGuid(), Name = "Ad", Price = 10m, CategoryId = Guid.NewGuid() }, CancellationToken.None);
 
@@ -66,29 +60,26 @@ public class ProductCommandHandlerTests
         }
     }
 
-    public class DeleteProductHandlerTests
+    public class DeleteProductHandlerTests : ApplicationTestBase
     {
         [Fact]
         public async Task Handle_WithExistingProduct_DeletesAndSaves()
         {
-            var uow = new FakeUnitOfWork();
             Product existing = Product.Create("Çay", 15m, "img.png", Guid.NewGuid());
-            await uow.ProductRepo.AddAsync(existing);
+            DbContext.Products.Add(existing);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
-            var currentUser = new FakeCurrentUserService();
-            TestActor.Seed(uow, currentUser.UserId);
-            var handler = new DeleteProductCommandHandler(uow, currentUser);
+            var handler = new DeleteProductCommandHandler(Db, CurrentUser);
             await handler.Handle(new DeleteProductCommand { Id = existing.Id }, CancellationToken.None);
 
-            Assert.Empty(uow.ProductRepo.Added);
-            Assert.True(uow.SaveChangesCalled);
+            Assert.Empty(DbContext.Products.ToList());
         }
 
         [Fact]
         public async Task Handle_WithNonExistingProduct_ReturnsFailureResult()
         {
-            var uow = new FakeUnitOfWork();
-            var handler = new DeleteProductCommandHandler(uow, new FakeCurrentUserService());
+            var handler = new DeleteProductCommandHandler(Db, CurrentUser);
 
             var result = await handler.Handle(new DeleteProductCommand { Id = Guid.NewGuid() }, CancellationToken.None);
 

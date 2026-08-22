@@ -10,7 +10,7 @@ public class GetAllProductsQueryTests : IntegrationTestBase
 
     public GetAllProductsQueryTests()
     {
-        _handler = new GetAllProductQueryHandler(UnitOfWork, CurrentUser);
+        _handler = new GetAllProductQueryHandler(AppDb, CurrentUser);
     }
 
     [Fact]

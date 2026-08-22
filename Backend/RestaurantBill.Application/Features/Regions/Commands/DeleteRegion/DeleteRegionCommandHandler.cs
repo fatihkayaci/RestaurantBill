@@ -1,26 +1,28 @@
 using MediatR;
-using RestaurantBill.Application.Common;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
-using RestaurantBill.Domain.Interfaces;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Regions.Commands.DeleteRegion
 {
-    public class DeleteRegionCommandHandler(IUnitOfWork uow, ICurrentUserService currentUser) : IRequestHandler<DeleteRegionCommand, Result>
+    public class DeleteRegionCommandHandler(IAppDbContext db, ICurrentUserService currentUser) : IRequestHandler<DeleteRegionCommand, Result>
     {
         public async Task<Result> Handle(DeleteRegionCommand command, CancellationToken cancellationToken)
         {
-            Region? region = await uow.Region.GetByIdAsync(command.Id);
+            Region? region = await db.Regions
+                .FirstOrDefaultAsync(r => r.Id == command.Id, cancellationToken);
             if (region is null) return Result.Failure("Böyle bir bölge bulunamadı");
 
-            IEnumerable<Table> linkedTables = await uow.Table.GetAllAsync(t => t.RegionId == command.Id, false);
+            List<Table> linkedTables = await db.Tables
+                .Where(t => t.RegionId == command.Id)
+                .ToListAsync(cancellationToken);
             region.EnsureCanBeDeleted(linkedTables);
 
-            uow.Region.Delete(region);
+            db.Regions.Remove(region);
 
-            User? actor = await uow.User.GetByIdAsync(currentUser.UserId);
+            User? actor = await db.Users.FirstOrDefaultAsync(u => u.Id == currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
                 currentUser.BranchId,
                 actor?.FullName ?? string.Empty,
@@ -30,9 +32,9 @@ namespace RestaurantBill.Application.Features.Regions.Commands.DeleteRegion
                 $"{actor?.FullName} {region.Name} bölgesini sildi.",
                 nameof(Region),
                 region.Id);
-            await uow.AuditLog.AddAsync(log);
+            db.AuditLogs.Add(log);
 
-            await uow.SaveChangesAsync(cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
     }
