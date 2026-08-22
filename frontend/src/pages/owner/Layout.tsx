@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import {
-    LayoutDashboard, Building2, UserCog, CreditCard, Palette, BarChart3, History, Moon, ChevronRight,
+    LayoutDashboard, Building2, UserCog, Palette, BarChart3, History, Moon, ChevronRight,
     Menu, X, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
@@ -16,7 +16,6 @@ const navItems = [
     { to: '/owner/overview', icon: LayoutDashboard, label: 'Genel Bakış' },
     { to: '/owner/branches', icon: Building2, label: 'Şubeler' },
     { to: '/owner/admins', icon: UserCog, label: 'Adminler' },
-    { to: '/owner/membership', icon: CreditCard, label: 'Üyelik & Fatura' },
     { to: '/owner/branding', icon: Palette, label: 'Marka Ayarları' },
     { to: '/owner/reports', icon: BarChart3, label: 'Finansal Rapor' },
     { to: '/owner/audit-log', icon: History, label: 'Denetim Kaydı' },

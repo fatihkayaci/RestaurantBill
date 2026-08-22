@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    TrendingUp, ShoppingCart, ShoppingBag, Building2, RefreshCw, AlertTriangle, X,
+    TrendingUp, ShoppingCart, ShoppingBag, Building2, RefreshCw,
     ArrowUpRight, ArrowDownRight, ArrowRight,
     Calendar, Table2,
     type LucideIcon,
@@ -47,8 +47,6 @@ const PAYMENT_LABEL: Record<number, string> = {
     [PAYMENT_METHOD.Qr]: 'QR / Mobil',
 };
 
-const MEMBERSHIP_WARNING_WINDOW_DAYS = 7;
-
 const getTodayIso = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -86,7 +84,6 @@ export default function DashboardPage() {
     const navigate = useNavigate();
     const [range, setRange] = useState<7 | 30 | 90>(7);
     const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
-    const [bannerVisible, setBannerVisible] = useState(true);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedDate, setSelectedDate] = useState(getTodayIso);
@@ -205,33 +202,6 @@ export default function DashboardPage() {
                     </button>
                 </div>
             </div>
-
-            {/* Membership warning */}
-            {bannerVisible && !!stats && stats.membershipExpiringBranchCount > 0 && (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rb-amber/30 bg-rb-amber-bg px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                        <AlertTriangle className="h-5 w-5 text-rb-amber shrink-0" />
-                        <div>
-                            <span className="text-sm font-semibold text-foreground">Üyelik Uyarısı </span>
-                            <span className="text-sm text-muted-foreground">
-                                {stats.membershipExpiringBranchCount} şubenizin üyeliği {MEMBERSHIP_WARNING_WINDOW_DAYS} gün içinde sona erecek. Lütfen yenilemeyi unutmayın.
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                        <button
-                            type="button"
-                            onClick={() => navigate('/owner/membership')}
-                            className="rounded-lg border border-rb-amber/40 bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/50 transition-colors"
-                        >
-                            Detayları Görüntüle
-                        </button>
-                        <button type="button" onClick={() => setBannerVisible(false)} className="text-muted-foreground hover:text-foreground">
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>
-            )}
 
             {/* Stat cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
