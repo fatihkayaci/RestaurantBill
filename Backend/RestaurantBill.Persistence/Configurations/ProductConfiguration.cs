@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Persistence.Configurations;
 
@@ -15,8 +14,5 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.Price)
             .HasPrecision(18, 2);
-
-        builder.Property(p => p.ImageFocus)
-            .HasDefaultValue(ImageFocus.Center);
     }
 }

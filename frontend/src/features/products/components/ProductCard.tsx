@@ -1,4 +1,3 @@
-import { imageFocusToObjectPosition } from '../types';
 import type { Product } from '../types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Image as ImageIcon } from 'lucide-react';
@@ -23,7 +22,6 @@ export default function ProductCard({ product, onAdd }: ProductCardProps) {
                         alt={product.name}
                         loading="lazy"
                         className="h-16 w-16 lg:h-20 lg:w-20 rounded-lg object-cover"
-                        style={{ objectPosition: imageFocusToObjectPosition[product.imageFocus] }}
                     />
                 ) : (
                     <div className="h-16 w-16 lg:h-20 lg:w-20 rounded-lg bg-muted flex items-center justify-center">

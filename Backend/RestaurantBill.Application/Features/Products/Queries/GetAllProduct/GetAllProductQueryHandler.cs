@@ -37,8 +37,7 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
                     IsActive = p.IsActive,
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category.Name,
-                    ImageUrl = p.ImageUrl,
-                    ImageFocus = p.ImageFocus
+                    ImageUrl = p.ImageUrl
                 })
                 .ToListAsync(cancellationToken);
 

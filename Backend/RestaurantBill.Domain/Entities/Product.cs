@@ -1,4 +1,3 @@
-using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Domain.Entities
@@ -11,7 +10,6 @@ namespace RestaurantBill.Domain.Entities
         public decimal Price { get; private set; }
         public bool IsActive { get; private set; }
         public string ImageUrl { get; private set; } = string.Empty;
-        public ImageFocus ImageFocus { get; private set; } = ImageFocus.Center;
 
         protected Product() { }
 
@@ -32,7 +30,6 @@ namespace RestaurantBill.Domain.Entities
                 Price = price,
                 IsActive = true,
                 ImageUrl = imageUrl,
-                ImageFocus = ImageFocus.Center,
                 CategoryId = categoryId
             };
         }
@@ -66,15 +63,6 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException("Geçersiz görsel anahtarı.");
 
             ImageUrl = imageUrl;
-            ImageFocus = ImageFocus.Center;
-        }
-
-        public void UpdateImageFocus(ImageFocus imageFocus)
-        {
-            if (string.IsNullOrWhiteSpace(ImageUrl))
-                throw new DomainException("Önce bir görsel yüklemelisiniz.");
-
-            ImageFocus = imageFocus;
         }
     }
 }

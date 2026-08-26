@@ -287,29 +287,42 @@ değişince key de değişir, dolayısıyla cache invalidation problemi yok.
 
 ---
 
-## Ek Özellik — Görsel Odak Noktası (Image Focus)
+## Ek Özellik — Görsel Kırpma (Gerçek Piksel Kırpma)
 
 Kartlarda görsel `aspect-video` kutusuna `object-cover` ile sığdırılıyor; dikey/kare
-fotoğraflarda üst veya alt kesilebiliyor. Bunu çözmek için "hangi kısım gösterilsin"
-seçimi eklendi (basit ön ayar: **Üst / Orta / Alt** — sürüklenebilir odak noktası değil).
+fotoğraflarda üst veya alt kesilebiliyor. Bu sorun için sırasıyla iki ara çözüm denendi
+(Üst/Orta/Alt butonları, sonra sürükle-konumlandır) ve ikisi de kaldırıldı — kullanıcı
+**gerçek piksel bazlı kırpma** istedi: görsel gerçekten kesilip yeniden yükleniyor, sadece
+CSS ile "gösterilen kısmı" değiştirme değil.
 
-- [x] `Domain/Enums/ImageFocus.cs` — `Top = 1, Center = 2, Bottom = 3`
-- [x] `Product.ImageFocus` alanı, varsayılan `Center`. Yeni görsel yüklenince otomatik
-      `Center`'a resetleniyor (`UpdateImage`), çünkü eski odak noktası yeni fotoğraf için
-      anlamsız kalabilir.
-- [x] `Product.UpdateImageFocus(ImageFocus)` — görsel yoksa hata fırlatır
-- [x] Yeni endpoint: `POST /api/product/{id}/image-focus` — `UpdateProductImageFocusCommand`,
-      aynı multi-tenant kontrolüyle (`Category.BranchId == currentUser.BranchId`)
-- [x] `ProductDto.ImageFocus` eklendi, `GetAllProductQueryHandler` ve `MappingExtensions` güncellendi
-- [x] Frontend: `MenuPage.tsx` düzenleme modalinde Üst/Orta/Alt butonları (seçim anında kaydediliyor,
-      hata olursa eski değere geri dönüyor), hem admin kartlarında hem müşteri tarafı `ProductCard`'da
-      `object-position` CSS'i ile uygulanıyor
-
-- [x] Migration oluşturuldu ve lokal veritabanına uygulandı: `20260826085511_AddProductImageFocus`
-      (`ALTER TABLE "Products" ADD "ImageFocus" integer NOT NULL DEFAULT 2` — mevcut ürünler
-      otomatik `Center` oldu). İlk denemede default değer yanlış (`0`) üretilmişti çünkü
-      `ProductConfiguration.cs`'de `HasDefaultValue` yoktu; eklenip migration yeniden oluşturuldu.
+- [x] `ImageFocusX`/`ImageFocusY` alanları ve tüm ilgili kod (entity, DTO, command/handler,
+      `/image-focus` endpoint'i) **tamamen geri alındı** — artık gerekli değil, çünkü kırpılan
+      görsel zaten tam olarak `16:9` çıkıyor.
+- [x] Frontend: `pnpm add react-easy-crop` (React 19 ile uyumlu, peer dep üst sınırı yok).
+      `lib/cropImage.ts` — `getCroppedImageBlob()`, seçilen kırpma alanını `<canvas>` ile
+      gerçekten kesip JPEG `Blob` üretiyor (kalite 0.92).
+      `features/products/components/ImageCropModal.tsx` — `react-easy-crop`'un `Cropper`
+      bileşeniyle tam fotoğrafı gösterip sürükle (pan) + kaydırıcıyla yakınlaştır (zoom),
+      **"Kırp ve Kaydet"** butonuna basmadan hiçbir şey kaydedilmiyor (önceki sürümdeki
+      "kaydete basmadan koyuyor" şikayeti böylece çözüldü).
+- [x] Akış: dosya seçilince (veya "Yeniden kırp"a basılınca) kırpma modalı açılıyor →
+      onaylanınca kırpılmış `Blob`, **var olan** `POST /api/product/{id}/image` endpoint'ine
+      yükleniyor (backend'de ek değişiklik gerekmedi — zaten resize+webp+eski-dosya-silme
+      mantığı oradaydı, sadece girdi artık orijinal dosya değil kırpılmış hali).
+- [x] "Yeniden kırp": zaten yüklü olan CDN görselini tekrar kırpma modalına yüklüyor. **Bilinen
+      sınırlama:** Bunny CDN'in CORS header'ları göndermediği bir durumda, canvas'tan blob
+      export adımı (`canvas.toBlob`) tarayıcı güvenlik kısıtlaması yüzünden başarısız olabilir —
+      bu durumda kullanıcıya "Görsel kırpılamadı, farklı bir görsel deneyin" hatası gösteriliyor
+      (kilitlenme yok, zarifçe düşüyor). Yeni dosya seçip kırpmak her zaman çalışır çünkü o,
+      tarayıcıdaki yerel `blob:` URL'i kullanıyor, CORS'a hiç takılmıyor.
+- [x] `Domain/Enums/ImageFocus.cs` silindi, `ProductCard.tsx`/admin kartlarında `object-position`
+      hack'i kaldırıldı — düz `object-cover` yeterli çünkü kaynak zaten 16:9.
+- [x] Üç migration da oluşturuldu ve lokal veritabanına uygulandı (önceki ikisi zaten
+      `origin`'e push'lanmıştı, o yüzden hiçbirini değiştirmedim, üstüne ekledim):
+      1. `20260826085511_AddProductImageFocus` — ilk sürümün `ImageFocus` int kolonu
+      2. `20260826091020_ReplaceProductImageFocusWithContinuousXY` — X/Y'ye geçiş
+      3. `20260826092646_DropProductImageFocusColumns` — X/Y kolonlarını tamamen düşürüyor
       Tüm test suite (190 test) yeşil.
-- [ ] Production'a deploy edildiğinde bu migration sunucuda da otomatik uygulanacak
+- [ ] Production'a deploy edildiğinde tüm migration'lar sunucuda otomatik uygulanacak
       (`MigrateAndSeedAsync` açılışta `context.Database.Migrate()` çağırıyor) — ekstra bir şey
-      yapmana gerek yok, sadece deploy sonrası ürün görsellerinin bozulmadığını kontrol et.
+      yapmana gerek yok.

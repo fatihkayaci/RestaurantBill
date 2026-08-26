@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
 using RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
 using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
-using RestaurantBill.Application.Features.Products.Commands.UpdateProductImageFocus;
 using RestaurantBill.Application.Features.Products.Commands.UploadProductImage;
 using RestaurantBill.Application.Features.Products.Queries.GetAllProduct;
 
@@ -89,23 +88,6 @@ namespace RestaurantBill.WebAPI.Controllers
                 Length = file.Length
             };
 
-            var result = await _mediator.Send(command, cancellationToken);
-            return HandleResult(result);
-        }
-
-        /// <summary>
-        /// Sets which part of an already-uploaded product image should stay visible when it's cropped
-        /// (e.g. in a fixed-aspect-ratio card). Only accessible by Admin and Kitchen.
-        /// </summary>
-        /// <param name="id">The ID of the product whose image focus is being set.</param>
-        /// <param name="command">The desired image focus (Top, Center or Bottom).</param>
-        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-        /// <returns>200 OK on success.</returns>
-        [Authorize(Roles = "Owner,Admin,Kitchen")]
-        [HttpPost("{id}/image-focus")]
-        public async Task<IActionResult> UpdateProductImageFocus([FromRoute] Guid id, [FromBody] UpdateProductImageFocusCommand command, CancellationToken cancellationToken)
-        {
-            command.ProductId = id;
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);
         }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RestaurantBill.Persistence.Context;
@@ -11,9 +12,11 @@ using RestaurantBill.Persistence.Context;
 namespace RestaurantBill.Persistence.Migrations
 {
     [DbContext(typeof(RestaurantBillDbContext))]
-    partial class RestaurantBillDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826091020_ReplaceProductImageFocusWithContinuousXY")]
+    partial class ReplaceProductImageFocusWithContinuousXY
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -478,6 +481,18 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<Guid>("CreatedUser")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("ImageFocusX")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasDefaultValue(50m);
+
+                    b.Property<decimal>("ImageFocusY")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasDefaultValue(50m);
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()

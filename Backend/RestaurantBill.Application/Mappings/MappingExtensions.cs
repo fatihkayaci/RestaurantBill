@@ -113,8 +113,7 @@ public static class MappingExtensions
         IsActive = p.IsActive,
         CategoryId = p.CategoryId,
         CategoryName = p.Category?.Name ?? string.Empty,
-        ImageUrl = p.ImageUrl,
-        ImageFocus = p.ImageFocus
+        ImageUrl = p.ImageUrl
     };
 
     public static MembershipDto ToDto(this Membership m) => new()

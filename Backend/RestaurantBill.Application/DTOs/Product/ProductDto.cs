@@ -1,5 +1,3 @@
-using RestaurantBill.Domain.Enums;
-
 namespace RestaurantBill.Application.DTOs;
 public class ProductDto
 {
@@ -11,5 +9,4 @@ public class ProductDto
 
     public string CategoryName { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
-    public ImageFocus ImageFocus { get; set; }
 }
