@@ -326,3 +326,30 @@ CSS ile "gösterilen kısmı" değiştirme değil.
 - [ ] Production'a deploy edildiğinde tüm migration'lar sunucuda otomatik uygulanacak
       (`MigrateAndSeedAsync` açılışta `context.Database.Migrate()` çağırıyor) — ekstra bir şey
       yapmana gerek yok.
+
+---
+
+## Ek Özellik — Ürün Ekle Akışında Görsel + Kırpma Kaydını Erteleme
+
+- [x] "Ürün Ekle" modalinde artık görsel alanı her zaman aktif — ürünü kaydetmeden önce
+      fotoğraf seçilip kırpılabiliyor (önceden sadece düzenleme modunda mümkündü).
+- [x] Kırpma artık tamamen client-side: "Kırp ve Kaydet" sadece kırpılmış görseli yerel bir
+      `Blob` + önizleme URL'i olarak `pendingImage` state'inde tutuyor, **sunucuya hiçbir şey
+      göndermiyor**. Asıl yükleme, formun "Kaydet" butonuna basıldığında —
+      ürün oluşturma/güncelleme çağrısıyla birlikte, aynı `handleSubmit` içinde — yapılıyor.
+      İptal/kapatma, bekleyen kırpılmış görseli sessizce atıyor (hiç sunucuya gitmemiş oluyor).
+
+## Ek Özellik — Storage Key'lerine Şube (Multi-Tenant) Öneki
+
+Bunny'de saklanan dosyalar `products/{guid}.webp` yerine artık `products/{branchId}/{guid}.webp`
+şeklinde — şubeler arası karışma ihtimalini ortadan kaldırıyor ve panelden bakınca hangi
+görselin hangi şubeye ait olduğu belli oluyor.
+
+- [x] `IImageStorageService.UploadAsync` artık `branchId` parametresi alıyor
+- [x] `BunnyStorageService` key'i `products/{branchId:N}/{guid:N}.webp` olarak üretiyor
+- [x] `UploadProductImageCommandHandler`, `_currentUser.BranchId`'i geçiyor
+- [x] `FakeImageStorageService` ve testler güncellendi, yeni bir assertion eklendi
+      (`UploadProductImageHandlerTests` — branchId'nin doğru geçtiğini doğruluyor)
+- [x] `Backend/RestaurantBill.Application.Tests` build + testler yeşil (WebAPI'nin build'i
+      sunucun açıkken kilitleniyor ama Application/Infrastructure projeleri ayrı ayrı derlendi,
+      sorun yok — sen sunucuyu kapatıp normal `dotnet build`/`dotnet run` ile devam edebilirsin)

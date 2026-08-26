@@ -135,6 +135,7 @@ public class ProductCommandHandlerTests
             Assert.True(result.IsSuccess);
             Assert.Equal("https://cdn.test/products/new-key.webp", result.Value);
             Assert.Equal("products/new-key.webp", existing.ImageUrl);
+            Assert.Equal(CurrentUser.BranchId, imageStorage.LastBranchId);
         }
 
         [Fact]

@@ -18,7 +18,7 @@ namespace RestaurantBill.Infrastructure.Services
             _options = options.Value;
         }
 
-        public async Task<string> UploadAsync(Stream content, CancellationToken cancellationToken)
+        public async Task<string> UploadAsync(Stream content, Guid branchId, CancellationToken cancellationToken)
         {
             using Image image = await Image.LoadAsync(content, cancellationToken);
 
@@ -32,7 +32,7 @@ namespace RestaurantBill.Infrastructure.Services
             await image.SaveAsWebpAsync(output, new WebpEncoder { Quality = 80 }, cancellationToken);
             output.Position = 0;
 
-            string key = $"products/{Guid.NewGuid():N}.webp";
+            string key = $"products/{branchId:N}/{Guid.NewGuid():N}.webp";
             string url = $"https://storage.bunnycdn.com/{_options.StorageZoneName}/{key}";
 
             using var request = new HttpRequestMessage(HttpMethod.Put, url);

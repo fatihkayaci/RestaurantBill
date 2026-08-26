@@ -42,7 +42,7 @@ namespace RestaurantBill.Application.Features.Products.Commands.UploadProductIma
             string newKey;
             try
             {
-                newKey = await _imageStorage.UploadAsync(request.Content, cancellationToken);
+                newKey = await _imageStorage.UploadAsync(request.Content, _currentUser.BranchId, cancellationToken);
             }
             catch
             {
