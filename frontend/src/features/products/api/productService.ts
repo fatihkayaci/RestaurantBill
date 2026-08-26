@@ -28,4 +28,13 @@ export const productService = {
     deleteProduct: async (id: string) => {
         await api.delete(`/product/${id}`);
     },
+    uploadProductImage: async (id: string, file: Blob, fileName = 'crop.jpg') => {
+        const formData = new FormData();
+        formData.append('file', file, fileName);
+        const response = await api.post<string>(`/product/${id}/image`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 30000
+        });
+        return response.data;
+    },
 };

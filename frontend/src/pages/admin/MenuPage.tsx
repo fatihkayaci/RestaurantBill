@@ -4,9 +4,10 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import type { Product } from "@/features/products/types";
 import type { Category } from "@/features/categories/types";
+import ImageCropModal from "@/features/products/components/ImageCropModal";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Check, Pencil, Image as ImageIcon } from 'lucide-react';
+import { X, Check, Pencil, Image as ImageIcon, Upload, Crop } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import axios from "axios";
 
@@ -22,6 +23,9 @@ export default function Menu() {
     const [editProduct, setEditProduct] = useState<Product | null>(null);
     const [form, setForm] = useState({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [isSaving, setIsSaving] = useState(false);
+    const [cropSource, setCropSource] = useState<{ src: string; revokeOnClose: boolean } | null>(null);
+    const [pendingImage, setPendingImage] = useState<{ blob: Blob; previewUrl: string } | null>(null);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [productDeleteError, setProductDeleteError] = useState<string | null>(null);
 
@@ -93,10 +97,18 @@ export default function Menu() {
         }
     };
 
+    const clearPendingImage = () => {
+        setPendingImage(prev => {
+            if (prev) URL.revokeObjectURL(prev.previewUrl);
+            return null;
+        });
+    };
+
     const openCreateModal = () => {
         setEditProduct(null);
         setForm({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
         setFieldErrors({});
+        clearPendingImage();
         setIsModalOpen(true);
     };
 
@@ -104,7 +116,41 @@ export default function Menu() {
         setEditProduct(product);
         setForm({ name: product.name, price: product.price, categoryId: product.categoryId, isActive: product.isActive, id: product.id });
         setFieldErrors({});
+        clearPendingImage();
         setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        clearPendingImage();
+    };
+
+    const closeCropModal = () => {
+        setCropSource(prev => {
+            if (prev?.revokeOnClose) URL.revokeObjectURL(prev.src);
+            return null;
+        });
+    };
+
+    const handleImageFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        setCropSource({ src: URL.createObjectURL(file), revokeOnClose: true });
+    };
+
+    const handleRecropExisting = () => {
+        const src = pendingImage?.previewUrl ?? editProduct?.imageUrl;
+        if (!src) return;
+        setCropSource({ src, revokeOnClose: false });
+    };
+
+    const handleCropConfirm = (blob: Blob) => {
+        setPendingImage(prev => {
+            if (prev) URL.revokeObjectURL(prev.previewUrl);
+            return { blob, previewUrl: URL.createObjectURL(blob) };
+        });
+        closeCropModal();
     };
 
     const handleToggleActive = async (product: Product) => {
@@ -206,20 +252,38 @@ export default function Menu() {
         if (!form.categoryId) errors.categoryId = 'Kategori seçiniz.';
         if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
+        setIsSaving(true);
         try {
+            let productId: string | undefined = editProduct?.id;
             if (editProduct) {
                 const currentIsActive = products.find(p => p.id === editProduct.id)?.isActive ?? form.isActive;
                 await productService.updateProduct({ id: form.id, name: form.name, price: form.price, categoryId: form.categoryId, isActive: currentIsActive });
             } else {
                 await productService.createProduct({ name: form.name, price: form.price, categoryId: form.categoryId, isActive: true });
+                const created = await productService.getProducts();
+                setProducts(created);
+                productId = created.find(p => p.name === form.name && p.categoryId === form.categoryId)?.id;
             }
+
+            if (productId && pendingImage) {
+                try {
+                    await productService.uploadProductImage(productId, pendingImage.blob);
+                } catch (imgErr: unknown) {
+                    if (axios.isAxiosError(imgErr)) {
+                        toast.error(imgErr.response?.data?.error ?? imgErr.response?.data?.message ?? 'Görsel yüklenemedi. Ürünü daha sonra düzenleyerek tekrar deneyebilirsiniz.');
+                    }
+                }
+            }
+
             const updated = await productService.getProducts();
             setProducts(updated);
-            setIsModalOpen(false);
+            closeModal();
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 setFieldErrors({ name: err.response?.data?.error ?? err.response?.data?.message ?? 'Ürün kaydedilemedi.' });
             }
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -430,8 +494,17 @@ export default function Menu() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredProducts.map(product => (
                         <div key={product.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
-                            <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
-                                <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                            <div className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                                {product.imageUrl ? (
+                                    <img
+                                        src={product.imageUrl}
+                                        alt={product.name}
+                                        loading="lazy"
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                                )}
                             </div>
 
                             <div className="flex items-start justify-between gap-2">
@@ -488,13 +561,13 @@ export default function Menu() {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
                         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <h2 className="text-xl font-bold text-foreground">
                                 {editProduct ? 'Ürünü Düzenle' : 'Ürün Ekle'}
                             </h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                            <button onClick={closeModal} className="text-muted-foreground hover:text-foreground transition-colors">
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
@@ -502,14 +575,49 @@ export default function Menu() {
                         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
                             <div>
                                 <label className={labelClass}>Ürün Görseli</label>
-                                <button
-                                    type="button"
-                                    disabled
-                                    className="w-full aspect-video rounded-lg border border-dashed border-border bg-muted/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground cursor-not-allowed"
-                                >
-                                    <ImageIcon className="h-6 w-6" />
-                                    <span className="text-xs">Yakında eklenecek</span>
-                                </button>
+                                {(() => {
+                                    const currentImageSrc = pendingImage?.previewUrl ?? editProduct?.imageUrl;
+                                    return currentImageSrc ? (
+                                        <div className="w-full aspect-video rounded-lg overflow-hidden border border-border bg-muted/50">
+                                            <img
+                                                src={currentImageSrc}
+                                                alt={form.name || 'Ürün görseli'}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="w-full aspect-video rounded-lg border border-dashed border-border bg-muted/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground">
+                                            <ImageIcon className="h-6 w-6" />
+                                            <span className="text-xs">Henüz görsel yok</span>
+                                        </div>
+                                    );
+                                })()}
+                                <div className="flex items-center gap-3 mt-2">
+                                    <label
+                                        htmlFor="product-image-input"
+                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-rb-accent hover:opacity-80 cursor-pointer transition-opacity"
+                                    >
+                                        <Upload className="h-3.5 w-3.5" />
+                                        {(pendingImage ?? editProduct?.imageUrl) ? 'Farklı görsel yükle' : 'Görsel seç'}
+                                    </label>
+                                    {(pendingImage ?? editProduct?.imageUrl) && (
+                                        <button
+                                            type="button"
+                                            onClick={handleRecropExisting}
+                                            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            <Crop className="h-3.5 w-3.5" />
+                                            Yeniden kırp
+                                        </button>
+                                    )}
+                                </div>
+                                <input
+                                    id="product-image-input"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={handleImageFileSelected}
+                                />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -557,21 +665,32 @@ export default function Menu() {
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button
                                 type="button"
-                                onClick={() => setIsModalOpen(false)}
-                                className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                                onClick={closeModal}
+                                disabled={isSaving}
+                                className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                             >
                                 İptal
                             </button>
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors"
+                                disabled={isSaving}
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-50"
                             >
-                                Kaydet
+                                {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Görsel Kırpma */}
+            {cropSource && (
+                <ImageCropModal
+                    imageSrc={cropSource.src}
+                    onCancel={closeCropModal}
+                    onConfirm={handleCropConfirm}
+                />
             )}
 
             {/* Delete Confirm */}

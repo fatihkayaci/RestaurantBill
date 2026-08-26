@@ -5,6 +5,7 @@ export interface Product {
     isActive: boolean;
     categoryId: string;
     categoryName: string;
+    imageUrl: string;
 }
 
 export interface CreateProduct {

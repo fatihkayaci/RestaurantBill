@@ -16,6 +16,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=database;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
       - ASPNETCORE_ENVIRONMENT=Production
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - BunnyStorage__AccessKey=${BunnyStorage__AccessKey}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s

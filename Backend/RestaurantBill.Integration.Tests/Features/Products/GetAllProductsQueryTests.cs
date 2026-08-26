@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Features.Products.Queries.GetAllProduct;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Integration.Tests.Infrastructure;
@@ -10,7 +12,7 @@ public class GetAllProductsQueryTests : IntegrationTestBase
 
     public GetAllProductsQueryTests()
     {
-        _handler = new GetAllProductQueryHandler(AppDb, CurrentUser);
+        _handler = new GetAllProductQueryHandler(AppDb, CurrentUser, Options.Create(new BunnyStorageOptions { CdnBaseUrl = "https://cdn.test" }));
     }
 
     [Fact]

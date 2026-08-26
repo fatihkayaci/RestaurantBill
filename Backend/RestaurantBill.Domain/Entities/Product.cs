@@ -56,5 +56,13 @@ namespace RestaurantBill.Domain.Entities
             IsActive = isActive;
             CategoryId = categoryId;
         }
+
+        public void UpdateImage(string imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+                throw new DomainException("Geçersiz görsel anahtarı.");
+
+            ImageUrl = imageUrl;
+        }
     }
 }

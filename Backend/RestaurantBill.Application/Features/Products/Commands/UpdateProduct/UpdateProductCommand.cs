@@ -11,6 +11,7 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
         public decimal Price { get; set; }
         public bool IsActive { get; set; }
         public Guid CategoryId { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
 
         public string[] CacheKeysToInvalidate => ["products:all"];
     }

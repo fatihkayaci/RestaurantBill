@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
 using RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
 using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
+using RestaurantBill.Application.Features.Products.Commands.UploadProductImage;
 using RestaurantBill.Application.Features.Products.Queries.GetAllProduct;
 
 namespace RestaurantBill.WebAPI.Controllers
@@ -62,7 +63,35 @@ namespace RestaurantBill.WebAPI.Controllers
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);
         }
-            
+
+        /// <summary>
+        /// Uploads (or replaces) the image of an existing product. Only accessible by Admin and Kitchen.
+        /// </summary>
+        /// <param name="id">The ID of the product whose image is being set.</param>
+        /// <param name="file">The image file (JPEG, PNG or WebP, max 5 MB).</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with the full CDN URL of the uploaded image on success.</returns>
+        [Authorize(Roles = "Owner,Admin,Kitchen")]
+        [HttpPost("{id}/image")]
+        [RequestSizeLimit(6_000_000)]
+        public async Task<IActionResult> UploadProductImage([FromRoute] Guid id, IFormFile file, CancellationToken cancellationToken)
+        {
+            if (file is null || file.Length == 0)
+                return BadRequest(new { Error = "Dosya seçilmedi." });
+
+            await using Stream stream = file.OpenReadStream();
+            var command = new UploadProductImageCommand
+            {
+                ProductId = id,
+                Content = stream,
+                ContentType = file.ContentType,
+                Length = file.Length
+            };
+
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
         #endregion
 
         #region delete methods

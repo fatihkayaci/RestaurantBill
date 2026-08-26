@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as signalR from '@microsoft/signalr';
-import { X } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { productService } from '@/features/products/api/productService';
@@ -436,10 +436,24 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                             filteredProducts.map(product => {
                                 const qty = getCartQty(product.id);
                                 return (
-                                    <div key={product.id} className="flex items-center justify-between py-3.5 border-b last:border-0">
-                                        <div>
-                                            <p className="text-sm font-medium text-foreground">{product.name}</p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
+                                    <div key={product.id} className="flex items-center justify-between gap-3 py-3.5 border-b last:border-0">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            {product.imageUrl ? (
+                                                <img
+                                                    src={product.imageUrl}
+                                                    alt={product.name}
+                                                    loading="lazy"
+                                                    className="h-12 w-12 rounded-lg object-cover shrink-0"
+                                                />
+                                            ) : (
+                                                <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                                    <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
+                                                <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
                                             {qty > 0 && (
