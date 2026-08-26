@@ -1,5 +1,5 @@
 import { api } from '@/lib/axiosInstance';
-import type { CreateProduct, UpdateProduct, Product } from '../types';
+import type { CreateProduct, UpdateProduct, Product, ImageFocus } from '../types';
 
 export const productService = {
     getProducts: async () => {
@@ -27,5 +27,17 @@ export const productService = {
     },
     deleteProduct: async (id: string) => {
         await api.delete(`/product/${id}`);
+    },
+    uploadProductImage: async (id: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await api.post<string>(`/product/${id}/image`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 30000
+        });
+        return response.data;
+    },
+    updateProductImageFocus: async (id: string, imageFocus: ImageFocus) => {
+        await api.post(`/product/${id}/image-focus`, { ImageFocus: imageFocus });
     },
 };

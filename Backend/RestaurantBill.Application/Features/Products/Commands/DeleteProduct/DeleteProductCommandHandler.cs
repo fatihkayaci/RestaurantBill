@@ -11,11 +11,13 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
     {
         private readonly IAppDbContext _db;
         private readonly ICurrentUserService _currentUser;
+        private readonly IImageStorageService _imageStorage;
 
-        public DeleteProductCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
+        public DeleteProductCommandHandler(IAppDbContext db, ICurrentUserService currentUser, IImageStorageService imageStorage)
         {
             _db = db;
             _currentUser = currentUser;
+            _imageStorage = imageStorage;
         }
 
         public async Task<Result> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
@@ -45,6 +47,19 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
             _db.AuditLogs.Add(log);
 
             await _db.SaveChangesAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+            {
+                try
+                {
+                    await _imageStorage.DeleteAsync(product.ImageUrl, cancellationToken);
+                }
+                catch
+                {
+                    // Best-effort cleanup: product deletion has already succeeded, don't fail the request over a stale CDN file.
+                }
+            }
+
             return Result.Success();
         }
     }

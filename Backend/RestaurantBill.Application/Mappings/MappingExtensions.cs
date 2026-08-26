@@ -112,7 +112,9 @@ public static class MappingExtensions
         Price = p.Price,
         IsActive = p.IsActive,
         CategoryId = p.CategoryId,
-        CategoryName = p.Category?.Name ?? string.Empty
+        CategoryName = p.Category?.Name ?? string.Empty,
+        ImageUrl = p.ImageUrl,
+        ImageFocus = p.ImageFocus
     };
 
     public static MembershipDto ToDto(this Membership m) => new()

@@ -27,6 +27,9 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
 
             product.Update(request.Name, request.Price, request.IsActive, request.CategoryId);
 
+            if (!string.IsNullOrWhiteSpace(request.ImageUrl))
+                product.UpdateImage(request.ImageUrl);
+
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
                 _currentUser.BranchId,

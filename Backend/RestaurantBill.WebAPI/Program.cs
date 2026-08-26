@@ -22,7 +22,7 @@ builder.Services.AddSwaggerWithJwt()
                 .AddIdentityWithJwt(builder.Configuration)
                 .AddCorsPolicy()
                 .AddMediatRWithBehaviors()
-                .AddInfrastructureServices()
+                .AddInfrastructureServices(builder.Configuration)
                 .AddCurrentUserService()
                 .AddHealthCheck()
                 .AddAuthRateLimiting();

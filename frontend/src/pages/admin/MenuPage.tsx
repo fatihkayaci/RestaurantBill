@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
+import { ImageFocus, imageFocusToObjectPosition } from "@/features/products/types";
 import type { Product } from "@/features/products/types";
 import type { Category } from "@/features/categories/types";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -22,6 +23,9 @@ export default function Menu() {
     const [editProduct, setEditProduct] = useState<Product | null>(null);
     const [form, setForm] = useState({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imageUploading, setImageUploading] = useState(false);
+    const [imageFocusSaving, setImageFocusSaving] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [productDeleteError, setProductDeleteError] = useState<string | null>(null);
 
@@ -97,6 +101,7 @@ export default function Menu() {
         setEditProduct(null);
         setForm({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
         setFieldErrors({});
+        setImagePreview(null);
         setIsModalOpen(true);
     };
 
@@ -104,7 +109,54 @@ export default function Menu() {
         setEditProduct(product);
         setForm({ name: product.name, price: product.price, categoryId: product.categoryId, isActive: product.isActive, id: product.id });
         setFieldErrors({});
+        setImagePreview(null);
         setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setImagePreview(null);
+    };
+
+    const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file || !editProduct) return;
+
+        const objectUrl = URL.createObjectURL(file);
+        setImagePreview(objectUrl);
+        setImageUploading(true);
+        try {
+            const uploadedUrl = await productService.uploadProductImage(editProduct.id, file);
+            setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...p, imageUrl: uploadedUrl, imageFocus: ImageFocus.Center } : p));
+            setEditProduct(prev => prev ? { ...prev, imageUrl: uploadedUrl, imageFocus: ImageFocus.Center } : prev);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Görsel yüklenemedi.');
+            }
+        } finally {
+            setImageUploading(false);
+            setImagePreview(null);
+            URL.revokeObjectURL(objectUrl);
+        }
+    };
+
+    const handleImageFocusChange = async (focus: ImageFocus) => {
+        if (!editProduct || imageFocusSaving) return;
+        const previousFocus = editProduct.imageFocus;
+        setEditProduct(prev => prev ? { ...prev, imageFocus: focus } : prev);
+        setImageFocusSaving(true);
+        try {
+            await productService.updateProductImageFocus(editProduct.id, focus);
+            setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...p, imageFocus: focus } : p));
+        } catch (err: unknown) {
+            setEditProduct(prev => prev ? { ...prev, imageFocus: previousFocus } : prev);
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Görsel konumu kaydedilemedi.');
+            }
+        } finally {
+            setImageFocusSaving(false);
+        }
     };
 
     const handleToggleActive = async (product: Product) => {
@@ -210,12 +262,23 @@ export default function Menu() {
             if (editProduct) {
                 const currentIsActive = products.find(p => p.id === editProduct.id)?.isActive ?? form.isActive;
                 await productService.updateProduct({ id: form.id, name: form.name, price: form.price, categoryId: form.categoryId, isActive: currentIsActive });
+                const updated = await productService.getProducts();
+                setProducts(updated);
+                closeModal();
             } else {
                 await productService.createProduct({ name: form.name, price: form.price, categoryId: form.categoryId, isActive: true });
+                const updated = await productService.getProducts();
+                setProducts(updated);
+                const created = updated.find(p => p.name === form.name && p.categoryId === form.categoryId);
+                if (created) {
+                    // Keep the modal open in edit mode so a product image can be attached right after creation.
+                    setEditProduct(created);
+                    setForm({ name: created.name, price: created.price, categoryId: created.categoryId, isActive: created.isActive, id: created.id });
+                    toast.success('Ürün eklendi. Şimdi görsel ekleyebilirsiniz.');
+                } else {
+                    closeModal();
+                }
             }
-            const updated = await productService.getProducts();
-            setProducts(updated);
-            setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 setFieldErrors({ name: err.response?.data?.error ?? err.response?.data?.message ?? 'Ürün kaydedilemedi.' });
@@ -430,8 +493,18 @@ export default function Menu() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredProducts.map(product => (
                         <div key={product.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
-                            <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
-                                <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                            <div className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                                {product.imageUrl ? (
+                                    <img
+                                        src={product.imageUrl}
+                                        alt={product.name}
+                                        loading="lazy"
+                                        className="h-full w-full object-cover"
+                                        style={{ objectPosition: imageFocusToObjectPosition[product.imageFocus] }}
+                                    />
+                                ) : (
+                                    <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                                )}
                             </div>
 
                             <div className="flex items-start justify-between gap-2">
@@ -488,13 +561,13 @@ export default function Menu() {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
                         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <h2 className="text-xl font-bold text-foreground">
                                 {editProduct ? 'Ürünü Düzenle' : 'Ürün Ekle'}
                             </h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                            <button onClick={closeModal} className="text-muted-foreground hover:text-foreground transition-colors">
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
@@ -502,14 +575,72 @@ export default function Menu() {
                         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
                             <div>
                                 <label className={labelClass}>Ürün Görseli</label>
-                                <button
-                                    type="button"
-                                    disabled
-                                    className="w-full aspect-video rounded-lg border border-dashed border-border bg-muted/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground cursor-not-allowed"
-                                >
-                                    <ImageIcon className="h-6 w-6" />
-                                    <span className="text-xs">Yakında eklenecek</span>
-                                </button>
+                                {editProduct ? (
+                                    <label
+                                        htmlFor="product-image-input"
+                                        className={cn(
+                                            "relative block w-full aspect-video rounded-lg border border-dashed border-border bg-muted/50 overflow-hidden cursor-pointer hover:border-rb-accent/50 transition-colors",
+                                            imageUploading && "pointer-events-none"
+                                        )}
+                                    >
+                                        {(imagePreview ?? editProduct.imageUrl) ? (
+                                            <img
+                                                src={imagePreview ?? editProduct.imageUrl}
+                                                alt={editProduct.name}
+                                                className="absolute inset-0 h-full w-full object-cover"
+                                                style={{ objectPosition: imageFocusToObjectPosition[editProduct.imageFocus] }}
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-muted-foreground">
+                                                <ImageIcon className="h-6 w-6" />
+                                                <span className="text-xs">Görsel yükle</span>
+                                            </div>
+                                        )}
+                                        {imageUploading && (
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                                <span className="text-xs text-white">Yükleniyor...</span>
+                                            </div>
+                                        )}
+                                        <input
+                                            id="product-image-input"
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={handleImageSelect}
+                                            disabled={imageUploading}
+                                        />
+                                    </label>
+                                ) : (
+                                    <div className="w-full aspect-video rounded-lg border border-dashed border-border bg-muted/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground text-center px-4">
+                                        <ImageIcon className="h-6 w-6" />
+                                        <span className="text-xs">Görsel eklemek için önce ürünü kaydedin</span>
+                                    </div>
+                                )}
+                                {editProduct?.imageUrl && !imageUploading && (
+                                    <div className="flex items-center gap-1.5 mt-2">
+                                        <span className="text-xs text-muted-foreground mr-1">Görselin gösterilecek kısmı:</span>
+                                        {([
+                                            { value: ImageFocus.Top, label: 'Üst' },
+                                            { value: ImageFocus.Center, label: 'Orta' },
+                                            { value: ImageFocus.Bottom, label: 'Alt' },
+                                        ] as const).map(option => (
+                                            <button
+                                                key={option.value}
+                                                type="button"
+                                                disabled={imageFocusSaving}
+                                                onClick={() => handleImageFocusChange(option.value)}
+                                                className={cn(
+                                                    "px-3 py-1 rounded-full text-xs font-medium border transition-colors disabled:opacity-50",
+                                                    editProduct.imageFocus === option.value
+                                                        ? "bg-rb-accent text-white border-rb-accent"
+                                                        : "border-border text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -557,7 +688,7 @@ export default function Menu() {
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button
                                 type="button"
-                                onClick={() => setIsModalOpen(false)}
+                                onClick={closeModal}
                                 className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
                             >
                                 İptal
