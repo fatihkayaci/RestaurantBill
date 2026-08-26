@@ -29,15 +29,14 @@ export default function ImageCropModal({ imageSrc, aspect = 16 / 9, onCancel, on
         try {
             const blob = await getCroppedImageBlob(imageSrc, croppedAreaPixels);
             await onConfirm(blob);
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Görsel kırpılamadı. Farklı bir görsel deneyin.');
-        } finally {
+        } catch {
+            setError('Görsel kırpılamadı. Farklı bir görsel deneyin.');
             setIsSaving(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+        <div className="fixed inset-0 z-60 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/60" onClick={() => !isSaving && onCancel()} />
             <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
                 <div className="px-6 pt-6 pb-4 border-b border-border">
