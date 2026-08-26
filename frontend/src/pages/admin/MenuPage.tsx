@@ -23,7 +23,9 @@ export default function Menu() {
     const [editProduct, setEditProduct] = useState<Product | null>(null);
     const [form, setForm] = useState({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const [cropSource, setCropSource] = useState<{ src: string; isLocal: boolean } | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [cropSource, setCropSource] = useState<{ src: string; revokeOnClose: boolean } | null>(null);
+    const [pendingImage, setPendingImage] = useState<{ blob: Blob; previewUrl: string } | null>(null);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [productDeleteError, setProductDeleteError] = useState<string | null>(null);
 
@@ -95,10 +97,18 @@ export default function Menu() {
         }
     };
 
+    const clearPendingImage = () => {
+        setPendingImage(prev => {
+            if (prev) URL.revokeObjectURL(prev.previewUrl);
+            return null;
+        });
+    };
+
     const openCreateModal = () => {
         setEditProduct(null);
         setForm({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
         setFieldErrors({});
+        clearPendingImage();
         setIsModalOpen(true);
     };
 
@@ -106,16 +116,18 @@ export default function Menu() {
         setEditProduct(product);
         setForm({ name: product.name, price: product.price, categoryId: product.categoryId, isActive: product.isActive, id: product.id });
         setFieldErrors({});
+        clearPendingImage();
         setIsModalOpen(true);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
+        clearPendingImage();
     };
 
     const closeCropModal = () => {
         setCropSource(prev => {
-            if (prev?.isLocal) URL.revokeObjectURL(prev.src);
+            if (prev?.revokeOnClose) URL.revokeObjectURL(prev.src);
             return null;
         });
     };
@@ -124,27 +136,21 @@ export default function Menu() {
         const file = e.target.files?.[0];
         e.target.value = '';
         if (!file) return;
-        setCropSource({ src: URL.createObjectURL(file), isLocal: true });
+        setCropSource({ src: URL.createObjectURL(file), revokeOnClose: true });
     };
 
     const handleRecropExisting = () => {
-        if (!editProduct?.imageUrl) return;
-        setCropSource({ src: editProduct.imageUrl, isLocal: false });
+        const src = pendingImage?.previewUrl ?? editProduct?.imageUrl;
+        if (!src) return;
+        setCropSource({ src, revokeOnClose: false });
     };
 
-    const handleCropConfirm = async (blob: Blob) => {
-        if (!editProduct) return;
-        try {
-            const uploadedUrl = await productService.uploadProductImage(editProduct.id, blob);
-            setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...p, imageUrl: uploadedUrl } : p));
-            setEditProduct(prev => prev ? { ...prev, imageUrl: uploadedUrl } : prev);
-            closeCropModal();
-        } catch (err: unknown) {
-            const message = axios.isAxiosError(err)
-                ? (err.response?.data?.error ?? err.response?.data?.message ?? 'Görsel yüklenemedi.')
-                : 'Görsel yüklenemedi.';
-            throw new Error(message);
-        }
+    const handleCropConfirm = (blob: Blob) => {
+        setPendingImage(prev => {
+            if (prev) URL.revokeObjectURL(prev.previewUrl);
+            return { blob, previewUrl: URL.createObjectURL(blob) };
+        });
+        closeCropModal();
     };
 
     const handleToggleActive = async (product: Product) => {
@@ -246,31 +252,38 @@ export default function Menu() {
         if (!form.categoryId) errors.categoryId = 'Kategori seçiniz.';
         if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
+        setIsSaving(true);
         try {
+            let productId: string | undefined = editProduct?.id;
             if (editProduct) {
                 const currentIsActive = products.find(p => p.id === editProduct.id)?.isActive ?? form.isActive;
                 await productService.updateProduct({ id: form.id, name: form.name, price: form.price, categoryId: form.categoryId, isActive: currentIsActive });
-                const updated = await productService.getProducts();
-                setProducts(updated);
-                closeModal();
             } else {
                 await productService.createProduct({ name: form.name, price: form.price, categoryId: form.categoryId, isActive: true });
-                const updated = await productService.getProducts();
-                setProducts(updated);
-                const created = updated.find(p => p.name === form.name && p.categoryId === form.categoryId);
-                if (created) {
-                    // Keep the modal open in edit mode so a product image can be attached right after creation.
-                    setEditProduct(created);
-                    setForm({ name: created.name, price: created.price, categoryId: created.categoryId, isActive: created.isActive, id: created.id });
-                    toast.success('Ürün eklendi. Şimdi görsel ekleyebilirsiniz.');
-                } else {
-                    closeModal();
+                const created = await productService.getProducts();
+                setProducts(created);
+                productId = created.find(p => p.name === form.name && p.categoryId === form.categoryId)?.id;
+            }
+
+            if (productId && pendingImage) {
+                try {
+                    await productService.uploadProductImage(productId, pendingImage.blob);
+                } catch (imgErr: unknown) {
+                    if (axios.isAxiosError(imgErr)) {
+                        toast.error(imgErr.response?.data?.error ?? imgErr.response?.data?.message ?? 'Görsel yüklenemedi. Ürünü daha sonra düzenleyerek tekrar deneyebilirsiniz.');
+                    }
                 }
             }
+
+            const updated = await productService.getProducts();
+            setProducts(updated);
+            closeModal();
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 setFieldErrors({ name: err.response?.data?.error ?? err.response?.data?.message ?? 'Ürün kaydedilemedi.' });
             }
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -563,20 +576,12 @@ export default function Menu() {
                             <div>
                                 <label className={labelClass}>Ürün Görseli</label>
                                 {(() => {
-                                    if (!editProduct) {
-                                        return (
-                                            <div className="w-full aspect-video rounded-lg border border-dashed border-border bg-muted/50 flex flex-col items-center justify-center gap-1.5 text-muted-foreground text-center px-4">
-                                                <ImageIcon className="h-6 w-6" />
-                                                <span className="text-xs">Görsel eklemek için önce ürünü kaydedin</span>
-                                            </div>
-                                        );
-                                    }
-
-                                    return editProduct.imageUrl ? (
+                                    const currentImageSrc = pendingImage?.previewUrl ?? editProduct?.imageUrl;
+                                    return currentImageSrc ? (
                                         <div className="w-full aspect-video rounded-lg overflow-hidden border border-border bg-muted/50">
                                             <img
-                                                src={editProduct.imageUrl}
-                                                alt={editProduct.name}
+                                                src={currentImageSrc}
+                                                alt={form.name || 'Ürün görseli'}
                                                 className="h-full w-full object-cover"
                                             />
                                         </div>
@@ -587,27 +592,25 @@ export default function Menu() {
                                         </div>
                                     );
                                 })()}
-                                {editProduct && (
-                                    <div className="flex items-center gap-3 mt-2">
-                                        <label
-                                            htmlFor="product-image-input"
-                                            className="inline-flex items-center gap-1.5 text-xs font-medium text-rb-accent hover:opacity-80 cursor-pointer transition-opacity"
+                                <div className="flex items-center gap-3 mt-2">
+                                    <label
+                                        htmlFor="product-image-input"
+                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-rb-accent hover:opacity-80 cursor-pointer transition-opacity"
+                                    >
+                                        <Upload className="h-3.5 w-3.5" />
+                                        {(pendingImage ?? editProduct?.imageUrl) ? 'Farklı görsel yükle' : 'Görsel seç'}
+                                    </label>
+                                    {(pendingImage ?? editProduct?.imageUrl) && (
+                                        <button
+                                            type="button"
+                                            onClick={handleRecropExisting}
+                                            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                                         >
-                                            <Upload className="h-3.5 w-3.5" />
-                                            {editProduct.imageUrl ? 'Farklı görsel yükle' : 'Görsel seç'}
-                                        </label>
-                                        {editProduct.imageUrl && (
-                                            <button
-                                                type="button"
-                                                onClick={handleRecropExisting}
-                                                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                                            >
-                                                <Crop className="h-3.5 w-3.5" />
-                                                Yeniden kırp
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
+                                            <Crop className="h-3.5 w-3.5" />
+                                            Yeniden kırp
+                                        </button>
+                                    )}
+                                </div>
                                 <input
                                     id="product-image-input"
                                     type="file"
@@ -663,16 +666,18 @@ export default function Menu() {
                             <button
                                 type="button"
                                 onClick={closeModal}
-                                className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                                disabled={isSaving}
+                                className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                             >
                                 İptal
                             </button>
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors"
+                                disabled={isSaving}
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-50"
                             >
-                                Kaydet
+                                {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>
                         </div>
                     </div>
