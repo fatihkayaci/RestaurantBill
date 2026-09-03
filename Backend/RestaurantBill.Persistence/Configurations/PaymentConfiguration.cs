@@ -16,5 +16,11 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 
         builder.Property(p => p.TaxAmount)
             .HasPrecision(18, 2);
+
+        builder.Property(p => p.DiscountAmount)
+            .HasPrecision(18, 2);
+
+        builder.Property(p => p.DiscountPercent)
+            .HasPrecision(5, 2);
     }
 }

@@ -12,6 +12,9 @@ public class CreatePaymentCommand : IRequest<Result<bool>>, IIdempotent
     public Guid CashRegisterId { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
     public ICollection<PaymentItemDto> Items { get; set; } = new List<PaymentItemDto>();
+    public decimal? DiscountPercent { get; set; }
+    public decimal? DiscountAmount { get; set; }
+    public string? DiscountNote { get; set; }
 
     public string IdempotencyKey => $"create-payment:{OrderId}";
 }
