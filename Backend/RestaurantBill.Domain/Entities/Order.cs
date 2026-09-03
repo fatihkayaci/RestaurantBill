@@ -103,16 +103,16 @@ namespace RestaurantBill.Domain.Entities
 
             Status = newStatus;
 
-            var transitions = new Dictionary<OrderStatus, (OrderItemStatus from, OrderItemStatus to)>
+            var transitions = new Dictionary<OrderStatus, (OrderItemStatus[] from, OrderItemStatus to)>
             {
-                [OrderStatus.Preparing] = (OrderItemStatus.Pending,   OrderItemStatus.Preparing),
-                [OrderStatus.Ready]     = (OrderItemStatus.Preparing, OrderItemStatus.Ready),
-                [OrderStatus.Served]    = (OrderItemStatus.Ready,     OrderItemStatus.Served),
+                [OrderStatus.Preparing] = (new[] { OrderItemStatus.Pending }, OrderItemStatus.Preparing),
+                [OrderStatus.Ready]     = (new[] { OrderItemStatus.Pending, OrderItemStatus.Preparing }, OrderItemStatus.Ready),
+                [OrderStatus.Served]    = (new[] { OrderItemStatus.Ready }, OrderItemStatus.Served),
             };
 
-            if (transitions.TryGetValue(newStatus, out (OrderItemStatus from, OrderItemStatus to) transition))
+            if (transitions.TryGetValue(newStatus, out var transition))
             {
-                foreach (OrderItem item in _orderItems.Where(i => i.Status == transition.from))
+                foreach (OrderItem item in _orderItems.Where(i => transition.from.Contains(i.Status)))
                     item.UpdateStatus(transition.to);
             }
         }
