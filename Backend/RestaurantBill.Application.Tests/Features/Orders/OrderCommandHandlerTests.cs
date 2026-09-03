@@ -4,9 +4,11 @@ using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
+using RestaurantBill.Application.Features.Orders.Commands.TransferOrder;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemStatus;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
+using RestaurantBill.Application.Features.Orders.Queries;
 using RestaurantBill.Application.Tests.Fakes;
 using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
@@ -220,6 +222,158 @@ public class OrderCommandHandlerTests
             await handler.Handle(new UpdateOrderStatusCommand { OrderId = order.Id, Status = (int)OrderStatus.Preparing }, CancellationToken.None);
 
             Assert.Equal(OrderStatus.Preparing, order.Status);
+        }
+    }
+
+    public class TransferOrderHandlerTests : ApplicationTestBase
+    {
+        private TransferOrderCommandHandler CreateHandler() =>
+            new(Db, new OrderQueries(Db), new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
+
+        [Fact]
+        public async Task Handle_MoveToAvailableTable_MovesOrderAndSwapsTableStatus()
+        {
+            Table source = CreateTable();
+            source.Occupy();
+            Table destination = CreateTable();
+            Order order = CreateOrder(source.Id);
+            order.AddItem(CreateProduct(), 2);
+            DbContext.Tables.AddRange(source, destination);
+            DbContext.Orders.Add(order);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
+
+            var handler = CreateHandler();
+            var result = await handler.Handle(new TransferOrderCommand { SourceTableId = source.Id, DestinationTableId = destination.Id, Mode = TableTransferMode.Move }, CancellationToken.None);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(destination.Id, order.TableId);
+            Assert.Equal(TableStatus.Available, source.Status);
+            Assert.Equal(TableStatus.Occupied, destination.Status);
+        }
+
+        [Fact]
+        public async Task Handle_MoveToOccupiedTable_ReturnsFailureResult()
+        {
+            Table source = CreateTable();
+            source.Occupy();
+            Table destination = CreateTable();
+            destination.Occupy();
+            Order sourceOrder = CreateOrder(source.Id);
+            sourceOrder.AddItem(CreateProduct(), 1);
+            Order destinationOrder = CreateOrder(destination.Id);
+            destinationOrder.AddItem(CreateProduct(), 1);
+            DbContext.Tables.AddRange(source, destination);
+            DbContext.Orders.AddRange(sourceOrder, destinationOrder);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
+
+            var handler = CreateHandler();
+            var result = await handler.Handle(new TransferOrderCommand { SourceTableId = source.Id, DestinationTableId = destination.Id, Mode = TableTransferMode.Move }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+        }
+
+        [Fact]
+        public async Task Handle_MergeWithMatchingLine_CombinesQuantityAndClosesSource()
+        {
+            Table source = CreateTable();
+            source.Occupy();
+            Table destination = CreateTable();
+            destination.Occupy();
+            Product product = CreateProduct(price: 10m);
+
+            Order sourceOrder = CreateOrder(source.Id);
+            sourceOrder.AddItem(product, 2);
+            Order destinationOrder = CreateOrder(destination.Id);
+            destinationOrder.AddItem(product, 3);
+
+            DbContext.Tables.AddRange(source, destination);
+            DbContext.Orders.AddRange(sourceOrder, destinationOrder);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
+
+            var handler = CreateHandler();
+            var result = await handler.Handle(new TransferOrderCommand { SourceTableId = source.Id, DestinationTableId = destination.Id, Mode = TableTransferMode.Merge }, CancellationToken.None);
+
+            Assert.True(result.IsSuccess);
+            Assert.Single(destinationOrder.OrderItems);
+            Assert.Equal(5, destinationOrder.OrderItems.First().Quantity);
+            Assert.Equal(50m, destinationOrder.TotalPrice);
+            Assert.Equal(OrderStatus.Cancelled, sourceOrder.Status);
+            Assert.Equal(TableStatus.Available, source.Status);
+            Assert.Equal(TableStatus.Occupied, destination.Status);
+        }
+
+        [Fact]
+        public async Task Handle_MergeWithDifferentStatusLines_KeepsSeparateLines()
+        {
+            Table source = CreateTable();
+            source.Occupy();
+            Table destination = CreateTable();
+            destination.Occupy();
+            Product product = CreateProduct(price: 10m);
+
+            Order sourceOrder = CreateOrder(source.Id);
+            sourceOrder.AddItem(product, 2);
+            sourceOrder.UpdateStatus(OrderStatus.Preparing);
+            Order destinationOrder = CreateOrder(destination.Id);
+            destinationOrder.AddItem(product, 3);
+
+            DbContext.Tables.AddRange(source, destination);
+            DbContext.Orders.AddRange(sourceOrder, destinationOrder);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
+
+            var handler = CreateHandler();
+            var result = await handler.Handle(new TransferOrderCommand { SourceTableId = source.Id, DestinationTableId = destination.Id, Mode = TableTransferMode.Merge }, CancellationToken.None);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(2, destinationOrder.OrderItems.Count);
+            Assert.Equal(50m, destinationOrder.TotalPrice);
+        }
+
+        [Fact]
+        public async Task Handle_Swap_ExchangesTablesWithoutChangingStatus()
+        {
+            Table source = CreateTable();
+            source.Occupy();
+            Table destination = CreateTable();
+            destination.Occupy();
+
+            Order sourceOrder = CreateOrder(source.Id);
+            sourceOrder.AddItem(CreateProduct(price: 10m), 1);
+            Order destinationOrder = CreateOrder(destination.Id);
+            destinationOrder.AddItem(CreateProduct(price: 25m), 1);
+
+            DbContext.Tables.AddRange(source, destination);
+            DbContext.Orders.AddRange(sourceOrder, destinationOrder);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
+
+            var handler = CreateHandler();
+            var result = await handler.Handle(new TransferOrderCommand { SourceTableId = source.Id, DestinationTableId = destination.Id, Mode = TableTransferMode.Swap }, CancellationToken.None);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(destination.Id, sourceOrder.TableId);
+            Assert.Equal(source.Id, destinationOrder.TableId);
+            Assert.Equal(TableStatus.Occupied, source.Status);
+            Assert.Equal(TableStatus.Occupied, destination.Status);
+        }
+
+        [Fact]
+        public async Task Handle_WithNoActiveOrderAtSourceTable_ReturnsFailureResult()
+        {
+            Table source = CreateTable();
+            Table destination = CreateTable();
+            DbContext.Tables.AddRange(source, destination);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
+
+            var handler = CreateHandler();
+            var result = await handler.Handle(new TransferOrderCommand { SourceTableId = source.Id, DestinationTableId = destination.Id, Mode = TableTransferMode.Move }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
         }
     }
 

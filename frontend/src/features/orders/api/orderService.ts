@@ -62,5 +62,13 @@ export const orderService = {
             quantity
         });
         return response.data;
+    },
+    transferOrder: async (sourceTableId: string, destinationTableId: string, mode: 1 | 2 | 3) => {
+        const response = await api.post(`/order/transfer`, {
+            SourceTableId: sourceTableId,
+            DestinationTableId: destinationTableId,
+            Mode: mode
+        });
+        return response.data;
     }
 };

@@ -6,6 +6,7 @@ using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
+using RestaurantBill.Application.Features.Orders.Commands.TransferOrder;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemStatus;
@@ -84,6 +85,16 @@ namespace RestaurantBill.WebAPI.Controllers
         [Authorize(Roles = "Owner, Admin, Waiter, Cashier")]
         [HttpPost("close")]
         public async Task<IActionResult> Close([FromBody]DeleteCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+        /// <summary> Moves, merges or swaps an order with another table. </summary>
+        /// <param name="command"></param>
+        /// <param name="cancellationToken"></param>
+        [Authorize(Roles = "Owner,Admin,Cashier")]
+        [HttpPost("transfer")]
+        public async Task<IActionResult> Transfer([FromBody] TransferOrderCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);

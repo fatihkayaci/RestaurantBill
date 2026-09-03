@@ -160,6 +160,18 @@ public class OrderTests
         }
 
         [Fact]
+        public void ToReady_MovesPendingItemsDirectlyToReady()
+        {
+            Order order = Order.Create(Guid.NewGuid());
+            order.AddItem(OrderTests.CreateProduct(), 1);
+
+            order.UpdateStatus(OrderStatus.Ready);
+
+            Assert.Equal(OrderStatus.Ready, order.Status);
+            Assert.All(order.OrderItems, item => Assert.Equal(OrderItemStatus.Ready, item.Status));
+        }
+
+        [Fact]
         public void ToServed_MovesReadyItemsToServed()
         {
             Order order = Order.Create(Guid.NewGuid());

@@ -27,7 +27,8 @@ namespace RestaurantBill.Application.Features.Regions.Commands.CreateRegion
             if (nameExists)
                 return Result.Failure("Bu isimde bir bölge zaten mevcut.");
 
-            Region region = Region.Create(command.Name, restaurantId);
+            int nextSortOrder = await _db.Regions.CountAsync(r => r.BranchId == restaurantId, cancellationToken);
+            Region region = Region.Create(command.Name, restaurantId, nextSortOrder);
             _db.Regions.Add(region);
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _userService.UserId, cancellationToken);

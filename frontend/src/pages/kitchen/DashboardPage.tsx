@@ -6,21 +6,16 @@ import { orderService } from '@/features/orders/api/orderService';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 
 const OrderStatus = {
-    Preparing: 3,
     Ready: 4,
-    Served: 5,
 } as const;
 
 const itemStatusMap: Record<number, { from: number; to: number }> = {
-    [OrderStatus.Preparing]: { from: 1, to: 2 },
-    [OrderStatus.Ready]: { from: 2, to: 3 },
-    [OrderStatus.Served]: { from: 3, to: 4 },
+    [OrderStatus.Ready]: { from: 1, to: 3 },
 };
 
 interface OrderGroup {
     order: Order;
     items: Order['orderItems'];
-    colStatus: number;
 }
 
 const URGENT_THRESHOLD_MINUTES = 30;
@@ -44,15 +39,7 @@ function KitchenCard({
     onItemUpdate: (orderId: number, itemId: number, newStatus: number) => void;
     onBulkUpdate: (orderId: number, newOrderStatus: number) => void;
 }) {
-    const { order, items, colStatus } = group;
-
-    const bulkButton = colStatus === 1
-        ? { label: 'Hazırlamaya Başla →', action: OrderStatus.Preparing, cls: 'bg-rb-accent-bg hover:opacity-80 text-rb-accent' }
-        : colStatus === 2
-        ? { label: 'Hazır ✓', action: OrderStatus.Ready, cls: 'bg-rb-green-bg hover:opacity-80 text-rb-green' }
-        : { label: 'Garson Çağrıldı — Teslim', action: OrderStatus.Served, cls: 'bg-muted/60 text-muted-foreground/60 cursor-default' };
-
-    const itemNextStatus = colStatus === 1 ? 2 : colStatus === 2 ? 3 : null;
+    const { order, items } = group;
 
     const elapsedMinutes = Math.max(0, Math.floor((now - new Date(order.createdAt).getTime()) / 60000));
     const isUrgent = elapsedMinutes >= URGENT_THRESHOLD_MINUTES;
@@ -77,6 +64,13 @@ function KitchenCard({
                 </span>
             </div>
 
+            {/* Sipariş notu */}
+            {order.note && (
+                <div className="mx-4 mb-3 rounded-lg bg-rb-amber-bg text-rb-amber text-xs px-3 py-2">
+                    <span className="font-bold">Not: </span>{order.note}
+                </div>
+            )}
+
             {/* Ürün listesi */}
             <div className="px-4 pb-3 space-y-0 divide-y divide-border">
                 {items.map(item => (
@@ -87,19 +81,13 @@ function KitchenCard({
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">×{item.quantity}</span>
-                            {itemNextStatus && (
-                                <button
-                                    onClick={() => onItemUpdate(order.id, item.id, itemNextStatus)}
-                                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors ${
-                                        colStatus === 1
-                                            ? 'text-rb-accent hover:bg-rb-accent-bg'
-                                            : 'text-rb-green hover:bg-rb-green-bg'
-                                    }`}
-                                    title={colStatus === 1 ? 'Hazırlamaya başla' : 'Hazır işaretle'}
-                                >
-                                    {colStatus === 1 ? '→' : '✓'}
-                                </button>
-                            )}
+                            <button
+                                onClick={() => onItemUpdate(order.id, item.id, 3)}
+                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors text-rb-green hover:bg-rb-green-bg"
+                                title="Hazır işaretle"
+                            >
+                                ✓
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -108,11 +96,10 @@ function KitchenCard({
             {/* Bulk aksiyon butonu */}
             <div className="px-4 pb-4">
                 <button
-                    onClick={() => colStatus !== 3 && onBulkUpdate(order.id, bulkButton.action)}
-                    className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors ${bulkButton.cls}`}
-                    disabled={colStatus === 3}
+                    onClick={() => onBulkUpdate(order.id, OrderStatus.Ready)}
+                    className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors bg-rb-green-bg hover:opacity-80 text-rb-green"
                 >
-                    {bulkButton.label}
+                    Hazır ✓
                 </button>
             </div>
         </div>
@@ -139,17 +126,9 @@ export default function KitchenDashboardPage() {
         return () => clearInterval(interval);
     }, []);
 
-    const orderGroups: OrderGroup[] = orders.flatMap(order => {
-        return [1, 2, 3].map(s => ({
-            order,
-            items: order.orderItems.filter(i => i.status === s),
-            colStatus: s,
-        })).filter(g => g.items.length > 0);
-    });
-
-    const pendingGroups   = orderGroups.filter(g => g.colStatus === 1);
-    const preparingGroups = orderGroups.filter(g => g.colStatus === 2);
-    const readyGroups     = orderGroups.filter(g => g.colStatus === 3);
+    const pendingGroups: OrderGroup[] = orders
+        .map(order => ({ order, items: order.orderItems.filter(i => i.status === 1) }))
+        .filter(g => g.items.length > 0);
 
     /* ── Bireysel ürün güncelleme ── */
     const handleItemStatusUpdate = async (orderId: number, itemId: number, newStatus: number) => {
@@ -182,9 +161,6 @@ export default function KitchenDashboardPage() {
                     return { ...o, status: newOrderStatus, orderItems: updatedItems };
                 })
             );
-            if (newOrderStatus === OrderStatus.Served) {
-                setOrders(prev => prev.filter(o => o.id !== orderId));
-            }
         } catch (err) {
             console.error('handleStatusUpdate:', err);
         }
@@ -243,56 +219,21 @@ export default function KitchenDashboardPage() {
         <>
             {/* Header stats portal */}
             {statsSlot && createPortal(
-                <>
-                    <HeaderStatCounter label="Bekliyor"      count={pendingGroups.length}   color="text-rb-amber" />
-                    <HeaderStatCounter label="Hazırlanıyor"  count={preparingGroups.length} color="text-rb-accent" />
-                    <HeaderStatCounter label="Hazır"         count={readyGroups.length}     color="text-rb-green" />
-                </>,
+                <HeaderStatCounter label="Bekliyor" count={pendingGroups.length} color="text-rb-amber" />,
                 statsSlot
             )}
 
-            {/* 3 sütun kanban */}
-            <div className="flex-1 grid grid-cols-3 divide-x divide-border overflow-hidden">
-                {/* BEKLIYOR */}
-                <div className="overflow-y-auto flex flex-col">
-                    <ColumnHeader dot="bg-rb-amber" text="text-rb-amber" bg="bg-rb-amber-bg" label="Bekliyor" count={pendingGroups.length} />
-                    <div className="p-4 space-y-3 flex-1">
-                        {pendingGroups.length === 0 ? (
-                            <p className="text-xs text-muted-foreground text-center py-8">Bekleyen sipariş yok</p>
-                        ) : (
-                            pendingGroups.map(g => (
-                                <KitchenCard key={`${g.order.id}-pending`} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
-                            ))
-                        )}
-                    </div>
-                </div>
-
-                {/* HAZIRLANIYOR */}
-                <div className="overflow-y-auto flex flex-col">
-                    <ColumnHeader dot="bg-rb-accent" text="text-rb-accent" bg="bg-rb-accent-bg" label="Hazırlanıyor" count={preparingGroups.length} />
-                    <div className="p-4 space-y-3 flex-1">
-                        {preparingGroups.length === 0 ? (
-                            <p className="text-xs text-muted-foreground text-center py-8">Hazırlanan sipariş yok</p>
-                        ) : (
-                            preparingGroups.map(g => (
-                                <KitchenCard key={`${g.order.id}-preparing`} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
-                            ))
-                        )}
-                    </div>
-                </div>
-
-                {/* HAZIR */}
-                <div className="overflow-y-auto flex flex-col">
-                    <ColumnHeader dot="bg-rb-green" text="text-rb-green" bg="bg-rb-green-bg" label="Hazır" count={readyGroups.length} />
-                    <div className="p-4 space-y-3 flex-1">
-                        {readyGroups.length === 0 ? (
-                            <p className="text-xs text-muted-foreground text-center py-8">Hazır sipariş yok</p>
-                        ) : (
-                            readyGroups.map(g => (
-                                <KitchenCard key={`${g.order.id}-ready`} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
-                            ))
-                        )}
-                    </div>
+            {/* Tek kutu */}
+            <div className="flex-1 overflow-hidden flex flex-col">
+                <ColumnHeader dot="bg-rb-amber" text="text-rb-amber" bg="bg-rb-amber-bg" label="Bekliyor" count={pendingGroups.length} />
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 flex-1 overflow-y-auto content-start">
+                    {pendingGroups.length === 0 ? (
+                        <p className="col-span-full text-xs text-muted-foreground text-center py-8">Bekleyen sipariş yok</p>
+                    ) : (
+                        pendingGroups.map(g => (
+                            <KitchenCard key={g.order.id} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
+                        ))
+                    )}
                 </div>
             </div>
         </>

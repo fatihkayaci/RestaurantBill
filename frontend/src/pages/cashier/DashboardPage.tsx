@@ -3,10 +3,13 @@ import { createPortal } from 'react-dom';
 import * as signalR from '@microsoft/signalr';
 import { orderService } from '@/features/orders/api/orderService';
 import { shiftService } from '@/features/cashier/api/shiftService';
+import { tableService } from '@/features/tables/api/tableService';
 import type { Order } from '@/features/orders/types';
 import type { PaymentMethod, ShiftSummary, ShiftTransaction } from '@/features/cashier/types';
+import type { Table } from '@/features/tables/types';
 import PaymentPanel from './components/PaymentPanel';
 import TransactionDetailPanel from './components/TransactionDetailPanel';
+import TableTransferModal from '@/features/tables/components/TableTransferModal';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 
 const OrderStatus = { Served: 5 } as const;
@@ -33,10 +36,12 @@ function formatShortName(fullName: string): string {
 
 export default function CashierDashboardPage() {
     const [servedOrders, setServedOrders] = useState<Order[]>([]);
+    const [tables, setTables] = useState<Table[]>([]);
     const [shiftTransactions, setShiftTransactions] = useState<ShiftTransaction[]>([]);
     const [shiftSummary, setShiftSummary] = useState<ShiftSummary | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [selectedTransaction, setSelectedTransaction] = useState<ShiftTransaction | null>(null);
+    const [transferSourceOrder, setTransferSourceOrder] = useState<Order | null>(null);
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
@@ -56,6 +61,9 @@ export default function CashierDashboardPage() {
     useEffect(() => {
         orderService.getAllOrdersToCashier()
             .then(setServedOrders)
+            .catch(() => {});
+        tableService.getTables()
+            .then(setTables)
             .catch(() => {});
         refreshTransactions();
     }, []);
@@ -95,6 +103,9 @@ export default function CashierDashboardPage() {
         conn.on('OrdersChanged', () => {
             orderService.getAllOrdersToCashier()
                 .then(setServedOrders)
+                .catch(() => {});
+            tableService.getTables()
+                .then(setTables)
                 .catch(() => {});
             refreshTransactions();
         });
@@ -192,12 +203,20 @@ export default function CashierDashboardPage() {
                                         <span>{order.orderItems.length} ürün</span>
                                     </div>
 
-                                    <button
-                                        onClick={() => setSelectedOrder(order)}
-                                        className="w-full bg-rb-accent-bg hover:opacity-80 text-rb-accent text-sm font-semibold rounded-xl py-2 transition-colors"
-                                    >
-                                        Ödeme Al
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setSelectedOrder(order)}
+                                            className="flex-1 bg-rb-accent-bg hover:opacity-80 text-rb-accent text-sm font-semibold rounded-xl py-2 transition-colors"
+                                        >
+                                            Ödeme Al
+                                        </button>
+                                        <button
+                                            onClick={() => setTransferSourceOrder(order)}
+                                            className="flex-1 border border-border hover:bg-muted text-foreground text-sm font-semibold rounded-xl py-2 transition-colors"
+                                        >
+                                            Masayı Taşı
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -285,6 +304,24 @@ export default function CashierDashboardPage() {
                     </div>
                 </>
             )}
+
+            {/* Masayı Taşı modalı */}
+            {transferSourceOrder && (() => {
+                const sourceTable = tables.find(t => t.id === transferSourceOrder.tableId);
+                if (!sourceTable) return null;
+                return (
+                    <TableTransferModal
+                        sourceTable={sourceTable}
+                        tables={tables}
+                        onClose={() => setTransferSourceOrder(null)}
+                        onDone={async () => {
+                            setTransferSourceOrder(null);
+                            await orderService.getAllOrdersToCashier().then(setServedOrders).catch(() => {});
+                            await tableService.getTables().then(setTables).catch(() => {});
+                        }}
+                    />
+                );
+            })()}
         </>
     );
 }

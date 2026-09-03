@@ -6,10 +6,11 @@ public class Region : BaseEntity
     public Guid BranchId { get; private set; }
     public Branch Branch { get; private set; } = default!;
     public string Name { get; private set; } = string.Empty;
+    public int SortOrder { get; private set; }
 
     protected Region() { }
 
-    public static Region Create(string name, Guid branchId)
+    public static Region Create(string name, Guid branchId, int sortOrder = 0)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("Bölge adı boş olamaz.");
@@ -20,7 +21,8 @@ public class Region : BaseEntity
         return new Region
         {
             Name = name,
-            BranchId = branchId
+            BranchId = branchId,
+            SortOrder = sortOrder
         };
     }
 
@@ -30,6 +32,11 @@ public class Region : BaseEntity
             throw new DomainException("Bölge adı boş olamaz.");
 
         Name = name;
+    }
+
+    public void SetSortOrder(int sortOrder)
+    {
+        SortOrder = sortOrder;
     }
 
     public void EnsureCanBeDeleted(IEnumerable<Table> linkedTables)

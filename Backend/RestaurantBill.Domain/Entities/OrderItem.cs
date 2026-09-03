@@ -45,6 +45,12 @@ namespace RestaurantBill.Domain.Entities
             Quantity += quantity;
         }
 
+        internal void ReassignOrder(Order newOrder)
+        {
+            OrderId = newOrder.Id;
+            Order = newOrder;
+        }
+
         internal void ReduceQuantity(int quantity)
         {
             Quantity -= quantity;

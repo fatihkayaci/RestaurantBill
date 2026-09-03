@@ -103,16 +103,16 @@ namespace RestaurantBill.Domain.Entities
 
             Status = newStatus;
 
-            var transitions = new Dictionary<OrderStatus, (OrderItemStatus from, OrderItemStatus to)>
+            var transitions = new Dictionary<OrderStatus, (OrderItemStatus[] from, OrderItemStatus to)>
             {
-                [OrderStatus.Preparing] = (OrderItemStatus.Pending,   OrderItemStatus.Preparing),
-                [OrderStatus.Ready]     = (OrderItemStatus.Preparing, OrderItemStatus.Ready),
-                [OrderStatus.Served]    = (OrderItemStatus.Ready,     OrderItemStatus.Served),
+                [OrderStatus.Preparing] = (new[] { OrderItemStatus.Pending }, OrderItemStatus.Preparing),
+                [OrderStatus.Ready]     = (new[] { OrderItemStatus.Pending, OrderItemStatus.Preparing }, OrderItemStatus.Ready),
+                [OrderStatus.Served]    = (new[] { OrderItemStatus.Ready }, OrderItemStatus.Served),
             };
 
-            if (transitions.TryGetValue(newStatus, out (OrderItemStatus from, OrderItemStatus to) transition))
+            if (transitions.TryGetValue(newStatus, out var transition))
             {
-                foreach (OrderItem item in _orderItems.Where(i => i.Status == transition.from))
+                foreach (OrderItem item in _orderItems.Where(i => transition.from.Contains(i.Status)))
                     item.UpdateStatus(transition.to);
             }
         }
@@ -137,6 +137,47 @@ namespace RestaurantBill.Domain.Entities
         public void Cancel()
         {
             Status = OrderStatus.Cancelled;
+        }
+
+        public void MoveToTable(Guid newTableId)
+        {
+            if (newTableId == Guid.Empty)
+                throw new DomainException("Geçersiz masa.");
+
+            TableId = newTableId;
+        }
+
+        public void MergeFrom(Order source)
+        {
+            if (source is null)
+                throw new DomainException("Geçersiz kaynak sipariş.");
+
+            foreach (OrderItem item in source._orderItems.ToList())
+            {
+                OrderItem? existing = _orderItems.FirstOrDefault(x =>
+                    x.ProductId == item.ProductId && x.Status == item.Status &&
+                    x.UnitPrice == item.UnitPrice && x.TaxRate == item.TaxRate);
+
+                if (existing != null)
+                {
+                    existing.AddQuantity(item.Quantity);
+                    source._orderItems.Remove(item);
+                }
+                else
+                {
+                    item.ReassignOrder(this);
+                    source._orderItems.Remove(item);
+                    _orderItems.Add(item);
+                }
+            }
+
+            if (string.IsNullOrEmpty(Note))
+                Note = source.Note;
+            else if (!string.IsNullOrEmpty(source.Note) && source.Note != Note)
+                Note = $"{Note} / {source.Note}";
+
+            RecalculateTotal();
+            source.RecalculateTotal();
         }
 
         private void RecalculateTotal()
