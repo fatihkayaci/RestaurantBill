@@ -20,4 +20,9 @@ export const regionService = {
     deleteRegion: async (id: string) => {
         await api.delete(`/region/${id}`);
     },
+    reorderRegions: async (orderedRegionIds: string[]) => {
+        await api.post('/region/reorder', {
+            OrderedRegionIds: orderedRegionIds
+        });
+    },
 };

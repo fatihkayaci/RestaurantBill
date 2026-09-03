@@ -12,11 +12,12 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, Image as ImageIcon } from 'lucide-react';
+import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import PaymentPanel from '../cashier/components/PaymentPanel';
+import TableTransferModal from '@/features/tables/components/TableTransferModal';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
 
@@ -124,6 +125,7 @@ export default function Tables() {
 
     const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
     const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+    const [transferModalOpen, setTransferModalOpen] = useState(false);
 
     const [reservationName, setReservationName] = useState('');
     const [reservationContact, setReservationContact] = useState('');
@@ -142,6 +144,22 @@ export default function Tables() {
     const refreshRegions = async () => {
         const updated = await regionService.getRegions();
         setRegions(updated);
+    };
+
+    const moveRegion = async (index: number, direction: -1 | 1) => {
+        const targetIndex = index + direction;
+        if (targetIndex < 0 || targetIndex >= regions.length) return;
+
+        const reordered = [...regions];
+        [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+        setRegions(reordered);
+
+        try {
+            await regionService.reorderRegions(reordered.map(r => r.id));
+        } catch {
+            toast.error('Bölge sırası kaydedilemedi.');
+            await refreshRegions();
+        }
     };
 
     useEffect(() => {
@@ -364,6 +382,7 @@ export default function Tables() {
         setNewItems([]);
         setOrderNote('');
         setPaymentOrder(null);
+        setTransferModalOpen(false);
         setProducts([]);
         setCategories([]);
         setActiveReservation(null);
@@ -497,6 +516,12 @@ export default function Tables() {
         count: tables.filter(t => t.regionId === region.id).length,
     }));
     const filteredTables = selectedRegionId === 'all' ? tables : tables.filter(t => t.regionId === selectedRegionId);
+    const showRegionSections = selectedRegionId === 'all';
+    const tableGroups = showRegionSections
+        ? regions
+            .map(region => ({ region, tables: tables.filter(t => t.regionId === region.id) }))
+            .filter(group => group.tables.length > 0)
+        : [{ region: regions.find(r => r.id === selectedRegionId) ?? null, tables: filteredTables }];
 
     const visibleTabs: PanelTab[] = !selectedTable
         ? []
@@ -605,83 +630,111 @@ export default function Tables() {
                 )}
             </div>
 
-            {/* Table Grid — waiter tarafındaki tasarımla aynı renk/hover davranışı */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredTables.map(table => {
-                    const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
-                    return (
-                        <div
-                            key={table.id}
-                            onClick={() => handleTableClick(table)}
-                            className={cn(
-                                "rounded-2xl border py-4 px-4 flex flex-col gap-1.5 cursor-pointer min-h-27",
-                                "transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]",
-                                "dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]",
-                                cfg.bg, cfg.border
-                            )}
-                        >
-                            <div className="flex items-start justify-between gap-1.5">
-                                <span className="font-serif text-[21px] font-bold text-foreground leading-[1.15]">
-                                    {table.name}
-                                </span>
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <button
-                                        onClick={e => { e.stopPropagation(); openEditModal(table); }}
-                                        className="text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        <Pencil className="h-3.5 w-3.5" />
-                                    </button>
-                                    <button
-                                        onClick={e => { e.stopPropagation(); setDeleteTargetId(table.id); }}
-                                        className="text-muted-foreground hover:text-destructive transition-colors"
-                                    >
-                                        <X className="h-3.5 w-3.5" />
-                                    </button>
-                                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-1.5 leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
-                                        {cfg.label}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <span className="self-start text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                                {table.regionName}
-                            </span>
-
-                            <div className="flex-1 flex flex-col justify-end gap-1">
-                                {table.status === 1 && (
-                                    <span className={cn("text-[11px] tracking-[0.2px] mt-1", cfg.hint)}>
-                                        ↑ Sipariş oluştur
-                                    </span>
-                                )}
-                                {table.status === 2 && (
-                                    <>
-                                        <div className="flex items-center justify-between mt-1">
-                                            <span className={cn("text-xs", cfg.hint)}>Aktif sipariş</span>
-                                            <span className="text-sm font-bold text-foreground">₺{table.activeOrderTotal.toFixed(0)}</span>
-                                        </div>
-                                        {table.occupiedSince && (
-                                            <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">
-                                                <span>Açılış: {new Date(table.occupiedSince).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                <span>{formatElapsed(table.occupiedSince, now)}</span>
-                                            </div>
-                                        )}
-                                        {table.createdByUserName && (
-                                            <div className="text-[10px] text-muted-foreground/80">
-                                                Alan: {table.createdByUserName}
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                                {table.status === 3 && (
-                                    <span className={cn("text-[11px]", cfg.hint)}>
-                                        Rezervasyon mevcut
-                                    </span>
-                                )}
-                            </div>
+            {/* Table Grid — bölgelere göre gruplanmış, waiter tarafındaki tasarımla aynı renk/hover davranışı */}
+            {tableGroups.map(group => {
+                const regionIndex = group.region ? regions.findIndex(r => r.id === group.region!.id) : -1;
+                return (
+                <div key={group.region?.id ?? 'all'} className="space-y-3">
+                    {showRegionSections && (
+                        <div className="flex items-center gap-1">
+                            <h2 className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
+                                {group.region?.name} ({group.tables.length})
+                            </h2>
+                            <button
+                                onClick={() => moveRegion(regionIndex, -1)}
+                                disabled={regionIndex <= 0}
+                                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ArrowUp className="h-3 w-3" />
+                            </button>
+                            <button
+                                onClick={() => moveRegion(regionIndex, 1)}
+                                disabled={regionIndex === -1 || regionIndex >= regions.length - 1}
+                                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ArrowDown className="h-3 w-3" />
+                            </button>
                         </div>
-                    );
-                })}
-            </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {group.tables.map(table => {
+                            const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
+                            return (
+                                <div
+                                    key={table.id}
+                                    onClick={() => handleTableClick(table)}
+                                    className={cn(
+                                        "rounded-2xl border py-4 px-4 flex flex-col gap-1.5 cursor-pointer min-h-27",
+                                        "transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]",
+                                        "dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]",
+                                        cfg.bg, cfg.border
+                                    )}
+                                >
+                                    <div className="flex items-start justify-between gap-1.5">
+                                        <span className="font-serif text-[21px] font-bold text-foreground leading-[1.15]">
+                                            {table.name}
+                                        </span>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button
+                                                onClick={e => { e.stopPropagation(); openEditModal(table); }}
+                                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                            >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </button>
+                                            <button
+                                                onClick={e => { e.stopPropagation(); setDeleteTargetId(table.id); }}
+                                                className="text-muted-foreground hover:text-destructive transition-colors"
+                                            >
+                                                <X className="h-3.5 w-3.5" />
+                                            </button>
+                                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-1.5 leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
+                                                {cfg.label}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <span className="self-start text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                        {table.regionName}
+                                    </span>
+
+                                    <div className="flex-1 flex flex-col justify-end gap-1">
+                                        {table.status === 1 && (
+                                            <span className={cn("text-[11px] tracking-[0.2px] mt-1", cfg.hint)}>
+                                                ↑ Sipariş oluştur
+                                            </span>
+                                        )}
+                                        {table.status === 2 && (
+                                            <>
+                                                <div className="flex items-center justify-between mt-1">
+                                                    <span className={cn("text-xs", cfg.hint)}>Aktif sipariş</span>
+                                                    <span className="text-sm font-bold text-foreground">₺{table.activeOrderTotal.toFixed(0)}</span>
+                                                </div>
+                                                {table.occupiedSince && (
+                                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">
+                                                        <span>Açılış: {new Date(table.occupiedSince).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        <span>{formatElapsed(table.occupiedSince, now)}</span>
+                                                    </div>
+                                                )}
+                                                {table.createdByUserName && (
+                                                    <div className="text-[10px] text-muted-foreground/80">
+                                                        Alan: {table.createdByUserName}
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        {table.status === 3 && (
+                                            <span className={cn("text-[11px]", cfg.hint)}>
+                                                Rezervasyon mevcut
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+                );
+            })}
 
             {/* Masa Ekle / Düzenle Modal */}
             {isModalOpen && (
@@ -1119,6 +1172,12 @@ export default function Tables() {
                                             </button>
                                         )}
                                         <button
+                                            onClick={() => setTransferModalOpen(true)}
+                                            className="w-full rounded-xl border border-border text-foreground font-semibold text-sm py-2.5 hover:bg-muted transition-colors"
+                                        >
+                                            Masayı Taşı
+                                        </button>
+                                        <button
                                             onClick={() => setCancelConfirmOpen(true)}
                                             className="w-full rounded-xl border border-destructive/30 text-destructive font-semibold text-sm py-2.5 hover:bg-destructive/10 transition-colors"
                                         >
@@ -1152,6 +1211,20 @@ export default function Tables() {
                         />
                     </div>
                 </>
+            )}
+
+            {/* Masayı Taşı modalı */}
+            {transferModalOpen && selectedTable && (
+                <TableTransferModal
+                    sourceTable={selectedTable}
+                    tables={tables}
+                    onClose={() => setTransferModalOpen(false)}
+                    onDone={async () => {
+                        setTransferModalOpen(false);
+                        await refreshTables();
+                        closePanel();
+                    }}
+                />
             )}
 
             {/* Masayı Kapat Onay */}

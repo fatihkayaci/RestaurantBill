@@ -24,7 +24,7 @@ namespace RestaurantBill.Application.Features.Regions.Queries.GetAllRegions
             var regions = await _db.Regions
                 .AsNoTracking()
                 .Where(r => r.BranchId == restaurantId)
-                .OrderBy(r => r.Name)
+                .OrderBy(r => r.SortOrder).ThenBy(r => r.Name)
                 .Select(r => new RegionDto { Id = r.Id, Name = r.Name })
                 .ToListAsync(cancellationToken);
 

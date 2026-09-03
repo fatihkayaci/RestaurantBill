@@ -139,6 +139,47 @@ namespace RestaurantBill.Domain.Entities
             Status = OrderStatus.Cancelled;
         }
 
+        public void MoveToTable(Guid newTableId)
+        {
+            if (newTableId == Guid.Empty)
+                throw new DomainException("Geçersiz masa.");
+
+            TableId = newTableId;
+        }
+
+        public void MergeFrom(Order source)
+        {
+            if (source is null)
+                throw new DomainException("Geçersiz kaynak sipariş.");
+
+            foreach (OrderItem item in source._orderItems.ToList())
+            {
+                OrderItem? existing = _orderItems.FirstOrDefault(x =>
+                    x.ProductId == item.ProductId && x.Status == item.Status &&
+                    x.UnitPrice == item.UnitPrice && x.TaxRate == item.TaxRate);
+
+                if (existing != null)
+                {
+                    existing.AddQuantity(item.Quantity);
+                    source._orderItems.Remove(item);
+                }
+                else
+                {
+                    item.ReassignOrder(this);
+                    source._orderItems.Remove(item);
+                    _orderItems.Add(item);
+                }
+            }
+
+            if (string.IsNullOrEmpty(Note))
+                Note = source.Note;
+            else if (!string.IsNullOrEmpty(source.Note) && source.Note != Note)
+                Note = $"{Note} / {source.Note}";
+
+            RecalculateTotal();
+            source.RecalculateTotal();
+        }
+
         private void RecalculateTotal()
         {
             TotalPrice = _orderItems.Sum(x => x.UnitPrice * x.Quantity);

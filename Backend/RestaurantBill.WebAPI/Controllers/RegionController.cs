@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Regions.Commands.CreateRegion;
 using RestaurantBill.Application.Features.Regions.Commands.DeleteRegion;
+using RestaurantBill.Application.Features.Regions.Commands.ReorderRegions;
 using RestaurantBill.Application.Features.Regions.Commands.UpdateRegion;
 using RestaurantBill.Application.Features.Regions.Queries.GetAllRegions;
 
@@ -57,6 +58,20 @@ namespace RestaurantBill.WebAPI.Controllers
         [Authorize(Roles = "Owner,Admin")]
         [HttpPost("update")]
         public async Task<IActionResult> UpdateRegion([FromBody]UpdateRegionCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
+        /// <summary>
+        /// Updates the display order of regions. Only accessible by Admin.
+        /// </summary>
+        /// <param name="command">Ordered list of region IDs.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with success message on update.</returns>
+        [Authorize(Roles = "Owner,Admin")]
+        [HttpPost("reorder")]
+        public async Task<IActionResult> ReorderRegions([FromBody]ReorderRegionsCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);
