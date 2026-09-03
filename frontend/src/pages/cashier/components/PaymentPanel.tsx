@@ -34,9 +34,22 @@ function formatElapsed(createdAt: string): string {
 
 export default function PaymentPanel({ order, onClose, onComplete, cashRegisterMode = 'shift' }: Props) {
     const [displayOrder, setDisplayOrder] = useState<Order>(order);
+    const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent');
+    const [discountValueInput, setDiscountValueInput] = useState('');
+    const [discountNote, setDiscountNote] = useState('');
+
+    const resetDiscount = () => {
+        setDiscountType('percent');
+        setDiscountValueInput('');
+        setDiscountNote('');
+    };
+
     // Keep the displayed order in sync when the parent passes a freshly-updated order object.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    useEffect(() => setDisplayOrder(order), [order]);
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setDisplayOrder(order);
+        resetDiscount();
+    }, [order]);
 
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('kart');
     const [activeShift, setActiveShift] = useState<CurrentShift | null>(null);
@@ -48,11 +61,25 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
     const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
     const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
 
+    const onDiscountTypeChange = (type: 'percent' | 'amount') => {
+        setDiscountType(type);
+        setDiscountValueInput('');
+    };
+
     const selectedTotal = displayOrder.orderItems.reduce(
         (sum, item) => sum + (selectedQuantities[item.id] ?? 0) * item.unitPrice,
         0
     );
     const hasSelection = selectedTotal > 0;
+
+    const chargeBase = hasSelection ? selectedTotal : displayOrder.totalPrice;
+    const discountValue = Math.min(
+        discountType === 'percent'
+            ? chargeBase * (parseFloat(discountValueInput) || 0) / 100
+            : parseFloat(discountValueInput) || 0,
+        chargeBase
+    );
+    const netAmount = Math.max(chargeBase - discountValue, 0);
 
     const adjustSelection = (itemId: number, maxQuantity: number, delta: number) => {
         setSelectedQuantities(prev => {
@@ -104,12 +131,22 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                 .map(item => ({ orderItemId: item.id, quantity: selectedQuantities[item.id] }))
             : displayOrder.orderItems.map(item => ({ orderItemId: item.id, quantity: item.quantity }));
 
+        const discount = discountValueInput
+            ? {
+                percent: discountType === 'percent' ? parseFloat(discountValueInput) : undefined,
+                amount: discountType === 'amount' ? parseFloat(discountValueInput) : undefined,
+                note: discountNote || undefined,
+            }
+            : undefined;
+
         try {
             setSubmitting(true);
-            const fullyPaid: boolean = await paymentService.createPayment(displayOrder.id, cashRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay);
+            const fullyPaid: boolean = await paymentService.createPayment(displayOrder.id, cashRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay, discount);
             setSelectedQuantities({});
+            resetDiscount();
+            const paidMessage = discountValue > 0 ? `Ödeme tamamlandı! (₺${netAmount.toFixed(0)})` : 'Ödeme tamamlandı!';
             if (fullyPaid) {
-                toast.success('Ödeme tamamlandı!');
+                toast.success(paidMessage);
                 onComplete(displayOrder.id);
             } else {
                 toast.success('Kısmi ödeme alındı, kalan tutar için masa açık kalıyor.');
@@ -253,9 +290,60 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 <span className="text-sm font-semibold text-rb-accent tabular-nums">₺{selectedTotal.toFixed(0)}</span>
                             </div>
                         )}
+                        {discountValue > 0 && (
+                            <div className="mt-3 rounded-lg bg-rb-red-bg border border-rb-red px-3 py-2 flex items-center justify-between">
+                                <span className="text-xs font-medium text-rb-red">İskonto</span>
+                                <span className="text-sm font-semibold text-rb-red tabular-nums">-₺{discountValue.toFixed(0)}</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="px-6 py-5 space-y-4">
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs text-muted-foreground">İskonto</p>
+                                <div className="flex rounded-lg border border-border p-0.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => onDiscountTypeChange('percent')}
+                                        className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
+                                            discountType === 'percent' ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground'
+                                        }`}
+                                    >
+                                        %
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => onDiscountTypeChange('amount')}
+                                        className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
+                                            discountType === 'amount' ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground'
+                                        }`}
+                                    >
+                                        ₺
+                                    </button>
+                                </div>
+                            </div>
+                            <input
+                                type="number"
+                                inputMode="decimal"
+                                min={0}
+                                max={discountType === 'percent' ? 100 : undefined}
+                                value={discountValueInput}
+                                onChange={e => setDiscountValueInput(e.target.value)}
+                                placeholder={discountType === 'percent' ? 'Yüzde girin (%)' : 'Tutar girin (₺)'}
+                                className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                            />
+                            {discountValue > 0 && (
+                                <input
+                                    type="text"
+                                    value={discountNote}
+                                    onChange={e => setDiscountNote(e.target.value)}
+                                    placeholder="Not (opsiyonel)"
+                                    className="mt-2 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                                />
+                            )}
+                        </div>
+
                         {cashRegisterMode === 'shift' ? (
                             !loadingShift && !activeShift ? (
                                 <p className="text-sm text-destructive">Açık bir vardiyanız yok, ödeme alınamaz.</p>
@@ -324,8 +412,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                             {submitting
                                 ? 'İşleniyor...'
                                 : hasSelection
-                                    ? `Seçilenleri Öde (₺${selectedTotal.toFixed(0)}) ✓`
-                                    : 'Tümünü Öde ✓'}
+                                    ? `Seçilenleri Öde (₺${netAmount.toFixed(0)}) ✓`
+                                    : `Tümünü Öde (₺${netAmount.toFixed(0)}) ✓`}
                         </button>
                     </div>
                 </div>
