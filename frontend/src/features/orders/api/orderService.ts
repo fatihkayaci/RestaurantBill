@@ -11,7 +11,7 @@ export const orderService = {
         return response.data;
     },
     getOrderByTableId: async (tableId: string) => {
-        const response = await api.get<Order>(`/order/table/${tableId}`);
+        const response = await api.get<Order | null>(`/order/table/${tableId}`);
         return response.data;
     },
     addOrderItems: async (activeOrder: Order) => {

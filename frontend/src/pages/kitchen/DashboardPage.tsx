@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { Order } from '@/features/orders/types';
 import * as signalR from '@microsoft/signalr';
 import { orderService } from '@/features/orders/api/orderService';
+import { categoryService } from '@/features/categories/api/categoryService';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 
 const OrderStatus = {
@@ -126,6 +127,7 @@ export default function KitchenDashboardPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [now, setNow] = useState(() => Date.now());
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [categoryNames, setCategoryNames] = useState<string[]>([]);
 
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 30000);
@@ -141,7 +143,8 @@ export default function KitchenDashboardPage() {
         const name = i.categoryName || 'Diğer';
         categoryCounts.set(name, (categoryCounts.get(name) ?? 0) + i.quantity);
     }));
-    const categoryTabs = Array.from(categoryCounts.keys()).sort((a, b) => a.localeCompare(b, 'tr'));
+    const categoryTabs = Array.from(new Set([...categoryNames, ...categoryCounts.keys()]))
+        .sort((a, b) => a.localeCompare(b, 'tr'));
 
     const pendingGroups: OrderGroup[] = selectedCategory === null
         ? allPendingGroups
@@ -199,6 +202,9 @@ export default function KitchenDashboardPage() {
     useEffect(() => {
         orderService.getAllOrdersToKitchen()
             .then(setOrders)
+            .catch(console.error);
+        categoryService.getCategories()
+            .then(categories => setCategoryNames(categories.map(c => c.name)))
             .catch(console.error);
     }, []);
 
@@ -279,7 +285,7 @@ export default function KitchenDashboardPage() {
                             }`}
                         >
                             {cat}
-                            <span className="ml-1.5 opacity-80">{categoryCounts.get(cat)}</span>
+                            <span className="ml-1.5 opacity-80">{categoryCounts.get(cat) ?? 0}</span>
                         </button>
                     ))}
                 </div>

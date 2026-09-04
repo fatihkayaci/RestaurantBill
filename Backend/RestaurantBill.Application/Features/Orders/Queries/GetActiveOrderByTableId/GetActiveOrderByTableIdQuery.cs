@@ -4,7 +4,7 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId
 {
-    public class GetActiveOrderByTableIdQuery : IRequest<Result<OrderDto>> 
+    public class GetActiveOrderByTableIdQuery : IRequest<Result<OrderDto?>>
     {
         public Guid TableId { get; set; }
     }
