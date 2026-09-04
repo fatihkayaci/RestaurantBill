@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as signalR from '@microsoft/signalr';
-import { X, Image as ImageIcon, MessageSquare } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { productService } from '@/features/products/api/productService';
@@ -174,9 +174,6 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
     const filteredProducts = products.filter(p =>
         p.isActive && (selectedCategoryId === null || p.categoryId === selectedCategoryId)
     );
-
-    const getCartQty = (productId: string) =>
-        cart.find(c => c.productId === productId)?.quantity ?? 0;
 
     const addToCart = (product: Product) => {
         setCart(prev => {
@@ -441,9 +438,9 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                     Yükleniyor...
                 </div>
             ) : activeTab === 'new-order' ? (
-                <div className="flex-1 flex overflow-hidden">
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
                     {/* Sol: Kategori pilleri + Ürün listesi */}
-                    <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
                         {/* Kategori pilleri */}
                         <div className="flex gap-2 px-4 py-3 overflow-x-auto shrink-0 border-b" style={{ scrollbarWidth: 'none' }}>
                             {categories.map(cat => (
@@ -467,26 +464,52 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 <p className="text-center text-muted-foreground text-sm py-8">Ürün bulunamadı</p>
                             ) : (
                                 filteredProducts.map(product => {
-                                    const qty = getCartQty(product.id);
+                                    const cartItem = cart.find(c => c.productId === product.id);
+                                    const qty = cartItem?.quantity ?? 0;
                                     return (
-                                        <div key={product.id} className="flex items-center justify-between gap-3 py-3.5 border-b last:border-0">
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                {product.imageUrl ? (
-                                                    <img
-                                                        src={product.imageUrl}
-                                                        alt={product.name}
-                                                        loading="lazy"
-                                                        className="h-12 w-12 rounded-lg object-cover shrink-0"
-                                                    />
-                                                ) : (
-                                                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                                        <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                                        <div key={product.id} className="flex items-start justify-between gap-3 py-3.5 border-b last:border-0">
+                                            <div
+                                                className={`min-w-0 flex-1 ${qty > 0 ? 'cursor-pointer' : ''}`}
+                                                onClick={() => { if (qty > 0 && cartNoteEditorFor !== product.id) setCartNoteEditorFor(product.id); }}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    {product.imageUrl ? (
+                                                        <img
+                                                            src={product.imageUrl}
+                                                            alt={product.name}
+                                                            loading="lazy"
+                                                            className="h-12 w-12 rounded-lg object-cover shrink-0"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                                            <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                                                        </div>
+                                                    )}
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
+                                                    </div>
+                                                </div>
+                                                {qty > 0 && (
+                                                    <div className="mt-1.5 ml-15">
+                                                        {cartNoteEditorFor === product.id ? (
+                                                            <input
+                                                                autoFocus
+                                                                value={cartItem?.note ?? ''}
+                                                                onChange={e => updateCartItemNote(product.id, e.target.value)}
+                                                                onBlur={() => setCartNoteEditorFor(null)}
+                                                                onKeyDown={e => { if (e.key === 'Enter') setCartNoteEditorFor(null); }}
+                                                                onClick={e => e.stopPropagation()}
+                                                                placeholder="Ürün notu (örn. az pişmiş)"
+                                                                className="w-full rounded-lg border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-rb-accent"
+                                                            />
+                                                        ) : cartItem?.note ? (
+                                                            <p className="text-xs text-rb-amber truncate">Not: {cartItem.note}</p>
+                                                        ) : (
+                                                            <p className="text-xs text-muted-foreground/40">Not eklemek için tıklayın</p>
+                                                        )}
                                                     </div>
                                                 )}
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                                                    <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
-                                                </div>
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
                                                 {qty > 0 && (
@@ -515,49 +538,16 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                     </div>
 
                     {/* Sağ: Sepet + not + gönder */}
-                    <div className="w-90 shrink-0 border-l border-border overflow-y-auto flex flex-col px-4 py-4">
+                    <div className="w-full md:w-90 shrink-0 max-h-[45vh] md:max-h-none border-t md:border-t-0 md:border-l border-border overflow-y-auto flex flex-col px-4 py-4">
                         {cart.length === 0 ? (
                             <p className="text-center text-muted-foreground text-sm py-8">
                                 Sepetiniz boş.<br />Soldan ürün seçerek başlayın.
                             </p>
                         ) : (
                             <>
-                                <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center justify-between mb-4">
                                     <span className="text-sm text-muted-foreground">Sepet ({cartCount} ürün)</span>
                                     <span className="font-bold text-foreground">₺{cartTotal.toFixed(0)}</span>
-                                </div>
-                                <div className="space-y-2 mb-3 flex-1 overflow-y-auto">
-                                    {cart.map(c => (
-                                        <div
-                                            key={c.productId}
-                                            onClick={() => setCartNoteEditorFor(c.productId)}
-                                            className="rounded-lg border px-3 py-2 cursor-pointer hover:border-rb-accent/50 transition-colors"
-                                        >
-                                            <div className="flex items-center justify-between gap-2 text-sm">
-                                                <span className="font-medium text-foreground truncate">{c.quantity}x {c.productName}</span>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <span className="text-muted-foreground">₺{(c.unitPrice * c.quantity).toFixed(0)}</span>
-                                                    <MessageSquare className={`w-3.5 h-3.5 ${c.note ? 'text-rb-amber' : 'text-muted-foreground/40'}`} />
-                                                </div>
-                                            </div>
-                                            {cartNoteEditorFor === c.productId ? (
-                                                <input
-                                                    autoFocus
-                                                    value={c.note}
-                                                    onChange={e => updateCartItemNote(c.productId, e.target.value)}
-                                                    onBlur={() => setCartNoteEditorFor(null)}
-                                                    onKeyDown={e => { if (e.key === 'Enter') setCartNoteEditorFor(null); }}
-                                                    onClick={e => e.stopPropagation()}
-                                                    placeholder="Ürün notu (örn. az pişmiş)"
-                                                    className="mt-1.5 w-full rounded-lg border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-rb-accent"
-                                                />
-                                            ) : c.note ? (
-                                                <p className="mt-1 text-xs text-rb-amber truncate">Not: {c.note}</p>
-                                            ) : (
-                                                <p className="mt-1 text-xs text-muted-foreground/40">Not eklemek için tıklayın</p>
-                                            )}
-                                        </div>
-                                    ))}
                                 </div>
                                 <textarea
                                     value={orderNote}
