@@ -282,7 +282,7 @@ export default function WaiterTablesPage() {
                         className="fixed inset-0 z-20 bg-black/55 backdrop-blur-sm animate-in fade-in duration-200"
                         onClick={() => setSelectedTableId(null)}
                     />
-                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-190 shadow-2xl animate-in slide-in-from-right duration-300">
+                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full md:w-190 shadow-2xl animate-in slide-in-from-right duration-300">
                         <TablePanel
                             table={selectedTable}
                             onClose={() => setSelectedTableId(null)}

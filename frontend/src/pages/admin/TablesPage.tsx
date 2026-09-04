@@ -12,7 +12,7 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown, MessageSquare } from 'lucide-react';
+import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
 import axios from "axios";
@@ -909,10 +909,10 @@ export default function Tables() {
             {selectedTable && (
                 <>
                     <div
-                        className="fixed inset-0 z-20 bg-black/55 backdrop-blur-sm animate-in fade-in duration-200"
+                        className="fixed inset-0 z-60 bg-black/55 backdrop-blur-sm animate-in fade-in duration-200"
                         onClick={closePanel}
                     />
-                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-190 shadow-2xl animate-in slide-in-from-right duration-300 bg-background flex flex-col">
+                    <div className="fixed top-0 right-0 bottom-0 z-70 w-full md:w-190 shadow-2xl animate-in slide-in-from-right duration-300 bg-background flex flex-col">
                         {/* Header */}
                         <div className="px-6 pt-5 pb-4 border-b shrink-0">
                             <div className="flex items-start justify-between">
@@ -953,9 +953,9 @@ export default function Tables() {
                                 Yükleniyor...
                             </div>
                         ) : activeTab === 'new-order' ? (
-                            <div className="flex-1 flex overflow-hidden">
+                            <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
                                 {/* Sol: Kategori pilleri + Ürün listesi */}
-                                <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
                                     {/* Kategori pilleri */}
                                     <div className="flex gap-2 px-4 py-3 overflow-x-auto shrink-0 border-b" style={{ scrollbarWidth: 'none' }}>
                                         {categories.map(cat => (
@@ -979,26 +979,52 @@ export default function Tables() {
                                             <p className="text-center text-muted-foreground text-sm py-8">Ürün bulunamadı</p>
                                         ) : (
                                             filteredProducts.map(product => {
-                                                const qty = newItems.find(i => i.productId === product.id)?.quantity ?? 0;
+                                                const cartItem = newItems.find(i => i.productId === product.id);
+                                                const qty = cartItem?.quantity ?? 0;
                                                 return (
-                                                    <div key={product.id} className="flex items-center justify-between gap-3 py-3.5 border-b last:border-0">
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            {product.imageUrl ? (
-                                                                <img
-                                                                    src={product.imageUrl}
-                                                                    alt={product.name}
-                                                                    loading="lazy"
-                                                                    className="h-12 w-12 rounded-lg object-cover shrink-0"
-                                                                />
-                                                            ) : (
-                                                                <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                                                    <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                                                    <div key={product.id} className="flex items-start justify-between gap-3 py-3.5 border-b last:border-0">
+                                                        <div
+                                                            className={`min-w-0 flex-1 ${qty > 0 ? 'cursor-pointer' : ''}`}
+                                                            onClick={() => { if (qty > 0 && cartNoteEditorFor !== product.id) setCartNoteEditorFor(product.id); }}
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                {product.imageUrl ? (
+                                                                    <img
+                                                                        src={product.imageUrl}
+                                                                        alt={product.name}
+                                                                        loading="lazy"
+                                                                        className="h-12 w-12 rounded-lg object-cover shrink-0"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                                                        <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                                                                    </div>
+                                                                )}
+                                                                <div className="min-w-0">
+                                                                    <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
+                                                                    <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
+                                                                </div>
+                                                            </div>
+                                                            {qty > 0 && (
+                                                                <div className="mt-1.5 ml-15">
+                                                                    {cartNoteEditorFor === product.id ? (
+                                                                        <input
+                                                                            autoFocus
+                                                                            value={cartItem?.note ?? ''}
+                                                                            onChange={e => updateNewItemNote(product.id, e.target.value)}
+                                                                            onBlur={() => setCartNoteEditorFor(null)}
+                                                                            onKeyDown={e => { if (e.key === 'Enter') setCartNoteEditorFor(null); }}
+                                                                            onClick={e => e.stopPropagation()}
+                                                                            placeholder="Ürün notu (örn. az pişmiş)"
+                                                                            className="w-full rounded-lg border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-rb-accent"
+                                                                        />
+                                                                    ) : cartItem?.note ? (
+                                                                        <p className="text-xs text-rb-amber truncate">Not: {cartItem.note}</p>
+                                                                    ) : (
+                                                                        <p className="text-xs text-muted-foreground/40">Not eklemek için tıklayın</p>
+                                                                    )}
                                                                 </div>
                                                             )}
-                                                            <div className="min-w-0">
-                                                                <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                                                                <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
-                                                            </div>
                                                         </div>
                                                         <div className="flex items-center gap-2 shrink-0">
                                                             {qty > 0 && (
@@ -1027,49 +1053,16 @@ export default function Tables() {
                                 </div>
 
                                 {/* Sağ: Sepet + not + gönder */}
-                                <div className="w-90 shrink-0 border-l border-border overflow-y-auto flex flex-col px-4 py-4">
+                                <div className="w-full md:w-90 shrink-0 max-h-[45vh] md:max-h-none border-t md:border-t-0 md:border-l border-border overflow-y-auto flex flex-col px-4 py-4">
                                     {newItems.length === 0 ? (
                                         <p className="text-center text-muted-foreground text-sm py-8">
                                             Sepetiniz boş.<br />Soldan ürün seçerek başlayın.
                                         </p>
                                     ) : (
                                         <>
-                                            <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center justify-between mb-4">
                                                 <span className="text-sm text-muted-foreground">Sepet ({newItems.reduce((s, i) => s + i.quantity, 0)} ürün)</span>
                                                 <span className="font-bold text-foreground">₺{newItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0).toFixed(0)}</span>
-                                            </div>
-                                            <div className="space-y-2 mb-3 flex-1 overflow-y-auto">
-                                                {newItems.map(i => (
-                                                    <div
-                                                        key={i.productId}
-                                                        onClick={() => setCartNoteEditorFor(i.productId)}
-                                                        className="rounded-lg border px-3 py-2 cursor-pointer hover:border-rb-accent/50 transition-colors"
-                                                    >
-                                                        <div className="flex items-center justify-between gap-2 text-sm">
-                                                            <span className="font-medium text-foreground truncate">{i.quantity}x {i.productName}</span>
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                <span className="text-muted-foreground">₺{(i.unitPrice * i.quantity).toFixed(0)}</span>
-                                                                <MessageSquare className={`w-3.5 h-3.5 ${i.note ? 'text-rb-amber' : 'text-muted-foreground/40'}`} />
-                                                            </div>
-                                                        </div>
-                                                        {cartNoteEditorFor === i.productId ? (
-                                                            <input
-                                                                autoFocus
-                                                                value={i.note}
-                                                                onChange={e => updateNewItemNote(i.productId, e.target.value)}
-                                                                onBlur={() => setCartNoteEditorFor(null)}
-                                                                onKeyDown={e => { if (e.key === 'Enter') setCartNoteEditorFor(null); }}
-                                                                onClick={e => e.stopPropagation()}
-                                                                placeholder="Ürün notu (örn. az pişmiş)"
-                                                                className="mt-1.5 w-full rounded-lg border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-rb-accent"
-                                                            />
-                                                        ) : i.note ? (
-                                                            <p className="mt-1 text-xs text-rb-amber truncate">Not: {i.note}</p>
-                                                        ) : (
-                                                            <p className="mt-1 text-xs text-muted-foreground/40">Not eklemek için tıklayın</p>
-                                                        )}
-                                                    </div>
-                                                ))}
                                             </div>
                                             <textarea
                                                 value={orderNote}
@@ -1285,10 +1278,10 @@ export default function Tables() {
             {paymentOrder && (
                 <>
                     <div
-                        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[3px] animate-in fade-in duration-200"
+                        className="fixed inset-0 z-80 bg-black/60 backdrop-blur-[3px] animate-in fade-in duration-200"
                         onClick={() => setPaymentOrder(null)}
                     />
-                    <div className="fixed top-0 right-0 bottom-0 z-40 w-full sm:w-190 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
+                    <div className="fixed top-0 right-0 bottom-0 z-80 w-full md:w-190 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
                         <PaymentPanel
                             order={paymentOrder}
                             cashRegisterMode="manual"
