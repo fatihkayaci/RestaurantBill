@@ -40,7 +40,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
                     .FirstOrDefaultAsync(c => c.Id == product.CategoryId, cancellationToken);
                 decimal taxRate = category?.GetEffectiveTaxRate() ?? 0m;
 
-                order.AddItem(product, item.Quantity, taxRate);
+                order.AddItem(product, item.Quantity, taxRate, item.Note);
             }
 
             if (!string.IsNullOrWhiteSpace(request.Note))

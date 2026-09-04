@@ -102,7 +102,8 @@ public static class MappingExtensions
         Quantity = i.Quantity,
         Status = i.Status,
         CategoryName = i.Product?.Category?.Name ?? string.Empty,
-        TaxRate = i.TaxRate
+        TaxRate = i.TaxRate,
+        Note = i.Note
     };
 
     public static ProductDto ToDto(this Product p) => new()

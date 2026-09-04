@@ -12,5 +12,8 @@ public class CreateOrderItemDtoValidator : AbstractValidator<CreateOrderItemDto>
 
         RuleFor(x => x.Quantity)
             .GreaterThan(0).WithMessage("Ürün miktarı 0'dan büyük olmalıdır.");
+
+        RuleFor(x => x.Note)
+            .MaximumLength(300).WithMessage("Ürün notu en fazla 300 karakter olabilir.");
     }
 }

@@ -10,6 +10,7 @@ using RestaurantBill.Application.Features.Orders.Commands.TransferOrder;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemStatus;
+using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemNote;
 using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashierQuery;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitchen;
@@ -148,6 +149,17 @@ namespace RestaurantBill.WebAPI.Controllers
         [Authorize(Roles = "Owner,Admin,Kitchen,Waiter")]
         [HttpPost("{orderId}/item/{itemId}/status")]
         public async Task<IActionResult> UpdateItemStatus([FromRoute] Guid orderId, [FromRoute] Guid itemId, [FromBody] UpdateOrderItemStatusCommand command, CancellationToken cancellationToken)
+        {
+            command.OrderId = orderId;
+            command.OrderItemId = itemId;
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
+        /// <summary> Updates the note of a single order item. </summary>
+        [Authorize(Roles = "Owner,Admin,Waiter")]
+        [HttpPost("{orderId}/item/{itemId}/note")]
+        public async Task<IActionResult> UpdateItemNote([FromRoute] Guid orderId, [FromRoute] Guid itemId, [FromBody] UpdateOrderItemNoteCommand command, CancellationToken cancellationToken)
         {
             command.OrderId = orderId;
             command.OrderItemId = itemId;
