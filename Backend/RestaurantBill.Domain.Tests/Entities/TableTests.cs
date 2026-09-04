@@ -117,6 +117,16 @@ public class TableTests
 
             Assert.Equal(TableStatus.Reserved, table.Status);
         }
+
+        [Fact]
+        public void WhenOccupied_ThrowsDomainException()
+        {
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
+            table.Occupy();
+
+            Assert.Throws<DomainException>(() => table.Reserve());
+            Assert.Equal(TableStatus.Occupied, table.Status);
+        }
     }
 
     public class AssignRegion

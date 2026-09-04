@@ -60,4 +60,62 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
         Assert.NotNull(result.Value);
         Assert.Equal(table2.Id, result.Value!.TableId);
     }
+
+    [Fact]
+    public async Task Handle_WhenNoActiveOrderExists_ReturnsSuccessWithNullValue()
+    {
+        var table = Table.Create("Masa 1", "", RestaurantId);
+        table.AssignRegion(DefaultRegionId);
+        await DbContext.Tables.AddAsync(table);
+        await DbContext.SaveChangesAsync();
+
+        var result = await _handler.Handle(
+            new GetActiveOrderByTableIdQuery { TableId = table.Id },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value);
+    }
+
+    [Fact]
+    public async Task Handle_WhenOrderIsPaid_TreatsTableAsEmpty()
+    {
+        var table = Table.Create("Masa 1", "", RestaurantId);
+        table.AssignRegion(DefaultRegionId);
+        await DbContext.Tables.AddAsync(table);
+        await DbContext.SaveChangesAsync();
+
+        var order = Order.Create(table.Id);
+        order.Close();
+        await DbContext.Orders.AddAsync(order);
+        await DbContext.SaveChangesAsync();
+
+        var result = await _handler.Handle(
+            new GetActiveOrderByTableIdQuery { TableId = table.Id },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value);
+    }
+
+    [Fact]
+    public async Task Handle_WhenOrderIsCancelled_TreatsTableAsEmpty()
+    {
+        var table = Table.Create("Masa 1", "", RestaurantId);
+        table.AssignRegion(DefaultRegionId);
+        await DbContext.Tables.AddAsync(table);
+        await DbContext.SaveChangesAsync();
+
+        var order = Order.Create(table.Id);
+        order.Cancel();
+        await DbContext.Orders.AddAsync(order);
+        await DbContext.SaveChangesAsync();
+
+        var result = await _handler.Handle(
+            new GetActiveOrderByTableIdQuery { TableId = table.Id },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value);
+    }
 }

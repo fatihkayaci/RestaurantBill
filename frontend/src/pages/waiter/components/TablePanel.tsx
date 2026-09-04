@@ -414,8 +414,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                 {(
                     table.status === 3
                         ? (['reservation'] as PanelTab[])
-                        : table.status === 1
-                        ? (['orders', 'new-order', 'reservation'] as PanelTab[])
+                        : table.status === 1 && !activeOrder
+                        ? (['new-order', 'reservation'] as PanelTab[])
                         : (['orders', 'new-order'] as PanelTab[])
                 ).map(tab => (
                     <button

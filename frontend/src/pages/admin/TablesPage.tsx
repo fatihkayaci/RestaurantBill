@@ -195,7 +195,7 @@ export default function Tables() {
         connection.on("OrderUpdated", (changedTableId: string, totalPrice: number, createdByUserName: string) => {
             setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, activeOrderTotal: totalPrice, createdByUserName } : t));
             if (selectedTableIdRef.current === changedTableId) {
-                orderService.getOrderByTableId(changedTableId).then(data => { if (data) setTableOrder(data); });
+                orderService.getOrderByTableId(changedTableId).then(data => { if (data) setTableOrder(data); }).catch(() => {});
             }
         });
         connection.start().catch((err: Error) => {
@@ -556,8 +556,8 @@ export default function Tables() {
         ? []
         : selectedTable.status === 3
             ? ['reservation']
-            : selectedTable.status === 1
-                ? ['orders', 'new-order', 'reservation']
+            : selectedTable.status === 1 && !tableOrder
+                ? ['new-order', 'reservation']
                 : ['orders', 'new-order'];
 
     return (
@@ -1243,8 +1243,8 @@ export default function Tables() {
                                     </>
                                 )}
 
-                                {/* Ödeme Al + Masayı Kapat — masa dolu olduğu sürece görünür */}
-                                {selectedTable.status === 2 && tableOrder && (
+                                {/* Ödeme Al + Masayı Kapat — masa durumu ne olursa olsun, aktif bir sipariş varsa görünür */}
+                                {tableOrder && (
                                     <div className={tableOrder.orderItems.length === 0 ? 'mt-4 pt-4 border-t space-y-2' : 'mt-3 space-y-2'}>
                                         {tableOrder.orderItems.length > 0 && (
                                             <button

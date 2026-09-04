@@ -61,6 +61,9 @@ namespace RestaurantBill.Domain.Entities
 
         public void Reserve()
         {
+            if (Status == TableStatus.Occupied)
+                throw new DomainException("Masada aktif bir sipariş varken rezervasyon yapılamaz.");
+
             Status = TableStatus.Reserved;
         }
 

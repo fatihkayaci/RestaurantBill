@@ -20,6 +20,11 @@ public class ExceptionMiddleware
         {
             await _next(httpContext);
         }
+        catch (DomainException ex)
+        {
+            _logger.LogWarning(ex, "İş kuralı ihlali: {ErrorMessage}", ex.Message);
+            await HandleExceptionAsync(httpContext, ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Sistemde feci bir patlama oldu: {ErrorMessage}", ex.Message);
