@@ -32,12 +32,12 @@ function KitchenCard({
     group,
     now,
     onItemUpdate,
-    onBulkUpdate,
+    onReady,
 }: {
     group: OrderGroup;
     now: number;
     onItemUpdate: (orderId: number, itemId: number, newStatus: number) => void;
-    onBulkUpdate: (orderId: number, newOrderStatus: number) => void;
+    onReady: (group: OrderGroup) => void;
 }) {
     const { order, items } = group;
 
@@ -101,7 +101,7 @@ function KitchenCard({
             {/* Bulk aksiyon butonu */}
             <div className="px-4 pb-4">
                 <button
-                    onClick={() => onBulkUpdate(order.id, OrderStatus.Ready)}
+                    onClick={() => onReady(group)}
                     className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors bg-rb-green-bg hover:opacity-80 text-rb-green"
                 >
                     Hazır ✓
@@ -125,15 +125,29 @@ function ColumnHeader({ dot, text, bg, label, count }: { dot: string; text: stri
 export default function KitchenDashboardPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [now, setNow] = useState(() => Date.now());
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 30000);
         return () => clearInterval(interval);
     }, []);
 
-    const pendingGroups: OrderGroup[] = orders
+    const allPendingGroups: OrderGroup[] = orders
         .map(order => ({ order, items: order.orderItems.filter(i => i.status === 1) }))
         .filter(g => g.items.length > 0);
+
+    const categoryCounts = new Map<string, number>();
+    allPendingGroups.forEach(g => g.items.forEach(i => {
+        const name = i.categoryName || 'Diğer';
+        categoryCounts.set(name, (categoryCounts.get(name) ?? 0) + i.quantity);
+    }));
+    const categoryTabs = Array.from(categoryCounts.keys()).sort((a, b) => a.localeCompare(b, 'tr'));
+
+    const pendingGroups: OrderGroup[] = selectedCategory === null
+        ? allPendingGroups
+        : allPendingGroups
+            .map(g => ({ order: g.order, items: g.items.filter(i => (i.categoryName || 'Diğer') === selectedCategory) }))
+            .filter(g => g.items.length > 0);
 
     /* ── Bireysel ürün güncelleme ── */
     const handleItemStatusUpdate = async (orderId: number, itemId: number, newStatus: number) => {
@@ -168,6 +182,17 @@ export default function KitchenDashboardPage() {
             );
         } catch (err) {
             console.error('handleStatusUpdate:', err);
+        }
+    };
+
+    /* ── Kart üzerindeki "Hazır" aksiyonu: kategori filtresi yokken tüm siparişi,
+       filtre varken sadece görünen (o kategoriye ait) ürünleri hazıra çeker ── */
+    const handleReadyClick = (group: OrderGroup) => {
+        const allItemsVisible = group.items.length === group.order.orderItems.filter(i => i.status === 1).length;
+        if (allItemsVisible) {
+            handleStatusUpdate(group.order.id, OrderStatus.Ready);
+        } else {
+            group.items.forEach(item => handleItemStatusUpdate(group.order.id, item.id, 3));
         }
     };
 
@@ -230,13 +255,41 @@ export default function KitchenDashboardPage() {
 
             {/* Tek kutu */}
             <div className="flex-1 overflow-hidden flex flex-col">
+                {/* Kategori sekmeleri */}
+                <div className="flex gap-2 px-4 py-3 overflow-x-auto shrink-0 border-b" style={{ scrollbarWidth: 'none' }}>
+                    <button
+                        onClick={() => setSelectedCategory(null)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+                            selectedCategory === null
+                                ? 'bg-rb-accent text-white'
+                                : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                        }`}
+                    >
+                        Tümü
+                        <span className="ml-1.5 opacity-80">{allPendingGroups.reduce((sum, g) => sum + g.items.length, 0)}</span>
+                    </button>
+                    {categoryTabs.map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => setSelectedCategory(cat)}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+                                selectedCategory === cat
+                                    ? 'bg-rb-accent text-white'
+                                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                            }`}
+                        >
+                            {cat}
+                            <span className="ml-1.5 opacity-80">{categoryCounts.get(cat)}</span>
+                        </button>
+                    ))}
+                </div>
                 <ColumnHeader dot="bg-rb-amber" text="text-rb-amber" bg="bg-rb-amber-bg" label="Bekliyor" count={pendingGroups.length} />
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 flex-1 overflow-y-auto content-start">
                     {pendingGroups.length === 0 ? (
                         <p className="col-span-full text-xs text-muted-foreground text-center py-8">Bekleyen sipariş yok</p>
                     ) : (
                         pendingGroups.map(g => (
-                            <KitchenCard key={g.order.id} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onBulkUpdate={handleStatusUpdate} />
+                            <KitchenCard key={g.order.id} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onReady={handleReadyClick} />
                         ))
                     )}
                 </div>

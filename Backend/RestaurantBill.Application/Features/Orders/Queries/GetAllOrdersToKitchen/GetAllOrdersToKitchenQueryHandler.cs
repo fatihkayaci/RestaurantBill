@@ -31,7 +31,7 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitch
             List<Order> orders = await _db.Orders
                 .AsNoTracking()
                 .Include(o => o.Table)
-                .Include(o => o.OrderItems).ThenInclude(i => i.Product)
+                .Include(o => o.OrderItems).ThenInclude(i => i.Product).ThenInclude(p => p!.Category)
                 .Where(o => !excludedStatuses.Contains(o.Status) && o.Table.Region.BranchId == restaurantId)
                 .ToListAsync(cancellationToken);
 
