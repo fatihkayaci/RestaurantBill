@@ -200,6 +200,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                     <div>
                                         <p className="text-sm font-medium text-foreground">{item.productName}</p>
                                         <p className="text-xs text-muted-foreground">₺{item.unitPrice} / adet</p>
+                                        {item.note && <p className="text-xs text-rb-amber mt-0.5">Not: {item.note}</p>}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">

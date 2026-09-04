@@ -12,4 +12,5 @@ public class OrderItemDto
     public OrderItemStatus Status { get; set; }
     public string CategoryName { get; set; } = string.Empty;
     public decimal TaxRate { get; set; }
+    public string Note { get; set; } = string.Empty;
 }

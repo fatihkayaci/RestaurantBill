@@ -28,12 +28,15 @@ namespace RestaurantBill.Domain.Entities
             };
         }
 
-        public void AddItem(Product product, int quantity, decimal taxRate = 0m)
+        public void AddItem(Product product, int quantity, decimal taxRate = 0m, string? note = null)
         {
             if (quantity <= 0)
                 throw new DomainException("Miktar 0'dan büyük olmalı.");
 
-            OrderItem? existing = _orderItems.FirstOrDefault(x => x.ProductId == product.Id && x.Status == OrderItemStatus.Pending);
+            string normalizedNote = note?.Trim() ?? string.Empty;
+
+            OrderItem? existing = _orderItems.FirstOrDefault(x =>
+                x.ProductId == product.Id && x.Status == OrderItemStatus.Pending && x.Note == normalizedNote);
 
             if (existing != null)
             {
@@ -42,7 +45,7 @@ namespace RestaurantBill.Domain.Entities
             }
             else
             {
-                _orderItems.Add(OrderItem.Create(product.Price, quantity, product, taxRate));
+                _orderItems.Add(OrderItem.Create(product.Price, quantity, product, taxRate, normalizedNote));
             }
 
             RecalculateTotal();
@@ -129,6 +132,15 @@ namespace RestaurantBill.Domain.Entities
             item.UpdateStatus(status);
         }
 
+        public void UpdateItemNote(Guid orderItemId, string note)
+        {
+            OrderItem? item = _orderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (item == null)
+                throw new DomainException("Böyle bir sipariş kalemi bulunamadı.");
+
+            item.UpdateNote(note?.Trim() ?? string.Empty);
+        }
+
         public void Close()
         {
             Status = OrderStatus.Paid;
@@ -156,7 +168,7 @@ namespace RestaurantBill.Domain.Entities
             {
                 OrderItem? existing = _orderItems.FirstOrDefault(x =>
                     x.ProductId == item.ProductId && x.Status == item.Status &&
-                    x.UnitPrice == item.UnitPrice && x.TaxRate == item.TaxRate);
+                    x.UnitPrice == item.UnitPrice && x.TaxRate == item.TaxRate && x.Note == item.Note);
 
                 if (existing != null)
                 {

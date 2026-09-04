@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as signalR from '@microsoft/signalr';
-import { X, Image as ImageIcon } from 'lucide-react';
+import { X, Image as ImageIcon, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { productService } from '@/features/products/api/productService';
@@ -35,6 +35,7 @@ interface CartItem {
     productName: string;
     unitPrice: number;
     quantity: number;
+    note: string;
 }
 
 const STATUS_CONFIG = {
@@ -68,6 +69,9 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
     const [servingAll, setServingAll] = useState(false);
     const [orderNote, setOrderNote] = useState('');
     const [arriving, setArriving] = useState(false);
+    const [cartNoteEditorFor, setCartNoteEditorFor] = useState<string | null>(null);
+    const [editingItemNoteId, setEditingItemNoteId] = useState<number | null>(null);
+    const [itemNoteDraft, setItemNoteDraft] = useState('');
 
     useEffect(() => {
         // Reset panel state immediately when switching tables, before the new table's data loads.
@@ -82,6 +86,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
         setReservationNote('');
         setOrderNote('');
         setActiveReservation(null);
+        setCartNoteEditorFor(null);
+        setEditingItemNoteId(null);
 
         const fetchData = async () => {
             try {
@@ -176,7 +182,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
         setCart(prev => {
             const existing = prev.find(c => c.productId === product.id);
             if (existing) return prev.map(c => c.productId === product.id ? { ...c, quantity: c.quantity + 1 } : c);
-            return [...prev, { productId: product.id, productName: product.name, unitPrice: product.price, quantity: 1 }];
+            return [...prev, { productId: product.id, productName: product.name, unitPrice: product.price, quantity: 1, note: '' }];
         });
     };
 
@@ -187,6 +193,10 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             if (existing.quantity <= 1) return prev.filter(c => c.productId !== productId);
             return prev.map(c => c.productId === productId ? { ...c, quantity: c.quantity - 1 } : c);
         });
+    };
+
+    const updateCartItemNote = (productId: string, note: string) => {
+        setCart(prev => prev.map(c => c.productId === productId ? { ...c, note } : c));
     };
 
     const cartTotal = cart.reduce((sum, c) => sum + c.unitPrice * c.quantity, 0);
@@ -232,6 +242,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                     is_load: false,
                     categoryName: '',
                     taxRate: 0,
+                    note: c.note,
                 })),
             };
 
@@ -303,6 +314,26 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Servis edildi olarak işaretlenemedi.');
         } finally {
             setServingItemId(null);
+        }
+    };
+
+    const startEditingItemNote = (itemId: number, currentNote: string) => {
+        setEditingItemNoteId(itemId);
+        setItemNoteDraft(currentNote);
+    };
+
+    const commitItemNote = async (itemId: number) => {
+        setEditingItemNoteId(null);
+        const previousNote = activeOrder?.orderItems.find(i => i.id === itemId)?.note ?? '';
+        if (itemNoteDraft === previousNote) return;
+        try {
+            await orderService.updateOrderItemNote(activeOrder!.id, itemId, itemNoteDraft);
+            setActiveOrder(prev => prev ? {
+                ...prev,
+                orderItems: prev.orderItems.map(i => i.id === itemId ? { ...i, note: itemNoteDraft } : i),
+            } : prev);
+        } catch (err: any) {
+            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Not güncellenemedi.');
         }
     };
 
@@ -410,99 +441,141 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                     Yükleniyor...
                 </div>
             ) : activeTab === 'new-order' ? (
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* Kategori pilleri */}
-                    <div className="flex gap-2 px-4 py-3 overflow-x-auto shrink-0 border-b" style={{ scrollbarWidth: 'none' }}>
-                        {categories.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setSelectedCategoryId(cat.id)}
-                                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
-                                    selectedCategoryId === cat.id
-                                        ? 'bg-rb-accent text-white'
-                                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
-                                }`}
-                            >
-                                {cat.name}
-                            </button>
-                        ))}
-                    </div>
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Sol: Kategori pilleri + Ürün listesi */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Kategori pilleri */}
+                        <div className="flex gap-2 px-4 py-3 overflow-x-auto shrink-0 border-b" style={{ scrollbarWidth: 'none' }}>
+                            {categories.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setSelectedCategoryId(cat.id)}
+                                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+                                        selectedCategoryId === cat.id
+                                            ? 'bg-rb-accent text-white'
+                                            : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                                    }`}
+                                >
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
 
-                    {/* Ürün listesi */}
-                    <div className="flex-1 overflow-y-auto px-4">
-                        {filteredProducts.length === 0 ? (
-                            <p className="text-center text-muted-foreground text-sm py-8">Ürün bulunamadı</p>
-                        ) : (
-                            filteredProducts.map(product => {
-                                const qty = getCartQty(product.id);
-                                return (
-                                    <div key={product.id} className="flex items-center justify-between gap-3 py-3.5 border-b last:border-0">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            {product.imageUrl ? (
-                                                <img
-                                                    src={product.imageUrl}
-                                                    alt={product.name}
-                                                    loading="lazy"
-                                                    className="h-12 w-12 rounded-lg object-cover shrink-0"
-                                                />
-                                            ) : (
-                                                <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                                    <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                        {/* Ürün listesi */}
+                        <div className="flex-1 overflow-y-auto px-4">
+                            {filteredProducts.length === 0 ? (
+                                <p className="text-center text-muted-foreground text-sm py-8">Ürün bulunamadı</p>
+                            ) : (
+                                filteredProducts.map(product => {
+                                    const qty = getCartQty(product.id);
+                                    return (
+                                        <div key={product.id} className="flex items-center justify-between gap-3 py-3.5 border-b last:border-0">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                {product.imageUrl ? (
+                                                    <img
+                                                        src={product.imageUrl}
+                                                        alt={product.name}
+                                                        loading="lazy"
+                                                        className="h-12 w-12 rounded-lg object-cover shrink-0"
+                                                    />
+                                                ) : (
+                                                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                                        <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
+                                                    <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
                                                 </div>
-                                            )}
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                                                <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                {qty > 0 && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => decreaseCart(product.id)}
+                                                            className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-base font-bold text-muted-foreground hover:bg-muted transition-colors"
+                                                        >
+                                                            −
+                                                        </button>
+                                                        <span className="w-5 text-center text-sm font-bold text-foreground">{qty}</span>
+                                                    </>
+                                                )}
+                                                <button
+                                                    onClick={() => addToCart(product)}
+                                                    className="w-7 h-7 rounded-full bg-rb-accent flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-colors"
+                                                >
+                                                    +
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            {qty > 0 && (
-                                                <>
-                                                    <button
-                                                        onClick={() => decreaseCart(product.id)}
-                                                        className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-base font-bold text-muted-foreground hover:bg-muted transition-colors"
-                                                    >
-                                                        −
-                                                    </button>
-                                                    <span className="w-5 text-center text-sm font-bold text-foreground">{qty}</span>
-                                                </>
-                                            )}
-                                            <button
-                                                onClick={() => addToCart(product)}
-                                                className="w-7 h-7 rounded-full bg-rb-accent flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-colors"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        )}
+                                    );
+                                })
+                            )}
+                        </div>
                     </div>
 
-                    {/* Sepet özeti */}
-                    {cart.length > 0 && (
-                        <div className="shrink-0 px-4 py-4 border-t bg-background">
-                            <div className="flex items-center justify-between mb-3">
-                                <span className="text-sm text-muted-foreground">Sepet ({cartCount} ürün)</span>
-                                <span className="font-bold text-foreground">₺{cartTotal.toFixed(0)}</span>
-                            </div>
-                            <textarea
-                                value={orderNote}
-                                onChange={e => setOrderNote(e.target.value)}
-                                placeholder="Sipariş notu (isteğe bağlı) — örn. acısız, az pişmiş..."
-                                rows={2}
-                                className="w-full mb-3 rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-rb-accent"
-                            />
-                            <Button
-                                onClick={handleSendOrder}
-                                disabled={submitting}
-                                className="w-full bg-rb-accent hover:opacity-90 text-white font-semibold rounded-xl h-11"
-                            >
-                                {submitting ? 'Gönderiliyor...' : 'Siparişi Gönder →'}
-                            </Button>
-                        </div>
-                    )}
+                    {/* Sağ: Sepet + not + gönder */}
+                    <div className="w-90 shrink-0 border-l border-border overflow-y-auto flex flex-col px-4 py-4">
+                        {cart.length === 0 ? (
+                            <p className="text-center text-muted-foreground text-sm py-8">
+                                Sepetiniz boş.<br />Soldan ürün seçerek başlayın.
+                            </p>
+                        ) : (
+                            <>
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-sm text-muted-foreground">Sepet ({cartCount} ürün)</span>
+                                    <span className="font-bold text-foreground">₺{cartTotal.toFixed(0)}</span>
+                                </div>
+                                <div className="space-y-2 mb-3 flex-1 overflow-y-auto">
+                                    {cart.map(c => (
+                                        <div
+                                            key={c.productId}
+                                            onClick={() => setCartNoteEditorFor(c.productId)}
+                                            className="rounded-lg border px-3 py-2 cursor-pointer hover:border-rb-accent/50 transition-colors"
+                                        >
+                                            <div className="flex items-center justify-between gap-2 text-sm">
+                                                <span className="font-medium text-foreground truncate">{c.quantity}x {c.productName}</span>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <span className="text-muted-foreground">₺{(c.unitPrice * c.quantity).toFixed(0)}</span>
+                                                    <MessageSquare className={`w-3.5 h-3.5 ${c.note ? 'text-rb-amber' : 'text-muted-foreground/40'}`} />
+                                                </div>
+                                            </div>
+                                            {cartNoteEditorFor === c.productId ? (
+                                                <input
+                                                    autoFocus
+                                                    value={c.note}
+                                                    onChange={e => updateCartItemNote(c.productId, e.target.value)}
+                                                    onBlur={() => setCartNoteEditorFor(null)}
+                                                    onKeyDown={e => { if (e.key === 'Enter') setCartNoteEditorFor(null); }}
+                                                    onClick={e => e.stopPropagation()}
+                                                    placeholder="Ürün notu (örn. az pişmiş)"
+                                                    className="mt-1.5 w-full rounded-lg border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-rb-accent"
+                                                />
+                                            ) : c.note ? (
+                                                <p className="mt-1 text-xs text-rb-amber truncate">Not: {c.note}</p>
+                                            ) : (
+                                                <p className="mt-1 text-xs text-muted-foreground/40">Not eklemek için tıklayın</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <textarea
+                                    value={orderNote}
+                                    onChange={e => setOrderNote(e.target.value)}
+                                    placeholder="Sipariş notu (isteğe bağlı) — örn. acısız, az pişmiş..."
+                                    rows={2}
+                                    className="w-full mb-3 rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-rb-accent shrink-0"
+                                />
+                                <Button
+                                    onClick={handleSendOrder}
+                                    disabled={submitting}
+                                    className="w-full bg-rb-accent hover:opacity-90 text-white font-semibold rounded-xl h-11 shrink-0"
+                                >
+                                    {submitting ? 'Gönderiliyor...' : 'Siparişi Gönder →'}
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </div>
             ) : activeTab === 'reservation' ? (
                 table.status === 3 ? (
@@ -638,9 +711,28 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                         : 'text-muted-foreground';
                                     return (
                                         <div key={item.id} className="flex items-center justify-between py-3 gap-3">
-                                            <div className="min-w-0">
+                                            <div
+                                                className="min-w-0 flex-1 cursor-pointer"
+                                                onClick={() => { if (editingItemNoteId !== item.id) startEditingItemNote(item.id, item.note); }}
+                                            >
                                                 <p className="text-sm font-medium text-foreground truncate">{item.productName}</p>
                                                 <p className={`text-xs mt-0.5 ${statusColor}`}>{item.quantity}x · {statusLabel}</p>
+                                                {editingItemNoteId === item.id ? (
+                                                    <input
+                                                        autoFocus
+                                                        value={itemNoteDraft}
+                                                        onChange={e => setItemNoteDraft(e.target.value)}
+                                                        onBlur={() => commitItemNote(item.id)}
+                                                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                                                        onClick={e => e.stopPropagation()}
+                                                        placeholder="Ürün notu ekle..."
+                                                        className="mt-1 w-full rounded-lg border bg-background px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-rb-accent"
+                                                    />
+                                                ) : item.note ? (
+                                                    <p className="text-xs text-rb-amber mt-0.5 truncate">Not: {item.note}</p>
+                                                ) : (
+                                                    <p className="text-xs text-muted-foreground/40 mt-0.5">Not eklemek için tıklayın</p>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
                                                 {item.status === 3 && (

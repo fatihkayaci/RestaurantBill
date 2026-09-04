@@ -8,6 +8,7 @@ export interface OrderItem {
     is_load: boolean;
     categoryName: string;
     taxRate: number;
+    note: string;
 }
 
 export interface Order {

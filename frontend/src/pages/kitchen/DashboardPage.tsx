@@ -74,21 +74,26 @@ function KitchenCard({
             {/* Ürün listesi */}
             <div className="px-4 pb-3 space-y-0 divide-y divide-border">
                 {items.map(item => (
-                    <div key={item.id} className="flex items-center justify-between py-2.5">
-                        <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-xs">·</span>
-                            <span className="text-sm text-foreground">{item.productName}</span>
+                    <div key={item.id} className="py-2.5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-muted-foreground text-xs">·</span>
+                                <span className="text-sm text-foreground truncate">{item.productName}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-sm text-muted-foreground">×{item.quantity}</span>
+                                <button
+                                    onClick={() => onItemUpdate(order.id, item.id, 3)}
+                                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors text-rb-green hover:bg-rb-green-bg"
+                                    title="Hazır işaretle"
+                                >
+                                    ✓
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">×{item.quantity}</span>
-                            <button
-                                onClick={() => onItemUpdate(order.id, item.id, 3)}
-                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors text-rb-green hover:bg-rb-green-bg"
-                                title="Hazır işaretle"
-                            >
-                                ✓
-                            </button>
-                        </div>
+                        {item.note && (
+                            <p className="text-xs text-rb-amber mt-0.5 pl-4">Not: {item.note}</p>
+                        )}
                     </div>
                 ))}
             </div>

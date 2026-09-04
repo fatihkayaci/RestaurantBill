@@ -11,5 +11,9 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.Property(oi => oi.TaxRate)
             .HasPrecision(5, 2)
             .HasDefaultValue(0m);
+
+        builder.Property(oi => oi.Note)
+            .HasMaxLength(300)
+            .HasDefaultValue(string.Empty);
     }
 }
