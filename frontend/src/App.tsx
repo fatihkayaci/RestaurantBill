@@ -20,7 +20,6 @@ import OwnerDashboardPage from './pages/owner/DashboardPage';
 import OwnerBrandingPage from './pages/owner/SettingsPage';
 import OwnerBranchesPage from './pages/owner/BranchesPage';
 import OwnerAdminsPage from './pages/owner/AdminsPage';
-import OwnerReportsPage from './pages/owner/ReportsPage';
 import OwnerAuditLogPage from './pages/owner/AuditLogPage';
 import SlugSetupPage from './pages/owner/SlugSetupPage';
 
@@ -31,10 +30,10 @@ import StaffPage from './pages/admin/StaffPage';
 import TablesPage from './pages/admin/TablesPage';
 import MenuPage from './pages/admin/MenuPage';
 import CashRegistersPage from './pages/admin/CashRegistersPage';
-import ShiftsPage from './pages/admin/ShiftsPage';
 import DayEndPage from './pages/admin/DayEndPage';
 import ProfilePage from './pages/admin/ProfilePage';
 
+import ReportsPage from './pages/reports/ReportsPage';
 import OverViewPage from './pages/shared/OverViewPage';
 
 function App() {
@@ -65,7 +64,7 @@ function App() {
                     <Route path="branches" element={<OwnerBranchesPage />} />
                     <Route path="admins" element={<OwnerAdminsPage />} />
                     <Route path="branding" element={<OwnerBrandingPage />} />
-                    <Route path="reports" element={<OwnerReportsPage />} />
+                    <Route path="reports" element={<ReportsPage role="owner" />} />
                     <Route path="audit-log" element={<OwnerAuditLogPage />} />
                 </Route>
 
@@ -78,8 +77,8 @@ function App() {
                     <Route path="staff" element={<StaffPage />} />
                     <Route path="tables" element={<TablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />
-                    <Route path="shifts" element={<ShiftsPage />} />
                     <Route path="day-end" element={<DayEndPage />} />
+                    <Route path="reports" element={<ReportsPage role="admin" />} />
                     <Route path="restaurant" element={<AdminRestaurantPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                 </Route>

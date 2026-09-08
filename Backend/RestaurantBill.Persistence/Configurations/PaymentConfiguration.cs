@@ -24,5 +24,6 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .HasPrecision(5, 2);
 
         builder.HasIndex(p => p.ShiftId);
+        builder.HasIndex(p => new { p.CashRegisterId, p.CreatedAt });
     }
 }
