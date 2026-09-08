@@ -29,6 +29,7 @@ export default function LoginPage() {
     const [loginField, setLoginField] = useState("");
     const [loginPassword, setLoginPassword] = useState("");
     const [showLoginPassword, setShowLoginPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [loginLoading, setLoginLoading] = useState(false);
 
     // Register state
@@ -50,7 +51,7 @@ export default function LoginPage() {
         }
         try {
             setLoginLoading(true);
-            const response = await authService.login(loginField, loginPassword);
+            const response = await authService.login(loginField, loginPassword, rememberMe);
             if (!response.token) {
                 toast.error("Bu hesap birden fazla restorana bağlı, bu ekran henüz desteklenmiyor.");
                 return;
@@ -201,14 +202,9 @@ export default function LoginPage() {
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
-                                            ŞİFRE
-                                        </label>
-                                        <button type="button" className="text-[11px] font-semibold text-rb-accent hover:underline">
-                                            Şifremi unuttum
-                                        </button>
-                                    </div>
+                                    <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        ŞİFRE
+                                    </label>
                                     <div className="relative">
                                         <Input
                                             type={showLoginPassword ? "text" : "password"}
@@ -226,6 +222,16 @@ export default function LoginPage() {
                                         </button>
                                     </div>
                                 </div>
+
+                                <label className="flex items-center gap-2 text-[13px] cursor-pointer select-none" style={{ color: "#a39080" }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={rememberMe}
+                                        onChange={(e) => setRememberMe(e.target.checked)}
+                                        className="h-3.5 w-3.5 rounded border-border accent-rb-accent cursor-pointer"
+                                    />
+                                    Beni hatırla
+                                </label>
 
                                 <Button
                                     type="submit"

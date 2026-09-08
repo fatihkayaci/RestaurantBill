@@ -18,6 +18,8 @@ namespace RestaurantBill.Infrastructure.Extensions
             services.Configure<BunnyStorageOptions>(configuration.GetSection(BunnyStorageOptions.SectionName));
             services.AddHttpClient<IImageStorageService, BunnyStorageService>();
 
+            services.AddHostedService<RefreshTokenCleanupService>();
+
             return services;
         }
     }

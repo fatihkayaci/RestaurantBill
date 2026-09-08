@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import * as signalR from '@microsoft/signalr';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Table } from '@/features/tables/types';
 import TablePanel from './components/TablePanel';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
+import { createHubConnection } from '@/lib/signalrConnection';
 
 type FilterType = 'all' | 'empty' | 'occupied' | 'reserved';
 
@@ -141,18 +141,7 @@ export default function WaiterTablesPage() {
     }, []);
 
     useEffect(() => {
-        const conn = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`, {
-                accessTokenFactory: () => localStorage.getItem('token') ?? '',
-            })
-            .withAutomaticReconnect()
-            .configureLogging({
-                log(level: signalR.LogLevel, msg: string) {
-                    if (msg.includes('stopped during negotiation')) return;
-                    if (level >= signalR.LogLevel.Error) console.error(msg);
-                },
-            })
-            .build();
+        const { connection: conn, stop } = createHubConnection('/table-hub');
 
         conn.on('TableStatusChanged', (tableId: string, status: number) => {
             setTables(prev => prev.map(t => t.id === tableId
@@ -167,7 +156,7 @@ export default function WaiterTablesPage() {
 
         let cancelled = false;
         conn.start().catch(err => { if (!cancelled) console.error('SignalR:', err); });
-        return () => { cancelled = true; conn.stop(); };
+        return () => { cancelled = true; stop(); };
     }, []);
 
     const handleTableUpdated = (tableId: string, status: number) => {
