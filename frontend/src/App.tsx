@@ -32,6 +32,7 @@ import TablesPage from './pages/admin/TablesPage';
 import MenuPage from './pages/admin/MenuPage';
 import CashRegistersPage from './pages/admin/CashRegistersPage';
 import ShiftsPage from './pages/admin/ShiftsPage';
+import DayEndPage from './pages/admin/DayEndPage';
 import ProfilePage from './pages/admin/ProfilePage';
 
 import OverViewPage from './pages/shared/OverViewPage';
@@ -78,6 +79,7 @@ function App() {
                     <Route path="tables" element={<TablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />
                     <Route path="shifts" element={<ShiftsPage />} />
+                    <Route path="day-end" element={<DayEndPage />} />
                     <Route path="restaurant" element={<AdminRestaurantPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                 </Route>
