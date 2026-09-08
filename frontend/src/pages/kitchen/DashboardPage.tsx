@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Order } from '@/features/orders/types';
-import * as signalR from '@microsoft/signalr';
 import { orderService } from '@/features/orders/api/orderService';
 import { categoryService } from '@/features/categories/api/categoryService';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
+import { createHubConnection } from '@/lib/signalrConnection';
 
 const OrderStatus = {
     Ready: 4,
@@ -209,24 +209,14 @@ export default function KitchenDashboardPage() {
     }, []);
 
     useEffect(() => {
-        const kitchenConn = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/kitchen-hub`, {
-                accessTokenFactory: () => localStorage.getItem('token') ?? '',
-            })
-            .withAutomaticReconnect()
-            .build();
+        const { connection: kitchenConn, stop: stopKitchenConn } = createHubConnection('/kitchen-hub');
 
         kitchenConn.on('ReceiveNewOrder', async () => {
             const all = await orderService.getAllOrdersToKitchen().catch(() => null);
             if (all) setOrders(all);
         });
 
-        const tableConn = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`, {
-                accessTokenFactory: () => localStorage.getItem('token') ?? '',
-            })
-            .withAutomaticReconnect()
-            .build();
+        const { connection: tableConn, stop: stopTableConn } = createHubConnection('/table-hub');
 
         tableConn.on('OrderUpdated', async () => {
             const all = await orderService.getAllOrdersToKitchen().catch(() => null);
@@ -243,8 +233,8 @@ export default function KitchenDashboardPage() {
 
         return () => {
             cancelled = true;
-            kitchenConn.stop();
-            tableConn.stop();
+            stopKitchenConn();
+            stopTableConn();
         };
     }, []);
 

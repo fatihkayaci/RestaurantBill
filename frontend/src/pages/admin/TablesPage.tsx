@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import * as signalR from "@microsoft/signalr";
 import { toast } from "sonner";
 import type { Table, Reservation } from "@/features/tables/types";
 import type { Order, OrderItem } from "@/features/orders/types";
@@ -16,6 +15,7 @@ import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
 import axios from "axios";
+import { createHubConnection } from "@/lib/signalrConnection";
 import PaymentPanel from '../cashier/components/PaymentPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
 
@@ -176,18 +176,7 @@ export default function Tables() {
     }, []);
 
     useEffect(() => {
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`, {
-                accessTokenFactory: () => localStorage.getItem('token') ?? '',
-            })
-            .withAutomaticReconnect()
-            .configureLogging({
-                log(logLevel: signalR.LogLevel, message: string) {
-                    if (message.includes("stopped during negotiation")) return;
-                    if (logLevel >= signalR.LogLevel.Error) console.error(message);
-                }
-            })
-            .build();
+        const { connection, stop } = createHubConnection('/table-hub');
 
         connection.on("TableStatusChanged", (changedTableId: string, status: number) => {
             setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, status } : t));
@@ -201,7 +190,7 @@ export default function Tables() {
         connection.start().catch((err: Error) => {
             if (!err.message.includes("stopped during negotiation")) console.error("SignalR Connection Error:", err);
         });
-        return () => { connection.stop(); };
+        return () => { stop(); };
     }, []);
 
     const openCreateModal = () => {

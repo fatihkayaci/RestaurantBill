@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import * as signalR from '@microsoft/signalr';
 import { X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { createHubConnection } from '@/lib/signalrConnection';
 import { productService } from '@/features/products/api/productService';
 import { categoryService } from '@/features/categories/api/categoryService';
 import { orderService } from '@/features/orders/api/orderService';
@@ -128,18 +128,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
     }, [table.id]);
 
     useEffect(() => {
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/table-hub`, {
-                accessTokenFactory: () => localStorage.getItem('token') ?? '',
-            })
-            .withAutomaticReconnect()
-            .configureLogging({
-                log(logLevel: signalR.LogLevel, message: string) {
-                    if (message.includes('stopped during negotiation')) return;
-                    if (logLevel >= signalR.LogLevel.Error) console.error(message);
-                },
-            })
-            .build();
+        const { connection, stop } = createHubConnection('/table-hub');
 
         const refreshOrder = () => {
             orderService.getOrderByTableId(String(table.id)).then(data => {
@@ -167,7 +156,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
         });
 
         return () => {
-            connection.stop();
+            stop();
         };
     }, [table.id]);
 

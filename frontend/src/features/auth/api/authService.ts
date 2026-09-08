@@ -2,15 +2,21 @@ import type { Code, LoginResponse, Register, RegisterResponse, VerificationCode,
 import { api } from '@/lib/axiosInstance';
 
 export const authService = {
-    logout: () => {
+    logout: async () => {
         localStorage.removeItem('token');
+        try {
+            await api.post('/auth/logout');
+        } catch {
+            // sessizce yut — local çıkış zaten tamamlandı, refresh cookie'si sunucuda kendi süresinde düşer
+        }
     },
-    login: async (loginField: string, password: string) => {
+    login: async (loginField: string, password: string, rememberMe = false) => {
         const isEmail = loginField.includes('@');
         const response = await api.post<LoginResponse>(`/auth/login`, {
             UserName: isEmail ? undefined : loginField,
             Email: isEmail ? loginField : undefined,
-            Password: password
+            Password: password,
+            RememberMe: rememberMe
         });
         return response.data;
     },

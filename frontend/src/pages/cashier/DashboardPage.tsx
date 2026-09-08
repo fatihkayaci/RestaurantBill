@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import * as signalR from '@microsoft/signalr';
 import { orderService } from '@/features/orders/api/orderService';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import { tableService } from '@/features/tables/api/tableService';
@@ -11,6 +10,7 @@ import PaymentPanel from './components/PaymentPanel';
 import TransactionDetailPanel from './components/TransactionDetailPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
+import { createHubConnection } from '@/lib/signalrConnection';
 
 const OrderStatus = { Served: 5 } as const;
 
@@ -87,18 +87,7 @@ export default function CashierDashboardPage() {
     }, [shiftTransactions]);
 
     useEffect(() => {
-        const conn = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5077'}/cashier-hub`, {
-                accessTokenFactory: () => localStorage.getItem('token') ?? '',
-            })
-            .withAutomaticReconnect()
-            .configureLogging({
-                log(level: signalR.LogLevel, msg: string) {
-                    if (msg.includes('stopped during negotiation')) return;
-                    if (level >= signalR.LogLevel.Error) console.error(msg);
-                },
-            })
-            .build();
+        const { connection: conn, stop } = createHubConnection('/cashier-hub');
 
         conn.on('OrdersChanged', () => {
             orderService.getAllOrdersToCashier()
@@ -112,7 +101,7 @@ export default function CashierDashboardPage() {
 
         let cancelled = false;
         conn.start().catch(err => { if (!cancelled) console.error('SignalR:', err); });
-        return () => { cancelled = true; conn.stop(); };
+        return () => { cancelled = true; stop(); };
     }, []);
 
     const handlePaymentComplete = (orderId: number) => {
