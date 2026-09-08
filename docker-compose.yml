@@ -20,6 +20,8 @@ services:
       - BunnyStorage__Region=${BunnyStorage__Region}
       - BunnyStorage__AccessKey=${BunnyStorage__AccessKey}
       - BunnyStorage__CdnBaseUrl=${BunnyStorage__CdnBaseUrl}
+      - CorsSettings__AllowedOrigins=${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost}
+      - CorsSettings__AllowedOriginSuffix=${CORS_ALLOWED_ORIGIN_SUFFIX:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s

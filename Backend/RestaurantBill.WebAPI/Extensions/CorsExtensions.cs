@@ -2,24 +2,23 @@ namespace RestaurantBill.WebAPI.Extensions;
 
 public static class CorsExtensions
 {
-    public static IServiceCollection AddCorsPolicy(this IServiceCollection services)
+    public static IServiceCollection AddCorsPolicy(this IServiceCollection services, IConfiguration configuration)
     {
+        var corsSettings = configuration.GetSection(CorsSettings.SectionName).Get<CorsSettings>() ?? new CorsSettings();
+
+        string[] allowedOrigins = corsSettings.AllowedOrigins
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        string[] allowedOriginSuffixes = corsSettings.AllowedOriginSuffix
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
         services.AddCors(options =>
         {
-            string[] allowedOrigins =
-            [
-                "http://localhost:5173",
-                "http://localhost",
-                "http://165.245.222.71",
-                "http://64.226.125.22",
-                "https://bill.fatihkayaci.com"
-            ];
-
             options.AddPolicy("Allow", policy =>
             {
                 policy.SetIsOriginAllowed(origin =>
-                          allowedOrigins.Contains(origin) ||
-                          origin.EndsWith(".bill.fatihkayaci.com", StringComparison.OrdinalIgnoreCase)
+                          allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) ||
+                          allowedOriginSuffixes.Any(suffix => origin.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
                       )
                       .AllowAnyHeader()
                       .AllowAnyMethod()
