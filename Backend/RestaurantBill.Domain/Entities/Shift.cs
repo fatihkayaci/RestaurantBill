@@ -37,6 +37,9 @@ public class Shift : BaseEntity
     public ShiftStatus Status { get; private set; } = ShiftStatus.Open;
     public string? Note { get; private set; }
 
+    public ShiftCountStatus CountStatus { get; private set; } = ShiftCountStatus.Counted;
+    public bool ClosedBySystem { get; private set; }
+
     protected Shift() { }
 
     public static Shift Create(Guid branchId, Guid cashRegisterId, Guid openedByUserId, decimal expectedOpeningBalance, decimal openingBalance)
@@ -89,6 +92,46 @@ public class Shift : BaseEntity
         ClosingDifferenceReviewStatus = DifferenceReviewStatus.Pending;
         ClosedAt = DateTime.UtcNow;
         Status = ShiftStatus.Closed;
+        Note = note;
+    }
+
+    public void CloseWithoutCount(Guid? closedByUserId, decimal expectedClosingBalance, bool bySystem)
+    {
+        if (Status != ShiftStatus.Open)
+            throw new DomainException("Bu vardiya zaten kapatılmış.");
+
+        ClosedByUserId = closedByUserId;
+        ExpectedClosingBalance = expectedClosingBalance;
+        CountedClosingBalance = null;
+        Difference = null;
+        ClosingDifferenceReviewStatus = null;
+        CountStatus = ShiftCountStatus.NotCounted;
+        ClosedBySystem = bySystem;
+        ClosedAt = DateTime.UtcNow;
+        Status = ShiftStatus.Closed;
+    }
+
+    public void ApplyLateCount(Guid countedByUserId, decimal countedClosingBalance, string? note)
+    {
+        if (Status != ShiftStatus.Closed)
+            throw new DomainException("Sadece kapanmış bir vardiyaya sayım girilebilir.");
+
+        if (CountStatus == ShiftCountStatus.Counted)
+            throw new DomainException("Bu vardiyanın sayımı zaten yapılmış.");
+
+        if (countedByUserId == Guid.Empty)
+            throw new DomainException("Geçersiz kullanıcı ID'si.");
+
+        if (countedClosingBalance < 0)
+            throw new DomainException("Sayılan bakiye negatif olamaz.");
+
+        // Beklenenle aynı yazılsaydı fark hep 0 çıkar ve gerçek bir kasa açığı gizlenirdi;
+        // sayım hangi kullanıcıdan geldiyse (admin/kasiyer) o kullanıcı "kapatan" olarak işlenir.
+        ClosedByUserId = countedByUserId;
+        CountedClosingBalance = countedClosingBalance;
+        Difference = countedClosingBalance - ExpectedClosingBalance;
+        ClosingDifferenceReviewStatus = DifferenceReviewStatus.Pending;
+        CountStatus = ShiftCountStatus.Counted;
         Note = note;
     }
 

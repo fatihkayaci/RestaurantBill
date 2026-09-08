@@ -7,20 +7,26 @@ import { shiftService } from '@/features/cashier/api/shiftService';
 import { userService } from '@/features/users/api/userService';
 import type { Shift } from '@/features/cashier/types';
 import { cn } from '@/lib/utils';
+import CloseShiftModal from './components/CloseShiftModal';
+import LateCountModal from './components/LateCountModal';
 
 type ReviewTarget = { shift: Shift; type: 'opening' | 'closing'; action: 'approve' | 'reject' };
 
 const REVIEW_PENDING = 1;
 const REVIEW_REJECTED = 3;
+const COUNT_NOT_COUNTED = 2;
 
 export default function ShiftsPage() {
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [userNames, setUserNames] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [onlyPending, setOnlyPending] = useState(false);
+    const [onlyUncounted, setOnlyUncounted] = useState(false);
     const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
     const [rejectNote, setRejectNote] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [closeTarget, setCloseTarget] = useState<Shift | null>(null);
+    const [lateCountTarget, setLateCountTarget] = useState<Shift | null>(null);
 
     const refresh = async () => {
         try {
@@ -43,9 +49,11 @@ export default function ShiftsPage() {
     const requiresOpeningReview = (s: Shift) => s.openingDifference !== 0 && s.openingDifferenceReviewStatus === REVIEW_PENDING;
     const requiresClosingReview = (s: Shift) => s.status === 2 && !!s.difference && s.difference !== 0 && s.closingDifferenceReviewStatus === REVIEW_PENDING;
     const requiresAnyReview = (s: Shift) => requiresOpeningReview(s) || requiresClosingReview(s);
+    const requiresCount = (s: Shift) => s.status === 2 && s.countStatus === COUNT_NOT_COUNTED;
 
-    const filtered = onlyPending ? shifts.filter(requiresAnyReview) : shifts;
+    const filtered = shifts.filter(s => (!onlyPending || requiresAnyReview(s)) && (!onlyUncounted || requiresCount(s)));
     const pendingCount = shifts.filter(requiresAnyReview).length;
+    const uncountedCount = shifts.filter(requiresCount).length;
 
     const openReviewDialog = (shift: Shift, type: 'opening' | 'closing', action: 'approve' | 'reject') => {
         setReviewTarget({ shift, type, action });
@@ -91,18 +99,31 @@ export default function ShiftsPage() {
                 <div>
                     <h1 className="text-2xl font-serif font-bold text-foreground">Vardiyalar</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                        {shifts.length} vardiya{pendingCount > 0 && ` · ${pendingCount} inceleme bekliyor`}
+                        {shifts.length} vardiya
+                        {pendingCount > 0 && ` · ${pendingCount} inceleme bekliyor`}
+                        {uncountedCount > 0 && ` · ${uncountedCount} sayım bekliyor`}
                     </p>
                 </div>
-                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        checked={onlyPending}
-                        onChange={e => setOnlyPending(e.target.checked)}
-                        className="rounded border-border"
-                    />
-                    Sadece inceleme bekleyenler
-                </label>
+                <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={onlyPending}
+                            onChange={e => setOnlyPending(e.target.checked)}
+                            className="rounded border-border"
+                        />
+                        Sadece inceleme bekleyenler
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={onlyUncounted}
+                            onChange={e => setOnlyUncounted(e.target.checked)}
+                            className="rounded border-border"
+                        />
+                        Sayım bekleyenler
+                    </label>
+                </div>
             </div>
 
             <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -182,6 +203,16 @@ export default function ShiftsPage() {
                                                 )}>
                                                     {isOpen ? 'Açık' : 'Kapalı'}
                                                 </span>
+                                                {!isOpen && s.countStatus === COUNT_NOT_COUNTED && (
+                                                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rb-amber-bg text-rb-amber">
+                                                        Sayım Bekliyor
+                                                    </span>
+                                                )}
+                                                {!isOpen && s.closedBySystem && (
+                                                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rb-neutral-bg text-rb-neutral">
+                                                        Otomatik Kapandı
+                                                    </span>
+                                                )}
                                                 {s.openingDifference !== 0 && (
                                                     <span className={cn(
                                                         "inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold",
@@ -237,6 +268,22 @@ export default function ShiftsPage() {
                                                             Reddet
                                                         </button>
                                                     </div>
+                                                )}
+                                                {isOpen && (
+                                                    <button
+                                                        onClick={() => setCloseTarget(s)}
+                                                        className="text-xs font-semibold text-rb-red hover:opacity-80 transition-colors"
+                                                    >
+                                                        Günü Kapat
+                                                    </button>
+                                                )}
+                                                {requiresCount(s) && (
+                                                    <button
+                                                        onClick={() => setLateCountTarget(s)}
+                                                        className="text-xs font-semibold text-rb-accent hover:opacity-80 transition-colors"
+                                                    >
+                                                        Sayım Gir
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -295,6 +342,22 @@ export default function ShiftsPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {closeTarget && (
+                <CloseShiftModal
+                    shift={closeTarget}
+                    onClose={() => setCloseTarget(null)}
+                    onClosed={() => { setCloseTarget(null); refresh(); }}
+                />
+            )}
+
+            {lateCountTarget && (
+                <LateCountModal
+                    shift={lateCountTarget}
+                    onClose={() => setLateCountTarget(null)}
+                    onCounted={() => { setLateCountTarget(null); refresh(); }}
+                />
+            )}
         </div>
     );
 }

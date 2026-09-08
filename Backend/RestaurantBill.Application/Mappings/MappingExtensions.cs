@@ -53,7 +53,9 @@ public static class MappingExtensions
         OpenedAt = s.OpenedAt,
         ClosedAt = s.ClosedAt,
         Status = s.Status,
-        Note = s.Note
+        Note = s.Note,
+        CountStatus = s.CountStatus,
+        ClosedBySystem = s.ClosedBySystem
     };
 
     public static CashTransactionDto ToDto(this CashTransaction t) => new()
@@ -158,7 +160,9 @@ public static class MappingExtensions
         TaxRate = b.TaxRate,
         TableCount = tableCount,
         StaffCount = staffCount,
-        Revenue = revenue
+        Revenue = revenue,
+        DayEndTime = b.DayEndTime,
+        TimeZoneId = b.TimeZoneId
     };
 
     public static TableDto ToDto(this Table t) => new()

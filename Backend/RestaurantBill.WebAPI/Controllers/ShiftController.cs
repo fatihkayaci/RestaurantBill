@@ -1,9 +1,11 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantBill.Application.Features.Shifts.Commands.ApplyLateCount;
 using RestaurantBill.Application.Features.Shifts.Commands.ApproveShiftDifference;
 using RestaurantBill.Application.Features.Shifts.Commands.ApproveShiftOpeningDifference;
 using RestaurantBill.Application.Features.Shifts.Commands.CloseShift;
+using RestaurantBill.Application.Features.Shifts.Commands.CloseShiftWithoutCount;
 using RestaurantBill.Application.Features.Shifts.Commands.EnsureShiftOpen;
 using RestaurantBill.Application.Features.Shifts.Commands.OpenShift;
 using RestaurantBill.Application.Features.Shifts.Commands.RejectShiftDifference;
@@ -188,6 +190,30 @@ public class ShiftController : BaseController
     [HttpPost("close")]
     public async Task<IActionResult> Close([FromBody] CloseShiftCommand command, CancellationToken cancellationToken)
     {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Closes an open shift without a count (sayımsız); admin manual equivalent of the day-end auto-close job.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/close-without-count")]
+    public async Task<IActionResult> CloseWithoutCount([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var command = new CloseShiftWithoutCountCommand { ShiftId = id };
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Enters a late count for a shift that was closed without one (sayımsız kapanmış), computing and applying any difference.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/apply-late-count")]
+    public async Task<IActionResult> ApplyLateCount([FromRoute] Guid id, [FromBody] ApplyLateCountCommand command, CancellationToken cancellationToken)
+    {
+        command.ShiftId = id;
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }

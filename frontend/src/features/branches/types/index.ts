@@ -22,6 +22,8 @@ export interface Branch {
     tableCount: number;
     staffCount: number;
     revenue: number;
+    dayEndTime: string;
+    timeZoneId: string;
 }
 
 export interface CreateRestaurant {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Restaurants.Commands.CreateBranch;
 using RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranch;
+using RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranchDayEndSettings;
 using RestaurantBill.Application.Features.Restaurants.Queries.GetBranchByUserId;
 using RestaurantBill.Application.Features.Restaurants.Queries.GetMyBranches;
 
@@ -49,6 +50,18 @@ public class BranchController : BaseController
     public async Task<IActionResult> UpdateBranch([FromRoute] Guid id, [FromBody] UpdateBranchCommand command, CancellationToken cancellationToken)
     {
         command.RestaurantId = id;
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Updates the branch's day-end (gün sonu) time and time zone, used to auto-close open shifts.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("branches/{id}/day-end-settings")]
+    public async Task<IActionResult> UpdateDayEndSettings([FromRoute] Guid id, [FromBody] UpdateBranchDayEndSettingsCommand command, CancellationToken cancellationToken)
+    {
+        command.BranchId = id;
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }

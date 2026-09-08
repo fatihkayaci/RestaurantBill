@@ -37,10 +37,23 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
             .Where(s => s.BranchId == restaurantId && s.Status == ShiftStatus.Open)
             .ToDictionaryAsync(s => s.CashRegisterId, cancellationToken);
 
+        // Kasa bazında en son kapanmış vardiyayı bulmak için (sayımı atlanmış mı diye bakmak
+        // amacıyla) tüm kapalı vardiyaları çekip bellekte gruplamak, EF'in GroupBy+First
+        // çevirisinin sağlayıcıya göre değişken olmasından daha güvenilir.
+        List<Shift> closedShifts = await _db.Shifts
+            .AsNoTracking()
+            .Where(s => s.BranchId == restaurantId && s.Status == ShiftStatus.Closed)
+            .OrderByDescending(s => s.ClosedAt)
+            .ToListAsync(cancellationToken);
+        Dictionary<Guid, Shift> lastClosedShiftByRegisterId = closedShifts
+            .GroupBy(s => s.CashRegisterId)
+            .ToDictionary(g => g.Key, g => g.First());
+
         var candidates = registers
             .Select(r =>
             {
                 openShiftByRegisterId.TryGetValue(r.Id, out Shift? openShift);
+                lastClosedShiftByRegisterId.TryGetValue(r.Id, out Shift? lastClosedShift);
                 return new ShiftStartCandidateDto
                 {
                     CashRegisterId = r.Id,
@@ -48,7 +61,8 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
                     ExpectedOpeningBalance = r.Balance,
                     HasOpenShift = openShift is not null,
                     OpenShiftId = openShift?.Id,
-                    OpenedAt = openShift?.OpenedAt
+                    OpenedAt = openShift?.OpenedAt,
+                    PreviousShiftUncounted = lastClosedShift?.CountStatus == ShiftCountStatus.NotCounted
                 };
             })
             .OrderBy(c => c.CashRegisterName)

@@ -11,10 +11,12 @@ namespace RestaurantBill.Application.Features.Shifts.Queries.GetShiftSummary;
 public class GetShiftSummaryQueryHandler : IRequestHandler<GetShiftSummaryQuery, Result<ShiftSummaryDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IShiftBalanceCalculator _balanceCalculator;
 
-    public GetShiftSummaryQueryHandler(IAppDbContext db)
+    public GetShiftSummaryQueryHandler(IAppDbContext db, IShiftBalanceCalculator balanceCalculator)
     {
         _db = db;
+        _balanceCalculator = balanceCalculator;
     }
 
     public async Task<Result<ShiftSummaryDto>> Handle(GetShiftSummaryQuery request, CancellationToken cancellationToken)
@@ -60,18 +62,7 @@ public class GetShiftSummaryQueryHandler : IRequestHandler<GetShiftSummaryQuery,
             .Distinct()
             .Count();
 
-        List<CashTransaction> transactions = await _db.CashTransactions
-            .AsNoTracking()
-            .Where(t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt && t.CreatedAt <= rangeEnd
-                && t.Id != shift.OpeningAdjustmentTransactionId)
-            .ToListAsync(cancellationToken);
-
-        decimal expectedCashInRegister = shift.OpeningBalance;
-        foreach (var transaction in transactions)
-        {
-            bool isOutgoing = transaction.Type is CashTransactionType.Out or CashTransactionType.TransferOut or CashTransactionType.AdjustmentOut;
-            expectedCashInRegister += isOutgoing ? -transaction.Amount : transaction.Amount;
-        }
+        decimal expectedCashInRegister = await _balanceCalculator.CalculateExpectedClosingBalanceAsync(shift, cancellationToken);
 
         return Result<ShiftSummaryDto>.Success(new ShiftSummaryDto
         {

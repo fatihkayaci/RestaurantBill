@@ -31,4 +31,10 @@ export const branchService = {
             TaxRate: Number(data.taxRate),
         });
     },
+    updateDayEndSettings: async (id: string, dayEndTime: string, timeZoneId: string): Promise<void> => {
+        await api.post(`/branch/branches/${id}/day-end-settings`, {
+            DayEndTime: dayEndTime,
+            TimeZoneId: timeZoneId,
+        });
+    },
 };

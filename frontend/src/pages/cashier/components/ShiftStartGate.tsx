@@ -139,6 +139,11 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
                                                     ? `Gün açık${c.openedAt ? ` · ${new Date(c.openedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}'den beri` : ''}`
                                                     : 'Vardiya başlatılmamış'}
                                             </span>
+                                            {c.previousShiftUncounted && (
+                                                <span className="text-xs font-semibold text-rb-amber block mt-0.5">
+                                                    ⚠ önceki gün sayılmadı, admin sonradan sayım girmeli
+                                                </span>
+                                            )}
                                         </div>
                                         <span className="text-sm text-muted-foreground font-serif">
                                             {joiningId === c.cashRegisterId

@@ -8,4 +8,5 @@ public class ShiftStartCandidateDto
     public bool HasOpenShift { get; set; }
     public Guid? OpenShiftId { get; set; }
     public DateTime? OpenedAt { get; set; }
+    public bool PreviousShiftUncounted { get; set; }
 }

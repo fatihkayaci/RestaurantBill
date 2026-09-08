@@ -73,4 +73,15 @@ export const shiftService = {
         });
         return response.data;
     },
+    closeShiftWithoutCount: async (shiftId: string) => {
+        const response = await api.post(`/shift/${shiftId}/close-without-count`);
+        return response.data;
+    },
+    applyLateCount: async (shiftId: string, countedClosingBalance: number, note?: string) => {
+        const response = await api.post(`/shift/${shiftId}/apply-late-count`, {
+            CountedClosingBalance: countedClosingBalance,
+            Note: note,
+        });
+        return response.data;
+    },
 };

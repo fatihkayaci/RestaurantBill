@@ -5,22 +5,20 @@ using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Shared;
 
-namespace RestaurantBill.Application.Features.Shifts.Commands.CloseShift;
+namespace RestaurantBill.Application.Features.Shifts.Commands.ApplyLateCount;
 
-public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Result>
+public class ApplyLateCountCommandHandler : IRequestHandler<ApplyLateCountCommand, Result>
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
-    private readonly IShiftBalanceCalculator _balanceCalculator;
 
-    public CloseShiftCommandHandler(IAppDbContext db, ICurrentUserService currentUser, IShiftBalanceCalculator balanceCalculator)
+    public ApplyLateCountCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
         _db = db;
         _currentUser = currentUser;
-        _balanceCalculator = balanceCalculator;
     }
 
-    public async Task<Result> Handle(CloseShiftCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(ApplyLateCountCommand request, CancellationToken cancellationToken)
     {
         Shift? shift = await _db.Shifts
             .FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
@@ -30,10 +28,10 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
             .FirstOrDefaultAsync(c => c.Id == shift.CashRegisterId, cancellationToken);
         if (register is null) return Result.Failure("Kasa bulunamadı.");
 
-        decimal expectedClosingBalance = await _balanceCalculator.CalculateExpectedClosingBalanceAsync(shift, cancellationToken);
+        shift.ApplyLateCount(_currentUser.UserId, request.CountedClosingBalance, request.Note);
 
-        shift.Close(_currentUser.UserId, expectedClosingBalance, request.CountedClosingBalance, request.Note);
-
+        // Fark, sayım anındaki kasa bakiyesine göre değil bir düzeltme (delta) olarak uygulanır;
+        // aradan geçen süre içinde kasada başka işlemler olmuş olsa da doğru sonucu verir.
         bool hasDifference = shift.Difference != 0;
         if (hasDifference)
         {
@@ -42,16 +40,15 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
         }
 
         User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
-        AuditLogSeverity severity = hasDifference ? AuditLogSeverity.Warning : AuditLogSeverity.Info;
         AuditLog log = AuditLog.Create(
             _currentUser.BranchId,
             actor?.FullName ?? string.Empty,
             AuditLogCategory.System,
-            severity,
-            "ShiftClosed",
+            hasDifference ? AuditLogSeverity.Warning : AuditLogSeverity.Info,
+            "ShiftLateCounted",
             hasDifference
-                ? $"{actor?.FullName} vardiyayı kapattı. Beklenen: ₺{shift.ExpectedClosingBalance}, Sayılan: ₺{shift.CountedClosingBalance}, Fark: ₺{shift.Difference}. Kasa bakiyesi anında düzeltildi, admin incelemesi bekliyor."
-                : $"{actor?.FullName} vardiyayı kapattı. Beklenen: ₺{shift.ExpectedClosingBalance}, Sayılan: ₺{shift.CountedClosingBalance}, Fark: ₺{shift.Difference}.",
+                ? $"{actor?.FullName} {register.Name} kasasında sonradan sayım girdi. Beklenen: ₺{shift.ExpectedClosingBalance}, Sayılan: ₺{shift.CountedClosingBalance}, Fark: ₺{shift.Difference}. Kasa bakiyesi anında düzeltildi, admin incelemesi bekliyor."
+                : $"{actor?.FullName} {register.Name} kasasında sonradan sayım girdi. Beklenen: ₺{shift.ExpectedClosingBalance}, Sayılan: ₺{shift.CountedClosingBalance}, fark yok.",
             nameof(Shift),
             shift.Id);
         _db.AuditLogs.Add(log);
