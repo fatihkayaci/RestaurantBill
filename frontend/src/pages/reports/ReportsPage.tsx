@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Calendar, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { reportService } from '@/features/reports/api/reportService';
 import { useReportFilter, presetRange, type DatePreset } from '@/features/reports/hooks/useReportFilter';
+import { useReportTabData } from '@/features/reports/hooks/useReportTabData';
 import { branchService } from '@/features/branches/api/branchService';
 import type { Branch } from '@/features/branches/types';
-import type { SalesReport, ShiftReport } from '@/features/reports/types';
 import { cn } from '@/lib/utils';
 import SalesTab from './tabs/SalesTab';
 import ShiftsTab from './tabs/ShiftsTab';
+import ProductsTab from './tabs/ProductsTab';
+import StaffTab from './tabs/StaffTab';
+import DiscountsTab from './tabs/DiscountsTab';
+import TaxTab from './tabs/TaxTab';
 
 interface Props {
     role: 'admin' | 'owner';
@@ -24,17 +28,19 @@ const PRESETS: { key: DatePreset; label: string }[] = [
 export default function ReportsPage({ role }: Props) {
     const { from, to, branchId, tab, setPreset, setCustomRange, setBranch, setTab } = useReportFilter('sales');
     const [branches, setBranches] = useState<Branch[]>([]);
-
-    const [salesData, setSalesData] = useState<SalesReport | null>(null);
-    const [salesLoading, setSalesLoading] = useState(false);
-    const [shiftData, setShiftData] = useState<ShiftReport | null>(null);
-    const [shiftLoading, setShiftLoading] = useState(false);
-    const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
     const [refreshing, setRefreshing] = useState(false);
 
-    const filterKey = `${from}|${to}|${branchId ?? ''}`;
-    const salesLoadedKeyRef = useRef<string | null>(null);
-    const shiftLoadedKeyRef = useRef<string | null>(null);
+    const filter = { from, to, branchId };
+
+    const sales = useReportTabData('sales', tab, filter, reportService.getSalesReport);
+    const shifts = useReportTabData('shifts', tab, filter, reportService.getShiftReport);
+    const products = useReportTabData('products', tab, filter, reportService.getProductReport);
+    const staff = useReportTabData('staff', tab, filter, reportService.getStaffReport);
+    const discounts = useReportTabData('discounts', tab, filter, reportService.getDiscountReport);
+    const tax = useReportTabData('tax', tab, filter, reportService.getTaxReport);
+
+    const byTab = { sales, shifts, products, staff, discounts, tax };
+    const active = byTab[tab as keyof typeof byTab] ?? sales;
 
     useEffect(() => {
         if (role === 'owner') {
@@ -42,33 +48,9 @@ export default function ReportsPage({ role }: Props) {
         }
     }, [role]);
 
-    const loadSales = useCallback((force: boolean) => {
-        if (!force && salesLoadedKeyRef.current === filterKey) return Promise.resolve();
-        setSalesLoading(true);
-        return reportService.getSalesReport({ from, to, branchId })
-            .then(data => { setSalesData(data); salesLoadedKeyRef.current = filterKey; })
-            .catch(console.error)
-            .finally(() => setSalesLoading(false));
-    }, [filterKey, from, to, branchId]);
-
-    const loadShifts = useCallback((force: boolean) => {
-        if (!force && shiftLoadedKeyRef.current === filterKey) return Promise.resolve();
-        setShiftLoading(true);
-        return reportService.getShiftReport({ from, to, branchId })
-            .then(data => { setShiftData(data); shiftLoadedKeyRef.current = filterKey; })
-            .catch(console.error)
-            .finally(() => setShiftLoading(false));
-    }, [filterKey, from, to, branchId]);
-
-    useEffect(() => {
-        const task = tab === 'shifts' ? loadShifts(false) : loadSales(false);
-        task.then(() => setLastUpdatedAt(new Date()));
-    }, [tab, loadSales, loadShifts]);
-
     const handleRefresh = () => {
         setRefreshing(true);
-        const task = tab === 'shifts' ? loadShifts(true) : loadSales(true);
-        task.then(() => setLastUpdatedAt(new Date())).finally(() => setRefreshing(false));
+        active.load(true).finally(() => setRefreshing(false));
     };
 
     const activePreset = PRESETS.find(p => {
@@ -77,6 +59,7 @@ export default function ReportsPage({ role }: Props) {
     })?.key;
 
     const isSingleDay = from === to;
+    const showBranchComparison = !branchId && branches.length > 1;
 
     return (
         <div className="space-y-5">
@@ -88,9 +71,9 @@ export default function ReportsPage({ role }: Props) {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    {lastUpdatedAt && (
+                    {active.updatedAt && (
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            Son güncelleme: {lastUpdatedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                            Son güncelleme: {active.updatedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                     )}
                     <button
@@ -157,23 +140,43 @@ export default function ReportsPage({ role }: Props) {
             </div>
 
             <Tabs value={tab} onValueChange={setTab}>
-                <TabsList>
+                <TabsList className="flex-wrap h-auto">
                     <TabsTrigger value="sales">Satış</TabsTrigger>
                     <TabsTrigger value="shifts">Kasa &amp; Vardiya</TabsTrigger>
+                    <TabsTrigger value="products">Ürünler</TabsTrigger>
+                    <TabsTrigger value="staff">Personel</TabsTrigger>
+                    <TabsTrigger value="discounts">İndirim &amp; İptal</TabsTrigger>
+                    <TabsTrigger value="tax">Mali (KDV)</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="sales">
-                    <SalesTab data={salesData} loading={salesLoading} isSingleDay={isSingleDay} role={role} showBranchComparison={!branchId && branches.length > 1} />
+                    <SalesTab data={sales.data} loading={sales.loading} isSingleDay={isSingleDay} role={role} showBranchComparison={showBranchComparison} />
                 </TabsContent>
 
                 <TabsContent value="shifts">
                     <ShiftsTab
-                        data={shiftData}
-                        loading={shiftLoading}
+                        data={shifts.data}
+                        loading={shifts.loading}
                         role={role}
-                        showBranchSummary={!branchId && branches.length > 1}
-                        onChanged={() => loadShifts(true).then(() => setLastUpdatedAt(new Date()))}
+                        showBranchSummary={showBranchComparison}
+                        onChanged={() => shifts.load(true)}
                     />
+                </TabsContent>
+
+                <TabsContent value="products">
+                    <ProductsTab data={products.data} loading={products.loading} />
+                </TabsContent>
+
+                <TabsContent value="staff">
+                    <StaffTab data={staff.data} loading={staff.loading} />
+                </TabsContent>
+
+                <TabsContent value="discounts">
+                    <DiscountsTab data={discounts.data} loading={discounts.loading} />
+                </TabsContent>
+
+                <TabsContent value="tax">
+                    <TaxTab data={tax.data} loading={tax.loading} />
                 </TabsContent>
             </Tabs>
         </div>

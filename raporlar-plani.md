@@ -5,28 +5,47 @@
 
 ---
 
-## Uygulama Durumu — Kısmen Tamamlandı
+## Uygulama Durumu — Tamamlandı (Adım 8 hariç)
 
-**Yapıldı** (`feat/reports-page` branch'i): Adım 0 (ön koşullar) + Öncelik 1.
+**Yapıldı** (`feat/shift-payment-user-tracking` branch'i): Adım 0 + tüm sekmeler (§5.1-5.6).
 
 - `IBusinessDayResolver` / `BusinessDayResolver` — şube bazlı iş günü ↔ UTC aralık çevrimi.
 - `IReportScopeResolver` / `ReportScopeResolver` — Admin tek şube, Owner tüm/tek şube (sahiplik doğrulamalı).
-- `ReportsController`: `GET /api/reports/sales`, `GET /api/reports/shifts`.
+- `ReportsController`: `GET /api/reports/{sales,shifts,products,staff,discounts,tax}`.
 - Frontend: `pages/reports/ReportsPage.tsx` (ortak filtre çubuğu: tarih presetleri + özel
-  aralık + Owner'da şube seçici) + `SalesTab` (ciro/matrah/KDV, saatlik/günlük grafik,
-  ödeme yöntemi kırılımı, gün×saat heatmap, Owner'da şube karşılaştırması) + `ShiftsTab`
-  (eski `ShiftsPage`'in yerini aldı: özet kartlar + vardiya tablosu + tüm aksiyonlar,
-  Owner'da şube bazlı özet).
+  aralık + Owner'da şube seçici, 6 sekme) + `useReportTabData` hook'u (her sekme aktifken
+  lazy çeker, aynı filtre için tekrar sekmeye dönülünce yeniden istek atmaz).
+  - `SalesTab` — ciro/matrah/KDV, saatlik/günlük grafik, ödeme yöntemi kırılımı, gün×saat
+    heatmap, Owner'da şube karşılaştırması.
+  - `ShiftsTab` — eski `ShiftsPage`'in yerini aldı: özet kartlar + vardiya tablosu + tüm
+    aksiyonlar, Owner'da şube bazlı özet.
+  - `ProductsTab` — en çok satan (adet/ciro toggle), kategori kırılımı, hiç satmayan aktif
+    ürünler, indirim-düzeltmeli ortalama birim fiyat.
+  - `StaffTab` — garson bazlı (Order.CreatedUser) ve kasiyer bazlı (Payment.UserId) iki ayrı tablo.
+  - `DiscountsTab` — kullanıcı bazlı indirim, oran dağılımı (0-10/10-25/25-50/50-100
+    kovaları), not doldurulma oranı, iptal edilen siparişler (AuditLog'dan kim/ne zaman).
+  - `TaxTab` — KDV oranı bazlı Matrah/KDV/Toplam dökümü.
 - `Payment(CashRegisterId, CreatedAt)` ve `Shift(BranchId, OpenedAt)` composite indeksleri.
-- Yan ürün: dev DB'de `Branch.TimeZoneId`'nin eski migration'dan boş (`""`) kalan
-  satırları `BackfillBranchTimeZoneId` migration'ıyla `Europe/Istanbul`'a dolduruldu;
+
+**Yol boyunca çıkan ve çözülen iki yan sorun:**
+
+- Dev DB'de `Branch.TimeZoneId`'nin eski migration'dan boş (`""`) kalan satırları
+  `BackfillBranchTimeZoneId` migration'ıyla `Europe/Istanbul`'a dolduruldu;
   `BusinessDayResolver`'a `DayEndCloseService`'teki gibi geçersiz saat dilimi → UTC
   fallback'i eklendi.
+- **Mimari bulgu — `OrderItem` ödendiğinde silinir:** `Order.SettleItem()` bir kalem
+  tamamen ödendiğinde `OrderItem`'ı koleksiyondan kaldırıyor; `OrderId` zorunlu FK olduğu
+  için EF Core bunu veritabanından fiziksel olarak siliyor. Yani Ürünler sekmesi için
+  geçmişe dönük ürün/kategori satışı `OrderItem`'dan hesaplanamaz. Kullanıcı kararıyla
+  düzgün çözüldü: yeni bir `PaymentLineItem` tablosu (`AddPaymentLineItem` migration)
+  eklendi — `CreatePaymentCommandHandler` artık her ödeme grubunda ürün/kategori adını
+  **anlık görüntü (snapshot)** olarak kalıcı satır halinde yazıyor, `OrderItem` silme
+  davranışına dokunulmadı. **Not:** Bu tablo yalnızca bu değişiklikten sonraki ödemeleri
+  kapsıyor — geçmiş ödemeler için backfill yapılmadı (Payment.ShiftId'deki "geriye dönük
+  doldurulmadı" kararıyla aynı mantık), Ürünler sekmesi eski tarih aralıklarında boş dönebilir.
 
 **Yapılmadı / sonraki oturuma kaldı:**
 
-- Ürünler, Personel, İndirim & İptal, Mali/KDV sekmeleri (Öncelik 2-3, §5.3-5.6).
-- `ReportsController`'ın `products`/`staff`/`discounts`/`tax` uçları.
 - Adım 8 temizliği: `GetOverviewStatsQueryHandler`'ın `Payment` kaynağına geçirilmesi
   (karar verildi: OverViewPage kalacak ama henüz uygulanmadı) ve tüm-zamanlar yerine
   tarih filtresi eklenmesi.

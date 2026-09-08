@@ -22,6 +22,7 @@ public interface IAppDbContext
     DbSet<VerificationCode> VerificationCodes { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<Payment> Payments { get; }
+    DbSet<PaymentLineItem> PaymentLineItems { get; }
     DbSet<Shift> Shifts { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
 

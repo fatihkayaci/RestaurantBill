@@ -58,3 +58,100 @@ export interface ShiftReport {
     shifts: Shift[];
     branchSummaries: BranchShiftSummaryRow[];
 }
+
+export interface ProductSalesRow {
+    productId: string;
+    productName: string;
+    categoryName: string;
+    sold: number;
+    revenue: number;
+    avgUnitPrice: number;
+}
+
+export interface CategorySalesRow {
+    categoryId: string;
+    categoryName: string;
+    sold: number;
+    revenue: number;
+    percent: number;
+}
+
+export interface NeverSoldProduct {
+    productId: string;
+    productName: string;
+    categoryName: string;
+    price: number;
+}
+
+export interface ProductReport {
+    products: ProductSalesRow[];
+    categoryBreakdown: CategorySalesRow[];
+    neverSoldProducts: NeverSoldProduct[];
+}
+
+export interface WaiterStaffRow {
+    userId: string;
+    userName: string;
+    orderCount: number;
+    revenue: number;
+    avgBasket: number;
+}
+
+export interface CashierStaffRow {
+    userId: string;
+    userName: string;
+    transactionCount: number;
+    revenue: number;
+    paymentMethods: PaymentMethodBreakdown[];
+}
+
+export interface StaffReport {
+    waiters: WaiterStaffRow[];
+    cashiers: CashierStaffRow[];
+}
+
+export interface DiscountUserRow {
+    userId: string;
+    userName: string;
+    count: number;
+    totalAmount: number;
+}
+
+export interface DiscountBucket {
+    label: string;
+    count: number;
+    totalAmount: number;
+}
+
+export interface CancelledOrderRow {
+    orderId: string;
+    tableName: string;
+    actorName: string;
+    cancelledAt: string;
+    amount: number;
+}
+
+export interface DiscountReport {
+    totalDiscountAmount: number;
+    grossRevenue: number;
+    discountToRevenuePercent: number;
+    discountedPaymentCount: number;
+    noteFilledPercent: number;
+    userBreakdown: DiscountUserRow[];
+    percentDistribution: DiscountBucket[];
+    cancelledOrders: CancelledOrderRow[];
+}
+
+export interface TaxRateRow {
+    taxRatePercent: number;
+    matrah: number;
+    tax: number;
+    total: number;
+}
+
+export interface TaxReport {
+    rates: TaxRateRow[];
+    totalMatrah: number;
+    totalTax: number;
+    totalAmount: number;
+}

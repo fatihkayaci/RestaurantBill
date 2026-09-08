@@ -25,7 +25,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
     public async Task<Result<bool>> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
     {
         Order? order = await _db.Orders
-            .Include(o => o.OrderItems).ThenInclude(i => i.Product)
+            .Include(o => o.OrderItems).ThenInclude(i => i.Product).ThenInclude(p => p.Category)
             .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
         if (order is null)
             return Result<bool>.Failure("Böyle bir sipariş bulunamadı.");
@@ -94,6 +94,15 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
             Payment payment = Payment.Create(order.Id, register.Id, groupNetTotal, groupMatrah, groupTaxAmount, request.PaymentMethod, groupItemCount,
                 groupDiscount, request.DiscountPercent, request.DiscountNote, _currentUserService.UserId, shift.Id);
             _db.Payments.Add(payment);
+
+            foreach (var (item, quantity) in group)
+            {
+                PaymentLineItem lineItem = PaymentLineItem.Create(
+                    payment, item.ProductId, item.Product?.Name ?? string.Empty,
+                    item.Product?.CategoryId ?? Guid.Empty, item.Product?.Category?.Name ?? string.Empty,
+                    item.UnitPrice, quantity, item.TaxRate);
+                _db.PaymentLineItems.Add(lineItem);
+            }
         }
 
         foreach (var (item, quantity) in paidItems)
