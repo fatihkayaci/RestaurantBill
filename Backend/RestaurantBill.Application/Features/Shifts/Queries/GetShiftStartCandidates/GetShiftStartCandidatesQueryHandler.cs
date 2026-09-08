@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Shared;
 
@@ -27,24 +28,28 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
             .AsNoTracking()
             .Where(r => r.BranchId == restaurantId && r.Status == CashRegisterStatus.Open)
             .ToListAsync(cancellationToken);
-        var shifts = await _db.Shifts
+
+        // Vardiya artık kişiye değil kasaya ait: admin bir kasada günü başlatmış olabilir,
+        // bu yüzden kasiyerin kendi açtığı bir vardiyası olsa da tüm açık kasalar listelenir
+        // ki zaten açık olan bir kasaya (sayım yapmadan) katılabilsin.
+        var openShiftByRegisterId = await _db.Shifts
             .AsNoTracking()
-            .Where(s => s.BranchId == restaurantId)
-            .ToListAsync(cancellationToken);
-
-        bool userHasOpenShift = shifts.Any(s => s.OpenedByUserId == _currentUser.UserId && s.Status == ShiftStatus.Open);
-        if (userHasOpenShift)
-            return Result<List<ShiftStartCandidateDto>>.Success(new List<ShiftStartCandidateDto>());
-
-        var openRegisterIds = shifts.Where(s => s.Status == ShiftStatus.Open).Select(s => s.CashRegisterId).ToHashSet();
+            .Where(s => s.BranchId == restaurantId && s.Status == ShiftStatus.Open)
+            .ToDictionaryAsync(s => s.CashRegisterId, cancellationToken);
 
         var candidates = registers
-            .Where(r => !openRegisterIds.Contains(r.Id))
-            .Select(r => new ShiftStartCandidateDto
+            .Select(r =>
             {
-                CashRegisterId = r.Id,
-                CashRegisterName = r.Name,
-                ExpectedOpeningBalance = r.Balance
+                openShiftByRegisterId.TryGetValue(r.Id, out Shift? openShift);
+                return new ShiftStartCandidateDto
+                {
+                    CashRegisterId = r.Id,
+                    CashRegisterName = r.Name,
+                    ExpectedOpeningBalance = r.Balance,
+                    HasOpenShift = openShift is not null,
+                    OpenShiftId = openShift?.Id,
+                    OpenedAt = openShift?.OpenedAt
+                };
             })
             .OrderBy(c => c.CashRegisterName)
             .ToList();

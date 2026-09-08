@@ -8,9 +8,20 @@ import HeaderClock from '@/components/layout/HeaderClock';
 import HeaderThemeToggle from '@/components/layout/HeaderThemeToggle';
 import HeaderLogoutButton from '@/components/layout/HeaderLogoutButton';
 import sophramLogo from '@/assets/sophram-logo-yan.svg';
+import { ActiveShiftProvider } from '@/features/cashier/context/ActiveShiftContext';
+import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 
 export default function CashierLayout() {
+    return (
+        <ActiveShiftProvider>
+            <CashierLayoutContent />
+        </ActiveShiftProvider>
+    );
+}
+
+function CashierLayoutContent() {
     const navigate = useNavigate();
+    const { setShift } = useActiveShift();
 
     const [restaurantName, setRestaurantName] = useState('');
     const [shiftGateResolved, setShiftGateResolved] = useState(false);
@@ -82,6 +93,7 @@ export default function CashierLayout() {
                     onShiftClosed={() => {
                         setShowEndShiftModal(false);
                         setShiftGateResolved(false);
+                        setShift(null);
                     }}
                 />
             )}

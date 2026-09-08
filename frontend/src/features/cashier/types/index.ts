@@ -23,6 +23,9 @@ export interface ShiftStartCandidate {
     cashRegisterId: string;
     cashRegisterName: string;
     expectedOpeningBalance: number;
+    hasOpenShift: boolean;
+    openShiftId?: string | null;
+    openedAt?: string | null;
 }
 
 export type PaymentMethod = 1 | 2 | 3;
@@ -97,6 +100,7 @@ export interface ShiftTransaction {
     taxAmount: number;
     itemCount: number;
     tableName: string;
+    paidByUserName: string;
     createdByUserName: string;
     details: ShiftTransactionDetail[];
 }

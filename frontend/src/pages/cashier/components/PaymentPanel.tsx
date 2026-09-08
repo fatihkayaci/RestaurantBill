@@ -3,10 +3,10 @@ import { X, ChevronDown, CreditCard, QrCode, Minus, Plus, Landmark } from 'lucid
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import { paymentService } from '@/features/cashier/api/paymentService';
-import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
 import { orderService } from '@/features/orders/api/orderService';
 import type { Order } from '@/features/orders/types';
-import type { CurrentShift, CashRegister } from '@/features/cashier/types';
+import type { Shift, ShiftStartCandidate } from '@/features/cashier/types';
+import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 
 type PaymentMethod = 'kart' | 'nakit' | 'qr';
 
@@ -51,12 +51,13 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         resetDiscount();
     }, [order]);
 
+    const { shift: cashierActiveShift } = useActiveShift();
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('kart');
-    const [activeShift, setActiveShift] = useState<CurrentShift | null>(null);
-    const [loadingShift, setLoadingShift] = useState(cashRegisterMode === 'shift');
-    const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
+    const [manualShift, setManualShift] = useState<Shift | null>(null);
+    const [cashRegisters, setCashRegisters] = useState<ShiftStartCandidate[]>([]);
     const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>('');
     const [loadingCashRegisters, setLoadingCashRegisters] = useState(cashRegisterMode === 'manual');
+    const [ensuringShift, setEnsuringShift] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
     const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
@@ -104,21 +105,34 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
     ).sort((a, b) => a.rate - b.rate);
 
     useEffect(() => {
-        if (cashRegisterMode === 'shift') {
-            shiftService.getMyCurrent()
-                .then(setActiveShift)
-                .catch(() => {})
-                .finally(() => setLoadingShift(false));
-        } else {
-            cashRegisterService.getCashRegisters()
-                .then(registers => setCashRegisters(registers.filter(r => r.status === 1)))
-                .catch(() => {})
-                .finally(() => setLoadingCashRegisters(false));
-        }
+        if (cashRegisterMode !== 'manual') return;
+        shiftService.getStartCandidates()
+            .then(setCashRegisters)
+            .catch(() => {})
+            .finally(() => setLoadingCashRegisters(false));
     }, [cashRegisterMode]);
 
-    const cashRegisterId = cashRegisterMode === 'shift' ? activeShift?.cashRegisterId : selectedCashRegisterId;
-    const canComplete = !submitting && !!cashRegisterId;
+    const activeShift = cashRegisterMode === 'shift' ? cashierActiveShift : manualShift;
+
+    const handleSelectRegister = async (register: ShiftStartCandidate) => {
+        setSelectedCashRegisterId(register.cashRegisterId);
+        setManualShift(null);
+        if (!register.hasOpenShift) {
+            toast.warning(`${register.cashRegisterName} kasasında gün henüz başlatılmamış, bu ödemeyle birlikte başlatılacak.`);
+        }
+        setEnsuringShift(true);
+        try {
+            const shift = await shiftService.ensureOpen(register.cashRegisterId);
+            setManualShift(shift);
+        } catch (err: any) {
+            toast.error(err.response?.data?.error ?? 'Bu kasada gün başlatılamadı.');
+        } finally {
+            setEnsuringShift(false);
+        }
+    };
+
+    const cashRegisterId = activeShift?.cashRegisterId;
+    const canComplete = !submitting && !ensuringShift && !!cashRegisterId;
 
     const handleComplete = async () => {
         if (!cashRegisterId) {
@@ -346,14 +360,14 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         </div>
 
                         {cashRegisterMode === 'shift' ? (
-                            !loadingShift && !activeShift ? (
-                                <p className="text-sm text-destructive">Açık bir vardiyanız yok, ödeme alınamaz.</p>
-                            ) : activeShift ? (
+                            activeShift ? (
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs text-muted-foreground">Kasa</span>
                                     <span className="text-sm font-medium text-foreground">{activeShift.cashRegisterName}</span>
                                 </div>
-                            ) : null
+                            ) : (
+                                <p className="text-sm text-destructive">Açık bir vardiyanız yok, ödeme alınamaz.</p>
+                            )
                         ) : (
                             <div>
                                 <p className="text-xs text-muted-foreground mb-2">Kasa Seç</p>
@@ -364,19 +378,26 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 ) : (
                                     <div className="grid grid-cols-2 gap-2">
                                         {cashRegisters.map(register => {
-                                            const isSelected = selectedCashRegisterId === String(register.id);
+                                            const isSelected = selectedCashRegisterId === register.cashRegisterId;
                                             return (
                                                 <button
-                                                    key={register.id}
-                                                    onClick={() => setSelectedCashRegisterId(String(register.id))}
-                                                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${isSelected ? 'border-rb-accent bg-rb-accent-bg ring-1 ring-rb-accent' : 'border-border bg-card hover:bg-muted/50'}`}
+                                                    key={register.cashRegisterId}
+                                                    onClick={() => handleSelectRegister(register)}
+                                                    disabled={ensuringShift}
+                                                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all disabled:opacity-60 disabled:cursor-not-allowed ${isSelected ? 'border-rb-accent bg-rb-accent-bg ring-1 ring-rb-accent' : 'border-border bg-card hover:bg-muted/50'}`}
                                                 >
                                                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-rb-accent text-white' : 'bg-muted'}`}>
                                                         <Landmark className="h-4 w-4" />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-rb-accent' : ''}`}>{register.name}</p>
-                                                        <p className="text-xs text-muted-foreground">{register.balance.toFixed(2)} ₺</p>
+                                                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-rb-accent' : ''}`}>{register.cashRegisterName}</p>
+                                                        <p className={`text-xs ${!register.hasOpenShift && !(isSelected && ensuringShift) ? 'text-rb-amber font-medium' : 'text-muted-foreground'}`}>
+                                                            {isSelected && ensuringShift
+                                                                ? 'Gün açılıyor...'
+                                                                : register.hasOpenShift
+                                                                    ? `${register.expectedOpeningBalance.toFixed(2)} ₺`
+                                                                    : 'Kapalı — gün başlatılacak'}
+                                                        </p>
                                                     </div>
                                                 </button>
                                             );
