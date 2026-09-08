@@ -68,7 +68,7 @@ export default function LoginPage() {
 
         } catch (error) {
             if (axios.isAxiosError(error)) {
-                toast.error(error.response?.data.error ?? "Giriş başarısız.");
+                toast.error(error.response?.data?.error ?? error.response?.data?.message ?? "Giriş başarısız.");
             } else {
                 console.log('Beklenmeyen hata:', error);
             }
@@ -110,7 +110,7 @@ export default function LoginPage() {
 
         } catch (error) {
             if (axios.isAxiosError(error)) {
-                toast.error(error.response?.data?.error ?? "Kayıt başarısız.");
+                toast.error(error.response?.data?.error ?? error.response?.data?.message ?? "Kayıt başarısız.");
             } else {
                 console.log('Beklenmeyen hata:', error);
             }

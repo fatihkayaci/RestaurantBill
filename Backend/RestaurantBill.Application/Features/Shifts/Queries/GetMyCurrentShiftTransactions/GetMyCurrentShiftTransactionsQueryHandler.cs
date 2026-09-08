@@ -31,13 +31,19 @@ public class GetMyCurrentShiftTransactionsQueryHandler : IRequestHandler<GetMyCu
         List<Payment> payments = await _db.Payments
             .AsNoTracking()
             .Include(p => p.Order).ThenInclude(o => o!.Table)
-            .Where(p => p.CashRegisterId == shift.CashRegisterId && p.CreatedAt >= shift.OpenedAt)
+            .Where(p => p.CashRegisterId == shift.CashRegisterId
+                && (p.ShiftId == shift.Id || (p.ShiftId == null && p.CreatedAt >= shift.OpenedAt)))
             .ToListAsync(cancellationToken);
 
         List<Guid> creatorIds = payments.Select(p => p.Order.CreatedUser).Distinct().ToList();
+        List<Guid> payerIds = payments.Where(p => p.UserId.HasValue).Select(p => p.UserId!.Value).Distinct().ToList();
         Dictionary<Guid, string> creatorNameById = await _db.Users
             .AsNoTracking()
             .Where(u => creatorIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+        Dictionary<Guid, string> payerNameById = await _db.Users
+            .AsNoTracking()
+            .Where(u => payerIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
         // One Payment row is created per tax rate per checkout, and an order can be paid off
@@ -73,6 +79,7 @@ public class GetMyCurrentShiftTransactionsQueryHandler : IRequestHandler<GetMyCu
                     ItemCount = g.Sum(p => p.ItemCount),
                     TableName = latest.Order?.Table?.Name ?? string.Empty,
                     CreatedByUserName = creatorNameById.GetValueOrDefault(latest.Order?.CreatedUser ?? Guid.Empty, string.Empty),
+                    PaidByUserName = latest.UserId.HasValue ? payerNameById.GetValueOrDefault(latest.UserId.Value, string.Empty) : string.Empty,
                     Details = details
                 };
             })

@@ -31,7 +31,8 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
         List<Payment> payments = await _db.Payments
             .AsNoTracking()
             .Include(p => p.Order)
-            .Where(p => p.CashRegisterId == shift.CashRegisterId && p.CreatedAt >= shift.OpenedAt)
+            .Where(p => p.CashRegisterId == shift.CashRegisterId
+                && (p.ShiftId == shift.Id || (p.ShiftId == null && p.CreatedAt >= shift.OpenedAt)))
             .ToListAsync(cancellationToken);
 
         var breakdown = payments

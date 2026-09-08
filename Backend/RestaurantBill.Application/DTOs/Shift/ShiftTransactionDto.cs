@@ -11,6 +11,7 @@ public class ShiftTransactionDto
     public decimal TaxAmount { get; set; }
     public int ItemCount { get; set; }
     public string TableName { get; set; } = string.Empty;
+    public string PaidByUserName { get; set; } = string.Empty;
     public string CreatedByUserName { get; set; } = string.Empty;
     public List<ShiftTransactionDetailDto> Details { get; set; } = new();
 }
