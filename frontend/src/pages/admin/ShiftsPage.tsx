@@ -9,6 +9,7 @@ import type { Shift } from '@/features/cashier/types';
 import { cn } from '@/lib/utils';
 import CloseShiftModal from './components/CloseShiftModal';
 import LateCountModal from './components/LateCountModal';
+import ShiftDetailModal from './components/ShiftDetailModal';
 
 type ReviewTarget = { shift: Shift; type: 'opening' | 'closing'; action: 'approve' | 'reject' };
 
@@ -27,6 +28,7 @@ export default function ShiftsPage() {
     const [submitting, setSubmitting] = useState(false);
     const [closeTarget, setCloseTarget] = useState<Shift | null>(null);
     const [lateCountTarget, setLateCountTarget] = useState<Shift | null>(null);
+    const [detailTarget, setDetailTarget] = useState<Shift | null>(null);
 
     const refresh = async () => {
         try {
@@ -285,6 +287,12 @@ export default function ShiftsPage() {
                                                         Sayım Gir
                                                     </button>
                                                 )}
+                                                <button
+                                                    onClick={() => setDetailTarget(s)}
+                                                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                                                >
+                                                    Detay
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -356,6 +364,13 @@ export default function ShiftsPage() {
                     shift={lateCountTarget}
                     onClose={() => setLateCountTarget(null)}
                     onCounted={() => { setLateCountTarget(null); refresh(); }}
+                />
+            )}
+
+            {detailTarget && (
+                <ShiftDetailModal
+                    shift={detailTarget}
+                    onClose={() => setDetailTarget(null)}
                 />
             )}
         </div>

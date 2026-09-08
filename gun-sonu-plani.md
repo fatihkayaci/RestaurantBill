@@ -6,6 +6,15 @@ değişiklikleri sıralar.
 
 ---
 
+## Uygulama Durumu — Tamamlandı
+
+Adım 1-4'ün tamamı `feat/shift-payment-user-tracking` branch'inde uygulandı. Sapmalar ve
+kararlar için aşağıdaki "Açık Sorular" bölümüne bakın; en önemlisi Adım 3.3'teki "tek
+sayım iki vardiyaya birden uygulanır" tasarımı yerine daha basit ve zamana dayanıksız
+(timing-independent) bir mekanizma seçildi — detay ilgili maddede.
+
+---
+
 ## 0. Alınan Kararlar
 
 | Konu | Karar |
@@ -498,8 +507,7 @@ Adım 1 + 2 bittiğinde kullanılabilir bir sürüm çıkar. Adım 3 ve 4 üstü
 | Adım | Migration | İçerik |
 |---|---|---|
 | 1 | `AddPaymentUserAndShift` | `Payment.UserId`, `Payment.ShiftId` |
-| 3 | `AddBranchDayEndTime` | `Branch.DayEndTime`, `Branch.TimeZoneId` |
-| 3 | `AddShiftCountStatus` | `Shift.CountStatus`, `Shift.ClosedBySystem` |
+| 3 | `AddBranchDayEndTimeAndShiftCountStatus` | `Branch.DayEndTime`, `Branch.TimeZoneId`, `Shift.CountStatus`, `Shift.ClosedBySystem` (EF tek diff olarak birleştirdi, iki ayrı migration'a bölünmedi) |
 
 ---
 
@@ -512,8 +520,8 @@ Adım 1 + 2 bittiğinde kullanılabilir bir sürüm çıkar. Adım 3 ve 4 üstü
 4. Kart ödemesi alınır → `CashRegister.Balance` **değişmez**, gün sonu raporunda görünür.
 5. Gün sonu saati gelir → vardiya `NotCounted` kapanır, yeni vardiya açılmaz.
 6. Sunucu gece kapalı, sabah açılır → kaçan kapanış ilk tikte yakalanır.
-7. Ertesi gün kasa seçilir → "önceki gün sayılmadı" ekranı çıkar, tek sayım iki vardiyaya
-   uygulanır.
+7. ~~Ertesi gün kasa seçilir → "önceki gün sayılmadı" ekranı çıkar, tek sayım iki vardiyaya
+   uygulanır.~~ **Uygulanan tasarım farklı** — bkz. Açık Sorular.
 8. Sayım atlanır → vardiya `NotCounted` kalır, `ShiftsPage`'de rozet görünür.
 9. Sonradan sayım girilir → fark hesaplanır, kasa düzeltilir, onay/ret akışı çalışır.
 10. Kapalı kasada gün başlatılamaz.
@@ -521,11 +529,26 @@ Adım 1 + 2 bittiğinde kullanılabilir bir sürüm çıkar. Adım 3 ve 4 üstü
 
 ---
 
-## Açık Sorular
+## Açık Sorular — Kararlar
 
-- [ ] `Shift.LinkedClosingShiftId` alanı hâlâ var mı? Varsa Adım 3.3'teki
-      "önceki vardiya ↔ sonraki vardiya" bağı için kullanılsın.
-- [ ] Z raporu snapshot'ı Adım 4'e mi dahil edilsin, sonraya mı bırakılsın?
-- [ ] `TimeZoneId` şube bazlı mı, config'te sabit mi?
-- [ ] Eski `Payment` kayıtları için `ShiftId` geriye dönük doldurulacak mı,
-      yoksa `null` bırakılıp fallback mi kullanılacak?
+- [x] `Shift.LinkedClosingShiftId` alanı hâlâ var mı? — **Hayır.** `AddShiftLinkedClosingShift`
+      migration'ıyla eklenmiş ama `ReworkShiftDifferenceReview` migration'ında kaldırılmış;
+      güncel entity'de yok. "Önceki vardiya ↔ sonraki vardiya" bağı için kullanılamadı.
+- [x] "Tek sayım iki vardiyaya birden uygulanır" mekanizması (3.3) — **Uygulanmadı, yerine
+      daha basit bir tasarım seçildi.** Yeni vardiya (`EnsureShiftOpenCommand`) her zaman
+      `register.Balance`'tan, sayım beklemeden açılıyor. Önceki vardiyanın sayımı ayrı ve
+      bağımsız bir adım: `ApplyLateCountCommand`, farkı **mevcut kasa bakiyesine bir delta
+      (düzeltme) olarak** uyguluyor (`CashRegister.ApplyShiftDifference`), tıpkı normal
+      kapanıştaki gibi. Bu yüzden ne zaman girilirse girilsin doğru sonucu verir — aradan
+      kaç vardiya/işlem geçmiş olursa olsun, düzeltme miktarı değişmez. Kullanıcı deneyimi
+      olarak: kasiyer tarafında `ShiftStartGate`'te "⚠ önceki gün sayılmadı" bilgi notu
+      çıkıyor (bloklamıyor), asıl sayım girişi admin'in Vardiyalar/Gün Sonu sayfasındaki
+      "Sayım Gir" butonundan yapılıyor.
+- [x] Z raporu snapshot'ı — **Sonraya bırakıldı.** Adım 4 canlı hesapla (`GetShiftSummaryQuery`,
+      açık/kapalı fark etmeksizin çalışıyor) uygulandı. Sonradan iptal/iade olursa geçmiş
+      bir Z raporu değişebilir; bu kabul edilen bir risk.
+- [x] `TimeZoneId` — **Şube bazlı** (`Branch.TimeZoneId`), Owner/Admin panelden düzenlenebilir
+      (varsayılan `Europe/Istanbul`).
+- [x] Eski `Payment` kayıtları için `ShiftId` — **Geriye dönük doldurulmadı.** `null` kalıyor,
+      sorgular `p.ShiftId == shift.Id || (p.ShiftId == null && p.CreatedAt aralığı)` fallback'i
+      kullanıyor. İleride gerekirse ayrı bir backfill migration'ı eklenebilir.
