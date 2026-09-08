@@ -15,6 +15,8 @@ namespace RestaurantBill.Infrastructure.Extensions
             services.AddScoped<ISmsSender, SmsSender>();
             services.AddScoped<IEmailSender, EmailSender>();
             services.AddScoped<IShiftBalanceCalculator, ShiftBalanceCalculator>();
+            services.AddScoped<IBusinessDayResolver, BusinessDayResolver>();
+            services.AddScoped<IReportScopeResolver, ReportScopeResolver>();
 
             services.Configure<BunnyStorageOptions>(configuration.GetSection(BunnyStorageOptions.SectionName));
             services.AddHttpClient<IImageStorageService, BunnyStorageService>();
