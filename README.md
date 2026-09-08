@@ -314,6 +314,10 @@ DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 JWT_SECRET_KEY=your_long_random_secret_key
 VITE_API_URL=http://localhost:8080
+
+# Optional — defaults to localhost if unset. Set these when deploying to a real domain.
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost,https://your-domain.com
+CORS_ALLOWED_ORIGIN_SUFFIX=.your-domain.com
 ```
 
 #### 2. Build and start everything

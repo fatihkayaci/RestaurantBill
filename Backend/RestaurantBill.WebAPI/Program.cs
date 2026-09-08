@@ -20,7 +20,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddSwaggerWithJwt()
                 .AddDatabase(builder.Configuration)
                 .AddIdentityWithJwt(builder.Configuration)
-                .AddCorsPolicy()
+                .AddCorsPolicy(builder.Configuration)
                 .AddMediatRWithBehaviors()
                 .AddInfrastructureServices(builder.Configuration)
                 .AddCurrentUserService()
