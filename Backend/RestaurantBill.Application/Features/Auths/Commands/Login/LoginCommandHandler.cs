@@ -2,6 +2,8 @@ using RestaurantBill.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Enums;
@@ -15,13 +17,20 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly ITenantResolver _tenantResolver;
+        private readonly RefreshTokenSettings _refreshTokenSettings;
 
-        public LoginCommandHandler(IAppDbContext db, IPasswordHasher<User> passwordHasher, IJwtTokenGenerator jwtTokenGenerator, ITenantResolver tenantResolver)
+        public LoginCommandHandler(
+            IAppDbContext db,
+            IPasswordHasher<User> passwordHasher,
+            IJwtTokenGenerator jwtTokenGenerator,
+            ITenantResolver tenantResolver,
+            IConfiguration configuration)
         {
             _db = db;
             _passwordHasher = passwordHasher;
             _jwtTokenGenerator = jwtTokenGenerator;
             _tenantResolver = tenantResolver;
+            _refreshTokenSettings = RefreshTokenSettings.FromConfiguration(configuration);
         }
 
         public async Task<Result<LoginResponseDto>> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -75,10 +84,17 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
             var single = accessible.Values.First();
 
+            (string rawRefreshToken, DateTime refreshExpiresAt) = CreateRefreshToken(
+                emailUser.Id, single.Company.Id, UserRole.Owner, request.RememberMe);
+            await _db.SaveChangesAsync(cancellationToken);
+
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
                 Token = _jwtTokenGenerator.GenerateToken(emailUser, single.Company.Id, single.Role, single.UserName),
-                NeedsSlugSetup = string.IsNullOrWhiteSpace(single.Company.Slug)
+                NeedsSlugSetup = string.IsNullOrWhiteSpace(single.Company.Slug),
+                RefreshToken = rawRefreshToken,
+                RefreshTokenExpiresAt = refreshExpiresAt,
+                RememberMe = request.RememberMe
             });
         }
 
@@ -126,11 +142,21 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 nameof(User),
                 membership.UserId);
             _db.AuditLogs.Add(log);
+
+            // "Beni hatırla" yalnızca Owner/Admin için geçerli — Waiter/Kitchen/Cashier ortak cihazlarda çalışıyor,
+            // 30 günlük oturum bir sonraki vardiyadaki kişinin başkasının kimliğiyle işlem yapmasına yol açar.
+            bool effectiveRememberMe = request.RememberMe && (membership.Role == UserRole.Owner || membership.Role == UserRole.Admin);
+
+            (string rawRefreshToken, DateTime refreshExpiresAt) = CreateRefreshToken(
+                membership.UserId, membership.BranchId, membership.Role, effectiveRememberMe);
             await _db.SaveChangesAsync(cancellationToken);
 
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
-                Token = _jwtTokenGenerator.GenerateToken(membership.User, membership.BranchId, membership.Role, membership.UserName)
+                Token = _jwtTokenGenerator.GenerateToken(membership.User, membership.BranchId, membership.Role, membership.UserName),
+                RefreshToken = rawRefreshToken,
+                RefreshTokenExpiresAt = refreshExpiresAt,
+                RememberMe = effectiveRememberMe
             });
         }
 
@@ -151,10 +177,32 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             if (company.OwnerUserId != user.Id)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
+            (string rawRefreshToken, DateTime refreshExpiresAt) = CreateRefreshToken(
+                user.Id, company.Id, UserRole.Owner, request.RememberMe);
+            await _db.SaveChangesAsync(cancellationToken);
+
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
-                Token = _jwtTokenGenerator.GenerateToken(user, company.Id, UserRole.Owner, user.Email!)
+                Token = _jwtTokenGenerator.GenerateToken(user, company.Id, UserRole.Owner, user.Email!),
+                RefreshToken = rawRefreshToken,
+                RefreshTokenExpiresAt = refreshExpiresAt,
+                RememberMe = request.RememberMe
             });
+        }
+
+        private (string RawToken, DateTime ExpiresAt) CreateRefreshToken(
+            Guid userId, Guid branchId, UserRole role, bool rememberMe)
+        {
+            DateTime absoluteExpiresAt = DateTime.UtcNow.Add(_refreshTokenSettings.LifetimeFor(rememberMe));
+            string rawToken = RefreshTokenHasher.GenerateRawToken();
+            string tokenHash = RefreshTokenHasher.Hash(rawToken);
+
+            RefreshToken refreshToken = RefreshToken.Create(
+                userId, branchId, role, tokenHash, absoluteExpiresAt, absoluteExpiresAt, rememberMe, null, null);
+
+            _db.RefreshTokens.Add(refreshToken);
+
+            return (rawToken, absoluteExpiresAt);
         }
     }
 }

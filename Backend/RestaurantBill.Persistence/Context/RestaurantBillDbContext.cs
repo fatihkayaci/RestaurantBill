@@ -32,6 +32,7 @@ public class RestaurantBillDbContext : DbContext, IAppDbContext
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<Shift> Shifts { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

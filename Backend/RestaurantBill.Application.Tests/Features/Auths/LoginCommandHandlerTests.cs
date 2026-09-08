@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using RestaurantBill.Application.Features.Auths.Commands.Login;
 using RestaurantBill.Application.Tests.Fakes;
 using RestaurantBill.Application.Tests.Infrastructure;
@@ -20,7 +21,7 @@ public class LoginCommandHandlerTests : ApplicationTestBase
     }
 
     private LoginCommandHandler CreateHandler(FakeTenantResolver tenantResolver)
-        => new(Db, new FakePasswordHasher(), new FakeJwtTokenGenerator(), tenantResolver);
+        => new(Db, new FakePasswordHasher(), new FakeJwtTokenGenerator(), tenantResolver, new ConfigurationBuilder().Build());
 
     [Fact]
     public async Task Handle_OwnerLoginWithoutSlug_UnverifiedPhone_ReturnsFullTokenWithoutFlag()
