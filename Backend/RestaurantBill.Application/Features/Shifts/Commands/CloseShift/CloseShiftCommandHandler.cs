@@ -11,11 +11,13 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly IShiftBalanceCalculator _balanceCalculator;
 
-    public CloseShiftCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
+    public CloseShiftCommandHandler(IAppDbContext db, ICurrentUserService currentUser, IShiftBalanceCalculator balanceCalculator)
     {
         _db = db;
         _currentUser = currentUser;
+        _balanceCalculator = balanceCalculator;
     }
 
     public async Task<Result> Handle(CloseShiftCommand request, CancellationToken cancellationToken)
@@ -28,17 +30,7 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
             .FirstOrDefaultAsync(c => c.Id == shift.CashRegisterId, cancellationToken);
         if (register is null) return Result.Failure("Kasa bulunamadı.");
 
-        List<CashTransaction> transactions = await _db.CashTransactions
-            .Where(t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt
-                && t.Id != shift.OpeningAdjustmentTransactionId)
-            .ToListAsync(cancellationToken);
-
-        decimal expectedClosingBalance = shift.OpeningBalance;
-        foreach (var transaction in transactions)
-        {
-            bool isOutgoing = transaction.Type is CashTransactionType.Out or CashTransactionType.TransferOut or CashTransactionType.AdjustmentOut;
-            expectedClosingBalance += isOutgoing ? -transaction.Amount : transaction.Amount;
-        }
+        decimal expectedClosingBalance = await _balanceCalculator.CalculateExpectedClosingBalanceAsync(shift, cancellationToken);
 
         shift.Close(_currentUser.UserId, expectedClosingBalance, request.CountedClosingBalance, request.Note);
 

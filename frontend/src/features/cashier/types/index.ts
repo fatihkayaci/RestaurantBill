@@ -23,6 +23,10 @@ export interface ShiftStartCandidate {
     cashRegisterId: string;
     cashRegisterName: string;
     expectedOpeningBalance: number;
+    hasOpenShift: boolean;
+    openShiftId?: string | null;
+    openedAt?: string | null;
+    previousShiftUncounted: boolean;
 }
 
 export type PaymentMethod = 1 | 2 | 3;
@@ -52,6 +56,8 @@ export interface CurrentShift {
 
 export type ShiftStatus = 1 | 2;
 
+export type ShiftCountStatus = 1 | 2; // Counted | NotCounted
+
 export type DifferenceReviewStatus = 1 | 2 | 3; // Pending | Approved | Rejected
 
 export interface Shift {
@@ -79,6 +85,8 @@ export interface Shift {
     closedAt?: string | null;
     status: ShiftStatus;
     note?: string | null;
+    countStatus: ShiftCountStatus;
+    closedBySystem: boolean;
 }
 
 export interface ShiftTransactionDetail {
@@ -97,6 +105,7 @@ export interface ShiftTransaction {
     taxAmount: number;
     itemCount: number;
     tableName: string;
+    paidByUserName: string;
     createdByUserName: string;
     details: ShiftTransactionDetail[];
 }

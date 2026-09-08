@@ -30,6 +30,10 @@ export default function BranchesPage() {
     const [infoErrors, setInfoErrors] = useState<Record<string, string>>({});
     const [infoSaving, setInfoSaving] = useState(false);
 
+    const [dayEndTimeInput, setDayEndTimeInput] = useState('00:00');
+    const [timeZoneIdInput, setTimeZoneIdInput] = useState('Europe/Istanbul');
+    const [dayEndSaving, setDayEndSaving] = useState(false);
+
     const [provinces, setProvinces] = useState<Province[]>([]);
     const districtsFor = (cityName: string) => provinces.find(p => p.name === cityName)?.districts ?? [];
 
@@ -63,6 +67,27 @@ export default function BranchesPage() {
             taxRate: String(branch.taxRate),
         });
         setInfoErrors({});
+        setDayEndTimeInput(branch.dayEndTime?.slice(0, 5) || '00:00');
+        setTimeZoneIdInput(branch.timeZoneId || 'Europe/Istanbul');
+    };
+
+    const handleDayEndSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editTarget) return;
+        setDayEndSaving(true);
+        try {
+            const dayEndTime = `${dayEndTimeInput}:00`;
+            await branchService.updateDayEndSettings(editTarget.id, dayEndTime, timeZoneIdInput);
+            setEditTarget(prev => prev ? { ...prev, dayEndTime, timeZoneId: timeZoneIdInput } : null);
+            loadBranches();
+            toast.success('Gün sonu ayarları güncellendi.');
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? 'Gün sonu ayarları güncellenemedi.');
+            }
+        } finally {
+            setDayEndSaving(false);
+        }
     };
 
     const handleInfoSubmit = async (e: React.FormEvent) => {
@@ -450,6 +475,44 @@ export default function BranchesPage() {
                                     className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 disabled:opacity-60 text-rb-gold-foreground font-medium transition-colors"
                                 >
                                     {infoSaving ? 'Kaydediliyor...' : 'Şube Bilgilerini Kaydet'}
+                                </button>
+                            </div>
+                        </form>
+
+                        <form onSubmit={handleDayEndSubmit} className="px-6 pb-6 pt-4 mt-2 border-t border-border space-y-3">
+                            <p className={labelClass}>Gün Sonu Ayarları</p>
+                            <p className="text-xs text-muted-foreground -mt-2">
+                                Şubede o gün açık kalan vardiyalar bu saatte otomatik olarak (sayım istenmeden) kapatılır.
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelClass}>Gün Sonu Saati</label>
+                                    <input
+                                        type="time"
+                                        className={inputClass}
+                                        value={dayEndTimeInput}
+                                        onChange={e => setDayEndTimeInput(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Saat Dilimi</label>
+                                    <select
+                                        className={inputClass}
+                                        value={timeZoneIdInput}
+                                        onChange={e => setTimeZoneIdInput(e.target.value)}
+                                    >
+                                        <option value="Europe/Istanbul">İstanbul (UTC+3)</option>
+                                        <option value="UTC">UTC</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex justify-end">
+                                <button
+                                    type="submit"
+                                    disabled={dayEndSaving}
+                                    className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 disabled:opacity-60 text-rb-gold-foreground font-medium transition-colors"
+                                >
+                                    {dayEndSaving ? 'Kaydediliyor...' : 'Gün Sonu Ayarlarını Kaydet'}
                                 </button>
                             </div>
                         </form>

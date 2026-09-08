@@ -14,11 +14,13 @@ namespace RestaurantBill.Infrastructure.Extensions
             services.AddScoped<ICashierNotificationService, CashierNotificationService>();
             services.AddScoped<ISmsSender, SmsSender>();
             services.AddScoped<IEmailSender, EmailSender>();
+            services.AddScoped<IShiftBalanceCalculator, ShiftBalanceCalculator>();
 
             services.Configure<BunnyStorageOptions>(configuration.GetSection(BunnyStorageOptions.SectionName));
             services.AddHttpClient<IImageStorageService, BunnyStorageService>();
 
             services.AddHostedService<RefreshTokenCleanupService>();
+            services.AddHostedService<DayEndCloseService>();
 
             return services;
         }

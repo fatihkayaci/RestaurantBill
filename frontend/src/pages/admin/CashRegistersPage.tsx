@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Wallet } from 'lucide-react';
+import { X, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Wallet, PlayCircle, StopCircle } from 'lucide-react';
 import axios from 'axios';
-import type { CashRegister, CashRegisterStatus } from '@/features/cashier/types';
+import { toast } from 'sonner';
+import type { CashRegister, CashRegisterStatus, ShiftStartCandidate } from '@/features/cashier/types';
 import { cashRegisterService } from '@/features/cashier/api/cashRegisterService';
+import { shiftService } from '@/features/cashier/api/shiftService';
 import { cn } from '@/lib/utils';
+import CloseShiftModal from './components/CloseShiftModal';
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function CashRegisters() {
     const [registers, setRegisters] = useState<CashRegister[]>([]);
+    const [shiftCandidates, setShiftCandidates] = useState<ShiftStartCandidate[]>([]);
+    const [startingShiftId, setStartingShiftId] = useState<string | null>(null);
+    const [closeTarget, setCloseTarget] = useState<{ id: string; cashRegisterName: string } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<CashRegister | null>(null);
     const [name, setName] = useState('');
@@ -36,10 +42,29 @@ export default function CashRegisters() {
 
     const refresh = async () => {
         try {
-            const data = await cashRegisterService.getCashRegisters();
+            const [data, candidates] = await Promise.all([
+                cashRegisterService.getCashRegisters(),
+                shiftService.getStartCandidates(),
+            ]);
             setRegisters(data);
+            setShiftCandidates(candidates);
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    const handleStartShift = async (register: CashRegister) => {
+        setStartingShiftId(register.id);
+        try {
+            await shiftService.ensureOpen(register.id);
+            toast.success(`${register.name} kasasında gün başlatıldı.`);
+            await refresh();
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? 'Gün başlatılamadı.');
+            }
+        } finally {
+            setStartingShiftId(null);
         }
     };
 
@@ -248,14 +273,45 @@ export default function CashRegisters() {
 
                         {/* Status + actions */}
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                            <span className={cn(
-                                "text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded",
-                                r.status === 1
-                                    ? "bg-rb-green-bg text-rb-green"
-                                    : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                            )}>
-                                {r.status === 1 ? 'Açık' : 'Kapalı'}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={cn(
+                                    "text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded",
+                                    r.status === 1
+                                        ? "bg-rb-green-bg text-rb-green"
+                                        : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                                )}>
+                                    {r.status === 1 ? 'Açık' : 'Kapalı'}
+                                </span>
+                                {r.status === 1 && (() => {
+                                    const candidate = shiftCandidates.find(c => c.cashRegisterId === r.id);
+                                    if (candidate?.hasOpenShift) {
+                                        return (
+                                            <>
+                                                <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded bg-rb-accent-bg text-rb-accent">
+                                                    Gün Açık
+                                                </span>
+                                                <button
+                                                    onClick={() => setCloseTarget({ id: candidate.openShiftId!, cashRegisterName: candidate.cashRegisterName })}
+                                                    className="flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded border border-border text-muted-foreground hover:text-rb-red hover:border-rb-red transition-colors"
+                                                >
+                                                    <StopCircle className="h-3 w-3" />
+                                                    Günü Kapat
+                                                </button>
+                                            </>
+                                        );
+                                    }
+                                    return (
+                                        <button
+                                            disabled={startingShiftId === r.id}
+                                            onClick={() => handleStartShift(r)}
+                                            className="flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded border border-border text-muted-foreground hover:text-rb-accent hover:border-rb-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <PlayCircle className="h-3 w-3" />
+                                            {startingShiftId === r.id ? 'Başlatılıyor...' : 'Günü Başlat'}
+                                        </button>
+                                    );
+                                })()}
+                            </div>
                             <div className="flex items-center gap-1.5 flex-wrap">
                                 <button
                                     disabled={r.status !== 1}
@@ -493,6 +549,14 @@ export default function CashRegisters() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {closeTarget && (
+                <CloseShiftModal
+                    shift={closeTarget}
+                    onClose={() => setCloseTarget(null)}
+                    onClosed={() => { setCloseTarget(null); refresh(); }}
+                />
+            )}
         </div>
     );
 }

@@ -11,6 +11,7 @@ import TransactionDetailPanel from './components/TransactionDetailPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 import { createHubConnection } from '@/lib/signalrConnection';
+import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 
 const OrderStatus = { Served: 5 } as const;
 
@@ -35,6 +36,7 @@ function formatShortName(fullName: string): string {
 }
 
 export default function CashierDashboardPage() {
+    const { shift } = useActiveShift();
     const [servedOrders, setServedOrders] = useState<Order[]>([]);
     const [tables, setTables] = useState<Table[]>([]);
     const [shiftTransactions, setShiftTransactions] = useState<ShiftTransaction[]>([]);
@@ -50,10 +52,11 @@ export default function CashierDashboardPage() {
     }, []);
 
     const refreshTransactions = () => {
-        shiftService.getMyCurrentTransactions()
+        if (!shift) return;
+        shiftService.getShiftTransactions(shift.id)
             .then(data => setShiftTransactions(data.slice(0, 10)))
             .catch(() => {});
-        shiftService.getMyCurrentSummary()
+        shiftService.getShiftSummary(shift.id)
             .then(setShiftSummary)
             .catch(() => {});
     };
@@ -66,7 +69,8 @@ export default function CashierDashboardPage() {
             .then(setTables)
             .catch(() => {});
         refreshTransactions();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shift]);
 
     useEffect(() => {
         // Keep the open detail panel in sync with the refreshed list (e.g. after a SignalR update).

@@ -28,4 +28,6 @@ public class ShiftDto
     public DateTime? ClosedAt { get; set; }
     public ShiftStatus Status { get; set; }
     public string? Note { get; set; }
+    public ShiftCountStatus CountStatus { get; set; }
+    public bool ClosedBySystem { get; set; }
 }

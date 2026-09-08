@@ -3,32 +3,53 @@ import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { ShiftStartCandidate } from '@/features/cashier/types';
 import { Button } from '@/components/ui/button';
+import { useActiveShift, getStoredCashRegisterId, clearStoredCashRegisterId } from '@/features/cashier/context/activeShiftStore';
 
 interface ShiftStartGateProps {
     onResolved: () => void;
 }
 
 export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
+    const { setShift } = useActiveShift();
     const [loading, setLoading] = useState(true);
     const [candidates, setCandidates] = useState<ShiftStartCandidate[]>([]);
     const [selected, setSelected] = useState<ShiftStartCandidate | null>(null);
     const [reportingDifference, setReportingDifference] = useState(false);
     const [countedAmount, setCountedAmount] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [joiningId, setJoiningId] = useState<string | null>(null);
 
     useEffect(() => {
-        shiftService.getStartCandidates()
-            .then(data => {
-                setCandidates(data);
-                if (data.length === 0) {
-                    onResolved();
-                } else if (data.length === 1) {
-                    setSelected(data[0]);
-                }
+        let cancelled = false;
+
+        const loadCandidates = () => {
+            shiftService.getStartCandidates()
+                .then(data => {
+                    if (cancelled) return;
+                    setCandidates(data);
+                    if (data.length === 1 && !data[0].hasOpenShift) setSelected(data[0]);
+                })
+                .catch(() => toast.error('Kasa bilgileri alınamadı.'))
+                .finally(() => { if (!cancelled) setLoading(false); });
+        };
+
+        const storedId = getStoredCashRegisterId();
+        if (!storedId) { loadCandidates(); return () => { cancelled = true; }; }
+
+        shiftService.getCurrent(storedId)
+            .then(shift => {
+                if (cancelled) return;
+                setShift(shift);
+                onResolved();
             })
-            .catch(() => toast.error('Kasa bilgileri alınamadı.'))
-            .finally(() => setLoading(false));
-    }, [onResolved]);
+            .catch(() => {
+                clearStoredCashRegisterId();
+                if (!cancelled) loadCandidates();
+            });
+
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleSelect = (candidate: ShiftStartCandidate) => {
         setSelected(candidate);
@@ -36,11 +57,27 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
         setCountedAmount('');
     };
 
+    const joinExistingShift = async (candidate: ShiftStartCandidate) => {
+        setJoiningId(candidate.cashRegisterId);
+        try {
+            const shift = await shiftService.getCurrent(candidate.cashRegisterId);
+            setShift(shift);
+            toast.success(`${candidate.cashRegisterName} kasasındaki güne katıldınız.`);
+            onResolved();
+        } catch (err: any) {
+            toast.error(err.response?.data?.error ?? 'Güne katılınamadı.');
+        } finally {
+            setJoiningId(null);
+        }
+    };
+
     const submitOpen = async (openingBalance: number) => {
         if (!selected) return;
         setSubmitting(true);
         try {
             await shiftService.openShift(selected.cashRegisterId, openingBalance);
+            const shift = await shiftService.getCurrent(selected.cashRegisterId);
+            setShift(shift);
             toast.success(`${selected.cashRegisterName} kasasında vardiya açıldı.`);
             onResolved();
         } catch (err: any) {
@@ -80,20 +117,45 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
                     <>
                         <h2 className="font-serif text-lg font-bold text-foreground mb-1">Kasa Seçin</h2>
                         <p className="text-sm text-muted-foreground mb-4">
-                            Vardiyası başlamamış birden fazla kasa var. Devam etmek için birini seçin.
+                            Devam etmek için çalışacağınız kasayı seçin.
                         </p>
-                        <div className="flex flex-col gap-2">
-                            {candidates.map(c => (
-                                <button
-                                    key={c.cashRegisterId}
-                                    onClick={() => handleSelect(c)}
-                                    className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-left hover:bg-muted transition-colors"
-                                >
-                                    <span className="font-medium text-foreground">{c.cashRegisterName}</span>
-                                    <span className="text-sm text-muted-foreground font-serif">₺{c.expectedOpeningBalance.toFixed(2)}</span>
-                                </button>
-                            ))}
-                        </div>
+                        {candidates.length === 0 ? (
+                            <p className="text-sm text-destructive">
+                                Açık bir kasa bulunamadı. Lütfen yöneticinize başvurun.
+                            </p>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {candidates.map(c => (
+                                    <button
+                                        key={c.cashRegisterId}
+                                        onClick={() => c.hasOpenShift ? joinExistingShift(c) : handleSelect(c)}
+                                        disabled={joiningId !== null}
+                                        className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-left hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <div>
+                                            <span className="font-medium text-foreground block">{c.cashRegisterName}</span>
+                                            <span className={`text-xs font-semibold ${c.hasOpenShift ? 'text-rb-green' : 'text-muted-foreground'}`}>
+                                                {c.hasOpenShift
+                                                    ? `Gün açık${c.openedAt ? ` · ${new Date(c.openedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}'den beri` : ''}`
+                                                    : 'Vardiya başlatılmamış'}
+                                            </span>
+                                            {c.previousShiftUncounted && (
+                                                <span className="text-xs font-semibold text-rb-amber block mt-0.5">
+                                                    ⚠ önceki gün sayılmadı, admin sonradan sayım girmeli
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-sm text-muted-foreground font-serif">
+                                            {joiningId === c.cashRegisterId
+                                                ? 'Katılınıyor...'
+                                                : c.hasOpenShift
+                                                    ? 'Katıl →'
+                                                    : `₺${c.expectedOpeningBalance.toFixed(2)}`}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </>
                 ) : (
                     <>

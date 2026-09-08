@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { PaymentMethod, ShiftSummary } from '@/features/cashier/types';
+import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 
 interface Props {
     onClose: () => void;
@@ -21,19 +22,23 @@ function formatTime(iso: string): string {
 }
 
 export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
+    const { shift } = useActiveShift();
     const [countedAmount, setCountedAmount] = useState('');
     const [summary, setSummary] = useState<ShiftSummary | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [now] = useState(() => new Date().toISOString());
     const [closedAt, setClosedAt] = useState<string | null>(null);
 
     useEffect(() => {
-        shiftService.getMyCurrentSummary()
+        if (!shift) return;
+        shiftService.getShiftSummary(shift.id)
             .then(setSummary)
-            .catch(() => toast.error('Vardiya özeti alınamadı.'))
-            .finally(() => setLoading(false));
-    }, []);
+            .catch(() => {
+                setLoadFailed(true);
+                toast.error('Vardiya özeti alınamadı.');
+            });
+    }, [shift]);
 
     const handleCloseShift = async (showReport: boolean) => {
         if (!summary) return;
@@ -90,10 +95,10 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                     )}
                 </div>
 
-                {loading ? (
-                    <p className="text-sm text-muted-foreground mt-6 text-center">Yükleniyor...</p>
-                ) : !summary ? (
+                {!shift || loadFailed ? (
                     <p className="text-sm text-destructive mt-6 text-center">Açık bir vardiyanız bulunamadı.</p>
+                ) : !summary ? (
+                    <p className="text-sm text-muted-foreground mt-6 text-center">Yükleniyor...</p>
                 ) : closedAt ? (
                     <>
                         <div className="mt-4 flex flex-col gap-2.5">

@@ -100,6 +100,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid>("CreatedUser")
                         .HasColumnType("uuid");
 
+                    b.Property<TimeOnly>("DayEndTime")
+                        .HasColumnType("time without time zone");
+
                     b.Property<string>("District")
                         .IsRequired()
                         .HasColumnType("text");
@@ -126,6 +129,10 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<decimal>("TaxRate")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -463,6 +470,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("ShiftId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("TaxAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -474,11 +484,16 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CashRegisterId");
 
                     b.HasIndex("OrderId");
+
+                    b.HasIndex("ShiftId");
 
                     b.ToTable("Payments");
                 });
@@ -685,6 +700,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime?>("ClosedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("ClosedBySystem")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("ClosedByUserId")
                         .HasColumnType("uuid");
 
@@ -699,6 +717,9 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<Guid?>("ClosingDifferenceReviewedByUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("CountStatus")
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("CountedClosingBalance")
                         .HasColumnType("numeric");

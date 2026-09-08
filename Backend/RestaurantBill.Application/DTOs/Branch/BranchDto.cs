@@ -14,5 +14,7 @@ namespace RestaurantBill.Application.DTOs
         public int TableCount { get; set; }
         public int StaffCount { get; set; }
         public decimal Revenue { get; set; }
+        public TimeOnly DayEndTime { get; set; }
+        public string TimeZoneId { get; set; } = string.Empty;
     }
 }

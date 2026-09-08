@@ -1,9 +1,12 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantBill.Application.Features.Shifts.Commands.ApplyLateCount;
 using RestaurantBill.Application.Features.Shifts.Commands.ApproveShiftDifference;
 using RestaurantBill.Application.Features.Shifts.Commands.ApproveShiftOpeningDifference;
 using RestaurantBill.Application.Features.Shifts.Commands.CloseShift;
+using RestaurantBill.Application.Features.Shifts.Commands.CloseShiftWithoutCount;
+using RestaurantBill.Application.Features.Shifts.Commands.EnsureShiftOpen;
 using RestaurantBill.Application.Features.Shifts.Commands.OpenShift;
 using RestaurantBill.Application.Features.Shifts.Commands.RejectShiftDifference;
 using RestaurantBill.Application.Features.Shifts.Commands.RejectShiftOpeningDifference;
@@ -14,6 +17,8 @@ using RestaurantBill.Application.Features.Shifts.Queries.GetMyCurrentShiftSummar
 using RestaurantBill.Application.Features.Shifts.Queries.GetMyCurrentShiftTransactions;
 using RestaurantBill.Application.Features.Shifts.Queries.GetShiftById;
 using RestaurantBill.Application.Features.Shifts.Queries.GetShiftStartCandidates;
+using RestaurantBill.Application.Features.Shifts.Queries.GetShiftSummary;
+using RestaurantBill.Application.Features.Shifts.Queries.GetShiftTransactions;
 
 namespace RestaurantBill.WebAPI.Controllers;
 
@@ -125,6 +130,34 @@ public class ShiftController : BaseController
         var values = await _mediator.Send(query, cancellationToken);
         return HandleResult(values);
     }
+
+    /// <summary>
+    /// Returns a payment-method breakdown, total, and open-tables warning count for a given shift, open or closed.
+    /// </summary>
+    /// <param name="id">ShiftId</param>
+    /// <param name="cancellationToken"></param>
+    [Authorize(Roles = "Owner,Admin,Cashier")]
+    [HttpGet("{id}/summary")]
+    public async Task<IActionResult> GetSummary([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var query = new GetShiftSummaryQuery { ShiftId = id };
+        var summary = await _mediator.Send(query, cancellationToken);
+        return HandleResult(summary);
+    }
+
+    /// <summary>
+    /// Returns the payment transactions recorded during a given shift, open or closed.
+    /// </summary>
+    /// <param name="id">ShiftId</param>
+    /// <param name="cancellationToken"></param>
+    [Authorize(Roles = "Owner,Admin,Cashier")]
+    [HttpGet("{id}/transactions")]
+    public async Task<IActionResult> GetTransactions([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var query = new GetShiftTransactionsQuery { ShiftId = id };
+        var values = await _mediator.Send(query, cancellationToken);
+        return HandleResult(values);
+    }
     #endregion
 
     #region post methods
@@ -140,12 +173,47 @@ public class ShiftController : BaseController
     }
 
     /// <summary>
+    /// Returns the cash register's currently open shift, opening one (sayımsız, server-computed opening balance) if none exists yet.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin,Cashier")]
+    [HttpPost("ensure-open")]
+    public async Task<IActionResult> EnsureOpen([FromBody] EnsureShiftOpenCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
     /// Closes an open shift, recording the counted balance and any difference.
     /// </summary>
     [Authorize(Roles = "Owner,Admin,Cashier")]
     [HttpPost("close")]
     public async Task<IActionResult> Close([FromBody] CloseShiftCommand command, CancellationToken cancellationToken)
     {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Closes an open shift without a count (sayımsız); admin manual equivalent of the day-end auto-close job.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/close-without-count")]
+    public async Task<IActionResult> CloseWithoutCount([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var command = new CloseShiftWithoutCountCommand { ShiftId = id };
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Enters a late count for a shift that was closed without one (sayımsız kapanmış), computing and applying any difference.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPost("{id}/apply-late-count")]
+    public async Task<IActionResult> ApplyLateCount([FromRoute] Guid id, [FromBody] ApplyLateCountCommand command, CancellationToken cancellationToken)
+    {
+        command.ShiftId = id;
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }

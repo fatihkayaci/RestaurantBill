@@ -22,5 +22,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 
         builder.Property(p => p.DiscountPercent)
             .HasPrecision(5, 2);
+
+        builder.HasIndex(p => p.ShiftId);
     }
 }

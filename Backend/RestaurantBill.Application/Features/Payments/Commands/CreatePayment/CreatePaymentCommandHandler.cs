@@ -40,6 +40,11 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         if (register is null)
             return Result<bool>.Failure("Böyle bir kasa bulunamadı.");
 
+        Shift? shift = await _db.Shifts
+            .FirstOrDefaultAsync(s => s.CashRegisterId == register.Id && s.Status == ShiftStatus.Open, cancellationToken);
+        if (shift is null)
+            return Result<bool>.Failure("Bu kasada açık bir gün yok, önce günü başlatın.");
+
         var paidItems = new List<(OrderItem Item, int Quantity)>();
         foreach (var requested in request.Items)
         {
@@ -87,7 +92,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
             int groupItemCount = group.Sum(p => p.Quantity);
             Payment payment = Payment.Create(order.Id, register.Id, groupNetTotal, groupMatrah, groupTaxAmount, request.PaymentMethod, groupItemCount,
-                groupDiscount, request.DiscountPercent, request.DiscountNote);
+                groupDiscount, request.DiscountPercent, request.DiscountNote, _currentUserService.UserId, shift.Id);
             _db.Payments.Add(payment);
         }
 

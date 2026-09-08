@@ -12,11 +12,13 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly IShiftBalanceCalculator _balanceCalculator;
 
-    public GetMyCurrentShiftSummaryQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
+    public GetMyCurrentShiftSummaryQueryHandler(IAppDbContext db, ICurrentUserService currentUser, IShiftBalanceCalculator balanceCalculator)
     {
         _db = db;
         _currentUser = currentUser;
+        _balanceCalculator = balanceCalculator;
     }
 
     public async Task<Result<ShiftSummaryDto>> Handle(GetMyCurrentShiftSummaryQuery request, CancellationToken cancellationToken)
@@ -31,7 +33,8 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
         List<Payment> payments = await _db.Payments
             .AsNoTracking()
             .Include(p => p.Order)
-            .Where(p => p.CashRegisterId == shift.CashRegisterId && p.CreatedAt >= shift.OpenedAt)
+            .Where(p => p.CashRegisterId == shift.CashRegisterId
+                && (p.ShiftId == shift.Id || (p.ShiftId == null && p.CreatedAt >= shift.OpenedAt)))
             .ToListAsync(cancellationToken);
 
         var breakdown = payments
@@ -58,18 +61,7 @@ public class GetMyCurrentShiftSummaryQueryHandler : IRequestHandler<GetMyCurrent
             .Distinct()
             .Count();
 
-        List<CashTransaction> transactions = await _db.CashTransactions
-            .AsNoTracking()
-            .Where(t => t.CashRegisterId == shift.CashRegisterId && t.CreatedAt >= shift.OpenedAt
-                && t.Id != shift.OpeningAdjustmentTransactionId)
-            .ToListAsync(cancellationToken);
-
-        decimal expectedCashInRegister = shift.OpeningBalance;
-        foreach (var transaction in transactions)
-        {
-            bool isOutgoing = transaction.Type is CashTransactionType.Out or CashTransactionType.TransferOut or CashTransactionType.AdjustmentOut;
-            expectedCashInRegister += isOutgoing ? -transaction.Amount : transaction.Amount;
-        }
+        decimal expectedCashInRegister = await _balanceCalculator.CalculateExpectedClosingBalanceAsync(shift, cancellationToken);
 
         return Result<ShiftSummaryDto>.Success(new ShiftSummaryDto
         {

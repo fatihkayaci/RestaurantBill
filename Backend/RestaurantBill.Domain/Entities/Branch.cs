@@ -1,3 +1,5 @@
+using RestaurantBill.Domain.Exceptions;
+
 namespace RestaurantBill.Domain.Entities
 {
     public class Branch : BaseEntity
@@ -13,6 +15,9 @@ namespace RestaurantBill.Domain.Entities
         public string District { get; private set; } = string.Empty;
         public string OpenAddress { get; private set; } = string.Empty;
         public decimal TaxRate { get; private set; }
+
+        public TimeOnly DayEndTime { get; private set; } = new(0, 0);
+        public string TimeZoneId { get; private set; } = "Europe/Istanbul";
 
         protected Branch() { }
 
@@ -47,6 +52,24 @@ namespace RestaurantBill.Domain.Entities
             District = district;
             OpenAddress = openAddress;
             TaxRate = taxRate;
+        }
+
+        public void UpdateDayEndSettings(TimeOnly dayEndTime, string timeZoneId)
+        {
+            if (string.IsNullOrWhiteSpace(timeZoneId))
+                throw new DomainException("Geçersiz saat dilimi.");
+
+            try
+            {
+                TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            }
+            catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
+            {
+                throw new DomainException("Geçersiz saat dilimi.");
+            }
+
+            DayEndTime = dayEndTime;
+            TimeZoneId = timeZoneId;
         }
     }
 }

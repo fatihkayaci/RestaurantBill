@@ -19,10 +19,13 @@ public class Payment : BaseEntity
     public decimal? DiscountPercent { get; private set; }
     public string DiscountNote { get; private set; } = string.Empty;
 
+    public Guid? UserId { get; private set; }
+    public Guid? ShiftId { get; private set; }
+
     protected Payment() { }
 
     public static Payment Create(Guid orderId, Guid cashRegisterId, decimal totalAmount, decimal matrah, decimal taxAmount, PaymentMethod paymentMethod, int itemCount,
-        decimal discountAmount = 0m, decimal? discountPercent = null, string? discountNote = null)
+        decimal discountAmount = 0m, decimal? discountPercent = null, string? discountNote = null, Guid? userId = null, Guid? shiftId = null)
     {
         if (orderId == Guid.Empty)
             throw new DomainException("Geçersiz sipariş.");
@@ -53,7 +56,9 @@ public class Payment : BaseEntity
             ItemCount = itemCount,
             DiscountAmount = discountAmount,
             DiscountPercent = discountPercent,
-            DiscountNote = discountNote ?? string.Empty
+            DiscountNote = discountNote ?? string.Empty,
+            UserId = userId,
+            ShiftId = shiftId
         };
     }
 }
