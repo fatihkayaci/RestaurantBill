@@ -157,6 +157,7 @@ public static class MappingExtensions
         City = b.City,
         District = b.District,
         OpenAddress = b.OpenAddress,
+        Slug = b.Company?.Slug ?? string.Empty,
         TaxRate = b.TaxRate,
         TableCount = tableCount,
         StaffCount = staffCount,

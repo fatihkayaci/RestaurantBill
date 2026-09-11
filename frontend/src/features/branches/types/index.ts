@@ -18,6 +18,7 @@ export interface Branch {
     city: string;
     district: string;
     openAddress: string;
+    slug: string;
     taxRate: number;
     tableCount: number;
     staffCount: number;

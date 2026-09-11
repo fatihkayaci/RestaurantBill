@@ -2,6 +2,10 @@ import type { Branch, CreateBranch, Restaurant, UpdateBranch } from '../types';
 import { api } from '@/lib/axiosInstance';
 
 export const branchService = {
+    getMyBranch: async (): Promise<Branch> => {
+        const response = await api.get<Branch>(`/branch`);
+        return response.data;
+    },
     getMyBranches: async (): Promise<Branch[]> => {
         const response = await api.get<Branch[]>(`/branch/branches`);
         return response.data;

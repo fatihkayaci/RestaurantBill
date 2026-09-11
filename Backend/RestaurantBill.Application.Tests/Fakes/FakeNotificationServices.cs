@@ -12,4 +12,5 @@ public class FakeTableNotificationService : ITableNotificationService
 public class FakeCashierNotificationService : ICashierNotificationService
 {
     public Task SendOrdersChangedAsync(Guid restaurantId) => Task.CompletedTask;
+    public Task SendShiftAutoClosedAsync(Guid restaurantId, string cashRegisterName) => Task.CompletedTask;
 }

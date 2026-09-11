@@ -65,14 +65,15 @@ public class BranchController : BaseController
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }
-    /*
-    [Authorize(Roles = "Owner, Admin, Cashier, Waiter, Kitchen")]
+    /// <summary>
+    /// Returns the branch info for the authenticated user's own branch.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin")]
     [HttpGet]
     public async Task<IActionResult> GetMyBranch(CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetBranchByUserIdQuery(), cancellationToken);
         return HandleResult(result);
     }
-*/
     #endregion
 }
