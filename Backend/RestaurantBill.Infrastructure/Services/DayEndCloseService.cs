@@ -42,6 +42,7 @@ public class DayEndCloseService : BackgroundService
             using IServiceScope scope = _scopeFactory.CreateScope();
             IAppDbContext db = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
             IShiftBalanceCalculator balanceCalculator = scope.ServiceProvider.GetRequiredService<IShiftBalanceCalculator>();
+            ICashierNotificationService notificationService = scope.ServiceProvider.GetRequiredService<ICashierNotificationService>();
 
             DateTime utcNow = DateTime.UtcNow;
 
@@ -51,14 +52,14 @@ public class DayEndCloseService : BackgroundService
                 .Where(s => s.Status == ShiftStatus.Open)
                 .ToListAsync(cancellationToken);
 
-            int closedCount = 0;
+            List<(Guid BranchId, string CashRegisterName)> closedShifts = [];
             foreach (Shift shift in openShifts)
             {
                 if (!IsPastDayEnd(shift, utcNow)) continue;
 
                 decimal expectedClosingBalance = await balanceCalculator.CalculateExpectedClosingBalanceAsync(shift, cancellationToken);
                 shift.CloseWithoutCount(null, expectedClosingBalance, bySystem: true);
-                closedCount++;
+                closedShifts.Add((shift.BranchId, shift.CashRegister.Name));
 
                 AuditLog log = AuditLog.Create(
                     shift.BranchId,
@@ -72,10 +73,13 @@ public class DayEndCloseService : BackgroundService
                 db.AuditLogs.Add(log);
             }
 
-            if (closedCount > 0)
+            if (closedShifts.Count > 0)
             {
                 await db.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Gün sonu saati geldiği için {Count} vardiya otomatik kapatıldı.", closedCount);
+                _logger.LogInformation("Gün sonu saati geldiği için {Count} vardiya otomatik kapatıldı.", closedShifts.Count);
+
+                foreach ((Guid branchId, string cashRegisterName) in closedShifts)
+                    await notificationService.SendShiftAutoClosedAsync(branchId, cashRegisterName);
             }
         }
         catch (Exception ex)

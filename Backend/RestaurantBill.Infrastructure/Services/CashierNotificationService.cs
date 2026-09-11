@@ -16,4 +16,9 @@ public class CashierNotificationService : ICashierNotificationService
     {
         await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("OrdersChanged");
     }
+
+    public async Task SendShiftAutoClosedAsync(Guid restaurantId, string cashRegisterName)
+    {
+        await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("ShiftAutoClosed", cashRegisterName);
+    }
 }

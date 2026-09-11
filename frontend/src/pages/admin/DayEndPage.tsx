@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { PaymentMethod, Shift, ShiftStartCandidate, ShiftSummary } from '@/features/cashier/types';
+import { createHubConnection } from '@/lib/signalrConnection';
 import { cn } from '@/lib/utils';
 import CloseShiftModal from './components/CloseShiftModal';
 import ShiftDetailModal from './components/ShiftDetailModal';
@@ -23,6 +24,7 @@ export default function DayEndPage() {
     const [cards, setCards] = useState<RegisterCard[]>([]);
     const [loading, setLoading] = useState(true);
     const [startingId, setStartingId] = useState<string | null>(null);
+    const [startingAll, setStartingAll] = useState(false);
     const [closeTarget, setCloseTarget] = useState<{ id: string; cashRegisterName: string } | null>(null);
     const [detailTarget, setDetailTarget] = useState<{ id: string; cashRegisterName: string } | null>(null);
 
@@ -49,6 +51,19 @@ export default function DayEndPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh() is async; its setState calls happen after the await, not synchronously.
     useEffect(() => { refresh(); }, []);
 
+    useEffect(() => {
+        const { connection, stop } = createHubConnection('/cashier-hub');
+
+        connection.on("ShiftAutoClosed", (cashRegisterName: string) => {
+            toast.info(`${cashRegisterName} kasasında gün sonu saati geldiği için gün otomatik kapatıldı.`);
+            refresh();
+        });
+        connection.start().catch((err: Error) => {
+            if (!err.message.includes("stopped during negotiation")) console.error("SignalR Connection Error:", err);
+        });
+        return () => { stop(); };
+    }, []);
+
     const handleStartShift = async (candidate: ShiftStartCandidate) => {
         setStartingId(candidate.cashRegisterId);
         try {
@@ -62,11 +77,40 @@ export default function DayEndPage() {
         }
     };
 
+    const closedCandidates = cards.filter(c => !c.candidate.hasOpenShift).map(c => c.candidate);
+
+    const handleStartAll = async () => {
+        setStartingAll(true);
+        try {
+            const results = await Promise.allSettled(
+                closedCandidates.map(candidate => shiftService.ensureOpen(candidate.cashRegisterId))
+            );
+            const failed = results.filter(r => r.status === 'rejected').length;
+            const succeeded = results.length - failed;
+            if (succeeded > 0) toast.success(`${succeeded} kasada gün başlatıldı.`);
+            if (failed > 0) toast.error(`${failed} kasada gün başlatılamadı.`);
+            await refresh();
+        } finally {
+            setStartingAll(false);
+        }
+    };
+
     return (
         <div className="space-y-5">
-            <div>
-                <h1 className="text-2xl font-serif font-bold text-foreground">Gün Sonu</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Kasa bazında günün özeti</p>
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Gün Sonu</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">Kasa bazında günün özeti</p>
+                </div>
+                {closedCandidates.length > 0 && (
+                    <button
+                        onClick={handleStartAll}
+                        disabled={startingAll}
+                        className="rounded-lg bg-rb-accent text-white text-sm font-semibold px-4 py-2.5 hover:opacity-90 disabled:opacity-60 transition-opacity whitespace-nowrap"
+                    >
+                        {startingAll ? 'Başlatılıyor...' : `Tüm Kasaları Aç (${closedCandidates.length})`}
+                    </button>
+                )}
             </div>
 
             {loading ? (
@@ -98,7 +142,7 @@ export default function DayEndPage() {
                                     )}
                                     <button
                                         onClick={() => handleStartShift(candidate)}
-                                        disabled={startingId === candidate.cashRegisterId}
+                                        disabled={startingId === candidate.cashRegisterId || startingAll}
                                         className="mt-1 rounded-lg bg-rb-accent text-white text-sm font-semibold py-2.5 hover:opacity-90 disabled:opacity-60 transition-opacity"
                                     >
                                         {startingId === candidate.cashRegisterId ? 'Başlatılıyor...' : 'Günü Başlat'}
