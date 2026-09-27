@@ -71,5 +71,14 @@ namespace RestaurantBill.Domain.Entities
             DayEndTime = dayEndTime;
             TimeZoneId = timeZoneId;
         }
+
+        public void EnsureCanBeDeleted(IEnumerable<Region> linkedRegions, IEnumerable<UserBranch> linkedStaff)
+        {
+            if (linkedRegions.Any())
+                throw new DomainException("Bu şubeye bağlı bölgeler bulunmaktadır. Lütfen silmeden önce ilgili bölgeleri kaldırın.");
+
+            if (linkedStaff.Any())
+                throw new DomainException("Bu şubeye atanmış personel bulunmaktadır. Lütfen silmeden önce personeli kaldırın veya başka bir şubeye taşıyın.");
+        }
     }
 }

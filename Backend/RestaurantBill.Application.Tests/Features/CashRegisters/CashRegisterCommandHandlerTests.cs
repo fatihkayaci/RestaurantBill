@@ -48,7 +48,7 @@ public class CashRegisterCommandHandlerTests
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
 
-            var handler = new UpdateCashRegisterHandler(Db, CurrentUser);
+            var handler = new UpdateCashRegisterCommandHandler(Db, CurrentUser);
             var command = new UpdateCashRegisterCommand
             {
                 Id = existing.Id,
@@ -68,7 +68,7 @@ public class CashRegisterCommandHandlerTests
         [Fact]
         public async Task Handle_WithNonExistingRegister_ReturnsFailureResult()
         {
-            var handler = new UpdateCashRegisterHandler(Db, CurrentUser);
+            var handler = new UpdateCashRegisterCommandHandler(Db, CurrentUser);
             var command = new UpdateCashRegisterCommand { Id = Guid.NewGuid(), Name = "Ad", Balance = 0m, Status = CashRegisterStatus.Open };
 
             var result = await handler.Handle(command, CancellationToken.None);
@@ -86,7 +86,7 @@ public class CashRegisterCommandHandlerTests
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
 
-            var handler = new DeleteCashRegisterHandler(Db, CurrentUser);
+            var handler = new DeleteCashRegisterCommandHandler(Db, CurrentUser);
             var command = new DeleteCashRegisterCommand { CashRegisterId = existing.Id };
 
             var result = await handler.Handle(command, CancellationToken.None);
@@ -102,7 +102,7 @@ public class CashRegisterCommandHandlerTests
             DbContext.CashRegisters.Add(existing);
             await DbContext.SaveChangesAsync();
 
-            var handler = new DeleteCashRegisterHandler(Db, CurrentUser);
+            var handler = new DeleteCashRegisterCommandHandler(Db, CurrentUser);
             var command = new DeleteCashRegisterCommand { CashRegisterId = existing.Id };
 
             await Assert.ThrowsAsync<DomainException>(() => handler.Handle(command, CancellationToken.None));
@@ -111,7 +111,7 @@ public class CashRegisterCommandHandlerTests
         [Fact]
         public async Task Handle_WithNonExistingRegister_ReturnResultIsFailure()
         {
-            var handler = new DeleteCashRegisterHandler(Db, CurrentUser);
+            var handler = new DeleteCashRegisterCommandHandler(Db, CurrentUser);
             var command = new DeleteCashRegisterCommand { CashRegisterId = Guid.NewGuid() };
 
             var result = await handler.Handle(command, CancellationToken.None);
