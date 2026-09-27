@@ -1,6 +1,6 @@
 # 📋 Project Roadmap (TODO)
 
-> **Last updated:** June 2026
+> **Last updated:** September 2026
 > This file tracks completed work and the remaining roadmap for RestaurantBill. The Turkish version is available in [TODO.tr.md](TODO.tr.md).
 
 ---
@@ -23,15 +23,17 @@
 - [x] **Waiter:** Add a serve action and a "Served" tab to the POS page.
 - [x] **Order:** Support per-item status changes within an order.
 
+### ✅ Completed (since June 2026)
+- [x] **Cashier:** Add a detailed transactions view section (`TransactionDetailPanel`).
+- [x] **Reports:** Fill in the Reports page content (Sales, Products, Staff, Discounts, Tax, Shifts tabs).
+- [x] **Profile:** Add a dedicated profile page (`admin/ProfilePage`).
+- [x] **POS:** Make the page fully mobile-responsive.
+
 ### 🚧 Planned
 - [ ] **Validation:** Add client-side form validation to stop invalid data from reaching the backend. *(Done: admin side — menu, categories, staff, tables, reports.)*
-- [ ] **Cashier:** Add a detailed transactions view section.
 - [ ] **Cashier:** Fix the statistics cards.
-- [ ] **Reports:** Fill in the Reports page content.
-- [ ] **Profile:** Add a dedicated profile page.
 - [ ] **POS:** Fix action buttons (e.g. "Confirm").
 - [ ] **POS:** Remove the payment section and integrate it with the Cashier page.
-- [ ] **POS:** Make the page fully mobile-responsive.
 - [ ] **POS:** Fix the non-working trash icon under the "New" tab.
 - [ ] **POS:** Reposition the awkwardly placed "Back to Tables" icon.
 - [ ] **UI:** Replace two-state status selects with on/off sliders.

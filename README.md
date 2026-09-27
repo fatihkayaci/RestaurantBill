@@ -576,9 +576,9 @@ A `User` can own a Company and/or be linked to one or more Branches through `Use
 **Planned:** (see [TODO.md](TODO.md))
 - [ ] Configurable VAT rate
 - [ ] Detailed reservation management (customer name, time, party size)
-- [ ] Reports page contents & richer analytics
-- [ ] Mobile-responsive POS & KDS
 - [ ] Client-side form validation polish (remaining non-admin pages)
+- [x] Reports page contents & richer analytics (Sales, Products, Staff, Discounts, Tax, Shifts tabs)
+- [x] Mobile-responsive POS & KDS
 - [x] Move audit log search/filtering to the backend
 
 ---
