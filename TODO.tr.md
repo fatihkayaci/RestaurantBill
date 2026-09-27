@@ -1,6 +1,6 @@
 # 📋 Proje Yol Haritası (Yapılacaklar)
 
-> **Son güncelleme:** Haziran 2026
+> **Son güncelleme:** Eylül 2026
 > Bu dosya, RestaurantBill'in tamamlanan işlerini ve kalan yol haritasını takip eder. İngilizce versiyon için: [TODO.md](TODO.md).
 
 ---
@@ -23,15 +23,17 @@
 - [x] **Garson:** POS sayfasına servis işlemi ve "Servis edildi" sekmesi eklendi.
 - [x] **Sipariş:** Sipariş içinde ürün bazlı durum değişimi eklendi.
 
+### ✅ Tamamlananlar (Haziran 2026'dan sonra)
+- [x] **Kasiyer:** Detaylı işlemleri görebileceği bir bölüm eklendi (`TransactionDetailPanel`).
+- [x] **Raporlar:** Raporlar sayfasının içeriği dolduruldu (Satış, Ürün, Personel, İndirim, Vergi, Vardiya sekmeleri).
+- [x] **Profil:** Profil sayfası eklendi (`admin/ProfilePage`).
+- [x] **POS:** Sayfa tamamen mobil uyumlu hale getirildi.
+
 ### 🚧 Planlananlar
 - [ ] **Doğrulama:** Hatalı verinin backend'e ulaşmasını engellemek için istemci taraflı form doğrulaması eklenecek. *(Tamamlananlar: admin tarafı — menü, kategoriler, personel, masalar, raporlar.)*
-- [ ] **Kasiyer:** Detaylı işlemleri görebileceği bir bölüm eklenecek.
 - [ ] **Kasiyer:** İstatistik kartları düzeltilecek.
-- [ ] **Raporlar:** Raporlar sayfasının içeriği doldurulacak.
-- [ ] **Profil:** Profil sayfası eklenecek.
 - [ ] **POS:** Aksiyon butonları (ör. "Onayla") düzeltilecek.
 - [ ] **POS:** Ücret alma kısmı kaldırılıp Kasiyer sayfasıyla entegre edilecek.
-- [ ] **POS:** Sayfa tamamen mobil uyumlu yapılacak.
 - [ ] **POS:** "Yeni" sekmesindeki çalışmayan çöp ikonu düzeltilecek.
 - [ ] **POS:** Konumu uygunsuz olan "Masalara dön" ikonu yeniden yerleştirilecek.
 - [ ] **UI:** İki durumlu status seçimleri aç/kapa slider'a dönüştürülecek.
