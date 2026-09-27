@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useState } from "react";
-import sophramLogo from "@/assets/sophram-logo.svg";
+import PublicNav from "@/components/layout/PublicNav";
+import PublicFooter from "@/components/layout/PublicFooter";
 
 const ACCENT = { color: "var(--rb-accent)", bg: "var(--rb-accent-bg)" };
 const GREEN = { color: "var(--rb-green)", bg: "var(--rb-green-bg)" };
@@ -20,12 +21,6 @@ const NAV_LINKS = [
     { label: "Fiyatlandırma", href: "#pricing" },
 ];
 
-const HERO_STATS = [
-    { num: "500+", label: "Aktif Restoran" },
-    { num: "2M+", label: "Aylık Sipariş" },
-    { num: "%99", label: "Uptime" },
-];
-
 const MOCK_TABLES = [
     { num: "01", badge: "Dolu", amount: "₺240", ...ORANGE },
     { num: "02", badge: "Boş", amount: null, color: MOCK_GREEN, bg: "rgba(69,200,122,0.08)", border: "rgba(69,200,122,0.2)" },
@@ -37,8 +32,6 @@ const MOCK_TABLES = [
     { num: "08", badge: "Rezerve", amount: null, color: MOCK_AMBER, bg: "rgba(232,184,53,0.08)", border: "rgba(232,184,53,0.2)" },
     { num: "09", badge: "Dolu", amount: "₺315", ...ORANGE },
 ];
-
-const TRUST_BRANDS = ["Çınar Mutfak", "Teras Brasserie", "Sultan Sofrası", "Bosphorus Grill", "Meze & More"];
 
 const FEATURES = [
     { icon: "◎", name: "Garson Ekranı", desc: "Masa durumunu anlık görün, sipariş oluşturun ve gönderin. Tıkla, seç, gönder.", roleTag: "Garson", accent: ACCENT },
@@ -79,153 +72,48 @@ const ROLES = [
     },
 ];
 
-const TESTIMONIALS = [
-    { text: "Mutfak ekranı gerçekten hayat kurtardı. Garsonların not kağıdı koşturmakla vakit kaybetmesi bitti.", name: "Ahmet Yılmaz", rest: "Çınar Mutfak, İstanbul", initial: "A" },
-    { text: "Admin paneli sayesinde tüm şubeleri tek yerden takip ediyoruz. Raporlar çok net ve anlaşılır.", name: "Selin Öztürk", rest: "Teras Brasserie, Ankara", initial: "S" },
-    { text: "Kasiyer ekranında ödeme almak çok kolay. Müşteri bekletme süresi yarıya indi, şikayetler bitti.", name: "Mehmet Arslan", rest: "Bosphorus Grill, İzmir", initial: "M" },
-];
-
-type Feature = { text: string; inc: boolean };
-
-type PlanDef = {
-    key: string;
-    name: string;
-    icon: string;
-    desc: string;
-    priceMonthly: number;
-    priceAnnual: number;
-    accent: typeof GREEN;
-    isPopular: boolean;
-    features: Feature[];
+type BillingPeriod = {
+    key: "monthly" | "quarterly" | "yearly";
+    label: string;
+    months: number;
+    priceTotal: number;
+    priceMonthlyEquivalent: number;
+    discountLabel?: string;
 };
 
-const PLAN_DEFS: PlanDef[] = [
-    {
-        key: "starter",
-        name: "Başlangıç",
-        icon: "◎",
-        desc: "Küçük işletmeler için temel özellikler",
-        priceMonthly: 499,
-        priceAnnual: 399,
-        accent: GREEN,
-        isPopular: false,
-        features: [
-            { text: "Garson sipariş yönetimi", inc: true },
-            { text: "Mutfak ekranı", inc: true },
-            { text: "Temel kasa & ödeme", inc: true },
-            { text: "10 masa", inc: true },
-            { text: "2 kullanıcı hesabı", inc: true },
-            { text: "Admin paneli", inc: false },
-            { text: "Raporlar & analitik", inc: false },
-            { text: "7/24 destek", inc: false },
-        ],
-    },
-    {
-        key: "pro",
-        name: "Profesyonel",
-        icon: "◈",
-        desc: "Büyüyen restoranlar için tam kapsamlı",
-        priceMonthly: 999,
-        priceAnnual: 799,
-        accent: ACCENT,
-        isPopular: true,
-        features: [
-            { text: "Garson sipariş yönetimi", inc: true },
-            { text: "Mutfak ekranı", inc: true },
-            { text: "Gelişmiş kasa & ödeme", inc: true },
-            { text: "Sınırsız masa", inc: true },
-            { text: "10 kullanıcı hesabı", inc: true },
-            { text: "Admin paneli & raporlar", inc: true },
-            { text: "Rezervasyon yönetimi", inc: true },
-            { text: "E-posta desteği", inc: true },
-        ],
-    },
-    {
-        key: "enterprise",
-        name: "Kurumsal",
-        icon: "◉",
-        desc: "Zincir restoranlar ve büyük işletmeler",
-        priceMonthly: 2499,
-        priceAnnual: 1999,
-        accent: AMBER,
-        isPopular: false,
-        features: [
-            { text: "Tüm Pro özellikler", inc: true },
-            { text: "Çoklu şube yönetimi", inc: true },
-            { text: "Özel entegrasyonlar", inc: true },
-            { text: "Sınırsız kullanıcı", inc: true },
-            { text: "Özel onboarding", inc: true },
-            { text: "SLA garantisi", inc: true },
-            { text: "7/24 telefon desteği", inc: true },
-            { text: "Özel geliştirme", inc: true },
-        ],
-    },
+const BILLING_PERIODS: BillingPeriod[] = [
+    { key: "monthly", label: "Aylık", months: 1, priceTotal: 600, priceMonthlyEquivalent: 600 },
+    { key: "quarterly", label: "3 Aylık", months: 3, priceTotal: 1620, priceMonthlyEquivalent: 540, discountLabel: "%10 tasarruf" },
+    { key: "yearly", label: "Yıllık", months: 12, priceTotal: 5760, priceMonthlyEquivalent: 480, discountLabel: "%20 tasarruf" },
 ];
 
-const TABLE_ROW_DEFS: { feature: string; values: string[] }[] = [
-    { feature: "Masa kapasitesi", values: ["10", "Sınırsız", "Sınırsız"] },
-    { feature: "Kullanıcı hesabı", values: ["2", "10", "Sınırsız"] },
-    { feature: "Garson ekranı", values: ["✓", "✓", "✓"] },
-    { feature: "Mutfak ekranı", values: ["✓", "✓", "✓"] },
-    { feature: "Kasa & ödeme", values: ["Temel", "Gelişmiş", "Gelişmiş"] },
-    { feature: "Admin paneli", values: ["—", "✓", "✓"] },
-    { feature: "Raporlar", values: ["—", "✓", "✓"] },
-    { feature: "Çoklu şube", values: ["—", "—", "✓"] },
-    { feature: "Destek", values: ["—", "E-posta", "7/24 Telefon"] },
+const PLAN_FEATURES: string[] = [
+    "Garson sipariş yönetimi",
+    "Mutfak ekranı",
+    "Kasiyer & ödeme yönetimi",
+    "Admin paneli & raporlar",
+    "Sınırsız masa",
+    "Rezervasyon yönetimi",
+    "Gerçek zamanlı senkronizasyon",
+    "E-posta desteği",
 ];
 
 const FAQ_DEFS: { q: string; a: string }[] = [
-    { q: "Ücretsiz deneme süresi var mı?", a: "Evet, tüm planlarda 14 gün ücretsiz deneme sunuyoruz. Kredi kartı gerekmez." },
-    { q: "İstediğim zaman plan değiştirebilir miyim?", a: "Evet, her zaman üst ya da alt plana geçiş yapabilirsiniz. Fark tutarı yansıtılır." },
-    { q: "Faturalama nasıl çalışır?", a: "Aylık planlar her ay, yıllık planlar yılda bir faturalandırılır. İptal her zaman mümkündür." },
-    { q: "Kurumsal plan için fiyat nasıl belirlenir?", a: "Kurumsal fiyatlandırma şube sayısı, kullanıcı sayısı ve özel gereksinimlere göre belirlenir." },
+    { q: "Ücretsiz deneme süresi var mı?", a: "Evet, 14 gün ücretsiz deneme sunuyoruz. Kredi kartı gerekmez." },
+    { q: "Deneme sonrasında otomatik ücretlendirme olur mu?", a: "Hayır. Deneme süresi bitince siz karar verirsiniz; otomatik yenileme isteğe bağlıdır ve dilediğiniz zaman açıp kapatabilirsiniz." },
+    { q: "Faturalama periyodunu değiştirebilir miyim?", a: "Evet, aylık, 3 aylık ve yıllık periyotlar arasında istediğiniz zaman geçiş yapabilirsiniz." },
+    { q: "İptal ve iade nasıl işliyor?", a: "Satın alma sonrası 14 gün içinde koşulsuz iade alabilirsiniz; sonrasında kullanılmayan süre için iade yapılır. Detaylar için İptal & İade sayfamıza bakabilirsiniz." },
 ];
 
 export default function LandingPage() {
-    const { theme, setTheme } = useTheme();
+    const { theme } = useTheme();
     const isDark = theme === "dark";
-    const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
-    const isAnnual = billing === "annual";
+    const [billingKey, setBillingKey] = useState<BillingPeriod["key"]>("monthly");
+    const billing = BILLING_PERIODS.find((p) => p.key === billingKey)!;
 
     return (
         <div className="min-h-screen bg-[#f5f0e8] dark:bg-[#18140f] text-[#2a1f14] dark:text-[#f2ede4] font-sans">
-            {/* ── NAVBAR ── */}
-            <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#f5f0e8]/96 dark:bg-[#18140f]/96 border-b border-[#e8e0d0] dark:border-[#3d3528] px-6 md:px-15 py-1.5 flex items-center justify-between gap-6">
-                <Link to="/" className="flex items-center gap-0 shrink-0">
-                    <img src={sophramLogo} alt="Sophram" className="h-14 w-auto" />
-                    <span className="font-serif text-xl font-bold">Sophram</span>
-                </Link>
-
-                <div className="hidden lg:flex items-center gap-7 flex-1 justify-center">
-                    {NAV_LINKS.map((link) => (
-                        <a
-                            key={link.label}
-                            href={link.href}
-                            className="text-[13px] font-medium text-[#6b5e52] dark:text-[#a89880] hover:text-[#2a1f14] dark:hover:text-[#f2ede4] transition-colors"
-                        >
-                            {link.label}
-                        </a>
-                    ))}
-                </div>
-
-                <div className="flex items-center gap-2.5 shrink-0">
-                    <button
-                        onClick={() => setTheme(isDark ? "light" : "dark")}
-                        className={`relative inline-flex h-5 w-9.5 items-center rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${
-                            isDark ? "bg-rb-accent" : "bg-black/10"
-                        }`}
-                    >
-                        <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-all duration-200 ${
-                                isDark ? "translate-x-5" : "translate-x-0.5"
-                            }`}
-                        />
-                    </button>
-                    <Link to="/login" className="px-4 py-1.75 rounded-lg bg-[#C8A96E] text-[13px] font-bold text-[#1c1510] hover:opacity-90 transition-opacity">
-                        Giriş Yap
-                    </Link>
-                </div>
-            </nav>
+            <PublicNav links={NAV_LINKS} />
 
             {/* ── HERO ── */}
             <section
@@ -262,22 +150,6 @@ export default function LandingPage() {
                         >
                             Fiyatları İncele
                         </a>
-                    </div>
-
-                    <div className="flex items-center mt-2">
-                        {HERO_STATS.map((stat, i) => (
-                            <div key={stat.label} className="flex items-center">
-                                <div className="flex flex-col gap-0.75">
-                                    <div className="font-serif text-[28px] font-bold leading-none text-[#f2ede4]">{stat.num}</div>
-                                    <div className="text-[11px] font-medium tracking-[0.3px]" style={{ color: "rgba(242,237,228,0.4)" }}>
-                                        {stat.label}
-                                    </div>
-                                </div>
-                                {i < HERO_STATS.length - 1 && (
-                                    <div className="w-px h-8 mx-6 shrink-0" style={{ background: "rgba(255,255,255,0.12)" }} />
-                                )}
-                            </div>
-                        ))}
                     </div>
                 </div>
 
@@ -360,20 +232,6 @@ export default function LandingPage() {
                     </div>
                 </div>
             </section>
-
-            {/* ── TRUST BAR ── */}
-            <div className="px-6 md:px-15 py-5.5 border-t border-b border-[#e8e0d0] dark:border-[#3d3528] bg-black/2 dark:bg-white/1 flex items-center gap-8 flex-wrap">
-                <span className="text-[11px] font-bold tracking-[0.6px] uppercase text-[#a39080] dark:text-[#7a6e60] shrink-0">
-                    Güvenen Restoranlar
-                </span>
-                <div className="flex gap-7 items-center flex-wrap">
-                    {TRUST_BRANDS.map((brand) => (
-                        <span key={brand} className="font-serif text-base font-semibold tracking-[0.3px] text-[#a39080] dark:text-[#7a6e60]">
-                            {brand}
-                        </span>
-                    ))}
-                </div>
-            </div>
 
             {/* ── FEATURES ── */}
             <section id="features" className="px-6 md:px-15 py-20 bg-[#f5f0e8] dark:bg-[#18140f] [content-visibility:auto] [contain-intrinsic-size:auto_900px]">
@@ -501,40 +359,8 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ── TESTIMONIALS ── */}
-            <section className="px-6 md:px-15 py-20 bg-black/2 dark:bg-white/1 border-t border-b border-[#e8e0d0] dark:border-[#3d3528] [content-visibility:auto] [contain-intrinsic-size:auto_500px]">
-                <div className="text-center mb-13">
-                    <h2 className="font-serif text-3xl md:text-[44px] font-bold leading-tight">Restoranlar Ne Diyor?</h2>
-                </div>
-                <div className="max-w-275 mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {TESTIMONIALS.map((t) => (
-                        <div key={t.name} className="rounded-2xl p-6 flex flex-col gap-4 border border-[#e8e0d0] dark:border-[#3d3528] bg-white dark:bg-[#2a2318]">
-                            <div className="font-serif text-5xl leading-none h-8 overflow-hidden" style={{ color: ACCENT.color }}>
-                                "
-                            </div>
-                            <div className="text-sm leading-relaxed italic flex-1 text-[#6b5e52] dark:text-[#a89880]">{t.text}</div>
-                            <div className="flex items-center gap-3 mt-2">
-                                <div
-                                    className="w-9.5 h-9.5 rounded-full flex items-center justify-center text-sm font-extrabold shrink-0"
-                                    style={{ background: ACCENT.bg, color: ACCENT.color }}
-                                >
-                                    {t.initial}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-bold">{t.name}</div>
-                                    <div className="text-[11px] mt-0.5 text-[#a39080] dark:text-[#7a6e60]">{t.rest}</div>
-                                </div>
-                                <div className="text-sm tracking-[-1px]" style={{ color: AMBER.color }}>
-                                    ★★★★★
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
             {/* ── PRICING ── */}
-            <section id="pricing" className="px-6 md:px-15 py-20 bg-black/2 dark:bg-white/1 border-t border-b border-[#e8e0d0] dark:border-[#3d3528] [content-visibility:auto] [contain-intrinsic-size:auto_2200px]">
+            <section id="pricing" className="px-6 md:px-15 py-20 bg-black/2 dark:bg-white/1 border-t border-b border-[#e8e0d0] dark:border-[#3d3528] [content-visibility:auto] [contain-intrinsic-size:auto_1400px]">
                 <div className="text-center mb-11 flex flex-col items-center gap-5">
                     <div
                         className="inline-block rounded-full px-3.5 py-1 text-[11px] font-bold tracking-[0.6px] uppercase"
@@ -543,195 +369,96 @@ export default function LandingPage() {
                         Fiyatlandırma
                     </div>
                     <h2 className="font-serif text-3xl md:text-[44px] font-bold leading-tight whitespace-pre-line">
-                        {"Restoranınız İçin\nDoğru Plan"}
+                        {"Tek Plan,\nTüm Özellikler"}
                     </h2>
                     <p className="text-[15px] leading-relaxed max-w-130 text-[#a39080] dark:text-[#7a6e60]">
                         14 gün ücretsiz deneyin. Kredi kartı gerekmez. İstediğiniz zaman iptal edin.
                     </p>
 
-                    {/* Billing toggle */}
-                    <div className="flex items-center gap-3 px-4.5 py-2.5 rounded-full bg-black/5 dark:bg-white/6 border border-[#e8e0d0] dark:border-white/10">
-                        <span
-                            onClick={() => setBilling("monthly")}
-                            className="text-[13px] cursor-pointer transition-all"
-                            style={{ fontWeight: isAnnual ? 400 : 700 }}
-                        >
-                            Aylık
-                        </span>
-                        <div
-                            onClick={() => setBilling(isAnnual ? "monthly" : "annual")}
-                            className="relative w-9.5 h-5 rounded-full cursor-pointer shrink-0 transition-colors duration-300"
-                            style={{ background: isAnnual ? GREEN.color : "var(--rb-toggle-track-off)" }}
-                        >
-                            <div
-                                className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all duration-200"
-                                style={{ left: isAnnual ? "20px" : "2px" }}
-                            />
-                        </div>
-                        <span
-                            onClick={() => setBilling("annual")}
-                            className="text-[13px] cursor-pointer transition-all"
-                            style={{ fontWeight: isAnnual ? 700 : 400 }}
-                        >
-                            Yıllık
-                        </span>
-                        <div className="rounded-full px-2.5 py-0.75 text-[11px] font-bold" style={{ background: GREEN.bg, color: GREEN.color }}>
-                            %20 Tasarruf
-                        </div>
-                    </div>
-                </div>
-
-                {/* Plan cards */}
-                <div className="max-w-275 mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 items-start mb-16">
-                    {PLAN_DEFS.map((plan) => {
-                        const color = plan.accent.color;
-                        const colorBg = plan.accent.bg;
-                        const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
-                        const saving = (plan.priceMonthly - plan.priceAnnual) * 12;
-
-                        return (
-                            <div
-                                key={plan.key}
-                                className={`relative overflow-hidden rounded-[20px] p-7 flex flex-col gap-3.5 border-2 ${
-                                    plan.isPopular
-                                        ? "bg-[#1c1510] dark:bg-[#0e0b08]"
-                                        : "bg-white dark:bg-[#2a2318] border-[#e8e0d0] dark:border-[#3d3528]"
-                                }`}
+                    {/* Billing period toggle */}
+                    <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-black/5 dark:bg-white/6 border border-[#e8e0d0] dark:border-white/10">
+                        {BILLING_PERIODS.map((period) => (
+                            <button
+                                key={period.key}
+                                onClick={() => setBillingKey(period.key)}
+                                className="px-4 py-2 rounded-full text-[13px] font-semibold transition-colors"
                                 style={{
-                                    borderColor: plan.isPopular ? color : undefined,
-                                    boxShadow: plan.isPopular ? `0 20px 60px ${colorBg}` : "none",
+                                    background: billingKey === period.key ? GREEN.color : "transparent",
+                                    color: billingKey === period.key ? "#FFFFFF" : undefined,
                                 }}
                             >
-                                {plan.isPopular && (
-                                    <div
-                                        className="absolute top-5 right-5 rounded-full px-3 py-0.75 text-[11px] font-bold tracking-[0.4px] text-white"
-                                        style={{ background: color }}
+                                {period.label}
+                                {period.discountLabel && (
+                                    <span
+                                        className="ml-1.5 text-[10px] font-bold"
+                                        style={{ color: billingKey === period.key ? "rgba(255,255,255,0.8)" : GREEN.color }}
                                     >
-                                        En Popüler
-                                    </div>
+                                        {period.discountLabel}
+                                    </span>
                                 )}
-
-                                <div className="flex items-center justify-between">
-                                    <div
-                                        className="w-11 h-11 rounded-xl flex items-center justify-center text-lg"
-                                        style={{ background: colorBg, color }}
-                                    >
-                                        {plan.icon}
-                                    </div>
-                                    {plan.isPopular && <div className="w-2 h-2 rounded-full" style={{ background: color }} />}
-                                </div>
-
-                                <div className="font-serif text-[28px] font-bold leading-none" style={{ color: plan.isPopular ? "#f2ede4" : undefined }}>
-                                    {plan.name}
-                                </div>
-                                <div className="text-[13px] leading-tight" style={{ color: plan.isPopular ? "rgba(242,237,228,0.55)" : undefined }}>
-                                    {plan.desc}
-                                </div>
-
-                                <div className="flex items-baseline gap-0.75">
-                                    <span className="text-xl font-semibold mb-1.5" style={{ color: plan.isPopular ? "#f2ede4" : undefined }}>
-                                        ₺
-                                    </span>
-                                    <span className="font-serif text-[52px] font-bold leading-none" style={{ color: plan.isPopular ? "#f2ede4" : undefined }}>
-                                        {price.toLocaleString("tr-TR")}
-                                    </span>
-                                    <span className="text-[13px] ml-0.5" style={{ color: plan.isPopular ? "rgba(242,237,228,0.45)" : undefined }}>
-                                        /ay
-                                    </span>
-                                </div>
-                                {isAnnual && (
-                                    <div className="text-[11px] font-bold rounded-md px-2.5 py-1 self-start" style={{ color, background: colorBg }}>
-                                        {`Yıllık ödeme · ${saving.toLocaleString("tr-TR")} ₺ tasarruf`}
-                                    </div>
-                                )}
-
-                                <div className="h-px" style={{ background: plan.isPopular ? "rgba(255,255,255,0.1)" : undefined }} />
-
-                                <div className="flex flex-col flex-1">
-                                    {plan.features.map((feat) => (
-                                        <div key={feat.text} className="flex items-center gap-2.25 py-1.25">
-                                            <div
-                                                className="w-4.5 h-4.5 rounded-md shrink-0 flex items-center justify-center"
-                                                style={{
-                                                    background: feat.inc ? colorBg : "var(--rb-checkbox-off-bg)",
-                                                    color: feat.inc ? color : "var(--rb-text-muted)",
-                                                }}
-                                            >
-                                                {feat.inc ? (
-                                                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                                                        <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                                                    </svg>
-                                                ) : (
-                                                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                                                        <path d="M2 2l4 4M6 2L2 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                                                    </svg>
-                                                )}
-                                            </div>
-                                            <span
-                                                className="text-[13px]"
-                                                style={{
-                                                    color: feat.inc ? (plan.isPopular ? "#f2ede4" : undefined) : "var(--rb-text-muted)",
-                                                    textDecoration: feat.inc ? "none" : "line-through",
-                                                }}
-                                            >
-                                                {feat.text}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <Link
-                                    to="/login"
-                                    className="w-full text-center py-3.25 rounded-xl text-sm font-bold mt-2 transition-opacity hover:opacity-90"
-                                    style={{ background: plan.isPopular ? color : colorBg, color: plan.isPopular ? "#FFFFFF" : color }}
-                                >
-                                    {plan.key === "enterprise" ? "Satışla İletişime Geç" : "Ücretsiz Dene"}
-                                </Link>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Feature comparison table */}
-                <div className="font-serif text-2xl md:text-[32px] font-bold text-center mb-7">Özellik Karşılaştırması</div>
-                <div className="max-w-225 mx-auto rounded-2xl border border-[#e8e0d0] dark:border-[#3d3528] bg-white dark:bg-[#2a2318] overflow-hidden overflow-x-auto mb-16">
-                    <div className="flex items-center bg-black/3 dark:bg-white/4 border-b border-[#e8e0d0] dark:border-[#3d3528] min-w-150">
-                        <div className="w-55 shrink-0 px-4 py-3.5 text-[11px] font-bold uppercase tracking-[0.5px] text-[#a39080] dark:text-[#7a6e60]">
-                            Özellik
-                        </div>
-                        {PLAN_DEFS.map((plan) => (
-                            <div key={plan.key} className="flex-1 text-center text-[13px] font-bold px-2.5 py-3.5">
-                                {plan.name}
-                            </div>
+                            </button>
                         ))}
                     </div>
+                </div>
 
-                    {TABLE_ROW_DEFS.map((row, i) => (
-                        <div
-                            key={row.feature}
-                            className={`flex items-center border-b border-[#e8e0d0] dark:border-[#3d3528] min-w-150 ${
-                                i % 2 === 0 ? "bg-black/1.5 dark:bg-white/1.5" : ""
-                            }`}
-                        >
-                            <div className="w-55 shrink-0 px-4 py-3.25 text-[13px] font-medium text-[#6b5e52] dark:text-[#a89880]">{row.feature}</div>
-                            {row.values.map((v, vi) => {
-                                const plan = PLAN_DEFS[vi];
-                                const color = plan.accent.color;
-                                return (
-                                    <div
-                                        key={vi}
-                                        className="flex-1 text-center px-2.5 py-3.25 text-[13px]"
-                                        style={{
-                                            fontWeight: v === "✓" ? 700 : v === "—" ? 400 : 500,
-                                            color: v === "✓" ? color : v === "—" ? "var(--rb-text-muted)" : undefined,
-                                        }}
-                                    >
-                                        {v}
-                                    </div>
-                                );
-                            })}
+                {/* Plan card */}
+                <div className="max-w-115 mx-auto mb-16">
+                    <div
+                        className="relative overflow-hidden rounded-[20px] p-8 flex flex-col gap-4 border-2 bg-[#1c1510] dark:bg-[#0e0b08]"
+                        style={{ borderColor: ACCENT.color, boxShadow: `0 20px 60px ${ACCENT.bg}` }}
+                    >
+                        <div className="font-serif text-[26px] font-bold leading-none" style={{ color: "#f2ede4" }}>
+                            Sophram Aboneliği
                         </div>
-                    ))}
+                        <div className="text-[13px] leading-tight" style={{ color: "rgba(242,237,228,0.55)" }}>
+                            Tek şubeli restoranlar için tüm özellikler dahil
+                        </div>
+
+                        <div className="flex items-baseline gap-0.75">
+                            <span className="text-xl font-semibold mb-1.5" style={{ color: "#f2ede4" }}>
+                                ₺
+                            </span>
+                            <span className="font-serif text-[52px] font-bold leading-none" style={{ color: "#f2ede4" }}>
+                                {billing.priceMonthlyEquivalent.toLocaleString("tr-TR")}
+                            </span>
+                            <span className="text-[13px] ml-0.5" style={{ color: "rgba(242,237,228,0.45)" }}>
+                                /ay
+                            </span>
+                        </div>
+                        <div className="text-[12px]" style={{ color: "rgba(242,237,228,0.45)" }}>
+                            {billing.months === 1
+                                ? "Her ay faturalandırılır"
+                                : `${billing.label} peşin · toplam ${billing.priceTotal.toLocaleString("tr-TR")} ₺`}
+                        </div>
+
+                        <div className="h-px" style={{ background: "rgba(255,255,255,0.1)" }} />
+
+                        <div className="flex flex-col flex-1">
+                            {PLAN_FEATURES.map((feat) => (
+                                <div key={feat} className="flex items-center gap-2.25 py-1.25">
+                                    <div
+                                        className="w-4.5 h-4.5 rounded-md shrink-0 flex items-center justify-center"
+                                        style={{ background: ACCENT.bg, color: ACCENT.color }}
+                                    >
+                                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                            <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                    <span className="text-[13px]" style={{ color: "#f2ede4" }}>
+                                        {feat}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <Link
+                            to="/login"
+                            className="w-full text-center py-3.25 rounded-xl text-sm font-bold mt-2 transition-opacity hover:opacity-90"
+                            style={{ background: ACCENT.color, color: "#FFFFFF" }}
+                        >
+                            14 Gün Ücretsiz Dene
+                        </Link>
+                    </div>
                 </div>
 
                 {/* FAQ */}
@@ -776,27 +503,7 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ── FOOTER ── */}
-            <footer className="px-6 md:px-15 py-5 border-t border-white/6 bg-[#1c1510] dark:bg-[#0e0b08]">
-                <div className="flex justify-between items-center flex-wrap gap-3">
-                    <div className="flex items-center gap-2">
-                        <span className="font-serif text-[17px] font-bold" style={{ color: "rgba(242,237,228,0.6)" }}>
-                            Sophram
-                        </span>
-                        <span className="text-xs ml-3" style={{ color: "rgba(242,237,228,0.25)" }}>
-                            © {new Date().getFullYear()} Sophram
-                        </span>
-                    </div>
-                    <div className="flex gap-5">
-                        <a href="#pricing" className="text-[13px]" style={{ color: "rgba(242,237,228,0.4)" }}>
-                            Fiyatlandırma
-                        </a>
-                        <Link to="/login" className="text-[13px]" style={{ color: "rgba(242,237,228,0.4)" }}>
-                            Giriş Yap
-                        </Link>
-                    </div>
-                </div>
-            </footer>
+            <PublicFooter />
         </div>
     );
 }
