@@ -36,6 +36,12 @@ import ProfilePage from './pages/admin/ProfilePage';
 import ReportsPage from './pages/reports/ReportsPage';
 import OverViewPage from './pages/shared/OverViewPage';
 
+import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/legal/TermsOfServicePage';
+import DistanceSalesAgreementPage from './pages/legal/DistanceSalesAgreementPage';
+import RefundPolicyPage from './pages/legal/RefundPolicyPage';
+import ContactPage from './pages/legal/ContactPage';
+
 function App() {
     return (
         <>
@@ -87,6 +93,13 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<Navigate to="/login" replace />} />
                 <Route path="/verify-phone" element={<PhoneVerificationPage />} />
+
+                {/* Legal */}
+                <Route path="/gizlilik-politikasi" element={<PrivacyPolicyPage />} />
+                <Route path="/kullanim-kosullari" element={<TermsOfServicePage />} />
+                <Route path="/mesafeli-satis-sozlesmesi" element={<DistanceSalesAgreementPage />} />
+                <Route path="/iptal-ve-iade" element={<RefundPolicyPage />} />
+                <Route path="/iletisim" element={<ContactPage />} />
 
                 {/* Landing */}
                 <Route path="/" element={<LandingPage />} />
