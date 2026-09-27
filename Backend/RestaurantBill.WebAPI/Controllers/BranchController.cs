@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Restaurants.Commands.CreateBranch;
+using RestaurantBill.Application.Features.Restaurants.Commands.DeleteBranch;
 using RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranch;
 using RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranchDayEndSettings;
 using RestaurantBill.Application.Features.Restaurants.Queries.GetBranchByUserId;
@@ -51,6 +52,14 @@ public class BranchController : BaseController
     {
         command.RestaurantId = id;
         var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    [Authorize(Roles = "Owner")]
+    [HttpDelete("branches/{id}")]
+    public async Task<IActionResult> DeleteBranch([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new DeleteBranchCommand { BranchId = id }, cancellationToken);
         return HandleResult(result);
     }
 

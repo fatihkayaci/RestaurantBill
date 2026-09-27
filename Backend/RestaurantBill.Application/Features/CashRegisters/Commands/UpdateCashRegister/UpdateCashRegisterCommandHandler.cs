@@ -5,37 +5,35 @@ using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Shared;
 
-namespace RestaurantBill.Application.Features.CashRegisters.Commands.DeleteCashRegister;
+namespace RestaurantBill.Application.Features.CashRegisters.Commands.UpdateCashRegister;
 
-public class DeleteCashRegisterHandler : IRequestHandler<DeleteCashRegisterCommand, Result>
+public class UpdateCashRegisterCommandHandler : IRequestHandler<UpdateCashRegisterCommand, Result>
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
-    public DeleteCashRegisterHandler(IAppDbContext db, ICurrentUserService currentUser)
+    public UpdateCashRegisterCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
         _db = db;
         _currentUser = currentUser;
     }
 
-    public async Task<Result> Handle(DeleteCashRegisterCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(UpdateCashRegisterCommand request, CancellationToken cancellationToken)
     {
         CashRegister? register = await _db.CashRegisters
-            .FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
-        if (register is null) return Result.Failure("Kasa Bulunamadı");
+            .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
+        if (register is null) return Result.Failure("Böyle bir kasa bulunamadı");
 
-        register.EnsureCanBeDeleted();
-
-        _db.CashRegisters.Remove(register);
+        register.Update(request.Name, request.Balance, request.Status);
 
         User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
             _currentUser.BranchId,
             actor?.FullName ?? string.Empty,
             AuditLogCategory.System,
-            AuditLogSeverity.Warning,
-            "CashRegisterDeleted",
-            $"{actor?.FullName} {register.Name} kasasını sildi.",
+            AuditLogSeverity.Info,
+            "CashRegisterUpdated",
+            $"{actor?.FullName} {register.Name} kasasını güncelledi.",
             nameof(CashRegister),
             register.Id);
         _db.AuditLogs.Add(log);
