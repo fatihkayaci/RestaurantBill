@@ -33,6 +33,13 @@ const MOCK_TABLES = [
     { num: "09", badge: "Dolu", amount: "₺315", ...ORANGE },
 ];
 
+const VALUE_PROPS = [
+    { icon: "☁", label: "Bulut Tabanlı" },
+    { icon: "⇄", label: "Gerçek Zamanlı Senkronizasyon" },
+    { icon: "🇹🇷", label: "Türkçe Arayüz & Destek" },
+    { icon: "🔒", label: "KVKK Uyumlu" },
+];
+
 const FEATURES = [
     { icon: "◎", name: "Garson Ekranı", desc: "Masa durumunu anlık görün, sipariş oluşturun ve gönderin. Tıkla, seç, gönder.", roleTag: "Garson", accent: ACCENT },
     { icon: "◈", name: "Mutfak Ekranı", desc: "Kanban tarzı iş akışı. Bekliyor → Hazırlanıyor → Hazır. 15dk+ siparişlerde uyarı.", roleTag: "Mutfak", accent: AMBER },
@@ -232,6 +239,18 @@ export default function LandingPage() {
                     </div>
                 </div>
             </section>
+
+            {/* ── VALUE PROPS ── */}
+            <div className="px-6 md:px-15 py-5.5 border-t border-b border-[#e8e0d0] dark:border-[#3d3528] bg-black/2 dark:bg-white/1 flex items-center justify-center gap-8 flex-wrap">
+                {VALUE_PROPS.map((prop) => (
+                    <div key={prop.label} className="flex items-center gap-2">
+                        <span className="text-base leading-none">{prop.icon}</span>
+                        <span className="text-[12px] font-semibold tracking-[0.2px] text-[#6b5e52] dark:text-[#a89880]">
+                            {prop.label}
+                        </span>
+                    </div>
+                ))}
+            </div>
 
             {/* ── FEATURES ── */}
             <section id="features" className="px-6 md:px-15 py-20 bg-[#f5f0e8] dark:bg-[#18140f] [content-visibility:auto] [contain-intrinsic-size:auto_900px]">

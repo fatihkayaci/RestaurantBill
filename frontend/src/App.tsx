@@ -36,6 +36,8 @@ import ProfilePage from './pages/admin/ProfilePage';
 import ReportsPage from './pages/reports/ReportsPage';
 import OverViewPage from './pages/shared/OverViewPage';
 
+import NotFoundPage from './pages/NotFoundPage';
+
 import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/legal/TermsOfServicePage';
 import DistanceSalesAgreementPage from './pages/legal/DistanceSalesAgreementPage';
@@ -103,6 +105,9 @@ function App() {
 
                 {/* Landing */}
                 <Route path="/" element={<LandingPage />} />
+
+                {/* 404 */}
+                <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <Toaster position="top-right" richColors />
         </>
