@@ -10,11 +10,10 @@ using RestaurantBill.Application.Features.Shifts.Commands.EnsureShiftOpen;
 using RestaurantBill.Application.Features.Shifts.Commands.OpenShift;
 using RestaurantBill.Application.Features.Shifts.Commands.RejectShiftDifference;
 using RestaurantBill.Application.Features.Shifts.Commands.RejectShiftOpeningDifference;
+using RestaurantBill.Application.Features.Shifts.Commands.TakeOverShift;
 using RestaurantBill.Application.Features.Shifts.Queries.GetAllShifts;
 using RestaurantBill.Application.Features.Shifts.Queries.GetCurrentShift;
 using RestaurantBill.Application.Features.Shifts.Queries.GetMyCurrentShift;
-using RestaurantBill.Application.Features.Shifts.Queries.GetMyCurrentShiftSummary;
-using RestaurantBill.Application.Features.Shifts.Queries.GetMyCurrentShiftTransactions;
 using RestaurantBill.Application.Features.Shifts.Queries.GetShiftById;
 using RestaurantBill.Application.Features.Shifts.Queries.GetShiftStartCandidates;
 using RestaurantBill.Application.Features.Shifts.Queries.GetShiftSummary;
@@ -108,30 +107,6 @@ public class ShiftController : BaseController
     }
 
     /// <summary>
-    /// Returns a payment-method breakdown, total, and open-tables warning count for the caller's currently open shift.
-    /// </summary>
-    [Authorize(Roles = "Owner,Admin,Cashier")]
-    [HttpGet("my-current-summary")]
-    public async Task<IActionResult> GetMyCurrentSummary(CancellationToken cancellationToken)
-    {
-        var query = new GetMyCurrentShiftSummaryQuery();
-        var summary = await _mediator.Send(query, cancellationToken);
-        return HandleResult(summary);
-    }
-
-    /// <summary>
-    /// Returns the payment transactions recorded during the caller's currently open shift.
-    /// </summary>
-    [Authorize(Roles = "Owner,Admin,Cashier")]
-    [HttpGet("my-current-transactions")]
-    public async Task<IActionResult> GetMyCurrentTransactions(CancellationToken cancellationToken)
-    {
-        var query = new GetMyCurrentShiftTransactionsQuery();
-        var values = await _mediator.Send(query, cancellationToken);
-        return HandleResult(values);
-    }
-
-    /// <summary>
     /// Returns a payment-method breakdown, total, and open-tables warning count for a given shift, open or closed.
     /// </summary>
     /// <param name="id">ShiftId</param>
@@ -162,7 +137,7 @@ public class ShiftController : BaseController
 
     #region post methods
     /// <summary>
-    /// Opens a new shift on a cash register.
+    /// Opens the caller's shift on a cash register. A count is required only when the register's previous shift closed without one.
     /// </summary>
     [Authorize(Roles = "Owner,Admin,Cashier")]
     [HttpPost("open")]
@@ -175,9 +150,20 @@ public class ShiftController : BaseController
     /// <summary>
     /// Returns the cash register's currently open shift, opening one (sayımsız, server-computed opening balance) if none exists yet.
     /// </summary>
-    [Authorize(Roles = "Owner,Admin,Cashier")]
+    [Authorize(Roles = "Owner,Admin")]
     [HttpPost("ensure-open")]
     public async Task<IActionResult> EnsureOpen([FromBody] EnsureShiftOpenCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Takes over another user's open shift on a cash register: closes it with the caller's count and opens the caller's shift.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin,Cashier")]
+    [HttpPost("take-over")]
+    public async Task<IActionResult> TakeOver([FromBody] TakeOverShiftCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);

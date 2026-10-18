@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -21,33 +22,41 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
 
     public async Task<Result<List<ShiftStartCandidateDto>>> Handle(GetShiftStartCandidatesQuery request, CancellationToken cancellationToken)
     {
-        Guid restaurantId = _currentUser.BranchId;
-        if (restaurantId == Guid.Empty) return Result<List<ShiftStartCandidateDto>>.Failure("Geçersiz şube bilgisi.");
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+        if (branchIds.Count == 0) return Result<List<ShiftStartCandidateDto>>.Failure("Geçersiz şube bilgisi.");
 
         var registers = await _db.CashRegisters
             .AsNoTracking()
-            .Where(r => r.BranchId == restaurantId && r.Status == CashRegisterStatus.Open)
+            .InBranches(branchIds)
+            .Where(r => r.Status == CashRegisterStatus.Open)
             .ToListAsync(cancellationToken);
 
-        // Vardiya artık kişiye değil kasaya ait: admin bir kasada günü başlatmış olabilir,
-        // bu yüzden kasiyerin kendi açtığı bir vardiyası olsa da tüm açık kasalar listelenir
-        // ki zaten açık olan bir kasaya (sayım yapmadan) katılabilsin.
         var openShiftByRegisterId = await _db.Shifts
             .AsNoTracking()
-            .Where(s => s.BranchId == restaurantId && s.Status == ShiftStatus.Open)
+            .InBranches(branchIds)
+            .Where(s => s.Status == ShiftStatus.Open)
             .ToDictionaryAsync(s => s.CashRegisterId, cancellationToken);
+
+        List<Guid> ownerIds = openShiftByRegisterId.Values.Select(s => s.OpenedByUserId).Distinct().ToList();
+        Dictionary<Guid, string> ownerNames = await _db.Users
+            .AsNoTracking()
+            .Where(u => ownerIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
         // Kasa bazında en son kapanmış vardiyayı bulmak için (sayımı atlanmış mı diye bakmak
         // amacıyla) tüm kapalı vardiyaları çekip bellekte gruplamak, EF'in GroupBy+First
         // çevirisinin sağlayıcıya göre değişken olmasından daha güvenilir.
         List<Shift> closedShifts = await _db.Shifts
             .AsNoTracking()
-            .Where(s => s.BranchId == restaurantId && s.Status == ShiftStatus.Closed)
+            .InBranches(branchIds)
+            .Where(s => s.Status == ShiftStatus.Closed)
             .OrderByDescending(s => s.ClosedAt)
             .ToListAsync(cancellationToken);
         Dictionary<Guid, Shift> lastClosedShiftByRegisterId = closedShifts
             .GroupBy(s => s.CashRegisterId)
             .ToDictionary(g => g.Key, g => g.First());
+
+        bool canSeeExpected = _currentUser.CanSeeExpectedBalance();
 
         var candidates = registers
             .Select(r =>
@@ -58,11 +67,13 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
                 {
                     CashRegisterId = r.Id,
                     CashRegisterName = r.Name,
-                    ExpectedOpeningBalance = r.Balance,
+                    ExpectedOpeningBalance = canSeeExpected ? r.Balance : null,
                     HasOpenShift = openShift is not null,
                     OpenShiftId = openShift?.Id,
                     OpenedAt = openShift?.OpenedAt,
-                    PreviousShiftUncounted = lastClosedShift?.CountStatus == ShiftCountStatus.NotCounted
+                    OpenShiftOwnerName = openShift is null ? null : ownerNames.GetValueOrDefault(openShift.OpenedByUserId),
+                    IsMine = openShift?.OpenedByUserId == _currentUser.UserId,
+                    RequiresCount = openShift is null && lastClosedShift?.CountStatus == ShiftCountStatus.NotCounted
                 };
             })
             .OrderBy(c => c.CashRegisterName)

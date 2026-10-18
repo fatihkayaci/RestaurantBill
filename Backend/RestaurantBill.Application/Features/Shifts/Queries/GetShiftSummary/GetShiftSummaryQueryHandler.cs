@@ -76,7 +76,7 @@ public class GetShiftSummaryQueryHandler : IRequestHandler<GetShiftSummaryQuery,
             TransactionCount = completedOrdersCount,
             Breakdown = breakdown,
             Total = payments.Sum(p => p.TotalAmount),
-            ExpectedCashInRegister = expectedCashInRegister,
+            ExpectedCashInRegister = _currentUser.CanSeeExpectedBalance() ? expectedCashInRegister : null,
             OpenTablesCount = openTablesCount
         });
     }

@@ -9,7 +9,7 @@ public class OpenShiftCommandValidator : AbstractValidator<OpenShiftCommand>
         RuleFor(x => x.CashRegisterId)
             .NotEqual(Guid.Empty).WithMessage("Geçersiz kasa Id.");
 
-        RuleFor(x => x.OpeningBalance)
-            .GreaterThanOrEqualTo(0).WithMessage("Açılış bakiyesi negatif olamaz.");
+        RuleFor(x => x.CountedBalance)
+            .GreaterThanOrEqualTo(0).When(x => x.CountedBalance.HasValue).WithMessage("Sayılan tutar negatif olamaz.");
     }
 }

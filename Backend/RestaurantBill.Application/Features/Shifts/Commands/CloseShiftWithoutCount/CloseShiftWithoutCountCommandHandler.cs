@@ -38,7 +38,7 @@ public class CloseShiftWithoutCountCommandHandler : IRequestHandler<CloseShiftWi
 
         User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
-            _currentUser.BranchId,
+            shift.BranchId,
             actor?.FullName ?? string.Empty,
             AuditLogCategory.System,
             AuditLogSeverity.Info,

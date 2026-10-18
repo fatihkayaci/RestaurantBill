@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -20,9 +21,11 @@ public class RejectShiftDifferenceCommandHandler : IRequestHandler<RejectShiftDi
 
     public async Task<Result> Handle(RejectShiftDifferenceCommand request, CancellationToken cancellationToken)
     {
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
         Shift? shift = await _db.Shifts
-            .FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
-        if (shift is null || shift.BranchId != _currentUser.BranchId)
+            .InBranches(branchIds).FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
+        if (shift is null)
             return Result.Failure("Vardiya bulunamadı.");
 
         if (shift.Difference is null or 0)
@@ -32,19 +35,18 @@ public class RejectShiftDifferenceCommandHandler : IRequestHandler<RejectShiftDi
             .FirstOrDefaultAsync(c => c.Id == shift.CashRegisterId, cancellationToken);
         if (register is null) return Result.Failure("Kasa bulunamadı.");
 
-        CashTransaction reversal = register.ApplyShiftDifference(-shift.Difference.Value, _currentUser.UserId);
-        _db.CashTransactions.Add(reversal);
-
+        // Kasa bakiyesi sayılan nakde eşitlenmişti ve öyle kalır: ret sadece farkın kabul
+        // edilmediğini işaretler. Düzeltmeyi geri almak bakiyeyi fiziksel nakitten koparırdı.
         shift.RejectDifference(_currentUser.UserId, request.Note);
 
         User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
-            _currentUser.BranchId,
+            shift.BranchId,
             actor?.FullName ?? string.Empty,
             AuditLogCategory.System,
             AuditLogSeverity.Warning,
             "ShiftDifferenceRejected",
-            $"{actor?.FullName} {register.Name} kasasındaki ₺{shift.Difference} tutarındaki vardiya kapanış farkını reddetti, kasa bakiyesi düzeltme öncesine geri alındı (yeni bakiye ₺{register.Balance})." +
+            $"{actor?.FullName} {register.Name} kasasındaki ₺{shift.Difference} tutarındaki vardiya kapanış farkını reddetti. Kasa bakiyesi sayılan tutarda kaldı." +
                 (string.IsNullOrWhiteSpace(request.Note) ? string.Empty : $" Not: {request.Note}"),
             nameof(Shift),
             shift.Id);
