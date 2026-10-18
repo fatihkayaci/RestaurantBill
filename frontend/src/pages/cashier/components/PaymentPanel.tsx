@@ -120,14 +120,14 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         setSelectedCashRegisterId(register.cashRegisterId);
         setManualShift(null);
         if (!register.hasOpenShift) {
-            toast.warning(`${register.cashRegisterName} kasasında gün henüz başlatılmamış, bu ödemeyle birlikte başlatılacak.`);
+            toast.warning(`${register.cashRegisterName} kasasında açık vardiya yok, bu ödemeyle birlikte sizin adınıza açılacak.`);
         }
         setEnsuringShift(true);
         try {
             const shift = await shiftService.ensureOpen(register.cashRegisterId);
             setManualShift(shift);
         } catch (err) {
-            toast.error(getApiErrorMessage(err, 'Bu kasada gün başlatılamadı.'));
+            toast.error(getApiErrorMessage(err, 'Bu kasada vardiya açılamadı.'));
         } finally {
             setEnsuringShift(false);
         }
@@ -397,10 +397,10 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                                         <p className={`text-sm font-semibold truncate ${isSelected ? 'text-rb-accent' : ''}`}>{register.cashRegisterName}</p>
                                                         <p className={`text-xs ${!register.hasOpenShift && !(isSelected && ensuringShift) ? 'text-rb-amber font-medium' : 'text-muted-foreground'}`}>
                                                             {isSelected && ensuringShift
-                                                                ? 'Gün açılıyor...'
+                                                                ? 'Vardiya açılıyor...'
                                                                 : register.hasOpenShift
-                                                                    ? `${formatAmount(register.expectedOpeningBalance)} ₺`
-                                                                    : 'Kapalı — gün başlatılacak'}
+                                                                    ? `${register.openShiftOwnerName || 'Açık'} vardiyası · ${formatAmount(register.expectedOpeningBalance ?? 0)} ₺`
+                                                                    : 'Vardiya yok, sizin adınıza açılacak'}
                                                         </p>
                                                     </div>
                                                 </button>

@@ -118,7 +118,8 @@ export default function CashierDashboardPage() {
     const shiftRevenue = shiftSummary?.total ?? 0;
     const shiftTransactionCount = shiftSummary?.transactionCount ?? 0;
     const shiftAvgTicket = shiftTransactionCount > 0 ? shiftRevenue / shiftTransactionCount : 0;
-    const cashInRegister = shiftSummary?.expectedCashInRegister ?? 0;
+    // Kör sayım için kasadaki beklenen tutar gösterilmez; sadece bu vardiyada alınan nakit gösterilir.
+    const cashCollected = shiftSummary?.breakdown.find(b => b.method === 2)?.amount ?? 0;
 
     const statsSlot = document.getElementById('cashier-stats-slot');
 
@@ -152,8 +153,8 @@ export default function CashierDashboardPage() {
                 </div>
                 <div className="hidden sm:block w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-serif font-bold text-rb-green">₺{formatAmount(cashInRegister)}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Kasadaki Para</p>
+                    <p className="text-lg font-serif font-bold text-rb-green">₺{formatAmount(cashCollected)}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Nakit Tahsilat</p>
                 </div>
             </div>
 

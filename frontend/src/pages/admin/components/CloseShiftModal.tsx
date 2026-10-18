@@ -46,7 +46,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
 
     const countedNum = parseFloat(countedAmount.replace(',', '.'));
     const hasValidCounted = countedAmount !== '' && !Number.isNaN(countedNum);
-    const diff = summary && hasValidCounted ? countedNum - summary.expectedCashInRegister : 0;
+    const diff = summary && hasValidCounted ? countedNum - (summary.expectedCashInRegister ?? 0) : 0;
 
     const handleCloseWithCount = async () => {
         if (!summary) return;
@@ -134,7 +134,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
 
                         <div className="mt-2 rounded-lg bg-muted px-4 py-3 flex items-center justify-between">
                             <span className="text-xs text-muted-foreground uppercase tracking-wide">Kasada Olması Gereken Nakit</span>
-                            <span className="font-serif text-lg font-bold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister)}</span>
+                            <span className="font-serif text-lg font-bold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister ?? 0)}</span>
                         </div>
 
                         <div className="mt-5">

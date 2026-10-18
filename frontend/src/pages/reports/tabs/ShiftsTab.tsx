@@ -76,7 +76,7 @@ export default function ShiftsTab({ data, loading, showBranchSummary, onChanged 
                     toast.success('Açılış farkı onaylandı.');
                 } else {
                     await shiftService.rejectOpeningDifference(shift.id, rejectNote || undefined);
-                    toast.success('Açılış farkı reddedildi, kasa bakiyesi geri alındı.');
+                    toast.success('Açılış farkı reddedildi.');
                 }
             } else {
                 if (action === 'approve') {
@@ -84,7 +84,7 @@ export default function ShiftsTab({ data, loading, showBranchSummary, onChanged 
                     toast.success('Kapanış farkı onaylandı.');
                 } else {
                     await shiftService.rejectDifference(shift.id, rejectNote || undefined);
-                    toast.success('Kapanış farkı reddedildi, kasa bakiyesi geri alındı.');
+                    toast.success('Kapanış farkı reddedildi.');
                 }
             }
             setReviewTarget(null);
@@ -297,10 +297,10 @@ export default function ShiftsTab({ data, loading, showBranchSummary, onChanged 
                                 <>
                                     {reviewTarget.shift.cashRegisterName} kasasında{' '}
                                     ₺{formatAmount((reviewTarget.type === 'opening' ? reviewTarget.shift.openingDifference : reviewTarget.shift.difference) ?? 0)}{' '}
-                                    tutarında {reviewTarget.type === 'opening' ? 'açılış' : 'kapanış'} farkı, kasiyer bildirdiği anda kasa bakiyesine zaten işlendi.{' '}
+                                    tutarında {reviewTarget.type === 'opening' ? 'açılış' : 'kapanış'} farkı, sayım yapıldığı anda kasa bakiyesine işlendi; kasa bakiyesi sayılan nakde eşit.{' '}
                                     {reviewTarget.action === 'approve'
-                                        ? 'Onaylarsanız kasa bakiyesine ek bir işlem yapılmaz, sadece incelendiği kaydedilir.'
-                                        : 'Reddederseniz kasa bakiyesi bu düzeltme öncesine geri alınır.'}
+                                        ? 'Onaylarsanız fark kabul edilmiş olarak kaydedilir.'
+                                        : 'Reddederseniz fark kabul edilmemiş olarak işaretlenir (örn. kasiyerden tahsil edilecek). Kasa bakiyesi değişmez.'}
                                 </>
                             )}
                         </AlertDialogDescription>

@@ -100,7 +100,7 @@ export default function ShiftDetailModal({ shift, onClose }: Props) {
 
                             <div className="rounded-lg bg-muted px-4 py-3 flex items-center justify-between">
                                 <span className="text-xs text-muted-foreground uppercase tracking-wide">Kasada Olması Gereken Nakit</span>
-                                <span className="font-serif text-lg font-bold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister)}</span>
+                                <span className="font-serif text-lg font-bold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister ?? 0)}</span>
                             </div>
 
                             {summary.openTablesCount > 0 && (
