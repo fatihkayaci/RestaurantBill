@@ -37,8 +37,12 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.UseSwagger();
-app.UseSwaggerUI();
+// Production'da API yüzeyini dışarı açmamak için Swagger yalnızca Development'ta veya açıkça istendiğinde yayınlanır.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled"))
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 app.MapHub<KitchenHub>("/kitchen-hub");
 app.MapHub<TableHub>("/table-hub");
 app.MapHub<CashierHub>("/cashier-hub");

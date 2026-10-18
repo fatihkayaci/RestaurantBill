@@ -327,7 +327,7 @@ docker compose up --build
 ```
 
 This starts:
-- **API** on `http://localhost:8080` (Swagger: `http://localhost:8080/swagger`)
+- **API** on `http://localhost:8080` (Swagger: `http://localhost:8080/swagger` — set `SWAGGER_ENABLED=true` in `.env`, it is off by default outside Development)
 - **Frontend** on `http://localhost:3000`
 - **PostgreSQL** on `localhost:5432`
 
