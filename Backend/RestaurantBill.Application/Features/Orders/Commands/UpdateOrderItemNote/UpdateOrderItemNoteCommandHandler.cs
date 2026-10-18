@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Shared;
@@ -21,9 +22,11 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemNot
 
         public async Task<Result> Handle(UpdateOrderItemNoteCommand request, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUserService, cancellationToken);
+
             Order? order = await _db.Orders
                 .Include(o => o.OrderItems)
-                .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 

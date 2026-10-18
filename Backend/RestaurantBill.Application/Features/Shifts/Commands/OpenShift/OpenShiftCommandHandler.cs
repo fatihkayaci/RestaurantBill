@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -20,10 +21,12 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
 
     public async Task<Result> Handle(OpenShiftCommand request, CancellationToken cancellationToken)
     {
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
         Guid restaurantId = _currentUser.BranchId;
 
         CashRegister? register = await _db.CashRegisters
-            .FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
+            .InBranches(branchIds).FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
         if (register is null) return Result.Failure("Kasa bulunamadı.");
 
         if (register.Status != CashRegisterStatus.Open)

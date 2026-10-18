@@ -1,4 +1,5 @@
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -23,15 +24,17 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
 
         public async Task<Result> Handle(AddProductToOrderCommand request, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUserService, cancellationToken);
+
             Order? order = await _db.Orders
                 .Include(o => o.OrderItems)
-                .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
             foreach (var item in request.OrderItems)
             {
-                Product? product = await _db.Products.FirstOrDefaultAsync(p => p.Id == item.ProductId, cancellationToken);
+                Product? product = await _db.Products.InBranches(branchIds).FirstOrDefaultAsync(p => p.Id == item.ProductId, cancellationToken);
                 if (product is null)
                     return Result.Failure("Böyle bir ürün bulunamadı.");
 

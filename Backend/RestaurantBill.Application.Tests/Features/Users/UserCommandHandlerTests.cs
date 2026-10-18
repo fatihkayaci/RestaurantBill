@@ -77,9 +77,13 @@ public class UserCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingUser_MarksAsDeletedAndSaves()
         {
+            Branch branch = CreateBranchWithId(CurrentUser.BranchId);
+            DbContext.Branches.Add(branch);
             User user = User.Create("Fatih", "", "");
             DbContext.Users.Add(user);
+            DbContext.UserBranches.Add(UserBranch.Create(user, branch, "fatih", "USR01", UserRole.Waiter));
             await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
 
             var handler = new DeleteUserCommandHandler(Db, CurrentUser);
             await handler.Handle(new DeleteUserCommand { UserId = user.Id }, CancellationToken.None);
@@ -96,6 +100,38 @@ public class UserCommandHandlerTests
 
             Assert.True(result.IsFailure);
         }
+
+        [Fact]
+        public async Task Handle_WithUserFromAnotherBranch_ReturnsFailureAndKeepsUser()
+        {
+            Branch otherBranch = CreateBranchWithId(Guid.NewGuid());
+            DbContext.Branches.Add(otherBranch);
+            User user = User.Create("Başka Şube", "", "");
+            DbContext.Users.Add(user);
+            DbContext.UserBranches.Add(UserBranch.Create(user, otherBranch, "baska", "USR02", UserRole.Waiter));
+            await DbContext.SaveChangesAsync();
+
+            var handler = new DeleteUserCommandHandler(Db, CurrentUser);
+            var result = await handler.Handle(new DeleteUserCommand { UserId = user.Id }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.False(user.IsDeleted);
+        }
+
+        [Fact]
+        public async Task Handle_WithOwnerAccount_ReturnsFailureAndKeepsOwner()
+        {
+            User ownerUser = User.Create("Başka Owner", "owner@test.com", "");
+            DbContext.Users.Add(ownerUser);
+            DbContext.Companies.Add(Company.Create("Başka Şirket", ownerUser));
+            await DbContext.SaveChangesAsync();
+
+            var handler = new DeleteUserCommandHandler(Db, CurrentUser);
+            var result = await handler.Handle(new DeleteUserCommand { UserId = ownerUser.Id }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.False(ownerUser.IsDeleted);
+        }
     }
 
     public class UpdateUserHandlerTests : ApplicationTestBase
@@ -103,16 +139,17 @@ public class UserCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingUser_UpdatesAndSaves()
         {
-            Branch branch = CreateBranchWithId(Guid.NewGuid());
+            var owner = new FakeCurrentUserService { Role = "Owner" };
+            User ownerUser = await SeedActorAsync(userId: owner.UserId);
+            Company company = Company.Create("Şirket", ownerUser);
+            DbContext.Companies.Add(company);
+            Branch branch = Branch.Create(company.Id, "Test Restoran", "", "", "", "", "", "", 0m);
             DbContext.Branches.Add(branch);
             User user = User.Create("Eski Ad", "", "");
             DbContext.Users.Add(user);
             UserBranch userBranch = UserBranch.Create(user, branch, "eski", "OLD01", UserRole.Waiter);
             DbContext.UserBranches.Add(userBranch);
             await DbContext.SaveChangesAsync();
-
-            var owner = new FakeCurrentUserService { Role = "Owner" };
-            await SeedActorAsync(userId: owner.UserId);
 
             var handler = new UpdateUserCommandHandler(Db, new FakePasswordHasher(), owner);
             var command = new UpdateUserCommand
@@ -134,7 +171,7 @@ public class UserCommandHandlerTests
         [Fact]
         public async Task Handle_WithPassword_HashesAndSetsPassword()
         {
-            Branch branch = CreateBranchWithId(Guid.NewGuid());
+            Branch branch = CreateBranchWithId(CurrentUser.BranchId);
             DbContext.Branches.Add(branch);
             User user = User.Create("Fatih", "", "");
             DbContext.Users.Add(user);
@@ -165,6 +202,47 @@ public class UserCommandHandlerTests
             var result = await handler.Handle(new UpdateUserCommand { UserId = Guid.NewGuid(), FullName = "Ad", UserName = "un", UserCode = "UC" }, CancellationToken.None);
 
             Assert.True(result.IsFailure);
+        }
+
+        [Fact]
+        public async Task Handle_AdminChangingAnotherOwnersPassword_ReturnsFailureAndKeepsPassword()
+        {
+            User ownerUser = User.Create("Başka Owner", "owner@test.com", "");
+            ownerUser.SetPasswordHash("original_hash");
+            DbContext.Users.Add(ownerUser);
+            DbContext.Companies.Add(Company.Create("Başka Şirket", ownerUser));
+            await DbContext.SaveChangesAsync();
+
+            var handler = new UpdateUserCommandHandler(Db, new FakePasswordHasher(), CurrentUser);
+            var result = await handler.Handle(new UpdateUserCommand
+            {
+                UserId = ownerUser.Id,
+                FullName = "Ele Geçirildi",
+                UserName = "x",
+                UserCode = "X",
+                Password = "yenisifre",
+                Role = UserRole.Owner
+            }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal("original_hash", ownerUser.PasswordHash);
+        }
+
+        [Fact]
+        public async Task Handle_WithUserFromAnotherBranch_ReturnsFailure()
+        {
+            Branch otherBranch = CreateBranchWithId(Guid.NewGuid());
+            DbContext.Branches.Add(otherBranch);
+            User user = User.Create("Başka Şube", "", "");
+            DbContext.Users.Add(user);
+            DbContext.UserBranches.Add(UserBranch.Create(user, otherBranch, "baska", "USR02", UserRole.Waiter));
+            await DbContext.SaveChangesAsync();
+
+            var handler = new UpdateUserCommandHandler(Db, new FakePasswordHasher(), CurrentUser);
+            var result = await handler.Handle(new UpdateUserCommand { UserId = user.Id, FullName = "Yeni", UserName = "yeni", UserCode = "Y1", Role = UserRole.Waiter }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal("Başka Şube", user.FullName);
         }
     }
 }

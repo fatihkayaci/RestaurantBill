@@ -23,6 +23,9 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
 
         public async Task<Result> Handle(CreateUserCommand request, CancellationToken cancellationToken)
         {
+            if (request.Role == UserRole.Owner)
+                return Result.Failure("Personele Owner rolü atanamaz.");
+
             if (request.Role == UserRole.Admin && _currentUser.Role != nameof(UserRole.Owner))
                 return Result.Failure("Admin rolü atama yetkiniz yok.");
 

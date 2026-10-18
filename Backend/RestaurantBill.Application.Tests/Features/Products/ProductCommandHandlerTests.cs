@@ -25,7 +25,7 @@ public class ProductCommandHandlerTests
                 Price = 15m,
                 IsActive = true,
                 ImageUrl = "img.png",
-                CategoryId = Guid.NewGuid()
+                CategoryId = await DefaultCategoryIdAsync()
             };
 
             var result = await handler.Handle(command, CancellationToken.None);
@@ -39,13 +39,13 @@ public class ProductCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingProduct_UpdatesAndSaves()
         {
-            Product existing = Product.Create("Eski", 10m, "img.png", Guid.NewGuid());
+            Product existing = Product.Create("Eski", 10m, "img.png", await DefaultCategoryIdAsync());
             DbContext.Products.Add(existing);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
 
             var handler = new UpdateProductCommandHandler(Db, CurrentUser);
-            var command = new UpdateProductCommand { Id = existing.Id, Name = "Yeni", Price = 25m, IsActive = false, CategoryId = Guid.NewGuid() };
+            var command = new UpdateProductCommand { Id = existing.Id, Name = "Yeni", Price = 25m, IsActive = false, CategoryId = await DefaultCategoryIdAsync() };
 
             await handler.Handle(command, CancellationToken.None);
 
@@ -69,7 +69,7 @@ public class ProductCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingProduct_DeletesAndSaves()
         {
-            Product existing = Product.Create("Çay", 15m, "img.png", Guid.NewGuid());
+            Product existing = Product.Create("Çay", 15m, "img.png", await DefaultCategoryIdAsync());
             DbContext.Products.Add(existing);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
@@ -83,7 +83,7 @@ public class ProductCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingProductImage_DeletesImageFromStorage()
         {
-            Product existing = Product.Create("Çay", 15m, "products/img.webp", Guid.NewGuid());
+            Product existing = Product.Create("Çay", 15m, "products/img.webp", await DefaultCategoryIdAsync());
             DbContext.Products.Add(existing);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();

@@ -30,9 +30,11 @@ namespace RestaurantBill.Application.Features.Products.Commands.UploadProductIma
 
         public async Task<Result<string>> Handle(UploadProductImageCommand request, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
             Product? product = await _db.Products
                 .Include(p => p.Category)
-                .FirstOrDefaultAsync(p => p.Id == request.ProductId, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(p => p.Id == request.ProductId, cancellationToken);
             if (product is null)
                 return Result<string>.Failure("Böyle bir ürün bulunamadı.");
 

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -24,9 +25,11 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
     public async Task<Result<bool>> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
     {
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUserService, cancellationToken);
+
         Order? order = await _db.Orders
             .Include(o => o.OrderItems).ThenInclude(i => i.Product).ThenInclude(p => p.Category)
-            .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
+            .InBranches(branchIds).FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
         if (order is null)
             return Result<bool>.Failure("Böyle bir sipariş bulunamadı.");
 
@@ -36,8 +39,15 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
             return Result<bool>.Failure("Böyle bir masa bulunamadı.");
 
         CashRegister? register = await _db.CashRegisters
-            .FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
+            .InBranches(branchIds).FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
         if (register is null)
+            return Result<bool>.Failure("Böyle bir kasa bulunamadı.");
+
+        Guid orderBranchId = await _db.Regions
+            .Where(r => r.Id == table.RegionId)
+            .Select(r => r.BranchId)
+            .FirstAsync(cancellationToken);
+        if (register.BranchId != orderBranchId)
             return Result<bool>.Failure("Böyle bir kasa bulunamadı.");
 
         Shift? shift = await _db.Shifts

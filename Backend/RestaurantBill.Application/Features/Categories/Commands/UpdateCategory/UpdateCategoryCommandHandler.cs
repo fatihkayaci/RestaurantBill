@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -20,8 +21,10 @@ namespace RestaurantBill.Application.Features.Categories.Commands.UpdateCategory
 
         public async Task<Result> Handle(UpdateCategoryCommand command, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
             Category? category = await _db.Categories
-                .FirstOrDefaultAsync(c => c.Id == command.Id, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(c => c.Id == command.Id, cancellationToken);
             if (category is null) return Result.Failure("Böyle bir kategori bulunamadı");
 
             category.Rename(command.Name);

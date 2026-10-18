@@ -22,6 +22,11 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
         {
             Guid restaurantId = _currentUser.BranchId;
 
+            bool regionInBranch = await _db.Regions
+                .AnyAsync(r => r.Id == request.RegionId && r.BranchId == restaurantId, cancellationToken);
+            if (!regionInBranch)
+                return Result.Failure("Böyle bir bölge bulunamadı.");
+
             bool nameExistsInRegion = await _db.Tables
                 .AnyAsync(t => t.Name == request.Name && t.RegionId == request.RegionId && t.Region.BranchId == restaurantId, cancellationToken);
             if (nameExistsInRegion)

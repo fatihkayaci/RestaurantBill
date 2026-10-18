@@ -32,5 +32,40 @@ public abstract class ApplicationTestBase : IDisposable
         return user;
     }
 
+    // Handler'lar Id ile gelen kayıtları kullanıcının şubesiyle sınırlar; test verisi bu yüzden
+    // CurrentUser.BranchId'ye bağlı bir bölge/kategori üzerinden kurulmalı.
+    protected async Task<Region> SeedRegionAsync(Guid? branchId = null)
+    {
+        Region region = Region.Create("Salon", branchId ?? CurrentUser.BranchId);
+        DbContext.Regions.Add(region);
+        await DbContext.SaveChangesAsync();
+        return region;
+    }
+
+    protected async Task<Category> SeedCategoryAsync(Guid? branchId = null)
+    {
+        Category category = Category.Create("Kategori", branchId ?? CurrentUser.BranchId);
+        DbContext.Categories.Add(category);
+        await DbContext.SaveChangesAsync();
+        return category;
+    }
+
+    private Region? _defaultRegion;
+    private Category? _defaultCategory;
+
+    protected async Task<Guid> DefaultRegionIdAsync()
+        => (_defaultRegion ??= await SeedRegionAsync()).Id;
+
+    protected async Task<Guid> DefaultCategoryIdAsync()
+        => (_defaultCategory ??= await SeedCategoryAsync()).Id;
+
+    protected async Task<Table> SeedTableAsync()
+    {
+        Table table = Table.Create("Masa", "", await DefaultRegionIdAsync());
+        DbContext.Tables.Add(table);
+        await DbContext.SaveChangesAsync();
+        return table;
+    }
+
     public void Dispose() => DbContext.Dispose();
 }

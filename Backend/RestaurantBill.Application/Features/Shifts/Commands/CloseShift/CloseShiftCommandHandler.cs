@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -22,8 +23,10 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
 
     public async Task<Result> Handle(CloseShiftCommand request, CancellationToken cancellationToken)
     {
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
         Shift? shift = await _db.Shifts
-            .FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
+            .InBranches(branchIds).FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
         if (shift is null) return Result.Failure("Vardiya bulunamadı.");
 
         CashRegister? register = await _db.CashRegisters

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Features.Orders.Queries;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -27,8 +28,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
 
         public async Task<Result<Guid>> Handle(OpenTableCommand request, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUserService, cancellationToken);
+
             Table? table = await _db.Tables
-                .FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
             if (table is null) return Result<Guid>.Failure("Böyle bir masa bulunamadı.");
 
             if (table.Status == TableStatus.Occupied)

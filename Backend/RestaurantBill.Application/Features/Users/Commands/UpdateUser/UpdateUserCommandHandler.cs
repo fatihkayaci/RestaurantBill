@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -27,14 +28,26 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
                 .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
             if (user is null) return Result.Failure("Kullanıcı bulunamadı.");
 
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
             UserBranch? userBranch = await _db.UserBranches
                 .Include(ur => ur.Branch)
                 .FirstOrDefaultAsync(ur => ur.UserId == request.UserId && !ur.IsDeleted, cancellationToken);
             if (userBranch is null)
             {
+                // Şubesi olmayan tek kullanıcı tipi Owner'dır ve yalnızca kendi hesabını güncelleyebilir.
+                if (request.UserId != _currentUser.UserId) return Result.Failure("Kullanıcı bulunamadı.");
+
                 bool isOwner = await _db.Companies
                     .AnyAsync(c => c.OwnerUserId == request.UserId && !c.IsDeleted, cancellationToken);
                 if (!isOwner) return Result.Failure("Kullanıcı bulunamadı.");
+            }
+            else
+            {
+                if (!branchIds.Contains(userBranch.BranchId)) return Result.Failure("Kullanıcı bulunamadı.");
+                if (request.Role == UserRole.Owner) return Result.Failure("Personele Owner rolü atanamaz.");
+                if (userBranch.Role == UserRole.Admin && request.UserId != _currentUser.UserId && _currentUser.Role != nameof(UserRole.Owner))
+                    return Result.Failure("Admin kullanıcıları yalnızca Owner düzenleyebilir.");
             }
 
             bool isPromotingToAdmin = request.Role == UserRole.Admin && userBranch?.Role != UserRole.Admin;
