@@ -148,7 +148,7 @@ public class CashRegisterCommandHandlerTests
         public async Task Handle_WithClosedRegister_ThrowsDomainException()
         {
             CashRegister register = CashRegister.Create("Kasa", 500m, CurrentUser.BranchId);
-            register.Update("Kasa", 500m, CashRegisterStatus.Closed);
+            register.Update("Kasa", 500m, CashRegisterStatus.Closed, Guid.NewGuid());
             DbContext.CashRegisters.Add(register);
             await DbContext.SaveChangesAsync();
 
