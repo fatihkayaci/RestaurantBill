@@ -9,7 +9,7 @@ import { cashRegisterService } from '@/features/cashier/api/cashRegisterService'
 import { shiftService } from '@/features/cashier/api/shiftService';
 import { cn } from '@/lib/utils';
 import CloseShiftModal from './components/CloseShiftModal';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatPrice } from '@/lib/format';
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
@@ -218,7 +218,7 @@ export default function CashRegisters() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="rounded-xl border border-rb-green/30 bg-rb-green-bg p-5">
                     <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-green">Toplam Bakiye</p>
-                    <p className="text-3xl font-bold text-foreground mt-2">₺{totalBalance.toFixed(0)}</p>
+                    <p className="text-3xl font-bold text-foreground mt-2">₺{formatPrice(totalBalance)}</p>
                     <p className="text-xs text-muted-foreground mt-1">tüm kasalar</p>
                 </div>
                 <div className="rounded-xl border border-rb-accent/30 bg-rb-accent-bg p-5">

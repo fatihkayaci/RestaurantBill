@@ -133,7 +133,7 @@ export default function ShiftDetailModal({ shift, onClose }: Props) {
                                         {transactions.map(t => (
                                             <div key={t.id} className="py-2.5 flex items-center justify-between gap-3 text-sm">
                                                 <div className="min-w-0">
-                                                    <p className="font-medium text-foreground truncate">{t.tableName ? `Masa ${t.tableName}` : 'Masa —'}</p>
+                                                    <p className="font-medium text-foreground truncate">{t.tableName || 'Masa —'}</p>
                                                     <p className="text-xs text-muted-foreground truncate">
                                                         {new Date(t.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} · {METHOD_LABELS[t.method]} · {t.paidByUserName || '—'}
                                                     </p>

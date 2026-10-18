@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { X, Check, Pencil, Image as ImageIcon, Upload, Crop } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import axios from "axios";
+import { formatPrice } from '@/lib/format';
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
@@ -528,7 +529,7 @@ export default function Menu() {
                                 </div>
                             </div>
 
-                            <p className="text-lg font-bold text-foreground">₺{product.price.toFixed(0)}</p>
+                            <p className="text-lg font-bold text-foreground">₺{formatPrice(product.price)}</p>
 
                             <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
                                 <button

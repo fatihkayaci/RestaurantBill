@@ -8,7 +8,7 @@ import type { Order } from '@/features/orders/types';
 import type { Shift, ShiftStartCandidate } from '@/features/cashier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatPrice } from '@/lib/format';
 
 type PaymentMethod = 'kart' | 'nakit' | 'qr';
 
@@ -160,7 +160,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
             const fullyPaid: boolean = await paymentService.createPayment(displayOrder.id, cashRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay, discount);
             setSelectedQuantities({});
             resetDiscount();
-            const paidMessage = discountValue > 0 ? `Ödeme tamamlandı! (₺${netAmount.toFixed(0)})` : 'Ödeme tamamlandı!';
+            const paidMessage = discountValue > 0 ? `Ödeme tamamlandı! (₺${formatPrice(netAmount)})` : 'Ödeme tamamlandı!';
             if (fullyPaid) {
                 toast.success(paidMessage);
                 onComplete(displayOrder.id);
@@ -179,28 +179,30 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
     return (
         <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="px-8 pt-6 pb-4 shrink-0 border-b border-border">
+            <div className="px-4 sm:px-8 pt-5 sm:pt-6 pb-4 shrink-0 border-b border-border">
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="text-2xl font-serif font-bold text-foreground">
-                            Masa {displayOrder.tableName} — Hesap
+                            {displayOrder.tableName} — Hesap
                         </h2>
                         <p className="text-sm text-muted-foreground mt-1">
                             {displayOrder.createdByUserName || '—'} · {formatElapsed(displayOrder.createdAt)}
                         </p>
                     </div>
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        aria-label="Kapat"
+                        className="w-9 h-9 sm:w-8 sm:h-8 shrink-0 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
                 {/* Sol: Ürünler */}
-                <div className="flex-1 overflow-y-auto px-8 py-5">
+                <div className="md:flex-1 md:overflow-y-auto px-4 sm:px-8 py-5">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
                         Sipariş Kalemleri
                     </p>
@@ -247,7 +249,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                         </button>
                                     </div>
                                     <span className="text-sm font-semibold text-foreground tabular-nums w-14 text-right">
-                                        ₺{(item.unitPrice * item.quantity).toFixed(0)}
+                                        ₺{formatPrice(item.unitPrice * item.quantity)}
                                     </span>
                                 </div>
                             </div>
@@ -256,10 +258,10 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                 </div>
 
                 {/* Sağ: Toplam + Ödeme */}
-                <div className="w-90 shrink-0 border-l border-border overflow-y-auto flex flex-col">
+                <div className="md:w-90 shrink-0 border-t md:border-t-0 md:border-l border-border md:overflow-y-auto flex flex-col">
                     <div className="px-6 py-6 text-center border-b border-border">
                         <p className="text-4xl font-serif font-bold text-foreground">
-                            ₺{displayOrder.totalPrice.toFixed(0)}
+                            ₺{formatPrice(displayOrder.totalPrice)}
                         </p>
                         {taxGroups.length > 1 ? (
                             <div className="mt-2">
@@ -304,13 +306,13 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         {hasSelection && (
                             <div className="mt-3 rounded-lg bg-rb-accent-bg border border-rb-accent px-3 py-2 flex items-center justify-between">
                                 <span className="text-xs font-medium text-rb-accent">Seçili Tutar</span>
-                                <span className="text-sm font-semibold text-rb-accent tabular-nums">₺{selectedTotal.toFixed(0)}</span>
+                                <span className="text-sm font-semibold text-rb-accent tabular-nums">₺{formatPrice(selectedTotal)}</span>
                             </div>
                         )}
                         {discountValue > 0 && (
                             <div className="mt-3 rounded-lg bg-rb-red-bg border border-rb-red px-3 py-2 flex items-center justify-between">
                                 <span className="text-xs font-medium text-rb-red">İskonto</span>
-                                <span className="text-sm font-semibold text-rb-red tabular-nums">-₺{discountValue.toFixed(0)}</span>
+                                <span className="text-sm font-semibold text-rb-red tabular-nums">-₺{formatPrice(discountValue)}</span>
                             </div>
                         )}
                     </div>
@@ -436,8 +438,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                             {submitting
                                 ? 'İşleniyor...'
                                 : hasSelection
-                                    ? `Seçilenleri Öde (₺${netAmount.toFixed(0)}) ✓`
-                                    : `Tümünü Öde (₺${netAmount.toFixed(0)}) ✓`}
+                                    ? `Seçilenleri Öde (₺${formatPrice(netAmount)}) ✓`
+                                    : `Tümünü Öde (₺${formatPrice(netAmount)}) ✓`}
                         </button>
                     </div>
                 </div>

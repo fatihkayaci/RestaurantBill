@@ -2,12 +2,14 @@ import { useTheme } from 'next-themes';
 import { Moon, Sun } from 'lucide-react';
 
 export default function HeaderThemeToggle() {
-    const { theme, setTheme } = useTheme();
-    const isDark = theme === 'dark';
+    const { resolvedTheme, setTheme } = useTheme();
+    const isDark = resolvedTheme === 'dark';
 
     return (
         <button
+            type="button"
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            aria-label={isDark ? 'Açık temaya geç' : 'Koyu temaya geç'}
             className="flex items-center gap-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] px-2.5 py-1.5 transition-colors"
         >
             {isDark ? <Moon className="w-4 h-4 text-sidebar-foreground/60" /> : <Sun className="w-4 h-4 text-sidebar-foreground/60" />}

@@ -5,6 +5,7 @@ import type { Table } from '@/features/tables/types';
 import TablePanel from './components/TablePanel';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 import { createHubConnection } from '@/lib/signalrConnection';
+import { formatPrice } from '@/lib/format';
 
 type FilterType = 'all' | 'empty' | 'occupied' | 'reserved';
 
@@ -95,7 +96,7 @@ function TableCard({
                     <>
                         <div className="flex items-center justify-between mt-1">
                             <span className={`text-xs ${cfg.hint}`}>Aktif sipariş</span>
-                            <span className="text-sm font-bold text-foreground">₺{table.activeOrderTotal.toFixed(0)}</span>
+                            <span className="text-sm font-bold text-foreground">₺{formatPrice(table.activeOrderTotal)}</span>
                         </div>
                         {table.occupiedSince && (
                             <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">

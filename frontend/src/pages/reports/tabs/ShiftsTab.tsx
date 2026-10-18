@@ -104,7 +104,7 @@ export default function ShiftsTab({ data, loading, showBranchSummary, onChanged 
 
     return (
         <div className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="rounded-xl border border-border bg-card p-4">
                     <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Toplam Fark</p>
                     <p className={cn(
