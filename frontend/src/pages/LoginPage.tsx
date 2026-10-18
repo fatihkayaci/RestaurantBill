@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useTheme } from "next-themes";
 import { authService } from "@/features/auth/api/authService";
 import { getRoleFromToken, getRoleHomePath, startSession } from "@/lib/auth";
@@ -9,21 +9,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
 import sophramLogo from "@/assets/sophram-logo-yazisiz.svg";
+import sophramMark from "@/assets/sophram-logo.svg";
 
 type TabType = "login" | "register";
 
 const SIDEBAR_FEATURES = [
-    "Garson sipariş yönetimi",
-    "Mutfak ekran takibi",
-    "Anlık hesap & ödeme",
-    "Admin dashboard & raporlar",
+    "Garson, mutfak ve kasa tek sistemde",
+    "Gerçek zamanlı sipariş akışı",
+    "Vardiya, gün sonu ve raporlar",
+    "Çok şubeli yönetim",
 ];
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { theme, setTheme } = useTheme();
-    const isDark = theme === "dark";
-    const [activeTab, setActiveTab] = useState<TabType>("login");
+    const [searchParams] = useSearchParams();
+    const { resolvedTheme, setTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+    // Tanıtım sayfasındaki "Ücretsiz Dene" butonları doğrudan kayıt formunu açar.
+    const [activeTab, setActiveTab] = useState<TabType>(searchParams.get("tab") === "register" ? "register" : "login");
 
     // Login state
     const [loginField, setLoginField] = useState("");
@@ -123,9 +126,9 @@ export default function LoginPage() {
         <div className="flex min-h-screen">
             {/* ── Sol Sidebar ── */}
             <aside className="hidden lg:flex w-100 shrink-0 flex-col items-center text-center bg-[#1c1510] text-white px-10 pt-12 pb-8">
-                <div className="flex items-center gap-3 mb-6">
+                <Link to="/" className="flex items-center gap-3 mb-6" aria-label="Sophram ana sayfa">
                     <img src={sophramLogo} alt="Sophram" className="h-44 w-auto" />
-                </div>
+                </Link>
 
                 <ul className="space-y-1 flex-1">
                     {SIDEBAR_FEATURES.map((feature) => (
@@ -137,7 +140,9 @@ export default function LoginPage() {
                 </ul>
 
                 <button
+                    type="button"
                     onClick={() => setTheme(isDark ? "light" : "dark")}
+                    aria-label={isDark ? "Açık temaya geç" : "Koyu temaya geç"}
                     className={`relative inline-flex h-5.5 w-10.5 items-center rounded-full transition-colors duration-300 focus:outline-none ${
                         isDark ? "bg-rb-accent" : "bg-white/15"
                     }`}
@@ -151,7 +156,19 @@ export default function LoginPage() {
             </aside>
 
             {/* ── Sağ Alan ── */}
-            <main className="flex-1 bg-[#f5f0e8] dark:bg-[#18140f] flex items-center justify-center p-4 sm:p-6 md:p-10">
+            <main className="flex-1 bg-[#f5f0e8] dark:bg-[#18140f] flex flex-col items-center justify-center gap-6 p-4 sm:p-6 md:p-10">
+                <div className="w-full max-w-115 flex items-center justify-between">
+                    <Link to="/" className="lg:hidden flex items-center" aria-label="Sophram ana sayfa">
+                        <img src={sophramMark} alt="" className="h-12 w-auto" />
+                        <span className="font-serif text-xl font-bold text-[#2a1f14] dark:text-[#f2ede4]">Sophram</span>
+                    </Link>
+                    <Link
+                        to="/"
+                        className="ml-auto inline-flex items-center gap-1.5 text-[13px] font-medium text-[#6b5e52] dark:text-[#a89880] hover:text-[#2a1f14] dark:hover:text-[#f2ede4] transition-colors"
+                    >
+                        <ArrowLeft size={15} /> Ana sayfa
+                    </Link>
+                </div>
                 <div className="w-full max-w-115 bg-[#fdfaf5] dark:bg-[#221d16] rounded-2xl border border-[#e8e0d0] dark:border-[#3d3528] shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)] overflow-hidden">
 
                     {/* Tabs */}
@@ -159,6 +176,7 @@ export default function LoginPage() {
                         {(["login", "register"] as TabType[]).map((tab) => (
                             <button
                                 key={tab}
+                                type="button"
                                 onClick={() => setActiveTab(tab)}
                                 className={`flex-1 py-4 text-[13px] font-semibold transition-colors relative z-10 ${
                                     activeTab === tab
@@ -170,7 +188,7 @@ export default function LoginPage() {
                             </button>
                         ))}
                         <div
-                            className={`absolute bottom-0 h-0.5 w-1/2 bg-rb-accent rounded-t-sm transition-all duration-250 ease-in-out ${
+                            className={`absolute bottom-0 h-0.5 w-1/2 bg-[#C8A96E] rounded-t-sm transition-all duration-250 ease-in-out ${
                                 activeTab === "login" ? "left-0" : "left-1/2"
                             }`}
                         />
@@ -190,32 +208,37 @@ export default function LoginPage() {
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="login-field" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                         KULLANICI ADI VEYA E-POSTA
                                     </label>
                                     <Input
-                                        value={loginField}
+id="login-field"
+                                        autoComplete="username"
+                                                                                value={loginField}
                                         onChange={(e) => setLoginField(e.target.value)}
                                         placeholder="kullanici_adi veya e-posta"
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
                                     />
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="login-password" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                         ŞİFRE
                                     </label>
                                     <div className="relative">
                                         <Input
-                                            type={showLoginPassword ? "text" : "password"}
+id="login-password"
+                                            autoComplete="current-password"
+                                                                                        type={showLoginPassword ? "text" : "password"}
                                             value={loginPassword}
                                             onChange={(e) => setLoginPassword(e.target.value)}
                                             placeholder="Şifreniz..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 pr-10 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 pr-10 text-sm"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowLoginPassword(!showLoginPassword)}
+                                            aria-label={showLoginPassword ? "Şifreyi gizle" : "Şifreyi göster"}
                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a39080] hover:text-gray-600"
                                         >
                                             {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -228,7 +251,7 @@ export default function LoginPage() {
                                         type="checkbox"
                                         checked={rememberMe}
                                         onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="h-3.5 w-3.5 rounded border-border accent-rb-accent cursor-pointer"
+                                        className="h-3.5 w-3.5 rounded border-border accent-[#C8A96E] cursor-pointer"
                                     />
                                     Beni hatırla
                                 </label>
@@ -236,7 +259,7 @@ export default function LoginPage() {
                                 <Button
                                     type="submit"
                                     disabled={loginLoading}
-                                    className="w-full h-11.5 rounded-xl bg-rb-accent hover:opacity-90 text-white font-bold text-sm mt-0.5"
+                                    className="w-full h-11.5 rounded-xl bg-[#C8A96E] hover:bg-[#d6b97f] text-[#1c1510] font-bold text-sm mt-0.5"
                                 >
                                     {loginLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
                                 </Button>
@@ -246,7 +269,7 @@ export default function LoginPage() {
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("register")}
-                                        className="text-rb-accent font-semibold hover:underline"
+                                        className="text-[#9A7B3F] dark:text-[#C8A96E] font-semibold hover:underline"
                                     >
                                         Kayıt olun
                                     </button>
@@ -268,83 +291,96 @@ export default function LoginPage() {
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
-                                        <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        <label htmlFor="reg-first-name" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                             AD
                                         </label>
                                         <Input
-                                            value={firstName}
+id="reg-first-name"
+                                        autoComplete="given-name"
+                                                                                    value={firstName}
                                             onChange={(e) => setFirstName(e.target.value)}
                                             placeholder="Adınız..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
                                         />
                                     </div>
                                     <div className="flex flex-col gap-1.5">
-                                        <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        <label htmlFor="reg-last-name" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                             SOYAD
                                         </label>
                                         <Input
-                                            value={lastName}
+id="reg-last-name"
+                                        autoComplete="family-name"
+                                                                                    value={lastName}
                                             onChange={(e) => setLastName(e.target.value)}
                                             placeholder="Soyadınız..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="reg-restaurant" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                         RESTORAN ADI
                                     </label>
                                     <Input
-                                        value={restaurantName}
+id="reg-restaurant"
+                                        autoComplete="organization"
+                                                                                value={restaurantName}
                                         onChange={(e) => setRestaurantName(e.target.value)}
                                         placeholder="Restoranınızın adı..."
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
                                     />
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="reg-phone" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                         TELEFON NUMARASI
                                     </label>
                                     <Input
-                                        type="tel"
+id="reg-phone"
+                                        autoComplete="tel"
+                                                                                type="tel"
                                         value={regPhoneNumber}
                                         onChange={(e) => setRegPhoneNumber(e.target.value)}
                                         placeholder="05XX XXX XX XX"
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
                                     />
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="reg-email" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                         E-POSTA
                                     </label>
                                     <Input
-                                        type="email"
+id="reg-email"
+                                        autoComplete="email"
+                                                                                type="email"
                                         value={regEmail}
                                         onChange={(e) => setRegEmail(e.target.value)}
                                         placeholder="ornek@restoran.com"
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
-                                        <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        <label htmlFor="reg-password" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                             ŞİFRE
                                         </label>
                                         <div className="relative">
                                             <Input
-                                                type={showRegPassword ? "text" : "password"}
+id="reg-password"
+                                            autoComplete="new-password"
+                                                                                            type={showRegPassword ? "text" : "password"}
                                                 value={regPassword}
                                                 onChange={(e) => setRegPassword(e.target.value)}
                                                 placeholder="Şifreniz..."
-                                                className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 pr-10 text-sm"
+                                                className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 pr-10 text-sm"
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowRegPassword(!showRegPassword)}
+                                                aria-label={showRegPassword ? "Şifreyi gizle" : "Şifreyi göster"}
                                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a39080] hover:text-gray-600"
                                             >
                                                 {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -352,15 +388,17 @@ export default function LoginPage() {
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-1.5">
-                                        <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        <label htmlFor="reg-password-confirm" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
                                             ŞİFRE TEKRAR
                                         </label>
                                         <Input
-                                            type="password"
+id="reg-password-confirm"
+                                        autoComplete="new-password"
+                                                                                    type="password"
                                             value={regConfirm}
                                             onChange={(e) => setRegConfirm(e.target.value)}
                                             placeholder="Tekrar girin..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
                                         />
                                     </div>
                                 </div>
@@ -368,7 +406,7 @@ export default function LoginPage() {
                                 <Button
                                     type="submit"
                                     disabled={regLoading}
-                                    className="w-full h-11.5 rounded-xl bg-rb-accent hover:opacity-90 text-white font-bold text-sm mt-0.5"
+                                    className="w-full h-11.5 rounded-xl bg-[#C8A96E] hover:bg-[#d6b97f] text-[#1c1510] font-bold text-sm mt-0.5"
                                 >
                                     {regLoading ? "Hesap oluşturuluyor..." : "Hesap Oluştur"}
                                 </Button>
@@ -378,7 +416,7 @@ export default function LoginPage() {
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("login")}
-                                        className="text-rb-accent font-semibold hover:underline"
+                                        className="text-[#9A7B3F] dark:text-[#C8A96E] font-semibold hover:underline"
                                     >
                                         Giriş yapın
                                     </button>

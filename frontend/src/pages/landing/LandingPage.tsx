@@ -81,7 +81,7 @@ function Hero() {
 
                     <div className="flex flex-col sm:flex-row gap-3">
                         <Link
-                            to="/login"
+                            to="/login?tab=register"
                             className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#C8A96E] text-[#1c1510] text-sm font-bold hover:bg-[#d6b97f] transition-colors"
                         >
                             14 Gün Ücretsiz Dene <ArrowRight size={16} />
@@ -360,7 +360,7 @@ function Pricing() {
                     </ul>
 
                     <Link
-                        to="/login"
+                            to="/login?tab=register"
                         className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold bg-[#C8A96E] text-[#1c1510] hover:bg-[#d6b97f] transition-colors"
                     >
                         14 Gün Ücretsiz Dene <ArrowRight size={16} />
@@ -421,7 +421,7 @@ function FinalCta() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <Link
-                        to="/login"
+                            to="/login?tab=register"
                         className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-[#C8A96E] text-[#1c1510] text-sm font-bold hover:bg-[#d6b97f] transition-colors"
                     >
                         Ücretsiz Hesap Oluştur <ArrowRight size={16} />
