@@ -69,7 +69,7 @@ function Hero() {
                         RESTORAN YÖNETİM SİSTEMİ
                     </span>
 
-                    <h1 className="font-serif text-[44px] sm:text-[56px] lg:text-[64px] font-bold leading-[1.02] tracking-[-0.5px] text-[#f2ede4]">
+                    <h1 className="font-serif text-[44px] sm:text-[56px] lg:text-[52px] xl:text-[64px] font-bold leading-[1.02] tracking-[-0.5px] text-[#f2ede4]">
                         Siparişten hesaba,
                         <br />
                         <em className="italic text-[#C8A96E]">tek akışta.</em>

@@ -46,7 +46,7 @@ export const HIGHLIGHTS: { icon: LucideIcon; title: string; desc: string }[] = [
 
 export const FLOW_STEPS: { icon: LucideIcon; tone: Tone; who: string; title: string; desc: string }[] = [
     { icon: HandPlatter, tone: "accent", who: "Garson", title: "Siparişi alır", desc: "Masayı seçer, menüden ürünleri ve notları ekleyip gönderir." },
-    { icon: ChefHat, tone: "amber", who: "Mutfak", title: "Anında görür", desc: "Sipariş ekrana düşer; Bekliyor → Hazırlanıyor → Hazır olarak ilerler." },
+    { icon: ChefHat, tone: "amber", who: "Mutfak", title: "Anında görür", desc: "Sipariş mutfak ekranına sırasıyla düşer; ürünler hazırlandıkça işaretlenir." },
     { icon: Radio, tone: "green", who: "Garson", title: "Hazır bildirimi alır", desc: "Ürün hazır olduğunda masa ekranında görünür, servis edilir." },
     { icon: Wallet, tone: "purple", who: "Kasiyer", title: "Hesabı kapatır", desc: "Nakit, kart veya QR ile tahsil eder; masa otomatik boşalır." },
 ];
@@ -60,7 +60,7 @@ export const FEATURES: { icon: LucideIcon; tone: Tone; title: string; desc: stri
     {
         icon: ChefHat, tone: "amber", title: "Mutfak ekranı",
         desc: "Siparişler kâğıda gerek kalmadan, sırasıyla mutfağa ulaşır.",
-        points: ["Bekliyor / Hazırlanıyor / Hazır", "Ürün bazlı durum takibi", "30 dk'yı geçen siparişlerde uyarı"],
+        points: ["Siparişler geliş sırasıyla", "Ürün bazlı hazır işaretleme", "30 dk'yı geçen siparişlerde uyarı"],
     },
     {
         icon: Wallet, tone: "green", title: "Kasa & ödeme",
@@ -119,8 +119,8 @@ export const ROLES: Role[] = [
     {
         key: "kitchen", icon: ChefHat, tone: "amber", name: "Mutfak",
         tagline: "Kâğıt fiş yok.",
-        desc: "Gelen siparişleri sırasıyla görür, hazırlandıkça durumunu günceller.",
-        points: ["Bekliyor / Hazırlanıyor / Hazır kolonları", "Ürün bazlı durum değişimi", "Bekleme süresi ve gecikme vurgusu", "Masa, sipariş notu ve siparişi alan kişi"],
+        desc: "Gelen siparişleri sırasıyla görür, hazırlanan ürünleri işaretler; garson anında haberdar olur.",
+        points: ["Bekleyen siparişler tek ekranda", "Ürün bazlı veya toplu hazır işaretleme", "Kategoriye göre filtre (ör. sadece içecekler)", "Bekleme süresi ve gecikme vurgusu", "Masa, sipariş notu ve siparişi alan kişi"],
     },
     {
         key: "cashier", icon: Wallet, tone: "green", name: "Kasiyer",

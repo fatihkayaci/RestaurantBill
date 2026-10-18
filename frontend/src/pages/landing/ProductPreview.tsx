@@ -131,59 +131,70 @@ function WaiterMock() {
     );
 }
 
-const KITCHEN_COLUMNS = [
-    {
-        label: "Bekliyor", color: C.amber, orders: [
-            { table: "Masa 5", time: "34 dk", urgent: true, items: ["2× Adana Kebap", "1× Çoban Salata"] },
-            { table: "Bahçe 1", time: "4 dk", items: ["1× Mercimek Çorbası"] },
-        ],
-    },
-    {
-        label: "Hazırlanıyor", color: C.orange, orders: [
-            { table: "Masa 1", time: "12 dk", items: ["1× Izgara Köfte", "2× Ayran"] },
-        ],
-    },
-    {
-        label: "Hazır", color: C.green, orders: [
-            { table: "Masa 3", time: "18 dk", items: ["1× Lahmacun", "1× Künefe"] },
-        ],
-    },
+const KITCHEN_FILTERS = ["Tümü 6", "Ana Yemekler 3", "Başlangıçlar 1", "İçecekler 2"];
+
+type KitchenOrder = { table: string; by: string; time: string; urgent?: boolean; note?: string; items: { name: string; qty: number; done?: boolean }[] };
+
+const KITCHEN_ORDERS: KitchenOrder[] = [
+    { table: "Masa 5", by: "Ayşe", time: "34 dk", urgent: true, items: [{ name: "Adana Kebap", qty: 2, done: true }, { name: "Çoban Salata", qty: 1 }] },
+    { table: "Bahçe 1", by: "Mert", time: "6 dk", note: "Az acılı", items: [{ name: "Mercimek Çorbası", qty: 1 }, { name: "Ayran", qty: 2 }] },
+    { table: "Masa 1", by: "Ayşe", time: "2 dk", items: [{ name: "Izgara Köfte", qty: 1 }] },
 ];
 
 function KitchenMock() {
     return (
-        <div className="h-full grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {KITCHEN_COLUMNS.map((col) => (
-                // Dar ekranlarda orta kolon gizlenir; üç kolon telefonda okunamayacak kadar daralıyor.
-                <div
-                    key={col.label}
-                    className={`rounded-lg p-2 flex-col gap-2 min-w-0 ${col.label === "Hazırlanıyor" ? "hidden sm:flex" : "flex"}`}
-                    style={{ background: C.faint }}
-                >
-                    <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: col.color }} />
-                        <span className="text-[10px] font-bold truncate" style={{ color: col.color }}>{col.label}</span>
-                        <span className="ml-auto text-[10px]" style={{ color: C.sub }}>{col.orders.length}</span>
-                    </div>
-                    {col.orders.map((o) => (
-                        <div
-                            key={o.table}
-                            className="rounded-md p-2 flex flex-col gap-1"
-                            style={{ background: "#1A1510", border: `1px solid ${o.urgent ? "#F0606080" : C.line}` }}
-                        >
-                            <div className="flex items-center justify-between gap-1">
-                                <span className="font-serif text-[12px] font-bold truncate" style={{ color: C.text }}>{o.table}</span>
-                                <span className="flex items-center gap-0.5 text-[9px] shrink-0" style={{ color: o.urgent ? "#F06060" : C.sub }}>
-                                    <Timer size={9} />{o.time}
-                                </span>
+        <div className="h-full flex flex-col gap-2.5">
+            <div className="flex gap-1.5 overflow-hidden">
+                {KITCHEN_FILTERS.map((f, i) => (
+                    <span
+                        key={f}
+                        className="shrink-0 rounded-full px-2.5 py-1 text-[9px] font-semibold"
+                        style={{ background: i === 0 ? C.accent : C.faint, color: i === 0 ? "#0E0B08" : C.sub }}
+                    >
+                        {f}
+                    </span>
+                ))}
+            </div>
+            <div className="flex items-center gap-1.5 rounded-md px-2 py-1.5" style={{ background: `${C.amber}1A` }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: C.amber }} />
+                <span className="text-[9px] font-bold tracking-widest" style={{ color: C.amber }}>BEKLİYOR</span>
+                <span className="ml-auto text-[9px] font-bold" style={{ color: C.amber }}>{KITCHEN_ORDERS.length}</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 min-h-0">
+                {KITCHEN_ORDERS.map((o, i) => (
+                    <div
+                        key={o.table}
+                        className={`rounded-lg p-2 flex-col gap-1.5 min-w-0 ${i === 2 ? "hidden sm:flex" : "flex"}`}
+                        style={{ background: "#1A1510", border: `1px solid ${o.urgent ? `${C.amber}66` : C.line}` }}
+                    >
+                        <div className="flex items-start justify-between gap-1">
+                            <div className="min-w-0">
+                                <div className="font-serif text-[12px] font-bold truncate" style={{ color: C.text }}>{o.table}</div>
+                                <div className="text-[8px]" style={{ color: C.sub }}>{o.by}</div>
                             </div>
-                            {o.items.map((i) => (
-                                <span key={i} className="text-[10px] leading-tight truncate" style={{ color: C.sub }}>{i}</span>
-                            ))}
+                            <span
+                                className="flex items-center gap-0.5 text-[8px] font-bold shrink-0 rounded px-1 py-0.5"
+                                style={o.urgent ? { background: `${C.amber}26`, color: C.amber } : { color: C.sub }}
+                            >
+                                <Timer size={8} />{o.time}
+                            </span>
                         </div>
-                    ))}
-                </div>
-            ))}
+                        {o.note && (
+                            <div className="rounded px-1.5 py-1 text-[8px]" style={{ background: `${C.amber}1A`, color: C.amber }}>Not: {o.note}</div>
+                        )}
+                        {o.items.map((it) => (
+                            <div key={it.name} className="flex items-center gap-1 text-[9px]">
+                                <span className="truncate" style={{ color: it.done ? C.sub : C.text, textDecoration: it.done ? "line-through" : undefined }}>{it.name}</span>
+                                <span className="ml-auto shrink-0" style={{ color: C.sub }}>×{it.qty}</span>
+                                <Check size={9} strokeWidth={3} className="shrink-0" style={{ color: C.green, opacity: it.done ? 1 : 0.45 }} />
+                            </div>
+                        ))}
+                        <div className="mt-auto rounded-md py-1 text-center text-[9px] font-semibold" style={{ background: `${C.green}1F`, color: C.green }}>
+                            Hazır ✓
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
