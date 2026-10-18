@@ -146,9 +146,10 @@ public class GetSalesReportQueryHandler : IRequestHandler<GetSalesReportQuery, R
         });
     }
 
-    private static decimal PercentChange(decimal current, decimal previous)
+    // Önceki dönem 0 iken yüzde değişim tanımsızdır; "+%100" göstermek yerine null döner.
+    private static decimal? PercentChange(decimal current, decimal previous)
     {
-        if (previous == 0) return current == 0 ? 0 : 100;
+        if (previous == 0) return current == 0 ? 0 : null;
         return Math.Round((current - previous) / previous * 100, 1);
     }
 }

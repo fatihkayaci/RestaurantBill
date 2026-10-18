@@ -13,11 +13,11 @@ import type { BranchOperationalStatus, OwnerDashboardStats } from '@/features/st
 import { auditLogService } from '@/features/auditLogs/api/auditLogService';
 import type { AuditLog } from '@/features/auditLogs/types';
 import { SEVERITY_LABELS, SEVERITY_STYLE } from '@/features/auditLogs/constants';
+import { formatPercentChange } from '@/lib/format';
 
 const formatCurrency = (value: number, decimals = 0) =>
     `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
-const formatChange = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
 
 const minutesAgoLabel = (iso: string) => {
     const minutes = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
@@ -52,19 +52,22 @@ const getTodayIso = () => {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
-function ChangeCaption({ value, caption }: { value: number; caption?: string }) {
+function ChangeCaption({ value, caption }: { value: number | null; caption?: string }) {
+    if (value === null) {
+        return <p className="text-xs mt-1 text-muted-foreground">Önceki dönemde veri yok</p>;
+    }
     const positive = value >= 0;
     return (
         <p className={cn('flex items-center gap-1 text-xs mt-1', positive ? 'text-rb-green' : 'text-rb-red')}>
             {positive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-            {formatChange(value)}
+            {formatPercentChange(value)}
             {caption && <span className="text-muted-foreground">{caption}</span>}
         </p>
     );
 }
 
 function StatCard({ icon: Icon, colorBg, colorText, label, value, change, caption }: {
-    icon: LucideIcon; colorBg: string; colorText: string; label: string; value: string; change: number; caption: string;
+    icon: LucideIcon; colorBg: string; colorText: string; label: string; value: string; change: number | null; caption: string;
 }) {
     return (
         <div className="rounded-xl border border-border bg-card p-5">
@@ -173,7 +176,7 @@ export default function DashboardPage() {
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Owner Dashboard</h1>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Genel Bakış</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">Şirket genelinizin özet performansı</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -208,17 +211,17 @@ export default function DashboardPage() {
                 <StatCard
                     icon={TrendingUp} colorBg="bg-rb-green-bg" colorText="text-rb-green"
                     label="Toplam Ciro" value={formatCurrency(stats?.totalRevenue ?? 0, 2)}
-                    change={stats?.totalRevenueChangePercent ?? 0} caption="düne göre"
+                    change={stats ? stats.totalRevenueChangePercent : 0} caption="düne göre"
                 />
                 <StatCard
                     icon={ShoppingCart} colorBg="bg-rb-accent-bg" colorText="text-rb-accent"
                     label="Toplam Sipariş" value={(stats?.totalOrders ?? 0).toLocaleString('tr-TR')}
-                    change={stats?.totalOrdersChangePercent ?? 0} caption="geçen haftaya göre"
+                    change={stats ? stats.totalOrdersChangePercent : 0} caption="geçen haftaya göre"
                 />
                 <StatCard
                     icon={ShoppingBag} colorBg="bg-rb-purple-bg" colorText="text-rb-purple"
                     label="Ortalama Sepet" value={formatCurrency(stats?.avgOrderValue ?? 0, 2)}
-                    change={stats?.avgOrderValueChangePercent ?? 0} caption="geçen haftaya göre"
+                    change={stats ? stats.avgOrderValueChangePercent : 0} caption="geçen haftaya göre"
                 />
                 <div className="rounded-xl border border-border bg-card p-5">
                     <div className="flex items-center gap-3">
@@ -228,7 +231,7 @@ export default function DashboardPage() {
                         <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Aktif Şube Sayısı</p>
                     </div>
                     <p className="text-3xl font-bold text-foreground mt-3">{stats?.activeBranchCount ?? 0} / {stats?.totalBranchCount ?? 0}</p>
-                    <p className="text-xs text-muted-foreground mt-1">%{activeRatio.toFixed(1)} aktiflik oranı</p>
+                    <p className="text-xs text-muted-foreground mt-1">%{activeRatio.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} aktiflik oranı</p>
                 </div>
             </div>
 

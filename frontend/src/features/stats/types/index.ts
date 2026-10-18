@@ -33,9 +33,9 @@ export interface BranchPerformanceRow {
     district: string;
     status: BranchOperationalStatus;
     todayRevenue: number;
-    todayRevenueChangePercent: number;
+    todayRevenueChangePercent: number | null;
     todayOrders: number;
-    todayOrdersChangePercent: number;
+    todayOrdersChangePercent: number | null;
     avgBasket: number;
     staffCount: number;
     openTables: number;
@@ -45,11 +45,11 @@ export interface BranchPerformanceRow {
 
 export interface OwnerDashboardStats {
     totalRevenue: number;
-    totalRevenueChangePercent: number;
+    totalRevenueChangePercent: number | null;
     totalOrders: number;
-    totalOrdersChangePercent: number;
+    totalOrdersChangePercent: number | null;
     avgOrderValue: number;
-    avgOrderValueChangePercent: number;
+    avgOrderValueChangePercent: number | null;
     activeBranchCount: number;
     totalBranchCount: number;
     membershipExpiringBranchCount: number;

@@ -3,6 +3,7 @@ import { TrendingUp, ShoppingCart, ShoppingBag, ArrowUpRight, ArrowDownRight } f
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { SalesReport } from '@/features/reports/types';
+import { formatPercentChange } from '@/lib/format';
 
 interface Props {
     data: SalesReport | null;
@@ -15,7 +16,6 @@ interface Props {
 const formatCurrency = (value: number, decimals = 0) =>
     `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
-const formatChange = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
 
 const BRANCH_LINE_COLORS = ['var(--rb-orange)', 'var(--rb-accent)', 'var(--rb-green)', 'var(--rb-purple)', 'var(--rb-gold)', 'var(--rb-red)'];
 
@@ -24,12 +24,16 @@ const PAYMENT_LABEL: Record<number, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR / 
 
 const DOW_LABELS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
-function ChangeCaption({ value }: { value: number }) {
+function ChangeCaption({ value, caption }: { value: number | null; caption?: string }) {
+    if (value === null) {
+        return <p className="text-xs mt-1 text-muted-foreground">Önceki dönemde veri yok</p>;
+    }
     const positive = value >= 0;
     return (
         <p className={cn('flex items-center gap-1 text-xs mt-1', positive ? 'text-rb-green' : 'text-rb-red')}>
             {positive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-            {formatChange(value)}
+            {formatPercentChange(value)}
+            {caption && <span className="text-muted-foreground">{caption}</span>}
         </p>
     );
 }
@@ -84,7 +88,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
 
     return (
         <div className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5">
                     <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-lg bg-rb-green-bg flex items-center justify-center shrink-0">

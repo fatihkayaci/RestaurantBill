@@ -26,7 +26,7 @@ export interface BranchSalesRow {
     revenue: number;
     transactionCount: number;
     avgBasket: number;
-    revenueChangePercent: number;
+    revenueChangePercent: number | null;
 }
 
 export interface SalesReport {
