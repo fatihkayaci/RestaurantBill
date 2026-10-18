@@ -39,6 +39,11 @@ public class RestaurantBillDbContext : DbContext, IAppDbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(RestaurantBillDbContext).Assembly);
+
+        // Para ve masa durumu taşıyan satırlarda Postgres'in xmin sistem kolonu concurrency token olarak kullanılır:
+        // aynı kaydı eşzamanlı güncelleyen iki istekten ikincisi sessizce ezmek yerine DbUpdateConcurrencyException alır.
+        foreach (Type entityType in new[] { typeof(CashRegister), typeof(Order), typeof(Table), typeof(Shift) })
+            modelBuilder.Entity(entityType).Property<uint>("xmin").IsRowVersion();
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

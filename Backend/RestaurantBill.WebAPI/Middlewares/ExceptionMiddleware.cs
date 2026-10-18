@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Exceptions;
 namespace RestaurantBill.WebAPI.Middlewares;
 
@@ -23,6 +24,11 @@ public class ExceptionMiddleware
         catch (DomainException ex)
         {
             _logger.LogWarning(ex, "İş kuralı ihlali: {ErrorMessage}", ex.Message);
+            await HandleExceptionAsync(httpContext, ex);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(ex, "Eşzamanlı güncelleme çakışması: {Path}", httpContext.Request.Path);
             await HandleExceptionAsync(httpContext, ex);
         }
         catch (Exception ex)
@@ -49,6 +55,11 @@ public class ExceptionMiddleware
         {
             statusCode = (int)HttpStatusCode.BadRequest;
             message = domainEx.Message;
+        }
+        else if (exception is DbUpdateConcurrencyException)
+        {
+            statusCode = (int)HttpStatusCode.Conflict;
+            message = "Bu kayıt siz işlem yaparken başka biri tarafından değiştirildi. Lütfen sayfayı yenileyip tekrar deneyin.";
         }
 
         context.Response.StatusCode = statusCode;
