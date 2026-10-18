@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import PrivateRoute from './components/PrivateRoute';
+import { getTenantSlug } from './lib/tenant';
 
 import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/landing/LandingPage';
@@ -101,8 +102,8 @@ function App() {
                 <Route path="/iptal-ve-iade" element={<RefundPolicyPage />} />
                 <Route path="/iletisim" element={<ContactPage />} />
 
-                {/* Landing */}
-                <Route path="/" element={<LandingPage />} />
+                {/* Landing — restoran alt alan adında (ör. demo.sophram.com) personel doğrudan girişe gelir */}
+                <Route path="/" element={getTenantSlug() ? <Navigate to="/login" replace /> : <LandingPage />} />
             </Routes>
             <Toaster position="top-right" richColors />
         </>

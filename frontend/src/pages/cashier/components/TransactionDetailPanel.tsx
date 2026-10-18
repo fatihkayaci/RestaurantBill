@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import type { PaymentMethod, ShiftTransaction } from '@/features/cashier/types';
+import { formatAmount } from '@/lib/format';
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'KART', 2: 'NAKİT', 3: 'QR' };
 const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
@@ -47,7 +48,7 @@ export default function TransactionDetailPanel({ transaction, onClose }: Props) 
                 </p>
                 <div className="flex items-center justify-between text-sm mb-6 pb-4 border-b border-dashed border-border">
                     <span className="font-medium text-foreground">Toplam KDV</span>
-                    <span className="font-medium text-foreground tabular-nums">₺{transaction.taxAmount.toFixed(2)}</span>
+                    <span className="font-medium text-foreground tabular-nums">₺{formatAmount(transaction.taxAmount)}</span>
                 </div>
 
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">

@@ -5,6 +5,7 @@ import type { ShiftStartCandidate } from '@/features/cashier/types';
 import { Button } from '@/components/ui/button';
 import { useActiveShift, getStoredCashRegisterId, clearStoredCashRegisterId } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatAmount } from '@/lib/format';
 
 interface ShiftStartGateProps {
     onResolved: () => void;
@@ -151,7 +152,7 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
                                                 ? 'Katılınıyor...'
                                                 : c.hasOpenShift
                                                     ? 'Katıl →'
-                                                    : `₺${c.expectedOpeningBalance.toFixed(2)}`}
+                                                    : `₺${formatAmount(c.expectedOpeningBalance)}`}
                                         </span>
                                     </button>
                                 ))}
@@ -165,7 +166,7 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
 
                         <div className="rounded-lg bg-muted px-4 py-3 mb-4">
                             <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Beklenen Açılış Bakiyesi</p>
-                            <p className="font-serif text-2xl font-bold text-foreground">₺{selected.expectedOpeningBalance.toFixed(2)}</p>
+                            <p className="font-serif text-2xl font-bold text-foreground">₺{formatAmount(selected.expectedOpeningBalance)}</p>
                         </div>
 
                         {!reportingDifference ? (
@@ -202,8 +203,8 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
                                         {difference === 0
                                             ? 'Fark yok.'
                                             : difference < 0
-                                                ? `₺${Math.abs(difference).toFixed(2)} eksik`
-                                                : `₺${difference.toFixed(2)} fazla`}
+                                                ? `₺${formatAmount(Math.abs(difference))} eksik`
+                                                : `₺${formatAmount(difference)} fazla`}
                                     </p>
                                 )}
                                 <div className="flex gap-2">

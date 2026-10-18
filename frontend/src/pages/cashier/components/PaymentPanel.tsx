@@ -8,6 +8,7 @@ import type { Order } from '@/features/orders/types';
 import type { Shift, ShiftStartCandidate } from '@/features/cashier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatAmount } from '@/lib/format';
 
 type PaymentMethod = 'kart' | 'nakit' | 'qr';
 
@@ -281,15 +282,15 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                                     </p>
                                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                         <span>Matrah</span>
-                                                        <span className="tabular-nums">₺{matrah.toFixed(2)}</span>
+                                                        <span className="tabular-nums">₺{formatAmount(matrah)}</span>
                                                     </div>
                                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                         <span>KDV Tutarı</span>
-                                                        <span className="tabular-nums">₺{kdvTutari.toFixed(2)}</span>
+                                                        <span className="tabular-nums">₺{formatAmount(kdvTutari)}</span>
                                                     </div>
                                                     <div className="flex items-center justify-between text-xs font-medium text-foreground pt-0.5">
                                                         <span>Ara Toplam</span>
-                                                        <span className="tabular-nums">₺{group.total.toFixed(2)}</span>
+                                                        <span className="tabular-nums">₺{formatAmount(group.total)}</span>
                                                     </div>
                                                 </div>
                                             );
@@ -396,7 +397,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                                             {isSelected && ensuringShift
                                                                 ? 'Gün açılıyor...'
                                                                 : register.hasOpenShift
-                                                                    ? `${register.expectedOpeningBalance.toFixed(2)} ₺`
+                                                                    ? `${formatAmount(register.expectedOpeningBalance)} ₺`
                                                                     : 'Kapalı — gün başlatılacak'}
                                                         </p>
                                                     </div>
