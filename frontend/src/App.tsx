@@ -3,7 +3,7 @@ import { Toaster } from './components/ui/sonner';
 import PrivateRoute from './components/PrivateRoute';
 
 import LoginPage from './pages/LoginPage';
-import LandingPage from './pages/LandingPage';
+import LandingPage from './pages/landing/LandingPage';
 import PhoneVerificationPage from './pages/PhoneVerificationPage';
 
 import WaiterLayout from './pages/waiter/Layout';
