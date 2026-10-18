@@ -4,6 +4,7 @@ import { shiftService } from '@/features/cashier/api/shiftService';
 import type { ShiftStartCandidate } from '@/features/cashier/types';
 import { Button } from '@/components/ui/button';
 import { useActiveShift, getStoredCashRegisterId, clearStoredCashRegisterId } from '@/features/cashier/context/activeShiftStore';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface ShiftStartGateProps {
     onResolved: () => void;
@@ -64,8 +65,8 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
             setShift(shift);
             toast.success(`${candidate.cashRegisterName} kasasındaki güne katıldınız.`);
             onResolved();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? 'Güne katılınamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Güne katılınamadı.'));
         } finally {
             setJoiningId(null);
         }
@@ -80,8 +81,8 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
             setShift(shift);
             toast.success(`${selected.cashRegisterName} kasasında vardiya açıldı.`);
             onResolved();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? 'Vardiya açılamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Vardiya açılamadı.'));
         } finally {
             setSubmitting(false);
         }

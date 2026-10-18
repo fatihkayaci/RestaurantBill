@@ -11,6 +11,7 @@ import type { Table, Reservation } from '@/features/tables/types';
 import type { Product } from '@/features/products/types';
 import type { Category } from '@/features/categories/types';
 import type { Order } from '@/features/orders/types';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
 
@@ -244,8 +245,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                 });
             }
             setActiveTab('orders');
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Sipariş gönderilemedi.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Sipariş gönderilemedi.'));
         } finally {
             setSubmitting(false);
         }
@@ -261,8 +262,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             onTableUpdated?.(table.id, 1);
             toast.success('Masa kapatıldı.');
             onClose();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Masa kapatılamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Masa kapatılamadı.'));
         }
     };
 
@@ -281,8 +282,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             onTableUpdated?.(table.id, 3);
             toast.success('Rezervasyon kaydedildi.');
             onClose();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Rezervasyon kaydedilemedi.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Rezervasyon kaydedilemedi.'));
         } finally {
             setSavingReservation(false);
         }
@@ -296,8 +297,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                 ...prev,
                 orderItems: prev.orderItems.map(i => i.id === itemId ? { ...i, status: 4 } : i),
             } : prev);
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Servis edildi olarak işaretlenemedi.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Servis edildi olarak işaretlenemedi.'));
         } finally {
             setServingItemId(null);
         }
@@ -318,8 +319,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                 ...prev,
                 orderItems: prev.orderItems.map(i => i.id === itemId ? { ...i, note: itemNoteDraft } : i),
             } : prev);
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Not güncellenemedi.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Not güncellenemedi.'));
         }
     };
 
@@ -333,8 +334,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                 orderItems: prev.orderItems.map(i => i.status === 3 ? { ...i, status: 4 } : i),
             } : prev);
             toast.success('Ürünler servis edildi olarak işaretlendi.');
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Servis edilemedi.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Servis edilemedi.'));
         } finally {
             setServingAll(false);
         }
@@ -356,8 +357,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             }
             setActiveTab('new-order');
             toast.success('Masa açıldı, müşteri karşılandı!');
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Masa açılamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Masa açılamadı.'));
         } finally {
             setArriving(false);
         }
@@ -369,8 +370,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
             onTableUpdated?.(table.id, 1);
             toast.success('Rezervasyon iptal edildi.');
             onClose();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Rezervasyon iptal edilemedi.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Rezervasyon iptal edilemedi.'));
         }
     };
 

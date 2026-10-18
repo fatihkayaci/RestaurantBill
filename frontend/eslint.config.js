@@ -19,5 +19,16 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // React Compiler kuralı: mevcut veri yükleme effect'leri bu kalıbı kullanıyor; refactor edilene kadar uyarı olarak kalsın.
+      'react-hooks/set-state-in-effect': 'warn',
+    },
+  },
+  {
+    // shadcn tarafından üretilen bileşenler variant yardımcılarını da export eder.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
   },
 ])

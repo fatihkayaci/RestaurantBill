@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { PaymentMethod, ShiftSummary } from '@/features/cashier/types';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface Props {
     shift: { id: string; cashRegisterName: string };
@@ -58,8 +59,8 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
             await shiftService.closeShift(summary.shiftId, countedNum, note || undefined);
             toast.success('Gün kapatıldı.');
             onClosed();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? 'Gün kapatılamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Gün kapatılamadı.'));
         } finally {
             setSubmitting(false);
         }
@@ -71,8 +72,8 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
             await shiftService.closeShiftWithoutCount(shift.id);
             toast.success('Gün sayım yapılmadan kapatıldı, sayım sonradan girilebilir.');
             onClosed();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? 'Gün kapatılamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Gün kapatılamadı.'));
         } finally {
             setSubmitting(false);
         }

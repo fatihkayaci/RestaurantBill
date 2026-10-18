@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { Shift } from '@/features/cashier/types';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface Props {
     shift: Shift;
@@ -33,8 +34,8 @@ export default function LateCountModal({ shift, onClose, onCounted }: Props) {
             await shiftService.applyLateCount(shift.id, countedNum, note || undefined);
             toast.success('Sayım kaydedildi.');
             onCounted();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? 'Sayım kaydedilemedi.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Sayım kaydedilemedi.'));
         } finally {
             setSubmitting(false);
         }

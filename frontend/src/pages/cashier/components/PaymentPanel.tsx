@@ -7,6 +7,7 @@ import { orderService } from '@/features/orders/api/orderService';
 import type { Order } from '@/features/orders/types';
 import type { Shift, ShiftStartCandidate } from '@/features/cashier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 type PaymentMethod = 'kart' | 'nakit' | 'qr';
 
@@ -124,8 +125,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         try {
             const shift = await shiftService.ensureOpen(register.cashRegisterId);
             setManualShift(shift);
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? 'Bu kasada gün başlatılamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Bu kasada gün başlatılamadı.'));
         } finally {
             setEnsuringShift(false);
         }
@@ -167,8 +168,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                 const refreshed = await orderService.getOrderByTableId(displayOrder.tableId);
                 if (refreshed) setDisplayOrder(refreshed);
             }
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Ödeme tamamlanamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Ödeme tamamlanamadı.'));
         } finally {
             setSubmitting(false);
         }
