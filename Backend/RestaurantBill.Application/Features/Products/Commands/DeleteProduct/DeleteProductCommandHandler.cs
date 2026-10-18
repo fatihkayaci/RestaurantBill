@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -22,8 +23,10 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
 
         public async Task<Result> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
             Product? product = await _db.Products
-                .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
             if (product is null)
                 return Result.Failure("Böyle bir ürün bulunamadı.");
 

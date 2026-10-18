@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -11,8 +12,10 @@ namespace RestaurantBill.Application.Features.Regions.Commands.DeleteRegion
     {
         public async Task<Result> Handle(DeleteRegionCommand command, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await db.GetAccessibleBranchIdsAsync(currentUser, cancellationToken);
+
             Region? region = await db.Regions
-                .FirstOrDefaultAsync(r => r.Id == command.Id, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(r => r.Id == command.Id, cancellationToken);
             if (region is null) return Result.Failure("Böyle bir bölge bulunamadı");
 
             List<Table> linkedTables = await db.Tables

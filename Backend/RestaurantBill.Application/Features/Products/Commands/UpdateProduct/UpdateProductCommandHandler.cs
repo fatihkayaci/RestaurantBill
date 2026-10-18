@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -20,10 +21,21 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
 
         public async Task<Result> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
             Product? product = await _db.Products
-                .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
             if (product is null)
                 return Result.Failure("Böyle bir ürün bulunamadı.");
+
+            Guid productBranchId = await _db.Categories
+                .Where(c => c.Id == product.CategoryId)
+                .Select(c => c.BranchId)
+                .FirstAsync(cancellationToken);
+            bool categoryInSameBranch = await _db.Categories
+                .AnyAsync(c => c.Id == request.CategoryId && c.BranchId == productBranchId, cancellationToken);
+            if (!categoryInSameBranch)
+                return Result.Failure("Böyle bir kategori bulunamadı.");
 
             product.Update(request.Name, request.Price, request.IsActive, request.CategoryId);
 

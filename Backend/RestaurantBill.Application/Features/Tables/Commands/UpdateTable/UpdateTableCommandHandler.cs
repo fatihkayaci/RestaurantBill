@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -20,9 +21,20 @@ namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
 
         public async Task<Result> Handle(UpdateTableCommand request, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
             Table? table = await _db.Tables
-                .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
             if (table is null) return Result.Failure("Böyle bir masa bulunamadı");
+
+            Guid tableBranchId = await _db.Regions
+                .Where(r => r.Id == table.RegionId)
+                .Select(r => r.BranchId)
+                .FirstAsync(cancellationToken);
+            bool regionInSameBranch = await _db.Regions
+                .AnyAsync(r => r.Id == request.RegionId && r.BranchId == tableBranchId, cancellationToken);
+            if (!regionInSameBranch)
+                return Result.Failure("Böyle bir bölge bulunamadı.");
 
             table.Update(request.Name, table.Note);
             table.AssignRegion(request.RegionId);

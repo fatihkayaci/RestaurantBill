@@ -32,7 +32,9 @@ public class CashRegister : BaseEntity
         };
     }
 
-    public void Update(string name, decimal balance, CashRegisterStatus status)
+    // Bakiye doğrudan üzerine yazılmaz: fark, kasa defteri ve vardiya hesaplarıyla tutarlı kalsın diye
+    // düzeltme hareketi olarak kaydedilir. Bakiye değişmediyse null döner.
+    public CashTransaction? Update(string name, decimal balance, CashRegisterStatus status, Guid userId)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("Kasa adı boş olamaz.");
@@ -40,9 +42,18 @@ public class CashRegister : BaseEntity
         if (balance < 0)
             throw new DomainException("Bakiye negatif olamaz.");
 
+        CashTransaction? adjustment = null;
+        decimal difference = balance - Balance;
+        if (difference != 0)
+        {
+            CashTransactionType type = difference > 0 ? CashTransactionType.AdjustmentIn : CashTransactionType.AdjustmentOut;
+            adjustment = CashTransaction.Create(Id, type, Math.Abs(difference), userId);
+            Balance = balance;
+        }
+
         Name = name;
-        Balance = balance;
         Status = status;
+        return adjustment;
     }
 
     public void EnsureCanBeDeleted()

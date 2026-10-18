@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
@@ -22,7 +23,9 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
 
         public async Task<Result<OrderDto>> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
         {
-            Table? table = await _db.Tables.FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
+            Table? table = await _db.Tables.InBranches(branchIds).FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
             if (table is null)
                 return Result<OrderDto>.Failure("Böyle bir Masa bulunamadı.");
 

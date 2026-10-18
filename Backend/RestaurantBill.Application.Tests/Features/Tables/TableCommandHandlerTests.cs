@@ -16,9 +16,9 @@ namespace RestaurantBill.Application.Tests.Features.Tables;
 
 public class TableCommandHandlerTests
 {
-    private static Table CreateTable(Guid? id = null)
+    private static Table CreateTable(Guid regionId, Guid? id = null)
     {
-        var table = Table.Create("Masa 1", "", Guid.NewGuid());
+        var table = Table.Create("Masa 1", "", regionId);
         var prop = typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!;
         prop.SetValue(table, id ?? Guid.NewGuid());
         return table;
@@ -31,7 +31,7 @@ public class TableCommandHandlerTests
         {
             await SeedActorAsync();
             var handler = new CreateTableCommandHandler(Db, CurrentUser);
-            Guid regionId = Guid.NewGuid();
+            Guid regionId = await DefaultRegionIdAsync();
 
             await handler.Handle(new CreateTableCommand { Name = "Masa 1", RegionId = regionId }, CancellationToken.None);
 
@@ -45,13 +45,13 @@ public class TableCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingTable_UpdatesAndSaves()
         {
-            Table table = CreateTable();
+            Table table = CreateTable(await DefaultRegionIdAsync());
             DbContext.Tables.Add(table);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
 
             var handler = new UpdateCommandHandler(Db, CurrentUser);
-            var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved, RegionId = Guid.NewGuid() };
+            var command = new UpdateTableCommand { Id = table.Id, Name = "Yeni Ad", Status = TableStatus.Reserved, RegionId = (await SeedRegionAsync()).Id };
 
             await handler.Handle(command, CancellationToken.None);
 
@@ -75,7 +75,7 @@ public class TableCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingTable_DeletesAndSaves()
         {
-            Table table = CreateTable();
+            Table table = CreateTable(await DefaultRegionIdAsync());
             DbContext.Tables.Add(table);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
@@ -102,7 +102,7 @@ public class TableCommandHandlerTests
         [Fact]
         public async Task Handle_WithAvailableTable_CreatesOrderAndOccupiesTable()
         {
-            Table table = CreateTable();
+            Table table = CreateTable(await DefaultRegionIdAsync());
             DbContext.Tables.Add(table);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
@@ -127,7 +127,7 @@ public class TableCommandHandlerTests
         [Fact]
         public async Task Handle_WhenTableOccupiedWithActiveOrder_ReturnsExistingOrderIdempotently()
         {
-            Table table = CreateTable();
+            Table table = CreateTable(await DefaultRegionIdAsync());
             DbContext.Tables.Add(table);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
@@ -146,7 +146,7 @@ public class TableCommandHandlerTests
         [Fact]
         public async Task Handle_WhenTableOccupiedWithNoActiveOrder_SelfHealsAndCreatesNewOrder()
         {
-            Table table = CreateTable();
+            Table table = CreateTable(await DefaultRegionIdAsync());
             table.Occupy();
             DbContext.Tables.Add(table);
             await DbContext.SaveChangesAsync();
@@ -166,7 +166,7 @@ public class TableCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingTable_SetsStatusToReserved()
         {
-            Table table = CreateTable();
+            Table table = CreateTable(await DefaultRegionIdAsync());
             DbContext.Tables.Add(table);
             await DbContext.SaveChangesAsync();
 
@@ -186,7 +186,7 @@ public class TableCommandHandlerTests
         [Fact]
         public async Task Handle_WithOccupiedTable_ThrowsDomainExceptionAndLeavesTableOccupied()
         {
-            Table table = CreateTable();
+            Table table = CreateTable(await DefaultRegionIdAsync());
             table.Occupy();
             DbContext.Tables.Add(table);
             await DbContext.SaveChangesAsync();
@@ -211,7 +211,7 @@ public class TableCommandHandlerTests
         [Fact]
         public async Task Handle_WithReservedTable_ReleasesTable()
         {
-            Table table = CreateTable();
+            Table table = CreateTable(await DefaultRegionIdAsync());
             table.Reserve();
             DbContext.Tables.Add(table);
             await DbContext.SaveChangesAsync();

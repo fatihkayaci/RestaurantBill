@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -20,6 +21,12 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
 
         public async Task<Result> Handle(CreateProductCommand request, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+            bool categoryAccessible = await _db.Categories
+                .InBranches(branchIds).AnyAsync(c => c.Id == request.CategoryId, cancellationToken);
+            if (!categoryAccessible)
+                return Result.Failure("Böyle bir kategori bulunamadı.");
+
             bool nameExistsInCategory = await _db.Products
                 .AnyAsync(p => p.Name == request.Name && p.CategoryId == request.CategoryId, cancellationToken);
             if (nameExistsInCategory)

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -11,19 +12,23 @@ namespace RestaurantBill.Application.Features.Shifts.Queries.GetShiftSummary;
 public class GetShiftSummaryQueryHandler : IRequestHandler<GetShiftSummaryQuery, Result<ShiftSummaryDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _currentUser;
     private readonly IShiftBalanceCalculator _balanceCalculator;
 
-    public GetShiftSummaryQueryHandler(IAppDbContext db, IShiftBalanceCalculator balanceCalculator)
+    public GetShiftSummaryQueryHandler(IAppDbContext db, ICurrentUserService currentUser, IShiftBalanceCalculator balanceCalculator)
     {
         _db = db;
+        _currentUser = currentUser;
         _balanceCalculator = balanceCalculator;
     }
 
     public async Task<Result<ShiftSummaryDto>> Handle(GetShiftSummaryQuery request, CancellationToken cancellationToken)
     {
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
         Shift? shift = await _db.Shifts
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
+            .InBranches(branchIds).FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
         if (shift is null) return Result<ShiftSummaryDto>.Failure("Vardiya bulunamadı.");
 
         // Kapanmış bir vardiyayı görüntülerken sonraki vardiyanın işlemlerinin sızmaması için

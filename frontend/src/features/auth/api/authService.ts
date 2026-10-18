@@ -1,9 +1,10 @@
 import type { Code, LoginResponse, Register, RegisterResponse, VerificationCode, VerifyCodeResponse } from '../types';
 import { api } from '@/lib/axiosInstance';
+import { endSession } from '@/lib/auth';
 
 export const authService = {
     logout: async () => {
-        localStorage.removeItem('token');
+        endSession();
         try {
             await api.post('/auth/logout');
         } catch {

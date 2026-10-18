@@ -18,23 +18,23 @@ namespace RestaurantBill.Application.Tests.Features.Orders;
 
 public class OrderCommandHandlerTests
 {
-    private static Table CreateTable(Guid? tableId = null)
+    private static Table CreateTable(Guid regionId, Guid? tableId = null)
     {
-        var table = Table.Create("Masa 1", "", Guid.NewGuid());
+        var table = Table.Create("Masa 1", "", regionId);
         SetId(table, tableId ?? Guid.NewGuid());
         return table;
     }
 
-    private static Order CreateOrder(Guid? tableId = null)
+    private static Order CreateOrder(Guid tableId)
     {
-        var order = Order.Create(tableId ?? Guid.NewGuid());
+        var order = Order.Create(tableId);
         SetId(order, Guid.NewGuid());
         return order;
     }
 
-    private static Product CreateProduct(Guid? id = null, decimal price = 20m)
+    private static Product CreateProduct(Guid? id = null, decimal price = 20m, Guid? categoryId = null)
     {
-        var product = Product.Create("Ürün", price, "img.png", Guid.NewGuid());
+        var product = Product.Create("Ürün", price, "img.png", categoryId ?? Guid.NewGuid());
         SetId(product, id ?? Guid.NewGuid());
         return product;
     }
@@ -50,7 +50,7 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_WithAvailableTable_CreatesOrderAndOccupiesTable()
         {
-            Table table = CreateTable();
+            Table table = CreateTable(await DefaultRegionIdAsync());
             DbContext.Tables.Add(table);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
@@ -79,7 +79,7 @@ public class OrderCommandHandlerTests
         public async Task Handle_WithExistingOrder_CancelsOrderAndReleasesTable()
         {
             Guid tableId = Guid.NewGuid();
-            Table table = OrderCommandHandlerTests.CreateTable(tableId);
+            Table table = OrderCommandHandlerTests.CreateTable(await DefaultRegionIdAsync(), tableId);
             table.Occupy();
             Order order = OrderCommandHandlerTests.CreateOrder(tableId);
             DbContext.Tables.Add(table);
@@ -102,6 +102,25 @@ public class OrderCommandHandlerTests
             var result = await handler.Handle(new CancelOrderCommand { OrderId = Guid.NewGuid() }, CancellationToken.None);
             Assert.True(result.IsFailure);
         }
+
+        [Fact]
+        public async Task Handle_WithOrderFromAnotherBranch_ReturnsFailureAndKeepsOrder()
+        {
+            Region foreignRegion = await SeedRegionAsync(Guid.NewGuid());
+            Table foreignTable = OrderCommandHandlerTests.CreateTable(foreignRegion.Id);
+            foreignTable.Occupy();
+            Order foreignOrder = OrderCommandHandlerTests.CreateOrder(foreignTable.Id);
+            DbContext.Tables.Add(foreignTable);
+            DbContext.Orders.Add(foreignOrder);
+            await DbContext.SaveChangesAsync();
+            await SeedActorAsync();
+
+            var handler = new CancelOrderCommandHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), CurrentUser);
+            var result = await handler.Handle(new CancelOrderCommand { OrderId = foreignOrder.Id }, CancellationToken.None);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal(OrderStatus.Active, foreignOrder.Status);
+        }
     }
 
     public class CloseOrderHandlerTests : ApplicationTestBase
@@ -110,7 +129,7 @@ public class OrderCommandHandlerTests
         public async Task Handle_WithExistingOrder_ClosesOrderAndReleasesTable()
         {
             Guid tableId = Guid.NewGuid();
-            Table table = CreateTable(tableId);
+            Table table = CreateTable(await DefaultRegionIdAsync(), tableId);
             table.Occupy();
             Order order = CreateOrder(tableId);
             DbContext.Tables.Add(table);
@@ -141,8 +160,8 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_WithValidItems_AddsItemsToOrderAndSaves()
         {
-            Order order = OrderCommandHandlerTests.CreateOrder();
-            Product product = OrderCommandHandlerTests.CreateProduct(price: 15m);
+            Order order = OrderCommandHandlerTests.CreateOrder((await SeedTableAsync()).Id);
+            Product product = OrderCommandHandlerTests.CreateProduct(price: 15m, categoryId: await DefaultCategoryIdAsync());
             DbContext.Orders.Add(order);
             DbContext.Products.Add(product);
             await DbContext.SaveChangesAsync();
@@ -166,7 +185,7 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingProduct_RemovesItemAndSaves()
         {
-            Order order = OrderCommandHandlerTests.CreateOrder();
+            Order order = OrderCommandHandlerTests.CreateOrder((await SeedTableAsync()).Id);
             Product product = OrderCommandHandlerTests.CreateProduct();
             order.AddItem(product, 2);
             DbContext.Orders.Add(order);
@@ -194,7 +213,7 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingItem_UpdatesQuantityAndSaves()
         {
-            Order order = OrderCommandHandlerTests.CreateOrder();
+            Order order = OrderCommandHandlerTests.CreateOrder((await SeedTableAsync()).Id);
             Product product = OrderCommandHandlerTests.CreateProduct(price: 10m);
             order.AddItem(product, 2);
             DbContext.Orders.Add(order);
@@ -212,7 +231,7 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_WithValidStatus_UpdatesStatusAndSaves()
         {
-            Order order = OrderCommandHandlerTests.CreateOrder();
+            Order order = OrderCommandHandlerTests.CreateOrder((await SeedTableAsync()).Id);
             order.AddItem(OrderCommandHandlerTests.CreateProduct(), 1);
             DbContext.Orders.Add(order);
             await DbContext.SaveChangesAsync();
@@ -233,9 +252,9 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_MoveToAvailableTable_MovesOrderAndSwapsTableStatus()
         {
-            Table source = CreateTable();
+            Table source = CreateTable(await DefaultRegionIdAsync());
             source.Occupy();
-            Table destination = CreateTable();
+            Table destination = CreateTable(await DefaultRegionIdAsync());
             Order order = CreateOrder(source.Id);
             order.AddItem(CreateProduct(), 2);
             DbContext.Tables.AddRange(source, destination);
@@ -255,9 +274,9 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_MoveToOccupiedTable_ReturnsFailureResult()
         {
-            Table source = CreateTable();
+            Table source = CreateTable(await DefaultRegionIdAsync());
             source.Occupy();
-            Table destination = CreateTable();
+            Table destination = CreateTable(await DefaultRegionIdAsync());
             destination.Occupy();
             Order sourceOrder = CreateOrder(source.Id);
             sourceOrder.AddItem(CreateProduct(), 1);
@@ -277,9 +296,9 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_MergeWithMatchingLine_CombinesQuantityAndClosesSource()
         {
-            Table source = CreateTable();
+            Table source = CreateTable(await DefaultRegionIdAsync());
             source.Occupy();
-            Table destination = CreateTable();
+            Table destination = CreateTable(await DefaultRegionIdAsync());
             destination.Occupy();
             Product product = CreateProduct(price: 10m);
 
@@ -308,9 +327,9 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_MergeWithDifferentStatusLines_KeepsSeparateLines()
         {
-            Table source = CreateTable();
+            Table source = CreateTable(await DefaultRegionIdAsync());
             source.Occupy();
-            Table destination = CreateTable();
+            Table destination = CreateTable(await DefaultRegionIdAsync());
             destination.Occupy();
             Product product = CreateProduct(price: 10m);
 
@@ -336,9 +355,9 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_Swap_ExchangesTablesWithoutChangingStatus()
         {
-            Table source = CreateTable();
+            Table source = CreateTable(await DefaultRegionIdAsync());
             source.Occupy();
-            Table destination = CreateTable();
+            Table destination = CreateTable(await DefaultRegionIdAsync());
             destination.Occupy();
 
             Order sourceOrder = CreateOrder(source.Id);
@@ -364,8 +383,8 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_WithNoActiveOrderAtSourceTable_ReturnsFailureResult()
         {
-            Table source = CreateTable();
-            Table destination = CreateTable();
+            Table source = CreateTable(await DefaultRegionIdAsync());
+            Table destination = CreateTable(await DefaultRegionIdAsync());
             DbContext.Tables.AddRange(source, destination);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
@@ -382,7 +401,7 @@ public class OrderCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingItem_UpdatesStatusAndSaves()
         {
-            Order order = OrderCommandHandlerTests.CreateOrder();
+            Order order = OrderCommandHandlerTests.CreateOrder((await SeedTableAsync()).Id);
             order.AddItem(OrderCommandHandlerTests.CreateProduct(), 1);
             OrderItem item = order.OrderItems.First();
             Guid itemId = Guid.NewGuid();

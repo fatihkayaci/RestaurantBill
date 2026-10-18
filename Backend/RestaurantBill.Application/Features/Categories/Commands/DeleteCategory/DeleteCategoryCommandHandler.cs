@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -11,8 +12,10 @@ namespace RestaurantBill.Application.Features.Categories.Commands.DeleteCategory
     {
         public async Task<Result> Handle(DeleteCategoryCommand command, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await db.GetAccessibleBranchIdsAsync(currentUser, cancellationToken);
+
             Category? category = await db.Categories
-                .FirstOrDefaultAsync(c => c.Id == command.Id, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(c => c.Id == command.Id, cancellationToken);
             if (category is null) return Result.Failure("Böyle bir kategori bulunamadı");
 
             List<Product> linkedProducts = await db.Products

@@ -1,5 +1,5 @@
+using System.Collections.Concurrent;
 using MediatR;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Exceptions;
@@ -8,14 +8,11 @@ namespace RestaurantBill.Application.Behaviors;
 public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
-    private readonly IMemoryCache _cache;
     private readonly ILogger<IdempotencyBehavior<TRequest, TResponse>> _logger;
     private readonly ICurrentUserService _currentUser;
-    private static readonly TimeSpan LockSafetyNet = TimeSpan.FromSeconds(30);
 
-    public IdempotencyBehavior(IMemoryCache cache, ILogger<IdempotencyBehavior<TRequest, TResponse>> logger, ICurrentUserService currentUser)
+    public IdempotencyBehavior(ILogger<IdempotencyBehavior<TRequest, TResponse>> logger, ICurrentUserService currentUser)
     {
-        _cache = cache;
         _logger = logger;
         _currentUser = currentUser;
     }
@@ -30,13 +27,12 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
 
         var key = $"idempotency:r{_currentUser.BranchId}:{idempotent.IdempotencyKey}";
 
-        if (_cache.TryGetValue(key, out _))
+        // TryAdd atomiktir: aynı anda gelen iki çift tıklamadan yalnızca biri kilidi alır.
+        if (!IdempotencyLocks.InFlight.TryAdd(key, 0))
         {
             _logger.LogWarning("Duplicate request blocked: {Key}", key);
             throw new BusinessException("İşleminiz gerçekleştiriliyor, lütfen birkaç saniye bekleyip tekrar deneyin.");
         }
-
-        _cache.Set(key, true, LockSafetyNet);
 
         try
         {
@@ -44,7 +40,13 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
         }
         finally
         {
-            _cache.Remove(key);
+            IdempotencyLocks.InFlight.TryRemove(key, out _);
         }
     }
+}
+
+// Generic sınıftaki static alan her TRequest için ayrı olurdu; kilit tablosu tüm istek tipleri arasında ortak.
+internal static class IdempotencyLocks
+{
+    public static readonly ConcurrentDictionary<string, byte> InFlight = new();
 }

@@ -12,7 +12,7 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
 
     public GetActiveOrderByTableIdQueryTests()
     {
-        _handler = new GetActiveOrderByTableIdHandler(new OrderQueries(AppDb));
+        _handler = new GetActiveOrderByTableIdHandler(new OrderQueries(AppDb), AppDb, CurrentUser);
     }
 
     [Fact]
@@ -117,5 +117,24 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
 
         Assert.True(result.IsSuccess);
         Assert.Null(result.Value);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTableBelongsToAnotherBranch_ReturnsFailure()
+    {
+        var foreignTable = Table.Create("Masa 1", "", OtherRestaurantId);
+        foreignTable.AssignRegion(OtherDefaultRegionId);
+        await DbContext.Tables.AddAsync(foreignTable);
+        await DbContext.SaveChangesAsync();
+
+        var foreignOrder = Order.Create(foreignTable.Id);
+        await DbContext.Orders.AddAsync(foreignOrder);
+        await DbContext.SaveChangesAsync();
+
+        var result = await _handler.Handle(
+            new GetActiveOrderByTableIdQuery { TableId = foreignTable.Id },
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
     }
 }

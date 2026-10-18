@@ -43,7 +43,7 @@ public class CashRegisterCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingRegister_UpdatesAndSaves()
         {
-            CashRegister existing = CashRegister.Create("Eski Ad", 500m, Guid.NewGuid());
+            CashRegister existing = CashRegister.Create("Eski Ad", 500m, CurrentUser.BranchId);
             DbContext.CashRegisters.Add(existing);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
@@ -81,7 +81,7 @@ public class CashRegisterCommandHandlerTests
         [Fact]
         public async Task Handle_WithExistingRegister_DeletesAndSaves()
         {
-            CashRegister existing = CashRegister.Create("Kasa", 0m, Guid.NewGuid());
+            CashRegister existing = CashRegister.Create("Kasa", 0m, CurrentUser.BranchId);
             DbContext.CashRegisters.Add(existing);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
@@ -98,7 +98,7 @@ public class CashRegisterCommandHandlerTests
         [Fact]
         public async Task Handle_WithPositiveBalance_ThrowsDomainException()
         {
-            CashRegister existing = CashRegister.Create("Kasa", 100m, Guid.NewGuid());
+            CashRegister existing = CashRegister.Create("Kasa", 100m, CurrentUser.BranchId);
             DbContext.CashRegisters.Add(existing);
             await DbContext.SaveChangesAsync();
 
@@ -124,7 +124,7 @@ public class CashRegisterCommandHandlerTests
         [Fact]
         public async Task Handle_WithOpenRegister_AddsTransactionAndSaves()
         {
-            CashRegister register = CashRegister.Create("Kasa", 500m, Guid.NewGuid());
+            CashRegister register = CashRegister.Create("Kasa", 500m, CurrentUser.BranchId);
             DbContext.CashRegisters.Add(register);
             await DbContext.SaveChangesAsync();
             await SeedActorAsync();
@@ -147,8 +147,8 @@ public class CashRegisterCommandHandlerTests
         [Fact]
         public async Task Handle_WithClosedRegister_ThrowsDomainException()
         {
-            CashRegister register = CashRegister.Create("Kasa", 500m, Guid.NewGuid());
-            register.Update("Kasa", 500m, CashRegisterStatus.Closed);
+            CashRegister register = CashRegister.Create("Kasa", 500m, CurrentUser.BranchId);
+            register.Update("Kasa", 500m, CashRegisterStatus.Closed, Guid.NewGuid());
             DbContext.CashRegisters.Add(register);
             await DbContext.SaveChangesAsync();
 

@@ -59,7 +59,7 @@ public class CashRegisterTests
         {
             CashRegister cashRegister = CashRegister.Create("Eski Ad", 100m, Guid.NewGuid());
 
-            cashRegister.Update("Yeni Ad", 250m, CashRegisterStatus.Closed);
+            cashRegister.Update("Yeni Ad", 250m, CashRegisterStatus.Closed, Guid.NewGuid());
 
             Assert.Equal("Yeni Ad", cashRegister.Name);
             Assert.Equal(250m, cashRegister.Balance);
@@ -74,7 +74,7 @@ public class CashRegisterTests
             CashRegister cashRegister = CashRegister.Create("Kasa", 100m, Guid.NewGuid());
 
             Assert.Throws<DomainException>(() =>
-                cashRegister.Update(invalidName, 100m, CashRegisterStatus.Open));
+                cashRegister.Update(invalidName, 100m, CashRegisterStatus.Open, Guid.NewGuid()));
         }
 
         [Fact]
@@ -83,7 +83,7 @@ public class CashRegisterTests
             CashRegister cashRegister = CashRegister.Create("Kasa", 100m, Guid.NewGuid());
 
             Assert.Throws<DomainException>(() =>
-                cashRegister.Update("Kasa", -50m, CashRegisterStatus.Open));
+                cashRegister.Update("Kasa", -50m, CashRegisterStatus.Open, Guid.NewGuid()));
         }
 
         [Fact]
@@ -91,9 +91,35 @@ public class CashRegisterTests
         {
             CashRegister cashRegister = CashRegister.Create("Kasa", 100m, Guid.NewGuid());
 
-            cashRegister.Update("Kasa", 0m, CashRegisterStatus.Open);
+            cashRegister.Update("Kasa", 0m, CashRegisterStatus.Open, Guid.NewGuid());
 
             Assert.Equal(0m, cashRegister.Balance);
+        }
+
+        [Fact]
+        public void WithChangedBalance_ReturnsAdjustmentTransactionForDifference()
+        {
+            CashRegister cashRegister = CashRegister.Create("Kasa", 100m, Guid.NewGuid());
+
+            CashTransaction? increase = cashRegister.Update("Kasa", 160m, CashRegisterStatus.Open, Guid.NewGuid());
+            CashTransaction? decrease = cashRegister.Update("Kasa", 40m, CashRegisterStatus.Open, Guid.NewGuid());
+
+            Assert.NotNull(increase);
+            Assert.Equal(CashTransactionType.AdjustmentIn, increase!.Type);
+            Assert.Equal(60m, increase.Amount);
+            Assert.NotNull(decrease);
+            Assert.Equal(CashTransactionType.AdjustmentOut, decrease!.Type);
+            Assert.Equal(120m, decrease.Amount);
+        }
+
+        [Fact]
+        public void WithUnchangedBalance_ReturnsNoTransaction()
+        {
+            CashRegister cashRegister = CashRegister.Create("Kasa", 100m, Guid.NewGuid());
+
+            CashTransaction? adjustment = cashRegister.Update("Yeni Ad", 100m, CashRegisterStatus.Open, Guid.NewGuid());
+
+            Assert.Null(adjustment);
         }
     }
 
@@ -163,7 +189,7 @@ public class CashRegisterTests
         public void OnClosedRegister_ThrowsDomainException()
         {
             CashRegister cashRegister = CashRegister.Create("Kasa", 200m, Guid.NewGuid());
-            cashRegister.Update("Kasa", 200m, CashRegisterStatus.Closed);
+            cashRegister.Update("Kasa", 200m, CashRegisterStatus.Closed, Guid.NewGuid());
 
             Assert.Throws<DomainException>(() =>
                 cashRegister.AddTransaction(CashTransactionType.In, 50m, Guid.NewGuid()));
@@ -236,7 +262,7 @@ public class CashRegisterTests
         {
             CashRegister source = CashRegister.Create("Kasa A", 300m, Guid.NewGuid());
             CashRegister destination = CashRegister.Create("Kasa B", 100m, Guid.NewGuid());
-            destination.Update("Kasa B", 100m, CashRegisterStatus.Closed);
+            destination.Update("Kasa B", 100m, CashRegisterStatus.Closed, Guid.NewGuid());
             SetId(source, Guid.NewGuid());
             SetId(destination, Guid.NewGuid());
 

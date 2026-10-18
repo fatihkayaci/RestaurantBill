@@ -40,6 +40,7 @@ public class AuthController : BaseController
 
         if (result.IsSuccess && result.Value?.RefreshToken is not null)
         {
+            await RevokeExistingSessionAsync(cancellationToken);
             SetRefreshCookie(result.Value.RefreshToken, result.Value.RefreshTokenExpiresAt, result.Value.RememberMe);
             result.Value.RefreshToken = null;
         }
@@ -104,6 +105,14 @@ public class AuthController : BaseController
     public async Task<IActionResult> Register([FromBody] RegisterCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsSuccess && result.Value?.RefreshToken is not null)
+        {
+            await RevokeExistingSessionAsync(cancellationToken);
+            SetRefreshCookie(result.Value.RefreshToken, result.Value.RefreshTokenExpiresAt, rememberMe: false);
+            result.Value.RefreshToken = null;
+        }
+
         return HandleResult(result);
     }
 
@@ -130,9 +139,25 @@ public class AuthController : BaseController
     public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsSuccess && result.Value?.RefreshToken is not null)
+        {
+            await RevokeExistingSessionAsync(cancellationToken);
+            SetRefreshCookie(result.Value.RefreshToken, result.Value.RefreshTokenExpiresAt, rememberMe: false);
+            result.Value.RefreshToken = null;
+        }
+
         return HandleResult(result);
     }
     #endregion
+
+    // Aynı tarayıcıda yeni bir oturum açılırken önceki kullanıcının refresh token'ı sunucuda da iptal edilir;
+    // aksi halde eski cookie'nin süresi dolmadan yeni kullanıcı başka bir restoranın oturumuna düşebilir.
+    private async Task RevokeExistingSessionAsync(CancellationToken cancellationToken)
+    {
+        if (Request.Cookies.TryGetValue(RefreshCookieName, out var rawToken) && !string.IsNullOrEmpty(rawToken))
+            await _mediator.Send(new LogoutCommand { RefreshToken = rawToken }, cancellationToken);
+    }
 
     private void SetRefreshCookie(string rawToken, DateTime absoluteExpiresAt, bool rememberMe)
     {

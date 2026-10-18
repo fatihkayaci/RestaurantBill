@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using RestaurantBill.Application.Features.Auths.Commands.VerifyCode;
 using RestaurantBill.Application.Tests.Fakes;
 using RestaurantBill.Application.Tests.Infrastructure;
@@ -19,7 +20,7 @@ public class VerifyCodeCommandHandlerTests : ApplicationTestBase
     }
 
     private VerifyCodeCommandHandler CreateHandler()
-        => new(Db, new FakeJwtTokenGenerator());
+        => new(Db, new FakeJwtTokenGenerator(), new ConfigurationBuilder().Build());
 
     [Fact]
     public async Task Handle_WrongCode_IncrementsAttemptAndReturnsFailure()
@@ -116,6 +117,10 @@ public class VerifyCodeCommandHandlerTests : ApplicationTestBase
         Assert.True(result.Value!.NeedsSlugSetup);
         Assert.True(user.IsPhoneVerified);
         Assert.Equal(VerificationCodeStatus.Verified, code.Status);
+        Assert.False(string.IsNullOrEmpty(result.Value!.RefreshToken));
+        RefreshToken stored = Assert.Single(DbContext.RefreshTokens);
+        Assert.Equal(user.Id, stored.UserId);
+        Assert.Equal(company.Id, stored.BranchId);
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 # 📋 Proje Yol Haritası (Yapılacaklar)
 
-> **Son güncelleme:** Eylül 2026
+> **Son güncelleme:** Ekim 2026
 > Bu dosya, RestaurantBill'in tamamlanan işlerini ve kalan yol haritasını takip eder. İngilizce versiyon için: [TODO.md](TODO.md).
 
 ---
@@ -57,7 +57,20 @@
 - [x] **Doğrulama:** `AddFluentValidationAutoValidation` kaldırıldı; doğrulama yalnızca MediatR pipeline üzerinden çalışıyor.
 - [x] **Refactor:** Application feature klasörlerindeki isimlendirmeler düzenlendi.
 
+### ✅ Tamamlananlar (Ekim 2026 — production sağlamlaştırma)
+- [x] **Güvenlik:** Id ile gelen tüm komut/sorgular kullanıcının erişebildiği şubelerle sınırlandı (`BranchScope`); başka restoranın verisine erişim kapatıldı.
+- [x] **Güvenlik:** Admin'in başka şirketin Owner'ını güncellemesi/silmesi engellendi; personele Owner rolü atanamıyor.
+- [x] **Auth:** Kayıt ve telefon doğrulaması kendi refresh oturumunu açıyor; aynı tarayıcıdaki eski oturum iptal ediliyor.
+- [x] **Kasa:** Elle bakiye değişikliği düzeltme (Adjustment) hareketi olarak kaydediliyor.
+- [x] **Veri:** Kasa, sipariş, masa ve vardiyada `xmin` ile optimistic concurrency; çakışmada 409 dönülüyor.
+- [x] **Pipeline:** Hatalı sonuçlar cache'lenmiyor; idempotency kilidi atomik.
+- [x] **Ops:** Swagger production'da kapalı, API logları volume'da, Postgres yalnızca localhost'a açık.
+- [x] **CI:** Frontend lint + build deploy'dan önce çalışıyor.
+
 ### 🚧 Planlananlar
+- [ ] **Auth:** Gerçek SMS/e-posta sağlayıcısı bağlanıp telefon doğrulaması backend'de zorunlu hale getirilecek.
+- [ ] **API:** `Result` hata türüne göre doğru HTTP kodları (404/403/409) dönülecek.
+- [ ] **Test:** Integration testleri InMemory yerine Testcontainers + Postgres ile çalıştırılacak.
 - [ ] **Doğrulama:** Backend doğrulama kuralları gözden geçirilecek; eksik iş kuralları tamamlanacak.
 - [ ] **Refactor:** Anemic modelden daha zengin (rich) domain modeline geçilecek.
 - [ ] **Refactor:** Daha fazla domain exception tipi eklenip kapsam genişletilecek.

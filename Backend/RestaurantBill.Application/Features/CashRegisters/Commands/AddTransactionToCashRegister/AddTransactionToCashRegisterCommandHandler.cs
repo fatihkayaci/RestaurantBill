@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -20,8 +21,10 @@ public class AddTransactionToCashRegisterCommandHandler : IRequestHandler<AddTra
 
     public async Task<Result> Handle(AddTransactionToCashRegisterCommand request, CancellationToken cancellationToken)
     {
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
         CashRegister? register = await _db.CashRegisters
-            .FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
+            .InBranches(branchIds).FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
         if (register is null)
             return Result.Failure("Kasa Bulunamadı");
 

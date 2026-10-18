@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { PaymentMethod, ShiftSummary } from '@/features/cashier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 interface Props {
     onClose: () => void;
@@ -56,8 +57,8 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
             } else {
                 onShiftClosed();
             }
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? 'Vardiya kapatılamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Vardiya kapatılamadı.'));
         } finally {
             setSubmitting(false);
         }

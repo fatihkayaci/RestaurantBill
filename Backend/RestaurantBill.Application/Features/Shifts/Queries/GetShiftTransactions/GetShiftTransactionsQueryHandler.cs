@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Shared;
@@ -10,17 +11,21 @@ namespace RestaurantBill.Application.Features.Shifts.Queries.GetShiftTransaction
 public class GetShiftTransactionsQueryHandler : IRequestHandler<GetShiftTransactionsQuery, Result<List<ShiftTransactionDto>>>
 {
     private readonly IAppDbContext _db;
+    private readonly ICurrentUserService _currentUser;
 
-    public GetShiftTransactionsQueryHandler(IAppDbContext db)
+    public GetShiftTransactionsQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
     {
         _db = db;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<List<ShiftTransactionDto>>> Handle(GetShiftTransactionsQuery request, CancellationToken cancellationToken)
     {
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
         Shift? shift = await _db.Shifts
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
+            .InBranches(branchIds).FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
         if (shift is null) return Result<List<ShiftTransactionDto>>.Failure("Vardiya bulunamadı.");
 
         DateTime rangeEnd = shift.ClosedAt ?? DateTime.UtcNow;

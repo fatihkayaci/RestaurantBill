@@ -1,3 +1,4 @@
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,9 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
 
         public async Task<Result> Handle(DeleteCommand request, CancellationToken cancellationToken)
         {
-            Order? order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUserService, cancellationToken);
+
+            Order? order = await _db.Orders.InBranches(branchIds).FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
 
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");

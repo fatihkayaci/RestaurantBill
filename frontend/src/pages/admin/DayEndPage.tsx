@@ -6,6 +6,7 @@ import { createHubConnection } from '@/lib/signalrConnection';
 import { cn } from '@/lib/utils';
 import CloseShiftModal from './components/CloseShiftModal';
 import ShiftDetailModal from './components/ShiftDetailModal';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const METHOD_ORDER: PaymentMethod[] = [2, 1, 3];
 const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR' };
@@ -70,8 +71,8 @@ export default function DayEndPage() {
             await shiftService.ensureOpen(candidate.cashRegisterId);
             toast.success(`${candidate.cashRegisterName} kasasında gün başlatıldı.`);
             await refresh();
-        } catch (err: any) {
-            toast.error(err.response?.data?.error ?? 'Gün başlatılamadı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Gün başlatılamadı.'));
         } finally {
             setStartingId(null);
         }

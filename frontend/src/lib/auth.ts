@@ -1,4 +1,5 @@
 import { jwtDecode } from "jwt-decode";
+import { clearStoredCashRegisterId } from "@/features/cashier/context/activeShiftStore";
 
 const ROLE_CLAIM = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
 
@@ -20,4 +21,15 @@ export function getRoleHomePath(role: string | null): string {
         case "Waiter": return "/waiter";
         default: return "/login";
     }
+}
+
+// Yeni bir oturum başlarken önceki kullanıcıdan kalan cihaz durumu (ör. seçili kasa) taşınmasın.
+export function startSession(token: string): void {
+    clearStoredCashRegisterId();
+    localStorage.setItem("token", token);
+}
+
+export function endSession(): void {
+    clearStoredCashRegisterId();
+    localStorage.removeItem("token");
 }

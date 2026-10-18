@@ -1,6 +1,6 @@
 # 📋 Project Roadmap (TODO)
 
-> **Last updated:** September 2026
+> **Last updated:** October 2026
 > This file tracks completed work and the remaining roadmap for RestaurantBill. The Turkish version is available in [TODO.tr.md](TODO.tr.md).
 
 ---
@@ -57,7 +57,20 @@
 - [x] **Validation:** Remove `AddFluentValidationAutoValidation`; validation now runs only through the MediatR pipeline.
 - [x] **Refactor:** Clean up naming across the Application feature folders.
 
+### ✅ Completed (October 2026 — production hardening)
+- [x] **Security:** Every id-based command/query is scoped to the caller's reachable branches (`BranchScope`); cross-restaurant access is closed.
+- [x] **Security:** Admins can no longer edit/delete another company's owner; staff can't be given the Owner role.
+- [x] **Auth:** Register and phone verification open their own refresh session and revoke the previous one in the same browser.
+- [x] **Cash:** Manual balance edits are recorded as adjustment transactions.
+- [x] **Data:** Optimistic concurrency via `xmin` on registers, orders, tables and shifts; conflicts return 409.
+- [x] **Pipeline:** Failed results aren't cached; the idempotency lock is atomic.
+- [x] **Ops:** Swagger off in production, API logs on a volume, Postgres bound to localhost.
+- [x] **CI:** Frontend lint + build run before deploy.
+
 ### 🚧 Planned
+- [ ] **Auth:** Wire a real SMS/e-mail provider and enforce phone verification on the backend.
+- [ ] **API:** Map `Result` error kinds to proper HTTP codes (404/403/409).
+- [ ] **Tests:** Run integration tests on Testcontainers + Postgres instead of InMemory.
 - [ ] **Validation:** Review and complete all backend validation rules; implement missing business rules.
 - [ ] **Refactor:** Move from an anemic model toward a richer domain model.
 - [ ] **Refactor:** Add more domain exception types and broaden coverage.

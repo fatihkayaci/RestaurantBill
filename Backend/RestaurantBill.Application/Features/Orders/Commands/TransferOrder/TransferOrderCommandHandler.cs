@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Features.Orders.Queries;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -28,13 +29,23 @@ public class TransferOrderCommandHandler : IRequestHandler<TransferOrderCommand,
 
     public async Task<Result<bool>> Handle(TransferOrderCommand request, CancellationToken cancellationToken)
     {
-        Table? source = await _db.Tables.FirstOrDefaultAsync(t => t.Id == request.SourceTableId, cancellationToken);
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUserService, cancellationToken);
+
+        Table? source = await _db.Tables.InBranches(branchIds).FirstOrDefaultAsync(t => t.Id == request.SourceTableId, cancellationToken);
         if (source is null)
             return Result<bool>.Failure("Kaynak masa bulunamadı.");
 
-        Table? destination = await _db.Tables.FirstOrDefaultAsync(t => t.Id == request.DestinationTableId, cancellationToken);
+        Table? destination = await _db.Tables.InBranches(branchIds).FirstOrDefaultAsync(t => t.Id == request.DestinationTableId, cancellationToken);
         if (destination is null)
             return Result<bool>.Failure("Hedef masa bulunamadı.");
+
+        List<Guid> tableBranchIds = await _db.Regions
+            .Where(r => r.Id == source.RegionId || r.Id == destination.RegionId)
+            .Select(r => r.BranchId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        if (tableBranchIds.Count != 1)
+            return Result<bool>.Failure("Masalar farklı şubelere ait.");
 
         Order? sourceOrder = await _orderQueries.GetActiveOrderByTableIdAsync(source.Id, trackChanges: true, cancellationToken);
         if (sourceOrder is null)

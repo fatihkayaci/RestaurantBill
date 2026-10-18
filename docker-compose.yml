@@ -22,6 +22,9 @@ services:
       - BunnyStorage__CdnBaseUrl=${BunnyStorage__CdnBaseUrl}
       - CorsSettings__AllowedOrigins=${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost}
       - CorsSettings__AllowedOriginSuffix=${CORS_ALLOWED_ORIGIN_SUFFIX:-}
+      - Swagger__Enabled=${SWAGGER_ENABLED:-false}
+    volumes:
+      - api_logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -50,7 +53,8 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     ports:
-      - "5432:5432"
+      # Sadece sunucunun kendisinden erişilebilir; Docker yayınlanan portlarda host firewall'unu (ufw) atlar.
+      - "127.0.0.1:5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -61,3 +65,4 @@ services:
 
 volumes:
   pg_data:
+  api_logs:

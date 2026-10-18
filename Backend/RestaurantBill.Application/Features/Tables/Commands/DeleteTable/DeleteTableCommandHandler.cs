@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -20,8 +21,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.DeleteTable
 
         public async Task<Result> Handle(DeleteTableCommand request, CancellationToken cancellationToken)
         {
+            List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
             Table? table = await _db.Tables
-                .FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
+                .InBranches(branchIds).FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
             if (table is null) return Result.Failure("Masa bulunamadı.");
 
             List<Order> activeOrders = await _db.Orders

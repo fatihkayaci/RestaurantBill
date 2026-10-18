@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
@@ -22,10 +23,12 @@ public class EnsureShiftOpenCommandHandler : IRequestHandler<EnsureShiftOpenComm
 
     public async Task<Result<ShiftDto>> Handle(EnsureShiftOpenCommand request, CancellationToken cancellationToken)
     {
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
         Guid restaurantId = _currentUser.BranchId;
 
         CashRegister? register = await _db.CashRegisters
-            .FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
+            .InBranches(branchIds).FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
         if (register is null) return Result<ShiftDto>.Failure("Kasa bulunamadı.");
 
         if (register.Status != CashRegisterStatus.Open)
@@ -33,7 +36,7 @@ public class EnsureShiftOpenCommandHandler : IRequestHandler<EnsureShiftOpenComm
 
         Shift? existing = await _db.Shifts
             .Include(s => s.CashRegister)
-            .FirstOrDefaultAsync(s => s.CashRegisterId == request.CashRegisterId && s.Status == ShiftStatus.Open, cancellationToken);
+            .InBranches(branchIds).FirstOrDefaultAsync(s => s.CashRegisterId == request.CashRegisterId && s.Status == ShiftStatus.Open, cancellationToken);
         if (existing is not null)
             return Result<ShiftDto>.Success(existing.ToDto());
 
