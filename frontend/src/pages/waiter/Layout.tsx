@@ -28,7 +28,7 @@ export default function WaiterLayout() {
 
     return (
         <div className="min-h-screen bg-[#F1ECE4] dark:bg-background flex flex-col">
-            <header className="min-h-14 bg-sidebar flex items-center justify-between gap-3 px-3 sm:px-5 py-2 shrink-0 z-10">
+            <header className="min-h-16 bg-sidebar flex items-center justify-between gap-3 px-4 sm:px-8 py-2 shrink-0 z-10">
                 {/* Sol: Logo + İsim + Rol */}
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <img src={sophramLogo} alt="Sophram" className="h-12 sm:h-18 w-auto shrink-0" />
@@ -36,27 +36,24 @@ export default function WaiterLayout() {
                     <div className="hidden sm:block w-px h-6.5 bg-white/10 shrink-0" />
 
                     <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-1.75 h-1.75 rounded-full bg-rb-green shrink-0" style={{ boxShadow: '0 0 0 3px rgba(69,200,122,0.15)' }} />
+                        <span className="w-2 h-2 rounded-full bg-rb-green shrink-0" style={{ boxShadow: '0 0 0 3px rgba(69,200,122,0.15)' }} />
                         <div className="min-w-0">
-                            <p className="text-sidebar-foreground font-serif font-bold text-base leading-tight truncate">
+                            <p className="text-sidebar-foreground font-serif font-bold text-xl sm:text-2xl leading-tight truncate">
                                 {restaurantName || 'Sophram'}
                             </p>
-                            <p className="text-rb-amber text-[10px] font-semibold tracking-widest uppercase mt-0.5">
+                            <p className="text-rb-amber text-xs font-semibold tracking-widest uppercase mt-0.5">
                                 Garson
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Sayaçlar, TablesPage tarafından portal ile buraya enjekte edilir */}
-                <div id="waiter-stats-slot" className="hidden lg:flex items-center gap-0.5" />
-
                 {/* Sağ: saat + tema + çıkış */}
                 <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                    <HeaderClock />
+                    <HeaderClock large />
                     <div className="hidden sm:block w-px h-6.5 bg-white/10 shrink-0" />
-                    <HeaderThemeToggle />
-                    <HeaderLogoutButton onClick={handleLogout} />
+                    <HeaderThemeToggle large />
+                    <HeaderLogoutButton onClick={handleLogout} large />
                 </div>
             </header>
 

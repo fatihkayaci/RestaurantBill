@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Table } from '@/features/tables/types';
 import TablePanel from './components/TablePanel';
-import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { formatPrice } from '@/lib/format';
 import { Clock, Plus, User } from 'lucide-react';
@@ -206,8 +204,6 @@ export default function WaiterTablesPage() {
 
     const selectedTable = tables.find(t => t.id === selectedTableId) ?? null;
 
-    const statsSlot = document.getElementById('waiter-stats-slot');
-
     if (loading) {
         return (
             <div className="px-4 sm:px-8 py-6 grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-2.5 sm:gap-4">
@@ -220,16 +216,6 @@ export default function WaiterTablesPage() {
 
     return (
         <div className="min-h-full">
-            {/* Header stats portal */}
-            {statsSlot && createPortal(
-                <>
-                    <HeaderStatCounter label="Aktif Sipariş" count={counts.occupied} color="text-rb-accent" />
-                    <HeaderStatCounter label="Açık Masa" count={counts.occupied} color="text-rb-amber" />
-                    <HeaderStatCounter label="Bekleyen" count={counts.reserved} color="text-rb-red" />
-                </>,
-                statsSlot
-            )}
-
             {/* Filtreler (sayılar da burada) */}
             <div className="sticky top-0 z-10 bg-[#F1ECE4]/95 dark:bg-background/95 backdrop-blur-sm border-b border-border px-4 sm:px-8 py-3 sm:py-3.5 grid grid-cols-4 sm:flex sm:flex-wrap sm:items-center gap-1.5 sm:gap-2.5">
                 {FILTER_CONFIG.map(({ key, label, count, dot }) => (
@@ -252,7 +238,7 @@ export default function WaiterTablesPage() {
             </div>
 
             {/* Bölgelere göre masalar */}
-            <div className="max-w-360 mx-auto px-4 sm:px-8 pt-4.5 sm:pt-6 pb-8 sm:pb-12 flex flex-col gap-6 sm:gap-8">
+            <div className="px-4 sm:px-8 pt-4.5 sm:pt-6 pb-8 sm:pb-12 flex flex-col gap-6 sm:gap-8">
                 {visibleRegions.map(region => (
                     <section key={region.id} className="flex flex-col gap-2.5 sm:gap-3.5">
                         <div className="flex items-baseline gap-2.5 sm:gap-3">
