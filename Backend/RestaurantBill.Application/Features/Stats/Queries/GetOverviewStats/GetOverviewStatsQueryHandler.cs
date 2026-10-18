@@ -24,35 +24,37 @@ namespace RestaurantBill.Application.Features.Stats.Queries.GetOverviewStats
             Guid restaurantId = _currentUser.BranchId;
             if (restaurantId == Guid.Empty) return Result<OverviewStatsDto>.Failure("Geçersiz şube bilgisi.");
 
-            List<Order> orders = await _db.Orders
+            // Ödenen kalemler siparişten düşüldüğü için (Order.SettleItem) ciro sipariş tutarından değil,
+            // raporlarla aynı kaynak olan ödeme kayıtlarından hesaplanır.
+            var payments = await _db.Payments
                 .AsNoTracking()
-                .Include(o => o.OrderItems).ThenInclude(i => i.Product)
-                .Where(o => o.Table.Region.BranchId == restaurantId)
+                .Where(p => p.CashRegister.BranchId == restaurantId)
+                .Select(p => new { p.OrderId, p.TotalAmount })
                 .ToListAsync(cancellationToken);
             List<Table> tables = await _db.Tables
                 .AsNoTracking()
                 .Where(t => t.Region.BranchId == restaurantId)
                 .ToListAsync(cancellationToken);
 
-            decimal totalRevenue = orders.Sum(o => o.TotalPrice);
-            int totalOrders = orders.Count;
-            decimal avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+            decimal totalRevenue = payments.Sum(p => p.TotalAmount);
+            int totalOrders = payments.Select(p => p.OrderId).Distinct().Count();
+            decimal avgOrderValue = totalOrders > 0 ? Math.Round(totalRevenue / totalOrders, 2) : 0;
 
             int occupiedTables = tables.Count(t => t.Status == TableStatus.Occupied);
             int totalTables = tables.Count;
 
-            List<TopProductDto> topProducts = orders
-                .SelectMany(o => o.OrderItems)
-                .Where(i => i.Product != null)
-                .GroupBy(i => i.Product!.Name)
+            List<TopProductDto> topProducts = await _db.PaymentLineItems
+                .AsNoTracking()
+                .Where(l => l.Payment.CashRegister.BranchId == restaurantId)
+                .GroupBy(l => l.ProductName)
                 .Select(g => new TopProductDto
                 {
                     Name = g.Key,
-                    Sold = g.Sum(i => i.Quantity)
+                    Sold = g.Sum(l => l.Quantity)
                 })
                 .OrderByDescending(p => p.Sold)
                 .Take(5)
-                .ToList();
+                .ToListAsync(cancellationToken);
 
             return Result<OverviewStatsDto>.Success(new OverviewStatsDto
             {
