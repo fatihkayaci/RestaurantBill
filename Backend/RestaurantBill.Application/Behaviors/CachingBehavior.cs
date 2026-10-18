@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 namespace RestaurantBill.Application.Behaviors;
 public class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
@@ -32,6 +33,10 @@ public class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
 
         _logger.LogInformation("[Cache MISS] Key: {Key} — going to DB", cacheKey);
         var response = await next();
+
+        // Hatalı sonuç (ör. geçici bir DB sorunu) TTL boyunca tekrar tekrar dönmesin diye cache'lenmez.
+        if (response is Result { IsFailure: true })
+            return response;
 
         _cache.Set(cacheKey, response, cacheable.Ttl);
         _logger.LogInformation("[Cache SET] Key: {Key}, TTL: {Ttl}s", cacheKey, cacheable.Ttl.TotalSeconds);
