@@ -192,17 +192,6 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
         private (string RawToken, DateTime ExpiresAt) CreateRefreshToken(
             Guid userId, Guid branchId, UserRole role, bool rememberMe)
-        {
-            DateTime absoluteExpiresAt = DateTime.UtcNow.Add(_refreshTokenSettings.LifetimeFor(rememberMe));
-            string rawToken = RefreshTokenHasher.GenerateRawToken();
-            string tokenHash = RefreshTokenHasher.Hash(rawToken);
-
-            RefreshToken refreshToken = RefreshToken.Create(
-                userId, branchId, role, tokenHash, absoluteExpiresAt, absoluteExpiresAt, rememberMe, null, null);
-
-            _db.RefreshTokens.Add(refreshToken);
-
-            return (rawToken, absoluteExpiresAt);
-        }
+            => RefreshTokenIssuer.Issue(_db, _refreshTokenSettings, userId, branchId, role, rememberMe);
     }
 }

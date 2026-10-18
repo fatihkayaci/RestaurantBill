@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { authService } from "@/features/auth/api/authService";
 import { VerificationCodeType } from "@/features/auth/types";
+import { startSession } from "@/lib/auth";
 
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -84,7 +85,7 @@ export default function PhoneVerificationPage() {
             const userId = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
 
             const response = await authService.verifyCode({ userId, Code: code.join(""), type: VerificationCodeType.Phone });
-            localStorage.setItem("token", response.token);
+            startSession(response.token);
 
             toast.success("Telefon numaranız doğrulandı.");
 

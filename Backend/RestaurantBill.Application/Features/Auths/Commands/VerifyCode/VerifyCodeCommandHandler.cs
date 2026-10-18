@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -12,11 +14,13 @@ namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
     {
         private readonly IAppDbContext _db;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
+        private readonly RefreshTokenSettings _refreshTokenSettings;
 
-        public VerifyCodeCommandHandler(IAppDbContext db, IJwtTokenGenerator jwtTokenGenerator)
+        public VerifyCodeCommandHandler(IAppDbContext db, IJwtTokenGenerator jwtTokenGenerator, IConfiguration configuration)
         {
             _db = db;
             _jwtTokenGenerator = jwtTokenGenerator;
+            _refreshTokenSettings = RefreshTokenSettings.FromConfiguration(configuration);
         }
 
         private const int MaxAttempts = 5;
@@ -70,12 +74,16 @@ namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
 
                 verificationCode.MarkAsVerified();
                 user.MarkPhoneVerified();
+                (string rawRefreshToken, DateTime refreshExpiresAt) = RefreshTokenIssuer.Issue(
+                    _db, _refreshTokenSettings, user.Id, company.Id, UserRole.Owner, rememberMe: false);
                 await _db.SaveChangesAsync(cancellationToken);
 
                 return Result<VerifyCodeResponseDto>.Success(new VerifyCodeResponseDto
                 {
                     Token = _jwtTokenGenerator.GenerateToken(user, company.Id, UserRole.Owner, user.Email!),
                     NeedsSlugSetup = string.IsNullOrWhiteSpace(company.Slug),
+                    RefreshToken = rawRefreshToken,
+                    RefreshTokenExpiresAt = refreshExpiresAt
                 });
             }
 

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { useTheme } from "next-themes";
 import { authService } from "@/features/auth/api/authService";
-import { getRoleFromToken, getRoleHomePath } from "@/lib/auth";
+import { getRoleFromToken, getRoleHomePath, startSession } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
@@ -56,7 +56,7 @@ export default function LoginPage() {
                 toast.error("Bu hesap birden fazla restorana bağlı, bu ekran henüz desteklenmiyor.");
                 return;
             }
-            localStorage.setItem("token", response.token);
+            startSession(response.token);
 
             if (response.needsSlugSetup) {
                 navigate("/setup-slug");
@@ -105,7 +105,7 @@ export default function LoginPage() {
                 toast.error("Bu hesap birden fazla restorana bağlı, bu ekran henüz desteklenmiyor.");
                 return;
             }
-            localStorage.setItem("token", response.token);
+            startSession(response.token);
             navigate(response.needsSlugSetup ? "/setup-slug" : "/owner");
 
         } catch (error) {
