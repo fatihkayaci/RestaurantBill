@@ -1,0 +1,27 @@
+name: Azure Deploy
+
+on:
+  push:
+    branches: [ "ci/azure-deploy" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - run: dotnet publish Backend/RestaurantBill.WebAPI -c Release -o publish
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: sophram
+          package: publish
