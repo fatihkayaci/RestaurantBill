@@ -6,5 +6,7 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
 {
     public class GetUserByRestaurantIdCommand : IRequest<Result<IEnumerable<UserDto>>>
     {
+        // Owner şube modundayken de şirketin tüm şubelerini görmek için (Adminler sayfası). Admin için etkisizdir.
+        public bool AllBranches { get; set; }
     }
 }

@@ -6,8 +6,9 @@ export const userService = {
         const response = await api.get<User>('/user/me');
         return response.data;
     },
-    getUsersByRestaurantId: async () => {
-        const response = await api.get<User[]>(`/user`);
+    // allBranches: şube modundaki owner için şirketin tüm şubelerini kapsar (Adminler sayfası).
+    getUsersByRestaurantId: async (allBranches = false) => {
+        const response = await api.get<User[]>(`/user`, { params: allBranches ? { allBranches: true } : undefined });
         return response.data;
     },
     createUser: async (data: CreateUser) => {
@@ -20,6 +21,7 @@ export const userService = {
             UserCode: data.userCode,
             Role: data.role,
             BranchId: data.branchId,
+            BranchIds: data.branchIds,
             HireDate: data.hireDate
         });
     },
@@ -35,6 +37,7 @@ export const userService = {
             Role: data.role,
             IsActive: data.isActive,
             BranchId: data.branchId,
+            BranchIds: data.branchIds,
             HireDate: data.hireDate
         });
     },

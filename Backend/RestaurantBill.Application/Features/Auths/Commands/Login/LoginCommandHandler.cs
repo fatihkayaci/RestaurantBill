@@ -101,14 +101,16 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
         private async Task<Result<LoginResponseDto>> LoginAsEmployeeAsync(LoginCommand request, Company company, CancellationToken cancellationToken)
         {
+            // Çok şubeli Admin'de ilk atandığı şubeyle başlar; diğerlerine şube seçiciyle geçer.
             UserBranch? membership = await _db.UserBranches
                 .Include(ur => ur.User)
-                .FirstOrDefaultAsync(
+                .Where(
                     ur => ur.Branch.CompanyId == company.Id
                        && ur.UserName == request.UserName
                        && !ur.IsDeleted
-                       && !ur.User.IsDeleted,
-                    cancellationToken);
+                       && !ur.User.IsDeleted)
+                .OrderBy(ur => ur.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (membership is null)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");

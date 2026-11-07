@@ -37,8 +37,19 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
                     .Select(b => b.Id)
                     .ToListAsync(cancellationToken);
 
+                // Şube modundaki Owner (token'da bir şube) yalnızca o şubenin personelini görür; "Tümü" modunda hepsini.
+                bool branchMode = !request.AllBranches && _currentUser.BranchId != _currentUser.CompanyId && restaurantIds.Contains(_currentUser.BranchId);
+                List<Guid> visibleBranchIds = branchMode ? [_currentUser.BranchId] : restaurantIds;
+
+                List<Guid> visibleUserIds = await _db.UserBranches
+                    .Where(ur => visibleBranchIds.Contains(ur.BranchId) && !ur.IsDeleted)
+                    .Select(ur => ur.UserId)
+                    .Distinct()
+                    .ToListAsync(cancellationToken);
+
+                // Çok şubeli Admin'in tüm üyelikleri yüklenir ki kartta bütün şubeleri görünsün.
                 userBranches = await query
-                    .Where(ur => restaurantIds.Contains(ur.BranchId) && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted)
+                    .Where(ur => restaurantIds.Contains(ur.BranchId) && visibleUserIds.Contains(ur.UserId) && ur.UserId != currentUserId && !ur.IsDeleted && !ur.User.IsDeleted)
                     .ToListAsync(cancellationToken);
             }
             else
@@ -51,7 +62,20 @@ namespace RestaurantBill.Application.Features.Users.Queries.GetUserByRestaurantI
                     .ToListAsync(cancellationToken);
             }
 
-            return Result<IEnumerable<UserDto>>.Success(userBranches.OrderBy(ur => ur.User.FullName).Select(ur => ur.User.ToDto(ur)));
+            // Kullanıcı başına tek satır: birincil üyelik en eski olan, şube listesi hepsini taşır.
+            IEnumerable<UserDto> result = userBranches
+                .GroupBy(ur => ur.UserId)
+                .Select(g =>
+                {
+                    List<UserBranch> rows = g.OrderBy(ur => ur.CreatedAt).ToList();
+                    UserDto dto = rows[0].User.ToDto(rows[0]);
+                    dto.BranchIds = rows.Select(r => r.BranchId).ToList();
+                    dto.BranchName = string.Join(", ", rows.Select(r => r.Branch?.BranchName).Where(n => !string.IsNullOrWhiteSpace(n)));
+                    return dto;
+                })
+                .OrderBy(dto => dto.FullName);
+
+            return Result<IEnumerable<UserDto>>.Success(result);
         }
     }
 }

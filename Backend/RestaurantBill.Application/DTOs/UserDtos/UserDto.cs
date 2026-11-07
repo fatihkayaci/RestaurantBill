@@ -13,6 +13,8 @@ public class UserDto
     public bool IsActive { get; set; }
     public Guid BranchId { get; set; }
     public string? BranchName { get; set; }
+    // Birden çok şubeye atanmış Admin için tüm şubeler; diğer personelde tek eleman.
+    public List<Guid> BranchIds { get; set; } = [];
     public string? RestaurantName { get; set; }
     public DateTime? HireDate { get; set; }
     public bool IsPhoneVerified { get; set; }

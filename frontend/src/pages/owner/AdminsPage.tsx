@@ -9,6 +9,7 @@ import type { CreateUser, User } from "@/features/users/types";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 import { isValidEmail, isValidPhone } from "@/lib/validators";
+import { getSession } from "@/lib/auth";
 
 const ADMIN_ROLE = 1;
 
@@ -25,14 +26,14 @@ export default function AdminsPage() {
     const [editAdmin, setEditAdmin] = useState<User | null>(null);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', role: ADMIN_ROLE, branchId: undefined, hireDate: todayDateString()
+        passwordHash: '', role: ADMIN_ROLE, branchId: undefined, branchIds: [], hireDate: todayDateString()
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'login'>('personal');
 
     const loadAdmins = () => {
-        userService.getUsersByRestaurantId()
+        userService.getUsersByRestaurantId(true)
             .then(users => setAdmins(users.filter(u => u.role === ADMIN_ROLE)))
             .catch(console.error);
     };
@@ -49,9 +50,26 @@ export default function AdminsPage() {
         return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     };
 
+    // Şube modundaki owner için varsayılan seçim aktif şube; "Tümü" modunda ilk şube.
+    const defaultBranchIds = () => {
+        const session = getSession();
+        const active = session && !session.isCompanyScope ? session.restaurantId : null;
+        const first = (active && branches.some(b => b.id === active)) ? active : branches[0]?.id;
+        return first ? [first] : [];
+    };
+
+    const toggleBranch = (branchId: string, checked: boolean) => {
+        setForm(prev => {
+            const current = prev.branchIds ?? [];
+            const next = checked ? [...current.filter(id => id !== branchId), branchId] : current.filter(id => id !== branchId);
+            return { ...prev, branchIds: next, branchId: next[0] };
+        });
+    };
+
     const openCreateModal = () => {
         setEditAdmin(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: ADMIN_ROLE, branchId: branches[0]?.id, hireDate: todayDateString() });
+        const initial = defaultBranchIds();
+        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: ADMIN_ROLE, branchId: initial[0], branchIds: initial, hireDate: todayDateString() });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -59,7 +77,8 @@ export default function AdminsPage() {
 
     const openEditModal = (admin: User) => {
         setEditAdmin(admin);
-        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', role: ADMIN_ROLE, branchId: admin.branchId, hireDate: admin.hireDate ? admin.hireDate.slice(0, 10) : todayDateString() });
+        const initial = admin.branchIds?.length ? admin.branchIds : [admin.branchId];
+        setForm({ fullName: admin.fullName, userName: admin.userName, email: admin.email, phoneNumber: admin.phoneNumber, passwordHash: '', role: ADMIN_ROLE, branchId: initial[0], branchIds: initial, hireDate: admin.hireDate ? admin.hireDate.slice(0, 10) : todayDateString() });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -108,7 +127,7 @@ export default function AdminsPage() {
         if (form.email && !isValidEmail(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
         if (!form.phoneNumber.trim()) errors.phoneNumber = 'Telefon numarası boş bırakılamaz.';
         else if (!isValidPhone(form.phoneNumber)) errors.phoneNumber = 'Geçerli bir telefon numarası giriniz.';
-        if (!form.branchId) errors.branchId = 'Şube seçilmelidir.';
+        if (!form.branchIds?.length) errors.branchId = 'En az bir şube seçilmelidir.';
         if (!editAdmin) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
             else if (form.passwordHash.length < 6) errors.passwordHash = 'En az 6 karakter.';
@@ -296,17 +315,27 @@ export default function AdminsPage() {
                             {activeTab === 'personal' && (
                                 <>
                                     <div>
-                                        <label className={labelClass}>Şube *</label>
-                                        <select
-                                            className={cn(inputClass, fieldErrors.branchId && "border-destructive")}
-                                            value={form.branchId ?? ''}
-                                            onChange={e => setForm({ ...form, branchId: e.target.value || undefined })}
-                                        >
-                                            <option value="">Şube seçiniz...</option>
-                                            {branches.map(branch => (
-                                                <option key={branch.id} value={branch.id}>{branch.branchName}</option>
-                                            ))}
-                                        </select>
+                                        <label className={labelClass}>Şubeler *</label>
+                                        <div className={cn("rounded-lg border border-border divide-y divide-border overflow-hidden", fieldErrors.branchId && "border-destructive")}>
+                                            {branches.map(branch => {
+                                                const checked = form.branchIds?.includes(branch.id) ?? false;
+                                                return (
+                                                    <label key={branch.id} className="flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer hover:bg-muted/50">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="h-4 w-4 accent-rb-gold"
+                                                            checked={checked}
+                                                            onChange={e => toggleBranch(branch.id, e.target.checked)}
+                                                        />
+                                                        <span className="flex-1 text-foreground">{branch.branchName}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                            {branches.length === 0 && (
+                                                <p className="px-3 py-2.5 text-xs text-muted-foreground">Henüz şube yok.</p>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">Birden fazla şube seçersen admin bu şubeler arasında sol alttaki seçiciden geçiş yapar.</p>
                                         {fieldErrors.branchId && <p className="text-xs text-destructive mt-1">{fieldErrors.branchId}</p>}
                                     </div>
 
