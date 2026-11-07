@@ -58,13 +58,24 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
 
         string userName;
         UserRole currentRole;
+        Guid companyId;
 
         if (stored.Role == UserRole.Owner)
         {
-            Company? company = await _db.Companies
-                .FirstOrDefaultAsync(c => c.Id == stored.BranchId && c.OwnerUserId == user.Id && !c.IsDeleted, cancellationToken);
+            // Owner oturumu ya şirket kapsamında ("Tümü", BranchId = Company.Id) ya da sahibi olduğu bir şubede.
+            Guid? ownedCompanyId = await _db.Companies
+                .AsNoTracking()
+                .Where(c => c.Id == stored.BranchId && c.OwnerUserId == user.Id && !c.IsDeleted)
+                .Select(c => (Guid?)c.Id)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (company is null)
+            ownedCompanyId ??= await _db.Branches
+                .AsNoTracking()
+                .Where(b => b.Id == stored.BranchId && !b.IsDeleted && b.Company.OwnerUserId == user.Id && !b.Company.IsDeleted)
+                .Select(b => (Guid?)b.CompanyId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (ownedCompanyId is null)
             {
                 await RevokeAllForUserAsync(stored.UserId, cancellationToken);
                 await _db.SaveChangesAsync(cancellationToken);
@@ -73,10 +84,12 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
 
             userName = user.Email;
             currentRole = UserRole.Owner;
+            companyId = ownedCompanyId.Value;
         }
         else
         {
             UserBranch? membership = await _db.UserBranches
+                .Include(ub => ub.Branch)
                 .FirstOrDefaultAsync(ub => ub.UserId == stored.UserId && ub.BranchId == stored.BranchId && !ub.IsDeleted, cancellationToken);
 
             if (membership is null || !membership.IsActive)
@@ -88,6 +101,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
 
             userName = membership.UserName;
             currentRole = membership.Role;
+            companyId = membership.Branch.CompanyId;
         }
 
         // Rol değiştiyse (ör. Admin bir çalışanı azaltmış/yetkisini almış) tüm oturumlar kapatılır.
@@ -113,7 +127,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         _db.RefreshTokens.Add(newToken);
         await _db.SaveChangesAsync(cancellationToken);
 
-        string accessToken = _jwtTokenGenerator.GenerateToken(user, stored.BranchId, currentRole, userName);
+        string accessToken = _jwtTokenGenerator.GenerateToken(user, stored.BranchId, currentRole, userName, companyId);
 
         return Result<RefreshTokenResponseDto>.Success(new RefreshTokenResponseDto
         {
@@ -152,10 +166,26 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
 
     private async Task LogReuseAsync(RefreshToken stored, CancellationToken cancellationToken)
     {
+        // "Tümü" modundaki Owner oturumunda BranchId bir Company.Id'dir; AuditLog.BranchId şubeye FK olduğu için
+        // kayıt şirketin ilk şubesine yazılır. Şubesi olmayan şirkette yazılacak yer yoktur.
+        Guid? targetBranchId = await _db.Branches
+            .AsNoTracking()
+            .Where(b => b.Id == stored.BranchId)
+            .Select(b => (Guid?)b.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        targetBranchId ??= await _db.Branches
+            .AsNoTracking()
+            .Where(b => b.CompanyId == stored.BranchId && !b.IsDeleted)
+            .OrderBy(b => b.CreatedAt)
+            .Select(b => (Guid?)b.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (targetBranchId is null)
+            return;
+
         User? user = await _db.Users.FirstOrDefaultAsync(u => u.Id == stored.UserId, cancellationToken);
 
         AuditLog log = AuditLog.Create(
-            stored.BranchId,
+            targetBranchId.Value,
             user?.FullName ?? "Bilinmeyen kullanıcı",
             AuditLogCategory.Auth,
             AuditLogSeverity.Warning,

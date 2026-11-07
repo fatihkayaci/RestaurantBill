@@ -18,7 +18,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         _configuration = configuration;
     }
 
-    public string GenerateToken(User user, Guid restaurantId, UserRole role, string userName)
+    public string GenerateToken(User user, Guid restaurantId, UserRole role, string userName, Guid companyId)
     {
         var claims = new List<Claim>
         {
@@ -26,7 +26,8 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             new Claim(ClaimTypes.Name, userName),
             new Claim("FullName", user.FullName),
             new Claim(ClaimTypes.Role, role.ToString()),
-            new Claim("RestaurantId", restaurantId.ToString())
+            new Claim("RestaurantId", restaurantId.ToString()),
+            new Claim("CompanyId", companyId.ToString())
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecretKey"]!));

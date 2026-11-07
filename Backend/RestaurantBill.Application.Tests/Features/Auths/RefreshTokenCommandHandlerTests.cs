@@ -88,6 +88,11 @@ public class RefreshTokenCommandHandlerTests : ApplicationTestBase
     public async Task Handle_RevokedTokenReused_RevokesWholeChainAndLogsAudit()
     {
         (User owner, Company company) = await SeedOwnerAsync();
+        // AuditLog.BranchId şubeye FK; "Tümü" modundaki Owner oturumu için kayıt şirketin ilk şubesine düşer.
+        Branch branch = Branch.Create(company.Id, "Merkez Şube", "Yönetici", "111", "b@mail.com", "İstanbul", "Kadıköy", "Adres", 0);
+        SetId(branch, Guid.NewGuid());
+        DbContext.Branches.Add(branch);
+        await DbContext.SaveChangesAsync();
         string rawToken = await SeedRefreshTokenAsync(owner.Id, company.Id, UserRole.Owner);
 
         var handler = CreateHandler();
@@ -104,8 +109,9 @@ public class RefreshTokenCommandHandlerTests : ApplicationTestBase
         RefreshToken rotatedToken = DbContext.RefreshTokens.Single(rt => rt.TokenHash == RefreshTokenHasher.Hash(firstResult.Value!.RefreshToken));
         Assert.NotNull(rotatedToken.RevokedAt);
 
-        bool hasAuditLog = DbContext.AuditLogs.Any(a => a.Action == "RefreshTokenReuseDetected");
-        Assert.True(hasAuditLog);
+        AuditLog? auditLog = DbContext.AuditLogs.SingleOrDefault(a => a.Action == "RefreshTokenReuseDetected");
+        Assert.NotNull(auditLog);
+        Assert.Equal(branch.Id, auditLog!.BranchId);
     }
 
     [Fact]

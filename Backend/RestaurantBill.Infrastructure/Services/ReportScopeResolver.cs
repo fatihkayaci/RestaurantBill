@@ -23,7 +23,12 @@ public class ReportScopeResolver : IReportScopeResolver
                 .AsNoTracking()
                 .Where(b => b.Company.OwnerUserId == _currentUser.UserId);
 
-            if (requestedBranchId is Guid branchId)
+            // Şube modundaki Owner (token'daki RestaurantId bir şube) filtre vermezse o şubeyi görür;
+            // "Tümü" modunda (RestaurantId = Company.Id) tüm şubeler toplanır.
+            Guid? effectiveBranchId = requestedBranchId
+                ?? (_currentUser.BranchId != _currentUser.CompanyId && _currentUser.BranchId != Guid.Empty ? _currentUser.BranchId : null);
+
+            if (effectiveBranchId is Guid branchId)
                 ownerBranches = ownerBranches.Where(b => b.Id == branchId);
 
             return await ownerBranches.OrderBy(b => b.CreatedAt).ToListAsync(cancellationToken);

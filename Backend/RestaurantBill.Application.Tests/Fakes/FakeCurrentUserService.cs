@@ -5,6 +5,7 @@ namespace RestaurantBill.Application.Tests.Fakes;
 public class FakeCurrentUserService : ICurrentUserService
 {
     public Guid BranchId { get; init; } = Guid.NewGuid();
+    public Guid CompanyId { get; init; } = Guid.NewGuid();
     public Guid UserId { get; init; } = Guid.NewGuid();
     public string Role { get; init; } = "Admin";
 }

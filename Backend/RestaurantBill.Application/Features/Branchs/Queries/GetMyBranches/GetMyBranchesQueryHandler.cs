@@ -21,9 +21,14 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetMyBranches
 
         public async Task<Result<List<BranchDto>>> Handle(GetMyBranchesQuery request, CancellationToken cancellationToken)
         {
-            List<Branch> branches = await _db.Branches
+            // Owner sahibi olduğu tüm şubeleri, Admin ise atandığı şubeleri görür (şube seçici listesi).
+            IQueryable<Branch> query = _currentUser.Role == "Owner"
+                ? _db.Branches.Where(b => b.Company.OwnerUserId == _currentUser.UserId)
+                : _db.Branches.Where(b => _db.UserBranches.Any(ub => ub.UserId == _currentUser.UserId && ub.BranchId == b.Id && !ub.IsDeleted && ub.IsActive));
+
+            List<Branch> branches = await query
                 .AsNoTracking()
-                .Where(b => b.Company.OwnerUserId == _currentUser.UserId)
+                .Where(b => !b.IsDeleted)
                 .OrderBy(b => b.CreatedAt)
                 .ToListAsync(cancellationToken);
             List<Guid> branchIds = branches.Select(b => b.Id).ToList();

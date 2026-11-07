@@ -6,6 +6,8 @@ using RestaurantBill.Application.Features.Auths.Commands.Logout;
 using RestaurantBill.Application.Features.Auths.Commands.Refresh;
 using RestaurantBill.Application.Features.Auths.Commands.Register;
 using RestaurantBill.Application.Features.Auths.Commands.SendVerificationCode;
+using RestaurantBill.Application.Features.Auths.Commands.SwitchBranch;
+using Microsoft.AspNetCore.Authorization;
 using RestaurantBill.Application.Features.Auths.Commands.VerifyCode;
 
 namespace RestaurantBill.WebAPI.Controllers;
@@ -73,6 +75,31 @@ public class AuthController : BaseController
             DeleteRefreshCookie();
             return Unauthorized(new { Error = result.Error });
         }
+
+        SetRefreshCookie(result.Value!.RefreshToken, result.Value.RefreshTokenExpiresAt, result.Value.RememberMe);
+        return Ok(new { Token = result.Value.AccessToken });
+    }
+
+    /// <summary>
+    /// Aktif şubeyi değiştirir: seçilen şube (Owner için null = "Tümü") için yeni access token üretir ve refresh cookie'sini yeniler.
+    /// </summary>
+    /// <param name="command">BranchId (null = şirket kapsamı, yalnızca Owner).</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>200 OK with a new JWT token on success.</returns>
+    [Authorize(Roles = "Owner,Admin")]
+    [DisableRateLimiting]
+    [HttpPost("switch-branch")]
+    public async Task<IActionResult> SwitchBranch([FromBody] SwitchBranchCommand command, CancellationToken cancellationToken)
+    {
+        if (Request.Cookies.TryGetValue(RefreshCookieName, out var rawToken) && !string.IsNullOrEmpty(rawToken))
+            command.CurrentRefreshToken = rawToken;
+        command.IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        command.UserAgent = Request.Headers.UserAgent.ToString();
+
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { Error = result.Error });
 
         SetRefreshCookie(result.Value!.RefreshToken, result.Value.RefreshTokenExpiresAt, result.Value.RememberMe);
         return Ok(new { Token = result.Value.AccessToken });

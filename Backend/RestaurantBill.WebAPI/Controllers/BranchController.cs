@@ -24,10 +24,10 @@ public class BranchController : BaseController
     
 
     /// <summary>
-    /// Returns all restaurants (branches) owned by the authenticated Owner.
+    /// Returns the branches the caller can switch to: all company branches for an Owner, assigned branches for an Admin.
     /// </summary>
     /// <returns>200 OK with the list of branches on success.</returns>
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "Owner,Admin")]
     [HttpGet("branches")]
     public async Task<IActionResult> GetMyBranches(CancellationToken cancellationToken)
     {

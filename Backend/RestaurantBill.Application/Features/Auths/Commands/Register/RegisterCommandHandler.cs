@@ -17,6 +17,10 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly RefreshTokenSettings _refreshTokenSettings;
+
+        // Türkiye'de yeme-içme hizmeti KDV oranı; şube ayarlarından değiştirilebilir.
+        private const decimal DefaultTaxRate = 10m;
+
         public RegisterCommandHandler(IAppDbContext db, IPasswordHasher<User> passwordHasher, IJwtTokenGenerator jwtTokenGenerator, IConfiguration configuration)
         {
             _db = db;
@@ -43,14 +47,29 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
 
             _db.Users.Add(user);
             _db.Companies.Add(company);
+
+            // Tek şubeli restoran en yaygın durum: ilk şube kayıtla birlikte açılır, sahibi doğrudan şube modunda
+            // (admin paneli) başlar. Şube bilgilerini sonradan Şubeler sayfasından düzenler.
+            Branch firstBranch = Branch.Create(
+                company.Id,
+                request.RestaurantName,
+                request.FullName,
+                request.PhoneNumber,
+                request.Email,
+                city: string.Empty,
+                district: string.Empty,
+                openAddress: string.Empty,
+                taxRate: DefaultTaxRate);
+            _db.Branches.Add(firstBranch);
+
             (string rawRefreshToken, DateTime refreshExpiresAt) = RefreshTokenIssuer.Issue(
-                _db, _refreshTokenSettings, user.Id, company.Id, UserRole.Owner, rememberMe: false);
+                _db, _refreshTokenSettings, user.Id, firstBranch.Id, UserRole.Owner, rememberMe: false);
             await _db.SaveChangesAsync(cancellationToken);
 
             return Result<RegisterResponseDto>.Success(
                 new RegisterResponseDto
                 {
-                    Token = _jwtTokenGenerator.GenerateToken(user, company.Id, UserRole.Owner, user.Email!),
+                    Token = _jwtTokenGenerator.GenerateToken(user, firstBranch.Id, UserRole.Owner, user.Email!, company.Id),
                     NeedsSlugSetup = string.IsNullOrWhiteSpace(company.Slug),
                     RefreshToken = rawRefreshToken,
                     RefreshTokenExpiresAt = refreshExpiresAt

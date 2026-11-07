@@ -27,16 +27,28 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, R
             .FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         if (user is null) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
 
-        UserBranch? userBranch = await _db.UserBranches
-            .AsNoTracking()
-            .Include(ur => ur.Branch).ThenInclude(b => b.Company)
-            .FirstOrDefaultAsync(ur => ur.UserId == user.Id, cancellationToken);
-        if (userBranch is not null)
-            return Result<UserDto>.Success(user.ToDto(userBranch));
+        if (_currentUser.Role != nameof(UserRole.Owner))
+        {
+            // Birden çok şubeye atanmış bir Admin'de token'daki şubenin üyeliği esastır.
+            List<UserBranch> memberships = await _db.UserBranches
+                .AsNoTracking()
+                .Include(ur => ur.Branch).ThenInclude(b => b.Company)
+                .Where(ur => ur.UserId == user.Id && !ur.IsDeleted)
+                .ToListAsync(cancellationToken);
+            UserBranch? userBranch = memberships.FirstOrDefault(ur => ur.BranchId == _currentUser.BranchId) ?? memberships.FirstOrDefault();
+            if (userBranch is not null)
+                return Result<UserDto>.Success(user.ToDto(userBranch));
+        }
 
-        bool isOwner = await _db.Companies
-            .AnyAsync(c => c.OwnerUserId == user.Id && !c.IsDeleted, cancellationToken);
-        if (!isOwner) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
+        Company? company = await _db.Companies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.OwnerUserId == user.Id && !c.IsDeleted, cancellationToken);
+        if (company is null) return Result<UserDto>.Failure("Kullanıcı bulunamadı.");
+
+        // Şube modundaki Owner için token'daki şube; "Tümü" modunda BranchId = Company.Id olduğu için null kalır.
+        Branch? activeBranch = await _db.Branches
+            .AsNoTracking()
+            .FirstOrDefaultAsync(b => b.Id == _currentUser.BranchId && b.CompanyId == company.Id && !b.IsDeleted, cancellationToken);
 
         return Result<UserDto>.Success(new UserDto
         {
@@ -48,6 +60,9 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, R
             UserCode = string.Empty,
             Role = UserRole.Owner,
             IsActive = user.IsActive,
+            BranchId = activeBranch?.Id ?? Guid.Empty,
+            BranchName = activeBranch?.BranchName,
+            RestaurantName = company.Name,
             IsPhoneVerified = user.IsPhoneVerified,
             IsEmailVerified = user.IsEmailVerified
         });

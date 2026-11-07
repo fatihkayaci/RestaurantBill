@@ -75,6 +75,49 @@ public class LoginCommandHandlerTests : ApplicationTestBase
     }
 
     [Fact]
+    public async Task Handle_OwnerLogin_SingleBranch_TokenIsScopedToThatBranch()
+    {
+        User owner = CreateOwnerWithId();
+        DbContext.Users.Add(owner);
+        Company company = Company.Create("Test Restoran", owner);
+        company.Slug = "test-restoran";
+        DbContext.Companies.Add(company);
+        Branch branch = Branch.Create(company.Id, "Merkez Şube", "Yönetici", "111", "b@mail.com", "İstanbul", "Kadıköy", "Adres", 0);
+        SetId(branch, Guid.NewGuid());
+        DbContext.Branches.Add(branch);
+        await DbContext.SaveChangesAsync();
+
+        var handler = CreateHandler(new FakeTenantResolver { Slug = "test-restoran" });
+        var result = await handler.Handle(new LoginCommand { Email = "owner@mail.com", Password = "sifre123" }, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal($"token:{owner.Id}:{branch.Id}:Owner:owner@mail.com:{company.Id}", result.Value!.Token);
+        Assert.Equal(branch.Id, DbContext.RefreshTokens.Single().BranchId);
+    }
+
+    [Fact]
+    public async Task Handle_OwnerLogin_MultipleBranches_TokenIsScopedToCompany()
+    {
+        User owner = CreateOwnerWithId();
+        DbContext.Users.Add(owner);
+        Company company = Company.Create("Test Restoran", owner);
+        DbContext.Companies.Add(company);
+        foreach (string name in new[] { "Şube 1", "Şube 2" })
+        {
+            Branch branch = Branch.Create(company.Id, name, "Yönetici", "111", "b@mail.com", "İstanbul", "Kadıköy", "Adres", 0);
+            SetId(branch, Guid.NewGuid());
+            DbContext.Branches.Add(branch);
+        }
+        await DbContext.SaveChangesAsync();
+
+        var handler = CreateHandler(new FakeTenantResolver { Slug = null });
+        var result = await handler.Handle(new LoginCommand { Email = "owner@mail.com", Password = "sifre123" }, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal($"token:{owner.Id}:{company.Id}:Owner:owner@mail.com:{company.Id}", result.Value!.Token);
+    }
+
+    [Fact]
     public async Task Handle_EmployeeLogin_UnverifiedPhone_IsNotBlocked()
     {
         User owner = CreateOwnerWithId();

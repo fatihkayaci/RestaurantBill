@@ -83,14 +83,15 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
             var single = accessible.Values.First();
+            Guid scopeId = await OwnerScope.ResolveInitialScopeIdAsync(_db, single.Company.Id, cancellationToken);
 
             (string rawRefreshToken, DateTime refreshExpiresAt) = CreateRefreshToken(
-                emailUser.Id, single.Company.Id, UserRole.Owner, request.RememberMe);
+                emailUser.Id, scopeId, UserRole.Owner, request.RememberMe);
             await _db.SaveChangesAsync(cancellationToken);
 
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
-                Token = _jwtTokenGenerator.GenerateToken(emailUser, single.Company.Id, single.Role, single.UserName),
+                Token = _jwtTokenGenerator.GenerateToken(emailUser, scopeId, single.Role, single.UserName, single.Company.Id),
                 NeedsSlugSetup = string.IsNullOrWhiteSpace(single.Company.Slug),
                 RefreshToken = rawRefreshToken,
                 RefreshTokenExpiresAt = refreshExpiresAt,
@@ -153,7 +154,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
-                Token = _jwtTokenGenerator.GenerateToken(membership.User, membership.BranchId, membership.Role, membership.UserName),
+                Token = _jwtTokenGenerator.GenerateToken(membership.User, membership.BranchId, membership.Role, membership.UserName, company.Id),
                 RefreshToken = rawRefreshToken,
                 RefreshTokenExpiresAt = refreshExpiresAt,
                 RememberMe = effectiveRememberMe
@@ -177,13 +178,15 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             if (company.OwnerUserId != user.Id)
                 return Result<LoginResponseDto>.Failure("Kullanıcı adı, email veya şifre hatalı!");
 
+            Guid scopeId = await OwnerScope.ResolveInitialScopeIdAsync(_db, company.Id, cancellationToken);
+
             (string rawRefreshToken, DateTime refreshExpiresAt) = CreateRefreshToken(
-                user.Id, company.Id, UserRole.Owner, request.RememberMe);
+                user.Id, scopeId, UserRole.Owner, request.RememberMe);
             await _db.SaveChangesAsync(cancellationToken);
 
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
-                Token = _jwtTokenGenerator.GenerateToken(user, company.Id, UserRole.Owner, user.Email!),
+                Token = _jwtTokenGenerator.GenerateToken(user, scopeId, UserRole.Owner, user.Email!, company.Id),
                 RefreshToken = rawRefreshToken,
                 RefreshTokenExpiresAt = refreshExpiresAt,
                 RememberMe = request.RememberMe

@@ -5,6 +5,8 @@ namespace RestaurantBill.Application.Interfaces;
 
 public interface IJwtTokenGenerator
 {
-    string GenerateToken(User user, Guid restaurantId, UserRole role, string userName);
+    // restaurantId: çalışan ve şube modundaki Owner için Branch.Id, "Tümü" modundaki Owner için Company.Id.
+    // companyId her durumda şirket; frontend restaurantId == companyId ise "Tümü" modunda olduğunu anlar.
+    string GenerateToken(User user, Guid restaurantId, UserRole role, string userName, Guid companyId);
     string GenerateTransitionToken(Guid userId, UserRole role);
 }
