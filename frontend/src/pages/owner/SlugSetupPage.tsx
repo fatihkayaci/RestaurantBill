@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getHomePathFromToken } from "@/lib/auth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
@@ -26,7 +27,7 @@ export default function SlugSetupPage() {
             const company = await companyService.getMyCompany();
             await companyService.setBranchSlug(company.id, cleanSlug);
             toast.success(`Restoran adresiniz ayarlandı: ${cleanSlug}.${ROOT_DOMAIN}`);
-            navigate("/owner");
+            navigate(getHomePathFromToken());
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 toast.error(error.response?.data?.error ?? "Adres ayarlanamadı.");

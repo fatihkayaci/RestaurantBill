@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useTheme } from "next-themes";
 import { authService } from "@/features/auth/api/authService";
-import { getRoleFromToken, getRoleHomePath, startSession } from "@/lib/auth";
+import { startSession, getHomePathFromToken } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
@@ -66,8 +66,7 @@ export default function LoginPage() {
                 return;
             }
 
-            const role = getRoleFromToken(response.token);
-            navigate(getRoleHomePath(role));
+            navigate(getHomePathFromToken(response.token));
 
         } catch (error) {
             if (axios.isAxiosError(error)) {
@@ -109,7 +108,7 @@ export default function LoginPage() {
                 return;
             }
             startSession(response.token);
-            navigate(response.needsSlugSetup ? "/setup-slug" : "/owner");
+            navigate(response.needsSlugSetup ? "/setup-slug" : getHomePathFromToken(response.token));
 
         } catch (error) {
             if (axios.isAxiosError(error)) {
