@@ -333,6 +333,37 @@ This starts:
 
 Database migrations and demo seeding run automatically on API startup (`MigrateAndSeedAsync`).
 
+#### 3. Production: reverse proxy in front of Compose
+
+All three services bind to `127.0.0.1` only, so a reverse proxy (nginx, Caddy) on the host terminates TLS and routes traffic. The SignalR hubs are **not** under `/api/`, so they need their own WebSocket-aware location besides the API one:
+
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location ~ ^/(kitchen-hub|table-hub|cashier-hub)(/|$) {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 3600s;
+}
+
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+}
+```
+
+Without the hub block the frontend container answers the `/negotiate` call with a 405 and the Kitchen, Tables and Cashier screens silently stop receiving live updates.
+
 ---
 
 ### Option B — Manual (local development)

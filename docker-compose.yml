@@ -7,7 +7,7 @@ services:
       dockerfile: DockerFile
     container_name: restaurant_api
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     restart: on-failure
     depends_on:
       database:
@@ -40,7 +40,7 @@ services:
         - VITE_API_URL=${VITE_API_URL}
     container_name: restaurant_frontend
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"
     depends_on:
       api:
         condition: service_healthy
