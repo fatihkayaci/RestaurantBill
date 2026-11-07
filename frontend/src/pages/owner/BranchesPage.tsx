@@ -39,10 +39,13 @@ export default function BranchesPage() {
     const [provinces, setProvinces] = useState<Province[]>([]);
     const districtsFor = (cityName: string) => provinces.find(p => p.name === cityName)?.districts ?? [];
 
+    const [loaded, setLoaded] = useState(false);
+
     const loadBranches = () => {
         branchService.getMyBranches()
             .then(setBranches)
-            .catch(console.error);
+            .catch(console.error)
+            .finally(() => setLoaded(true));
     };
 
     useEffect(() => {
@@ -213,7 +216,7 @@ export default function BranchesPage() {
                         </div>
                     );
                 })}
-                {branches.length === 0 && (
+                {loaded && branches.length === 0 && (
                     <EmptyState
                         className="col-span-full"
                         icon={Store}

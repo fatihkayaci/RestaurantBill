@@ -89,6 +89,7 @@ function formatTimeDigits(rawValue: string): string {
 
 export default function Tables() {
     const [tables, setTables] = useState<Table[]>([]);
+    const [loaded, setLoaded] = useState(false);
     const [now, setNow] = useState(() => Date.now());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editTable, setEditTable] = useState<Table | null>(null);
@@ -168,8 +169,8 @@ export default function Tables() {
     };
 
     useEffect(() => {
-        refreshTables().catch(console.error);
-        refreshRegions().catch(console.error);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh calls are async; setState happens after the await, not synchronously.
+        Promise.all([refreshTables(), refreshRegions()]).catch(console.error).finally(() => setLoaded(true));
     }, []);
 
     useEffect(() => {
@@ -662,7 +663,7 @@ export default function Tables() {
                 )}
             </div>
 
-            {tables.length === 0 && (
+            {loaded && tables.length === 0 && (
                 <EmptyState
                     icon={LayoutGrid}
                     title="Henüz masa tanımlanmadı"

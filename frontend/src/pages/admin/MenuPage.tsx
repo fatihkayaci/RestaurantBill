@@ -19,6 +19,7 @@ const labelClass = "block text-[11px] font-semibold tracking-widest uppercase te
 export default function Menu() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [loaded, setLoaded] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,8 +54,10 @@ export default function Menu() {
     }));
 
     useEffect(() => {
-        productService.getProducts().then(setProducts).catch(console.error);
-        categoryService.getCategories().then(setCategories).catch(console.error);
+        Promise.all([
+            productService.getProducts().then(setProducts),
+            categoryService.getCategories().then(setCategories),
+        ]).catch(console.error).finally(() => setLoaded(true));
     }, []);
 
     useEffect(() => {
@@ -488,7 +491,7 @@ export default function Menu() {
             </div>
 
             {/* Kartlar */}
-            {products.length === 0 ? (
+            {!loaded ? null : products.length === 0 ? (
                 <EmptyState
                     icon={UtensilsCrossed}
                     title="Menü henüz boş"

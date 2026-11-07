@@ -38,6 +38,7 @@ export default function CashRegisters() {
     const [transferDestinationId, setTransferDestinationId] = useState<string | ''>('');
     const [transferAmount, setTransferAmount] = useState<string>('');
     const [transferError, setTransferError] = useState<string | null>(null);
+    const [loaded, setLoaded] = useState(false);
 
     const totalBalance = registers.reduce((sum, r) => sum + r.balance, 0);
     const openCount = registers.filter(r => r.status === 1).length;
@@ -52,6 +53,8 @@ export default function CashRegisters() {
             setShiftCandidates(candidates);
         } catch (err) {
             console.error(err);
+        } finally {
+            setLoaded(true);
         }
     };
 
@@ -215,7 +218,7 @@ export default function CashRegisters() {
                 </button>
             </div>
 
-            {registers.length === 0 && (
+            {loaded && registers.length === 0 && (
                 <EmptyState
                     icon={Wallet}
                     title="Henüz kasa yok"

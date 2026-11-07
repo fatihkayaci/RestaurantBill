@@ -33,10 +33,13 @@ export default function AdminsPage() {
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'login'>('personal');
 
+    const [loaded, setLoaded] = useState(false);
+
     const loadAdmins = () => {
         userService.getUsersByRestaurantId(true)
             .then(users => setAdmins(users.filter(u => u.role === ADMIN_ROLE)))
-            .catch(console.error);
+            .catch(console.error)
+            .finally(() => setLoaded(true));
     };
 
     useEffect(() => {
@@ -198,7 +201,7 @@ export default function AdminsPage() {
             </div>
 
             {/* Kartlar */}
-            {admins.length === 0 ? (
+            {!loaded ? null : admins.length === 0 ? (
                 <EmptyState
                     icon={ShieldCheck}
                     title="Henüz yönetici yok"

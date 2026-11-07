@@ -28,6 +28,7 @@ export default function StaffPage() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editUser, setEditUser] = useState<User | null>(null);
+    const [loaded, setLoaded] = useState(false);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
         passwordHash: '', role: 2, hireDate: todayDateString()
@@ -39,7 +40,8 @@ export default function StaffPage() {
     useEffect(() => {
         userService.getUsersByRestaurantId()
             .then(setUsers)
-            .catch(console.error);
+            .catch(console.error)
+            .finally(() => setLoaded(true));
     }, []);
 
     const generatePassword = () => {
@@ -187,7 +189,7 @@ export default function StaffPage() {
             </div>
 
             {/* Kartlar */}
-            {users.length === 0 ? (
+            {!loaded ? null : users.length === 0 ? (
                 <EmptyState
                     icon={Users}
                     title="Henüz çalışan yok"

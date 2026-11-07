@@ -14,6 +14,7 @@ const labelClass = "block text-[11px] font-semibold tracking-widest uppercase te
 
 export default function CategoriesPanel() {
     const [categories, setCategories] = useState<Category[]>([]);
+    const [loaded, setLoaded] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editCategory, setEditCategory] = useState<Category | null>(null);
     const [name, setName] = useState('');
@@ -25,7 +26,7 @@ export default function CategoriesPanel() {
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
     useEffect(() => {
-        categoryService.getCategories().then(setCategories).catch(console.error);
+        categoryService.getCategories().then(setCategories).catch(console.error).finally(() => setLoaded(true));
     }, []);
 
     const openCreateModal = () => {
@@ -170,7 +171,7 @@ export default function CategoriesPanel() {
                                 </td>
                             </tr>
                         ))}
-                        {categories.length === 0 && (
+                        {loaded && categories.length === 0 && (
                             <EmptyStateRow colSpan={3}>
                                 <EmptyState
                                     bare
