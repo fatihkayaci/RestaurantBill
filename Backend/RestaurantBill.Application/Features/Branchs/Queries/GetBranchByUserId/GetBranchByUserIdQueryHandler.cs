@@ -34,11 +34,12 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetBranchByUse
                 .CountAsync(t => t.Region.BranchId == branchId, cancellationToken);
             int staffCount = await _db.UserBranches
                 .AsNoTracking()
-                .CountAsync(ub => ub.BranchId == branchId, cancellationToken);
-            decimal revenue = await _db.Orders
+                .CountAsync(ub => ub.BranchId == branchId && !ub.IsDeleted, cancellationToken);
+            // Ödenen kalemler siparişten düştüğü için ciro ödeme kayıtlarından hesaplanır.
+            decimal revenue = await _db.Payments
                 .AsNoTracking()
-                .Where(o => o.Table.Region.BranchId == branchId)
-                .SumAsync(o => (decimal?)o.TotalPrice, cancellationToken) ?? 0;
+                .Where(p => p.CashRegister.BranchId == branchId)
+                .SumAsync(p => (decimal?)p.TotalAmount, cancellationToken) ?? 0;
 
             return Result<BranchDto>.Success(branch.ToBranchDto(tableCount, staffCount, revenue));
         }

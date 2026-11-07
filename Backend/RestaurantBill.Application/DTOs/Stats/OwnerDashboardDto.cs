@@ -5,11 +5,11 @@ namespace RestaurantBill.Application.DTOs.Stats
     public class OwnerDashboardDto
     {
         public decimal TotalRevenue { get; set; }
-        public decimal TotalRevenueChangePercent { get; set; }
+        public decimal? TotalRevenueChangePercent { get; set; }
         public int TotalOrders { get; set; }
-        public decimal TotalOrdersChangePercent { get; set; }
+        public decimal? TotalOrdersChangePercent { get; set; }
         public decimal AvgOrderValue { get; set; }
-        public decimal AvgOrderValueChangePercent { get; set; }
+        public decimal? AvgOrderValueChangePercent { get; set; }
         public int ActiveBranchCount { get; set; }
         public int TotalBranchCount { get; set; }
         public int MembershipExpiringBranchCount { get; set; }
@@ -40,9 +40,9 @@ namespace RestaurantBill.Application.DTOs.Stats
         public string District { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public decimal TodayRevenue { get; set; }
-        public decimal TodayRevenueChangePercent { get; set; }
+        public decimal? TodayRevenueChangePercent { get; set; }
         public int TodayOrders { get; set; }
-        public decimal TodayOrdersChangePercent { get; set; }
+        public decimal? TodayOrdersChangePercent { get; set; }
         public decimal AvgBasket { get; set; }
         public int StaffCount { get; set; }
         public int OpenTables { get; set; }

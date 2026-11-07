@@ -51,7 +51,7 @@ function KitchenCard({
             <div className="px-4 pt-4 pb-3 flex items-start justify-between">
                 <div>
                     <p className="font-serif font-bold text-lg text-foreground leading-none">
-                        Masa {order.tableName}
+                        {order.tableName}
                     </p>
                     {order.createdByUserName && (
                         <p className="text-xs text-muted-foreground mt-1">{order.createdByUserName}</p>
@@ -84,9 +84,11 @@ function KitchenCard({
                             <div className="flex items-center gap-2 shrink-0">
                                 <span className="text-sm text-muted-foreground">×{item.quantity}</span>
                                 <button
+                                    type="button"
                                     onClick={() => onItemUpdate(order.id, item.id, 3)}
-                                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors text-rb-green hover:bg-rb-green-bg"
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors text-rb-green hover:bg-rb-green-bg"
                                     title="Hazır işaretle"
+                                    aria-label={`${item.productName} hazır`}
                                 >
                                     ✓
                                 </button>

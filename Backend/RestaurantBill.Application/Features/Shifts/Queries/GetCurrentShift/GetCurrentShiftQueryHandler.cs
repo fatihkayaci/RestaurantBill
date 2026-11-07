@@ -31,6 +31,6 @@ public class GetCurrentShiftQueryHandler : IRequestHandler<GetCurrentShiftQuery,
 
         if (shift is null) return Result<ShiftDto>.Failure("Bu kasada açık bir vardiya yok.");
 
-        return Result<ShiftDto>.Success(shift.ToDto());
+        return Result<ShiftDto>.Success(await _db.ToDtoWithOwnerAsync(shift, cancellationToken));
     }
 }

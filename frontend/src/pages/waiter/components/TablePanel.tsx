@@ -12,6 +12,7 @@ import type { Product } from '@/features/products/types';
 import type { Category } from '@/features/categories/types';
 import type { Order } from '@/features/orders/types';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatPrice } from '@/lib/format';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
 
@@ -506,7 +507,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                     <>
                                                         <button
                                                             onClick={() => decreaseCart(product.id)}
-                                                            className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-base font-bold text-muted-foreground hover:bg-muted transition-colors"
+                                                            aria-label={`${product.name} azalt`}
+                                                            className="w-9 h-9 sm:w-7 sm:h-7 rounded-full border border-border flex items-center justify-center text-base font-bold text-muted-foreground hover:bg-muted transition-colors"
                                                         >
                                                             −
                                                         </button>
@@ -515,7 +517,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                 )}
                                                 <button
                                                     onClick={() => addToCart(product)}
-                                                    className="w-7 h-7 rounded-full bg-rb-accent flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-colors"
+                                                    aria-label={`${product.name} ekle`}
+                                                    className="w-9 h-9 sm:w-7 sm:h-7 rounded-full bg-rb-accent flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-colors"
                                                 >
                                                     +
                                                 </button>
@@ -531,13 +534,13 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                     <div className="w-full md:w-90 shrink-0 max-h-[45vh] md:max-h-none border-t md:border-t-0 md:border-l border-border overflow-y-auto flex flex-col px-4 py-4">
                         {cart.length === 0 ? (
                             <p className="text-center text-muted-foreground text-sm py-8">
-                                Sepetiniz boş.<br />Soldan ürün seçerek başlayın.
+                                Sepetiniz boş.<br />Menüden ürün seçerek başlayın.
                             </p>
                         ) : (
                             <>
                                 <div className="flex items-center justify-between mb-4">
                                     <span className="text-sm text-muted-foreground">Sepet ({cartCount} ürün)</span>
-                                    <span className="font-bold text-foreground">₺{cartTotal.toFixed(0)}</span>
+                                    <span className="font-bold text-foreground">₺{formatPrice(cartTotal)}</span>
                                 </div>
                                 <textarea
                                     value={orderNote}
@@ -725,7 +728,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                     </button>
                                                 )}
                                                 <span className="text-sm font-semibold text-foreground">
-                                                    ₺{(item.unitPrice * item.quantity).toFixed(0)}
+                                                    ₺{formatPrice(item.unitPrice * item.quantity)}
                                                 </span>
                                             </div>
                                         </div>
@@ -734,7 +737,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                             </div>
                             <div className="flex justify-between pt-4 mt-2 border-t font-bold text-foreground">
                                 <span>Toplam</span>
-                                <span>₺{activeOrder.totalPrice.toFixed(0)}</span>
+                                <span>₺{formatPrice(activeOrder.totalPrice)}</span>
                             </div>
                         </>
                     )}

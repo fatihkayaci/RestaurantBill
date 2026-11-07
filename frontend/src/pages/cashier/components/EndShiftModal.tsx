@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
-import type { PaymentMethod, ShiftSummary } from '@/features/cashier/types';
+import type { PaymentMethod, Shift, ShiftSummary } from '@/features/cashier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
 
@@ -29,7 +29,9 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
     const [loadFailed, setLoadFailed] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [now] = useState(() => new Date().toISOString());
-    const [closedAt, setClosedAt] = useState<string | null>(null);
+    // Kapanıştan sonra dolar; beklenen tutar ve fark kör sayım bittikten sonra buradan gösterilir.
+    const [closedShift, setClosedShift] = useState<Shift | null>(null);
+    const closedAt = closedShift?.closedAt ?? null;
 
     useEffect(() => {
         if (!shift) return;
@@ -50,10 +52,10 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
         }
         setSubmitting(true);
         try {
-            await shiftService.closeShift(summary.shiftId, amount);
+            const closed = await shiftService.closeShift(summary.shiftId, amount);
             toast.success('Vardiya kapatıldı.');
             if (showReport) {
-                setClosedAt(new Date().toISOString());
+                setClosedShift(closed);
             } else {
                 onShiftClosed();
             }
@@ -70,9 +72,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
             .filter((b): b is NonNullable<typeof b> => !!b)
         : [];
 
-    const countedNum = parseFloat(countedAmount.replace(',', '.'));
-    const hasValidCounted = countedAmount !== '' && !Number.isNaN(countedNum);
-    const diff = summary && hasValidCounted ? countedNum - summary.expectedCashInRegister : 0;
+    const diff = closedShift?.difference ?? 0;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[3px] p-4">
@@ -83,7 +83,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                             {closedAt ? 'Z Raporu' : 'Vardiyayı Bitir'}
                         </h2>
                         <p className="text-sm text-muted-foreground mt-0.5">
-                            {summary ? `${formatTime(summary.openedAt)} — ${formatTime(closedAt ?? now)} · Kasiyer` : 'Kasiyer'}
+                            {summary ? `${formatTime(summary.openedAt)} — ${formatTime(closedAt ?? now)} · ${shift?.openedByUserName ?? ''}` : shift?.openedByUserName}
                         </p>
                     </div>
                     {!closedAt && (
@@ -123,11 +123,11 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                         <div className="mt-4 pt-4 border-t border-dashed border-border flex flex-col gap-2.5">
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Kasada Olması Gereken Nakit</span>
-                                <span className="font-medium text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister)}</span>
+                                <span className="font-medium text-foreground tabular-nums">{formatTL(closedShift!.expectedClosingBalance)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Kasada Sayılan Nakit</span>
-                                <span className="font-medium text-foreground tabular-nums">{formatTL(countedNum)}</span>
+                                <span className="font-medium text-foreground tabular-nums">{formatTL(closedShift!.countedClosingBalance ?? 0)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Fark</span>
@@ -176,16 +176,15 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                             <span className="font-serif text-2xl font-bold text-foreground tabular-nums">{formatTL(summary.total)}</span>
                         </div>
 
-                        <div className="mt-2 rounded-lg bg-muted px-4 py-3 flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground uppercase tracking-wide">Kasada Olması Gereken Nakit</span>
-                            <span className="font-serif text-lg font-bold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister)}</span>
-                        </div>
-
                         <div className="mt-5">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                            <label htmlFor="end-shift-count" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
                                 Kasada Sayılan Nakit
                             </label>
+                            <p className="text-xs text-muted-foreground mb-2">
+                                Kasadaki nakdi sayıp yazın. Beklenen tutar ve fark, vardiyayı kapattıktan sonra Z raporunda görünür.
+                            </p>
                             <input
+                                id="end-shift-count"
                                 type="number"
                                 inputMode="decimal"
                                 value={countedAmount}
@@ -193,11 +192,6 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 placeholder="Sayım tutarı..."
                                 className="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
                             />
-                            {hasValidCounted && (
-                                <p className={`mt-1.5 text-sm font-medium ${diff < 0 ? 'text-red-500' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
-                                    {diff === 0 ? 'Fark yok.' : diff < 0 ? `${formatTL(Math.abs(diff))} eksik` : `${formatTL(diff)} fazla`}
-                                </p>
-                            )}
                         </div>
 
                         <div className="mt-5 flex flex-col gap-2">

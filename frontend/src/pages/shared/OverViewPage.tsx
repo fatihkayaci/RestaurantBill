@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { statsService } from '@/features/stats/api/statsService';
 import type { OverviewStats } from '@/features/stats/types';
+import { formatPrice } from '@/lib/format';
 
 export default function OverViewPage() {
     const [stats, setStats] = useState<OverviewStats | null>(null);
@@ -23,7 +24,7 @@ export default function OverViewPage() {
             {/* Page Header */}
             <div>
                 <h1 className="text-2xl font-serif font-bold text-foreground">Genel Bakış</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Bugünün özeti</p>
+                <p className="text-sm text-muted-foreground mt-0.5">Şubenizin genel durumu</p>
             </div>
 
             {/* Stat Cards */}
@@ -34,7 +35,7 @@ export default function OverViewPage() {
                         Toplam Gelir
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
-                        {loading ? '—' : `₺${stats!.totalRevenue.toFixed(0)}`}
+                        {loading ? '—' : `₺${formatPrice(stats!.totalRevenue)}`}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">tüm zamanlar</p>
                 </div>
@@ -47,7 +48,7 @@ export default function OverViewPage() {
                     <p className="text-3xl font-bold text-foreground mt-2">
                         {loading ? '—' : stats!.totalOrders}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">tamamlanan</p>
+                    <p className="text-xs text-muted-foreground mt-1">ödeme alınan sipariş</p>
                 </div>
 
                 {/* Ort. Sipariş */}
@@ -56,7 +57,7 @@ export default function OverViewPage() {
                         Ort. Sipariş
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
-                        {loading ? '—' : `₺${stats!.avgOrderValue.toFixed(0)}`}
+                        {loading ? '—' : `₺${formatPrice(stats!.avgOrderValue)}`}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">sipariş başına</p>
                 </div>

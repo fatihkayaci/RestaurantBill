@@ -29,6 +29,6 @@ public class GetShiftByIdQueryHandler : IRequestHandler<GetShiftByIdQuery, Resul
             .InBranches(branchIds).FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
         if (shift is null) return Result<ShiftDto>.Failure("Vardiya bulunamadı.");
 
-        return Result<ShiftDto>.Success(shift.ToDto());
+        return Result<ShiftDto>.Success(await _db.ToDtoWithOwnerAsync(shift, cancellationToken));
     }
 }

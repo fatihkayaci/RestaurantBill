@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -8,7 +9,7 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Shifts.Commands.OpenShift;
 
-public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
+public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result<ShiftDto>>
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
@@ -19,52 +20,71 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result>
         _currentUser = currentUser;
     }
 
-    public async Task<Result> Handle(OpenShiftCommand request, CancellationToken cancellationToken)
+    public async Task<Result<ShiftDto>> Handle(OpenShiftCommand request, CancellationToken cancellationToken)
     {
         List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
 
-        Guid restaurantId = _currentUser.BranchId;
-
         CashRegister? register = await _db.CashRegisters
             .InBranches(branchIds).FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
-        if (register is null) return Result.Failure("Kasa bulunamadı.");
+        if (register is null) return Result<ShiftDto>.Failure("Kasa bulunamadı.");
 
         if (register.Status != CashRegisterStatus.Open)
-            return Result.Failure("Kapalı bir kasada vardiya açılamaz.");
+            return Result<ShiftDto>.Failure("Kapalı bir kasada vardiya açılamaz.");
 
         bool hasOpenShift = await _db.Shifts
             .AnyAsync(s => s.CashRegisterId == request.CashRegisterId && s.Status == ShiftStatus.Open, cancellationToken);
         if (hasOpenShift)
-            return Result.Failure("Bu kasada zaten açık bir vardiya var.");
+            return Result<ShiftDto>.Failure("Bu kasada başka birinin açık vardiyası var, devralmanız gerekiyor.");
 
-        decimal expectedOpeningBalance = register.Balance;
+        bool userHasOpenShift = await _db.Shifts
+            .AnyAsync(s => s.OpenedByUserId == _currentUser.UserId && s.Status == ShiftStatus.Open, cancellationToken);
+        if (userHasOpenShift)
+            return Result<ShiftDto>.Failure("Zaten açık bir vardiyanız var.");
 
-        Shift shift = Shift.Create(restaurantId, request.CashRegisterId, _currentUser.UserId, expectedOpeningBalance, request.OpeningBalance);
-        _db.Shifts.Add(shift);
+        // Önceki vardiya sayımla kapandıysa kasadaki nakit o sayımdır, tekrar saydırılmaz.
+        // Sayılmadan kapandıysa (gün sonu otomatik kapanış vb.) bu açılış sayımı o vardiyanın
+        // geç sayımı olur; aradaki fark kasaya dokunan son kişiye, yani önceki vardiyaya yazılır.
+        Shift? previousShift = await _db.Shifts
+            .Where(s => s.CashRegisterId == register.Id && s.Status == ShiftStatus.Closed)
+            .OrderByDescending(s => s.ClosedAt)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        bool hasDifference = shift.OpeningDifference != 0;
-        if (hasDifference)
+        CashTransaction? lateCountAdjustment = null;
+        if (previousShift?.CountStatus == ShiftCountStatus.NotCounted)
         {
-            CashTransaction adjustment = register.ApplyShiftDifference(shift.OpeningDifference, _currentUser.UserId);
-            _db.CashTransactions.Add(adjustment);
-            shift.LinkOpeningAdjustmentTransaction(adjustment.Id);
+            if (request.CountedBalance is not decimal counted)
+                return Result<ShiftDto>.Failure("Önceki vardiya sayılmadan kapanmış. Vardiyayı açmak için kasadaki nakdi sayın.");
+
+            previousShift.ApplyLateCount(_currentUser.UserId, counted, "Sonraki vardiyanın açılış sayımı.");
+            if (previousShift.Difference != 0)
+            {
+                lateCountAdjustment = register.ApplyShiftDifference(previousShift.Difference!.Value, _currentUser.UserId);
+                _db.CashTransactions.Add(lateCountAdjustment);
+            }
         }
+
+        Shift shift = Shift.Create(register.BranchId, register.Id, _currentUser.UserId, register.Balance, register.Balance);
+        // Düzeltme kaydı SaveChanges'ta zaman damgası aldığı için yeni vardiyanın aralığına düşer;
+        // açılış bakiyesi bu düzeltmeyi zaten içerdiğinden vardiya hesabından hariç tutulur.
+        if (lateCountAdjustment is not null)
+            shift.LinkOpeningAdjustmentTransaction(lateCountAdjustment.Id);
+        _db.Shifts.Add(shift);
 
         User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
-            restaurantId,
+            register.BranchId,
             actor?.FullName ?? string.Empty,
             AuditLogCategory.System,
-            hasDifference ? AuditLogSeverity.Warning : AuditLogSeverity.Info,
+            lateCountAdjustment is not null ? AuditLogSeverity.Warning : AuditLogSeverity.Info,
             "ShiftOpened",
-            hasDifference
-                ? $"{actor?.FullName} {register.Name} kasasında ₺{request.OpeningBalance} açılış bakiyesiyle vardiya açtı. Beklenen ₺{expectedOpeningBalance} idi, ₺{shift.OpeningDifference} fark var. Kasa bakiyesi anında düzeltildi, admin incelemesi bekliyor."
-                : $"{actor?.FullName} {register.Name} kasasında ₺{request.OpeningBalance} açılış bakiyesiyle vardiya açtı.",
+            lateCountAdjustment is not null
+                ? $"{actor?.FullName} {register.Name} kasasında vardiya açtı. Sayılmadan kapanan önceki vardiya ₺{previousShift!.CountedClosingBalance} olarak sayıldı, ₺{previousShift.Difference} fark var. Admin incelemesi bekliyor."
+                : $"{actor?.FullName} {register.Name} kasasında ₺{shift.OpeningBalance} ile vardiya açtı.",
             nameof(Shift),
             shift.Id);
         _db.AuditLogs.Add(log);
 
         await _db.SaveChangesAsync(cancellationToken);
-        return Result.Success();
+        return Result<ShiftDto>.Success(await _db.ToDtoWithOwnerAsync(shift, cancellationToken));
     }
 }

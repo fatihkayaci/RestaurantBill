@@ -1,14 +1,9 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Shift } from '../types';
-import { ActiveShiftContext, persistCashRegisterId } from './activeShiftStore';
+import { ActiveShiftContext } from './activeShiftStore';
 
 export function ActiveShiftProvider({ children }: { children: ReactNode }) {
-    const [shift, setShiftState] = useState<Shift | null>(null);
-
-    const setShift = useCallback((next: Shift | null) => {
-        setShiftState(next);
-        persistCashRegisterId(next?.cashRegisterId ?? null);
-    }, []);
+    const [shift, setShift] = useState<Shift | null>(null);
 
     return (
         <ActiveShiftContext.Provider value={{ shift, setShift }}>

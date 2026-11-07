@@ -25,8 +25,6 @@ public class EnsureShiftOpenCommandHandler : IRequestHandler<EnsureShiftOpenComm
     {
         List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
 
-        Guid restaurantId = _currentUser.BranchId;
-
         CashRegister? register = await _db.CashRegisters
             .InBranches(branchIds).FirstOrDefaultAsync(c => c.Id == request.CashRegisterId, cancellationToken);
         if (register is null) return Result<ShiftDto>.Failure("Kasa bulunamadı.");
@@ -38,17 +36,17 @@ public class EnsureShiftOpenCommandHandler : IRequestHandler<EnsureShiftOpenComm
             .Include(s => s.CashRegister)
             .InBranches(branchIds).FirstOrDefaultAsync(s => s.CashRegisterId == request.CashRegisterId && s.Status == ShiftStatus.Open, cancellationToken);
         if (existing is not null)
-            return Result<ShiftDto>.Success(existing.ToDto());
+            return Result<ShiftDto>.Success(await _db.ToDtoWithOwnerAsync(existing, cancellationToken));
 
         // Sunucudan okunan bakiye açılış olarak yazılır: client'ın açılış bakiyesini
         // istediği gibi belirlemesini engeller ve fark oluşmadığı için sayım/onay akışına girmez.
         decimal openingBalance = register.Balance;
-        Shift shift = Shift.Create(restaurantId, request.CashRegisterId, _currentUser.UserId, openingBalance, openingBalance);
+        Shift shift = Shift.Create(register.BranchId, request.CashRegisterId, _currentUser.UserId, openingBalance, openingBalance);
         _db.Shifts.Add(shift);
 
         User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
-            restaurantId,
+            register.BranchId,
             actor?.FullName ?? string.Empty,
             AuditLogCategory.System,
             AuditLogSeverity.Info,
@@ -60,11 +58,6 @@ public class EnsureShiftOpenCommandHandler : IRequestHandler<EnsureShiftOpenComm
 
         await _db.SaveChangesAsync(cancellationToken);
 
-        Shift created = await _db.Shifts
-            .AsNoTracking()
-            .Include(s => s.CashRegister)
-            .FirstAsync(s => s.Id == shift.Id, cancellationToken);
-
-        return Result<ShiftDto>.Success(created.ToDto());
+        return Result<ShiftDto>.Success(await _db.ToDtoWithOwnerAsync(shift, cancellationToken));
     }
 }

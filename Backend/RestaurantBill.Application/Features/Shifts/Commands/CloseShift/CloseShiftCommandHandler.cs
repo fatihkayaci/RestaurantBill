@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -8,7 +9,7 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Shifts.Commands.CloseShift;
 
-public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Result>
+public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Result<ShiftDto>>
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
@@ -21,17 +22,21 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
         _balanceCalculator = balanceCalculator;
     }
 
-    public async Task<Result> Handle(CloseShiftCommand request, CancellationToken cancellationToken)
+    public async Task<Result<ShiftDto>> Handle(CloseShiftCommand request, CancellationToken cancellationToken)
     {
         List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
 
         Shift? shift = await _db.Shifts
             .InBranches(branchIds).FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
-        if (shift is null) return Result.Failure("Vardiya bulunamadı.");
+        if (shift is null) return Result<ShiftDto>.Failure("Vardiya bulunamadı.");
+
+        // Vardiya kişiye ait: kasiyer sadece kendi vardiyasını kapatır, başkasınınkini devralır.
+        if (!_currentUser.CanSeeExpectedBalance() && shift.OpenedByUserId != _currentUser.UserId)
+            return Result<ShiftDto>.Failure("Sadece kendi vardiyanızı kapatabilirsiniz.");
 
         CashRegister? register = await _db.CashRegisters
             .FirstOrDefaultAsync(c => c.Id == shift.CashRegisterId, cancellationToken);
-        if (register is null) return Result.Failure("Kasa bulunamadı.");
+        if (register is null) return Result<ShiftDto>.Failure("Kasa bulunamadı.");
 
         decimal expectedClosingBalance = await _balanceCalculator.CalculateExpectedClosingBalanceAsync(shift, cancellationToken);
 
@@ -47,7 +52,7 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
         User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLogSeverity severity = hasDifference ? AuditLogSeverity.Warning : AuditLogSeverity.Info;
         AuditLog log = AuditLog.Create(
-            _currentUser.BranchId,
+            shift.BranchId,
             actor?.FullName ?? string.Empty,
             AuditLogCategory.System,
             severity,
@@ -60,6 +65,6 @@ public class CloseShiftCommandHandler : IRequestHandler<CloseShiftCommand, Resul
         _db.AuditLogs.Add(log);
 
         await _db.SaveChangesAsync(cancellationToken);
-        return Result.Success();
+        return Result<ShiftDto>.Success(await _db.ToDtoWithOwnerAsync(shift, cancellationToken));
     }
 }

@@ -35,17 +35,18 @@ namespace RestaurantBill.Application.Features.Restaurants.Queries.GetMyBranches
                 .ToListAsync(cancellationToken);
             List<UserBranch> staff = await _db.UserBranches
                 .AsNoTracking()
-                .Where(ur => branchIds.Contains(ur.BranchId))
+                .Where(ur => branchIds.Contains(ur.BranchId) && !ur.IsDeleted)
                 .ToListAsync(cancellationToken);
-            var orderRows = await _db.Orders
+            // Ödenen kalemler siparişten düştüğü için ciro ödeme kayıtlarından hesaplanır.
+            var paymentRows = await _db.Payments
                 .AsNoTracking()
-                .Where(o => branchIds.Contains(o.Table.Region.BranchId))
-                .Select(o => new { BranchId = o.Table.Region.BranchId, o.TotalPrice })
+                .Where(p => branchIds.Contains(p.CashRegister.BranchId))
+                .Select(p => new { p.CashRegister.BranchId, p.TotalAmount })
                 .ToListAsync(cancellationToken);
 
             Dictionary<Guid, int> tableCounts = tableBranchIds.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
             Dictionary<Guid, int> staffCounts = staff.GroupBy(s => s.BranchId).ToDictionary(g => g.Key, g => g.Count());
-            Dictionary<Guid, decimal> revenueByRestaurant = orderRows.GroupBy(o => o.BranchId).ToDictionary(g => g.Key, g => g.Sum(o => o.TotalPrice));
+            Dictionary<Guid, decimal> revenueByRestaurant = paymentRows.GroupBy(p => p.BranchId).ToDictionary(g => g.Key, g => g.Sum(p => p.TotalAmount));
 
             List<BranchDto> result = branches.Select(b => b.ToBranchDto(
                 tableCounts.GetValueOrDefault(b.Id),

@@ -1,102 +1,122 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
-import type { ShiftStartCandidate } from '@/features/cashier/types';
+import type { Shift, ShiftStartCandidate } from '@/features/cashier/types';
 import { Button } from '@/components/ui/button';
-import { useActiveShift, getStoredCashRegisterId, clearStoredCashRegisterId } from '@/features/cashier/context/activeShiftStore';
+import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
 
 interface ShiftStartGateProps {
     onResolved: () => void;
 }
 
+// Kör sayım: kasiyer sayarken "olması gereken" tutarı görmez, fark admin tarafında incelenir.
+type CountMode = 'takeover' | 'opening';
+
+function formatTime(iso: string): string {
+    return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function candidateStatus(c: ShiftStartCandidate): { text: string; className: string } {
+    if (c.isMine) return { text: 'Sizin vardiyanız açık', className: 'text-rb-green' };
+    if (c.hasOpenShift) {
+        const since = c.openedAt ? ` · ${formatTime(c.openedAt)}'den beri` : '';
+        return { text: `${c.openShiftOwnerName || 'Başka biri'} vardiyada${since}`, className: 'text-rb-orange' };
+    }
+    if (c.requiresCount) return { text: 'Önceki vardiya sayılmadı, açılışta sayım gerekiyor', className: 'text-rb-amber' };
+    return { text: 'Boş', className: 'text-muted-foreground' };
+}
+
+function candidateAction(c: ShiftStartCandidate): string {
+    if (c.isMine) return 'Devam et →';
+    if (c.hasOpenShift) return 'Devral →';
+    if (c.requiresCount) return 'Say ve başlat →';
+    return 'Vardiyayı başlat →';
+}
+
 export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
     const { setShift } = useActiveShift();
     const [loading, setLoading] = useState(true);
     const [candidates, setCandidates] = useState<ShiftStartCandidate[]>([]);
-    const [selected, setSelected] = useState<ShiftStartCandidate | null>(null);
-    const [reportingDifference, setReportingDifference] = useState(false);
+    const [counting, setCounting] = useState<{ candidate: ShiftStartCandidate; mode: CountMode } | null>(null);
     const [countedAmount, setCountedAmount] = useState('');
-    const [submitting, setSubmitting] = useState(false);
-    const [joiningId, setJoiningId] = useState<string | null>(null);
+    const [busyId, setBusyId] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
 
-        const loadCandidates = () => {
-            shiftService.getStartCandidates()
-                .then(data => {
-                    if (cancelled) return;
-                    setCandidates(data);
-                    if (data.length === 1 && !data[0].hasOpenShift) setSelected(data[0]);
-                })
-                .catch(() => toast.error('Kasa bilgileri alınamadı.'))
-                .finally(() => { if (!cancelled) setLoading(false); });
-        };
-
-        const storedId = getStoredCashRegisterId();
-        if (!storedId) { loadCandidates(); return () => { cancelled = true; }; }
-
-        shiftService.getCurrent(storedId)
+        // Vardiya kişiye ait: kasiyerin açık bir vardiyası varsa kasa seçtirmeden devam edilir.
+        shiftService.getMyCurrent()
             .then(shift => {
                 if (cancelled) return;
                 setShift(shift);
                 onResolved();
             })
             .catch(() => {
-                clearStoredCashRegisterId();
-                if (!cancelled) loadCandidates();
+                shiftService.getStartCandidates()
+                    .then(data => { if (!cancelled) setCandidates(data); })
+                    .catch(() => toast.error('Kasa bilgileri alınamadı.'))
+                    .finally(() => { if (!cancelled) setLoading(false); });
             });
 
         return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleSelect = (candidate: ShiftStartCandidate) => {
-        setSelected(candidate);
-        setReportingDifference(false);
-        setCountedAmount('');
+    const resolveWith = (shift: Shift, message: string) => {
+        setShift(shift);
+        toast.success(message);
+        onResolved();
     };
 
-    const joinExistingShift = async (candidate: ShiftStartCandidate) => {
-        setJoiningId(candidate.cashRegisterId);
+    const handlePick = async (candidate: ShiftStartCandidate) => {
+        if (candidate.hasOpenShift && !candidate.isMine) {
+            setCounting({ candidate, mode: 'takeover' });
+            setCountedAmount('');
+            return;
+        }
+        if (!candidate.hasOpenShift && candidate.requiresCount) {
+            setCounting({ candidate, mode: 'opening' });
+            setCountedAmount('');
+            return;
+        }
+
+        setBusyId(candidate.cashRegisterId);
         try {
-            const shift = await shiftService.getCurrent(candidate.cashRegisterId);
-            setShift(shift);
-            toast.success(`${candidate.cashRegisterName} kasasındaki güne katıldınız.`);
-            onResolved();
+            if (candidate.isMine) {
+                resolveWith(await shiftService.getCurrent(candidate.cashRegisterId), `${candidate.cashRegisterName} kasasındaki vardiyanıza döndünüz.`);
+            } else {
+                resolveWith(await shiftService.openShift(candidate.cashRegisterId), `${candidate.cashRegisterName} kasasında vardiyanız başladı.`);
+            }
         } catch (err) {
-            toast.error(getApiErrorMessage(err, 'Güne katılınamadı.'));
+            toast.error(getApiErrorMessage(err, 'Vardiya başlatılamadı.'));
         } finally {
-            setJoiningId(null);
+            setBusyId(null);
         }
     };
 
-    const submitOpen = async (openingBalance: number) => {
-        if (!selected) return;
-        setSubmitting(true);
-        try {
-            await shiftService.openShift(selected.cashRegisterId, openingBalance);
-            const shift = await shiftService.getCurrent(selected.cashRegisterId);
-            setShift(shift);
-            toast.success(`${selected.cashRegisterName} kasasında vardiya açıldı.`);
-            onResolved();
-        } catch (err) {
-            toast.error(getApiErrorMessage(err, 'Vardiya açılamadı.'));
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleConfirmExact = () => submitOpen(selected!.expectedOpeningBalance);
-
-    const handleConfirmWithDifference = () => {
+    const handleSubmitCount = async () => {
+        if (!counting) return;
         const amount = parseFloat(countedAmount.replace(',', '.'));
-        if (Number.isNaN(amount) || amount < 0) {
+        if (countedAmount === '' || Number.isNaN(amount) || amount < 0) {
             toast.error('Geçerli bir tutar girin.');
             return;
         }
-        submitOpen(amount);
+
+        const { candidate, mode } = counting;
+        setBusyId(candidate.cashRegisterId);
+        try {
+            const shift = mode === 'takeover'
+                ? await shiftService.takeOver(candidate.cashRegisterId, amount)
+                : await shiftService.openShift(candidate.cashRegisterId, amount);
+            resolveWith(shift, mode === 'takeover'
+                ? `${candidate.cashRegisterName} kasasını devraldınız.`
+                : `${candidate.cashRegisterName} kasasında vardiyanız başladı.`);
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, mode === 'takeover' ? 'Kasa devralınamadı.' : 'Vardiya başlatılamadı.'));
+        } finally {
+            setBusyId(null);
+        }
     };
 
     if (loading) {
@@ -107,18 +127,16 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
         );
     }
 
-    const parsedCounted = parseFloat(countedAmount);
-    const hasValidCountedAmount = countedAmount !== '' && !Number.isNaN(parsedCounted);
-    const difference = hasValidCountedAmount ? parsedCounted - selected!.expectedOpeningBalance : 0;
+    const submitting = busyId !== null;
 
     return (
         <div className="flex-1 flex items-center justify-center p-6">
             <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-lg p-6">
-                {!selected ? (
+                {!counting ? (
                     <>
-                        <h2 className="font-serif text-lg font-bold text-foreground mb-1">Kasa Seçin</h2>
+                        <h2 className="font-serif text-lg font-bold text-foreground mb-1">Vardiyanızı Başlatın</h2>
                         <p className="text-sm text-muted-foreground mb-4">
-                            Devam etmek için çalışacağınız kasayı seçin.
+                            Çalışacağınız kasayı seçin. Kasa başkasının vardiyasındaysa sayım yapıp devralırsınız.
                         </p>
                         {candidates.length === 0 ? (
                             <p className="text-sm text-destructive">
@@ -126,106 +144,64 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
                             </p>
                         ) : (
                             <div className="flex flex-col gap-2">
-                                {candidates.map(c => (
-                                    <button
-                                        key={c.cashRegisterId}
-                                        onClick={() => c.hasOpenShift ? joinExistingShift(c) : handleSelect(c)}
-                                        disabled={joiningId !== null}
-                                        className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-left hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <div>
-                                            <span className="font-medium text-foreground block">{c.cashRegisterName}</span>
-                                            <span className={`text-xs font-semibold ${c.hasOpenShift ? 'text-rb-green' : 'text-muted-foreground'}`}>
-                                                {c.hasOpenShift
-                                                    ? `Gün açık${c.openedAt ? ` · ${new Date(c.openedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}'den beri` : ''}`
-                                                    : 'Vardiya başlatılmamış'}
+                                {candidates.map(c => {
+                                    const status = candidateStatus(c);
+                                    return (
+                                        <button
+                                            key={c.cashRegisterId}
+                                            onClick={() => handlePick(c)}
+                                            disabled={submitting}
+                                            className="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 min-h-14 text-left hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <div className="min-w-0">
+                                                <span className="font-medium text-foreground block">{c.cashRegisterName}</span>
+                                                <span className={`text-xs font-semibold ${status.className}`}>{status.text}</span>
+                                            </div>
+                                            <span className="text-sm font-semibold text-foreground shrink-0">
+                                                {busyId === c.cashRegisterId ? 'Bekleyin...' : candidateAction(c)}
                                             </span>
-                                            {c.previousShiftUncounted && (
-                                                <span className="text-xs font-semibold text-rb-amber block mt-0.5">
-                                                    ⚠ önceki gün sayılmadı, admin sonradan sayım girmeli
-                                                </span>
-                                            )}
-                                        </div>
-                                        <span className="text-sm text-muted-foreground font-serif">
-                                            {joiningId === c.cashRegisterId
-                                                ? 'Katılınıyor...'
-                                                : c.hasOpenShift
-                                                    ? 'Katıl →'
-                                                    : `₺${c.expectedOpeningBalance.toFixed(2)}`}
-                                        </span>
-                                    </button>
-                                ))}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
                     </>
                 ) : (
                     <>
-                        <h2 className="font-serif text-lg font-bold text-foreground mb-1">{selected.cashRegisterName}</h2>
-                        <p className="text-sm text-muted-foreground mb-4">Vardiyayı açmadan önce kasadaki nakti sayın.</p>
+                        <h2 className="font-serif text-lg font-bold text-foreground mb-1">
+                            {counting.mode === 'takeover' ? `${counting.candidate.cashRegisterName} kasasını devral` : counting.candidate.cashRegisterName}
+                        </h2>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            {counting.mode === 'takeover'
+                                ? `Kasa ${counting.candidate.openShiftOwnerName || 'başka biri'} adına açık. Kasadaki nakdi sayın: bu sayım onun vardiyasını kapatır ve sizinkini başlatır.`
+                                : 'Önceki vardiya sayılmadan kapanmış. Vardiyanızı başlatmak için kasadaki nakdi sayın.'}
+                        </p>
 
-                        <div className="rounded-lg bg-muted px-4 py-3 mb-4">
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Beklenen Açılış Bakiyesi</p>
-                            <p className="font-serif text-2xl font-bold text-foreground">₺{selected.expectedOpeningBalance.toFixed(2)}</p>
-                        </div>
-
-                        {!reportingDifference ? (
-                            <div className="flex flex-col gap-2">
-                                <Button onClick={handleConfirmExact} disabled={submitting} className="w-full">
-                                    Beklenen Tutar Doğru, Onayla
+                        <div className="flex flex-col gap-3">
+                            <div>
+                                <label htmlFor="shift-count" className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">
+                                    Kasada Sayılan Nakit
+                                </label>
+                                <input
+                                    id="shift-count"
+                                    type="number"
+                                    inputMode="decimal"
+                                    value={countedAmount}
+                                    onChange={e => setCountedAmount(e.target.value)}
+                                    placeholder="0,00"
+                                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground font-serif text-lg focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={() => setCounting(null)} disabled={submitting} className="flex-1">
+                                    Vazgeç
                                 </Button>
-                                <button
-                                    onClick={() => setReportingDifference(true)}
-                                    disabled={submitting}
-                                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    Kasada fark var
-                                </button>
+                                <Button onClick={handleSubmitCount} disabled={submitting} className="flex-1">
+                                    {submitting ? 'Bekleyin...' : counting.mode === 'takeover' ? 'Sayımı Onayla, Devral' : 'Sayımı Onayla, Başlat'}
+                                </Button>
                             </div>
-                        ) : (
-                            <div className="flex flex-col gap-3">
-                                <div>
-                                    <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">
-                                        Sayılan Tutar
-                                    </label>
-                                    <input
-                                        type="number"
-                                        inputMode="decimal"
-                                        value={countedAmount}
-                                        onChange={e => setCountedAmount(e.target.value)}
-                                        placeholder="0.00"
-                                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground font-serif text-lg focus:outline-none focus:ring-2 focus:ring-rb-accent"
-                                        autoFocus
-                                    />
-                                </div>
-                                {hasValidCountedAmount && (
-                                    <p className={`text-sm font-medium ${difference < 0 ? 'text-red-500' : difference > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
-                                        {difference === 0
-                                            ? 'Fark yok.'
-                                            : difference < 0
-                                                ? `₺${Math.abs(difference).toFixed(2)} eksik`
-                                                : `₺${difference.toFixed(2)} fazla`}
-                                    </p>
-                                )}
-                                <div className="flex gap-2">
-                                    <Button variant="outline" onClick={() => setReportingDifference(false)} disabled={submitting} className="flex-1">
-                                        Vazgeç
-                                    </Button>
-                                    <Button onClick={handleConfirmWithDifference} disabled={submitting} className="flex-1">
-                                        Devam Et
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
-                        {candidates.length > 1 && (
-                            <button
-                                onClick={() => setSelected(null)}
-                                disabled={submitting}
-                                className="mt-4 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                ← Farklı kasa seç
-                            </button>
-                        )}
+                        </div>
                     </>
                 )}
             </div>

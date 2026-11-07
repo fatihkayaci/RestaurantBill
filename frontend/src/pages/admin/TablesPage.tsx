@@ -18,6 +18,7 @@ import axios from "axios";
 import { createHubConnection } from "@/lib/signalrConnection";
 import PaymentPanel from '../cashier/components/PaymentPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
+import { formatPrice } from '@/lib/format';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
 
@@ -725,7 +726,7 @@ export default function Tables() {
                                             <>
                                                 <div className="flex items-center justify-between mt-1">
                                                     <span className={cn("text-xs", cfg.hint)}>Aktif sipariş</span>
-                                                    <span className="text-sm font-bold text-foreground">₺{table.activeOrderTotal.toFixed(0)}</span>
+                                                    <span className="text-sm font-bold text-foreground">₺{formatPrice(table.activeOrderTotal)}</span>
                                                 </div>
                                                 {table.occupiedSince && (
                                                     <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">
@@ -1045,13 +1046,13 @@ export default function Tables() {
                                 <div className="w-full md:w-90 shrink-0 max-h-[45vh] md:max-h-none border-t md:border-t-0 md:border-l border-border overflow-y-auto flex flex-col px-4 py-4">
                                     {newItems.length === 0 ? (
                                         <p className="text-center text-muted-foreground text-sm py-8">
-                                            Sepetiniz boş.<br />Soldan ürün seçerek başlayın.
+                                            Sepetiniz boş.<br />Menüden ürün seçerek başlayın.
                                         </p>
                                     ) : (
                                         <>
                                             <div className="flex items-center justify-between mb-4">
                                                 <span className="text-sm text-muted-foreground">Sepet ({newItems.reduce((s, i) => s + i.quantity, 0)} ürün)</span>
-                                                <span className="font-bold text-foreground">₺{newItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0).toFixed(0)}</span>
+                                                <span className="font-bold text-foreground">₺{formatPrice(newItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0))}</span>
                                             </div>
                                             <textarea
                                                 value={orderNote}
@@ -1221,13 +1222,13 @@ export default function Tables() {
                                                             <p className="text-xs text-muted-foreground/40 mt-0.5">Not eklemek için tıklayın</p>
                                                         )}
                                                     </div>
-                                                    <span className="text-sm font-semibold text-foreground shrink-0">₺{(item.unitPrice * item.quantity).toFixed(0)}</span>
+                                                    <span className="text-sm font-semibold text-foreground shrink-0">₺{formatPrice(item.unitPrice * item.quantity)}</span>
                                                 </div>
                                             ))}
                                         </div>
                                         <div className="flex justify-between pt-4 mt-2 border-t font-bold text-foreground">
                                             <span>Ara Toplam</span>
-                                            <span>₺{tableOrder.totalPrice.toFixed(0)}</span>
+                                            <span>₺{formatPrice(tableOrder.totalPrice)}</span>
                                         </div>
                                     </>
                                 )}

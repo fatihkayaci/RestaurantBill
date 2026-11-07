@@ -22,11 +22,15 @@ export interface CashTransaction {
 export interface ShiftStartCandidate {
     cashRegisterId: string;
     cashRegisterName: string;
-    expectedOpeningBalance: number;
+    // Kör sayım: kasiyere null gelir, sadece Admin/Owner görür.
+    expectedOpeningBalance: number | null;
     hasOpenShift: boolean;
     openShiftId?: string | null;
     openedAt?: string | null;
-    previousShiftUncounted: boolean;
+    openShiftOwnerName?: string | null;
+    isMine: boolean;
+    // Kasanın son vardiyası sayılmadan kapandıysa açılışta sayım gerekir.
+    requiresCount: boolean;
 }
 
 export type PaymentMethod = 1 | 2 | 3;
@@ -43,15 +47,9 @@ export interface ShiftSummary {
     transactionCount: number;
     breakdown: ShiftPaymentBreakdown[];
     total: number;
-    expectedCashInRegister: number;
+    // Kör sayım: kasiyere null gelir, sadece Admin/Owner görür.
+    expectedCashInRegister: number | null;
     openTablesCount: number;
-}
-
-export interface CurrentShift {
-    id: string;
-    cashRegisterId: string;
-    cashRegisterName: string;
-    openedAt: string;
 }
 
 export type ShiftStatus = 1 | 2;
@@ -66,6 +64,7 @@ export interface Shift {
     cashRegisterId: string;
     cashRegisterName: string;
     openedByUserId: string;
+    openedByUserName: string;
     closedByUserId?: string | null;
     expectedOpeningBalance: number;
     openingBalance: number;

@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import CloseShiftModal from '@/pages/admin/components/CloseShiftModal';
 import LateCountModal from '@/pages/admin/components/LateCountModal';
 import ShiftDetailModal from '@/pages/admin/components/ShiftDetailModal';
+import { formatAmount } from '@/lib/format';
 
 interface Props {
     data: ShiftReport | null;
@@ -75,7 +76,7 @@ export default function ShiftsTab({ data, loading, showBranchSummary, onChanged 
                     toast.success('Açılış farkı onaylandı.');
                 } else {
                     await shiftService.rejectOpeningDifference(shift.id, rejectNote || undefined);
-                    toast.success('Açılış farkı reddedildi, kasa bakiyesi geri alındı.');
+                    toast.success('Açılış farkı reddedildi.');
                 }
             } else {
                 if (action === 'approve') {
@@ -83,7 +84,7 @@ export default function ShiftsTab({ data, loading, showBranchSummary, onChanged 
                     toast.success('Kapanış farkı onaylandı.');
                 } else {
                     await shiftService.rejectDifference(shift.id, rejectNote || undefined);
-                    toast.success('Kapanış farkı reddedildi, kasa bakiyesi geri alındı.');
+                    toast.success('Kapanış farkı reddedildi.');
                 }
             }
             setReviewTarget(null);
@@ -103,7 +104,7 @@ export default function ShiftsTab({ data, loading, showBranchSummary, onChanged 
 
     return (
         <div className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="rounded-xl border border-border bg-card p-4">
                     <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Toplam Fark</p>
                     <p className={cn(
@@ -207,15 +208,15 @@ export default function ShiftsTab({ data, loading, showBranchSummary, onChanged 
                                                     {s.closedAt && (<><br /><span className="text-xs">→ {new Date(s.closedAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></>)}
                                                 </td>
                                                 <td className="px-4 py-3.5 text-right font-serif text-foreground whitespace-nowrap">
-                                                    ₺{expected.toFixed(2)}
+                                                    ₺{formatAmount(expected)}
                                                     <br />
                                                     <span className="text-[10px] font-sans uppercase tracking-wide text-muted-foreground">{isOpen ? 'açılış' : 'kapanış'}</span>
                                                 </td>
                                                 <td className="px-4 py-3.5 text-right font-serif text-foreground whitespace-nowrap">
-                                                    {counted != null ? `₺${counted.toFixed(2)}` : '—'}
+                                                    {counted != null ? `₺${formatAmount(counted)}` : '—'}
                                                 </td>
                                                 <td className={cn('px-4 py-3.5 text-right font-serif whitespace-nowrap', !hasDifference ? 'text-muted-foreground' : diff! < 0 ? 'text-red-500' : 'text-rb-amber')}>
-                                                    {hasDifference ? `₺${diff!.toFixed(2)}` : '—'}
+                                                    {hasDifference ? `₺${formatAmount(diff!)}` : '—'}
                                                 </td>
                                                 <td className="px-4 py-3.5">
                                                     <div className="flex flex-col gap-1 items-start">
@@ -295,11 +296,11 @@ export default function ShiftsTab({ data, loading, showBranchSummary, onChanged 
                             {reviewTarget && (
                                 <>
                                     {reviewTarget.shift.cashRegisterName} kasasında{' '}
-                                    ₺{(reviewTarget.type === 'opening' ? reviewTarget.shift.openingDifference : reviewTarget.shift.difference)?.toFixed(2)}{' '}
-                                    tutarında {reviewTarget.type === 'opening' ? 'açılış' : 'kapanış'} farkı, kasiyer bildirdiği anda kasa bakiyesine zaten işlendi.{' '}
+                                    ₺{formatAmount((reviewTarget.type === 'opening' ? reviewTarget.shift.openingDifference : reviewTarget.shift.difference) ?? 0)}{' '}
+                                    tutarında {reviewTarget.type === 'opening' ? 'açılış' : 'kapanış'} farkı, sayım yapıldığı anda kasa bakiyesine işlendi; kasa bakiyesi sayılan nakde eşit.{' '}
                                     {reviewTarget.action === 'approve'
-                                        ? 'Onaylarsanız kasa bakiyesine ek bir işlem yapılmaz, sadece incelendiği kaydedilir.'
-                                        : 'Reddederseniz kasa bakiyesi bu düzeltme öncesine geri alınır.'}
+                                        ? 'Onaylarsanız fark kabul edilmiş olarak kaydedilir.'
+                                        : 'Reddederseniz fark kabul edilmemiş olarak işaretlenir (örn. kasiyerden tahsil edilecek). Kasa bakiyesi değişmez.'}
                                 </>
                             )}
                         </AlertDialogDescription>

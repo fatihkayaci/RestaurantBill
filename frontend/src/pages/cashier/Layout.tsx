@@ -43,16 +43,16 @@ function CashierLayoutContent() {
 
     return (
         <div className="min-h-screen bg-background flex flex-col">
-            <header className="min-h-14 bg-sidebar flex items-center justify-between px-5 py-2 shrink-0 z-10">
-                <div className="flex items-center gap-3">
-                    <img src={sophramLogo} alt="Sophram" className="h-18 w-auto shrink-0" />
+            <header className="min-h-14 bg-sidebar flex items-center justify-between gap-3 px-3 sm:px-5 py-2 shrink-0 z-10">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <img src={sophramLogo} alt="Sophram" className="h-12 sm:h-18 w-auto shrink-0" />
 
-                    <div className="w-px h-6.5 bg-white/10 shrink-0" />
+                    <div className="hidden sm:block w-px h-6.5 bg-white/10 shrink-0" />
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
                         <span className="w-1.75 h-1.75 rounded-full bg-rb-green shrink-0" style={{ boxShadow: '0 0 0 3px rgba(69,200,122,0.15)' }} />
-                        <div>
-                            <p className="text-sidebar-foreground font-serif font-bold text-base leading-none">
+                        <div className="min-w-0">
+                            <p className="text-sidebar-foreground font-serif font-bold text-base leading-tight truncate">
                                 {restaurantName || 'Sophram'}
                             </p>
                             <p className="text-rb-amber text-[10px] font-semibold tracking-widest uppercase mt-0.5">
@@ -64,18 +64,19 @@ function CashierLayoutContent() {
 
                 <div id="cashier-stats-slot" className="hidden lg:flex items-center gap-0.5" />
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                     {shiftGateResolved && (
                         <button
                             onClick={() => setShowEndShiftModal(true)}
-                            className="text-xs font-semibold text-rb-red border border-rb-red/40 bg-rb-red-bg rounded-full px-3 py-1.5 hover:opacity-80 transition-opacity"
+                            className="text-xs font-semibold text-rb-red border border-rb-red/40 bg-rb-red-bg rounded-full px-2.5 sm:px-3 py-1.5 hover:opacity-80 transition-opacity whitespace-nowrap"
                         >
-                            Vardiyayı Bitir
+                            <span className="sm:hidden">Bitir</span>
+                            <span className="hidden sm:inline">Vardiyayı Bitir</span>
                         </button>
                     )}
 
                     <HeaderClock />
-                    <div className="w-px h-6.5 bg-white/10 shrink-0" />
+                    <div className="hidden sm:block w-px h-6.5 bg-white/10 shrink-0" />
                     <HeaderThemeToggle />
                     <HeaderLogoutButton onClick={handleLogout} />
                 </div>

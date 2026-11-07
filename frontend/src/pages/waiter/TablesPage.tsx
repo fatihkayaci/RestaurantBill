@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Table } from '@/features/tables/types';
 import TablePanel from './components/TablePanel';
-import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 import { createHubConnection } from '@/lib/signalrConnection';
+import { formatPrice } from '@/lib/format';
+import { Clock, Plus, User } from 'lucide-react';
 
 type FilterType = 'all' | 'empty' | 'occupied' | 'reserved';
 
@@ -16,41 +16,44 @@ interface Counts {
 }
 
 const FILTER_CONFIG = [
-    { key: 'all'      as FilterType, label: (c: Counts) => `Tümü (${c.total})`,       activeClass: 'bg-rb-accent text-white' },
-    { key: 'empty'    as FilterType, label: (c: Counts) => `Boş (${c.empty})`,         activeClass: 'bg-rb-green text-white' },
-    { key: 'occupied' as FilterType, label: (c: Counts) => `Dolu (${c.occupied})`,     activeClass: 'bg-rb-orange text-white' },
-    { key: 'reserved' as FilterType, label: (c: Counts) => `Rezerve (${c.reserved})`, activeClass: 'bg-rb-amber text-white' },
+    { key: 'all'      as FilterType, label: 'Tümü',    count: (c: Counts) => c.total,    dot: 'bg-foreground' },
+    { key: 'empty'    as FilterType, label: 'Boş',     count: (c: Counts) => c.empty,    dot: 'bg-rb-green' },
+    { key: 'occupied' as FilterType, label: 'Dolu',    count: (c: Counts) => c.occupied, dot: 'bg-rb-orange' },
+    { key: 'reserved' as FilterType, label: 'Rezerve', count: (c: Counts) => c.reserved, dot: 'bg-rb-amber' },
 ];
 
 const STATUS_CARD = {
     1: {
-        bg:     'bg-[#ECECE2] dark:bg-[rgba(69,200,122,0.05)]',
-        border: 'border-[#b8e8cd] dark:border-rb-green/25',
-        badge:  'bg-rb-green-bg text-rb-green',
-        hint:   'text-rb-accent font-semibold',
-        label:  'BOŞ',
+        bg:     'bg-white dark:bg-[rgba(69,200,122,0.05)]',
+        border: 'border-[#BFDCC9] dark:border-rb-green/25',
+        badge:  'bg-[#E3F1E8] text-[#1F6E44] dark:bg-rb-green-bg dark:text-rb-green',
+        label:  'Boş',
     },
     2: {
-        bg:     'bg-[#F3EAE0] dark:bg-[rgba(240,120,64,0.05)]',
-        border: 'border-[#f5c5aa] dark:border-rb-orange/25',
-        badge:  'bg-rb-orange-bg text-rb-orange',
-        hint:   'text-muted-foreground',
-        label:  'DOLU',
+        bg:     'bg-[#FBEEE4] dark:bg-[rgba(240,120,64,0.05)]',
+        border: 'border-[#EDC3A6] dark:border-rb-orange/25',
+        badge:  'bg-[#F6DCCB] text-[#A3420D] dark:bg-rb-orange-bg dark:text-rb-orange',
+        label:  'Dolu',
     },
     3: {
-        bg:     'bg-[#F5EEDA] dark:bg-[rgba(232,184,53,0.05)]',
-        border: 'border-[#f0d98a] dark:border-rb-amber/25',
-        badge:  'bg-rb-amber-bg text-rb-amber',
-        hint:   'text-rb-amber font-medium',
-        label:  'REZERVE',
+        bg:     'bg-[#FAF2DC] dark:bg-[rgba(232,184,53,0.05)]',
+        border: 'border-[#E6D08E] dark:border-rb-amber/25',
+        badge:  'bg-[#F2E4B8] text-[#7A5A08] dark:bg-rb-amber-bg dark:text-rb-amber',
+        label:  'Rezerve',
     },
 } as const;
 
-function formatElapsed(occupiedSince: string, now: number): string {
-    const minutes = Math.max(0, Math.floor((now - new Date(occupiedSince).getTime()) / 60000));
+// Bu süreyi geçen dolu masanın süresi vurgulanır.
+const LONG_STAY_MINUTES = 60;
+
+function elapsedMinutes(occupiedSince: string, now: number): number {
+    return Math.max(0, Math.floor((now - new Date(occupiedSince).getTime()) / 60000));
+}
+
+function formatElapsed(minutes: number): string {
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
+    return hours > 0 ? `${hours} sa ${remainingMinutes} dk` : `${remainingMinutes} dk`;
 }
 
 function TableCard({
@@ -65,53 +68,58 @@ function TableCard({
     onClick: () => void;
 }) {
     const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
+    const minutes = table.occupiedSince ? elapsedMinutes(table.occupiedSince, now) : null;
 
     return (
         <button
             onClick={onClick}
-            className={`text-left rounded-2xl border py-4 px-4 flex flex-col gap-1.5 cursor-pointer min-h-27
+            aria-label={`${table.name}, ${cfg.label}`}
+            className={`text-left rounded-[18px] sm:rounded-[20px] border-[1.5px] p-3.5 sm:px-5.5 sm:py-5 flex flex-col gap-2 sm:gap-3 cursor-pointer min-h-39 sm:min-h-46
                 transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]
                 dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]
-                ${cfg.bg} ${cfg.border}
-                ${isSelected ? 'ring-2 ring-rb-accent ring-offset-2 dark:ring-offset-background' : ''}
+                ${cfg.bg} ${isSelected ? 'border-foreground ring-[3px] ring-rb-gold' : cfg.border}
             `}
         >
-            <div className="flex items-start justify-between gap-1.5">
-                <span className="font-serif text-[21px] font-bold text-foreground leading-[1.15]">
+            <div className="flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between sm:gap-2.5 w-full">
+                <span className="font-serif text-[32px] sm:text-[38px] font-bold text-foreground leading-none">
                     {table.name}
                 </span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-1.5 shrink-0 leading-tight tracking-[0.6px] uppercase ${cfg.badge}`}>
+                <span className={`inline-flex items-center gap-1.5 text-[11px] sm:text-[13px] font-bold px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full shrink-0 leading-none tracking-[0.6px] uppercase ${cfg.badge}`}>
+                    <span className="size-1.75 sm:size-2 rounded-full bg-current" />
                     {cfg.label}
                 </span>
             </div>
 
-            <div className="flex-1 flex flex-col justify-end gap-1">
+            <div className="mt-auto w-full">
                 {table.status === 1 && (
-                    <span className={`text-[11px] tracking-[0.2px] mt-1 ${cfg.hint}`}>
-                        ↑ Sipariş oluştur
+                    <span className="flex items-center gap-1.5 sm:gap-2 text-[15px] sm:text-base font-semibold text-[#1F6E44] dark:text-rb-green">
+                        <Plus className="size-4.5 sm:size-5" strokeWidth={2.2} />
+                        Sipariş aç
                     </span>
                 )}
                 {table.status === 2 && (
-                    <>
-                        <div className="flex items-center justify-between mt-1">
-                            <span className={`text-xs ${cfg.hint}`}>Aktif sipariş</span>
-                            <span className="text-sm font-bold text-foreground">₺{table.activeOrderTotal.toFixed(0)}</span>
+                    <div className="flex flex-col gap-1.5 sm:gap-2.5">
+                        <span className="text-[22px] sm:text-[30px] font-bold text-foreground leading-none tracking-[-0.5px]">
+                            ₺{formatPrice(table.activeOrderTotal)}
+                        </span>
+                        <div className="flex items-center justify-between gap-2 text-[13px] sm:text-[15px] text-rb-text-sub">
+                            {minutes !== null && (
+                                <span className={`flex items-center gap-1.5 ${minutes >= LONG_STAY_MINUTES ? 'font-bold text-[#A3420D] dark:text-rb-orange' : ''}`}>
+                                    <Clock className="size-3.5 sm:size-4" />
+                                    {formatElapsed(minutes)}
+                                </span>
+                            )}
+                            {table.createdByUserName && (
+                                <span className="hidden sm:flex items-center gap-1.5 min-w-0">
+                                    <User className="size-4 shrink-0" />
+                                    <span className="truncate">{table.createdByUserName}</span>
+                                </span>
+                            )}
                         </div>
-                        {table.occupiedSince && (
-                            <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">
-                                <span>Açılış: {new Date(table.occupiedSince).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                <span>{formatElapsed(table.occupiedSince, now)}</span>
-                            </div>
-                        )}
-                        {table.createdByUserName && (
-                            <div className="text-[10px] text-muted-foreground/80">
-                                Alan: {table.createdByUserName}
-                            </div>
-                        )}
-                    </>
+                    </div>
                 )}
                 {table.status === 3 && (
-                    <span className={`text-[11px] ${cfg.hint}`}>
+                    <span className="text-sm sm:text-base font-semibold text-[#7A5A08] dark:text-rb-amber">
                         Rezervasyon mevcut
                     </span>
                 )}
@@ -180,15 +188,27 @@ export default function WaiterTablesPage() {
         return true;
     });
 
-    const selectedTable = tables.find(t => t.id === selectedTableId) ?? null;
+    // Bölge sırası, masaların API'den geliş sırasını izler.
+    const regions: { id: string; name: string; total: number; occupied: number; tables: Table[] }[] = [];
+    for (const table of tables) {
+        let region = regions.find(r => r.id === table.regionId);
+        if (!region) {
+            region = { id: table.regionId, name: table.regionName, total: 0, occupied: 0, tables: [] };
+            regions.push(region);
+        }
+        region.total++;
+        if (table.status === 2) region.occupied++;
+        if (filtered.includes(table)) region.tables.push(table);
+    }
+    const visibleRegions = regions.filter(r => r.tables.length > 0);
 
-    const statsSlot = document.getElementById('waiter-stats-slot');
+    const selectedTable = tables.find(t => t.id === selectedTableId) ?? null;
 
     if (loading) {
         return (
-            <div className="p-3 sm:p-6 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
+            <div className="px-4 sm:px-8 py-6 grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-2.5 sm:gap-4">
                 {[...Array(12)].map((_, i) => (
-                    <div key={i} className="h-25 rounded-2xl bg-muted animate-pulse" />
+                    <div key={i} className="h-39 sm:h-46 rounded-[20px] bg-muted animate-pulse" />
                 ))}
             </div>
         );
@@ -196,72 +216,55 @@ export default function WaiterTablesPage() {
 
     return (
         <div className="min-h-full">
-            {/* Header stats portal */}
-            {statsSlot && createPortal(
-                <>
-                    <HeaderStatCounter label="Aktif Sipariş" count={counts.occupied} color="text-rb-accent" />
-                    <HeaderStatCounter label="Açık Masa" count={counts.occupied} color="text-rb-amber" />
-                    <HeaderStatCounter label="Bekleyen" count={counts.reserved} color="text-rb-red" />
-                </>,
-                statsSlot
-            )}
-
-            {/* Stats + Filter Bar */}
-            <div className="sticky top-0 z-10 bg-[#F1ECE4]/95 dark:bg-background/95 backdrop-blur-sm border-b border-border px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                {/* Stats */}
-                <div className="flex items-center gap-2 text-sm flex-wrap">
-                    <div className="flex items-center gap-1.5">
-                        <span className="font-serif text-xl font-bold leading-none text-foreground">{counts.total}</span>
-                        <span className="text-xs text-muted-foreground">Toplam</span>
-                    </div>
-                    <div className="w-px h-4.5 bg-border mx-0.5" />
-                    <div className="flex items-center gap-1.5">
-                        <span className="font-serif text-xl font-bold leading-none text-rb-green">{counts.empty}</span>
-                        <span className="text-xs text-muted-foreground">Boş</span>
-                    </div>
-                    <div className="w-px h-4.5 bg-border mx-0.5" />
-                    <div className="flex items-center gap-1.5">
-                        <span className="font-serif text-xl font-bold leading-none text-rb-orange">{counts.occupied}</span>
-                        <span className="text-xs text-muted-foreground">Dolu</span>
-                    </div>
-                    <div className="w-px h-4.5 bg-border mx-0.5" />
-                    <div className="flex items-center gap-1.5">
-                        <span className="font-serif text-xl font-bold leading-none text-rb-amber">{counts.reserved}</span>
-                        <span className="text-xs text-muted-foreground">Rezerve</span>
-                    </div>
-                </div>
-
-                {/* Filtreler */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                    {FILTER_CONFIG.map(({ key, label, activeClass }) => (
-                        <button
-                            key={key}
-                            onClick={() => setFilter(key)}
-                            className={`px-3.25 py-1.25 rounded-full text-xs font-medium transition-all duration-150 ${
-                                filter === key
-                                    ? activeClass
-                                    : 'text-rb-text-muted border border-border hover:border-[#c8b09a] dark:hover:border-[#5a4e40]'
-                            }`}
-                        >
-                            {label(counts)}
-                        </button>
-                    ))}
-                </div>
+            {/* Filtreler (sayılar da burada) */}
+            <div className="sticky top-0 z-10 bg-[#F1ECE4]/95 dark:bg-background/95 backdrop-blur-sm border-b border-border px-4 sm:px-8 py-3 sm:py-3.5 grid grid-cols-4 sm:flex sm:flex-wrap sm:items-center gap-1.5 sm:gap-2.5">
+                {FILTER_CONFIG.map(({ key, label, count, dot }) => (
+                    <button
+                        key={key}
+                        onClick={() => setFilter(key)}
+                        aria-pressed={filter === key}
+                        className={`min-h-14 sm:min-h-12 px-1 sm:px-5 rounded-[14px] sm:rounded-full border-[1.5px] font-semibold
+                            flex flex-col-reverse sm:flex-row items-center justify-center gap-0.5 sm:gap-2.5 transition-colors duration-150 ${
+                            filter === key
+                                ? 'bg-foreground text-background border-foreground'
+                                : 'bg-white dark:bg-rb-surface2 text-foreground border-[#E0D6C4] dark:border-border hover:border-[#c8b09a] dark:hover:border-[#5a4e40]'
+                        }`}
+                    >
+                        <span className={`hidden sm:block size-2.5 rounded-full ${dot}`} />
+                        <span className="text-xs sm:text-base">{label}</span>
+                        <span className="font-serif text-[22px] font-bold leading-none">{count(counts)}</span>
+                    </button>
+                ))}
             </div>
 
-            {/* Masa Grid */}
-            <div className="px-3 sm:px-6 py-4.5">
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
-                    {filtered.map(table => (
-                        <TableCard
-                            key={table.id}
-                            table={table}
-                            isSelected={selectedTableId === table.id}
-                            now={now}
-                            onClick={() => setSelectedTableId(prev => prev === table.id ? null : table.id)}
-                        />
-                    ))}
-                </div>
+            {/* Bölgelere göre masalar */}
+            <div className="px-4 sm:px-8 pt-4.5 sm:pt-6 pb-8 sm:pb-12 flex flex-col gap-6 sm:gap-8">
+                {visibleRegions.map(region => (
+                    <section key={region.id} className="flex flex-col gap-2.5 sm:gap-3.5">
+                        <div className="flex items-baseline gap-2.5 sm:gap-3">
+                            <h2 className="font-serif text-[26px] sm:text-[30px] font-bold leading-tight text-foreground">{region.name}</h2>
+                            <span className="text-[13px] sm:text-sm text-rb-text-sub">
+                                {region.total} masa · {region.occupied} dolu
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-2.5 sm:gap-4">
+                            {region.tables.map(table => (
+                                <TableCard
+                                    key={table.id}
+                                    table={table}
+                                    isSelected={selectedTableId === table.id}
+                                    now={now}
+                                    onClick={() => setSelectedTableId(prev => prev === table.id ? null : table.id)}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                ))}
+                {visibleRegions.length === 0 && (
+                    <p className="my-10 text-center text-base text-rb-text-sub">
+                        {tables.length === 0 ? 'Henüz masa eklenmemiş.' : 'Bu filtrede masa yok.'}
+                    </p>
+                )}
             </div>
 
             {/* Overlay + Panel */}

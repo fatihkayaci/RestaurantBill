@@ -140,7 +140,7 @@ export default function ReportsPage({ role }: Props) {
             </div>
 
             <Tabs value={tab} onValueChange={setTab}>
-                <TabsList className="flex-wrap h-auto">
+                <TabsList className="flex-wrap justify-start group-data-horizontal/tabs:h-auto [&>[data-slot=tabs-trigger]]:h-8 [&>[data-slot=tabs-trigger]]:flex-none">
                     <TabsTrigger value="sales">Satış</TabsTrigger>
                     <TabsTrigger value="shifts">Kasa &amp; Vardiya</TabsTrigger>
                     <TabsTrigger value="products">Ürünler</TabsTrigger>

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -20,16 +21,18 @@ public class ApproveShiftOpeningDifferenceCommandHandler : IRequestHandler<Appro
 
     public async Task<Result> Handle(ApproveShiftOpeningDifferenceCommand request, CancellationToken cancellationToken)
     {
+        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+
         Shift? shift = await _db.Shifts
-            .FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
-        if (shift is null || shift.BranchId != _currentUser.BranchId)
+            .InBranches(branchIds).FirstOrDefaultAsync(s => s.Id == request.ShiftId, cancellationToken);
+        if (shift is null)
             return Result.Failure("Vardiya bulunamadı.");
 
         shift.ApproveOpeningDifference(_currentUser.UserId);
 
         User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         AuditLog log = AuditLog.Create(
-            _currentUser.BranchId,
+            shift.BranchId,
             actor?.FullName ?? string.Empty,
             AuditLogCategory.System,
             AuditLogSeverity.Info,

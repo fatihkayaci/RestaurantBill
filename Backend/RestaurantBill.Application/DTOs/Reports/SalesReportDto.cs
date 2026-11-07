@@ -43,5 +43,5 @@ public class BranchSalesRowDto
     public decimal Revenue { get; set; }
     public int TransactionCount { get; set; }
     public decimal AvgBasket { get; set; }
-    public decimal RevenueChangePercent { get; set; }
+    public decimal? RevenueChangePercent { get; set; }
 }

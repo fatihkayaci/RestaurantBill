@@ -6,6 +6,7 @@ import { branchService } from "@/features/branches/api/branchService";
 import type { Branch, CreateBranch, UpdateBranch } from "@/features/branches/types";
 import { getTurkeyProvinces, type Province } from "@/lib/turkeyLocations";
 import { cn } from "@/lib/utils";
+import { formatPrice } from '@/lib/format';
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
@@ -200,7 +201,7 @@ export default function BranchesPage() {
                                     <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Personel</p>
                                 </div>
                                 <div>
-                                    <p className="text-lg font-serif font-bold text-foreground">₺{(branch.revenue ?? 0).toFixed(0)}</p>
+                                    <p className="text-lg font-serif font-bold text-foreground">₺{formatPrice(branch.revenue ?? 0)}</p>
                                     <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Ciro</p>
                                 </div>
                             </div>

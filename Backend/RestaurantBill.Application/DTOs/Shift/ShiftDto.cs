@@ -9,6 +9,7 @@ public class ShiftDto
     public Guid CashRegisterId { get; set; }
     public string CashRegisterName { get; set; } = string.Empty;
     public Guid OpenedByUserId { get; set; }
+    public string OpenedByUserName { get; set; } = string.Empty;
     public Guid? ClosedByUserId { get; set; }
     public decimal ExpectedOpeningBalance { get; set; }
     public decimal OpeningBalance { get; set; }

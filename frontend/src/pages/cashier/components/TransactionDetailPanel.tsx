@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import type { PaymentMethod, ShiftTransaction } from '@/features/cashier/types';
+import { formatAmount, formatPrice } from '@/lib/format';
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'KART', 2: 'NAKİT', 3: 'QR' };
 const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
@@ -26,7 +27,7 @@ export default function TransactionDetailPanel({ transaction, onClose }: Props) 
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="text-2xl font-serif font-bold text-foreground">
-                            {transaction.tableName ? `Masa ${transaction.tableName}` : 'Masa —'}
+                            {transaction.tableName || 'Masa —'}
                         </h2>
                         <p className="text-sm text-muted-foreground mt-1">
                             {[formatShortName(transaction.createdByUserName), `${transaction.itemCount} ürün`].filter(Boolean).join(' · ')}
@@ -47,7 +48,7 @@ export default function TransactionDetailPanel({ transaction, onClose }: Props) 
                 </p>
                 <div className="flex items-center justify-between text-sm mb-6 pb-4 border-b border-dashed border-border">
                     <span className="font-medium text-foreground">Toplam KDV</span>
-                    <span className="font-medium text-foreground tabular-nums">₺{transaction.taxAmount.toFixed(2)}</span>
+                    <span className="font-medium text-foreground tabular-nums">₺{formatAmount(transaction.taxAmount)}</span>
                 </div>
 
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
@@ -72,7 +73,7 @@ export default function TransactionDetailPanel({ transaction, onClose }: Props) 
                                     {PAYMENT_METHOD_LABELS[d.method]}
                                 </span>
                                 <span className="text-sm font-serif font-bold text-foreground tabular-nums w-16 text-right">
-                                    ₺{d.amount.toFixed(0)}
+                                    ₺{formatPrice(d.amount)}
                                 </span>
                             </div>
                         );
@@ -84,7 +85,7 @@ export default function TransactionDetailPanel({ transaction, onClose }: Props) 
                 <div className="flex items-center justify-between">
                     <span className="font-semibold text-foreground">Toplam</span>
                     <span className="font-serif text-2xl font-bold text-foreground tabular-nums">
-                        ₺{transaction.amount.toFixed(0)}
+                        ₺{formatPrice(transaction.amount)}
                     </span>
                 </div>
             </div>

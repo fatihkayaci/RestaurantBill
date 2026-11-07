@@ -69,10 +69,10 @@ export default function DayEndPage() {
         setStartingId(candidate.cashRegisterId);
         try {
             await shiftService.ensureOpen(candidate.cashRegisterId);
-            toast.success(`${candidate.cashRegisterName} kasasında gün başlatıldı.`);
+            toast.success(`${candidate.cashRegisterName} kasasında vardiya açıldı.`);
             await refresh();
         } catch (err) {
-            toast.error(getApiErrorMessage(err, 'Gün başlatılamadı.'));
+            toast.error(getApiErrorMessage(err, 'Vardiya açılamadı.'));
         } finally {
             setStartingId(null);
         }
@@ -88,8 +88,8 @@ export default function DayEndPage() {
             );
             const failed = results.filter(r => r.status === 'rejected').length;
             const succeeded = results.length - failed;
-            if (succeeded > 0) toast.success(`${succeeded} kasada gün başlatıldı.`);
-            if (failed > 0) toast.error(`${failed} kasada gün başlatılamadı.`);
+            if (succeeded > 0) toast.success(`${succeeded} kasada vardiya açıldı.`);
+            if (failed > 0) toast.error(`${failed} kasada vardiya açılamadı.`);
             await refresh();
         } finally {
             setStartingAll(false);
@@ -125,20 +125,25 @@ export default function DayEndPage() {
                     {cards.map(({ candidate, shift, summary }) => (
                         <div key={candidate.cashRegisterId} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4">
                             <div className="flex items-center justify-between">
-                                <h2 className="font-serif font-bold text-lg text-foreground">{candidate.cashRegisterName}</h2>
+                                <div className="min-w-0">
+                                    <h2 className="font-serif font-bold text-lg text-foreground">{candidate.cashRegisterName}</h2>
+                                    {candidate.hasOpenShift && (
+                                        <p className="text-sm text-muted-foreground truncate">Kasiyer: {candidate.openShiftOwnerName || '—'}</p>
+                                    )}
+                                </div>
                                 <span className={cn(
                                     "text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded",
                                     candidate.hasOpenShift ? "bg-rb-green-bg text-rb-green" : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
                                 )}>
-                                    {candidate.hasOpenShift ? 'Gün Açık' : 'Gün Kapalı'}
+                                    {candidate.hasOpenShift ? 'Vardiya Açık' : 'Vardiya Yok'}
                                 </span>
                             </div>
 
                             {!candidate.hasOpenShift ? (
                                 <>
-                                    {candidate.previousShiftUncounted && (
+                                    {candidate.requiresCount && (
                                         <p className="text-xs font-semibold text-rb-amber">
-                                            ⚠ Önceki gün sayılmadı, Vardiyalar sayfasından sayım girin.
+                                            ⚠ Önceki vardiya sayılmadı. Sıradaki kasiyer açılışta sayacak; isterseniz Vardiyalar sayfasından şimdi sayım girebilirsiniz.
                                         </p>
                                     )}
                                     <button
@@ -146,7 +151,7 @@ export default function DayEndPage() {
                                         disabled={startingId === candidate.cashRegisterId || startingAll}
                                         className="mt-1 rounded-lg bg-rb-accent text-white text-sm font-semibold py-2.5 hover:opacity-90 disabled:opacity-60 transition-opacity"
                                     >
-                                        {startingId === candidate.cashRegisterId ? 'Başlatılıyor...' : 'Günü Başlat'}
+                                        {startingId === candidate.cashRegisterId ? 'Başlatılıyor...' : 'Vardiya Aç'}
                                     </button>
                                 </>
                             ) : shift && summary ? (
@@ -179,7 +184,7 @@ export default function DayEndPage() {
 
                                     <div className="rounded-lg bg-muted px-4 py-3 flex items-center justify-between">
                                         <span className="text-xs text-muted-foreground uppercase tracking-wide">Kasada Olması Gereken Nakit</span>
-                                        <span className="font-serif text-lg font-bold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister)}</span>
+                                        <span className="font-serif text-lg font-bold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister ?? 0)}</span>
                                     </div>
 
                                     {summary.openTablesCount > 0 && (
@@ -191,7 +196,7 @@ export default function DayEndPage() {
                                             onClick={() => setCloseTarget({ id: shift.id, cashRegisterName: candidate.cashRegisterName })}
                                             className="flex-1 rounded-lg border border-border text-sm font-semibold py-2 text-rb-red hover:bg-rb-red-bg transition-colors"
                                         >
-                                            Günü Kapat
+                                            Vardiyayı Kapat
                                         </button>
                                         <button
                                             onClick={() => setDetailTarget({ id: shift.id, cashRegisterName: candidate.cashRegisterName })}

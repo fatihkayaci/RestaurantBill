@@ -53,7 +53,12 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         Shift? shift = await _db.Shifts
             .FirstOrDefaultAsync(s => s.CashRegisterId == register.Id && s.Status == ShiftStatus.Open, cancellationToken);
         if (shift is null)
-            return Result<bool>.Failure("Bu kasada açık bir gün yok, önce günü başlatın.");
+            return Result<bool>.Failure("Bu kasada açık bir vardiya yok, önce vardiyayı başlatın.");
+
+        // Vardiya kişiye ait: kasiyer sadece kendi vardiyasındaki kasaya ödeme alır ki kasa farkı
+        // doğru kişiye yazılsın. Admin/Owner'ın aldığı ödeme Payment.UserId ile zaten ayrışır.
+        if (_currentUserService.Role == "Cashier" && shift.OpenedByUserId != _currentUserService.UserId)
+            return Result<bool>.Failure("Bu kasa başka birinin vardiyasında. Ödeme almak için kasayı devralmanız gerekiyor.");
 
         var paidItems = new List<(OrderItem Item, int Quantity)>();
         foreach (var requested in request.Items)

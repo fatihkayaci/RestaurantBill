@@ -28,13 +28,14 @@ public static class MappingExtensions
         Status = r.Status
     };
 
-    public static ShiftDto ToDto(this Shift s) => new()
+    public static ShiftDto ToDto(this Shift s, string? openedByUserName = null) => new()
     {
         Id = s.Id,
         BranchId = s.BranchId,
         CashRegisterId = s.CashRegisterId,
         CashRegisterName = s.CashRegister?.Name ?? string.Empty,
         OpenedByUserId = s.OpenedByUserId,
+        OpenedByUserName = openedByUserName ?? string.Empty,
         ClosedByUserId = s.ClosedByUserId,
         ExpectedOpeningBalance = s.ExpectedOpeningBalance,
         OpeningBalance = s.OpeningBalance,

@@ -5,7 +5,7 @@ const DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-export default function HeaderClock() {
+export default function HeaderClock({ large = false }: { large?: boolean }) {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -15,10 +15,10 @@ export default function HeaderClock() {
 
     return (
         <div className="hidden lg:flex flex-col items-end gap-0.5">
-            <span className="font-serif text-lg font-bold leading-none text-sidebar-foreground">
+            <span className={`font-serif font-bold leading-none text-sidebar-foreground ${large ? 'text-2xl' : 'text-lg'}`}>
                 {pad(now.getHours())}:{pad(now.getMinutes())}
             </span>
-            <span className="text-[9.5px] text-sidebar-foreground/40 whitespace-nowrap">
+            <span className={`text-sidebar-foreground/40 whitespace-nowrap ${large ? 'text-xs' : 'text-[9.5px]'}`}>
                 {now.getDate()} {MONTHS[now.getMonth()]} · {DAYS[now.getDay()]}
             </span>
         </div>

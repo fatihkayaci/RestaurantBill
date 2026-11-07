@@ -1,5 +1,5 @@
 import { api } from '@/lib/axiosInstance';
-import type { CurrentShift, Shift, ShiftStartCandidate, ShiftSummary, ShiftTransaction } from '../types';
+import type { Shift, ShiftStartCandidate, ShiftSummary, ShiftTransaction } from '../types';
 
 export const shiftService = {
     getAll: async (cashRegisterId?: string) => {
@@ -29,7 +29,7 @@ export const shiftService = {
         return response.data;
     },
     getMyCurrent: async () => {
-        const response = await api.get<CurrentShift>('/shift/my-current');
+        const response = await api.get<Shift>('/shift/my-current');
         return response.data;
     },
     getCurrent: async (cashRegisterId: string) => {
@@ -42,19 +42,19 @@ export const shiftService = {
         });
         return response.data;
     },
-    openShift: async (cashRegisterId: string, openingBalance: number) => {
-        const response = await api.post('/shift/open', {
+    // countedBalance sadece kasanın önceki vardiyası sayılmadan kapandıysa gerekir.
+    openShift: async (cashRegisterId: string, countedBalance?: number) => {
+        const response = await api.post<Shift>('/shift/open', {
             CashRegisterId: cashRegisterId,
-            OpeningBalance: openingBalance,
+            CountedBalance: countedBalance,
         });
         return response.data;
     },
-    getMyCurrentSummary: async () => {
-        const response = await api.get<ShiftSummary>('/shift/my-current-summary');
-        return response.data;
-    },
-    getMyCurrentTransactions: async () => {
-        const response = await api.get<ShiftTransaction[]>('/shift/my-current-transactions');
+    takeOver: async (cashRegisterId: string, countedBalance: number) => {
+        const response = await api.post<Shift>('/shift/take-over', {
+            CashRegisterId: cashRegisterId,
+            CountedBalance: countedBalance,
+        });
         return response.data;
     },
     getShiftSummary: async (shiftId: string) => {
@@ -66,7 +66,7 @@ export const shiftService = {
         return response.data;
     },
     closeShift: async (shiftId: string, countedClosingBalance: number, note?: string) => {
-        const response = await api.post('/shift/close', {
+        const response = await api.post<Shift>('/shift/close', {
             ShiftId: shiftId,
             CountedClosingBalance: countedClosingBalance,
             Note: note,

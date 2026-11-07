@@ -12,6 +12,7 @@ import TableTransferModal from '@/features/tables/components/TableTransferModal'
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
+import { formatAmount } from '@/lib/format';
 
 const OrderStatus = { Served: 5 } as const;
 
@@ -117,7 +118,8 @@ export default function CashierDashboardPage() {
     const shiftRevenue = shiftSummary?.total ?? 0;
     const shiftTransactionCount = shiftSummary?.transactionCount ?? 0;
     const shiftAvgTicket = shiftTransactionCount > 0 ? shiftRevenue / shiftTransactionCount : 0;
-    const cashInRegister = shiftSummary?.expectedCashInRegister ?? 0;
+    // Kör sayım için kasadaki beklenen tutar gösterilmez; sadece bu vardiyada alınan nakit gösterilir.
+    const cashCollected = shiftSummary?.breakdown.find(b => b.method === 2)?.amount ?? 0;
 
     const statsSlot = document.getElementById('cashier-stats-slot');
 
@@ -134,32 +136,32 @@ export default function CashierDashboardPage() {
             )}
 
             {/* Dark stats bar */}
-            <div className="bg-sidebar px-6 py-4 flex items-center gap-8 shrink-0">
+            <div className="bg-sidebar px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-2 gap-y-3 gap-x-6 sm:flex sm:items-center sm:gap-8 shrink-0">
                 <div>
-                    <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{shiftRevenue.toFixed(0)}</p>
+                    <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{formatAmount(shiftRevenue)}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">Vardiya Cirosu</p>
                 </div>
-                <div className="w-px h-8 bg-gray-700" />
+                <div className="hidden sm:block w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-bold text-sidebar-foreground">{shiftTransactionCount}</p>
+                    <p className="text-lg font-serif font-bold text-sidebar-foreground">{shiftTransactionCount}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">İşlem</p>
                 </div>
-                <div className="w-px h-8 bg-gray-700" />
+                <div className="hidden sm:block w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-bold text-sidebar-foreground">₺{shiftAvgTicket.toFixed(0)}</p>
+                    <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{formatAmount(shiftAvgTicket)}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">Ortalama</p>
                 </div>
-                <div className="w-px h-8 bg-gray-700" />
+                <div className="hidden sm:block w-px h-8 bg-gray-700" />
                 <div>
-                    <p className="text-lg font-serif font-bold text-rb-green">₺{cashInRegister.toFixed(0)}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Kasadaki Para</p>
+                    <p className="text-lg font-serif font-bold text-rb-green">₺{formatAmount(cashCollected)}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Nakit Tahsilat</p>
                 </div>
             </div>
 
             {/* İçerik */}
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
                 {/* Sol: Ödeme bekleyen masalar */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="lg:flex-1 lg:overflow-y-auto p-4 sm:p-6">
                     <div className="flex items-center gap-2 mb-5">
                         <h2 className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
                             Ödeme Bekleyen Masalar
@@ -182,13 +184,12 @@ export default function CashierDashboardPage() {
                                 >
                                     <div className="flex items-start justify-between">
                                         <span className="font-serif font-bold text-lg text-foreground">
-                                            Masa {order.tableName}
+                                            {order.tableName}
                                         </span>
-                                        <span className="text-xs text-muted-foreground">— kişilik</span>
                                     </div>
 
                                     <p className="text-2xl font-serif font-bold text-foreground">
-                                        ₺{order.totalPrice.toFixed(0)}
+                                        ₺{formatAmount(order.totalPrice)}
                                     </p>
 
                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -217,7 +218,7 @@ export default function CashierDashboardPage() {
                 </div>
 
                 {/* Sağ: Vardiya işlemleri */}
-                <div className="w-72 xl:w-80 border-l shrink-0 overflow-y-auto p-6">
+                <div className="lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l shrink-0 lg:overflow-y-auto p-4 sm:p-6">
                     <h2 className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-5">
                         Vardiya İşlemleri
                     </h2>
@@ -237,7 +238,7 @@ export default function CashierDashboardPage() {
                                             </span>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-bold text-foreground truncate">
-                                                    {txn.tableName ? `Masa ${txn.tableName}` : 'Masa —'}
+                                                    {txn.tableName || 'Masa —'}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground truncate">
                                                     {[formatShortName(txn.createdByUserName), `${txn.itemCount} ürün`].filter(Boolean).join(' · ')}
@@ -247,7 +248,7 @@ export default function CashierDashboardPage() {
                                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${PAYMENT_METHOD_COLORS[txn.method]}`}>
                                                     {PAYMENT_METHOD_LABELS[txn.method]}
                                                 </span>
-                                                <span className="text-base font-serif font-bold text-foreground">₺{txn.amount.toFixed(0)}</span>
+                                                <span className="text-base font-serif font-bold text-foreground">₺{formatAmount(txn.amount)}</span>
                                             </div>
                                         </div>
 
