@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { X } from 'lucide-react';
+import { X, Store } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import axios from "axios";
 import { toast } from "sonner";
 import { branchService } from "@/features/branches/api/branchService";
@@ -213,9 +214,13 @@ export default function BranchesPage() {
                     );
                 })}
                 {branches.length === 0 && (
-                    <div className="rounded-xl border border-border bg-card p-8 text-sm text-muted-foreground text-center col-span-full">
-                        Henüz şube bulunmuyor.
-                    </div>
+                    <EmptyState
+                        className="col-span-full"
+                        icon={Store}
+                        title="Henüz şube yok"
+                        description="Her şube kendi menüsü, masaları ve kasasıyla çalışır."
+                        action={{ label: 'Yeni şube ekle', onClick: openCreateModal }}
+                    />
                 )}
             </div>
 

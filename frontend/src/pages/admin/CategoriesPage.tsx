@@ -3,7 +3,9 @@ import { categoryService } from "@/features/categories/api/categoryService";
 import type { Category } from "@/features/categories/types";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Pencil } from 'lucide-react';
+import { X, Pencil, Tag } from 'lucide-react';
+import { toast } from "sonner";
+import { EmptyState, EmptyStateRow } from '@/components/ui/empty-state';
 import { cn } from "@/lib/utils";
 import axios from "axios";
 
@@ -35,6 +37,18 @@ export default function CategoriesPanel() {
         setBranchTaxRate(inherited ? inherited.effectiveTaxRate : null);
         setFieldErrors({});
         setIsModalOpen(true);
+    };
+
+    // Boş durumdaki hazır öneri çipleri: tek tıkla, şube KDV'siyle kategori oluşturur.
+    const quickAddCategory = async (categoryName: string) => {
+        try {
+            await categoryService.createCategory(categoryName, null);
+            setCategories(await categoryService.getCategories());
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Kategori eklenemedi.');
+            }
+        }
     };
 
     const openEditModal = (category: Category) => {
@@ -157,11 +171,18 @@ export default function CategoriesPanel() {
                             </tr>
                         ))}
                         {categories.length === 0 && (
-                            <tr>
-                                <td colSpan={3} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                                    Kategori bulunamadı.
-                                </td>
-                            </tr>
+                            <EmptyStateRow colSpan={3}>
+                                <EmptyState
+                                    bare
+                                    icon={Tag}
+                                    title="Henüz kategori yok"
+                                    description="Ana yemekler, içecekler gibi menü başlıkları. Ürünler bu başlıkların altında listelenir. Sık kullanılanlardan tek tıkla başla ya da kendi başlığını yaz."
+                                    quickAdds={{ options: ['Ana Yemek', 'Başlangıç', 'İçecek', 'Tatlı', 'Salata', 'Kahvaltı'], onPick: quickAddCategory }}
+                                    action={{ label: 'Kendi kategorini ekle', onClick: openCreateModal }}
+                                    link={{ label: 'Kurulum adımlarına dön', to: '/admin/overview' }}
+                                    hint="Kurulum listesinde 1. adım · sonra ürün, masa, kasa, personel"
+                                />
+                            </EmptyStateRow>
                         )}
                     </tbody>
                 </table>

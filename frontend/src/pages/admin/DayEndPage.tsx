@@ -4,6 +4,8 @@ import { shiftService } from '@/features/cashier/api/shiftService';
 import type { PaymentMethod, Shift, ShiftStartCandidate, ShiftSummary } from '@/features/cashier/types';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { cn } from '@/lib/utils';
+import { Wallet } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import CloseShiftModal from './components/CloseShiftModal';
 import ShiftDetailModal from './components/ShiftDetailModal';
 import { getApiErrorMessage } from '@/lib/apiError';
@@ -117,9 +119,12 @@ export default function DayEndPage() {
             {loading ? (
                 <p className="text-sm text-muted-foreground">Yükleniyor...</p>
             ) : cards.length === 0 ? (
-                <div className="rounded-xl border border-border bg-card p-8 text-sm text-muted-foreground text-center">
-                    Açık kasa bulunamadı.
-                </div>
+                <EmptyState
+                    icon={Wallet}
+                    title="Açık kasa yok"
+                    description="Gün başlatmak için önce Kasalar sayfasından bir kasa aç; sonra buradan günü başlatabilirsin."
+                    link={{ label: 'Kasalara git', to: '/admin/cash-registers' }}
+                />
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                     {cards.map(({ candidate, shift, summary }) => (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { X, Pencil, Store } from 'lucide-react';
+import { X, Pencil, Store, ShieldCheck } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { toast } from "sonner";
 import { userService } from "@/features/users/api/userService";
 import { branchService } from "@/features/branches/api/branchService";
@@ -198,9 +199,12 @@ export default function AdminsPage() {
 
             {/* Kartlar */}
             {admins.length === 0 ? (
-                <div className="rounded-xl border border-border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
-                    Admin bulunamadı.
-                </div>
+                <EmptyState
+                    icon={ShieldCheck}
+                    title="Henüz yönetici yok"
+                    description="Şubeyi senin adına yönetecek kişiler. Bir yöneticiye birden fazla şube verebilirsin."
+                    action={{ label: 'Yönetici ekle', onClick: openCreateModal }}
+                />
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {admins.map(admin => {

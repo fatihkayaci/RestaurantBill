@@ -7,7 +7,8 @@ import type { Category } from "@/features/categories/types";
 import ImageCropModal from "@/features/products/components/ImageCropModal";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Check, Pencil, Image as ImageIcon, Upload, Crop } from 'lucide-react';
+import { X, Check, Pencil, Image as ImageIcon, Upload, Crop, UtensilsCrossed } from 'lucide-react';
+import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import { formatPrice } from '@/lib/format';
@@ -487,10 +488,27 @@ export default function Menu() {
             </div>
 
             {/* Kartlar */}
-            {filteredProducts.length === 0 ? (
-                <div className="rounded-xl border border-border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
-                    Ürün bulunamadı.
-                </div>
+            {products.length === 0 ? (
+                <EmptyState
+                    icon={UtensilsCrossed}
+                    title="Menü henüz boş"
+                    description="Fiyatlarıyla birlikte ürünleri ekle. Garson ekranında sipariş alırken bu liste görünür."
+                    action={categories.length === 0
+                        ? { label: 'Önce kategori ekle', onClick: startAddCategory }
+                        : { label: 'İlk ürünü ekle', onClick: openCreateModal }}
+                    link={{ label: 'Kurulum adımlarına dön', to: '/admin/overview' }}
+                    hint={categories.length === 0
+                        ? 'Ürünler bir kategorinin altına eklenir; önce yukarıdan bir kategori oluştur.'
+                        : 'Kurulum listesinde 2. adım · sonra masa, kasa, personel'}
+                />
+            ) : filteredProducts.length === 0 ? (
+                <SearchEmptyState
+                    noun="ürün"
+                    title="Bu kategoride ürün yok"
+                    description="Ürün eklerken bu kategoriyi seç ya da tüm ürünlere dön."
+                    onClear={() => setSelectedCategory('all')}
+                    clearLabel="Tüm ürünleri göster"
+                />
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredProducts.map(product => (

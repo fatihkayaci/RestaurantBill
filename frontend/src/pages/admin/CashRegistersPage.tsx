@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { X, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Wallet, PlayCircle, StopCircle } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import axios from 'axios';
 import { toast } from 'sonner';
 import type { CashRegister, CashRegisterStatus, ShiftStartCandidate } from '@/features/cashier/types';
@@ -214,6 +215,18 @@ export default function CashRegisters() {
                 </button>
             </div>
 
+            {registers.length === 0 && (
+                <EmptyState
+                    icon={Wallet}
+                    title="Henüz kasa yok"
+                    description="Ödemeler ve vardiyalar bir kasaya bağlanır. Kasiyerin işe başlaması için en az bir kasa gerekir."
+                    action={{ label: 'İlk kasayı aç', onClick: openCreateModal }}
+                    link={{ label: 'Kurulum adımlarına dön', to: '/admin/overview' }}
+                    hint="Kurulum listesinde 4. adım · sonra personel"
+                />
+            )}
+
+            {registers.length > 0 && (<>
             {/* Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="rounded-xl border border-rb-green/30 bg-rb-green-bg p-5">
@@ -343,6 +356,7 @@ export default function CashRegisters() {
                     </div>
                 ))}
             </div>
+            </>)}
 
             {/* Kasa Ekle / Düzenle Modal */}
             {isModalOpen && (

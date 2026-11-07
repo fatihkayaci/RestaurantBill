@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Search, X, Pencil } from 'lucide-react';
+import { Search, X, Pencil, Users } from 'lucide-react';
+import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { toast } from "sonner";
 import { userService } from "@/features/users/api/userService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -186,10 +187,17 @@ export default function StaffPage() {
             </div>
 
             {/* Kartlar */}
-            {filtered.length === 0 ? (
-                <div className="rounded-xl border border-border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
-                    Çalışan bulunamadı.
-                </div>
+            {users.length === 0 ? (
+                <EmptyState
+                    icon={Users}
+                    title="Henüz çalışan yok"
+                    description="Garson, mutfak ve kasiyer hesapları oluştur. Her biri kullanıcı adıyla giriş yapar."
+                    action={{ label: 'İlk çalışanı ekle', onClick: openCreateModal }}
+                    link={{ label: 'Kurulum adımlarına dön', to: '/admin/overview' }}
+                    hint="Kurulum listesinde 5. adım · son adım"
+                />
+            ) : filtered.length === 0 ? (
+                <SearchEmptyState query={search} noun="çalışan" onClear={() => setSearch('')} />
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filtered.map(user => {

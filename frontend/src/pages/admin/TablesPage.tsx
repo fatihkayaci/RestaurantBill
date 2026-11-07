@@ -11,7 +11,8 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
+import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid } from 'lucide-react';
+import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
 import axios from "axios";
@@ -256,6 +257,18 @@ export default function Tables() {
         setNewRegionName(region.name);
         setRegionFieldError('');
         setIsRegionModalOpen(true);
+    };
+
+    // Boş durumdaki hazır bölge çipleri (Salon, Bahçe...): tek tıkla bölge oluşturur.
+    const quickAddRegion = async (regionName: string) => {
+        try {
+            await regionService.createRegion(regionName);
+            await refreshRegions();
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Bölge eklenemedi.');
+            }
+        }
     };
 
     const startAddRegion = () => {
@@ -649,8 +662,22 @@ export default function Tables() {
                 )}
             </div>
 
+            {tables.length === 0 && (
+                <EmptyState
+                    icon={LayoutGrid}
+                    title="Henüz masa tanımlanmadı"
+                    description={regions.length === 0
+                        ? 'Önce bölge (Salon, Bahçe) sonra masaları ekle. Garsonlar bu masalara sipariş açar.'
+                        : 'Masaları ekle; garsonlar bu masalara sipariş açar.'}
+                    quickAdds={regions.length === 0 ? { options: ['Salon', 'Bahçe', 'Teras', 'Üst Kat'], onPick: quickAddRegion } : undefined}
+                    action={{ label: 'İlk masayı ekle', onClick: openCreateModal }}
+                    link={{ label: 'Kurulum adımlarına dön', to: '/admin/overview' }}
+                    hint="Kurulum listesinde 3. adım · sonra kasa, personel"
+                />
+            )}
+
             {/* Table Grid — bölgelere göre gruplanmış, waiter tarafındaki tasarımla aynı renk/hover davranışı */}
-            {tableGroups.map(group => {
+            {tables.length > 0 && tableGroups.map(group => {
                 const regionIndex = group.region ? regions.findIndex(r => r.id === group.region!.id) : -1;
                 return (
                 <div key={group.region?.id ?? 'all'} className="space-y-3">
@@ -674,6 +701,15 @@ export default function Tables() {
                                 <ArrowDown className="h-3 w-3" />
                             </button>
                         </div>
+                    )}
+                    {group.tables.length === 0 && (
+                        <SearchEmptyState
+                            noun="masa"
+                            title="Bu bölgede masa yok"
+                            description="Masa eklerken bu bölgeyi seç ya da tüm masalara dön."
+                            onClear={() => setSelectedRegionId('all')}
+                            clearLabel="Tüm masaları göster"
+                        />
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {group.tables.map(table => {

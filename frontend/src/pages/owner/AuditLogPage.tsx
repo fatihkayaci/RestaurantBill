@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Search, SlidersHorizontal, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, ScrollText } from 'lucide-react';
+import { EmptyState, EmptyStateRow, SearchEmptyState } from '@/components/ui/empty-state';
 import { auditLogService } from '@/features/auditLogs/api/auditLogService';
 import type { AuditLog } from '@/features/auditLogs/types';
 import { branchService } from '@/features/branches/api/branchService';
@@ -85,6 +86,9 @@ export default function AuditLogPage() {
         setDateTo(draftDateTo);
         setPage(1);
     };
+
+    const hasActiveFilters = debouncedSearch.trim() !== '' || categoryFilter !== 'all' || severityFilter !== 'all'
+        || branchFilter !== 'all' || userFilter !== 'all' || dateFrom !== '' || dateTo !== '';
 
     const clearFilters = () => {
         setCategoryFilter('all');
@@ -276,11 +280,24 @@ export default function AuditLogPage() {
                                 </td>
                             </tr>
                         ) : logs.length === 0 ? (
-                            <tr>
-                                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                                    Kayıt bulunamadı.
-                                </td>
-                            </tr>
+                            <EmptyStateRow colSpan={6}>
+                                {hasActiveFilters ? (
+                                    <SearchEmptyState
+                                        bare
+                                        query={debouncedSearch || undefined}
+                                        noun="kayıt"
+                                        onClear={() => { clearFilters(); setSearch(''); }}
+                                        clearLabel="Filtreleri temizle"
+                                    />
+                                ) : (
+                                    <EmptyState
+                                        bare
+                                        icon={ScrollText}
+                                        title="Henüz kayıt yok"
+                                        description="Kim neyi ne zaman değiştirdi burada listelenir. İlk işlemle birlikte dolmaya başlar."
+                                    />
+                                )}
+                            </EmptyStateRow>
                         ) : (
                             logs.map(log => (
                                 <tr key={log.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors align-top">
