@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
+import { chartTooltipProps } from '@/lib/chartTheme';
 import { statsService } from '@/features/stats/api/statsService';
 import type { BranchOperationalStatus, OwnerDashboardStats } from '@/features/stats/types';
 import { auditLogService } from '@/features/auditLogs/api/auditLogService';
@@ -210,12 +211,12 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     icon={TrendingUp} colorBg="bg-rb-green-bg" colorText="text-rb-green"
-                    label="Toplam Ciro" value={formatCurrency(stats?.totalRevenue ?? 0, 2)}
+                    label="Bugünkü Ciro" value={formatCurrency(stats?.totalRevenue ?? 0, 2)}
                     change={stats ? stats.totalRevenueChangePercent : 0} caption="düne göre"
                 />
                 <StatCard
                     icon={ShoppingCart} colorBg="bg-rb-accent-bg" colorText="text-rb-accent"
-                    label="Toplam Sipariş" value={(stats?.totalOrders ?? 0).toLocaleString('tr-TR')}
+                    label="Bugünkü Sipariş" value={(stats?.totalOrders ?? 0).toLocaleString('tr-TR')}
                     change={stats ? stats.totalOrdersChangePercent : 0} caption="geçen haftaya göre"
                 />
                 <StatCard
@@ -262,7 +263,7 @@ export default function DashboardPage() {
                             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                             <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
-                            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                            <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
                             {branchSeries.filter(series => !hiddenSeries.has(series.key)).map(series => (
                                 <Line
                                     key={series.key}
@@ -316,7 +317,7 @@ export default function DashboardPage() {
                                         >
                                             {paymentMethods.map(p => <Cell key={p.method} fill={PAYMENT_COLOR[p.method]} />)}
                                         </Pie>
-                                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                                        <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

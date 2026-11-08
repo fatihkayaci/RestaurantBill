@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Lock, MapPin, Phone, Settings, User } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Lock, MapPin, Phone, Settings, User } from "lucide-react";
+import { getSession } from "@/lib/auth";
 import { toast } from "sonner";
 import { branchService } from "@/features/branches/api/branchService";
 import type { Branch } from "@/features/branches/types";
@@ -41,6 +43,7 @@ function InfoCard({ icon: Icon, title, rows }: { icon: typeof User; title: strin
 export default function RestaurantPage() {
     const [branch, setBranch] = useState<Branch | null>(null);
     const [loading, setLoading] = useState(true);
+    const isOwner = getSession()?.role === 'Owner';
     const qrRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -115,10 +118,19 @@ export default function RestaurantPage() {
                 </div>
             </div>
 
-            <div className="rounded-xl bg-rb-amber-bg border border-rb-amber/20 px-4 py-3 flex items-center gap-2 text-sm text-rb-amber">
-                <Lock className="w-4 h-4 shrink-0" />
-                <span>Bu bilgiler şube sahibi (Owner) tarafından yönetilir. Değişiklik için Owner paneline başvurun.</span>
-            </div>
+            {isOwner ? (
+                <div className="rounded-xl bg-rb-gold-bg border border-rb-gold/30 px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm text-foreground">
+                    <span>Bu sayfa özet; şube bilgilerini ve gün sonu ayarlarını Şubeler sayfasından düzenlersin.</span>
+                    <Link to="/admin/branches" className="inline-flex items-center gap-1 font-semibold text-rb-amber hover:underline">
+                        Şubeyi düzenle <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                </div>
+            ) : (
+                <div className="rounded-xl bg-rb-amber-bg border border-rb-amber/20 px-4 py-3 flex items-center gap-2 text-sm text-rb-amber">
+                    <Lock className="w-4 h-4 shrink-0" />
+                    <span>Bu bilgiler restoran sahibi tarafından yönetilir. Değişiklik için sahibe başvurun.</span>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4 items-start">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

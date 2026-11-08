@@ -22,7 +22,7 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
 
     public async Task<Result<List<ShiftStartCandidateDto>>> Handle(GetShiftStartCandidatesQuery request, CancellationToken cancellationToken)
     {
-        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+        List<Guid> branchIds = await _db.GetWorkingBranchIdsAsync(_currentUser, cancellationToken);
         if (branchIds.Count == 0) return Result<List<ShiftStartCandidateDto>>.Failure("Geçersiz şube bilgisi.");
 
         var registers = await _db.CashRegisters

@@ -129,8 +129,7 @@ export default function AdminsPage() {
         if (!form.userName.trim()) errors.userName = 'Kullanıcı adı boş bırakılamaz.';
         else if (form.userName.length > 50) errors.userName = 'En fazla 50 karakter.';
         if (form.email && !isValidEmail(form.email)) errors.email = 'Geçerli bir e-posta giriniz.';
-        if (!form.phoneNumber.trim()) errors.phoneNumber = 'Telefon numarası boş bırakılamaz.';
-        else if (!isValidPhone(form.phoneNumber)) errors.phoneNumber = 'Geçerli bir telefon numarası giriniz.';
+        if (form.phoneNumber.trim() && !isValidPhone(form.phoneNumber)) errors.phoneNumber = 'Geçerli bir telefon numarası giriniz.';
         if (!form.branchIds?.length) errors.branchId = 'En az bir şube seçilmelidir.';
         if (!editAdmin) {
             if (!form.passwordHash) errors.passwordHash = 'Şifre boş bırakılamaz.';
@@ -370,7 +369,7 @@ export default function AdminsPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Telefon *</label>
+                                        <label className={labelClass}>Telefon</label>
                                         <input
                                             className={cn(inputClass, fieldErrors.phoneNumber && "border-destructive")}
                                             placeholder="0532 000 00 00"

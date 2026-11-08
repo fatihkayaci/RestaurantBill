@@ -13,6 +13,14 @@ const getToday = () => {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
+// Mesaj "Restoran Sahibi masa adında yeni bir masa ekledi." diye geliyor; Kullanıcı sütunu aynı adı
+// zaten gösterdiğinden baştaki adı atıp ilk harfi büyütüyoruz.
+function detailWithoutActor(message: string, actorName?: string | null) {
+    if (!actorName || !message.startsWith(actorName + ' ')) return message;
+    const rest = message.slice(actorName.length + 1).trimStart();
+    return rest.charAt(0).toLocaleUpperCase('tr-TR') + rest.slice(1);
+}
+
 export default function AuditLogPage() {
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
@@ -253,7 +261,7 @@ export default function AuditLogPage() {
                     <button
                         type="button"
                         onClick={applyFilters}
-                        className="rounded-lg bg-rb-accent px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                        className="rounded-lg bg-rb-gold px-4 py-2 text-sm font-semibold text-rb-gold-foreground hover:opacity-90 transition-opacity"
                     >
                         Filtrele
                     </button>
@@ -317,7 +325,7 @@ export default function AuditLogPage() {
                                     </td>
                                     <td className="px-4 py-3.5 font-medium text-foreground whitespace-nowrap">{log.actorName || '—'}</td>
                                     <td className="px-4 py-3.5">
-                                        <p className="text-foreground">{log.message}</p>
+                                        <p className="text-foreground">{detailWithoutActor(log.message, log.actorName)}</p>
                                         <p className="text-xs text-muted-foreground mt-0.5">{log.action}</p>
                                     </td>
                                 </tr>

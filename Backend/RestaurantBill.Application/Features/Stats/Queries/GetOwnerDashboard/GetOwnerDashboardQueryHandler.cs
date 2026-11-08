@@ -135,7 +135,8 @@ namespace RestaurantBill.Application.Features.Stats.Queries.GetOwnerDashboard
             List<BranchPerformanceDto> branchPerformance = branches.Select(b =>
             {
                 Membership? membership = latestMembershipByBranch.GetValueOrDefault(b.Id);
-                bool membershipActive = membership?.IsCurrentlyActive() ?? false;
+                // Üyelik kaydı hiç yoksa (yeni kayıt, demo) şube "süresi dolmuş" sayılmaz; yalnızca var olup bitmiş üyelik öyle görünür.
+                bool membershipActive = membership?.IsCurrentlyActive() ?? true;
                 string status = !membershipActive ? "expired" : branchesWithOpenShift.Contains(b.Id) ? "open" : "closed";
 
                 decimal revenue = RevenueFor(day, dayEnd, b.Id);

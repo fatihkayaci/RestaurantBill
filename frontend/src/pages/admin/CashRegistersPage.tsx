@@ -212,7 +212,7 @@ export default function CashRegisters() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Kasa Ekle
                 </button>
@@ -416,7 +416,7 @@ export default function CashRegisters() {
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
-                            <button type="button" onClick={handleSubmit} className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors">
+                            <button type="button" onClick={handleSubmit} className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors">
                                 {editTarget ? 'Kaydet' : 'Ekle'}
                             </button>
                         </div>
@@ -540,7 +540,7 @@ export default function CashRegisters() {
                                 type="button"
                                 onClick={handleTransferSubmit}
                                 disabled={transferDestinationId === ''}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 Aktar
                             </button>

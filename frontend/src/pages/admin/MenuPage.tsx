@@ -315,7 +315,7 @@ export default function Menu() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Ürün Ekle
                 </button>
@@ -714,7 +714,7 @@ export default function Menu() {
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={isSaving}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-50"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors disabled:opacity-50"
                             >
                                 {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>

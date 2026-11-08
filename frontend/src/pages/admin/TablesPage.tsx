@@ -574,7 +574,7 @@ export default function Tables() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Masa Ekle
                 </button>
@@ -844,7 +844,7 @@ export default function Tables() {
                             </button>
                             <button
                                 onClick={handleSubmit}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors"
                             >
                                 Kaydet
                             </button>
@@ -890,7 +890,7 @@ export default function Tables() {
                             <button
                                 onClick={handleSaveRegion}
                                 disabled={savingRegion}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-60"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors disabled:opacity-60"
                             >
                                 {savingRegion ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>

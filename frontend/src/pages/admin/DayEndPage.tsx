@@ -109,7 +109,7 @@ export default function DayEndPage() {
                     <button
                         onClick={handleStartAll}
                         disabled={startingAll}
-                        className="rounded-lg bg-rb-accent text-white text-sm font-semibold px-4 py-2.5 hover:opacity-90 disabled:opacity-60 transition-opacity whitespace-nowrap"
+                        className="rounded-lg bg-rb-gold text-rb-gold-foreground text-sm font-semibold px-4 py-2.5 hover:opacity-90 disabled:opacity-60 transition-opacity whitespace-nowrap"
                     >
                         {startingAll ? 'Başlatılıyor...' : `Tüm Kasaları Aç (${closedCandidates.length})`}
                     </button>
@@ -154,7 +154,7 @@ export default function DayEndPage() {
                                     <button
                                         onClick={() => handleStartShift(candidate)}
                                         disabled={startingId === candidate.cashRegisterId || startingAll}
-                                        className="mt-1 rounded-lg bg-rb-accent text-white text-sm font-semibold py-2.5 hover:opacity-90 disabled:opacity-60 transition-opacity"
+                                        className="mt-1 rounded-lg bg-rb-gold text-rb-gold-foreground text-sm font-semibold py-2.5 hover:opacity-90 disabled:opacity-60 transition-opacity"
                                     >
                                         {startingId === candidate.cashRegisterId ? 'Başlatılıyor...' : 'Vardiya Aç'}
                                     </button>

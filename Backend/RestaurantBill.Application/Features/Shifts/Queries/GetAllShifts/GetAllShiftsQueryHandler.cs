@@ -21,7 +21,7 @@ public class GetAllShiftsQueryHandler : IRequestHandler<GetAllShiftsQuery, Resul
 
     public async Task<Result<List<ShiftDto>>> Handle(GetAllShiftsQuery request, CancellationToken cancellationToken)
     {
-        List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
+        List<Guid> branchIds = await _db.GetWorkingBranchIdsAsync(_currentUser, cancellationToken);
         if (branchIds.Count == 0) return Result<List<ShiftDto>>.Failure("Geçersiz şube bilgisi.");
 
         var shifts = await _db.Shifts

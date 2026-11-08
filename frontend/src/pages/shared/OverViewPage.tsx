@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { statsService } from '@/features/stats/api/statsService';
 import type { OverviewStats } from '@/features/stats/types';
 import { formatPrice } from '@/lib/format';
+import { chartTooltipProps } from '@/lib/chartTheme';
 
 export default function OverViewPage() {
     const [stats, setStats] = useState<OverviewStats | null>(null);
@@ -97,8 +98,8 @@ export default function OverViewPage() {
                                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                                 <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-30} textAnchor="end" height={60} />
                                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                                <Tooltip formatter={(value) => [value, 'Satış Adedi']} />
-                                <Bar dataKey="adet" fill="var(--rb-amber)" radius={[4, 4, 0, 0]} />
+                                <Tooltip {...chartTooltipProps} formatter={(value) => [value, 'Satış Adedi']} />
+                                <Bar dataKey="adet" fill="var(--rb-amber)" radius={[4, 4, 0, 0]} maxBarSize={56} />
                             </BarChart>
                         </ResponsiveContainer>
                     )}

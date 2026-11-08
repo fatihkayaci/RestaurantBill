@@ -206,7 +206,7 @@ export default function BranchesPage() {
                                 </div>
                                 <div>
                                     <p className="text-lg font-serif font-bold text-foreground">₺{formatPrice(branch.revenue ?? 0)}</p>
-                                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Ciro</p>
+                                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Toplam Ciro</p>
                                 </div>
                             </div>
                             <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-sm">

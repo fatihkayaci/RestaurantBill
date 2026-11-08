@@ -230,7 +230,7 @@ export default function Profile() {
                                 <button
                                     type="submit"
                                     disabled={profileForm.formState.isSubmitting}
-                                    className="px-5 py-2 rounded-lg bg-rb-accent hover:opacity-90 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                                    className="px-5 py-2 rounded-lg bg-rb-gold hover:opacity-90 disabled:opacity-60 text-rb-gold-foreground text-sm font-medium transition-colors"
                                 >
                                     {profileForm.formState.isSubmitting ? "Kaydediliyor..." : "Bilgileri Kaydet →"}
                                 </button>
@@ -279,7 +279,7 @@ export default function Profile() {
                                 <button
                                     type="submit"
                                     disabled={passwordLoading}
-                                    className="px-5 py-2 rounded-lg bg-rb-accent hover:opacity-90 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                                    className="px-5 py-2 rounded-lg bg-rb-gold hover:opacity-90 disabled:opacity-60 text-rb-gold-foreground text-sm font-medium transition-colors"
                                 >
                                     {passwordLoading ? "Güncelleniyor..." : "Şifreyi Güncelle →"}
                                 </button>
@@ -312,7 +312,7 @@ export default function Profile() {
                             <Button
                                 type="submit"
                                 disabled={emailVerifyCode.length !== 6 || emailVerifySubmitting}
-                                className="bg-rb-accent hover:opacity-90 text-white"
+                                className="bg-rb-gold hover:opacity-90 text-rb-gold-foreground"
                             >
                                 {emailVerifySubmitting ? "Doğrulanıyor..." : "Doğrula"}
                             </Button>
