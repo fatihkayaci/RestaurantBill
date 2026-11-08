@@ -666,14 +666,17 @@ export default function Tables() {
             {loaded && tables.length === 0 && (
                 <EmptyState
                     icon={LayoutGrid}
-                    title="Henüz masa tanımlanmadı"
+                    title={regions.length === 0 ? 'Önce bir bölge oluştur' : 'Henüz masa tanımlanmadı'}
                     description={regions.length === 0
-                        ? 'Önce bölge (Salon, Bahçe) sonra masaları ekle. Garsonlar bu masalara sipariş açar.'
+                        ? 'Salon, Bahçe gibi masa grupları. Her masa bir bölgeye bağlıdır; sık kullanılanlardan tek tıkla başla ya da kendi bölgeni yaz.'
                         : 'Masaları ekle; garsonlar bu masalara sipariş açar.'}
                     quickAdds={regions.length === 0 ? { options: ['Salon', 'Bahçe', 'Teras', 'Üst Kat'], onPick: quickAddRegion } : undefined}
-                    action={{ label: 'İlk masayı ekle', onClick: openCreateModal }}
-                    link={{ label: 'Kurulum adımlarına dön', to: '/admin/overview' }}
-                    hint="Kurulum listesinde 3. adım · sonra kasa, personel"
+                    action={regions.length === 0
+                        ? { label: 'Kendi bölgeni ekle', onClick: startAddRegion }
+                        : { label: 'İlk masayı ekle', onClick: openCreateModal }}
+                    hint={regions.length === 0
+                        ? 'Kurulum listesinde 3. adım · sonra masa, kasa, personel'
+                        : 'Kurulum listesinde 4. adım · sonra kasa, personel'}
                 />
             )}
 

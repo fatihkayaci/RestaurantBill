@@ -224,8 +224,7 @@ export default function CashRegisters() {
                     title="Henüz kasa yok"
                     description="Ödemeler ve vardiyalar bir kasaya bağlanır. Kasiyerin işe başlaması için en az bir kasa gerekir."
                     action={{ label: 'İlk kasayı aç', onClick: openCreateModal }}
-                    link={{ label: 'Kurulum adımlarına dön', to: '/admin/overview' }}
-                    hint="Kurulum listesinde 4. adım · sonra personel"
+                    hint="Kurulum listesinde 5. adım · sonra personel"
                 />
             )}
 

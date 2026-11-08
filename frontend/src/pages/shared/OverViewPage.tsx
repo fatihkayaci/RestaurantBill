@@ -3,7 +3,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { statsService } from '@/features/stats/api/statsService';
 import type { OverviewStats } from '@/features/stats/types';
 import { formatPrice } from '@/lib/format';
-import SetupChecklist from './SetupChecklist';
 
 export default function OverViewPage() {
     const [stats, setStats] = useState<OverviewStats | null>(null);
@@ -27,8 +26,6 @@ export default function OverViewPage() {
                 <h1 className="text-2xl font-serif font-bold text-foreground">Genel Bakış</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">Şubenizin genel durumu</p>
             </div>
-
-            <SetupChecklist />
 
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

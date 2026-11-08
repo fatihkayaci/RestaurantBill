@@ -195,8 +195,7 @@ export default function StaffPage() {
                     title="Henüz çalışan yok"
                     description="Garson, mutfak ve kasiyer hesapları oluştur. Her biri kullanıcı adıyla giriş yapar."
                     action={{ label: 'İlk çalışanı ekle', onClick: openCreateModal }}
-                    link={{ label: 'Kurulum adımlarına dön', to: '/admin/overview' }}
-                    hint="Kurulum listesinde 5. adım · son adım"
+                    hint="Kurulum listesinde 6. adım · son adım"
                 />
             ) : filtered.length === 0 ? (
                 <SearchEmptyState query={search} noun="çalışan" onClear={() => setSearch('')} />

@@ -25,7 +25,6 @@ import OwnerAuditLogPage from './pages/owner/AuditLogPage';
 import SlugSetupPage from './pages/owner/SlugSetupPage';
 
 import AdminLayout from './pages/admin/Layout';
-import CategoriesPage from './pages/admin/CategoriesPage';
 import AdminRestaurantPage from './pages/admin/RestaurantPage';
 import StaffPage from './pages/admin/StaffPage';
 import TablesPage from './pages/admin/TablesPage';
@@ -84,7 +83,6 @@ function App() {
                     <Route path="audit-log" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerAuditLogPage /></PrivateRoute>} />
                     <Route path="overview" element={<OverViewPage />} />
                     <Route path="menu" element={<MenuPage />} />
-                    <Route path="categories" element={<CategoriesPage />} />
                     <Route path="staff" element={<StaffPage />} />
                     <Route path="tables" element={<TablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />

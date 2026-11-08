@@ -15,6 +15,7 @@ import { getSession } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import sophramLogo from '@/assets/sophram-logo-yazisiz.svg';
 import BranchSwitcher from './BranchSwitcher';
+import SetupPanel from './SetupPanel';
 
 interface NavItem { to: string; icon: LucideIcon; label: string; }
 interface NavGroup { label?: string; items: NavItem[]; }
@@ -251,6 +252,8 @@ export default function AppShell() {
                 </button>
                 <Outlet />
             </main>
+
+            {!companyMode && <SetupPanel />}
         </div>
     );
 }

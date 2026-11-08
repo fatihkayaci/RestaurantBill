@@ -199,6 +199,19 @@ export default function Menu() {
         setIsAddingCategory(true);
     };
 
+    // Boş menüde hazır çipler: tek tıkla kategori oluşturur, ürün eklemeye geçilir.
+    const quickAddCategory = async (name: string) => {
+        try {
+            await categoryService.createCategory(name, null);
+            setCategories(await categoryService.getCategories());
+            toast.success(`${name} kategorisi eklendi.`);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Kategori eklenemedi.');
+            }
+        }
+    };
+
     const cancelCategoryEdit = () => {
         setIsAddingCategory(false);
         setEditCategory(null);
@@ -494,15 +507,19 @@ export default function Menu() {
             {!loaded ? null : products.length === 0 ? (
                 <EmptyState
                     icon={UtensilsCrossed}
-                    title="Menü henüz boş"
-                    description="Fiyatlarıyla birlikte ürünleri ekle. Garson ekranında sipariş alırken bu liste görünür."
+                    title={categories.length === 0 ? 'Önce bir kategori oluştur' : 'Menü henüz boş'}
+                    description={categories.length === 0
+                        ? 'Ana yemekler, içecekler gibi başlıklar. Ürünler bu başlıkların altında listelenir; sık kullanılanlardan tek tıkla başla ya da kendi başlığını yaz.'
+                        : 'Fiyatlarıyla birlikte ürünleri ekle. Garson ekranında sipariş alırken bu liste görünür.'}
+                    quickAdds={categories.length === 0
+                        ? { options: ['Ana Yemek', 'Başlangıç', 'İçecek', 'Tatlı', 'Salata', 'Kahvaltı'], onPick: quickAddCategory }
+                        : undefined}
                     action={categories.length === 0
-                        ? { label: 'Önce kategori ekle', onClick: startAddCategory }
+                        ? { label: 'Kendi kategorini ekle', onClick: startAddCategory }
                         : { label: 'İlk ürünü ekle', onClick: openCreateModal }}
-                    link={{ label: 'Kurulum adımlarına dön', to: '/admin/overview' }}
                     hint={categories.length === 0
-                        ? 'Ürünler bir kategorinin altına eklenir; önce yukarıdan bir kategori oluştur.'
-                        : 'Kurulum listesinde 2. adım · sonra masa, kasa, personel'}
+                        ? 'Kurulum listesinde 1. adım · sonra ürün, bölge, masa, kasa, personel'
+                        : 'Kurulum listesinde 2. adım · sonra bölge, masa, kasa, personel'}
                 />
             ) : filteredProducts.length === 0 ? (
                 <SearchEmptyState

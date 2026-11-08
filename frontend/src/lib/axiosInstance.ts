@@ -62,8 +62,19 @@ export function redirectToLogin() {
     }
 }
 
+// Başarılı her yazma isteğinden sonra yayınlanır; kurulum paneli gibi "veri değişti mi" diye
+// bakan bileşenler sayfayı yenilemeden kendini günceller.
+export const DATA_CHANGED_EVENT = 'rb:data-changed';
+const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
+
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        const method = response.config.method?.toLowerCase();
+        if (method && MUTATING_METHODS.has(method) && !response.config.url?.startsWith('/auth/')) {
+            window.dispatchEvent(new Event(DATA_CHANGED_EVENT));
+        }
+        return response;
+    },
     async (error: AxiosError) => {
         const originalRequest = error.config as RetryableRequestConfig | undefined;
 
