@@ -42,11 +42,17 @@ export const shiftService = {
         });
         return response.data;
     },
+    getById: async (shiftId: string) => {
+        const response = await api.get<Shift>(`/shift/${shiftId}`);
+        return response.data;
+    },
     // countedBalance sadece kasanın önceki vardiyası sayılmadan kapandıysa gerekir.
-    openShift: async (cashRegisterId: string, countedBalance?: number) => {
+    // forUserId: Admin/Owner bir kasiyer adına açar; kasiyer girişte kapı görmez.
+    openShift: async (cashRegisterId: string, countedBalance?: number, forUserId?: string) => {
         const response = await api.post<Shift>('/shift/open', {
             CashRegisterId: cashRegisterId,
             CountedBalance: countedBalance,
+            ForUserId: forUserId,
         });
         return response.data;
     },

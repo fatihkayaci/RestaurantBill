@@ -159,7 +159,6 @@ export default function ReportsPage({ role }: Props) {
                         loading={shifts.loading}
                         role={role}
                         showBranchSummary={showBranchComparison}
-                        onChanged={() => shifts.load(true)}
                     />
                 </TabsContent>
 

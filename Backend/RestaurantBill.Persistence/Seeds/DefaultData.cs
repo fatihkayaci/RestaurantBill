@@ -107,10 +107,11 @@ public static class DefaultData
         await context.SaveChangesAsync();
 
         // Cash Registers
+        // Kasa fiziksel çekmece demek; kart ödemeleri kasa nakdini değiştirmediği için
+        // ödeme yöntemine göre ayrı kasa açmak yanıltıcıydı.
         CashRegister[] cashRegisters =
         [
-            CashRegister.Create("Nakit Kasa", 0m, branch.Id),
-            CashRegister.Create("Kart Kasa", 0m, branch.Id),
+            CashRegister.Create("Ana Kasa", 0m, branch.Id),
         ];
         await context.CashRegisters.AddRangeAsync(cashRegisters);
         await context.SaveChangesAsync();

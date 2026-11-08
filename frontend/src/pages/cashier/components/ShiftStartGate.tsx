@@ -23,8 +23,8 @@ function candidateStatus(c: ShiftStartCandidate): { text: string; className: str
         const since = c.openedAt ? ` · ${formatTime(c.openedAt)}'den beri` : '';
         return { text: `${c.openShiftOwnerName || 'Başka biri'} vardiyada${since}`, className: 'text-rb-orange' };
     }
-    if (c.requiresCount) return { text: 'Önceki vardiya sayılmadı, açılışta sayım gerekiyor', className: 'text-rb-amber' };
-    return { text: 'Boş', className: 'text-muted-foreground' };
+    if (c.requiresCount) return { text: 'Önceki vardiya sayılmadan kapandı · açılışta sayım var', className: 'text-rb-amber' };
+    return { text: c.lastClosedAt ? 'Boş · son vardiya sayımla kapandı' : 'Boş', className: 'text-muted-foreground' };
 }
 
 function candidateAction(c: ShiftStartCandidate): string {
@@ -134,13 +134,14 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
             <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-lg p-6">
                 {!counting ? (
                     <>
-                        <h2 className="font-serif text-lg font-bold text-foreground mb-1">Vardiyanızı Başlatın</h2>
+                        <h2 className="font-serif text-lg font-bold text-foreground mb-1">Hangi kasada çalışacaksın?</h2>
                         <p className="text-sm text-muted-foreground mb-4">
-                            Çalışacağınız kasayı seçin. Kasa başkasının vardiyasındaysa sayım yapıp devralırsınız.
+                            Vardiya sana ait olur; ödemeler bu kasaya işlenir, kapanışta nakdi sen sayarsın. Kasa başkasındaysa sayım yapıp devralırsın.
+                            Yöneticin senin için vardiya açtıysa bu ekranı görmezsin.
                         </p>
                         {candidates.length === 0 ? (
                             <p className="text-sm text-destructive">
-                                Açık bir kasa bulunamadı. Lütfen yöneticinize başvurun.
+                                Kullanımda kasa yok. Yöneticin Kasalar sayfasından bir kasa açmalı.
                             </p>
                         ) : (
                             <div className="flex flex-col gap-2">
@@ -174,7 +175,7 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
                         <p className="text-sm text-muted-foreground mb-4">
                             {counting.mode === 'takeover'
                                 ? `Kasa ${counting.candidate.openShiftOwnerName || 'başka biri'} adına açık. Kasadaki nakdi sayın: bu sayım onun vardiyasını kapatır ve sizinkini başlatır.`
-                                : 'Önceki vardiya sayılmadan kapanmış. Vardiyanızı başlatmak için kasadaki nakdi sayın.'}
+                                : 'Önceki vardiya sayılmadan kapandı. Kasadaki nakdi say: bu sayım o vardiyaya yazılır, senin vardiyan bu tutarla başlar.'}
                         </p>
 
                         <div className="flex flex-col gap-3">

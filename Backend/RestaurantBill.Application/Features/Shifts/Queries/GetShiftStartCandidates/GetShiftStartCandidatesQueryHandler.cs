@@ -37,12 +37,6 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
             .Where(s => s.Status == ShiftStatus.Open)
             .ToDictionaryAsync(s => s.CashRegisterId, cancellationToken);
 
-        List<Guid> ownerIds = openShiftByRegisterId.Values.Select(s => s.OpenedByUserId).Distinct().ToList();
-        Dictionary<Guid, string> ownerNames = await _db.Users
-            .AsNoTracking()
-            .Where(u => ownerIds.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
-
         // Kasa bazında en son kapanmış vardiyayı bulmak için (sayımı atlanmış mı diye bakmak
         // amacıyla) tüm kapalı vardiyaları çekip bellekte gruplamak, EF'in GroupBy+First
         // çevirisinin sağlayıcıya göre değişken olmasından daha güvenilir.
@@ -55,6 +49,15 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
         Dictionary<Guid, Shift> lastClosedShiftByRegisterId = closedShifts
             .GroupBy(s => s.CashRegisterId)
             .ToDictionary(g => g.Key, g => g.First());
+
+        List<Guid> ownerIds = openShiftByRegisterId.Values.Select(s => s.OpenedByUserId)
+            .Concat(lastClosedShiftByRegisterId.Values.Select(s => s.OpenedByUserId))
+            .Distinct()
+            .ToList();
+        Dictionary<Guid, string> ownerNames = await _db.Users
+            .AsNoTracking()
+            .Where(u => ownerIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
         bool canSeeExpected = _currentUser.CanSeeExpectedBalance();
 
@@ -73,7 +76,12 @@ public class GetShiftStartCandidatesQueryHandler : IRequestHandler<GetShiftStart
                     OpenedAt = openShift?.OpenedAt,
                     OpenShiftOwnerName = openShift is null ? null : ownerNames.GetValueOrDefault(openShift.OpenedByUserId),
                     IsMine = openShift?.OpenedByUserId == _currentUser.UserId,
-                    RequiresCount = openShift is null && lastClosedShift?.CountStatus == ShiftCountStatus.NotCounted
+                    RequiresCount = openShift is null && lastClosedShift?.CountStatus == ShiftCountStatus.NotCounted,
+                    LastClosedShiftId = lastClosedShift?.Id,
+                    LastClosedAt = lastClosedShift?.ClosedAt,
+                    LastClosedBySystem = lastClosedShift?.ClosedBySystem ?? false,
+                    LastClosedCounted = lastClosedShift?.CountStatus == ShiftCountStatus.Counted,
+                    LastShiftOwnerName = lastClosedShift is null ? null : ownerNames.GetValueOrDefault(lastClosedShift.OpenedByUserId)
                 };
             })
             .OrderBy(c => c.CashRegisterName)

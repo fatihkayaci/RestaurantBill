@@ -30,7 +30,7 @@ import StaffPage from './pages/admin/StaffPage';
 import TablesPage from './pages/admin/TablesPage';
 import MenuPage from './pages/admin/MenuPage';
 import CashRegistersPage from './pages/admin/CashRegistersPage';
-import DayEndPage from './pages/admin/DayEndPage';
+import ShiftsPage from './pages/admin/ShiftsPage';
 import ProfilePage from './pages/admin/ProfilePage';
 
 import ReportsPage from './pages/reports/ReportsPage';
@@ -86,7 +86,8 @@ function App() {
                     <Route path="staff" element={<StaffPage />} />
                     <Route path="tables" element={<TablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />
-                    <Route path="day-end" element={<DayEndPage />} />
+                    <Route path="shifts" element={<ShiftsPage />} />
+                    <Route path="day-end" element={<Navigate to="/admin/shifts" replace />} />
                     <Route path="reports" element={<ReportsPage role="admin" />} />
                     <Route path="restaurant" element={<AdminRestaurantPage />} />
                     <Route path="profile" element={<ProfilePage />} />
