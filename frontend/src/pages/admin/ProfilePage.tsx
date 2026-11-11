@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-import { inputClass, labelClass } from '@/lib/formStyles';
     Dialog,
     DialogContent,
     DialogHeader,
@@ -21,6 +20,7 @@ import { inputClass, labelClass } from '@/lib/formStyles';
     DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
+import { inputClass, labelClass } from '@/lib/formStyles';
 
 const profileSchema = z.object({
     fullName: z.string().min(1, "Ad soyad zorunludur."),
