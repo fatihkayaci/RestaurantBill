@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { companyService } from "@/features/companies/api/companyService";
 import { ROOT_DOMAIN } from "@/lib/tenant";
+import { staffLoginUrl } from "@/lib/loginAddress";
 import { slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { inputClass, labelClass } from '@/lib/formStyles';
@@ -126,7 +127,7 @@ export default function SettingsPage() {
                         {cleanSlug && (
                             <div className="flex flex-col items-center gap-2 py-2">
                                 <div className="p-3 rounded-lg bg-white">
-                                    <QRCodeSVG value={`https://${cleanSlug}.${ROOT_DOMAIN}`} size={140} />
+                                    <QRCodeSVG value={staffLoginUrl(cleanSlug)} size={140} />
                                 </div>
                             </div>
                         )}
