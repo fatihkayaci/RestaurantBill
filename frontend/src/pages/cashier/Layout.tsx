@@ -1,13 +1,8 @@
-import { Outlet, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { authService } from '@/features/auth/api/authService';
-import { userService } from '@/features/users/api/userService';
+import { Outlet } from 'react-router-dom';
+import { useState } from 'react';
 import ShiftStartGate from './components/ShiftStartGate';
 import EndShiftModal from './components/EndShiftModal';
-import HeaderClock from '@/components/layout/HeaderClock';
-import HeaderThemeToggle from '@/components/layout/HeaderThemeToggle';
-import HeaderLogoutButton from '@/components/layout/HeaderLogoutButton';
-import sophramLogo from '@/assets/sophram-logo-yan.svg';
+import RoleShell from '@/components/layout/RoleShell';
 import { ActiveShiftProvider } from '@/features/cashier/context/ActiveShiftContext';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 
@@ -20,73 +15,32 @@ export default function CashierLayout() {
 }
 
 function CashierLayoutContent() {
-    const navigate = useNavigate();
     const { setShift } = useActiveShift();
 
-    const [restaurantName, setRestaurantName] = useState('');
     const [shiftGateResolved, setShiftGateResolved] = useState(false);
     const [showEndShiftModal, setShowEndShiftModal] = useState(false);
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) { navigate('/login'); return; }
-
-        userService.getCurrentUser()
-            .then(u => setRestaurantName(u.restaurantName ?? ''))
-            .catch(() => {});
-    }, [navigate]);
-
-    const handleLogout = () => {
-        authService.logout();
-        navigate('/login');
-    };
+    const endShiftButton = shiftGateResolved && (
+        <button
+            onClick={() => setShowEndShiftModal(true)}
+            className="text-xs font-semibold text-rb-red border border-rb-red/40 bg-rb-red-bg rounded-full px-2.5 sm:px-3 py-1.5 hover:opacity-80 transition-opacity whitespace-nowrap"
+        >
+            <span className="sm:hidden">Bitir</span>
+            <span className="hidden sm:inline">Vardiyayı Bitir</span>
+        </button>
+    );
 
     return (
-        <div className="min-h-screen bg-background flex flex-col">
-            <header className="min-h-14 bg-sidebar flex items-center justify-between gap-3 px-3 sm:px-5 py-2 shrink-0 z-10">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                    <img src={sophramLogo} alt="Sophram" className="h-12 sm:h-18 w-auto shrink-0" />
-
-                    <div className="hidden sm:block w-px h-6.5 bg-white/10 shrink-0" />
-
-                    <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-1.75 h-1.75 rounded-full bg-rb-green shrink-0" style={{ boxShadow: '0 0 0 3px rgba(69,200,122,0.15)' }} />
-                        <div className="min-w-0">
-                            <p className="text-sidebar-foreground font-serif font-bold text-base leading-tight truncate">
-                                {restaurantName || 'Sophram'}
-                            </p>
-                            <p className="text-rb-amber text-[10px] font-semibold tracking-widest uppercase mt-0.5">
-                                Kasiyer
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="cashier-stats-slot" className="hidden lg:flex items-center gap-0.5" />
-
-                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                    {shiftGateResolved && (
-                        <button
-                            onClick={() => setShowEndShiftModal(true)}
-                            className="text-xs font-semibold text-rb-red border border-rb-red/40 bg-rb-red-bg rounded-full px-2.5 sm:px-3 py-1.5 hover:opacity-80 transition-opacity whitespace-nowrap"
-                        >
-                            <span className="sm:hidden">Bitir</span>
-                            <span className="hidden sm:inline">Vardiyayı Bitir</span>
-                        </button>
-                    )}
-
-                    <HeaderClock />
-                    <div className="hidden sm:block w-px h-6.5 bg-white/10 shrink-0" />
-                    <HeaderThemeToggle />
-                    <HeaderLogoutButton onClick={handleLogout} />
-                </div>
-            </header>
-
-            <div className="flex-1 overflow-auto flex flex-col">
-                {shiftGateResolved
-                    ? <Outlet />
-                    : <ShiftStartGate onResolved={() => setShiftGateResolved(true)} />}
-            </div>
+        <RoleShell
+            roleLabel="Kasiyer"
+            statsSlotId="cashier-stats-slot"
+            statsSlotClassName="hidden lg:flex"
+            actions={endShiftButton}
+            bodyClassName="overflow-auto flex flex-col"
+        >
+            {shiftGateResolved
+                ? <Outlet />
+                : <ShiftStartGate onResolved={() => setShiftGateResolved(true)} />}
 
             {showEndShiftModal && (
                 <EndShiftModal
@@ -98,6 +52,6 @@ function CashierLayoutContent() {
                     }}
                 />
             )}
-        </div>
+        </RoleShell>
     );
 }
