@@ -11,6 +11,7 @@ import axios from "axios";
 import { cn } from "@/lib/utils";
 import { isValidEmail, isValidPhone } from "@/lib/validators";
 import { getSession } from "@/lib/auth";
+import { Switch } from '@/components/ui/switch';
 
 const ADMIN_ROLE = 1;
 
@@ -245,21 +246,11 @@ export default function AdminsPage() {
                                 </div>
 
                                 <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
-                                    <button
-                                        onClick={() => toggleActive(admin)}
-                                        className="flex items-center gap-2"
-                                    >
-                                        <span className={cn(
-                                            "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0",
-                                            admin.isActive ? "bg-rb-green" : "bg-(--rb-toggle-track-off)"
-                                        )}>
-                                            <span className={cn(
-                                                "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200",
-                                                admin.isActive ? "translate-x-4" : "translate-x-0.5"
-                                            )} />
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">{admin.isActive ? 'Erişim açık' : 'Erişim kapalı'}</span>
-                                    </button>
+                                    <Switch
+                                        checked={admin.isActive}
+                                        onCheckedChange={() => toggleActive(admin)}
+                                        label={<span className="text-xs text-muted-foreground">{admin.isActive ? 'Erişim açık' : 'Erişim kapalı'}</span>}
+                                    />
                                     <button
                                         onClick={() => setDeleteTargetId(admin.id)}
                                         className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"

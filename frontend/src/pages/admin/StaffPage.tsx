@@ -7,6 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import type { CreateUser, User } from "@/features/users/types";
 import axios from "axios";
 import { cn } from "@/lib/utils";
+import { Switch } from '@/components/ui/switch';
 
 const roleMap: Record<number, string> = { 1: "Admin", 2: "Garson", 3: "Kasiyer", 4: "Mutfak" };
 
@@ -241,21 +242,11 @@ export default function StaffPage() {
                                 </div>
 
                                 <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
-                                    <button
-                                        onClick={() => toggleActive(user)}
-                                        className="flex items-center gap-2"
-                                    >
-                                        <span className={cn(
-                                            "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0",
-                                            isActive ? "bg-rb-green" : "bg-(--rb-toggle-track-off)"
-                                        )}>
-                                            <span className={cn(
-                                                "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200",
-                                                isActive ? "translate-x-4" : "translate-x-0.5"
-                                            )} />
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">{isActive ? 'Erişim açık' : 'Erişim kapalı'}</span>
-                                    </button>
+                                    <Switch
+                                        checked={isActive}
+                                        onCheckedChange={() => toggleActive(user)}
+                                        label={<span className="text-xs text-muted-foreground">{isActive ? 'Erişim açık' : 'Erişim kapalı'}</span>}
+                                    />
                                     <button
                                         onClick={() => setDeleteTargetId(user.id)}
                                         className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"

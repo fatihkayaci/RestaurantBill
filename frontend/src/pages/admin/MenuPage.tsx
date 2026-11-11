@@ -12,6 +12,7 @@ import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import { formatPrice } from '@/lib/format';
+import { Switch } from '@/components/ui/switch';
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
@@ -573,21 +574,11 @@ export default function Menu() {
                             <p className="text-lg font-bold text-foreground">₺{formatPrice(product.price)}</p>
 
                             <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
-                                <button
-                                    onClick={() => handleToggleActive(product)}
-                                    className="flex items-center gap-2"
-                                >
-                                    <span className={cn(
-                                        "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0",
-                                        product.isActive ? "bg-rb-green" : "bg-(--rb-toggle-track-off)"
-                                    )}>
-                                        <span className={cn(
-                                            "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200",
-                                            product.isActive ? "translate-x-4" : "translate-x-0.5"
-                                        )} />
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">{product.isActive ? 'Satışta' : 'Satış dışı'}</span>
-                                </button>
+                                <Switch
+                                    checked={product.isActive}
+                                    onCheckedChange={() => handleToggleActive(product)}
+                                    label={<span className="text-xs text-muted-foreground">{product.isActive ? 'Satışta' : 'Satış dışı'}</span>}
+                                />
                                 <button
                                     onClick={() => setDeleteTargetId(product.id)}
                                     className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"
