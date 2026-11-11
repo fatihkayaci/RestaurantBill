@@ -5,6 +5,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { cn } from '@/lib/utils';
 import type { SalesReport } from '@/features/reports/types';
 import { formatPercentChange, formatCurrency } from '@/lib/format';
+import { PageLoading } from '@/components/ui/page-state';
 
 interface Props {
     data: SalesReport | null;
@@ -84,7 +85,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
     const paymentTotal = (data?.paymentMethods ?? []).reduce((sum, p) => sum + p.amount, 0);
 
     if (loading && !data) {
-        return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Yükleniyor...</div>;
+        return <PageLoading />;
     }
 
     return (

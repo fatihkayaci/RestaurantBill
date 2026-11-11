@@ -6,6 +6,7 @@ import type { Shift } from '@/features/cashier/types';
 import type { ShiftReport } from '@/features/reports/types';
 import { cn } from '@/lib/utils';
 import { formatAmount, formatTL } from '@/lib/format';
+import { PageLoading } from '@/components/ui/page-state';
 
 interface Props {
     data: ShiftReport | null;
@@ -45,7 +46,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
     const filtered = shifts.filter(s => !onlyPending || needsAttention(s));
 
     if (loading && !data) {
-        return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Yükleniyor...</div>;
+        return <PageLoading />;
     }
 
     return (

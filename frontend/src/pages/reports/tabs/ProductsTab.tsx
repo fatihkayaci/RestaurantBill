@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { ProductReport } from '@/features/reports/types';
 import { formatCurrency } from '@/lib/format';
+import { PageLoading } from '@/components/ui/page-state';
 
 interface Props {
     data: ProductReport | null;
@@ -23,7 +24,7 @@ export default function ProductsTab({ data, loading }: Props) {
     }, [data, sortBy]);
 
     if (loading && !data) {
-        return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Yükleniyor...</div>;
+        return <PageLoading />;
     }
 
     return (

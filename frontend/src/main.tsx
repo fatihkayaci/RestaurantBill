@@ -5,14 +5,17 @@ import { ThemeProvider } from 'next-themes'
 import './index.css'
 import App from './App.tsx'
 import ThemeTransition from './components/ThemeTransition'
+import ErrorBoundary from './components/ErrorBoundary'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider attribute="class" defaultTheme="light">
       <ThemeTransition />
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ErrorBoundary>
     </ThemeProvider>
   </StrictMode>,
 )

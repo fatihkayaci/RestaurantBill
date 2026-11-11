@@ -1,5 +1,6 @@
 import type { StaffReport } from '@/features/reports/types';
 import { formatCurrency } from '@/lib/format';
+import { PageLoading } from '@/components/ui/page-state';
 
 interface Props {
     data: StaffReport | null;
@@ -10,7 +11,7 @@ const METHOD_LABELS: Record<number, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR' }
 
 export default function StaffTab({ data, loading }: Props) {
     if (loading && !data) {
-        return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Yükleniyor...</div>;
+        return <PageLoading />;
     }
 
     return (
