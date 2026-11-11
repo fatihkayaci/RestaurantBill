@@ -269,7 +269,8 @@ export default function AuditLogPage() {
             )}
 
             <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-sm">
                     <thead>
                         <tr className="border-b border-border">
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Zaman</th>
@@ -333,6 +334,7 @@ export default function AuditLogPage() {
                         )}
                     </tbody>
                 </table>
+                </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">

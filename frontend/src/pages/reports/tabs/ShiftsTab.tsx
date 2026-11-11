@@ -76,8 +76,8 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
             </div>
 
             {showBranchSummary ? (
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
-                    <table className="w-full text-sm">
+                <div className="rounded-xl border border-border bg-card overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-sm">
                         <thead>
                             <tr className="border-b border-border">
                                 <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
@@ -118,8 +118,8 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                         )}
                     </div>
 
-                    <div className="rounded-xl border border-border bg-card overflow-hidden">
-                        <table className="w-full text-sm">
+                    <div className="rounded-xl border border-border bg-card overflow-x-auto">
+                        <table className="w-full min-w-[720px] text-sm">
                             <thead>
                                 <tr className="border-b border-border">
                                     <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kasa</th>
