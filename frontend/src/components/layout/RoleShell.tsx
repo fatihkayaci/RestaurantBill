@@ -27,6 +27,7 @@ interface RoleShellProps {
 
 const DOT: Record<HubStatus, { cls: string; label: string }> = {
     idle: { cls: 'bg-rb-green ring-rb-green/15', label: 'Canlı' },
+    connecting: { cls: 'bg-rb-amber ring-rb-amber/20', label: 'Bağlanıyor' },
     connected: { cls: 'bg-rb-green ring-rb-green/15', label: 'Canlı bağlantı açık' },
     reconnecting: { cls: 'bg-rb-amber ring-rb-amber/20', label: 'Yeniden bağlanıyor' },
     disconnected: { cls: 'bg-rb-red ring-rb-red/20', label: 'Bağlantı koptu' },

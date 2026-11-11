@@ -12,7 +12,7 @@ export interface ManagedHubConnection {
 
 // ── Canlı bağlantı durumu ──
 // Açık tüm hub bağlantılarının en kötü durumu: rol ekranlarının başlığındaki nokta ve "bağlantı koptu" şeridi bunu gösterir.
-export type HubStatus = 'idle' | 'connected' | 'reconnecting' | 'disconnected';
+export type HubStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 type HubState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
 const hubStates = new Map<number, HubState>();
@@ -24,8 +24,9 @@ function recomputeStatus() {
     const values = [...hubStates.values()];
     const next: HubStatus = values.length === 0 ? 'idle'
         : values.includes('disconnected') ? 'disconnected'
-            : values.some(v => v === 'reconnecting' || v === 'connecting') ? 'reconnecting'
-                : 'connected';
+            : values.includes('reconnecting') ? 'reconnecting'
+                : values.includes('connecting') ? 'connecting'
+                    : 'connected';
     if (next === currentStatus) return;
     currentStatus = next;
     statusListeners.forEach(listener => listener());
