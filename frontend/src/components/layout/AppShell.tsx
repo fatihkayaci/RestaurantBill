@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes';
 import type { LucideIcon } from 'lucide-react';
 import {
     LayoutDashboard, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, UserCircle, Store,
-    Building2, UserCog, Palette, History, Moon, ChevronRight, Menu, X, PanelLeftClose, PanelLeftOpen, LogOut,
+    Building2, UserCog, Palette, History, CalendarCheck, Moon, ChevronRight, Menu, X, PanelLeftClose, PanelLeftOpen, LogOut,
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { userService } from '@/features/users/api/userService';
@@ -28,6 +28,7 @@ const branchNav: NavItem[] = [
     { to: '/admin/staff', icon: Users, label: 'Çalışanlar' },
     { to: '/admin/tables', icon: LayoutGrid, label: 'Masalar' },
     { to: '/admin/menu', icon: UtensilsCrossed, label: 'Menü' },
+    { to: '/admin/reservations', icon: CalendarCheck, label: 'Rezervasyonlar' },
     { to: '/admin/cash-registers', icon: Wallet, label: 'Kasalar' },
     { to: '/admin/shifts', icon: Clock, label: 'Vardiyalar' },
     { to: '/admin/reports', icon: BarChart3, label: 'Raporlar' },

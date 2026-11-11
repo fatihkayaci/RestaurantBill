@@ -103,7 +103,8 @@ export default function QuickAccessPanel() {
     const doneCount = steps.filter(s => s.done).length;
     const allDone = doneCount === steps.length;
 
-    const loginAddress = slug ? `${slug}.${ROOT_DOMAIN}` : null;
+    // Alan adının kökü artık müşteri sitesi; personel /login'den girer.
+    const loginAddress = slug ? `${slug}.${ROOT_DOMAIN}/login` : null;
     const loginUrl = loginAddress ? `https://${loginAddress}` : '';
     const shareText = `Personel giriş adresi: ${loginUrl}`;
     const nextStep = steps.find(s => !s.done) ?? null;

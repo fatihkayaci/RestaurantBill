@@ -11,7 +11,7 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid, Trash2 } from 'lucide-react';
+import { Check, X, Pencil, QrCode, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid, Trash2 } from 'lucide-react';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
@@ -19,6 +19,10 @@ import axios from "axios";
 import { createHubConnection } from "@/lib/signalrConnection";
 import PaymentPanel from '../cashier/components/PaymentPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
+import TableQrModal from '@/features/tables/components/TableQrModal';
+import CustomerOrderRequests from '../waiter/components/CustomerOrderRequests';
+import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
+import type { OrderRequest } from '@/features/customerSite/types';
 import { formatPrice, formatElapsed } from '@/lib/format';
 import { inputClass, labelClass } from '@/lib/formStyles';
 
@@ -85,6 +89,10 @@ export default function Tables() {
     const [now, setNow] = useState(() => Date.now());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editTable, setEditTable] = useState<Table | null>(null);
+    // Müşteri QR'ı gösterilen masa.
+    const [qrTable, setQrTable] = useState<Table | null>(null);
+    // Masa QR'ından gelen, onay bekleyen müşteri siparişleri (garsonu olmayan işletmede sahibi onaylar).
+    const [orderRequests, setOrderRequests] = useState<OrderRequest[]>([]);
     const [newTableName, setNewTableName] = useState('');
     const [newTableRegionId, setNewTableRegionId] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -160,9 +168,16 @@ export default function Tables() {
         }
     };
 
+    const loadOrderRequests = () => {
+        customerRequestService.getPendingOrderRequests()
+            .then(setOrderRequests)
+            .catch(console.error);
+    };
+
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh calls are async; setState happens after the await, not synchronously.
         Promise.all([refreshTables(), refreshRegions()]).catch(console.error).finally(() => setLoaded(true));
+        loadOrderRequests();
     }, []);
 
     useEffect(() => {
@@ -182,6 +197,7 @@ export default function Tables() {
                 orderService.getOrderByTableId(changedTableId).then(data => { if (data) setTableOrder(data); }).catch(() => {});
             }
         });
+        connection.on("CustomerRequestsChanged", loadOrderRequests);
         connection.start().catch((err: Error) => {
             if (!err.message.includes("stopped during negotiation")) console.error("SignalR Connection Error:", err);
         });
@@ -572,6 +588,8 @@ export default function Tables() {
                 </button>
             </div>
 
+            <CustomerOrderRequests requests={orderRequests} onChanged={loadOrderRequests} />
+
             {/* Bölge Sekmeleri */}
             <div className="flex gap-2 flex-wrap items-center">
                 <button
@@ -728,6 +746,14 @@ export default function Tables() {
                                             {table.name}
                                         </span>
                                         <div className="flex items-center gap-2 shrink-0">
+                                            <button
+                                                onClick={e => { e.stopPropagation(); setQrTable(table); }}
+                                                aria-label={`${table.name} QR kodu`}
+                                                title="Müşteri QR kodu"
+                                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                            >
+                                                <QrCode className="h-3.5 w-3.5" />
+                                            </button>
                                             <button
                                                 onClick={e => { e.stopPropagation(); openEditModal(table); }}
                                                 aria-label={`${table.name} masasını düzenle`}
@@ -894,6 +920,8 @@ export default function Tables() {
                     </div>
                 </div>
             )}
+
+            {qrTable && <TableQrModal table={qrTable} onClose={() => setQrTable(null)} />}
 
             {/* Bölge Silme Onay */}
             <AlertDialog open={regionDeleteTargetId !== null} onOpenChange={open => !open && closeRegionDeleteDialog()}>
