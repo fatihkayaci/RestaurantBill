@@ -7,7 +7,8 @@ import type { Category } from "@/features/categories/types";
 import ImageCropModal from "@/features/products/components/ImageCropModal";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Check, Pencil, Image as ImageIcon, Upload, Crop } from 'lucide-react';
+import { X, Check, Pencil, Image as ImageIcon, Upload, Crop, UtensilsCrossed } from 'lucide-react';
+import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import { formatPrice } from '@/lib/format';
@@ -18,6 +19,7 @@ const labelClass = "block text-[11px] font-semibold tracking-widest uppercase te
 export default function Menu() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [loaded, setLoaded] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,8 +54,10 @@ export default function Menu() {
     }));
 
     useEffect(() => {
-        productService.getProducts().then(setProducts).catch(console.error);
-        categoryService.getCategories().then(setCategories).catch(console.error);
+        Promise.all([
+            productService.getProducts().then(setProducts),
+            categoryService.getCategories().then(setCategories),
+        ]).catch(console.error).finally(() => setLoaded(true));
     }, []);
 
     useEffect(() => {
@@ -195,6 +199,19 @@ export default function Menu() {
         setIsAddingCategory(true);
     };
 
+    // Boş menüde hazır çipler: tek tıkla kategori oluşturur, ürün eklemeye geçilir.
+    const quickAddCategory = async (name: string) => {
+        try {
+            await categoryService.createCategory(name, null);
+            setCategories(await categoryService.getCategories());
+            toast.success(`${name} kategorisi eklendi.`);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Kategori eklenemedi.');
+            }
+        }
+    };
+
     const cancelCategoryEdit = () => {
         setIsAddingCategory(false);
         setEditCategory(null);
@@ -298,7 +315,7 @@ export default function Menu() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Ürün Ekle
                 </button>
@@ -487,10 +504,31 @@ export default function Menu() {
             </div>
 
             {/* Kartlar */}
-            {filteredProducts.length === 0 ? (
-                <div className="rounded-xl border border-border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
-                    Ürün bulunamadı.
-                </div>
+            {!loaded ? null : products.length === 0 ? (
+                <EmptyState
+                    icon={UtensilsCrossed}
+                    title={categories.length === 0 ? 'Önce bir kategori oluştur' : 'Menü henüz boş'}
+                    description={categories.length === 0
+                        ? 'Ana yemekler, içecekler gibi başlıklar. Ürünler bu başlıkların altında listelenir; sık kullanılanlardan tek tıkla başla ya da kendi başlığını yaz.'
+                        : 'Fiyatlarıyla birlikte ürünleri ekle. Garson ekranında sipariş alırken bu liste görünür.'}
+                    quickAdds={categories.length === 0
+                        ? { options: ['Ana Yemek', 'Başlangıç', 'İçecek', 'Tatlı', 'Salata', 'Kahvaltı'], onPick: quickAddCategory }
+                        : undefined}
+                    action={categories.length === 0
+                        ? { label: 'Kendi kategorini ekle', onClick: startAddCategory }
+                        : { label: 'İlk ürünü ekle', onClick: openCreateModal }}
+                    hint={categories.length === 0
+                        ? 'Kurulum listesinde 1. adım · sonra ürün, bölge, masa, kasa, personel'
+                        : 'Kurulum listesinde 2. adım · sonra bölge, masa, kasa, personel'}
+                />
+            ) : filteredProducts.length === 0 ? (
+                <SearchEmptyState
+                    noun="ürün"
+                    title="Bu kategoride ürün yok"
+                    description="Ürün eklerken bu kategoriyi seç ya da tüm ürünlere dön."
+                    onClear={() => setSelectedCategory('all')}
+                    clearLabel="Tüm ürünleri göster"
+                />
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredProducts.map(product => (
@@ -676,7 +714,7 @@ export default function Menu() {
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={isSaving}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-50"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors disabled:opacity-50"
                             >
                                 {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>

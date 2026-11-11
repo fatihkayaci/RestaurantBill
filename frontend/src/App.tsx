@@ -25,13 +25,12 @@ import OwnerAuditLogPage from './pages/owner/AuditLogPage';
 import SlugSetupPage from './pages/owner/SlugSetupPage';
 
 import AdminLayout from './pages/admin/Layout';
-import CategoriesPage from './pages/admin/CategoriesPage';
 import AdminRestaurantPage from './pages/admin/RestaurantPage';
 import StaffPage from './pages/admin/StaffPage';
 import TablesPage from './pages/admin/TablesPage';
 import MenuPage from './pages/admin/MenuPage';
 import CashRegistersPage from './pages/admin/CashRegistersPage';
-import DayEndPage from './pages/admin/DayEndPage';
+import ShiftsPage from './pages/admin/ShiftsPage';
 import ProfilePage from './pages/admin/ProfilePage';
 
 import ReportsPage from './pages/reports/ReportsPage';
@@ -65,7 +64,7 @@ function App() {
 
                 {/* Owner */}
                 <Route path="/setup-slug" element={<PrivateRoute allowedRoles={["Owner"]}><SlugSetupPage /></PrivateRoute>} />
-                <Route path="/owner" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerLayout /></PrivateRoute>}>
+                <Route path="/owner" element={<PrivateRoute allowedRoles={["Owner"]} scope="company"><OwnerLayout /></PrivateRoute>}>
                     <Route index element={<Navigate to="/owner/overview" replace />} />
                     <Route path="overview" element={<OwnerDashboardPage />} />
                     <Route path="branches" element={<OwnerBranchesPage />} />
@@ -75,16 +74,20 @@ function App() {
                     <Route path="audit-log" element={<OwnerAuditLogPage />} />
                 </Route>
 
-                {/* Admin */}
-                <Route path="/admin" element={<PrivateRoute allowedRoles={["Admin"]}><AdminLayout /></PrivateRoute>}>
+                {/* Admin — Owner bir şube seçtiğinde aynı paneli kullanır; şirket sayfaları ona ek olarak açılır */}
+                <Route path="/admin" element={<PrivateRoute allowedRoles={["Admin", "Owner"]} scope="branch"><AdminLayout /></PrivateRoute>}>
                     <Route index element={<Navigate to="/admin/overview" replace />} />
+                    <Route path="branches" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerBranchesPage /></PrivateRoute>} />
+                    <Route path="admins" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerAdminsPage /></PrivateRoute>} />
+                    <Route path="branding" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerBrandingPage /></PrivateRoute>} />
+                    <Route path="audit-log" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerAuditLogPage /></PrivateRoute>} />
                     <Route path="overview" element={<OverViewPage />} />
                     <Route path="menu" element={<MenuPage />} />
-                    <Route path="categories" element={<CategoriesPage />} />
                     <Route path="staff" element={<StaffPage />} />
                     <Route path="tables" element={<TablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />
-                    <Route path="day-end" element={<DayEndPage />} />
+                    <Route path="shifts" element={<ShiftsPage />} />
+                    <Route path="day-end" element={<Navigate to="/admin/shifts" replace />} />
                     <Route path="reports" element={<ReportsPage role="admin" />} />
                     <Route path="restaurant" element={<AdminRestaurantPage />} />
                     <Route path="profile" element={<ProfilePage />} />

@@ -38,8 +38,10 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
         RuleFor(x => x.Role)
             .IsInEnum().WithMessage("Geçerli bir kullanıcı rolü seçilmelidir.");
 
-        RuleFor(x => x.BranchId)
-            .NotEmpty().WithMessage("Şube seçilmelidir.")
+        RuleFor(x => x)
+            .Must(x => x.BranchId.HasValue || (x.BranchIds?.Count ?? 0) > 0)
+            .WithMessage("Şube seçilmelidir.")
+            .WithName(nameof(CreateUserCommand.BranchId))
             .When(x => x.Role == UserRole.Admin);
     }
 

@@ -93,7 +93,7 @@ export default function LateCountModal({ shift, onClose, onCounted }: Props) {
                 <button
                     onClick={handleSubmit}
                     disabled={submitting}
-                    className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-white bg-rb-accent hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-rb-gold-foreground bg-rb-gold hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                     {submitting ? 'Kaydediliyor...' : 'Sayımı Kaydet'}
                 </button>

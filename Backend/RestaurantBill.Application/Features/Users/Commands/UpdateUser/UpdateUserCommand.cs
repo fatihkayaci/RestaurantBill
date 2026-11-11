@@ -16,6 +16,8 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
         public UserRole Role { get; set; } = UserRole.Waiter;
         public bool? IsActive { get; set; }
         public Guid? BranchId { get; set; }
+        // Admin için atandığı şubelerin tam listesi (Owner gönderir); verilirse üyelikler bu listeyle eşitlenir.
+        public List<Guid>? BranchIds { get; set; }
         public DateTime? HireDate { get; set; }
     }
 }

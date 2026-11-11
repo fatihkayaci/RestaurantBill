@@ -23,6 +23,20 @@ public static class BranchScope
         return currentUser.BranchId == Guid.Empty ? [] : [currentUser.BranchId];
     }
 
+    // Liste ekranlarının çalışma kapsamı. Erişim kapsamından farkı: Owner bir şube seçmişse (token o şubenin
+    // id'sini taşır) yalnızca o şube döner; "Tümü" modunda (token CompanyId taşır) tüm şubeler.
+    // Erişim kapsamı owner için her zaman tüm şubelerdir, çünkü admin atama gibi işler şube modunda da
+    // şirket genelinde çalışır; ama Gün Sonu gibi listeler seçili şubeyi göstermeli.
+    public static async Task<List<Guid>> GetWorkingBranchIdsAsync(
+        this IAppDbContext db, ICurrentUserService currentUser, CancellationToken cancellationToken)
+    {
+        List<Guid> accessible = await db.GetAccessibleBranchIdsAsync(currentUser, cancellationToken);
+        bool ownerInBranch = currentUser.Role == "Owner"
+            && currentUser.BranchId != Guid.Empty
+            && currentUser.BranchId != currentUser.CompanyId;
+        return ownerInBranch ? accessible.Where(id => id == currentUser.BranchId).ToList() : accessible;
+    }
+
     public static IQueryable<Order> InBranches(this IQueryable<Order> query, IReadOnlyCollection<Guid> branchIds)
         => query.Where(o => branchIds.Contains(o.Table.Region.BranchId));
 

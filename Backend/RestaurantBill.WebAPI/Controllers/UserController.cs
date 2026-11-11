@@ -35,9 +35,9 @@ namespace RestaurantBill.WebAPI.Controllers
 
         [Authorize(Roles = "Owner,Admin")]
         [HttpGet]
-        public async Task<IActionResult> GetUserByRestaurantId()
+        public async Task<IActionResult> GetUserByRestaurantId([FromQuery] bool allBranches = false)
         {
-            var query = new GetUserByRestaurantIdCommand();
+            var query = new GetUserByRestaurantIdCommand { AllBranches = allBranches };
             var result = await _mediator.Send(query);
             return HandleResult(result);
         }

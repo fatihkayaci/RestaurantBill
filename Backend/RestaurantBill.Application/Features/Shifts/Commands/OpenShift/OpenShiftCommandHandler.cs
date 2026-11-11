@@ -36,10 +36,30 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result<
         if (hasOpenShift)
             return Result<ShiftDto>.Failure("Bu kasada başka birinin açık vardiyası var, devralmanız gerekiyor.");
 
+        // Vardiya kimin adına açılacak: varsayılan isteği yapan; Admin/Owner şubedeki bir kasiyeri seçebilir.
+        Guid openerId = _currentUser.UserId;
+        string? openerName = null;
+        if (request.ForUserId is Guid forUserId && forUserId != _currentUser.UserId)
+        {
+            if (!_currentUser.CanSeeExpectedBalance())
+                return Result<ShiftDto>.Failure("Başkası adına vardiyayı yalnızca yönetici açabilir.");
+
+            UserBranch? membership = await _db.UserBranches
+                .AsNoTracking()
+                .Include(ub => ub.User)
+                .FirstOrDefaultAsync(ub => ub.UserId == forUserId && ub.BranchId == register.BranchId && !ub.IsDeleted && ub.IsActive
+                    && (ub.Role == UserRole.Cashier || ub.Role == UserRole.Admin), cancellationToken);
+            if (membership is null)
+                return Result<ShiftDto>.Failure("Seçilen kişi bu şubede kasiyer ya da yönetici değil.");
+
+            openerId = forUserId;
+            openerName = membership.User.FullName;
+        }
+
         bool userHasOpenShift = await _db.Shifts
-            .AnyAsync(s => s.OpenedByUserId == _currentUser.UserId && s.Status == ShiftStatus.Open, cancellationToken);
+            .AnyAsync(s => s.OpenedByUserId == openerId && s.Status == ShiftStatus.Open, cancellationToken);
         if (userHasOpenShift)
-            return Result<ShiftDto>.Failure("Zaten açık bir vardiyanız var.");
+            return Result<ShiftDto>.Failure(openerName is null ? "Zaten açık bir vardiyanız var." : $"{openerName} adına zaten açık bir vardiya var.");
 
         // Önceki vardiya sayımla kapandıysa kasadaki nakit o sayımdır, tekrar saydırılmaz.
         // Sayılmadan kapandıysa (gün sonu otomatik kapanış vb.) bu açılış sayımı o vardiyanın
@@ -63,7 +83,7 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result<
             }
         }
 
-        Shift shift = Shift.Create(register.BranchId, register.Id, _currentUser.UserId, register.Balance, register.Balance);
+        Shift shift = Shift.Create(register.BranchId, register.Id, openerId, register.Balance, register.Balance);
         // Düzeltme kaydı SaveChanges'ta zaman damgası aldığı için yeni vardiyanın aralığına düşer;
         // açılış bakiyesi bu düzeltmeyi zaten içerdiğinden vardiya hesabından hariç tutulur.
         if (lateCountAdjustment is not null)
@@ -78,8 +98,8 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result<
             lateCountAdjustment is not null ? AuditLogSeverity.Warning : AuditLogSeverity.Info,
             "ShiftOpened",
             lateCountAdjustment is not null
-                ? $"{actor?.FullName} {register.Name} kasasında vardiya açtı. Sayılmadan kapanan önceki vardiya ₺{previousShift!.CountedClosingBalance} olarak sayıldı, ₺{previousShift.Difference} fark var. Admin incelemesi bekliyor."
-                : $"{actor?.FullName} {register.Name} kasasında ₺{shift.OpeningBalance} ile vardiya açtı.",
+                ? $"{actor?.FullName} {register.Name} kasasında{(openerName is null ? "" : $" {openerName} adına")} vardiya açtı. Sayılmadan kapanan önceki vardiya ₺{previousShift!.CountedClosingBalance} olarak sayıldı, ₺{previousShift.Difference} fark var. Admin incelemesi bekliyor."
+                : $"{actor?.FullName} {register.Name} kasasında{(openerName is null ? "" : $" {openerName} adına")} ₺{shift.OpeningBalance} ile vardiya açtı.",
             nameof(Shift),
             shift.Id);
         _db.AuditLogs.Add(log);

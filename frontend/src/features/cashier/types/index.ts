@@ -31,6 +31,12 @@ export interface ShiftStartCandidate {
     isMine: boolean;
     // Kasanın son vardiyası sayılmadan kapandıysa açılışta sayım gerekir.
     requiresCount: boolean;
+    // Açık vardiya yokken kartta son vardiyayı anlatmak ve "Sayım gir" için.
+    lastClosedShiftId?: string | null;
+    lastClosedAt?: string | null;
+    lastClosedBySystem: boolean;
+    lastClosedCounted: boolean;
+    lastShiftOwnerName?: string | null;
 }
 
 export type PaymentMethod = 1 | 2 | 3;

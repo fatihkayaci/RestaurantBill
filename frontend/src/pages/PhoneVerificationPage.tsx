@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { authService } from "@/features/auth/api/authService";
 import { VerificationCodeType } from "@/features/auth/types";
-import { startSession } from "@/lib/auth";
+import { getHomePathFromToken, startSession } from "@/lib/auth";
 
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -89,7 +89,7 @@ export default function PhoneVerificationPage() {
 
             toast.success("Telefon numaranız doğrulandı.");
 
-            navigate(response.needsSlugSetup ? "/setup-slug" : "/owner");
+            navigate(response.needsSlugSetup ? "/setup-slug" : getHomePathFromToken(response.token));
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 toast.error(error.response?.data?.error ?? "Doğrulama başarısız.");

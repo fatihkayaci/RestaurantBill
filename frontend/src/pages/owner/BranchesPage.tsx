@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { X } from 'lucide-react';
+import { X, Store } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import axios from "axios";
 import { toast } from "sonner";
 import { branchService } from "@/features/branches/api/branchService";
@@ -38,10 +39,13 @@ export default function BranchesPage() {
     const [provinces, setProvinces] = useState<Province[]>([]);
     const districtsFor = (cityName: string) => provinces.find(p => p.name === cityName)?.districts ?? [];
 
+    const [loaded, setLoaded] = useState(false);
+
     const loadBranches = () => {
         branchService.getMyBranches()
             .then(setBranches)
-            .catch(console.error);
+            .catch(console.error)
+            .finally(() => setLoaded(true));
     };
 
     useEffect(() => {
@@ -202,7 +206,7 @@ export default function BranchesPage() {
                                 </div>
                                 <div>
                                     <p className="text-lg font-serif font-bold text-foreground">₺{formatPrice(branch.revenue ?? 0)}</p>
-                                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Ciro</p>
+                                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Toplam Ciro</p>
                                 </div>
                             </div>
                             <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-sm">
@@ -212,10 +216,14 @@ export default function BranchesPage() {
                         </div>
                     );
                 })}
-                {branches.length === 0 && (
-                    <div className="rounded-xl border border-border bg-card p-8 text-sm text-muted-foreground text-center col-span-full">
-                        Henüz şube bulunmuyor.
-                    </div>
+                {loaded && branches.length === 0 && (
+                    <EmptyState
+                        className="col-span-full"
+                        icon={Store}
+                        title="Henüz şube yok"
+                        description="Her şube kendi menüsü, masaları ve kasasıyla çalışır."
+                        action={{ label: 'Yeni şube ekle', onClick: openCreateModal }}
+                    />
                 )}
             </div>
 

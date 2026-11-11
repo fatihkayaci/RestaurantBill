@@ -74,13 +74,14 @@ namespace RestaurantBill.Application.Features.Auths.Commands.VerifyCode
 
                 verificationCode.MarkAsVerified();
                 user.MarkPhoneVerified();
+                Guid scopeId = await OwnerScope.ResolveInitialScopeIdAsync(_db, company.Id, cancellationToken);
                 (string rawRefreshToken, DateTime refreshExpiresAt) = RefreshTokenIssuer.Issue(
-                    _db, _refreshTokenSettings, user.Id, company.Id, UserRole.Owner, rememberMe: false);
+                    _db, _refreshTokenSettings, user.Id, scopeId, UserRole.Owner, rememberMe: false);
                 await _db.SaveChangesAsync(cancellationToken);
 
                 return Result<VerifyCodeResponseDto>.Success(new VerifyCodeResponseDto
                 {
-                    Token = _jwtTokenGenerator.GenerateToken(user, company.Id, UserRole.Owner, user.Email!),
+                    Token = _jwtTokenGenerator.GenerateToken(user, scopeId, UserRole.Owner, user.Email!, company.Id),
                     NeedsSlugSetup = string.IsNullOrWhiteSpace(company.Slug),
                     RefreshToken = rawRefreshToken,
                     RefreshTokenExpiresAt = refreshExpiresAt

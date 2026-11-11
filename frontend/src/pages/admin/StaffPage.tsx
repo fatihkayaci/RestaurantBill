@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Search, X, Pencil } from 'lucide-react';
+import { Search, X, Pencil, Users } from 'lucide-react';
+import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { toast } from "sonner";
 import { userService } from "@/features/users/api/userService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -27,6 +28,7 @@ export default function StaffPage() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editUser, setEditUser] = useState<User | null>(null);
+    const [loaded, setLoaded] = useState(false);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
         passwordHash: '', role: 2, hireDate: todayDateString()
@@ -38,7 +40,8 @@ export default function StaffPage() {
     useEffect(() => {
         userService.getUsersByRestaurantId()
             .then(setUsers)
-            .catch(console.error);
+            .catch(console.error)
+            .finally(() => setLoaded(true));
     }, []);
 
     const generatePassword = () => {
@@ -168,7 +171,7 @@ export default function StaffPage() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Çalışan Ekle
                 </button>
@@ -186,10 +189,16 @@ export default function StaffPage() {
             </div>
 
             {/* Kartlar */}
-            {filtered.length === 0 ? (
-                <div className="rounded-xl border border-border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
-                    Çalışan bulunamadı.
-                </div>
+            {!loaded ? null : users.length === 0 ? (
+                <EmptyState
+                    icon={Users}
+                    title="Henüz çalışan yok"
+                    description="Garson, mutfak ve kasiyer hesapları oluştur. Her biri kullanıcı adıyla giriş yapar."
+                    action={{ label: 'İlk çalışanı ekle', onClick: openCreateModal }}
+                    hint="Kurulum listesinde 6. adım · son adım"
+                />
+            ) : filtered.length === 0 ? (
+                <SearchEmptyState query={search} noun="çalışan" onClear={() => setSearch('')} />
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filtered.map(user => {
@@ -404,7 +413,7 @@ export default function StaffPage() {
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors"
                             >
                                 Kaydet
                             </button>

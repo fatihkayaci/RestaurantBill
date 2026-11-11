@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { chartTooltipProps } from '@/lib/chartTheme';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { ProductReport } from '@/features/reports/types';
@@ -89,7 +90,7 @@ export default function ProductsTab({ data, loading }: Props) {
                                     <Pie data={data!.categoryBreakdown} dataKey="revenue" nameKey="categoryName" innerRadius={50} outerRadius={72} paddingAngle={2}>
                                         {data!.categoryBreakdown.map((c, i) => <Cell key={c.categoryId} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />)}
                                     </Pie>
-                                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                                    <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="space-y-2.5 mt-2">

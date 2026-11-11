@@ -13,4 +13,12 @@ public class ShiftStartCandidateDto
     public bool IsMine { get; set; }
     // Kasanın son vardiyası sayılmadan kapandıysa yeni vardiya açılışta sayım ister.
     public bool RequiresCount { get; set; }
+
+    // Açık vardiya yokken kartta "son vardiya dün 23:48'de sayımla kapandı" diyebilmek ve
+    // sayımsız kapananlar için "Sayım gir" düğmesini bağlamak için.
+    public Guid? LastClosedShiftId { get; set; }
+    public DateTime? LastClosedAt { get; set; }
+    public bool LastClosedBySystem { get; set; }
+    public bool LastClosedCounted { get; set; }
+    public string? LastShiftOwnerName { get; set; }
 }

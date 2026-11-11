@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { chartTooltipProps } from '@/lib/chartTheme';
 import { TrendingUp, ShoppingCart, ShoppingBag, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
@@ -65,6 +66,9 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
         }));
     }, [data, isSingleDay]);
 
+    // Veri yoksa boş eksen yerine açık bir mesaj; Ödeme Yöntemleri kartıyla aynı dil.
+    const chartHasData = chartData.some(d => Object.entries(d).some(([k, v]) => k !== 'label' && typeof v === 'number' && v > 0));
+    const heatmapHasData = (data?.heatmap ?? []).some(p => p.amount > 0);
     const heatmapMax = useMemo(() => Math.max(1, ...(data?.heatmap.map(p => p.amount) ?? [0])), [data]);
     const heatmapByCell = useMemo(() => {
         const map = new Map<string, { amount: number; count: number }>();
@@ -127,13 +131,16 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                     <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">
                         {isSingleDay ? 'Saatlik Ciro' : 'Günlük Ciro'}
                     </p>
+                    {!chartHasData ? (
+                        <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">Bu aralıkta satış yok.</div>
+                    ) : (
                     <ResponsiveContainer width="100%" height={260}>
                         {isSingleDay ? (
                             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
                                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                                 <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={1} />
                                 <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
-                                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                                <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
                                 <Bar dataKey="total" fill="var(--rb-accent)" radius={[3, 3, 0, 0]} />
                             </BarChart>
                         ) : (
@@ -141,7 +148,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                                 <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
-                                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                                <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
                                 {(showBranchComparison ? branchSeries : [{ key: 'total', label: 'Toplam', color: 'var(--rb-accent)' }])
                                     .filter(s => !hiddenSeries.has(s.key))
                                     .map(s => (
@@ -150,6 +157,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                             </LineChart>
                         )}
                     </ResponsiveContainer>
+                    )}
                     {showBranchComparison && !isSingleDay && (
                         <div className="flex flex-wrap items-center gap-3 mt-3">
                             {branchSeries.map(series => (
@@ -179,7 +187,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                                         <Pie data={data!.paymentMethods} dataKey="amount" nameKey="method" innerRadius={50} outerRadius={72} paddingAngle={2}>
                                             {data!.paymentMethods.map(p => <Cell key={p.method} fill={PAYMENT_COLOR[p.method]} />)}
                                         </Pie>
-                                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                                        <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -208,7 +216,8 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
 
             <div className="rounded-xl border border-border bg-card p-5">
                 <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">Saatlik Yoğunluk</p>
-                <div className="overflow-x-auto">
+                {!heatmapHasData && <p className="-mt-2 mb-3 text-sm text-muted-foreground">Bu aralıkta işlem yok.</p>}
+                <div className={cn("overflow-x-auto", !heatmapHasData && "opacity-50")}>
                     <div className="min-w-[640px]">
                         <div className="grid grid-cols-[32px_repeat(24,1fr)] gap-[3px]">
                             <div />

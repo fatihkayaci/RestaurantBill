@@ -38,6 +38,11 @@ export const authService = {
         });
         return response.data;
     },
+    // Seçilen şube (null = Owner için "Tümü") için yeni token alır; çağıran taraf oturumu yenileyip sayfayı yeniden yükler.
+    switchBranch: async (branchId: string | null): Promise<string> => {
+        const response = await api.post<{ token: string }>(`/auth/switch-branch`, { BranchId: branchId });
+        return response.data.token;
+    },
     verifyCode: async (request: Code) => {
         const response = await api.post<VerifyCodeResponse>(`/auth/verify-code`, {
             UserId: request.userId,

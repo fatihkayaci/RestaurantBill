@@ -29,19 +29,26 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
             if (request.Role == UserRole.Admin && _currentUser.Role != nameof(UserRole.Owner))
                 return Result.Failure("Admin rolü atama yetkiniz yok.");
 
-            Guid restaurantId = _currentUser.BranchId;
+            List<Guid> requestedBranchIds = (request.BranchIds ?? [])
+                .Prepend(request.BranchId ?? Guid.Empty)
+                .Where(id => id != Guid.Empty)
+                .Distinct()
+                .ToList();
 
-            if (request.BranchId.HasValue && request.BranchId.Value != restaurantId)
+            if (requestedBranchIds.Count > 1 && request.Role != UserRole.Admin)
+                return Result.Failure("Birden fazla şube yalnızca Admin için seçilebilir.");
+
+            Guid restaurantId = requestedBranchIds.Count > 0 ? requestedBranchIds[0] : _currentUser.BranchId;
+
+            if (requestedBranchIds.Any(id => id != _currentUser.BranchId))
             {
                 if (_currentUser.Role != nameof(UserRole.Owner))
                     return Result.Failure("Bu şubeye kullanıcı ekleme yetkiniz yok.");
 
-                bool ownsRestaurant = await _db.Branches
-                    .AnyAsync(b => b.Id == request.BranchId.Value && b.Company.OwnerUserId == _currentUser.UserId && !b.IsDeleted, cancellationToken);
-                if (!ownsRestaurant)
+                int ownedCount = await _db.Branches
+                    .CountAsync(b => requestedBranchIds.Contains(b.Id) && b.Company.OwnerUserId == _currentUser.UserId && !b.IsDeleted, cancellationToken);
+                if (ownedCount != requestedBranchIds.Count)
                     return Result.Failure("Şube bulunamadı.");
-
-                restaurantId = request.BranchId.Value;
             }
 
             Branch? branch = await _db.Branches
@@ -77,6 +84,24 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
 
             _db.Users.Add(user);
             _db.UserBranches.Add(userBranch);
+
+            // Çok şubeli Admin: aynı kullanıcı adı ve kodla her ek şubeye bir üyelik daha açılır.
+            List<Guid> extraBranchIds = requestedBranchIds.Where(id => id != restaurantId).ToList();
+            if (extraBranchIds.Count > 0)
+            {
+                List<Branch> extraBranches = await _db.Branches
+                    .Where(b => extraBranchIds.Contains(b.Id) && b.CompanyId == branch.CompanyId)
+                    .ToListAsync(cancellationToken);
+                if (extraBranches.Count != extraBranchIds.Count)
+                    return Result.Failure("Şube bulunamadı.");
+
+                foreach (Branch extra in extraBranches)
+                {
+                    UserBranch extraMembership = UserBranch.Create(user, extra, request.UserName, request.UserCode, request.Role);
+                    extraMembership.SetHireDate(request.HireDate ?? DateTime.UtcNow);
+                    _db.UserBranches.Add(extraMembership);
+                }
+            }
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(

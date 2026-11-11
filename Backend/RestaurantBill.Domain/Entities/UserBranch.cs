@@ -60,6 +60,13 @@ namespace RestaurantBill.Domain.Entities
             BranchId = branch.Id;
         }
 
+        // Şubeden çıkarılıp sonra yeniden atanan admin: (UserId, BranchId) tekil indeksi yüzünden satır silinmez, geri açılır.
+        public void Restore()
+        {
+            IsDeleted = false;
+            SetUpdatedAt();
+        }
+
         public void SetHireDate(DateTime hireDate)
         {
             HireDate = hireDate.Kind == DateTimeKind.Unspecified

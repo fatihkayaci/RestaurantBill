@@ -11,7 +11,8 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
+import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid } from 'lucide-react';
+import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
 import axios from "axios";
@@ -88,6 +89,7 @@ function formatTimeDigits(rawValue: string): string {
 
 export default function Tables() {
     const [tables, setTables] = useState<Table[]>([]);
+    const [loaded, setLoaded] = useState(false);
     const [now, setNow] = useState(() => Date.now());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editTable, setEditTable] = useState<Table | null>(null);
@@ -167,8 +169,8 @@ export default function Tables() {
     };
 
     useEffect(() => {
-        refreshTables().catch(console.error);
-        refreshRegions().catch(console.error);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh calls are async; setState happens after the await, not synchronously.
+        Promise.all([refreshTables(), refreshRegions()]).catch(console.error).finally(() => setLoaded(true));
     }, []);
 
     useEffect(() => {
@@ -256,6 +258,18 @@ export default function Tables() {
         setNewRegionName(region.name);
         setRegionFieldError('');
         setIsRegionModalOpen(true);
+    };
+
+    // Boş durumdaki hazır bölge çipleri (Salon, Bahçe...): tek tıkla bölge oluşturur.
+    const quickAddRegion = async (regionName: string) => {
+        try {
+            await regionService.createRegion(regionName);
+            await refreshRegions();
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Bölge eklenemedi.');
+            }
+        }
     };
 
     const startAddRegion = () => {
@@ -560,7 +574,7 @@ export default function Tables() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-rb-accent hover:opacity-90 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                     + Masa Ekle
                 </button>
@@ -649,8 +663,25 @@ export default function Tables() {
                 )}
             </div>
 
+            {loaded && tables.length === 0 && (
+                <EmptyState
+                    icon={LayoutGrid}
+                    title={regions.length === 0 ? 'Önce bir bölge oluştur' : 'Henüz masa tanımlanmadı'}
+                    description={regions.length === 0
+                        ? 'Salon, Bahçe gibi masa grupları. Her masa bir bölgeye bağlıdır; sık kullanılanlardan tek tıkla başla ya da kendi bölgeni yaz.'
+                        : 'Masaları ekle; garsonlar bu masalara sipariş açar.'}
+                    quickAdds={regions.length === 0 ? { options: ['Salon', 'Bahçe', 'Teras', 'Üst Kat'], onPick: quickAddRegion } : undefined}
+                    action={regions.length === 0
+                        ? { label: 'Kendi bölgeni ekle', onClick: startAddRegion }
+                        : { label: 'İlk masayı ekle', onClick: openCreateModal }}
+                    hint={regions.length === 0
+                        ? 'Kurulum listesinde 3. adım · sonra masa, kasa, personel'
+                        : 'Kurulum listesinde 4. adım · sonra kasa, personel'}
+                />
+            )}
+
             {/* Table Grid — bölgelere göre gruplanmış, waiter tarafındaki tasarımla aynı renk/hover davranışı */}
-            {tableGroups.map(group => {
+            {tables.length > 0 && tableGroups.map(group => {
                 const regionIndex = group.region ? regions.findIndex(r => r.id === group.region!.id) : -1;
                 return (
                 <div key={group.region?.id ?? 'all'} className="space-y-3">
@@ -674,6 +705,15 @@ export default function Tables() {
                                 <ArrowDown className="h-3 w-3" />
                             </button>
                         </div>
+                    )}
+                    {group.tables.length === 0 && (
+                        <SearchEmptyState
+                            noun="masa"
+                            title="Bu bölgede masa yok"
+                            description="Masa eklerken bu bölgeyi seç ya da tüm masalara dön."
+                            onClear={() => setSelectedRegionId('all')}
+                            clearLabel="Tüm masaları göster"
+                        />
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {group.tables.map(table => {
@@ -804,7 +844,7 @@ export default function Tables() {
                             </button>
                             <button
                                 onClick={handleSubmit}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors"
                             >
                                 Kaydet
                             </button>
@@ -850,7 +890,7 @@ export default function Tables() {
                             <button
                                 onClick={handleSaveRegion}
                                 disabled={savingRegion}
-                                className="px-4 py-2 text-sm rounded-lg bg-rb-accent hover:opacity-90 text-white font-medium transition-colors disabled:opacity-60"
+                                className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors disabled:opacity-60"
                             >
                                 {savingRegion ? 'Kaydediliyor...' : 'Kaydet'}
                             </button>
