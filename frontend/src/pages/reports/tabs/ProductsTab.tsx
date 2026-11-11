@@ -3,6 +3,7 @@ import { chartTooltipProps } from '@/lib/chartTheme';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { ProductReport } from '@/features/reports/types';
+import { formatCurrency } from '@/lib/format';
 
 interface Props {
     data: ProductReport | null;
@@ -10,9 +11,6 @@ interface Props {
 }
 
 type SortBy = 'sold' | 'revenue';
-
-const formatCurrency = (value: number, decimals = 0) =>
-    `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
 const CATEGORY_COLORS = ['var(--rb-accent)', 'var(--rb-green)', 'var(--rb-gold)', 'var(--rb-orange)', 'var(--rb-purple)', 'var(--rb-red)'];
 

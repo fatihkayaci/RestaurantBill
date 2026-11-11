@@ -5,7 +5,7 @@ import { userService } from '@/features/users/api/userService';
 import type { Shift } from '@/features/cashier/types';
 import type { ShiftReport } from '@/features/reports/types';
 import { cn } from '@/lib/utils';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatTL } from '@/lib/format';
 
 interface Props {
     data: ShiftReport | null;
@@ -18,7 +18,6 @@ const REVIEW_PENDING = 1;
 const REVIEW_REJECTED = 3;
 const COUNT_NOT_COUNTED = 2;
 
-const formatTL = (amount: number) => `₺${amount.toLocaleString('tr-TR')}`;
 
 // Salt okunur rapor. Onay, sayım ve kapatma işleri Vardiyalar sayfasında.
 export default function ShiftsTab({ data, loading, role, showBranchSummary }: Props) {

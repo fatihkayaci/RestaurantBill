@@ -4,7 +4,7 @@ import { TrendingUp, ShoppingCart, ShoppingBag, ArrowUpRight, ArrowDownRight } f
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { SalesReport } from '@/features/reports/types';
-import { formatPercentChange } from '@/lib/format';
+import { formatPercentChange, formatCurrency } from '@/lib/format';
 
 interface Props {
     data: SalesReport | null;
@@ -13,9 +13,6 @@ interface Props {
     role: 'admin' | 'owner';
     showBranchComparison: boolean;
 }
-
-const formatCurrency = (value: number, decimals = 0) =>
-    `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
 
 const BRANCH_LINE_COLORS = ['var(--rb-orange)', 'var(--rb-accent)', 'var(--rb-green)', 'var(--rb-purple)', 'var(--rb-gold)', 'var(--rb-red)'];

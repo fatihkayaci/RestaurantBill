@@ -1,13 +1,11 @@
 import { Percent, TrendingDown, FileText } from 'lucide-react';
 import type { DiscountReport } from '@/features/reports/types';
+import { formatCurrency } from '@/lib/format';
 
 interface Props {
     data: DiscountReport | null;
     loading: boolean;
 }
-
-const formatCurrency = (value: number, decimals = 0) =>
-    `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
 export default function DiscountsTab({ data, loading }: Props) {
     if (loading && !data) {

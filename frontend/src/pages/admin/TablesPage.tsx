@@ -19,7 +19,7 @@ import axios from "axios";
 import { createHubConnection } from "@/lib/signalrConnection";
 import PaymentPanel from '../cashier/components/PaymentPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
-import { formatPrice } from '@/lib/format';
+import { formatPrice, formatElapsed } from '@/lib/format';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
 
@@ -54,13 +54,6 @@ const STATUS_CARD = {
         label:  'REZERVE',
     },
 } as const;
-
-function formatElapsed(occupiedSince: string, now: number): string {
-    const minutes = Math.max(0, Math.floor((now - new Date(occupiedSince).getTime()) / 60000));
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
-}
 
 const PANEL_STATUS_CONFIG: Record<number, { label: string; cls: string }> = {
     1: { label: 'BOŞ', cls: 'bg-rb-green-bg text-rb-green' },
@@ -1036,7 +1029,7 @@ export default function Tables() {
                                                                 )}
                                                                 <div className="min-w-0">
                                                                     <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                                                                    <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
+                                                                    <p className="text-xs text-muted-foreground mt-0.5">₺{formatPrice(product.price)}</p>
                                                                 </div>
                                                             </div>
                                                             {qty > 0 && (

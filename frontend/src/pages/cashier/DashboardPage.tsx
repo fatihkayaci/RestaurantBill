@@ -12,7 +12,7 @@ import TableTransferModal from '@/features/tables/components/TableTransferModal'
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatElapsed } from '@/lib/format';
 
 const OrderStatus = { Served: 5 } as const;
 
@@ -22,13 +22,6 @@ const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
     2: 'bg-rb-green-bg text-rb-green',
     3: 'bg-rb-amber-bg text-rb-amber',
 };
-
-function formatElapsed(createdAt: string, now: number): string {
-    const minutes = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 60000));
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
-}
 
 function formatShortName(fullName: string): string {
     const parts = fullName.trim().split(' ').filter(Boolean);

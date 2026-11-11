@@ -5,6 +5,7 @@ import { shiftService } from '@/features/cashier/api/shiftService';
 import type { PaymentMethod, Shift, ShiftSummary } from '@/features/cashier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatTL } from '@/lib/format';
 
 interface Props {
     onClose: () => void;
@@ -13,10 +14,6 @@ interface Props {
 
 const METHOD_ORDER: PaymentMethod[] = [2, 1, 3];
 const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR' };
-
-function formatTL(amount: number): string {
-    return `₺${amount.toLocaleString('tr-TR')}`;
-}
 
 function formatTime(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });

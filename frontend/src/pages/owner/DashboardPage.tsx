@@ -14,10 +14,7 @@ import type { BranchOperationalStatus, OwnerDashboardStats } from '@/features/st
 import { auditLogService } from '@/features/auditLogs/api/auditLogService';
 import type { AuditLog } from '@/features/auditLogs/types';
 import { SEVERITY_LABELS, SEVERITY_STYLE } from '@/features/auditLogs/constants';
-import { formatPercentChange } from '@/lib/format';
-
-const formatCurrency = (value: number, decimals = 0) =>
-    `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+import { formatPercentChange, formatCurrency } from '@/lib/format';
 
 
 const minutesAgoLabel = (iso: string) => {

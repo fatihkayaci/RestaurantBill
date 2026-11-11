@@ -8,6 +8,7 @@ import { createHubConnection } from '@/lib/signalrConnection';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatElapsed } from '@/lib/format';
 
 const OrderStatus = {
     Ready: 4,
@@ -23,13 +24,6 @@ interface OrderGroup {
 }
 
 const URGENT_THRESHOLD_MINUTES = 30;
-
-function formatElapsed(createdAt: string, now: number): string {
-    const minutes = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 60000));
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
-}
 
 /* ── Tek kart bileşeni ── */
 function KitchenCard({

@@ -3,7 +3,7 @@ import { tableService } from '@/features/tables/api/tableService';
 import type { Table } from '@/features/tables/types';
 import TablePanel from './components/TablePanel';
 import { createHubConnection } from '@/lib/signalrConnection';
-import { formatPrice } from '@/lib/format';
+import { formatPrice, formatMinutes } from '@/lib/format';
 import { Clock, Plus, User } from 'lucide-react';
 
 type FilterType = 'all' | 'empty' | 'occupied' | 'reserved';
@@ -48,12 +48,6 @@ const LONG_STAY_MINUTES = 60;
 
 function elapsedMinutes(occupiedSince: string, now: number): number {
     return Math.max(0, Math.floor((now - new Date(occupiedSince).getTime()) / 60000));
-}
-
-function formatElapsed(minutes: number): string {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours} sa ${remainingMinutes} dk` : `${remainingMinutes} dk`;
 }
 
 function TableCard({
@@ -106,7 +100,7 @@ function TableCard({
                             {minutes !== null && (
                                 <span className={`flex items-center gap-1.5 ${minutes >= LONG_STAY_MINUTES ? 'font-bold text-[#A3420D] dark:text-rb-orange' : ''}`}>
                                     <Clock className="size-3.5 sm:size-4" />
-                                    {formatElapsed(minutes)}
+                                    {formatMinutes(minutes)}
                                 </span>
                             )}
                             {table.createdByUserName && (

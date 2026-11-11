@@ -4,15 +4,12 @@ import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { Shift } from '@/features/cashier/types';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatTL } from '@/lib/format';
 
 interface Props {
     shift: Shift;
     onClose: () => void;
     onCounted: () => void;
-}
-
-function formatTL(amount: number): string {
-    return `₺${amount.toLocaleString('tr-TR')}`;
 }
 
 export default function LateCountModal({ shift, onClose, onCounted }: Props) {

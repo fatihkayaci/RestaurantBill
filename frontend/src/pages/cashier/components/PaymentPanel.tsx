@@ -8,7 +8,7 @@ import type { Order } from '@/features/orders/types';
 import type { Shift, ShiftStartCandidate } from '@/features/cashier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { formatAmount, formatPrice } from '@/lib/format';
+import { formatAmount, formatPrice, formatElapsed } from '@/lib/format';
 
 type PaymentMethod = 'kart' | 'nakit' | 'qr';
 
@@ -25,13 +25,6 @@ interface Props {
     onClose: () => void;
     onComplete: (orderId: number) => void;
     cashRegisterMode?: 'shift' | 'manual';
-}
-
-function formatElapsed(createdAt: string): string {
-    const totalMinutes = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000));
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return hours > 0 ? `${hours}sa ${minutes}dk` : `${minutes}dk`;
 }
 
 export default function PaymentPanel({ order, onClose, onComplete, cashRegisterMode = 'shift' }: Props) {

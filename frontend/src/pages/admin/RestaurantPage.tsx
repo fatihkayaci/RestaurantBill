@@ -7,14 +7,11 @@ import { toast } from "sonner";
 import { branchService } from "@/features/branches/api/branchService";
 import type { Branch } from "@/features/branches/types";
 import { ROOT_DOMAIN } from "@/lib/tenant";
+import { formatTL } from '@/lib/format';
 
 const infoRowClass = "flex items-center justify-between text-sm py-2 border-b border-border last:border-0";
 const labelClass = "text-muted-foreground";
 const valueClass = "text-foreground font-medium text-right";
-
-function formatTL(amount: number): string {
-    return `₺${amount.toLocaleString('tr-TR')}`;
-}
 
 interface InfoRow {
     label: string;
