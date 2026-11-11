@@ -5,6 +5,7 @@ import { shiftService } from '@/features/cashier/api/shiftService';
 import type { PaymentMethod, ShiftSummary } from '@/features/cashier/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatTL } from '@/lib/format';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 
 interface Props {
     shift: { id: string; cashRegisterName: string };
@@ -77,11 +78,11 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[3px] p-4">
+        <Modal onClose={onClose} closeOnOverlay={false} overlayClassName="z-50 bg-black/60 backdrop-blur-[3px] p-4">
             <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
                 <div className="flex items-start justify-between mb-1">
                     <div>
-                        <h2 className="font-serif text-xl font-bold text-foreground">Vardiyayı Kapat</h2>
+                        <ModalTitle className="font-serif text-xl font-bold text-foreground">Vardiyayı Kapat</ModalTitle>
                         <p className="text-sm text-muted-foreground mt-0.5">{shift.cashRegisterName}</p>
                     </div>
                     <button
@@ -180,6 +181,6 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
                     </>
                 )}
             </div>
-        </div>
+        </Modal>
     );
 }

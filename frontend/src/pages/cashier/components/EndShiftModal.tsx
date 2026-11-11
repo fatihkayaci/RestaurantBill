@@ -6,6 +6,7 @@ import type { PaymentMethod, Shift, ShiftSummary } from '@/features/cashier/type
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatTL } from '@/lib/format';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 
 interface Props {
     onClose: () => void;
@@ -72,13 +73,13 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
     const diff = closedShift?.difference ?? 0;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[3px] p-4">
+        <Modal onClose={onClose} closeOnOverlay={false} overlayClassName="z-50 bg-black/60 backdrop-blur-[3px] p-4">
             <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
                 <div className="flex items-start justify-between mb-1">
                     <div>
-                        <h2 className="font-serif text-xl font-bold text-foreground">
+                        <ModalTitle className="font-serif text-xl font-bold text-foreground">
                             {closedAt ? 'Z Raporu' : 'Vardiyayı Bitir'}
-                        </h2>
+                        </ModalTitle>
                         <p className="text-sm text-muted-foreground mt-0.5">
                             {summary ? `${formatTime(summary.openedAt)} — ${formatTime(closedAt ?? now)} · ${shift?.openedByUserName ?? ''}` : shift?.openedByUserName}
                         </p>
@@ -210,6 +211,6 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                     </>
                 )}
             </div>
-        </div>
+        </Modal>
     );
 }

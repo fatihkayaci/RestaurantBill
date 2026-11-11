@@ -8,6 +8,7 @@ import type { Branch, CreateBranch, UpdateBranch } from "@/features/branches/typ
 import { getTurkeyProvinces, type Province } from "@/lib/turkeyLocations";
 import { cn } from "@/lib/utils";
 import { formatPrice } from '@/lib/format';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
@@ -229,11 +230,10 @@ export default function BranchesPage() {
 
             {/* Create Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                <Modal onClose={() => setIsModalOpen(false)} overlayClassName="bg-black/40 backdrop-blur-sm">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-foreground">Şube Ekle</h2>
+                            <ModalTitle className="text-xl font-bold text-foreground">Şube Ekle</ModalTitle>
                             <button
                                 onClick={() => setIsModalOpen(false)}
                                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -360,16 +360,15 @@ export default function BranchesPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Branch Detail Modal */}
             {editTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setEditTarget(null)} />
+                <Modal onClose={() => setEditTarget(null)} overlayClassName="bg-black/40 backdrop-blur-sm">
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden max-h-[85vh] flex flex-col">
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
-                            <h2 className="text-xl font-bold text-foreground">{editTarget.branchName}</h2>
+                            <ModalTitle className="text-xl font-bold text-foreground">{editTarget.branchName}</ModalTitle>
                             <button
                                 onClick={() => setEditTarget(null)}
                                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -537,7 +536,7 @@ export default function BranchesPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
         </div>
     );

@@ -3,6 +3,7 @@ import Cropper, { type Area } from 'react-easy-crop';
 import { ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getCroppedImageBlob } from '@/lib/cropImage';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 
 interface ImageCropModalProps {
     imageSrc: string;
@@ -36,11 +37,10 @@ export default function ImageCropModal({ imageSrc, aspect = 16 / 9, onCancel, on
     };
 
     return (
-        <div className="fixed inset-0 z-60 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/60" onClick={() => !isSaving && onCancel()} />
+        <Modal onClose={() => { if (!isSaving) onCancel(); }} overlayClassName="z-60 bg-black/60">
             <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
                 <div className="px-6 pt-6 pb-4 border-b border-border">
-                    <h2 className="text-lg font-bold text-foreground">Görseli Kırp</h2>
+                    <ModalTitle className="text-lg font-bold text-foreground">Görseli Kırp</ModalTitle>
                     <p className="text-xs text-muted-foreground mt-0.5">Sürükleyerek konumlandır, kaydırıcıyla yakınlaştır.</p>
                 </div>
 
@@ -86,6 +86,6 @@ export default function ImageCropModal({ imageSrc, aspect = 16 / 9, onCancel, on
                     </Button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 }

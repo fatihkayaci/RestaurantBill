@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import axios from "axios";
 import { formatPrice } from '@/lib/format';
 import { Switch } from '@/components/ui/switch';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 
 const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
@@ -593,13 +594,12 @@ export default function Menu() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                <Modal onClose={closeModal} overlayClassName="bg-black/40 backdrop-blur-sm">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-foreground">
+                            <ModalTitle className="text-xl font-bold text-foreground">
                                 {editProduct ? 'Ürünü Düzenle' : 'Ürün Ekle'}
-                            </h2>
+                            </ModalTitle>
                             <button onClick={closeModal} className="text-muted-foreground hover:text-foreground transition-colors">
                                 <X className="h-5 w-5" />
                             </button>
@@ -714,7 +714,7 @@ export default function Menu() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Görsel Kırpma */}

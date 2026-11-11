@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { isValidEmail, isValidPhone } from "@/lib/validators";
 import { getSession } from "@/lib/auth";
 import { Switch } from '@/components/ui/switch';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 
 const ADMIN_ROLE = 1;
 
@@ -266,13 +267,12 @@ export default function AdminsPage() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                <Modal onClose={() => setIsModalOpen(false)} overlayClassName="bg-black/40 backdrop-blur-sm">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-foreground">
+                            <ModalTitle className="text-xl font-bold text-foreground">
                                 {editAdmin ? 'Yöneticiyi Düzenle' : 'Yönetici Ekle'}
-                            </h2>
+                            </ModalTitle>
                             <button
                                 onClick={() => setIsModalOpen(false)}
                                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -427,7 +427,7 @@ export default function AdminsPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Delete Confirm */}

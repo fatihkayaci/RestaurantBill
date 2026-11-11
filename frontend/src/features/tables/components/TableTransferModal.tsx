@@ -3,6 +3,7 @@ import { X, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { orderService } from '@/features/orders/api/orderService';
 import type { Table } from '@/features/tables/types';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 
 interface Props {
     sourceTable: Table;
@@ -61,7 +62,7 @@ export default function TableTransferModal({ sourceTable, tables, onClose, onDon
     };
 
     return (
-        <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/60 backdrop-blur-[3px] p-4">
+        <Modal onClose={onClose} closeOnOverlay={false} overlayClassName="z-80 bg-black/60 backdrop-blur-[3px] p-4">
             <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
                 {confirmTarget ? (
                     <>
@@ -73,9 +74,9 @@ export default function TableTransferModal({ sourceTable, tables, onClose, onDon
                                 >
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>
-                                <h2 className="font-serif text-lg font-bold text-foreground">
+                                <ModalTitle className="font-serif text-lg font-bold text-foreground">
                                     {confirmTarget.name} dolu
-                                </h2>
+                                </ModalTitle>
                             </div>
                             <button
                                 onClick={onClose}
@@ -108,7 +109,7 @@ export default function TableTransferModal({ sourceTable, tables, onClose, onDon
                     <>
                         <div className="flex items-start justify-between mb-1">
                             <div>
-                                <h2 className="font-serif text-lg font-bold text-foreground">Masayı Taşı</h2>
+                                <ModalTitle className="font-serif text-lg font-bold text-foreground">Masayı Taşı</ModalTitle>
                                 <p className="text-sm text-muted-foreground mt-0.5">{sourceTable.name} — hedef masa seçin</p>
                             </div>
                             <button
@@ -157,6 +158,6 @@ export default function TableTransferModal({ sourceTable, tables, onClose, onDon
                     </>
                 )}
             </div>
-        </div>
+        </Modal>
     );
 }
