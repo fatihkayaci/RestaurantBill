@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Wallet } from 'lucide-react';
+import { X, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Wallet, Trash2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -14,9 +14,9 @@ import LateCountModal from './components/LateCountModal';
 import StartShiftModal from './components/StartShiftModal';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatAmount, formatPrice } from '@/lib/format';
+import { Modal, ModalTitle } from '@/components/ui/modal';
+import { inputClass, labelClass } from '@/lib/formStyles';
 
-const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
-const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function CashRegisters() {
     const [registers, setRegisters] = useState<CashRegister[]>([]);
@@ -274,12 +274,12 @@ export default function CashRegisters() {
                                 </div>
                                 <p className="font-semibold text-foreground">{r.name}</p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => openEditModal(r)} className="text-muted-foreground hover:text-foreground transition-colors">
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => openEditModal(r)} aria-label={`${r.name} kasasını düzenle`} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                     <Pencil className="h-3.5 w-3.5" />
                                 </button>
-                                <button onClick={() => setDeleteTargetId(r.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                                    <X className="h-3.5 w-3.5" />
+                                <button onClick={() => setDeleteTargetId(r.id)} aria-label={`${r.name} kasasını sil`} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-rb-red-bg hover:text-destructive transition-colors">
+                                    <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                             </div>
                         </div>
@@ -359,13 +359,12 @@ export default function CashRegisters() {
 
             {/* Kasa Ekle / Düzenle Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+                <Modal onClose={() => setIsModalOpen(false)} overlayClassName="bg-black/40 backdrop-blur-sm">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-foreground">
+                            <ModalTitle className="text-xl font-bold text-foreground">
                                 {editTarget ? 'Kasayı Düzenle' : 'Kasa Ekle'}
-                            </h2>
+                            </ModalTitle>
                             <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                                 <X className="h-5 w-5" />
                             </button>
@@ -419,19 +418,18 @@ export default function CashRegisters() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Para Giriş / Çıkış Modal */}
             {txTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeTxDialog} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+                <Modal onClose={closeTxDialog} overlayClassName="bg-black/40 backdrop-blur-sm">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-foreground">
+                                <ModalTitle className="text-xl font-bold text-foreground">
                                     {txType === 1 ? 'Para Girişi' : 'Para Çıkışı'}
-                                </h2>
+                                </ModalTitle>
                                 <p className="text-sm text-muted-foreground mt-0.5">{txTarget.name}</p>
                             </div>
                             <button onClick={closeTxDialog} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -463,25 +461,24 @@ export default function CashRegisters() {
                                 type="button"
                                 onClick={handleTxSubmit}
                                 className={cn(
-                                    "px-4 py-2 text-sm rounded-lg text-white font-medium transition-colors",
-                                    txType === 1 ? "bg-rb-green hover:opacity-90" : "bg-rb-red hover:opacity-90"
+                                    "px-4 py-2 text-sm rounded-lg font-medium transition-colors",
+                                    txType === 1 ? "bg-rb-green text-rb-green-foreground hover:opacity-90" : "bg-rb-red text-rb-red-foreground hover:opacity-90"
                                 )}
                             >
                                 Onayla
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Kasalar Arası Aktarım Modal */}
             {transferSource && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeTransferDialog} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+                <Modal onClose={closeTransferDialog} overlayClassName="bg-black/40 backdrop-blur-sm">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-foreground">Kasalar Arası Aktarım</h2>
+                                <ModalTitle className="text-xl font-bold text-foreground">Kasalar Arası Aktarım</ModalTitle>
                                 <p className="text-sm text-muted-foreground mt-0.5">{transferSource.name}</p>
                             </div>
                             <button onClick={closeTransferDialog} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -544,7 +541,7 @@ export default function CashRegisters() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Delete Confirm */}

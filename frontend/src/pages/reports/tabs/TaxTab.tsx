@@ -1,4 +1,5 @@
 import type { TaxReport } from '@/features/reports/types';
+import { PageLoading } from '@/components/ui/page-state';
 
 interface Props {
     data: TaxReport | null;
@@ -10,7 +11,7 @@ const formatCurrency = (value: number, decimals = 2) =>
 
 export default function TaxTab({ data, loading }: Props) {
     if (loading && !data) {
-        return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Yükleniyor...</div>;
+        return <PageLoading />;
     }
 
     return (

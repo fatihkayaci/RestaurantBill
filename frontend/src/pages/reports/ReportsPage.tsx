@@ -80,6 +80,7 @@ export default function ReportsPage({ role }: Props) {
                         type="button"
                         onClick={handleRefresh}
                         disabled={refreshing}
+                        aria-label="Yenile"
                         className="flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-60"
                     >
                         <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
@@ -96,7 +97,7 @@ export default function ReportsPage({ role }: Props) {
                             onClick={() => setPreset(p.key)}
                             className={cn(
                                 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
-                                activePreset === p.key ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground'
+                                activePreset === p.key ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground'
                             )}
                         >
                             {p.label}
@@ -144,7 +145,7 @@ export default function ReportsPage({ role }: Props) {
                     <TabsTrigger value="sales">Satış</TabsTrigger>
                     <TabsTrigger value="shifts">Kasa &amp; Vardiya</TabsTrigger>
                     <TabsTrigger value="products">Ürünler</TabsTrigger>
-                    <TabsTrigger value="staff">Personel</TabsTrigger>
+                    <TabsTrigger value="staff">Çalışanlar</TabsTrigger>
                     <TabsTrigger value="discounts">İndirim &amp; İptal</TabsTrigger>
                     <TabsTrigger value="tax">Mali (KDV)</TabsTrigger>
                 </TabsList>

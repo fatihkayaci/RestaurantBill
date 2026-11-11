@@ -6,15 +6,12 @@ import { getSession } from "@/lib/auth";
 import { toast } from "sonner";
 import { branchService } from "@/features/branches/api/branchService";
 import type { Branch } from "@/features/branches/types";
-import { ROOT_DOMAIN } from "@/lib/tenant";
+import { downloadCanvasPng, staffLoginHost, staffLoginUrl } from "@/lib/loginAddress";
+import { formatTL } from '@/lib/format';
 
 const infoRowClass = "flex items-center justify-between text-sm py-2 border-b border-border last:border-0";
 const labelClass = "text-muted-foreground";
 const valueClass = "text-foreground font-medium text-right";
-
-function formatTL(amount: number): string {
-    return `₺${amount.toLocaleString('tr-TR')}`;
-}
 
 interface InfoRow {
     label: string;
@@ -54,7 +51,7 @@ export default function RestaurantPage() {
     }, []);
 
     const branchLocation = branch ? [branch.district, branch.city].filter(Boolean).join(', ') : '';
-    const restaurantUrl = branch?.slug ? `https://${branch.slug}.${ROOT_DOMAIN}` : "";
+    const restaurantUrl = branch?.slug ? staffLoginUrl(branch.slug) : "";
 
     const handleCopyLink = async () => {
         try {
@@ -65,14 +62,7 @@ export default function RestaurantPage() {
         }
     };
 
-    const handleDownloadPng = () => {
-        const canvas = qrRef.current;
-        if (!canvas) return;
-        const link = document.createElement('a');
-        link.download = `${branch?.slug || 'restoran'}-qr.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    };
+    const handleDownloadPng = () => downloadCanvasPng(qrRef.current, `${branch?.slug || 'restoran'}-qr.png`);
 
     return (
         <div className="space-y-4">
@@ -109,7 +99,7 @@ export default function RestaurantPage() {
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch?.staffCount ?? "—"}</p>
-                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Personel</p>
+                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Çalışan</p>
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch ? formatTL(branch.revenue) : "—"}</p>
@@ -157,7 +147,7 @@ export default function RestaurantPage() {
                 {/* Restoran QR Kodu */}
                 <div className="rounded-xl border border-border bg-card p-5 h-full flex flex-col">
                     <h2 className="text-base font-semibold text-foreground">Restoran QR Kodu</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">Personeliniz bu adresten restoranınıza giriş yapar</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">Çalışanlarınız bu adresten restoranınıza giriş yapar</p>
                     <div className="flex flex-col items-center gap-3 py-2 flex-1 justify-center">
                         {restaurantUrl ? (
                             <div className="p-3 rounded-lg bg-white">
@@ -169,7 +159,7 @@ export default function RestaurantPage() {
                             </div>
                         )}
                         <p className="text-sm text-foreground font-medium break-all text-center">
-                            {restaurantUrl ? restaurantUrl.replace(/^https?:\/\//, '') : "—"}
+                            {branch?.slug ? staffLoginHost(branch.slug) : "—"}
                         </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-2">

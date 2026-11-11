@@ -7,14 +7,15 @@ import type { Category } from "@/features/categories/types";
 import ImageCropModal from "@/features/products/components/ImageCropModal";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Check, Pencil, Image as ImageIcon, Upload, Crop, UtensilsCrossed } from 'lucide-react';
+import { X, Check, Pencil, Image as ImageIcon, Upload, Crop, UtensilsCrossed, Trash2 } from 'lucide-react';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import { formatPrice } from '@/lib/format';
+import { Switch } from '@/components/ui/switch';
+import { Modal, ModalTitle } from '@/components/ui/modal';
+import { inputClass, labelClass } from '@/lib/formStyles';
 
-const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
-const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function Menu() {
     const [products, setProducts] = useState<Product[]>([]);
@@ -341,7 +342,7 @@ export default function Menu() {
                                         onChange={e => setBannerUseGeneralTaxRate(e.target.checked)}
                                         className="h-3.5 w-3.5 rounded border-border"
                                     />
-                                    Genel KDV'i kullan
+                                    Genel KDV'yi kullan
                                 </label>
                                 {!bannerUseGeneralTaxRate && (
                                     <input
@@ -399,7 +400,7 @@ export default function Menu() {
                     className={cn(
                         "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                         selectedCategory === 'all'
-                            ? "bg-rb-accent text-white"
+                            ? "bg-rb-accent text-rb-accent-foreground"
                             : "border border-border text-muted-foreground hover:text-foreground"
                     )}
                 >
@@ -438,7 +439,7 @@ export default function Menu() {
                             className={cn(
                                 "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
                                 selectedCategory === cat.id
-                                    ? "bg-rb-accent text-white"
+                                    ? "bg-rb-accent text-rb-accent-foreground"
                                     : "border border-border text-muted-foreground hover:text-foreground"
                             )}
                         >
@@ -447,6 +448,7 @@ export default function Menu() {
                             </button>
                             <button
                                 onClick={() => startEditCategory(cat)}
+                                aria-label={`${cat.name} kategorisini düzenle`}
                                 className={cn(
                                     "p-1 rounded-full transition-colors",
                                     selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
@@ -456,12 +458,13 @@ export default function Menu() {
                             </button>
                             <button
                                 onClick={() => setCategoryDeleteTargetId(cat.id)}
+                                aria-label={`${cat.name} kategorisini sil`}
                                 className={cn(
                                     "p-1 rounded-full transition-colors",
                                     selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
                                 )}
                             >
-                                <X className="h-3 w-3" />
+                                <Trash2 className="h-3 w-3" />
                             </button>
                         </div>
                     )
@@ -560,7 +563,8 @@ export default function Menu() {
                                     </span>
                                     <button
                                         onClick={() => openEditModal(product)}
-                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                        aria-label={`${product.name} ürününü düzenle`}
+                                        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                     >
                                         <Pencil className="h-3.5 w-3.5" />
                                     </button>
@@ -570,26 +574,16 @@ export default function Menu() {
                             <p className="text-lg font-bold text-foreground">₺{formatPrice(product.price)}</p>
 
                             <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
-                                <button
-                                    onClick={() => handleToggleActive(product)}
-                                    className="flex items-center gap-2"
-                                >
-                                    <span className={cn(
-                                        "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0",
-                                        product.isActive ? "bg-rb-green" : "bg-gray-300 dark:bg-gray-600"
-                                    )}>
-                                        <span className={cn(
-                                            "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200",
-                                            product.isActive ? "translate-x-4" : "translate-x-0.5"
-                                        )} />
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">{product.isActive ? 'Satışta' : 'Satış dışı'}</span>
-                                </button>
+                                <Switch
+                                    checked={product.isActive}
+                                    onCheckedChange={() => handleToggleActive(product)}
+                                    label={<span className="text-xs text-muted-foreground">{product.isActive ? 'Satışta' : 'Satış dışı'}</span>}
+                                />
                                 <button
                                     onClick={() => setDeleteTargetId(product.id)}
                                     className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"
                                 >
-                                    Kaldır
+                                    Sil
                                 </button>
                             </div>
                         </div>
@@ -599,13 +593,12 @@ export default function Menu() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                <Modal onClose={closeModal} overlayClassName="bg-black/40 backdrop-blur-sm">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-foreground">
+                            <ModalTitle className="text-xl font-bold text-foreground">
                                 {editProduct ? 'Ürünü Düzenle' : 'Ürün Ekle'}
-                            </h2>
+                            </ModalTitle>
                             <button onClick={closeModal} className="text-muted-foreground hover:text-foreground transition-colors">
                                 <X className="h-5 w-5" />
                             </button>
@@ -720,7 +713,7 @@ export default function Menu() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Görsel Kırpma */}

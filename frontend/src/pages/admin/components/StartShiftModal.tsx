@@ -8,6 +8,7 @@ import type { User } from '@/features/users/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatAmount } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 
 interface Props {
     candidate: ShiftStartCandidate;
@@ -65,11 +66,11 @@ export default function StartShiftModal({ candidate, onClose, onStarted }: Props
     );
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+        <Modal onClose={onClose} overlayClassName="z-50 bg-black/50 p-4">
             <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl" onClick={e => e.stopPropagation()}>
                 <div className="flex items-start justify-between gap-3 px-6 pt-5 pb-4">
                     <div>
-                        <h2 className="font-serif text-2xl font-bold text-foreground">Vardiya başlat</h2>
+                        <ModalTitle className="font-serif text-2xl font-bold text-foreground">Vardiya başlat</ModalTitle>
                         <p className="mt-0.5 text-sm text-muted-foreground">
                             {candidate.cashRegisterName}
                             {candidate.expectedOpeningBalance != null && ` · açılış ₺${formatAmount(candidate.expectedOpeningBalance)} (kasa bakiyesi)`}
@@ -150,6 +151,6 @@ export default function StartShiftModal({ candidate, onClose, onStarted }: Props
                     </button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 }

@@ -134,10 +134,10 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
             <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-lg p-6">
                 {!counting ? (
                     <>
-                        <h2 className="font-serif text-lg font-bold text-foreground mb-1">Hangi kasada çalışacaksın?</h2>
+                        <h2 className="font-serif text-lg font-bold text-foreground mb-1">Hangi kasada çalışacaksınız?</h2>
                         <p className="text-sm text-muted-foreground mb-4">
-                            Vardiya sana ait olur; ödemeler bu kasaya işlenir, kapanışta nakdi sen sayarsın. Kasa başkasındaysa sayım yapıp devralırsın.
-                            Yöneticin senin için vardiya açtıysa bu ekranı görmezsin.
+                            Vardiya size ait olur; ödemeler bu kasaya işlenir, kapanışta nakdi siz sayarsınız. Kasa başkasındaysa sayım yapıp devralırsınız.
+                            Yöneticiniz sizin için vardiya açtıysa bu ekranı görmezsiniz.
                         </p>
                         {candidates.length === 0 ? (
                             <p className="text-sm text-destructive">
@@ -175,7 +175,7 @@ export default function ShiftStartGate({ onResolved }: ShiftStartGateProps) {
                         <p className="text-sm text-muted-foreground mb-4">
                             {counting.mode === 'takeover'
                                 ? `Kasa ${counting.candidate.openShiftOwnerName || 'başka biri'} adına açık. Kasadaki nakdi sayın: bu sayım onun vardiyasını kapatır ve sizinkini başlatır.`
-                                : 'Önceki vardiya sayılmadan kapandı. Kasadaki nakdi say: bu sayım o vardiyaya yazılır, senin vardiyan bu tutarla başlar.'}
+                                : 'Önceki vardiya sayılmadan kapandı. Kasadaki nakdi sayın: bu sayım o vardiyaya yazılır, sizin vardiyanız bu tutarla başlar.'}
                         </p>
 
                         <div className="flex flex-col gap-3">

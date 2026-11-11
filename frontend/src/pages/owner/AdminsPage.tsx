@@ -11,13 +11,14 @@ import axios from "axios";
 import { cn } from "@/lib/utils";
 import { isValidEmail, isValidPhone } from "@/lib/validators";
 import { getSession } from "@/lib/auth";
+import { Switch } from '@/components/ui/switch';
+import { Modal, ModalTitle } from '@/components/ui/modal';
+import { inputClass, labelClass } from '@/lib/formStyles';
 
 const ADMIN_ROLE = 1;
 
 const todayDateString = () => new Date().toISOString().slice(0, 10);
 
-const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
-const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function AdminsPage() {
     const [admins, setAdmins] = useState<User[]>([]);
@@ -96,10 +97,10 @@ export default function AdminsPage() {
         try {
             await userService.deleteUser(deleteTargetId);
             setAdmins(prev => prev.filter(u => u.id !== deleteTargetId));
-            toast.success('Admin silindi.');
+            toast.success('Yönetici silindi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Admin silinemedi.');
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Yönetici silinemedi.');
             }
         } finally {
             setDeleteTargetId(null);
@@ -113,7 +114,7 @@ export default function AdminsPage() {
                 phoneNumber: admin.phoneNumber, role: ADMIN_ROLE, isActive: !admin.isActive
             });
             setAdmins(prev => prev.map(u => u.id === admin.id ? { ...u, isActive: !u.isActive } : u));
-            toast.success(admin.isActive ? 'Admin pasif yapıldı.' : 'Admin aktif yapıldı.');
+            toast.success(admin.isActive ? 'Yönetici pasif yapıldı.' : 'Yönetici aktif yapıldı.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Durum güncellenemedi.');
@@ -152,7 +153,7 @@ export default function AdminsPage() {
             }
             loadAdmins();
             setIsModalOpen(false);
-            toast.success(editAdmin ? 'Admin güncellendi.' : 'Admin eklendi.');
+            toast.success(editAdmin ? 'Yönetici güncellendi.' : 'Yönetici eklendi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 const data = err.response?.data;
@@ -188,14 +189,14 @@ export default function AdminsPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Adminler</h1>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Yöneticiler</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">{admins.length} admin hesabı</p>
                 </div>
                 <button
                     onClick={openCreateModal}
                     className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
-                    + Admin Ekle
+                    + Yönetici Ekle
                 </button>
             </div>
 
@@ -245,26 +246,16 @@ export default function AdminsPage() {
                                 </div>
 
                                 <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
-                                    <button
-                                        onClick={() => toggleActive(admin)}
-                                        className="flex items-center gap-2"
-                                    >
-                                        <span className={cn(
-                                            "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0",
-                                            admin.isActive ? "bg-rb-green" : "bg-gray-300 dark:bg-gray-600"
-                                        )}>
-                                            <span className={cn(
-                                                "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200",
-                                                admin.isActive ? "translate-x-4" : "translate-x-0.5"
-                                            )} />
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">{admin.isActive ? 'Erişim açık' : 'Erişim kapalı'}</span>
-                                    </button>
+                                    <Switch
+                                        checked={admin.isActive}
+                                        onCheckedChange={() => toggleActive(admin)}
+                                        label={<span className="text-xs text-muted-foreground">{admin.isActive ? 'Erişim açık' : 'Erişim kapalı'}</span>}
+                                    />
                                     <button
                                         onClick={() => setDeleteTargetId(admin.id)}
                                         className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"
                                     >
-                                        Kaldır
+                                        Sil
                                     </button>
                                 </div>
                             </div>
@@ -275,13 +266,12 @@ export default function AdminsPage() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                <Modal onClose={() => setIsModalOpen(false)} overlayClassName="bg-black/40 backdrop-blur-sm">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-foreground">
-                                {editAdmin ? 'Admini Düzenle' : 'Admin Ekle'}
-                            </h2>
+                            <ModalTitle className="text-xl font-bold text-foreground">
+                                {editAdmin ? 'Yöneticiyi Düzenle' : 'Yönetici Ekle'}
+                            </ModalTitle>
                             <button
                                 onClick={() => setIsModalOpen(false)}
                                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -405,7 +395,7 @@ export default function AdminsPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Şifre * {editAdmin && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
+                                        <label className={labelClass}>Şifre * {editAdmin && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsanız değişmez)</span>}</label>
                                         <input
                                             type="text"
                                             className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}
@@ -436,14 +426,14 @@ export default function AdminsPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Delete Confirm */}
             <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Admini sil</AlertDialogTitle>
+                        <AlertDialogTitle>Yöneticiyi sil</AlertDialogTitle>
                         <AlertDialogDescription>
                             Bu admini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
                         </AlertDialogDescription>

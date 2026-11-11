@@ -129,13 +129,13 @@ export default function PhoneVerificationPage() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-[#f5f0e8] dark:bg-[#18140f] p-6">
+        <div className="flex min-h-screen items-center justify-center bg-background p-6">
             <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)] p-7">
-                <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-[#f2ede4]">
+                <h1 className="text-2xl font-serif font-bold text-foreground">
                     Telefon Numaranızı Doğrulayın
                 </h1>
                 <p className="text-[13px] mt-1.5" style={{ color: "#a39080" }}>
-                    <span className="font-medium">0532 *** ** 32</span> numarasına gönderilen 6 haneli kodu girin.
+                    Kayıtlı telefon numaranıza gönderilen 6 haneli kodu girin.
                 </p>
 
                 <form onSubmit={handleSubmit}>
@@ -146,12 +146,14 @@ export default function PhoneVerificationPage() {
                                 ref={el => { inputsRef.current[index] = el; }}
                                 type="text"
                                 inputMode="numeric"
+                                autoComplete={index === 0 ? "one-time-code" : "off"}
+                                aria-label={`Doğrulama kodu ${index + 1}. hane`}
                                 maxLength={1}
                                 value={digit}
                                 onChange={e => handleChange(index, e.target.value)}
                                 onKeyDown={e => handleKeyDown(index, e)}
                                 onPaste={handlePaste}
-                                className="w-11 h-13 text-center text-lg font-semibold rounded-xl border border-border bg-[rgb(245,240,232)] dark:bg-white/5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-rb-accent"
+                                className="w-11 min-w-0 flex-1 max-w-11 h-13 text-center text-lg font-semibold rounded-xl border border-border bg-[rgb(245,240,232)] dark:bg-white/5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-rb-accent"
                             />
                         ))}
                     </div>
@@ -159,7 +161,7 @@ export default function PhoneVerificationPage() {
                     <Button
                         type="submit"
                         disabled={!isComplete || verifyLoading}
-                        className="w-full h-11.5 rounded-xl bg-rb-accent hover:opacity-90 text-white font-bold text-sm mt-6"
+                        className="w-full h-11.5 rounded-xl bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-bold text-sm mt-6"
                     >
                         {verifyLoading ? "Doğrulanıyor..." : "Doğrula →"}
                     </Button>

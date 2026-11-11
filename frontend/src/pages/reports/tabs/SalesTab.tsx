@@ -4,7 +4,8 @@ import { TrendingUp, ShoppingCart, ShoppingBag, ArrowUpRight, ArrowDownRight } f
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { SalesReport } from '@/features/reports/types';
-import { formatPercentChange } from '@/lib/format';
+import { formatPercentChange, formatCurrency } from '@/lib/format';
+import { PageLoading } from '@/components/ui/page-state';
 
 interface Props {
     data: SalesReport | null;
@@ -13,9 +14,6 @@ interface Props {
     role: 'admin' | 'owner';
     showBranchComparison: boolean;
 }
-
-const formatCurrency = (value: number, decimals = 0) =>
-    `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
 
 const BRANCH_LINE_COLORS = ['var(--rb-orange)', 'var(--rb-accent)', 'var(--rb-green)', 'var(--rb-purple)', 'var(--rb-gold)', 'var(--rb-red)'];
@@ -87,7 +85,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
     const paymentTotal = (data?.paymentMethods ?? []).reduce((sum, p) => sum + p.amount, 0);
 
     if (loading && !data) {
-        return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Yükleniyor...</div>;
+        return <PageLoading />;
     }
 
     return (

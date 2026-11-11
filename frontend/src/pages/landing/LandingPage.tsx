@@ -22,7 +22,7 @@ const SECTION_X = "px-5 sm:px-8 lg:px-15";
 
 export default function LandingPage() {
     return (
-        <div className="min-h-screen bg-[#f5f0e8] dark:bg-[#18140f] text-[#2a1f14] dark:text-[#f2ede4] font-sans">
+        <div className="min-h-screen bg-background text-foreground font-sans">
             <PublicNav links={NAV_LINKS} />
             <main>
                 <Hero />
@@ -64,15 +64,15 @@ function Hero() {
             />
             <div className="max-w-300 mx-auto grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-12 lg:gap-14 items-center relative">
                 <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <span className="inline-flex items-center gap-2 self-start rounded-full px-3.5 py-1.5 bg-[rgba(200,169,110,0.12)] border border-[rgba(200,169,110,0.25)] text-[11px] font-bold tracking-[0.4px] text-[#C8A96E]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#C8A96E] animate-pulse" />
+                    <span className="inline-flex items-center gap-2 self-start rounded-full px-3.5 py-1.5 bg-[rgba(200,169,110,0.12)] border border-[rgba(200,169,110,0.25)] text-[11px] font-bold tracking-[0.4px] text-rb-gold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rb-gold animate-pulse" />
                         RESTORAN YÖNETİM SİSTEMİ
                     </span>
 
                     <h1 className="font-serif text-[44px] sm:text-[56px] lg:text-[52px] xl:text-[64px] font-bold leading-[1.02] tracking-[-0.5px] text-[#f2ede4]">
                         Siparişten hesaba,
                         <br />
-                        <em className="italic text-[#C8A96E]">tek akışta.</em>
+                        <em className="italic text-rb-gold">tek akışta.</em>
                     </h1>
                     <p className="text-base leading-relaxed max-w-lg text-[rgba(242,237,228,0.68)]">
                         Sophram garsonu, mutfağı, kasayı ve yönetimi aynı anda çalışan tek bir sisteme bağlar. Sipariş mutfağa saniyesinde düşer,
@@ -82,7 +82,7 @@ function Hero() {
                     <div className="flex flex-col sm:flex-row gap-3">
                         <Link
                             to="/login?tab=register"
-                            className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#C8A96E] text-[#1c1510] text-sm font-bold hover:bg-[#d6b97f] transition-colors"
+                            className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-rb-gold text-[#1c1510] text-sm font-bold hover:bg-[#d6b97f] transition-colors"
                         >
                             14 Gün Ücretsiz Dene <ArrowRight size={16} />
                         </Link>
@@ -113,7 +113,7 @@ function Hero() {
 
 function Highlights() {
     return (
-        <section className={`${SECTION_X} border-b border-[#e8e0d0] dark:border-[#3d3528]`}>
+        <section className={`${SECTION_X} border-b border-border`}>
             <div className="max-w-300 mx-auto grid grid-cols-2 lg:grid-cols-4">
                 {HIGHLIGHTS.map(({ icon: Icon, title, desc }, i) => (
                     <div
@@ -154,12 +154,12 @@ function OrderFlow() {
                         )}
                         <div className="relative shrink-0">
                             <span
-                                className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white dark:bg-[#2a2318] border border-[#e8e0d0] dark:border-[#3d3528] shadow-sm"
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white dark:bg-[#2a2318] border border-border shadow-sm"
                                 style={{ color: TONE[tone].color }}
                             >
                                 <Icon size={24} />
                             </span>
-                            <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#C8A96E] text-[#1c1510] text-[11px] font-bold flex items-center justify-center">
+                            <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rb-gold text-[#1c1510] text-[11px] font-bold flex items-center justify-center">
                                 {i + 1}
                             </span>
                         </div>
@@ -177,7 +177,7 @@ function OrderFlow() {
 
 function Features() {
     return (
-        <section id="features" className={`${SECTION_X} py-20 md:py-24 bg-black/2 dark:bg-white/2 border-y border-[#e8e0d0] dark:border-[#3d3528] scroll-mt-16`}>
+        <section id="features" className={`${SECTION_X} py-20 md:py-24 bg-black/2 dark:bg-white/2 border-y border-border scroll-mt-16`}>
             <SectionHeading
                 eyebrow="Özellikler"
                 title={<>Restoranın ihtiyacı olan her şey,<br className="hidden md:block" /> tek yerde</>}
@@ -187,14 +187,14 @@ function Features() {
                 {FEATURES.map(({ icon: Icon, tone, title, desc, points }) => (
                     <article
                         key={title}
-                        className="rounded-2xl p-6 flex flex-col gap-3 border border-[#e8e0d0] dark:border-[#3d3528] bg-white dark:bg-[#221d16] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5 transition-[transform,box-shadow] duration-200"
+                        className="rounded-2xl p-6 flex flex-col gap-3 border border-border bg-white dark:bg-[#221d16] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5 transition-[transform,box-shadow] duration-200"
                     >
                         <span className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: TONE[tone].bg, color: TONE[tone].color }}>
                             <Icon size={21} />
                         </span>
                         <h3 className="font-serif text-xl font-bold">{title}</h3>
                         <p className="text-[13px] leading-relaxed text-rb-text-sub flex-1">{desc}</p>
-                        <ul className="flex flex-col gap-1.5 mt-1 pt-3 border-t border-[#e8e0d0] dark:border-[#3d3528]">
+                        <ul className="flex flex-col gap-1.5 mt-1 pt-3 border-t border-border">
                             {points.map((p) => (
                                 <li key={p} className="flex items-start gap-2 text-[13px]">
                                     <Check size={14} className="mt-0.5 shrink-0" style={{ color: TONE[tone].color }} />
@@ -236,7 +236,7 @@ function Roles() {
                                 onClick={() => setActiveKey(r.key)}
                                 className={`flex items-center gap-2.5 md:gap-3 rounded-xl px-3 py-2 md:px-4 md:py-3 text-left border transition-colors ${
                                     selected
-                                        ? "bg-white dark:bg-[#221d16] border-[#e8e0d0] dark:border-[#3d3528] shadow-sm"
+                                        ? "bg-white dark:bg-[#221d16] border-border shadow-sm"
                                         : "border-transparent hover:bg-black/3 dark:hover:bg-white/4"
                                 }`}
                             >
@@ -258,7 +258,7 @@ function Roles() {
                 <div
                     key={role.key}
                     role="tabpanel"
-                    className="rounded-2xl p-6 md:p-8 border border-[#e8e0d0] dark:border-[#3d3528] bg-white dark:bg-[#221d16] animate-in fade-in duration-300"
+                    className="rounded-2xl p-6 md:p-8 border border-border bg-white dark:bg-[#221d16] animate-in fade-in duration-300"
                 >
                     <div className="flex items-center gap-4 mb-4">
                         <span className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: tone.bg, color: tone.color }}>
@@ -272,7 +272,7 @@ function Roles() {
                     <p className="text-[15px] leading-relaxed text-rb-text-sub mb-5">{role.desc}</p>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {role.points.map((p) => (
-                            <li key={p} className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 bg-[#f5f0e8] dark:bg-[#18140f] text-[13px]">
+                            <li key={p} className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 bg-background text-[13px]">
                                 <Check size={15} className="mt-0.5 shrink-0" style={{ color: tone.color }} />
                                 <span>{p}</span>
                             </li>
@@ -289,7 +289,7 @@ function Pricing() {
     const billing = BILLING_PERIODS.find((p) => p.key === billingKey)!;
 
     return (
-        <section id="pricing" className={`${SECTION_X} py-20 md:py-24 bg-black/2 dark:bg-white/2 border-y border-[#e8e0d0] dark:border-[#3d3528] scroll-mt-16`}>
+        <section id="pricing" className={`${SECTION_X} py-20 md:py-24 bg-black/2 dark:bg-white/2 border-y border-border scroll-mt-16`}>
             <SectionHeading
                 eyebrow="Fiyatlandırma"
                 title={<>Tek plan, tüm özellikler</>}
@@ -308,7 +308,7 @@ function Pricing() {
                                 aria-checked={selected}
                                 onClick={() => setBillingKey(period.key)}
                                 className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors ${
-                                    selected ? "bg-[#1c1510] text-[#f2ede4] dark:bg-[#C8A96E] dark:text-[#1c1510]" : "text-rb-text-sub hover:text-[#2a1f14] dark:hover:text-[#f2ede4]"
+                                    selected ? "bg-[#1c1510] text-[#f2ede4] dark:bg-rb-gold dark:text-[#1c1510]" : "text-rb-text-sub hover:text-[#2a1f14] dark:hover:text-[#f2ede4]"
                                 }`}
                             >
                                 {period.label}
@@ -351,7 +351,7 @@ function Pricing() {
                     <ul className="flex flex-col gap-2.5 pt-5 border-t border-white/10">
                         {PLAN_FEATURES.map((feat) => (
                             <li key={feat} className="flex items-center gap-2.5 text-[14px] text-[#f2ede4]">
-                                <span className="w-5 h-5 rounded-md shrink-0 flex items-center justify-center bg-[rgba(200,169,110,0.15)] text-[#C8A96E]">
+                                <span className="w-5 h-5 rounded-md shrink-0 flex items-center justify-center bg-[rgba(200,169,110,0.15)] text-rb-gold">
                                     <Check size={12} strokeWidth={3} />
                                 </span>
                                 {feat}
@@ -361,7 +361,7 @@ function Pricing() {
 
                     <Link
                             to="/login?tab=register"
-                        className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold bg-[#C8A96E] text-[#1c1510] hover:bg-[#d6b97f] transition-colors"
+                        className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold bg-rb-gold text-[#1c1510] hover:bg-[#d6b97f] transition-colors"
                     >
                         14 Gün Ücretsiz Dene <ArrowRight size={16} />
                     </Link>
@@ -380,7 +380,7 @@ function Faq() {
                 {FAQ.map((item) => (
                     <details
                         key={item.q}
-                        className="group rounded-2xl border border-[#e8e0d0] dark:border-[#3d3528] bg-white dark:bg-[#221d16] open:shadow-sm"
+                        className="group rounded-2xl border border-border bg-white dark:bg-[#221d16] open:shadow-sm"
                     >
                         <summary className="flex items-center justify-between gap-4 cursor-pointer list-none px-5 py-4 text-[15px] font-semibold [&::-webkit-details-marker]:hidden">
                             {item.q}
@@ -422,7 +422,7 @@ function FinalCta() {
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <Link
                             to="/login?tab=register"
-                        className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-[#C8A96E] text-[#1c1510] text-sm font-bold hover:bg-[#d6b97f] transition-colors"
+                        className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-rb-gold text-[#1c1510] text-sm font-bold hover:bg-[#d6b97f] transition-colors"
                     >
                         Ücretsiz Hesap Oluştur <ArrowRight size={16} />
                     </Link>

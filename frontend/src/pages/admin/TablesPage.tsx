@@ -11,7 +11,7 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid } from 'lucide-react';
+import { Check, X, Pencil, QrCode, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid, Trash2 } from 'lucide-react';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
@@ -19,7 +19,12 @@ import axios from "axios";
 import { createHubConnection } from "@/lib/signalrConnection";
 import PaymentPanel from '../cashier/components/PaymentPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
-import { formatPrice } from '@/lib/format';
+import TableQrModal from '@/features/tables/components/TableQrModal';
+import CustomerOrderRequests from '../waiter/components/CustomerOrderRequests';
+import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
+import type { OrderRequest } from '@/features/customerSite/types';
+import { formatPrice, formatElapsed } from '@/lib/format';
+import { inputClass, labelClass } from '@/lib/formStyles';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
 
@@ -55,21 +60,12 @@ const STATUS_CARD = {
     },
 } as const;
 
-function formatElapsed(occupiedSince: string, now: number): string {
-    const minutes = Math.max(0, Math.floor((now - new Date(occupiedSince).getTime()) / 60000));
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
-}
-
 const PANEL_STATUS_CONFIG: Record<number, { label: string; cls: string }> = {
     1: { label: 'BOŞ', cls: 'bg-rb-green-bg text-rb-green' },
     2: { label: 'DOLU', cls: 'bg-rb-orange-bg text-rb-orange' },
     3: { label: 'REZERVE', cls: 'bg-rb-amber-bg text-rb-amber' },
 };
 
-const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
-const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 function formatTimeDigits(rawValue: string): string {
     let digits = rawValue.replace(/\D/g, '').slice(0, 4);
@@ -93,6 +89,10 @@ export default function Tables() {
     const [now, setNow] = useState(() => Date.now());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editTable, setEditTable] = useState<Table | null>(null);
+    // Müşteri QR'ı gösterilen masa.
+    const [qrTable, setQrTable] = useState<Table | null>(null);
+    // Masa QR'ından gelen, onay bekleyen müşteri siparişleri (garsonu olmayan işletmede sahibi onaylar).
+    const [orderRequests, setOrderRequests] = useState<OrderRequest[]>([]);
     const [newTableName, setNewTableName] = useState('');
     const [newTableRegionId, setNewTableRegionId] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -168,9 +168,16 @@ export default function Tables() {
         }
     };
 
+    const loadOrderRequests = () => {
+        customerRequestService.getPendingOrderRequests()
+            .then(setOrderRequests)
+            .catch(console.error);
+    };
+
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh calls are async; setState happens after the await, not synchronously.
         Promise.all([refreshTables(), refreshRegions()]).catch(console.error).finally(() => setLoaded(true));
+        loadOrderRequests();
     }, []);
 
     useEffect(() => {
@@ -190,6 +197,7 @@ export default function Tables() {
                 orderService.getOrderByTableId(changedTableId).then(data => { if (data) setTableOrder(data); }).catch(() => {});
             }
         });
+        connection.on("CustomerRequestsChanged", loadOrderRequests);
         connection.start().catch((err: Error) => {
             if (!err.message.includes("stopped during negotiation")) console.error("SignalR Connection Error:", err);
         });
@@ -580,6 +588,8 @@ export default function Tables() {
                 </button>
             </div>
 
+            <CustomerOrderRequests requests={orderRequests} onChanged={loadOrderRequests} />
+
             {/* Bölge Sekmeleri */}
             <div className="flex gap-2 flex-wrap items-center">
                 <button
@@ -587,7 +597,7 @@ export default function Tables() {
                     className={cn(
                         "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                         selectedRegionId === 'all'
-                            ? "bg-rb-accent text-white"
+                            ? "bg-rb-accent text-rb-accent-foreground"
                             : "border border-border text-muted-foreground hover:text-foreground"
                     )}
                 >
@@ -599,7 +609,7 @@ export default function Tables() {
                         className={cn(
                             "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
                             selectedRegionId === region.id
-                                ? "bg-rb-accent text-white"
+                                ? "bg-rb-accent text-rb-accent-foreground"
                                 : "border border-border text-muted-foreground hover:text-foreground"
                         )}
                     >
@@ -608,6 +618,7 @@ export default function Tables() {
                         </button>
                         <button
                             onClick={() => openRegionModal(region)}
+                            aria-label={`${region.name} bölgesini düzenle`}
                             className={cn(
                                 "p-1 rounded-full transition-colors",
                                 selectedRegionId === region.id ? "hover:bg-white/20" : "hover:bg-muted"
@@ -617,12 +628,13 @@ export default function Tables() {
                         </button>
                         <button
                             onClick={() => setRegionDeleteTargetId(region.id)}
+                            aria-label={`${region.name} bölgesini sil`}
                             className={cn(
                                 "p-1 rounded-full transition-colors",
                                 selectedRegionId === region.id ? "hover:bg-white/20" : "hover:bg-muted"
                             )}
                         >
-                            <X className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3" />
                         </button>
                     </div>
                 ))}
@@ -735,18 +747,28 @@ export default function Tables() {
                                         </span>
                                         <div className="flex items-center gap-2 shrink-0">
                                             <button
+                                                onClick={e => { e.stopPropagation(); setQrTable(table); }}
+                                                aria-label={`${table.name} QR kodu`}
+                                                title="Müşteri QR kodu"
+                                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                            >
+                                                <QrCode className="h-3.5 w-3.5" />
+                                            </button>
+                                            <button
                                                 onClick={e => { e.stopPropagation(); openEditModal(table); }}
+                                                aria-label={`${table.name} masasını düzenle`}
                                                 className="text-muted-foreground hover:text-foreground transition-colors"
                                             >
                                                 <Pencil className="h-3.5 w-3.5" />
                                             </button>
                                             <button
                                                 onClick={e => { e.stopPropagation(); setDeleteTargetId(table.id); }}
+                                                aria-label={`${table.name} masasını sil`}
                                                 className="text-muted-foreground hover:text-destructive transition-colors"
                                             >
-                                                <X className="h-3.5 w-3.5" />
+                                                <Trash2 className="h-3.5 w-3.5" />
                                             </button>
-                                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-1.5 leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
+                                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-md leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
                                                 {cfg.label}
                                             </span>
                                         </div>
@@ -899,6 +921,8 @@ export default function Tables() {
                 </div>
             )}
 
+            {qrTable && <TableQrModal table={qrTable} onClose={() => setQrTable(null)} />}
+
             {/* Bölge Silme Onay */}
             <AlertDialog open={regionDeleteTargetId !== null} onOpenChange={open => !open && closeRegionDeleteDialog()}>
                 <AlertDialogContent>
@@ -994,7 +1018,7 @@ export default function Tables() {
                                                 onClick={() => setSelectedCategoryId(cat.id)}
                                                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
                                                     selectedCategoryId === cat.id
-                                                        ? 'bg-rb-accent text-white'
+                                                        ? 'bg-rb-accent text-rb-accent-foreground'
                                                         : 'bg-muted text-muted-foreground hover:bg-muted/70'
                                                 }`}
                                             >
@@ -1032,7 +1056,7 @@ export default function Tables() {
                                                                 )}
                                                                 <div className="min-w-0">
                                                                     <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                                                                    <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
+                                                                    <p className="text-xs text-muted-foreground mt-0.5">₺{formatPrice(product.price)}</p>
                                                                 </div>
                                                             </div>
                                                             {qty > 0 && (
@@ -1070,7 +1094,7 @@ export default function Tables() {
                                                             )}
                                                             <button
                                                                 onClick={() => increaseNewItem(product)}
-                                                                className="w-7 h-7 rounded-full bg-rb-accent flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-colors"
+                                                                className="w-7 h-7 rounded-full bg-rb-gold flex items-center justify-center text-rb-gold-foreground text-xl font-bold hover:opacity-90 transition-colors"
                                                             >
                                                                 +
                                                             </button>
@@ -1104,7 +1128,7 @@ export default function Tables() {
                                             <Button
                                                 onClick={handleSendOrder}
                                                 disabled={isSendingOrder}
-                                                className="w-full bg-rb-accent hover:opacity-90 text-white font-semibold rounded-xl h-11 shrink-0"
+                                                className="w-full bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-semibold rounded-xl h-11 shrink-0"
                                             >
                                                 {isSendingOrder ? 'Gönderiliyor...' : 'Siparişi Gönder →'}
                                             </Button>
@@ -1149,7 +1173,7 @@ export default function Tables() {
                                     <Button
                                         onClick={handleCustomerArrived}
                                         disabled={arriving}
-                                        className="w-full bg-rb-green hover:opacity-90 text-white font-semibold rounded-xl h-11 disabled:opacity-60"
+                                        className="w-full bg-rb-green hover:opacity-90 text-rb-green-foreground font-semibold rounded-xl h-11 disabled:opacity-60"
                                     >
                                         {arriving ? 'Açılıyor...' : 'Müşteri Geldi (Masayı Aç)'}
                                     </Button>
@@ -1214,7 +1238,7 @@ export default function Tables() {
                                     <Button
                                         onClick={handleSaveReservation}
                                         disabled={savingReservation}
-                                        className="w-full bg-rb-amber hover:opacity-90 text-white font-semibold rounded-xl h-11"
+                                        className="w-full bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-semibold rounded-xl h-11"
                                     >
                                         {savingReservation ? 'Kaydediliyor...' : 'Rezervasyonu Kaydet'}
                                     </Button>
@@ -1279,7 +1303,7 @@ export default function Tables() {
                                         {tableOrder.orderItems.length > 0 && (
                                             <button
                                                 onClick={() => setPaymentOrder(tableOrder)}
-                                                className="w-full rounded-xl bg-rb-accent-bg text-rb-accent font-semibold text-sm py-2.5 hover:opacity-80 transition-colors"
+                                                className="w-full h-12 rounded-xl bg-rb-gold text-rb-gold-foreground font-semibold text-sm hover:bg-rb-gold/85 transition-colors"
                                             >
                                                 Ödeme Al
                                             </button>

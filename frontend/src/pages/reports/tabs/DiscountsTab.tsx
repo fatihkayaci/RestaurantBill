@@ -1,17 +1,16 @@
 import { Percent, TrendingDown, FileText } from 'lucide-react';
 import type { DiscountReport } from '@/features/reports/types';
+import { formatCurrency } from '@/lib/format';
+import { PageLoading } from '@/components/ui/page-state';
 
 interface Props {
     data: DiscountReport | null;
     loading: boolean;
 }
 
-const formatCurrency = (value: number, decimals = 0) =>
-    `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
-
 export default function DiscountsTab({ data, loading }: Props) {
     if (loading && !data) {
-        return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Yükleniyor...</div>;
+        return <PageLoading />;
     }
 
     const maxBucket = Math.max(1, ...(data?.percentDistribution.map(b => b.count) ?? [0]));

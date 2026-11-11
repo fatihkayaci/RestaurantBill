@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes';
 import type { LucideIcon } from 'lucide-react';
 import {
     LayoutDashboard, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, UserCircle, Store,
-    Building2, UserCog, Palette, History, Moon, ChevronRight, Menu, X, PanelLeftClose, PanelLeftOpen,
+    Building2, UserCog, Palette, History, CalendarCheck, Moon, ChevronRight, Menu, X, PanelLeftClose, PanelLeftOpen, LogOut,
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { userService } from '@/features/users/api/userService';
@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import sophramLogo from '@/assets/sophram-logo-yazisiz.svg';
 import BranchSwitcher from './BranchSwitcher';
 import QuickAccessPanel from './QuickAccessPanel';
+import LogoutConfirmDialog from './LogoutConfirmDialog';
+import { SwitchTrack } from '@/components/ui/switch';
 
 interface NavItem { to: string; icon: LucideIcon; label: string; }
 interface NavGroup { label?: string; items: NavItem[]; }
@@ -26,6 +28,7 @@ const branchNav: NavItem[] = [
     { to: '/admin/staff', icon: Users, label: 'Çalışanlar' },
     { to: '/admin/tables', icon: LayoutGrid, label: 'Masalar' },
     { to: '/admin/menu', icon: UtensilsCrossed, label: 'Menü' },
+    { to: '/admin/reservations', icon: CalendarCheck, label: 'Rezervasyonlar' },
     { to: '/admin/cash-registers', icon: Wallet, label: 'Kasalar' },
     { to: '/admin/shifts', icon: Clock, label: 'Vardiyalar' },
     { to: '/admin/reports', icon: BarChart3, label: 'Raporlar' },
@@ -36,7 +39,7 @@ const branchNav: NavItem[] = [
 // Owner'a şube modunda ek olarak açılan şirket sayfaları.
 const ownerExtrasInBranch: NavItem[] = [
     { to: '/admin/branches', icon: Building2, label: 'Şubeler' },
-    { to: '/admin/admins', icon: UserCog, label: 'Adminler' },
+    { to: '/admin/admins', icon: UserCog, label: 'Yöneticiler' },
     { to: '/admin/branding', icon: Palette, label: 'Marka Ayarları' },
     { to: '/admin/audit-log', icon: History, label: 'Denetim Kaydı' },
 ];
@@ -45,7 +48,7 @@ const ownerExtrasInBranch: NavItem[] = [
 const companyNav: NavItem[] = [
     { to: '/owner/overview', icon: LayoutDashboard, label: 'Şirket Genel Bakış' },
     { to: '/owner/branches', icon: Building2, label: 'Şubeler' },
-    { to: '/owner/admins', icon: UserCog, label: 'Adminler' },
+    { to: '/owner/admins', icon: UserCog, label: 'Yöneticiler' },
     { to: '/owner/branding', icon: Palette, label: 'Marka Ayarları' },
     { to: '/owner/reports', icon: BarChart3, label: 'Finansal Rapor' },
     { to: '/owner/audit-log', icon: History, label: 'Denetim Kaydı' },
@@ -64,6 +67,7 @@ export default function AppShell() {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [logoutOpen, setLogoutOpen] = useState(false);
     const [hoverTip, setHoverTip] = useState<{ label: string; top: number } | null>(null);
     const asideRef = useRef<HTMLElement>(null);
 
@@ -93,7 +97,7 @@ export default function AppShell() {
         <div className="flex h-screen bg-background">
             {/* Mobil üst bar */}
             <div className="md:hidden fixed top-0 inset-x-0 z-40 h-14 flex items-center justify-between px-4 bg-sidebar border-b border-white/10">
-                <button onClick={() => setMobileOpen(true)} className="text-sidebar-foreground/70 hover:text-sidebar-foreground p-1">
+                <button onClick={() => setMobileOpen(true)} aria-label="Menüyü aç" className="flex h-11 w-11 -ml-2 items-center justify-center text-sidebar-foreground/70 hover:text-sidebar-foreground">
                     <Menu className="w-5 h-5" />
                 </button>
                 <img src={sophramLogo} alt="Sophram" className="h-8 w-auto" />
@@ -118,10 +122,11 @@ export default function AppShell() {
                 )}
             >
                 {/* Logo */}
-                <div className="relative flex h-28 shrink-0 items-center justify-center px-5">
-                    <img src={sophramLogo} alt="Sophram" className={cn("h-18 w-auto shrink-0 transition-all duration-300", collapsed && "md:h-10")} />
+                <div className="relative flex h-20 shrink-0 items-center justify-center px-5">
+                    <img src={sophramLogo} alt="Sophram" className={cn("h-14 w-auto shrink-0 transition-all duration-300", collapsed && "md:h-10")} />
                     <button
                         onClick={() => setMobileOpen(false)}
+                        aria-label="Menüyü kapat"
                         className="md:hidden absolute right-4 top-1/2 -translate-y-1/2 text-sidebar-foreground/60 hover:text-sidebar-foreground"
                     >
                         <X className="w-5 h-5" />
@@ -156,7 +161,7 @@ export default function AppShell() {
                                             collapsed && 'md:justify-center md:px-2',
                                             isActive
                                                 ? 'bg-white/10 text-sidebar-foreground'
-                                                : 'text-sidebar-foreground/40 hover:text-sidebar-foreground/70'
+                                                : 'text-sidebar-foreground/65 hover:text-sidebar-foreground/90'
                                         )
                                     }
                                 >
@@ -164,7 +169,7 @@ export default function AppShell() {
                                         <>
                                             <Icon className={cn(
                                                 'w-4 h-4 shrink-0 transition-transform duration-200',
-                                                isActive ? accentText : 'text-sidebar-foreground/30',
+                                                isActive ? accentText : 'text-sidebar-foreground/55',
                                                 collapsed && 'md:group-hover:scale-125'
                                             )} />
                                             <span className={cn(collapsed && 'md:hidden')}>{label}</span>
@@ -210,46 +215,68 @@ export default function AppShell() {
                         </div>
                         <button
                             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-                            className={cn(
-                                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0',
-                                isDark ? 'bg-rb-accent' : 'bg-gray-600'
-                            )}
+                            role="switch"
+                            aria-checked={isDark}
+                            aria-label="Koyu tema"
+                            className="flex h-10 items-center shrink-0"
                         >
-                            <span className={cn(
-                                'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200',
-                                isDark ? 'translate-x-4' : 'translate-x-0.5'
-                            )} />
+                            <SwitchTrack checked={isDark} onClassName="bg-rb-accent" offClassName="bg-white/20" />
                         </button>
                     </div>
 
                     <button
-                        onClick={handleLogout}
+                        type="button"
+                        onClick={() => { if (!companyMode) { setMobileOpen(false); navigate('/admin/profile'); } }}
+                        disabled={companyMode}
                         className={cn(
-                            "flex items-center gap-2.5 w-full rounded-xl bg-white/5 hover:bg-white/10 px-2.5 py-2.5 transition-colors",
+                            "flex items-center gap-2.5 w-full rounded-xl bg-white/5 px-2.5 py-2.5 transition-colors",
+                            !companyMode && "hover:bg-white/10",
                             collapsed && "md:justify-center md:px-0"
                         )}
-                        title="Çıkış Yap"
+                        title={companyMode ? undefined : "Profil"}
                     >
                         <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", isOwner ? "bg-rb-gold" : "bg-rb-amber")}>
-                            <span className={cn("text-sm font-bold", isOwner ? "text-rb-gold-foreground" : "text-white")}>{initials}</span>
+                            <span className={cn("text-sm font-bold", isOwner ? "text-rb-gold-foreground" : "text-rb-amber-foreground")}>{initials}</span>
                         </div>
                         <div className={cn("flex-1 min-w-0 text-left", collapsed && "md:hidden")}>
                             <p className="text-sidebar-foreground text-sm font-medium truncate">{displayName}</p>
                             <p className="text-sidebar-foreground/40 text-xs truncate">{roleLabel}{currentUser?.email ? ` · ${currentUser.email}` : ''}</p>
                         </div>
-                        <ChevronRight className={cn("w-4 h-4 text-sidebar-foreground/30 shrink-0", collapsed && "md:hidden")} />
+                        {!companyMode && <ChevronRight className={cn("w-4 h-4 text-sidebar-foreground/30 shrink-0", collapsed && "md:hidden")} />}
                     </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setCollapsed(v => !v)}
+                        aria-label={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
+                        title={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
+                        className={cn(
+                            "hidden md:flex h-10 items-center gap-2.5 w-full rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground transition-colors",
+                            collapsed && "md:justify-center md:px-0"
+                        )}
+                    >
+                        {collapsed ? <PanelLeftOpen className="w-4 h-4 shrink-0" /> : <PanelLeftClose className="w-4 h-4 shrink-0" />}
+                        <span className={cn(collapsed && "md:hidden")}>Menüyü daralt</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setLogoutOpen(true)}
+                        aria-label="Çıkış Yap"
+                        title="Çıkış Yap"
+                        className={cn(
+                            "flex h-10 items-center gap-2.5 w-full rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground transition-colors",
+                            collapsed && "md:justify-center md:px-0"
+                        )}
+                    >
+                        <LogOut className="w-4 h-4 shrink-0" />
+                        <span className={cn(collapsed && "md:hidden")}>Çıkış Yap</span>
+                    </button>
+                    <LogoutConfirmDialog open={logoutOpen} onOpenChange={setLogoutOpen} onConfirm={handleLogout} />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-auto p-6 pt-20 md:pt-6">
-                <button
-                    onClick={() => setCollapsed(v => !v)}
-                    className="hidden md:flex items-center justify-center w-8 h-8 mb-4 -ml-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    title={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
-                >
-                    {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-                </button>
+            <main className="flex-1 overflow-auto p-6 pt-20 pb-24 md:pt-6 md:pb-6">
                 <Outlet />
             </main>
 

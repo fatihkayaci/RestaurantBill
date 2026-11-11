@@ -5,6 +5,8 @@ import { shiftService } from '@/features/cashier/api/shiftService';
 import type { PaymentMethod, Shift, ShiftSummary } from '@/features/cashier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { formatTL } from '@/lib/format';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 
 interface Props {
     onClose: () => void;
@@ -13,10 +15,6 @@ interface Props {
 
 const METHOD_ORDER: PaymentMethod[] = [2, 1, 3];
 const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR' };
-
-function formatTL(amount: number): string {
-    return `₺${amount.toLocaleString('tr-TR')}`;
-}
 
 function formatTime(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -75,13 +73,13 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
     const diff = closedShift?.difference ?? 0;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[3px] p-4">
+        <Modal onClose={onClose} closeOnOverlay={false} overlayClassName="z-50 bg-black/60 backdrop-blur-[3px] p-4">
             <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
                 <div className="flex items-start justify-between mb-1">
                     <div>
-                        <h2 className="font-serif text-xl font-bold text-foreground">
+                        <ModalTitle className="font-serif text-xl font-bold text-foreground">
                             {closedAt ? 'Z Raporu' : 'Vardiyayı Bitir'}
-                        </h2>
+                        </ModalTitle>
                         <p className="text-sm text-muted-foreground mt-0.5">
                             {summary ? `${formatTime(summary.openedAt)} — ${formatTime(closedAt ?? now)} · ${shift?.openedByUserName ?? ''}` : shift?.openedByUserName}
                         </p>
@@ -131,7 +129,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                             </div>
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Fark</span>
-                                <span className={`font-semibold tabular-nums ${diff < 0 ? 'text-red-500' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
+                                <span className={`font-semibold tabular-nums ${diff < 0 ? 'text-rb-red' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
                                     {diff === 0 ? 'Fark yok' : diff < 0 ? `-${formatTL(Math.abs(diff))}` : `+${formatTL(diff)}`}
                                 </span>
                             </div>
@@ -139,7 +137,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
 
                         <button
                             onClick={onShiftClosed}
-                            className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-white bg-rb-accent hover:opacity-90 transition-opacity"
+                            className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-rb-gold-foreground bg-rb-gold hover:opacity-90 transition-opacity"
                         >
                             Tamam
                         </button>
@@ -198,7 +196,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                             <button
                                 onClick={() => handleCloseShift(true)}
                                 disabled={submitting}
-                                className="w-full rounded-xl py-3.5 text-sm font-semibold text-white bg-rb-red hover:opacity-90 transition-opacity disabled:opacity-50"
+                                className="w-full rounded-xl py-3.5 text-sm font-semibold text-rb-red-foreground bg-rb-red hover:opacity-90 transition-opacity disabled:opacity-50"
                             >
                                 {submitting ? 'Kapatılıyor...' : 'Vardiyayı Kapat, Z Raporu Al'}
                             </button>
@@ -213,6 +211,6 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                     </>
                 )}
             </div>
-        </div>
+        </Modal>
     );
 }

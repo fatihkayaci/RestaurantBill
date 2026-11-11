@@ -161,7 +161,7 @@ export default function AuditLogPage() {
                     <SlidersHorizontal className="h-4 w-4" />
                     Filtrele
                     {activeFilterCount > 0 && (
-                        <span className="flex items-center justify-center h-4 w-4 rounded-full bg-rb-accent text-white text-[10px] font-semibold">
+                        <span className="flex items-center justify-center h-4 w-4 rounded-full bg-rb-accent text-rb-accent-foreground text-[10px] font-semibold">
                             {activeFilterCount}
                         </span>
                     )}
@@ -269,7 +269,8 @@ export default function AuditLogPage() {
             )}
 
             <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-sm">
                     <thead>
                         <tr className="border-b border-border">
                             <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Zaman</th>
@@ -333,6 +334,7 @@ export default function AuditLogPage() {
                         )}
                     </tbody>
                 </table>
+                </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -360,7 +362,8 @@ export default function AuditLogPage() {
                             type="button"
                             disabled={currentPage === 1}
                             onClick={() => setPage(1)}
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
+                            aria-label="İlk sayfa"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
                         >
                             <ChevronsLeft className="h-4 w-4" />
                         </button>
@@ -368,7 +371,8 @@ export default function AuditLogPage() {
                             type="button"
                             disabled={currentPage === 1}
                             onClick={() => setPage(Math.max(1, currentPage - 1))}
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
+                            aria-label="Önceki sayfa"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
@@ -379,7 +383,8 @@ export default function AuditLogPage() {
                             type="button"
                             disabled={currentPage === totalPages}
                             onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
+                            aria-label="Sonraki sayfa"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
                         >
                             <ChevronRight className="h-4 w-4" />
                         </button>
@@ -387,7 +392,8 @@ export default function AuditLogPage() {
                             type="button"
                             disabled={currentPage === totalPages}
                             onClick={() => setPage(totalPages)}
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
+                            aria-label="Son sayfa"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
                         >
                             <ChevronsRight className="h-4 w-4" />
                         </button>

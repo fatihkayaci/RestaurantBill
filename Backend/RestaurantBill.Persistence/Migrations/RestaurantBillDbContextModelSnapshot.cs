@@ -439,6 +439,87 @@ namespace RestaurantBill.Persistence.Migrations
                     b.ToTable("OrderItems");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasDefaultValue("");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TableId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TableId", "Status");
+
+                    b.ToTable("OrderRequests");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderRequestItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasDefaultValue("");
+
+                    b.Property<Guid>("OrderRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderRequestId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("OrderRequestItems");
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Payment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -724,6 +805,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid>("CreatedUser")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("GuestName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -734,6 +818,11 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<string>("Note")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("PartySize")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<DateTime>("ReservationTime")
                         .HasColumnType("timestamp with time zone");
@@ -750,6 +839,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TableId");
+
+                    b.HasIndex("Status", "ReservationTime");
 
                     b.ToTable("Reservations");
                 });
@@ -1158,6 +1249,36 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderRequest", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.Table", "Table")
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Table");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderRequestItem", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.OrderRequest", "OrderRequest")
+                        .WithMany("Items")
+                        .HasForeignKey("OrderRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RestaurantBill.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OrderRequest");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Payment", b =>
                 {
                     b.HasOne("RestaurantBill.Domain.Entities.CashRegister", "CashRegister")
@@ -1295,6 +1416,11 @@ namespace RestaurantBill.Persistence.Migrations
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Order", b =>
                 {
                     b.Navigation("OrderItems");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderRequest", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

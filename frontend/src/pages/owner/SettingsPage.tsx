@@ -4,11 +4,11 @@ import { toast } from "sonner";
 import axios from "axios";
 import { companyService } from "@/features/companies/api/companyService";
 import { ROOT_DOMAIN } from "@/lib/tenant";
+import { staffLoginUrl } from "@/lib/loginAddress";
 import { slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
+import { inputClass, labelClass } from '@/lib/formStyles';
 
-const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
-const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function SettingsPage() {
     const [companyId, setCompanyId] = useState<string | null>(null);
@@ -127,7 +127,7 @@ export default function SettingsPage() {
                         {cleanSlug && (
                             <div className="flex flex-col items-center gap-2 py-2">
                                 <div className="p-3 rounded-lg bg-white">
-                                    <QRCodeSVG value={`https://${cleanSlug}.${ROOT_DOMAIN}`} size={140} />
+                                    <QRCodeSVG value={staffLoginUrl(cleanSlug)} size={140} />
                                 </div>
                             </div>
                         )}

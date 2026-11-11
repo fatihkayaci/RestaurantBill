@@ -23,7 +23,7 @@ export default function PublicNav({ links = [] }: PublicNavProps) {
     }, [menuOpen]);
 
     return (
-        <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#f5f0e8]/95 dark:bg-[#18140f]/95 border-b border-[#e8e0d0] dark:border-[#3d3528]">
+        <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#f5f0e8]/95 dark:bg-[#18140f]/95 border-b border-border">
             <div className="px-5 sm:px-8 lg:px-15 py-1.5 flex items-center justify-between gap-6">
                 <Link to="/" className="flex items-center shrink-0" onClick={() => setMenuOpen(false)}>
                     <img src={sophramLogo} alt="" className="h-12 sm:h-14 w-auto" />
@@ -55,7 +55,7 @@ export default function PublicNav({ links = [] }: PublicNavProps) {
                     </button>
                     <Link
                         to="/login"
-                        className="px-4 py-2 rounded-lg bg-[#C8A96E] text-[13px] font-bold text-[#1c1510] hover:bg-[#d6b97f] transition-colors"
+                        className="px-4 py-2 rounded-lg bg-rb-gold text-[13px] font-bold text-[#1c1510] hover:bg-[#d6b97f] transition-colors"
                     >
                         Giriş Yap
                     </Link>
@@ -77,14 +77,14 @@ export default function PublicNav({ links = [] }: PublicNavProps) {
             {links.length > 0 && menuOpen && (
                 <div
                     id="public-nav-menu"
-                    className="lg:hidden border-t border-[#e8e0d0] dark:border-[#3d3528] px-5 sm:px-8 py-3 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
+                    className="lg:hidden border-t border-border px-5 sm:px-8 py-3 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
                 >
                     {links.map((link) => (
                         <a
                             key={link.label}
                             href={link.href}
                             onClick={() => setMenuOpen(false)}
-                            className="py-3 text-[15px] font-medium border-b last:border-b-0 border-[#e8e0d0] dark:border-[#3d3528]"
+                            className="py-3 text-[15px] font-medium border-b last:border-b-0 border-border"
                         >
                             {link.label}
                         </a>

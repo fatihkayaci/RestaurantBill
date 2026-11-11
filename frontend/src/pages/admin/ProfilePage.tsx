@@ -20,6 +20,7 @@ import {
     DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
+import { inputClass, labelClass } from '@/lib/formStyles';
 
 const profileSchema = z.object({
     fullName: z.string().min(1, "Ad soyad zorunludur."),
@@ -33,8 +34,6 @@ const roleLabel: Record<number, string> = {
     1: "Yönetici", 2: "Garson", 3: "Kasiyer", 4: "Mutfak", 5: "Sahibi",
 };
 
-const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
-const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 export default function Profile() {
     const [userId, setUserId] = useState<string | null>(null);
@@ -203,7 +202,7 @@ export default function Profile() {
                                     <label className={cn(labelClass, "mb-0")}>E-posta</label>
                                     <div className="flex items-center gap-2">
                                         {isEmailVerified ? (
-                                            <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Doğrulandı</Badge>
+                                            <Badge className="bg-rb-green-bg text-rb-green">Doğrulandı</Badge>
                                         ) : (
                                             <>
                                                 <Badge variant="destructive">Doğrulanmadı</Badge>

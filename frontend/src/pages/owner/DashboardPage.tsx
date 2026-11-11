@@ -14,10 +14,8 @@ import type { BranchOperationalStatus, OwnerDashboardStats } from '@/features/st
 import { auditLogService } from '@/features/auditLogs/api/auditLogService';
 import type { AuditLog } from '@/features/auditLogs/types';
 import { SEVERITY_LABELS, SEVERITY_STYLE } from '@/features/auditLogs/constants';
-import { formatPercentChange } from '@/lib/format';
-
-const formatCurrency = (value: number, decimals = 0) =>
-    `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+import { formatPercentChange, formatCurrency } from '@/lib/format';
+import { PageError, PageLoading } from '@/components/ui/page-state';
 
 
 const minutesAgoLabel = (iso: string) => {
@@ -89,6 +87,7 @@ export default function DashboardPage() {
     const [range, setRange] = useState<7 | 30 | 90>(7);
     const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedDate, setSelectedDate] = useState(getTodayIso);
     const [dashboard, setDashboard] = useState<OwnerDashboardStats | null>(null);
@@ -103,11 +102,12 @@ export default function DashboardPage() {
             auditLogService.getAll({ pageNumber: 1, pageSize: 5 }),
         ])
             .then(([dashboardData, auditLogPage]) => {
+                setLoadFailed(false);
                 setDashboard(dashboardData);
                 setRecentAuditLogs(auditLogPage.items);
                 setLastUpdatedAt(new Date());
             })
-            .catch(console.error)
+            .catch(err => { console.error(err); setLoadFailed(true); })
             .finally(async () => {
                 setLoading(false);
                 if (showRefreshSpinner) {
@@ -164,13 +164,8 @@ export default function DashboardPage() {
     const paymentTotal = paymentMethods.reduce((sum, p) => sum + p.amount, 0);
     const activeRatio = stats && stats.totalBranchCount > 0 ? (stats.activeBranchCount / stats.totalBranchCount) * 100 : 0;
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
-                Yükleniyor...
-            </div>
-        );
-    }
+    if (loading) return <PageLoading />;
+    if (loadFailed && !dashboard) return <PageError onRetry={() => { setLoading(true); void loadData(false); }} />;
 
     return (
         <div className="space-y-5">
@@ -200,6 +195,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={handleRefresh}
                         disabled={refreshing}
+                        aria-label="Yenile"
                         className="flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-60"
                     >
                         <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
@@ -249,7 +245,7 @@ export default function DashboardPage() {
                                     onClick={() => setRange(d)}
                                     className={cn(
                                         'px-3 py-1 rounded-md text-xs font-medium transition-colors',
-                                        range === d ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground'
+                                        range === d ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground'
                                     )}
                                 >
                                     {d} Gün

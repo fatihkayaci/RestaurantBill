@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { productService } from '@/features/products/api/productService';
 import { categoryService } from '@/features/categories/api/categoryService';
@@ -255,16 +259,14 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
 
     const handleCloseTable = async () => {
         if (!activeOrder) return;
-        const confirmed = window.confirm('Dikkat: Bu siparişin tamamı iptal edilecek ve masa boşaltılacaktır. Emin misiniz?');
-        if (!confirmed) return;
 
         try {
             await orderService.cancelOrder(activeOrder.id);
             onTableUpdated?.(table.id, 1);
-            toast.success('Masa kapatıldı.');
+            toast.success('Sipariş iptal edildi.');
             onClose();
         } catch (err) {
-            toast.error(getApiErrorMessage(err, 'Masa kapatılamadı.'));
+            toast.error(getApiErrorMessage(err, 'Sipariş iptal edilemedi.'));
         }
     };
 
@@ -376,6 +378,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
         }
     };
 
+    const [confirmAction, setConfirmAction] = useState<'cancel-order' | 'cancel-reservation' | null>(null);
+
     const statusCfg = STATUS_CONFIG[table.status as 1 | 2 | 3] ?? { label: '', cls: '' };
 
     return (
@@ -392,8 +396,10 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                         </div>
                     </div>
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="Kapat"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -438,9 +444,9 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 <button
                                     key={cat.id}
                                     onClick={() => setSelectedCategoryId(cat.id)}
-                                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+                                    className={`min-h-11 px-4 rounded-full text-sm font-semibold whitespace-nowrap shrink-0 transition-colors ${
                                         selectedCategoryId === cat.id
-                                            ? 'bg-rb-accent text-white'
+                                            ? 'bg-rb-accent text-rb-accent-foreground'
                                             : 'bg-muted text-muted-foreground hover:bg-muted/70'
                                     }`}
                                 >
@@ -478,7 +484,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                     )}
                                                     <div className="min-w-0">
                                                         <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                                                        <p className="text-xs text-muted-foreground mt-0.5">₺{product.price}</p>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">₺{formatPrice(product.price)}</p>
                                                     </div>
                                                 </div>
                                                 {qty > 0 && (
@@ -497,7 +503,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                         ) : cartItem?.note ? (
                                                             <p className="text-xs text-rb-amber truncate">Not: {cartItem.note}</p>
                                                         ) : (
-                                                            <p className="text-xs text-muted-foreground/40">Not eklemek için tıklayın</p>
+                                                            <p className="text-xs text-muted-foreground">Not eklemek için dokunun</p>
                                                         )}
                                                     </div>
                                                 )}
@@ -508,17 +514,17 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                         <button
                                                             onClick={() => decreaseCart(product.id)}
                                                             aria-label={`${product.name} azalt`}
-                                                            className="w-9 h-9 sm:w-7 sm:h-7 rounded-full border border-border flex items-center justify-center text-base font-bold text-muted-foreground hover:bg-muted transition-colors"
+                                                            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-lg font-bold text-foreground hover:bg-muted transition-colors"
                                                         >
                                                             −
                                                         </button>
-                                                        <span className="w-5 text-center text-sm font-bold text-foreground">{qty}</span>
+                                                        <span className="w-6 text-center text-base font-bold text-foreground">{qty}</span>
                                                     </>
                                                 )}
                                                 <button
                                                     onClick={() => addToCart(product)}
                                                     aria-label={`${product.name} ekle`}
-                                                    className="w-9 h-9 sm:w-7 sm:h-7 rounded-full bg-rb-accent flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-colors"
+                                                    className="w-11 h-11 rounded-full bg-rb-gold flex items-center justify-center text-rb-gold-foreground text-xl font-bold hover:opacity-90 transition-colors"
                                                 >
                                                     +
                                                 </button>
@@ -552,7 +558,9 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 <Button
                                     onClick={handleSendOrder}
                                     disabled={submitting}
-                                    className="w-full bg-rb-accent hover:opacity-90 text-white font-semibold rounded-xl h-11 shrink-0"
+                                    variant="primary"
+                                    size="touch"
+                                    className="w-full shrink-0"
                                 >
                                     {submitting ? 'Gönderiliyor...' : 'Siparişi Gönder →'}
                                 </Button>
@@ -597,16 +605,19 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                         <Button
                             onClick={handleCustomerArrived}
                             disabled={arriving}
-                            className="w-full bg-rb-green hover:opacity-90 text-white font-semibold rounded-xl h-11 disabled:opacity-60"
+                            variant="success"
+                            size="touch"
+                            className="w-full"
                         >
                             {arriving ? 'Açılıyor...' : 'Müşteri Geldi (Masayı Aç)'}
                         </Button>
 
                         <Button
-                            onClick={handleCancelReservation}
-                            variant="outline"
+                            onClick={() => setConfirmAction('cancel-reservation')}
+                            variant="danger-ghost"
+                            size="touch"
                             disabled={arriving}
-                            className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold rounded-xl h-11"
+                            className="w-full"
                         >
                             Rezervasyonu İptal Et
                         </Button>
@@ -633,6 +644,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                 value={reservationContact}
                                 onChange={e => setReservationContact(e.target.value)}
                                 placeholder="Telefon numarası..."
+                                type="tel"
+                                inputMode="tel"
                                 className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
                             />
                         </div>
@@ -662,7 +675,9 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                         <Button
                             onClick={handleSaveReservation}
                             disabled={savingReservation}
-                            className="w-full bg-rb-amber hover:opacity-90 text-white font-semibold rounded-xl h-11"
+                            variant="primary"
+                            size="touch"
+                            className="w-full"
                         >
                             {savingReservation ? 'Kaydediliyor...' : 'Rezervasyonu Kaydet'}
                         </Button>
@@ -714,7 +729,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                 ) : item.note ? (
                                                     <p className="text-xs text-rb-amber mt-0.5 truncate">Not: {item.note}</p>
                                                 ) : (
-                                                    <p className="text-xs text-muted-foreground/40 mt-0.5">Not eklemek için tıklayın</p>
+                                                    <p className="text-xs text-muted-foreground mt-0.5">Not eklemek için dokunun</p>
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
@@ -722,7 +737,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                     <button
                                                         onClick={() => handleMarkServed(item.id)}
                                                         disabled={servingItemId === item.id}
-                                                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-rb-green text-white hover:opacity-90 disabled:opacity-60 transition-colors"
+                                                        className="min-h-10 px-3.5 text-xs font-semibold rounded-lg bg-rb-green text-rb-green-foreground hover:opacity-90 disabled:opacity-60 transition-colors"
                                                     >
                                                         {servingItemId === item.id ? '...' : 'Servis Et'}
                                                     </button>
@@ -742,26 +757,57 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                         </>
                     )}
                     {table.status === 2 && activeOrder && (
-                        <div className={`flex items-center gap-2 mt-4 ${activeOrder.orderItems.length === 0 ? 'pt-4 border-t' : ''}`}>
+                        <div className={`flex flex-col gap-3 mt-4 ${activeOrder.orderItems.length === 0 ? 'pt-4 border-t' : ''}`}>
                             {activeOrder.orderItems.some(i => i.status === 3) && (
-                                <button
+                                <Button
                                     onClick={handleServeAll}
                                     disabled={servingAll}
-                                    className="flex-1 rounded-xl bg-rb-green hover:opacity-90 text-white font-semibold text-sm py-2.5 disabled:opacity-60 transition-colors"
+                                    variant="success"
+                                    size="touch"
+                                    className="w-full"
                                 >
-                                    {servingAll ? 'İşleniyor...' : 'Servis Et'}
-                                </button>
+                                    {servingAll ? 'İşleniyor...' : 'Hazır Olanları Servis Et'}
+                                </Button>
                             )}
-                            <button
-                                onClick={handleCloseTable}
-                                className="flex-1 rounded-xl border border-destructive/30 text-destructive font-semibold text-sm py-2.5 hover:bg-destructive/10 transition-colors"
+                            <Button
+                                onClick={() => setConfirmAction('cancel-order')}
+                                variant="danger-ghost"
+                                size="lg"
+                                className="w-full rounded-xl font-semibold"
                             >
-                                Masayı Kapat (İptal)
-                            </button>
+                                Siparişi İptal Et
+                            </Button>
                         </div>
                     )}
                 </div>
             )}
+
+            <AlertDialog open={confirmAction !== null} onOpenChange={open => !open && setConfirmAction(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {confirmAction === 'cancel-reservation' ? 'Rezervasyonu iptal et' : 'Siparişi iptal et'}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {confirmAction === 'cancel-reservation'
+                                ? 'Bu masanın rezervasyonu iptal edilecek ve masa boşa çıkacak. Emin misiniz?'
+                                : 'Bu siparişin tamamı iptal edilecek ve masa boşaltılacak. Bu işlem geri alınamaz. Emin misiniz?'}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction
+                            variant="danger"
+                            onClick={() => {
+                                if (confirmAction === 'cancel-reservation') void handleCancelReservation();
+                                else void handleCloseTable();
+                            }}
+                        >
+                            {confirmAction === 'cancel-reservation' ? 'Rezervasyonu İptal Et' : 'Siparişi İptal Et'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

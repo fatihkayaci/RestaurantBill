@@ -12,7 +12,7 @@ import TableTransferModal from '@/features/tables/components/TableTransferModal'
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatElapsed } from '@/lib/format';
 
 const OrderStatus = { Served: 5 } as const;
 
@@ -22,13 +22,6 @@ const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
     2: 'bg-rb-green-bg text-rb-green',
     3: 'bg-rb-amber-bg text-rb-amber',
 };
-
-function formatElapsed(createdAt: string, now: number): string {
-    const minutes = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 60000));
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}s ${remainingMinutes}dk` : `${remainingMinutes}dk`;
-}
 
 function formatShortName(fullName: string): string {
     const parts = fullName.trim().split(' ').filter(Boolean);
@@ -46,6 +39,7 @@ export default function CashierDashboardPage() {
     const [selectedTransaction, setSelectedTransaction] = useState<ShiftTransaction | null>(null);
     const [transferSourceOrder, setTransferSourceOrder] = useState<Order | null>(null);
     const [now, setNow] = useState(() => Date.now());
+    const [loadFailed, setLoadFailed] = useState(false);
 
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 30000);
@@ -62,10 +56,14 @@ export default function CashierDashboardPage() {
             .catch(() => {});
     };
 
-    useEffect(() => {
+    const loadOrders = () => {
         orderService.getAllOrdersToCashier()
-            .then(setServedOrders)
-            .catch(() => {});
+            .then(orders => { setServedOrders(orders); setLoadFailed(false); })
+            .catch(() => setLoadFailed(true));
+    };
+
+    useEffect(() => {
+        loadOrders();
         tableService.getTables()
             .then(setTables)
             .catch(() => {});
@@ -139,22 +137,22 @@ export default function CashierDashboardPage() {
             <div className="bg-sidebar px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-2 gap-y-3 gap-x-6 sm:flex sm:items-center sm:gap-8 shrink-0">
                 <div>
                     <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{formatAmount(shiftRevenue)}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Vardiya Cirosu</p>
+                    <p className="text-[11px] text-sidebar-foreground/60 mt-0.5">Vardiya Cirosu</p>
                 </div>
-                <div className="hidden sm:block w-px h-8 bg-gray-700" />
+                <div className="hidden sm:block w-px h-8 bg-white/15" />
                 <div>
                     <p className="text-lg font-serif font-bold text-sidebar-foreground">{shiftTransactionCount}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">İşlem</p>
+                    <p className="text-[11px] text-sidebar-foreground/60 mt-0.5">İşlem</p>
                 </div>
-                <div className="hidden sm:block w-px h-8 bg-gray-700" />
+                <div className="hidden sm:block w-px h-8 bg-white/15" />
                 <div>
                     <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{formatAmount(shiftAvgTicket)}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Ortalama</p>
+                    <p className="text-[11px] text-sidebar-foreground/60 mt-0.5">Ortalama</p>
                 </div>
-                <div className="hidden sm:block w-px h-8 bg-gray-700" />
+                <div className="hidden sm:block w-px h-8 bg-white/15" />
                 <div>
                     <p className="text-lg font-serif font-bold text-rb-green">₺{formatAmount(cashCollected)}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Nakit Tahsilat</p>
+                    <p className="text-[11px] text-sidebar-foreground/60 mt-0.5">Nakit Tahsilat</p>
                 </div>
             </div>
 
@@ -173,7 +171,18 @@ export default function CashierDashboardPage() {
                         )}
                     </div>
 
-                    {servedOrders.length === 0 ? (
+                    {loadFailed && servedOrders.length === 0 ? (
+                        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-rb-red/30 bg-rb-red-bg px-4 py-3">
+                            <p className="text-sm text-foreground">Masalar yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.</p>
+                            <button
+                                type="button"
+                                onClick={loadOrders}
+                                className="h-11 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                            >
+                                Tekrar dene
+                            </button>
+                        </div>
+                    ) : servedOrders.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Açık masa yok.</p>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -200,13 +209,13 @@ export default function CashierDashboardPage() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => setSelectedOrder(order)}
-                                            className="flex-1 bg-rb-accent-bg hover:opacity-80 text-rb-accent text-sm font-semibold rounded-xl py-2 transition-colors"
+                                            className="flex-[2] h-12 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-semibold rounded-xl transition-colors"
                                         >
                                             Ödeme Al
                                         </button>
                                         <button
                                             onClick={() => setTransferSourceOrder(order)}
-                                            className="flex-1 border border-border hover:bg-muted text-foreground text-sm font-semibold rounded-xl py-2 transition-colors"
+                                            className="flex-1 h-12 border border-border hover:bg-muted text-foreground text-sm font-semibold rounded-xl transition-colors"
                                         >
                                             Masayı Taşı
                                         </button>
@@ -254,9 +263,9 @@ export default function CashierDashboardPage() {
 
                                         <button
                                             onClick={() => setSelectedTransaction(txn)}
-                                            className="mt-1.5 ml-13 text-xs text-rb-accent hover:underline"
+                                            className="mt-1 ml-13 min-h-9 text-xs font-medium text-rb-accent hover:underline"
                                         >
-                                            Detay görmek için tıklayın
+                                            Detayı gör
                                         </button>
                                     </div>
                                 );

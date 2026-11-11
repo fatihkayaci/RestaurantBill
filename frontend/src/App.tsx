@@ -42,6 +42,10 @@ import DistanceSalesAgreementPage from './pages/legal/DistanceSalesAgreementPage
 import RefundPolicyPage from './pages/legal/RefundPolicyPage';
 import ContactPage from './pages/legal/ContactPage';
 
+import RestaurantSitePage from './pages/public/RestaurantSitePage';
+import TableOrderPage from './pages/public/TableOrderPage';
+import ReservationsPage from './pages/admin/ReservationsPage';
+
 function App() {
     return (
         <>
@@ -86,6 +90,7 @@ function App() {
                     <Route path="staff" element={<StaffPage />} />
                     <Route path="tables" element={<TablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />
+                    <Route path="reservations" element={<ReservationsPage />} />
                     <Route path="shifts" element={<ShiftsPage />} />
                     <Route path="day-end" element={<Navigate to="/admin/shifts" replace />} />
                     <Route path="reports" element={<ReportsPage role="admin" />} />
@@ -105,8 +110,10 @@ function App() {
                 <Route path="/iptal-ve-iade" element={<RefundPolicyPage />} />
                 <Route path="/iletisim" element={<ContactPage />} />
 
-                {/* Landing — restoran alt alan adında (ör. demo.sophram.com) personel doğrudan girişe gelir */}
-                <Route path="/" element={getTenantSlug() ? <Navigate to="/login" replace /> : <LandingPage />} />
+                {/* Restoranın müşteriye açık sitesi: slug'lı alan adının kökü. /menu, slug'sız (yerel) ortamda denemek için. */}
+                <Route path="/" element={getTenantSlug() ? <RestaurantSitePage /> : <LandingPage />} />
+                <Route path="/menu" element={<RestaurantSitePage />} />
+                <Route path="/masa/:tableId" element={<TableOrderPage />} />
             </Routes>
             <Toaster position="top-right" richColors />
         </>

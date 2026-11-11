@@ -11,12 +11,12 @@
   --card-foreground: #2A1F14;
   --popover: #FDFAF5;
   --popover-foreground: #2A1F14;
-  --primary: oklch(0.45 0.12 30);
-  --primary-foreground: oklch(0.98 0.005 80);
+  --primary: #C8A96E;
+  --primary-foreground: #1C1510;
   --secondary: oklch(0.94 0.02 80);
   --secondary-foreground: #2A1F14;
-  --muted: #FFFFFF;
-  --muted-foreground: #A39080;
+  --muted: #EFE8DB;
+  --muted-foreground: #6B5E52;
   --accent: oklch(0.55 0.15 145);
   --accent-foreground: oklch(0.98 0.005 80);
   --destructive: #C83030;
@@ -47,12 +47,12 @@
   --card-foreground: #F2EDE4;
   --popover: #221D16;
   --popover-foreground: #F2EDE4;
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: #C8A96E;
+  --primary-foreground: #1C1510;
   --secondary: rgb(52, 47, 42);
   --secondary-foreground: #F2EDE4;
   --muted: #2A2318;
-  --muted-foreground: #7A6E60;
+  --muted-foreground: #A89880;
   --accent: rgb(52, 47, 42);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: #F06060;
@@ -80,16 +80,20 @@
   --rb-text-muted: #A39080;
   --rb-accent: #2B7FFF;
   --rb-accent-bg: rgba(43,127,255,0.09);
+  --rb-accent-foreground: #FFFFFF;
   --rb-green: #1F8A52;
   --rb-green-bg: rgba(31,138,82,0.09);
+  --rb-green-foreground: #FFFFFF;
   --rb-amber: #B8880A;
   --rb-amber-bg: rgba(184,136,10,0.09);
+  --rb-amber-foreground: #1C1510;
   --rb-orange: #C85010;
   --rb-orange-bg: rgba(200,80,16,0.09);
   --rb-purple: #7B2FBF;
   --rb-purple-bg: rgba(123,47,191,0.09);
   --rb-red: #C83030;
   --rb-red-bg: rgba(200,48,48,0.09);
+  --rb-red-foreground: #FFFFFF;
   --rb-gold: #C8A96E;
   --rb-gold-bg: rgba(200,169,110,0.09);
   --rb-gold-foreground: #1C1510;
@@ -106,16 +110,20 @@
   --rb-text-muted: #7A6E60;
   --rb-accent: #5C9FFF;
   --rb-accent-bg: rgba(92,159,255,0.14);
+  --rb-accent-foreground: #0E0B08;
   --rb-green: #45C87A;
   --rb-green-bg: rgba(69,200,122,0.14);
+  --rb-green-foreground: #0E0B08;
   --rb-amber: #E8B835;
   --rb-amber-bg: rgba(232,184,53,0.14);
+  --rb-amber-foreground: #0E0B08;
   --rb-orange: #F07840;
   --rb-orange-bg: rgba(240,120,64,0.14);
   --rb-purple: #C87FE8;
   --rb-purple-bg: rgba(200,127,232,0.14);
   --rb-red: #F06060;
   --rb-red-bg: rgba(240,96,96,0.14);
+  --rb-red-foreground: #0E0B08;
   --rb-gold: #C8A96E;
   --rb-gold-bg: rgba(200,169,110,0.14);
   --rb-gold-foreground: #1C1510;
@@ -168,16 +176,20 @@
   --color-rb-text-muted: var(--rb-text-muted);
   --color-rb-accent: var(--rb-accent);
   --color-rb-accent-bg: var(--rb-accent-bg);
+  --color-rb-accent-foreground: var(--rb-accent-foreground);
   --color-rb-green: var(--rb-green);
   --color-rb-green-bg: var(--rb-green-bg);
+  --color-rb-green-foreground: var(--rb-green-foreground);
   --color-rb-amber: var(--rb-amber);
   --color-rb-amber-bg: var(--rb-amber-bg);
+  --color-rb-amber-foreground: var(--rb-amber-foreground);
   --color-rb-orange: var(--rb-orange);
   --color-rb-orange-bg: var(--rb-orange-bg);
   --color-rb-purple: var(--rb-purple);
   --color-rb-purple-bg: var(--rb-purple-bg);
   --color-rb-red: var(--rb-red);
   --color-rb-red-bg: var(--rb-red-bg);
+  --color-rb-red-foreground: var(--rb-red-foreground);
   --color-rb-gold: var(--rb-gold);
   --color-rb-gold-bg: var(--rb-gold-bg);
   --color-rb-gold-foreground: var(--rb-gold-foreground);
@@ -206,15 +218,13 @@
   50% { transform: translateY(-8px); }
 }
 
-/* Smooth dark mode transition */
-html {
-  transition: background-color 0.4s ease, color 0.4s ease;
-}
-
-*,
-*::before,
-*::after {
-  transition-property: background-color, border-color;
+/* Yumuşak tema geçişi: yalnızca tema değişirken (ThemeTransition bileşeni sınıfı ekleyip kaldırır).
+   Kural kalıcı olduğunda her hover / seçili durum 0,4 sn gecikiyordu. */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition-property: background-color, border-color, color;
   transition-duration: 400ms;
   transition-timing-function: ease;
 }

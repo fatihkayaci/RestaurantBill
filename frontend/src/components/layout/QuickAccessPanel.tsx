@@ -84,7 +84,7 @@ export default function QuickAccessPanel() {
                 { key: 'region', label: 'Bölge ekle', hint: 'Salon, Bahçe gibi masa grupları; her masa bir bölgeye bağlıdır', to: '/admin/tables', done: regions > 0, summary: plural(regions, 'bölge') },
                 { key: 'table', label: 'Masaları tanımla', hint: 'Garsonlar bu masalara sipariş açar', to: '/admin/tables', done: tables > 0, summary: plural(tables, 'masa') },
                 { key: 'register', label: 'Kasa aç', hint: 'Ödemelerin ve vardiyaların bağlanacağı kasa', to: '/admin/cash-registers', done: registers > 0, summary: plural(registers, 'kasa') },
-                { key: 'staff', label: 'Personel ekle', hint: 'Garson, mutfak ve kasiyer hesapları', to: '/admin/staff', done: staff > 0, summary: plural(staff, 'çalışan') },
+                { key: 'staff', label: 'Çalışan ekle', hint: 'Garson, mutfak ve kasiyer hesapları', to: '/admin/staff', done: staff > 0, summary: plural(staff, 'çalışan') },
             ]);
         });
 
@@ -103,7 +103,8 @@ export default function QuickAccessPanel() {
     const doneCount = steps.filter(s => s.done).length;
     const allDone = doneCount === steps.length;
 
-    const loginAddress = slug ? `${slug}.${ROOT_DOMAIN}` : null;
+    // Alan adının kökü artık müşteri sitesi; personel /login'den girer.
+    const loginAddress = slug ? `${slug}.${ROOT_DOMAIN}/login` : null;
     const loginUrl = loginAddress ? `https://${loginAddress}` : '';
     const shareText = `Personel giriş adresi: ${loginUrl}`;
     const nextStep = steps.find(s => !s.done) ?? null;
@@ -220,7 +221,7 @@ export default function QuickAccessPanel() {
                     >
                         <span className={cn(
                             'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                            step.done ? 'bg-rb-green text-white'
+                            step.done ? 'bg-rb-green text-rb-green-foreground'
                                 : isNext ? 'bg-rb-gold text-rb-gold-foreground'
                                     : 'bg-rb-gold/20 text-rb-amber'
                         )}>
@@ -234,7 +235,7 @@ export default function QuickAccessPanel() {
                                 {step.label}
                             </p>
                             <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-                                {step.done ? step.summary : here && isNext ? `${step.hint}. Şu an bu sayfadasın.` : step.hint}
+                                {step.done ? step.summary : here && isNext ? `${step.hint}. Şu an bu sayfadasınız.` : step.hint}
                             </p>
                             {isNext && !here && (
                                 <Link

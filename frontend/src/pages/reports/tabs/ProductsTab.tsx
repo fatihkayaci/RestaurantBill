@@ -3,6 +3,8 @@ import { chartTooltipProps } from '@/lib/chartTheme';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { ProductReport } from '@/features/reports/types';
+import { formatCurrency } from '@/lib/format';
+import { PageLoading } from '@/components/ui/page-state';
 
 interface Props {
     data: ProductReport | null;
@@ -10,9 +12,6 @@ interface Props {
 }
 
 type SortBy = 'sold' | 'revenue';
-
-const formatCurrency = (value: number, decimals = 0) =>
-    `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 
 const CATEGORY_COLORS = ['var(--rb-accent)', 'var(--rb-green)', 'var(--rb-gold)', 'var(--rb-orange)', 'var(--rb-purple)', 'var(--rb-red)'];
 
@@ -25,7 +24,7 @@ export default function ProductsTab({ data, loading }: Props) {
     }, [data, sortBy]);
 
     if (loading && !data) {
-        return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Yükleniyor...</div>;
+        return <PageLoading />;
     }
 
     return (
@@ -38,14 +37,14 @@ export default function ProductsTab({ data, loading }: Props) {
                             <button
                                 type="button"
                                 onClick={() => setSortBy('revenue')}
-                                className={cn('px-2.5 py-1 rounded-md text-xs font-medium transition-colors', sortBy === 'revenue' ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground')}
+                                className={cn('px-2.5 py-1 rounded-md text-xs font-medium transition-colors', sortBy === 'revenue' ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground')}
                             >
                                 Ciro
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setSortBy('sold')}
-                                className={cn('px-2.5 py-1 rounded-md text-xs font-medium transition-colors', sortBy === 'sold' ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground')}
+                                className={cn('px-2.5 py-1 rounded-md text-xs font-medium transition-colors', sortBy === 'sold' ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground')}
                             >
                                 Adet
                             </button>

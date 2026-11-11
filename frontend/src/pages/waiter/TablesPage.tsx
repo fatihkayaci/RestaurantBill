@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Table } from '@/features/tables/types';
 import TablePanel from './components/TablePanel';
+import CustomerOrderRequests from './components/CustomerOrderRequests';
+import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
+import type { OrderRequest } from '@/features/customerSite/types';
 import { createHubConnection } from '@/lib/signalrConnection';
-import { formatPrice } from '@/lib/format';
+import { formatPrice, formatMinutes } from '@/lib/format';
 import { Clock, Plus, User } from 'lucide-react';
 
 type FilterType = 'all' | 'empty' | 'occupied' | 'reserved';
@@ -48,12 +51,6 @@ const LONG_STAY_MINUTES = 60;
 
 function elapsedMinutes(occupiedSince: string, now: number): number {
     return Math.max(0, Math.floor((now - new Date(occupiedSince).getTime()) / 60000));
-}
-
-function formatElapsed(minutes: number): string {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours} sa ${remainingMinutes} dk` : `${remainingMinutes} dk`;
 }
 
 function TableCard({
@@ -106,7 +103,7 @@ function TableCard({
                             {minutes !== null && (
                                 <span className={`flex items-center gap-1.5 ${minutes >= LONG_STAY_MINUTES ? 'font-bold text-[#A3420D] dark:text-rb-orange' : ''}`}>
                                     <Clock className="size-3.5 sm:size-4" />
-                                    {formatElapsed(minutes)}
+                                    {formatMinutes(minutes)}
                                 </span>
                             )}
                             {table.createdByUserName && (
@@ -131,17 +128,26 @@ function TableCard({
 export default function WaiterTablesPage() {
     const [tables, setTables] = useState<Table[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [filter, setFilter] = useState<FilterType>('all');
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [now, setNow] = useState(() => Date.now());
+    // Müşterilerin masa QR'ından gönderdiği, onay bekleyen siparişler.
+    const [orderRequests, setOrderRequests] = useState<OrderRequest[]>([]);
+
+    const loadOrderRequests = useCallback(() => {
+        customerRequestService.getPendingOrderRequests()
+            .then(setOrderRequests)
+            .catch(console.error);
+    }, []);
 
     useEffect(() => {
         tableService.getTables()
-            .then(t => setTables(t))
-            .catch(console.error)
+            .then(t => { setTables(t); setLoadFailed(false); })
+            .catch(() => setLoadFailed(true))
             .finally(() => setLoading(false));
-
-    }, []);
+        loadOrderRequests();
+    }, [loadOrderRequests]);
 
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 30000);
@@ -162,10 +168,12 @@ export default function WaiterTablesPage() {
             setTables(prev => prev.map(t => t.id === tableId ? { ...t, activeOrderTotal: totalPrice, createdByUserName } : t));
         });
 
+        conn.on('CustomerRequestsChanged', loadOrderRequests);
+
         let cancelled = false;
         conn.start().catch(err => { if (!cancelled) console.error('SignalR:', err); });
         return () => { cancelled = true; stop(); };
-    }, []);
+    }, [loadOrderRequests]);
 
     const handleTableUpdated = (tableId: string, status: number) => {
         setTables(prev => prev.map(t => t.id === tableId
@@ -239,6 +247,7 @@ export default function WaiterTablesPage() {
 
             {/* Bölgelere göre masalar */}
             <div className="px-4 sm:px-8 pt-4.5 sm:pt-6 pb-8 sm:pb-12 flex flex-col gap-6 sm:gap-8">
+                <CustomerOrderRequests requests={orderRequests} onChanged={loadOrderRequests} />
                 {visibleRegions.map(region => (
                     <section key={region.id} className="flex flex-col gap-2.5 sm:gap-3.5">
                         <div className="flex items-baseline gap-2.5 sm:gap-3">
@@ -262,7 +271,9 @@ export default function WaiterTablesPage() {
                 ))}
                 {visibleRegions.length === 0 && (
                     <p className="my-10 text-center text-base text-rb-text-sub">
-                        {tables.length === 0 ? 'Henüz masa eklenmemiş.' : 'Bu filtrede masa yok.'}
+                        {loadFailed && tables.length === 0
+                            ? 'Masalar yüklenemedi. Bağlantınızı kontrol edip sayfayı yenileyin.'
+                            : tables.length === 0 ? 'Henüz masa eklenmemiş.' : 'Bu filtrede masa yok.'}
                     </p>
                 )}
             </div>

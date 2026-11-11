@@ -5,7 +5,8 @@ import { userService } from '@/features/users/api/userService';
 import type { Shift } from '@/features/cashier/types';
 import type { ShiftReport } from '@/features/reports/types';
 import { cn } from '@/lib/utils';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatTL } from '@/lib/format';
+import { PageLoading } from '@/components/ui/page-state';
 
 interface Props {
     data: ShiftReport | null;
@@ -18,7 +19,6 @@ const REVIEW_PENDING = 1;
 const REVIEW_REJECTED = 3;
 const COUNT_NOT_COUNTED = 2;
 
-const formatTL = (amount: number) => `₺${amount.toLocaleString('tr-TR')}`;
 
 // Salt okunur rapor. Onay, sayım ve kapatma işleri Vardiyalar sayfasında.
 export default function ShiftsTab({ data, loading, role, showBranchSummary }: Props) {
@@ -46,7 +46,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
     const filtered = shifts.filter(s => !onlyPending || needsAttention(s));
 
     if (loading && !data) {
-        return <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">Yükleniyor...</div>;
+        return <PageLoading />;
     }
 
     return (
@@ -56,7 +56,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                     <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Toplam Fark</p>
                     <p className={cn(
                         'text-2xl font-bold mt-2 font-serif',
-                        (data?.totalDifference ?? 0) === 0 ? 'text-foreground' : (data?.totalDifference ?? 0) < 0 ? 'text-red-500' : 'text-rb-amber'
+                        (data?.totalDifference ?? 0) === 0 ? 'text-foreground' : (data?.totalDifference ?? 0) < 0 ? 'text-rb-red' : 'text-rb-amber'
                     )}>
                         {formatTL(data?.totalDifference ?? 0)}
                     </p>
@@ -76,8 +76,8 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
             </div>
 
             {showBranchSummary ? (
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
-                    <table className="w-full text-sm">
+                <div className="rounded-xl border border-border bg-card overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-sm">
                         <thead>
                             <tr className="border-b border-border">
                                 <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
@@ -94,7 +94,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                                 <tr key={row.branchId} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                                     <td className="px-5 py-3.5 font-medium text-foreground whitespace-nowrap">{row.branchName}</td>
                                     <td className="px-4 py-3.5 text-foreground">{row.shiftCount}</td>
-                                    <td className={cn('px-4 py-3.5 font-serif', row.totalDifference === 0 ? 'text-muted-foreground' : row.totalDifference < 0 ? 'text-red-500' : 'text-rb-amber')}>
+                                    <td className={cn('px-4 py-3.5 font-serif', row.totalDifference === 0 ? 'text-muted-foreground' : row.totalDifference < 0 ? 'text-rb-red' : 'text-rb-amber')}>
                                         {formatTL(row.totalDifference)}
                                     </td>
                                     <td className="px-4 py-3.5 text-foreground">{row.uncountedCount}</td>
@@ -118,8 +118,8 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                         )}
                     </div>
 
-                    <div className="rounded-xl border border-border bg-card overflow-hidden">
-                        <table className="w-full text-sm">
+                    <div className="rounded-xl border border-border bg-card overflow-x-auto">
+                        <table className="w-full min-w-[720px] text-sm">
                             <thead>
                                 <tr className="border-b border-border">
                                     <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kasa</th>
@@ -161,7 +161,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                                                 <td className="px-4 py-3.5 text-right font-serif text-foreground whitespace-nowrap">
                                                     {counted != null ? `₺${formatAmount(counted)}` : '—'}
                                                 </td>
-                                                <td className={cn('px-4 py-3.5 text-right font-serif whitespace-nowrap', !hasDifference ? 'text-muted-foreground' : diff! < 0 ? 'text-red-500' : 'text-rb-amber')}>
+                                                <td className={cn('px-4 py-3.5 text-right font-serif whitespace-nowrap', !hasDifference ? 'text-muted-foreground' : diff! < 0 ? 'text-rb-red' : 'text-rb-amber')}>
                                                     {hasDifference ? `₺${formatAmount(diff!)}` : '—'}
                                                 </td>
                                                 <td className="px-4 py-3.5">
@@ -176,7 +176,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                                                             <span className={cn(
                                                                 'inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold',
                                                                 s.openingDifferenceReviewStatus === REVIEW_PENDING ? 'bg-rb-amber-bg text-rb-amber'
-                                                                    : s.openingDifferenceReviewStatus === REVIEW_REJECTED ? 'bg-rb-red-bg text-red-500'
+                                                                    : s.openingDifferenceReviewStatus === REVIEW_REJECTED ? 'bg-rb-red-bg text-rb-red'
                                                                         : 'bg-rb-neutral-bg text-rb-neutral'
                                                             )}>
                                                                 Açılış {s.openingDifferenceReviewStatus === REVIEW_PENDING ? 'onayı bekliyor' : s.openingDifferenceReviewStatus === REVIEW_REJECTED ? 'reddedildi' : 'onaylandı'}
@@ -186,7 +186,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                                                             <span className={cn(
                                                                 'inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold',
                                                                 s.closingDifferenceReviewStatus === REVIEW_PENDING ? 'bg-rb-amber-bg text-rb-amber'
-                                                                    : s.closingDifferenceReviewStatus === REVIEW_REJECTED ? 'bg-rb-red-bg text-red-500'
+                                                                    : s.closingDifferenceReviewStatus === REVIEW_REJECTED ? 'bg-rb-red-bg text-rb-red'
                                                                         : 'bg-rb-neutral-bg text-rb-neutral'
                                                             )}>
                                                                 Kapanış {s.closingDifferenceReviewStatus === REVIEW_PENDING ? 'onayı bekliyor' : s.closingDifferenceReviewStatus === REVIEW_REJECTED ? 'reddedildi' : 'onaylandı'}

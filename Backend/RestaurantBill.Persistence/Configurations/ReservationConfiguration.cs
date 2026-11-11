@@ -9,6 +9,8 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
     public void Configure(EntityTypeBuilder<Reservation> builder)
     {
         builder.HasIndex(r => r.TableId);
+        builder.HasIndex(r => new { r.Status, r.ReservationTime });
+        builder.Property(r => r.PartySize).HasDefaultValue(0);
 
         builder.HasOne(r => r.Table)
             .WithMany()
