@@ -4,10 +4,12 @@ import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from 'next-themes'
 import './index.css'
 import App from './App.tsx'
+import ThemeTransition from './components/ThemeTransition'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider attribute="class" defaultTheme="light">
+      <ThemeTransition />
       <BrowserRouter>
         <App />
       </BrowserRouter>

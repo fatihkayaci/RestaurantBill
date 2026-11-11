@@ -15,8 +15,8 @@
   --primary-foreground: #1C1510;
   --secondary: oklch(0.94 0.02 80);
   --secondary-foreground: #2A1F14;
-  --muted: #FFFFFF;
-  --muted-foreground: #A39080;
+  --muted: #EFE8DB;
+  --muted-foreground: #6B5E52;
   --accent: oklch(0.55 0.15 145);
   --accent-foreground: oklch(0.98 0.005 80);
   --destructive: #C83030;
@@ -52,7 +52,7 @@
   --secondary: rgb(52, 47, 42);
   --secondary-foreground: #F2EDE4;
   --muted: #2A2318;
-  --muted-foreground: #7A6E60;
+  --muted-foreground: #A89880;
   --accent: rgb(52, 47, 42);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: #F06060;
@@ -218,15 +218,13 @@
   50% { transform: translateY(-8px); }
 }
 
-/* Smooth dark mode transition */
-html {
-  transition: background-color 0.4s ease, color 0.4s ease;
-}
-
-*,
-*::before,
-*::after {
-  transition-property: background-color, border-color;
+/* Yumuşak tema geçişi: yalnızca tema değişirken (ThemeTransition bileşeni sınıfı ekleyip kaldırır).
+   Kural kalıcı olduğunda her hover / seçili durum 0,4 sn gecikiyordu. */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition-property: background-color, border-color, color;
   transition-duration: 400ms;
   transition-timing-function: ease;
 }
