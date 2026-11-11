@@ -25,9 +25,10 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
-          if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler') || id.includes('react-router')) return 'vendor-react';
+          // React, router, UI kitleri ve geri kalan paketler tek parçada: ayrı parçalara
+          // bölünce vendor ↔ vendor-react döngüsü oluşuyor ve React yüklenmeden
+          // createContext çağrılıp sayfa beyaz kalıyordu.
           if (id.includes('@microsoft/signalr')) return 'vendor-signalr';
-          if (id.includes('radix-ui') || id.includes('lucide-react')) return 'vendor-ui';
           if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
           return 'vendor';
         },
