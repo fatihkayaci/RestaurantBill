@@ -25,6 +25,8 @@ public interface IAppDbContext
     DbSet<PaymentLineItem> PaymentLineItems { get; }
     DbSet<Shift> Shifts { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<OrderRequest> OrderRequests { get; }
+    DbSet<OrderRequestItem> OrderRequestItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

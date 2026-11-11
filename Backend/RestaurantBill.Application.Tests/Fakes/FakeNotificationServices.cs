@@ -7,6 +7,12 @@ public class FakeTableNotificationService : ITableNotificationService
     public Task SendTableStatusChangedAsync(Guid restaurantId, Guid tableId, int status) => Task.CompletedTask;
     public Task SendOrderUpdatedAsync(Guid restaurantId, Guid tableId, decimal totalPrice, string createdByUserName) => Task.CompletedTask;
     public Task SendOrderClosedAsync(Guid restaurantId, Guid tableId, Guid orderId) => Task.CompletedTask;
+    public int CustomerRequestsChangedCount { get; private set; }
+    public Task SendCustomerRequestsChangedAsync(Guid restaurantId)
+    {
+        CustomerRequestsChangedCount++;
+        return Task.CompletedTask;
+    }
 }
 
 public class FakeCashierNotificationService : ICashierNotificationService

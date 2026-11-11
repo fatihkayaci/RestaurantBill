@@ -27,5 +27,10 @@ namespace RestaurantBill.Infrastructure.Services
         {
             await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("OrderClosed", tableId, orderId);
         }
+
+        public async Task SendCustomerRequestsChangedAsync(Guid restaurantId)
+        {
+            await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("CustomerRequestsChanged");
+        }
     }
 }
