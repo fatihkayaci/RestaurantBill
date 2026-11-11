@@ -159,7 +159,7 @@ export default function PhoneVerificationPage() {
                     <Button
                         type="submit"
                         disabled={!isComplete || verifyLoading}
-                        className="w-full h-11.5 rounded-xl bg-rb-accent hover:opacity-90 text-white font-bold text-sm mt-6"
+                        className="w-full h-11.5 rounded-xl bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-bold text-sm mt-6"
                     >
                         {verifyLoading ? "Doğrulanıyor..." : "Doğrula →"}
                     </Button>

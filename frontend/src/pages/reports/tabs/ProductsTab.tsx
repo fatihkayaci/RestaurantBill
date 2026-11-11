@@ -38,14 +38,14 @@ export default function ProductsTab({ data, loading }: Props) {
                             <button
                                 type="button"
                                 onClick={() => setSortBy('revenue')}
-                                className={cn('px-2.5 py-1 rounded-md text-xs font-medium transition-colors', sortBy === 'revenue' ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground')}
+                                className={cn('px-2.5 py-1 rounded-md text-xs font-medium transition-colors', sortBy === 'revenue' ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground')}
                             >
                                 Ciro
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setSortBy('sold')}
-                                className={cn('px-2.5 py-1 rounded-md text-xs font-medium transition-colors', sortBy === 'sold' ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground')}
+                                className={cn('px-2.5 py-1 rounded-md text-xs font-medium transition-colors', sortBy === 'sold' ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground')}
                             >
                                 Adet
                             </button>

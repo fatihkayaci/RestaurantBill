@@ -139,7 +139,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
 
                         <button
                             onClick={onShiftClosed}
-                            className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-white bg-rb-accent hover:opacity-90 transition-opacity"
+                            className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-rb-gold-foreground bg-rb-gold hover:opacity-90 transition-opacity"
                         >
                             Tamam
                         </button>
@@ -198,7 +198,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                             <button
                                 onClick={() => handleCloseShift(true)}
                                 disabled={submitting}
-                                className="w-full rounded-xl py-3.5 text-sm font-semibold text-white bg-rb-red hover:opacity-90 transition-opacity disabled:opacity-50"
+                                className="w-full rounded-xl py-3.5 text-sm font-semibold text-rb-red-foreground bg-rb-red hover:opacity-90 transition-opacity disabled:opacity-50"
                             >
                                 {submitting ? 'Kapatılıyor...' : 'Vardiyayı Kapat, Z Raporu Al'}
                             </button>

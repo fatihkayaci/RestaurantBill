@@ -249,7 +249,7 @@ export default function DashboardPage() {
                                     onClick={() => setRange(d)}
                                     className={cn(
                                         'px-3 py-1 rounded-md text-xs font-medium transition-colors',
-                                        range === d ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground'
+                                        range === d ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground'
                                     )}
                                 >
                                     {d} Gün

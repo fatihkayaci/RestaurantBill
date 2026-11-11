@@ -161,7 +161,7 @@ export default function AuditLogPage() {
                     <SlidersHorizontal className="h-4 w-4" />
                     Filtrele
                     {activeFilterCount > 0 && (
-                        <span className="flex items-center justify-center h-4 w-4 rounded-full bg-rb-accent text-white text-[10px] font-semibold">
+                        <span className="flex items-center justify-center h-4 w-4 rounded-full bg-rb-accent text-rb-accent-foreground text-[10px] font-semibold">
                             {activeFilterCount}
                         </span>
                     )}

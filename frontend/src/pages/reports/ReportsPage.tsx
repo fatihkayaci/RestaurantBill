@@ -96,7 +96,7 @@ export default function ReportsPage({ role }: Props) {
                             onClick={() => setPreset(p.key)}
                             className={cn(
                                 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
-                                activePreset === p.key ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground'
+                                activePreset === p.key ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground'
                             )}
                         >
                             {p.label}

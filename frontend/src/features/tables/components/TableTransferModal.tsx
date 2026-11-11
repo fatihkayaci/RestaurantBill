@@ -91,7 +91,7 @@ export default function TableTransferModal({ sourceTable, tables, onClose, onDon
                             <button
                                 onClick={() => runTransfer(confirmTarget.id, TRANSFER_MODE.Merge)}
                                 disabled={submitting}
-                                className="w-full rounded-xl py-3 text-sm font-semibold text-white bg-rb-accent hover:opacity-90 transition-opacity disabled:opacity-50"
+                                className="w-full rounded-xl py-3 text-sm font-semibold text-rb-gold-foreground bg-rb-gold hover:opacity-90 transition-opacity disabled:opacity-50"
                             >
                                 {submitting ? 'İşleniyor...' : 'Siparişlerimi Taşı'}
                             </button>

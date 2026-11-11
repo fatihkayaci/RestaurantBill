@@ -236,7 +236,7 @@ export default function AppShell() {
                         title={companyMode ? undefined : "Profil"}
                     >
                         <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", isOwner ? "bg-rb-gold" : "bg-rb-amber")}>
-                            <span className={cn("text-sm font-bold", isOwner ? "text-rb-gold-foreground" : "text-white")}>{initials}</span>
+                            <span className={cn("text-sm font-bold", isOwner ? "text-rb-gold-foreground" : "text-rb-amber-foreground")}>{initials}</span>
                         </div>
                         <div className={cn("flex-1 min-w-0 text-left", collapsed && "md:hidden")}>
                             <p className="text-sidebar-foreground text-sm font-medium truncate">{displayName}</p>

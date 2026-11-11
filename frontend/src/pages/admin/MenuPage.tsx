@@ -399,7 +399,7 @@ export default function Menu() {
                     className={cn(
                         "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                         selectedCategory === 'all'
-                            ? "bg-rb-accent text-white"
+                            ? "bg-rb-accent text-rb-accent-foreground"
                             : "border border-border text-muted-foreground hover:text-foreground"
                     )}
                 >
@@ -438,7 +438,7 @@ export default function Menu() {
                             className={cn(
                                 "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
                                 selectedCategory === cat.id
-                                    ? "bg-rb-accent text-white"
+                                    ? "bg-rb-accent text-rb-accent-foreground"
                                     : "border border-border text-muted-foreground hover:text-foreground"
                             )}
                         >

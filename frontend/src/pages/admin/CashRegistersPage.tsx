@@ -463,8 +463,8 @@ export default function CashRegisters() {
                                 type="button"
                                 onClick={handleTxSubmit}
                                 className={cn(
-                                    "px-4 py-2 text-sm rounded-lg text-white font-medium transition-colors",
-                                    txType === 1 ? "bg-rb-green hover:opacity-90" : "bg-rb-red hover:opacity-90"
+                                    "px-4 py-2 text-sm rounded-lg font-medium transition-colors",
+                                    txType === 1 ? "bg-rb-green text-rb-green-foreground hover:opacity-90" : "bg-rb-red text-rb-red-foreground hover:opacity-90"
                                 )}
                             >
                                 Onayla

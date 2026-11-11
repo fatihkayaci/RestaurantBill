@@ -587,7 +587,7 @@ export default function Tables() {
                     className={cn(
                         "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                         selectedRegionId === 'all'
-                            ? "bg-rb-accent text-white"
+                            ? "bg-rb-accent text-rb-accent-foreground"
                             : "border border-border text-muted-foreground hover:text-foreground"
                     )}
                 >
@@ -599,7 +599,7 @@ export default function Tables() {
                         className={cn(
                             "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
                             selectedRegionId === region.id
-                                ? "bg-rb-accent text-white"
+                                ? "bg-rb-accent text-rb-accent-foreground"
                                 : "border border-border text-muted-foreground hover:text-foreground"
                         )}
                     >
@@ -994,7 +994,7 @@ export default function Tables() {
                                                 onClick={() => setSelectedCategoryId(cat.id)}
                                                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
                                                     selectedCategoryId === cat.id
-                                                        ? 'bg-rb-accent text-white'
+                                                        ? 'bg-rb-accent text-rb-accent-foreground'
                                                         : 'bg-muted text-muted-foreground hover:bg-muted/70'
                                                 }`}
                                             >
@@ -1070,7 +1070,7 @@ export default function Tables() {
                                                             )}
                                                             <button
                                                                 onClick={() => increaseNewItem(product)}
-                                                                className="w-7 h-7 rounded-full bg-rb-accent flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-colors"
+                                                                className="w-7 h-7 rounded-full bg-rb-gold flex items-center justify-center text-rb-gold-foreground text-xl font-bold hover:opacity-90 transition-colors"
                                                             >
                                                                 +
                                                             </button>
@@ -1104,7 +1104,7 @@ export default function Tables() {
                                             <Button
                                                 onClick={handleSendOrder}
                                                 disabled={isSendingOrder}
-                                                className="w-full bg-rb-accent hover:opacity-90 text-white font-semibold rounded-xl h-11 shrink-0"
+                                                className="w-full bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-semibold rounded-xl h-11 shrink-0"
                                             >
                                                 {isSendingOrder ? 'Gönderiliyor...' : 'Siparişi Gönder →'}
                                             </Button>
@@ -1149,7 +1149,7 @@ export default function Tables() {
                                     <Button
                                         onClick={handleCustomerArrived}
                                         disabled={arriving}
-                                        className="w-full bg-rb-green hover:opacity-90 text-white font-semibold rounded-xl h-11 disabled:opacity-60"
+                                        className="w-full bg-rb-green hover:opacity-90 text-rb-green-foreground font-semibold rounded-xl h-11 disabled:opacity-60"
                                     >
                                         {arriving ? 'Açılıyor...' : 'Müşteri Geldi (Masayı Aç)'}
                                     </Button>
@@ -1214,7 +1214,7 @@ export default function Tables() {
                                     <Button
                                         onClick={handleSaveReservation}
                                         disabled={savingReservation}
-                                        className="w-full bg-rb-amber hover:opacity-90 text-white font-semibold rounded-xl h-11"
+                                        className="w-full bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-semibold rounded-xl h-11"
                                     >
                                         {savingReservation ? 'Kaydediliyor...' : 'Rezervasyonu Kaydet'}
                                     </Button>

@@ -68,7 +68,7 @@ export default function SlugSetupPage() {
                     <Button
                         type="submit"
                         disabled={loading}
-                        className="w-full h-11.5 rounded-xl bg-rb-accent hover:opacity-90 text-white font-bold text-sm"
+                        className="w-full h-11.5 rounded-xl bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-bold text-sm"
                     >
                         {loading ? "Kaydediliyor..." : "Adresi Kaydet →"}
                     </Button>

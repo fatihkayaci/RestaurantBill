@@ -220,7 +220,7 @@ export default function QuickAccessPanel() {
                     >
                         <span className={cn(
                             'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                            step.done ? 'bg-rb-green text-white'
+                            step.done ? 'bg-rb-green text-rb-green-foreground'
                                 : isNext ? 'bg-rb-gold text-rb-gold-foreground'
                                     : 'bg-rb-gold/20 text-rb-amber'
                         )}>

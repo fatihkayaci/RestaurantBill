@@ -168,7 +168,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
                             <button
                                 onClick={handleCloseWithCount}
                                 disabled={submitting}
-                                className="w-full rounded-xl py-3.5 text-sm font-semibold text-white bg-rb-red hover:opacity-90 transition-opacity disabled:opacity-50"
+                                className="w-full rounded-xl py-3.5 text-sm font-semibold text-rb-gold-foreground bg-rb-gold hover:opacity-90 transition-opacity disabled:opacity-50"
                             >
                                 {submitting ? 'Kapatılıyor...' : 'Sayarak Kapat'}
                             </button>
