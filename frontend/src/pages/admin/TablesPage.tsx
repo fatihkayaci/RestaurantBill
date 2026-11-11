@@ -1283,7 +1283,7 @@ export default function Tables() {
                                         {tableOrder.orderItems.length > 0 && (
                                             <button
                                                 onClick={() => setPaymentOrder(tableOrder)}
-                                                className="w-full rounded-xl bg-rb-accent-bg text-rb-accent font-semibold text-sm py-2.5 hover:opacity-80 transition-colors"
+                                                className="w-full h-12 rounded-xl bg-rb-gold text-rb-gold-foreground font-semibold text-sm hover:bg-rb-gold/85 transition-colors"
                                             >
                                                 Ödeme Al
                                             </button>
