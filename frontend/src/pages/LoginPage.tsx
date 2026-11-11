@@ -158,11 +158,11 @@ export default function LoginPage() {
             </aside>
 
             {/* ── Sağ Alan ── */}
-            <main className="flex-1 bg-[#f5f0e8] dark:bg-[#18140f] flex flex-col items-center justify-center gap-6 p-4 sm:p-6 md:p-10">
+            <main className="flex-1 bg-background flex flex-col items-center justify-center gap-6 p-4 sm:p-6 md:p-10">
                 <div className="w-full max-w-115 flex items-center justify-between">
                     <Link to="/" className="lg:hidden flex items-center" aria-label="Sophram ana sayfa">
                         <img src={sophramMark} alt="" className="h-12 w-auto" />
-                        <span className="font-serif text-xl font-bold text-[#2a1f14] dark:text-[#f2ede4]">Sophram</span>
+                        <span className="font-serif text-xl font-bold text-foreground">Sophram</span>
                     </Link>
                     {!isTenantHost && (
                     <Link
@@ -173,7 +173,7 @@ export default function LoginPage() {
                     </Link>
                     )}
                 </div>
-                <div className="w-full max-w-115 bg-[#fdfaf5] dark:bg-[#221d16] rounded-2xl border border-[#e8e0d0] dark:border-[#3d3528] shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)] overflow-hidden">
+                <div className="w-full max-w-115 bg-card rounded-2xl border border-border shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)] overflow-hidden">
 
                     {/* Tabs */}
                     <div className={`${isTenantHost ? 'hidden' : 'flex'} border-b border-[#e8e0d0] dark:border-[#3d3528] px-3 sm:px-6 relative`}>
@@ -184,7 +184,7 @@ export default function LoginPage() {
                                 onClick={() => setActiveTab(tab)}
                                 className={`flex-1 py-4 text-[13px] font-semibold transition-colors relative z-10 ${
                                     activeTab === tab
-                                        ? "text-gray-900 dark:text-[#f2ede4]"
+                                        ? "text-foreground"
                                         : "text-[#a39080] dark:text-[#7a6e60] hover:text-gray-600 dark:hover:text-[#a89880]"
                                 }`}
                             >
@@ -203,7 +203,7 @@ export default function LoginPage() {
                         {activeTab === "login" && (
                             <form onSubmit={handleLogin} className="space-y-4.5">
                                 <div>
-                                    <h2 className="text-[26px] font-serif font-bold leading-[1.1] text-gray-900 dark:text-[#f2ede4]">
+                                    <h2 className="text-[26px] font-serif font-bold leading-[1.1] text-foreground">
                                         Tekrar Hoş Geldiniz
                                     </h2>
                                     <p className="text-[13px] mt-1" style={{ color: "#a39080" }}>
@@ -263,7 +263,7 @@ id="login-password"
                                 <Button
                                     type="submit"
                                     disabled={loginLoading}
-                                    className="w-full h-11.5 rounded-xl bg-[#C8A96E] hover:bg-[#d6b97f] text-[#1c1510] font-bold text-sm mt-0.5"
+                                    className="w-full h-11.5 rounded-xl bg-rb-gold hover:bg-[#d6b97f] text-[#1c1510] font-bold text-sm mt-0.5"
                                 >
                                     {loginLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
                                 </Button>
@@ -273,7 +273,7 @@ id="login-password"
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("register")}
-                                        className="text-[#9A7B3F] dark:text-[#C8A96E] font-semibold hover:underline"
+                                        className="text-[#9A7B3F] dark:text-rb-gold font-semibold hover:underline"
                                     >
                                         Kayıt olun
                                     </button>
@@ -285,7 +285,7 @@ id="login-password"
                         {activeTab === "register" && (
                             <form onSubmit={handleRegister} className="space-y-4.5">
                                 <div>
-                                    <h2 className="text-[26px] font-serif font-bold leading-[1.1] text-gray-900 dark:text-[#f2ede4]">
+                                    <h2 className="text-[26px] font-serif font-bold leading-[1.1] text-foreground">
                                         Hesap Oluştur
                                     </h2>
                                     <p className="text-[13px] mt-1" style={{ color: "#a39080" }}>
@@ -410,7 +410,7 @@ id="reg-password-confirm"
                                 <Button
                                     type="submit"
                                     disabled={regLoading}
-                                    className="w-full h-11.5 rounded-xl bg-[#C8A96E] hover:bg-[#d6b97f] text-[#1c1510] font-bold text-sm mt-0.5"
+                                    className="w-full h-11.5 rounded-xl bg-rb-gold hover:bg-[#d6b97f] text-[#1c1510] font-bold text-sm mt-0.5"
                                 >
                                     {regLoading ? "Hesap oluşturuluyor..." : "Hesap Oluştur"}
                                 </Button>
@@ -420,7 +420,7 @@ id="reg-password-confirm"
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("login")}
-                                        className="text-[#9A7B3F] dark:text-[#C8A96E] font-semibold hover:underline"
+                                        className="text-[#9A7B3F] dark:text-rb-gold font-semibold hover:underline"
                                     >
                                         Giriş yapın
                                     </button>

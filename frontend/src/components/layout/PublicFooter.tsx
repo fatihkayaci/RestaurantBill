@@ -26,7 +26,7 @@ export default function PublicFooter() {
                     <p className="text-[13px] leading-relaxed text-[rgba(242,237,228,0.55)]">
                         Garson, mutfak, kasa ve yönetim için gerçek zamanlı restoran yönetim sistemi.
                     </p>
-                    <Link to="/login" className="self-start mt-1 text-[13px] font-semibold text-[#C8A96E] hover:underline underline-offset-4">
+                    <Link to="/login" className="self-start mt-1 text-[13px] font-semibold text-rb-gold hover:underline underline-offset-4">
                         Giriş Yap →
                     </Link>
                 </div>

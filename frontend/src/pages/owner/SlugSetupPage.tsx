@@ -40,9 +40,9 @@ export default function SlugSetupPage() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-[#f5f0e8] dark:bg-[#18140f] p-6">
+        <div className="flex min-h-screen items-center justify-center bg-background p-6">
             <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)] p-7">
-                <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-[#f2ede4]">
+                <h1 className="text-2xl font-serif font-bold text-foreground">
                     Restoran Adresinizi Belirleyin
                 </h1>
                 <p className="text-[13px] mt-1.5" style={{ color: "#a39080" }}>
