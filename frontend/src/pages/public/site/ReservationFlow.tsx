@@ -45,12 +45,12 @@ function initialSlot(now: Date): { date: string; time: string } {
 }
 
 const chipOn = 'border-[1.5px] border-[var(--site-accent)] bg-[var(--site-accent)] text-[var(--site-on-accent)]';
-const chipOff = 'border border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-accent)]';
-const chipDisabled = 'cursor-not-allowed border border-dashed border-[#D6C6B2] bg-[var(--site-disabled)] text-[var(--site-muted)] line-through';
+const chipOff = 'border border-[var(--site-border-strong)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-accent)]';
+const chipDisabled = 'cursor-not-allowed border border-dashed border-[var(--site-border-strong)] bg-transparent text-[var(--site-muted)] line-through';
 const legendClass = 'mb-2.5 p-0 text-[15px] font-semibold';
-const inputClass = 'h-12 w-full rounded-xl border border-[var(--site-border)] bg-[var(--site-card)] px-3 text-base text-[var(--site-text)] placeholder:text-[var(--site-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]';
+const inputClass = 'h-12 w-full rounded-xl border border-[var(--site-border-strong)] bg-[var(--site-card)] px-3 text-base text-[var(--site-text)] placeholder:text-[var(--site-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]';
 const labelClass = 'mb-1.5 block text-sm font-semibold';
-const primaryButton = 'flex h-14 w-full items-center justify-center rounded-[14px] bg-[var(--site-accent)] text-[17px] font-semibold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45';
+const primaryButton = 'flex h-14 w-full items-center justify-center rounded-full bg-[var(--site-accent)] text-[17px] font-semibold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45';
 
 type Step = 'slot' | 'details' | 'done';
 
@@ -171,7 +171,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                         type="button"
                         onClick={back}
                         aria-label={step === 'details' ? 'Önceki adım' : 'Restoran sayfasına dön'}
-                        className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--site-text)] hover:bg-[var(--site-band)]"
+                        className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--site-text)] hover:bg-[var(--site-raised)]"
                     >
                         <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                     </button>
@@ -184,8 +184,8 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
             {step === 'done' && (
                 <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-5 py-6">
-                    <div role="status" className="flex items-start gap-3 rounded-[14px] border border-[#9BD3AE] bg-[#E6F5EA] p-4">
-                        <Check className="mt-0.5 h-5 w-5 shrink-0 text-[#166534]" strokeWidth={2.5} aria-hidden="true" />
+                    <div role="status" className="flex items-start gap-3 rounded-2xl border border-[var(--site-ok-line)] bg-[var(--site-ok-bg)] p-4">
+                        <Check className="mt-0.5 h-5 w-5 shrink-0 text-[var(--site-ok)]" strokeWidth={2.5} aria-hidden="true" />
                         <div>
                             <p className="text-base font-semibold">Talebiniz alındı</p>
                             <p className="mt-0.5 text-sm leading-relaxed text-[var(--site-sub)]">
@@ -199,7 +199,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                         <button
                             type="button"
                             onClick={() => { setStep('slot'); goTop(); }}
-                            className="flex h-12 items-center justify-center rounded-[14px] border border-[var(--site-border)] bg-[var(--site-card)] text-[15px] font-semibold hover:border-[var(--site-accent)]"
+                            className="flex h-12 items-center justify-center rounded-full border border-[var(--site-border-strong)] text-[15px] font-semibold hover:border-[var(--site-text)]"
                         >
                             Yeni rezervasyon talebi
                         </button>
@@ -270,13 +270,13 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
                         <div className="flex items-center justify-between">
                             <label htmlFor="rez-kisi" className="text-[15px] font-semibold">Kişi sayısı</label>
-                            <div className="flex items-center gap-1 rounded-[14px] border border-[var(--site-border)] bg-[var(--site-card)] p-0.5">
+                            <div className="flex items-center gap-1 rounded-full border border-[var(--site-border-strong)] bg-[var(--site-card)] p-0.5">
                                 <button
                                     type="button"
                                     aria-label="Kişi sayısını azalt"
                                     disabled={partySize <= 1}
                                     onClick={() => setPartySize(n => Math.max(1, n - 1))}
-                                    className="flex h-11 w-11 items-center justify-center rounded-xl disabled:opacity-40"
+                                    className="flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-40"
                                 >
                                     <Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
                                 </button>
@@ -286,7 +286,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                     aria-label="Kişi sayısını artır"
                                     disabled={partySize >= MAX_PARTY}
                                     onClick={() => setPartySize(n => Math.min(MAX_PARTY, n + 1))}
-                                    className="flex h-11 w-11 items-center justify-center rounded-xl disabled:opacity-40"
+                                    className="flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-40"
                                 >
                                     <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
                                 </button>
@@ -298,11 +298,11 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                 Masa seçin <span className="font-normal text-[var(--site-muted)]">· {formatDay(date)}, {time}</span>
                             </legend>
 
-                            {slotError && <p role="alert" className="rounded-xl border border-[#E8A99C] bg-[#FBE1DC] p-3 text-sm font-medium text-[#7F1D1D]">{slotError}</p>}
+                            {slotError && <p role="alert" className="rounded-xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3 text-sm font-medium text-[var(--site-error)]">{slotError}</p>}
 
                             {!slotError && unavailable === null && (
                                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4" aria-busy="true">
-                                    {[...Array(8)].map((_, i) => <div key={i} className="h-[60px] animate-pulse rounded-xl bg-[var(--site-band)]" />)}
+                                    {[...Array(8)].map((_, i) => <div key={i} className="h-[60px] animate-pulse rounded-xl bg-[var(--site-card)]" />)}
                                 </div>
                             )}
 
@@ -338,7 +338,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                         </p>
                     </main>
 
-                    <div className="sticky bottom-0 z-10 border-t border-[var(--site-border)] bg-[var(--site-card)]">
+                    <div className="sticky bottom-0 z-10 border-t border-[var(--site-border)] bg-[var(--site-bg)]">
                         <div className="mx-auto flex max-w-2xl flex-col gap-2.5 px-5 pb-5 pt-3.5">
                             <p className="text-sm text-[var(--site-sub)]">{selected ? summary : 'Bir masa seçin'}</p>
                             <button
@@ -357,7 +357,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
             {step === 'details' && (
                 <form onSubmit={submit} className="flex flex-1 flex-col">
                     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-5 pb-8 pt-5">
-                        <div className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--site-border)] bg-[var(--site-card)] p-4">
+                        <div className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--site-border)] bg-[var(--site-card)] p-4">
                             <div className="min-w-0">
                                 <p className={cn(headingFont, 'text-xl font-bold leading-tight')}>{selected?.name}</p>
                                 <p className="text-sm text-[var(--site-sub)]">{formatDay(date)} · {time} · {partySize} kişi</p>
@@ -365,7 +365,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             <button
                                 type="button"
                                 onClick={() => { setStep('slot'); goTop(); }}
-                                className="flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-[var(--site-accent)] hover:bg-[var(--site-band)]"
+                                className="flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-[var(--site-accent)] hover:bg-[var(--site-raised)]"
                             >
                                 Değiştir
                             </button>
@@ -401,10 +401,10 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                 className={cn(inputClass, 'h-auto py-2.5')}
                             />
                         </div>
-                        {formError && <p role="alert" className="rounded-xl border border-[#E8A99C] bg-[#FBE1DC] p-3 text-sm font-medium text-[#7F1D1D]">{formError}</p>}
+                        {formError && <p role="alert" className="rounded-xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3 text-sm font-medium text-[var(--site-error)]">{formError}</p>}
                     </main>
 
-                    <div className="sticky bottom-0 z-10 border-t border-[var(--site-border)] bg-[var(--site-card)]">
+                    <div className="sticky bottom-0 z-10 border-t border-[var(--site-border)] bg-[var(--site-bg)]">
                         <div className="mx-auto flex max-w-2xl flex-col gap-2 px-5 pb-5 pt-3.5">
                             <button type="submit" disabled={sending || !selected} className={primaryButton}>
                                 {sending ? 'Gönderiliyor…' : 'Rezervasyon talebi gönder'}

@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 import MenuBrowser from './components/MenuBrowser';
 import ReservationFlow from './site/ReservationFlow';
 import {
-    AboutSection, GallerySection, HoursSection, LocationSection, MyReservations, SiteFooter, SiteHeaderDesktop, SiteHero,
+    AboutSection, GallerySection, HoursSection, InfoStrip, MenuHeading, MyReservations, PhoneActionBar, ReservationTeaser,
+    SiteFooter, SiteHeader, SiteHero, sectionWrap,
 } from './site/SiteSections';
 import { SITE_FONTS_HREF, headingFont, siteRootStyle, type SiteExtras } from './site/siteTheme';
 
@@ -33,8 +34,8 @@ function saveIds(ids: string[]) {
     try { localStorage.setItem(savedKey(), JSON.stringify(ids.slice(0, MAX_SAVED))); } catch { /* özel pencere */ }
 }
 
-// Restoranın müşteriye açık sitesi (tasarım: canvas "Restoran Sitesi", Yön 1 · Sıcak).
-// Ana sayfa: kapak, hızlı eylemler, menü, konum. Rezervasyon ayrı bir görünüm (?bolum=rezervasyon),
+// Restoranın müşteriye açık sitesi (tasarım: canvas "Restoran Sitesi v2" · Ocak).
+// Ana sayfa: başlık, bilgi şeridi, menü, rezervasyon tanıtımı, alt bilgi (konum). Rezervasyon ayrı bir görünüm (?bolum=rezervasyon),
 // böylece telefonda geri tuşu ana sayfaya döner.
 export default function RestaurantSitePage() {
     const [site, setSite] = useState<PublicSite | null>(null);
@@ -102,10 +103,10 @@ export default function RestaurantSitePage() {
     if (!site) {
         return root(
             <main className="flex-1" aria-busy="true">
-                <div className="h-[150px] animate-pulse bg-[var(--site-band)] md:h-[560px]" />
-                <div className="mx-auto max-w-3xl space-y-3 px-5 py-8">
-                    <div className="h-10 w-56 animate-pulse rounded-lg bg-[var(--site-band)]" />
-                    {[...Array(4)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-[14px] bg-[var(--site-band)]" />)}
+                <div className="h-[72px] border-b border-[var(--site-border)] md:h-20" />
+                <div className="mx-auto max-w-[1200px] space-y-3 px-4 py-8 md:px-6 md:py-14">
+                    <div className="h-14 w-72 animate-pulse rounded-xl bg-[var(--site-card)] md:h-20 md:w-[480px]" />
+                    {[...Array(4)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-[var(--site-card)]" />)}
                 </div>
             </main>
         );
@@ -122,41 +123,38 @@ export default function RestaurantSitePage() {
         );
     }
 
+    const fullAddress = [site.openAddress, location].filter(Boolean).join(', ');
+
     return root(
-        <>
-            <SiteHeaderDesktop name={name} logoUrl={extras.logoUrl} showLocation={Boolean(site.openAddress || location || site.phone)} onReserve={onReserve} />
-            <SiteHero
-                name={name}
-                subtitle={extras.slogan || location}
-                coverUrl={extras.coverUrl}
-                logoUrl={extras.logoUrl}
-                onReserve={onReserve}
-                phone={site.phone}
-                address={[site.openAddress, location].filter(Boolean).join(', ')}
-            />
+        <div className={cn('flex flex-1 flex-col', onReserve && 'pb-[84px] md:pb-0')}>
+            <SiteHeader name={name} logoUrl={extras.logoUrl} showLocation={Boolean(fullAddress || site.phone)} onReserve={onReserve} />
+            <SiteHero name={name} subtitle={extras.slogan || location} coverUrl={extras.coverUrl} onReserve={onReserve} />
 
             <main className="flex flex-col">
+                <InfoStrip address={fullAddress} phone={site.phone} regions={site.regions.map(r => r.name)} />
+
                 {mine.length > 0 && (
-                    <div className="mx-auto w-full max-w-[1280px] px-5 pb-6 md:px-10 md:pt-12 lg:px-20">
+                    <div className={cn(sectionWrap, 'pb-14')}>
                         <MyReservations items={mine} className="md:max-w-[560px]" />
                     </div>
                 )}
 
                 <AboutSection text={extras.about} />
 
-                <section id="menu" aria-labelledby="menu-baslik" className="scroll-mt-0 bg-[var(--site-band)] py-7 md:py-20">
-                    <div className="mx-auto w-full max-w-[1280px] md:px-5 lg:px-15">
-                        <h2 id="menu-baslik" className={cn(headingFont, 'px-5 pb-3 text-2xl font-bold md:text-[40px]')}>Menü</h2>
-                        <MenuBrowser categories={site.categories} tone="site" />
+                <section id="menu" aria-labelledby="menu-baslik" className="scroll-mt-0 border-y border-[var(--site-border)] bg-[var(--site-band)] py-14 md:py-20">
+                    <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 md:gap-8">
+                        <MenuHeading />
+                        <MenuBrowser categories={site.categories} />
                     </div>
                 </section>
 
+                <ReservationTeaser onReserve={onReserve} />
                 <HoursSection hours={extras.hours} />
-                <LocationSection address={site.openAddress} location={location} phone={site.phone} />
                 <GallerySection images={extras.gallery} />
             </main>
 
-            <SiteFooter name={name} instagramUrl={extras.instagramUrl} whatsappUrl={extras.whatsappUrl} />
-        </>
+            <SiteFooter name={name} address={fullAddress} phone={site.phone} instagramUrl={extras.instagramUrl} whatsappUrl={extras.whatsappUrl} />
+            <PhoneActionBar onReserve={onReserve} />
+        </div>
     );
 }
