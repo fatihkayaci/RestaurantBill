@@ -8,12 +8,23 @@ import { chartTooltipProps } from '@/lib/chartTheme';
 export default function OverViewPage() {
     const [stats, setStats] = useState<OverviewStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [failed, setFailed] = useState(false);
+    const [reloadTick, setReloadTick] = useState(0);
 
     useEffect(() => {
+        let cancelled = false;
         statsService.getOverview()
-            .then(setStats)
-            .finally(() => setLoading(false));
-    }, []);
+            .then(data => { if (!cancelled) { setStats(data); setFailed(false); } })
+            .catch(() => { if (!cancelled) setFailed(true); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, [reloadTick]);
+
+    const retry = () => {
+        setLoading(true);
+        setFailed(false);
+        setReloadTick(t => t + 1);
+    };
 
     const chartData = stats?.topProducts.map(p => ({ name: p.name, adet: p.sold })) ?? [];
     const occupiedPercent = stats && stats.totalTables > 0
@@ -28,6 +39,19 @@ export default function OverViewPage() {
                 <p className="text-sm text-muted-foreground mt-0.5">Şubenizin genel durumu</p>
             </div>
 
+            {failed && (
+                <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rb-red/30 bg-rb-red-bg px-4 py-3">
+                    <p className="text-sm text-foreground">Veriler yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.</p>
+                    <button
+                        type="button"
+                        onClick={retry}
+                        className="h-10 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                    >
+                        Tekrar dene
+                    </button>
+                </div>
+            )}
+
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Toplam Gelir */}
@@ -36,7 +60,7 @@ export default function OverViewPage() {
                         Toplam Gelir
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
-                        {loading ? '—' : `₺${formatPrice(stats!.totalRevenue)}`}
+                        {stats ? `₺${formatPrice(stats.totalRevenue)}` : '—'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">tüm zamanlar</p>
                 </div>
@@ -47,7 +71,7 @@ export default function OverViewPage() {
                         Toplam Sipariş
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
-                        {loading ? '—' : stats!.totalOrders}
+                        {stats ? stats.totalOrders : '—'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">ödeme alınan sipariş</p>
                 </div>
@@ -58,7 +82,7 @@ export default function OverViewPage() {
                         Ort. Sipariş
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
-                        {loading ? '—' : `₺${formatPrice(stats!.avgOrderValue)}`}
+                        {stats ? `₺${formatPrice(stats.avgOrderValue)}` : '—'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">sipariş başına</p>
                 </div>
@@ -69,10 +93,10 @@ export default function OverViewPage() {
                         Dolu Masa
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
-                        {loading ? '—' : `${stats!.occupiedTables}/${stats!.totalTables}`}
+                        {stats ? `${stats.occupiedTables}/${stats.totalTables}` : '—'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                        {loading ? '' : `%${occupiedPercent} doluluk`}
+                        {stats ? `%${occupiedPercent} doluluk` : ''}
                     </p>
                 </div>
             </div>
@@ -90,7 +114,7 @@ export default function OverViewPage() {
                         </div>
                     ) : chartData.length === 0 ? (
                         <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">
-                            Henüz sipariş verisi yok.
+                            {failed ? 'Veri yüklenemedi.' : 'Henüz sipariş verisi yok.'}
                         </div>
                     ) : (
                         <ResponsiveContainer width="100%" height={224}>
@@ -113,7 +137,7 @@ export default function OverViewPage() {
                     {loading ? (
                         <p className="text-muted-foreground text-sm">Yükleniyor...</p>
                     ) : !stats || stats.topProducts.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">Henüz sipariş verisi yok.</p>
+                        <p className="text-muted-foreground text-sm">{failed ? 'Veri yüklenemedi.' : 'Henüz sipariş verisi yok.'}</p>
                     ) : (
                         <div className="space-y-3">
                             {stats.topProducts.map((item, idx) => (
