@@ -109,7 +109,7 @@ export default function RestaurantPage() {
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch?.staffCount ?? "—"}</p>
-                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Personel</p>
+                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Çalışan</p>
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch ? formatTL(branch.revenue) : "—"}</p>
@@ -157,7 +157,7 @@ export default function RestaurantPage() {
                 {/* Restoran QR Kodu */}
                 <div className="rounded-xl border border-border bg-card p-5 h-full flex flex-col">
                     <h2 className="text-base font-semibold text-foreground">Restoran QR Kodu</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">Personeliniz bu adresten restoranınıza giriş yapar</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">Çalışanlarınız bu adresten restoranınıza giriş yapar</p>
                     <div className="flex flex-col items-center gap-3 py-2 flex-1 justify-center">
                         {restaurantUrl ? (
                             <div className="p-3 rounded-lg bg-white">

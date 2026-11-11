@@ -37,7 +37,7 @@ const branchNav: NavItem[] = [
 // Owner'a şube modunda ek olarak açılan şirket sayfaları.
 const ownerExtrasInBranch: NavItem[] = [
     { to: '/admin/branches', icon: Building2, label: 'Şubeler' },
-    { to: '/admin/admins', icon: UserCog, label: 'Adminler' },
+    { to: '/admin/admins', icon: UserCog, label: 'Yöneticiler' },
     { to: '/admin/branding', icon: Palette, label: 'Marka Ayarları' },
     { to: '/admin/audit-log', icon: History, label: 'Denetim Kaydı' },
 ];
@@ -46,7 +46,7 @@ const ownerExtrasInBranch: NavItem[] = [
 const companyNav: NavItem[] = [
     { to: '/owner/overview', icon: LayoutDashboard, label: 'Şirket Genel Bakış' },
     { to: '/owner/branches', icon: Building2, label: 'Şubeler' },
-    { to: '/owner/admins', icon: UserCog, label: 'Adminler' },
+    { to: '/owner/admins', icon: UserCog, label: 'Yöneticiler' },
     { to: '/owner/branding', icon: Palette, label: 'Marka Ayarları' },
     { to: '/owner/reports', icon: BarChart3, label: 'Finansal Rapor' },
     { to: '/owner/audit-log', icon: History, label: 'Denetim Kaydı' },

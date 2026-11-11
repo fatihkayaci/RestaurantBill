@@ -260,7 +260,7 @@ export default function StaffPage() {
                                         onClick={() => setDeleteTargetId(user.id)}
                                         className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"
                                     >
-                                        Kaldır
+                                        Sil
                                     </button>
                                 </div>
                             </div>
@@ -388,7 +388,7 @@ export default function StaffPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Şifre * {editUser && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
+                                        <label className={labelClass}>Şifre * {editUser && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsanız değişmez)</span>}</label>
                                         <input
                                             type="text"
                                             className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}

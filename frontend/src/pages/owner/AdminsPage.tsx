@@ -96,10 +96,10 @@ export default function AdminsPage() {
         try {
             await userService.deleteUser(deleteTargetId);
             setAdmins(prev => prev.filter(u => u.id !== deleteTargetId));
-            toast.success('Admin silindi.');
+            toast.success('Yönetici silindi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Admin silinemedi.');
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Yönetici silinemedi.');
             }
         } finally {
             setDeleteTargetId(null);
@@ -113,7 +113,7 @@ export default function AdminsPage() {
                 phoneNumber: admin.phoneNumber, role: ADMIN_ROLE, isActive: !admin.isActive
             });
             setAdmins(prev => prev.map(u => u.id === admin.id ? { ...u, isActive: !u.isActive } : u));
-            toast.success(admin.isActive ? 'Admin pasif yapıldı.' : 'Admin aktif yapıldı.');
+            toast.success(admin.isActive ? 'Yönetici pasif yapıldı.' : 'Yönetici aktif yapıldı.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Durum güncellenemedi.');
@@ -152,7 +152,7 @@ export default function AdminsPage() {
             }
             loadAdmins();
             setIsModalOpen(false);
-            toast.success(editAdmin ? 'Admin güncellendi.' : 'Admin eklendi.');
+            toast.success(editAdmin ? 'Yönetici güncellendi.' : 'Yönetici eklendi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 const data = err.response?.data;
@@ -188,14 +188,14 @@ export default function AdminsPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Adminler</h1>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Yöneticiler</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">{admins.length} admin hesabı</p>
                 </div>
                 <button
                     onClick={openCreateModal}
                     className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
-                    + Admin Ekle
+                    + Yönetici Ekle
                 </button>
             </div>
 
@@ -264,7 +264,7 @@ export default function AdminsPage() {
                                         onClick={() => setDeleteTargetId(admin.id)}
                                         className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"
                                     >
-                                        Kaldır
+                                        Sil
                                     </button>
                                 </div>
                             </div>
@@ -280,7 +280,7 @@ export default function AdminsPage() {
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-foreground">
-                                {editAdmin ? 'Admini Düzenle' : 'Admin Ekle'}
+                                {editAdmin ? 'Yöneticiyi Düzenle' : 'Yönetici Ekle'}
                             </h2>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -405,7 +405,7 @@ export default function AdminsPage() {
                                     </div>
 
                                     <div>
-                                        <label className={labelClass}>Şifre * {editAdmin && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsan değişmez)</span>}</label>
+                                        <label className={labelClass}>Şifre * {editAdmin && <span className="normal-case font-normal text-muted-foreground">(boş bırakırsanız değişmez)</span>}</label>
                                         <input
                                             type="text"
                                             className={cn(inputClass, fieldErrors.passwordHash && "border-destructive")}
@@ -443,7 +443,7 @@ export default function AdminsPage() {
             <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Admini sil</AlertDialogTitle>
+                        <AlertDialogTitle>Yöneticiyi sil</AlertDialogTitle>
                         <AlertDialogDescription>
                             Bu admini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
                         </AlertDialogDescription>

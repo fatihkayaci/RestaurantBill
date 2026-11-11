@@ -84,7 +84,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
             <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
                 <div className="flex items-start justify-between mb-1">
                     <div>
-                        <h2 className="font-serif text-xl font-bold text-foreground">Günü Kapat</h2>
+                        <h2 className="font-serif text-xl font-bold text-foreground">Vardiyayı Kapat</h2>
                         <p className="text-sm text-muted-foreground mt-0.5">{shift.cashRegisterName}</p>
                     </div>
                     <button
@@ -159,7 +159,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
                                 type="text"
                                 value={note}
                                 onChange={e => setNote(e.target.value)}
-                                placeholder="Not (opsiyonel)"
+                                placeholder="Not (isteğe bağlı)"
                                 className="mt-2 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
                             />
                         </div>

@@ -144,7 +144,7 @@ export default function ReportsPage({ role }: Props) {
                     <TabsTrigger value="sales">Satış</TabsTrigger>
                     <TabsTrigger value="shifts">Kasa &amp; Vardiya</TabsTrigger>
                     <TabsTrigger value="products">Ürünler</TabsTrigger>
-                    <TabsTrigger value="staff">Personel</TabsTrigger>
+                    <TabsTrigger value="staff">Çalışanlar</TabsTrigger>
                     <TabsTrigger value="discounts">İndirim &amp; İptal</TabsTrigger>
                     <TabsTrigger value="tax">Mali (KDV)</TabsTrigger>
                 </TabsList>

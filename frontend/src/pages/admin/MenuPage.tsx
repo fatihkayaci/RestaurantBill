@@ -341,7 +341,7 @@ export default function Menu() {
                                         onChange={e => setBannerUseGeneralTaxRate(e.target.checked)}
                                         className="h-3.5 w-3.5 rounded border-border"
                                     />
-                                    Genel KDV'i kullan
+                                    Genel KDV'yi kullan
                                 </label>
                                 {!bannerUseGeneralTaxRate && (
                                     <input
@@ -589,7 +589,7 @@ export default function Menu() {
                                     onClick={() => setDeleteTargetId(product.id)}
                                     className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"
                                 >
-                                    Kaldır
+                                    Sil
                                 </button>
                             </div>
                         </div>

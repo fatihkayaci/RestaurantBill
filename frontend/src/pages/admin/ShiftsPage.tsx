@@ -436,8 +436,8 @@ export default function ShiftsPage() {
                                 <>
                                     {reviewTarget.shift.cashRegisterName} kasasında {formatTL((reviewTarget.type === 'opening' ? reviewTarget.shift.openingDifference : reviewTarget.shift.difference) ?? 0)} tutarında {reviewTarget.type === 'opening' ? 'açılış' : 'kapanış'} farkı var; kasa bakiyesi sayım anında sayılan nakde eşitlendi.{' '}
                                     {reviewTarget.action === 'approve'
-                                        ? 'Onaylarsan fark kabul edilmiş olarak kaydedilir.'
-                                        : 'Reddedersen fark kabul edilmemiş olarak işaretlenir (örn. kasiyerden tahsil edilecek). Kasa bakiyesi değişmez.'}
+                                        ? 'Onaylarsanız fark kabul edilmiş olarak kaydedilir.'
+                                        : 'Reddederseniz fark kabul edilmemiş olarak işaretlenir (örn. kasiyerden tahsil edilecek). Kasa bakiyesi değişmez.'}
                                 </>
                             )}
                         </AlertDialogDescription>
