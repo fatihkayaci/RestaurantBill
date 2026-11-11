@@ -217,7 +217,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                     <span className="text-sm text-muted-foreground mt-0.5 w-7 shrink-0">×{item.quantity}</span>
                                     <div>
                                         <p className="text-sm font-medium text-foreground">{item.productName}</p>
-                                        <p className="text-xs text-muted-foreground">₺{item.unitPrice} / adet</p>
+                                        <p className="text-xs text-muted-foreground">₺{formatPrice(item.unitPrice)} / adet</p>
                                         {item.note && <p className="text-xs text-rb-amber mt-0.5">Not: {item.note}</p>}
                                     </div>
                                 </div>
@@ -228,7 +228,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                         <button
                                             onClick={() => adjustSelection(item.id, item.quantity, -1)}
                                             disabled={selectedQty === 0}
-                                            className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                                            aria-label={`${item.productName}: bu ödemedeki adedi azalt`}
+                                            className="w-10 h-10 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
                                             <Minus className="w-3.5 h-3.5" />
                                         </button>
@@ -238,12 +239,14 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                             min={0}
                                             max={item.quantity}
                                             onChange={(e) => setSelectionValue(item.id, item.quantity, e.target.valueAsNumber)}
+                                            aria-label={`${item.productName}: bu ödemede ödenecek adet`}
                                             className={`w-9 text-center text-sm font-semibold tabular-nums bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${selectedQty > 0 ? 'text-rb-accent' : 'text-muted-foreground'}`}
                                         />
                                         <button
                                             onClick={() => adjustSelection(item.id, item.quantity, 1)}
                                             disabled={selectedQty >= item.quantity}
-                                            className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                                            aria-label={`${item.productName}: bu ödemedeki adedi artır`}
+                                            className="w-10 h-10 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
                                             <Plus className="w-3.5 h-3.5" />
                                         </button>
@@ -260,9 +263,15 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                 {/* Sağ: Toplam + Ödeme */}
                 <div className="md:w-90 shrink-0 border-t md:border-t-0 md:border-l border-border md:overflow-y-auto flex flex-col">
                     <div className="px-6 py-6 text-center border-b border-border">
-                        <p className="text-4xl font-serif font-bold text-foreground">
-                            ₺{formatPrice(displayOrder.totalPrice)}
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Tahsil edilecek</p>
+                        <p className="mt-1 text-4xl font-serif font-bold tabular-nums text-foreground">
+                            ₺{formatPrice(netAmount)}
                         </p>
+                        {(hasSelection || discountValue > 0) && (
+                            <p className="mt-1 text-sm text-muted-foreground tabular-nums">
+                                Sipariş toplamı ₺{formatPrice(displayOrder.totalPrice)}
+                            </p>
+                        )}
                         {taxGroups.length > 1 ? (
                             <div className="mt-2">
                                 <button
@@ -311,7 +320,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         )}
                         {discountValue > 0 && (
                             <div className="mt-3 rounded-lg bg-rb-red-bg border border-rb-red px-3 py-2 flex items-center justify-between">
-                                <span className="text-xs font-medium text-rb-red">İskonto</span>
+                                <span className="text-xs font-medium text-rb-red">İndirim</span>
                                 <span className="text-sm font-semibold text-rb-red tabular-nums">-₺{formatPrice(discountValue)}</span>
                             </div>
                         )}
@@ -320,13 +329,13 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                     <div className="px-6 py-5 space-y-4">
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <p className="text-xs text-muted-foreground">İskonto</p>
+                                <p className="text-xs text-muted-foreground">İndirim</p>
                                 <div className="flex rounded-lg border border-border p-0.5">
                                     <button
                                         type="button"
                                         onClick={() => onDiscountTypeChange('percent')}
                                         className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
-                                            discountType === 'percent' ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground'
+                                            discountType === 'percent' ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground'
                                         }`}
                                     >
                                         %
@@ -335,7 +344,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                         type="button"
                                         onClick={() => onDiscountTypeChange('amount')}
                                         className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
-                                            discountType === 'amount' ? 'bg-rb-accent text-white' : 'text-muted-foreground hover:text-foreground'
+                                            discountType === 'amount' ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground'
                                         }`}
                                     >
                                         ₺
@@ -357,7 +366,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                     type="text"
                                     value={discountNote}
                                     onChange={e => setDiscountNote(e.target.value)}
-                                    placeholder="Not (opsiyonel)"
+                                    placeholder="Not (isteğe bağlı)"
                                     className="mt-2 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
                                 />
                             )}
@@ -390,7 +399,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                                     disabled={ensuringShift}
                                                     className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all disabled:opacity-60 disabled:cursor-not-allowed ${isSelected ? 'border-rb-accent bg-rb-accent-bg ring-1 ring-rb-accent' : 'border-border bg-card hover:bg-muted/50'}`}
                                                 >
-                                                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-rb-accent text-white' : 'bg-muted'}`}>
+                                                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-rb-accent text-rb-accent-foreground' : 'bg-muted'}`}>
                                                         <Landmark className="h-4 w-4" />
                                                     </div>
                                                     <div className="min-w-0">
@@ -416,7 +425,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 <button
                                     key={key}
                                     onClick={() => setPaymentMethod(key)}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border-[1.5px] text-sm font-medium transition-colors ${
+                                    className={`flex-1 flex h-14 items-center justify-center gap-2 rounded-xl border-[1.5px] text-base font-semibold transition-colors ${
                                         paymentMethod === key ? selectedClass : 'border-border text-muted-foreground hover:border-muted-foreground'
                                     }`}
                                 >
@@ -429,17 +438,17 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         <button
                             onClick={handleComplete}
                             disabled={!canComplete}
-                            className={`w-full rounded-xl py-3.5 text-sm font-semibold transition-colors ${
+                            className={`w-full h-14 rounded-xl text-base font-semibold transition-colors ${
                                 canComplete
-                                    ? 'bg-rb-green text-white hover:opacity-90 cursor-pointer'
-                                    : 'bg-black/12 text-muted-foreground cursor-not-allowed'
+                                    ? 'bg-rb-green text-rb-green-foreground hover:opacity-90 cursor-pointer'
+                                    : 'bg-rb-neutral-bg text-muted-foreground cursor-not-allowed'
                             }`}
                         >
                             {submitting
                                 ? 'İşleniyor...'
                                 : hasSelection
-                                    ? `Seçilenleri Öde (₺${formatPrice(netAmount)}) ✓`
-                                    : `Tümünü Öde (₺${formatPrice(netAmount)}) ✓`}
+                                    ? `Seçilenleri Öde (₺${formatPrice(netAmount)})`
+                                    : `Tümünü Öde (₺${formatPrice(netAmount)})`}
                         </button>
                     </div>
                 </div>
