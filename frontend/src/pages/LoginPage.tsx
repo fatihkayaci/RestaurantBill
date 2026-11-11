@@ -5,6 +5,7 @@ import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useTheme } from "next-themes";
 import { authService } from "@/features/auth/api/authService";
 import { startSession, getHomePathFromToken } from "@/lib/auth";
+import { getTenantSlug } from "@/lib/tenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
@@ -26,7 +27,9 @@ export default function LoginPage() {
     const { resolvedTheme, setTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     // Tanıtım sayfasındaki "Ücretsiz Dene" butonları doğrudan kayıt formunu açar.
-    const [activeTab, setActiveTab] = useState<TabType>(searchParams.get("tab") === "register" ? "register" : "login");
+    // Restoranın kendi alt alan adında (personel girişi) kayıt formu ve tanıtım sayfası bağlantısı gösterilmez.
+    const isTenantHost = getTenantSlug() !== null;
+    const [activeTab, setActiveTab] = useState<TabType>(!isTenantHost && searchParams.get("tab") === "register" ? "register" : "login");
 
     // Login state
     const [loginField, setLoginField] = useState("");
@@ -161,17 +164,19 @@ export default function LoginPage() {
                         <img src={sophramMark} alt="" className="h-12 w-auto" />
                         <span className="font-serif text-xl font-bold text-[#2a1f14] dark:text-[#f2ede4]">Sophram</span>
                     </Link>
+                    {!isTenantHost && (
                     <Link
                         to="/"
                         className="ml-auto inline-flex items-center gap-1.5 text-[13px] font-medium text-[#6b5e52] dark:text-[#a89880] hover:text-[#2a1f14] dark:hover:text-[#f2ede4] transition-colors"
                     >
                         <ArrowLeft size={15} /> Ana sayfa
                     </Link>
+                    )}
                 </div>
                 <div className="w-full max-w-115 bg-[#fdfaf5] dark:bg-[#221d16] rounded-2xl border border-[#e8e0d0] dark:border-[#3d3528] shadow-[0_24px_64px_rgba(0,0,0,0.08)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.4)] overflow-hidden">
 
                     {/* Tabs */}
-                    <div className="flex border-b border-[#e8e0d0] dark:border-[#3d3528] px-3 sm:px-6 relative">
+                    <div className={`${isTenantHost ? 'hidden' : 'flex'} border-b border-[#e8e0d0] dark:border-[#3d3528] px-3 sm:px-6 relative`}>
                         {(["login", "register"] as TabType[]).map((tab) => (
                             <button
                                 key={tab}
@@ -199,7 +204,7 @@ export default function LoginPage() {
                             <form onSubmit={handleLogin} className="space-y-4.5">
                                 <div>
                                     <h2 className="text-[26px] font-serif font-bold leading-[1.1] text-gray-900 dark:text-[#f2ede4]">
-                                        Tekrar Hoşgeldiniz
+                                        Tekrar Hoş Geldiniz
                                     </h2>
                                     <p className="text-[13px] mt-1" style={{ color: "#a39080" }}>
                                         Devam etmek için giriş yapın
@@ -216,7 +221,7 @@ id="login-field"
                                                                                 value={loginField}
                                         onChange={(e) => setLoginField(e.target.value)}
                                         placeholder="kullanici_adi veya e-posta"
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
                                     />
                                 </div>
 
@@ -232,7 +237,7 @@ id="login-password"
                                             value={loginPassword}
                                             onChange={(e) => setLoginPassword(e.target.value)}
                                             placeholder="Şifreniz..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 pr-10 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 pr-10 text-sm"
                                         />
                                         <button
                                             type="button"
@@ -299,7 +304,7 @@ id="reg-first-name"
                                                                                     value={firstName}
                                             onChange={(e) => setFirstName(e.target.value)}
                                             placeholder="Adınız..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
                                         />
                                     </div>
                                     <div className="flex flex-col gap-1.5">
@@ -312,7 +317,7 @@ id="reg-last-name"
                                                                                     value={lastName}
                                             onChange={(e) => setLastName(e.target.value)}
                                             placeholder="Soyadınız..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
                                         />
                                     </div>
                                 </div>
@@ -327,7 +332,7 @@ id="reg-restaurant"
                                                                                 value={restaurantName}
                                         onChange={(e) => setRestaurantName(e.target.value)}
                                         placeholder="Restoranınızın adı..."
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
                                     />
                                 </div>
 
@@ -342,7 +347,7 @@ id="reg-phone"
                                         value={regPhoneNumber}
                                         onChange={(e) => setRegPhoneNumber(e.target.value)}
                                         placeholder="05XX XXX XX XX"
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
                                     />
                                 </div>
 
@@ -357,7 +362,7 @@ id="reg-email"
                                         value={regEmail}
                                         onChange={(e) => setRegEmail(e.target.value)}
                                         placeholder="ornek@restoran.com"
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
                                     />
                                 </div>
 
@@ -374,7 +379,7 @@ id="reg-password"
                                                 value={regPassword}
                                                 onChange={(e) => setRegPassword(e.target.value)}
                                                 placeholder="Şifreniz..."
-                                                className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 pr-10 text-sm"
+                                                className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 pr-10 text-sm"
                                             />
                                             <button
                                                 type="button"
@@ -397,7 +402,7 @@ id="reg-password-confirm"
                                             value={regConfirm}
                                             onChange={(e) => setRegConfirm(e.target.value)}
                                             placeholder="Tekrar girin..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-2.5 h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
                                         />
                                     </div>
                                 </div>

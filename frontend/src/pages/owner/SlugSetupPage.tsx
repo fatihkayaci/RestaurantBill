@@ -58,7 +58,7 @@ export default function SlugSetupPage() {
                             value={slug}
                             onChange={(e) => setSlug(e.target.value)}
                             placeholder="restoran-adiniz"
-                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-2.5 h-11 text-sm"
+                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-[10px] h-11 text-sm"
                         />
                         <p className="text-xs text-muted-foreground mt-1 truncate">
                             {cleanSlug ? `${cleanSlug}.${ROOT_DOMAIN}` : `—.${ROOT_DOMAIN}`}

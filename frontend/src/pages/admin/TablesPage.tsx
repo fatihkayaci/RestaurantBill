@@ -746,7 +746,7 @@ export default function Tables() {
                                             >
                                                 <X className="h-3.5 w-3.5" />
                                             </button>
-                                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-1.5 leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
+                                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-md leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
                                                 {cfg.label}
                                             </span>
                                         </div>
