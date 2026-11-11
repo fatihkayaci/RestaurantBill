@@ -120,8 +120,8 @@ export default function AppShell() {
                 )}
             >
                 {/* Logo */}
-                <div className="relative flex h-28 shrink-0 items-center justify-center px-5">
-                    <img src={sophramLogo} alt="Sophram" className={cn("h-18 w-auto shrink-0 transition-all duration-300", collapsed && "md:h-10")} />
+                <div className="relative flex h-20 shrink-0 items-center justify-center px-5">
+                    <img src={sophramLogo} alt="Sophram" className={cn("h-14 w-auto shrink-0 transition-all duration-300", collapsed && "md:h-10")} />
                     <button
                         onClick={() => setMobileOpen(false)}
                         aria-label="Menüyü kapat"
@@ -159,7 +159,7 @@ export default function AppShell() {
                                             collapsed && 'md:justify-center md:px-2',
                                             isActive
                                                 ? 'bg-white/10 text-sidebar-foreground'
-                                                : 'text-sidebar-foreground/40 hover:text-sidebar-foreground/70'
+                                                : 'text-sidebar-foreground/65 hover:text-sidebar-foreground/90'
                                         )
                                     }
                                 >
@@ -167,7 +167,7 @@ export default function AppShell() {
                                         <>
                                             <Icon className={cn(
                                                 'w-4 h-4 shrink-0 transition-transform duration-200',
-                                                isActive ? accentText : 'text-sidebar-foreground/30',
+                                                isActive ? accentText : 'text-sidebar-foreground/55',
                                                 collapsed && 'md:group-hover:scale-125'
                                             )} />
                                             <span className={cn(collapsed && 'md:hidden')}>{label}</span>
@@ -251,6 +251,20 @@ export default function AppShell() {
 
                     <button
                         type="button"
+                        onClick={() => setCollapsed(v => !v)}
+                        aria-label={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
+                        title={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
+                        className={cn(
+                            "hidden md:flex h-10 items-center gap-2.5 w-full rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground transition-colors",
+                            collapsed && "md:justify-center md:px-0"
+                        )}
+                    >
+                        {collapsed ? <PanelLeftOpen className="w-4 h-4 shrink-0" /> : <PanelLeftClose className="w-4 h-4 shrink-0" />}
+                        <span className={cn(collapsed && "md:hidden")}>Menüyü daralt</span>
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={() => setLogoutOpen(true)}
                         aria-label="Çıkış Yap"
                         title="Çıkış Yap"
@@ -266,14 +280,7 @@ export default function AppShell() {
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-auto p-6 pt-20 md:pt-6">
-                <button
-                    onClick={() => setCollapsed(v => !v)}
-                    className="hidden md:flex items-center justify-center w-8 h-8 mb-4 -ml-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    title={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
-                >
-                    {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-                </button>
+            <main className="flex-1 overflow-auto p-6 pt-20 pb-24 md:pt-6 md:pb-6">
                 <Outlet />
             </main>
 
