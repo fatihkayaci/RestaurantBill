@@ -5,6 +5,9 @@ import { orderService } from '@/features/orders/api/orderService';
 import { categoryService } from '@/features/categories/api/categoryService';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 import { createHubConnection } from '@/lib/signalrConnection';
+import { Check } from 'lucide-react';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const OrderStatus = {
     Ready: 4,
@@ -46,11 +49,11 @@ function KitchenCard({
     const isUrgent = elapsedMinutes >= URGENT_THRESHOLD_MINUTES;
 
     return (
-        <div className={`bg-background border rounded-2xl overflow-hidden ${isUrgent ? 'border-rb-amber/40' : ''}`}>
+        <div className={`bg-card border rounded-2xl overflow-hidden ${isUrgent ? 'border-rb-amber/60' : ''}`}>
             {/* Kart başlığı */}
             <div className="px-4 pt-4 pb-3 flex items-start justify-between">
                 <div>
-                    <p className="font-serif font-bold text-lg text-foreground leading-none">
+                    <p className="font-serif font-bold text-2xl text-foreground leading-none">
                         {order.tableName}
                     </p>
                     {order.createdByUserName && (
@@ -58,8 +61,8 @@ function KitchenCard({
                     )}
                 </div>
                 <span className={isUrgent
-                    ? 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-rb-amber-bg text-rb-amber'
-                    : 'text-xs text-muted-foreground'
+                    ? 'text-sm font-bold px-2 py-0.5 rounded-md bg-rb-amber text-rb-amber-foreground'
+                    : 'text-sm text-muted-foreground'
                 }>
                     {formatElapsed(order.createdAt, now)}
                 </span>
@@ -67,7 +70,7 @@ function KitchenCard({
 
             {/* Sipariş notu */}
             {order.note && (
-                <div className="mx-4 mb-3 rounded-lg bg-rb-amber-bg text-rb-amber text-xs px-3 py-2">
+                <div className="mx-4 mb-3 rounded-lg bg-rb-amber-bg border border-rb-amber/30 text-foreground text-sm px-3 py-2">
                     <span className="font-bold">Not: </span>{order.note}
                 </div>
             )}
@@ -77,25 +80,22 @@ function KitchenCard({
                 {items.map(item => (
                     <div key={item.id} className="py-2.5">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-muted-foreground text-xs">·</span>
-                                <span className="text-sm text-foreground truncate">{item.productName}</span>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="min-w-9 text-xl font-bold tabular-nums text-foreground">{item.quantity}×</span>
+                                <span className="text-lg font-medium text-foreground truncate">{item.productName}</span>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                                <span className="text-sm text-muted-foreground">×{item.quantity}</span>
-                                <button
-                                    type="button"
-                                    onClick={() => onItemUpdate(order.id, item.id, 3)}
-                                    className="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors text-rb-green hover:bg-rb-green-bg"
-                                    title="Hazır işaretle"
-                                    aria-label={`${item.productName} hazır`}
-                                >
-                                    ✓
-                                </button>
-                            </div>
+                            <button
+                                type="button"
+                                onClick={() => onItemUpdate(order.id, item.id, 3)}
+                                className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl border border-rb-green/40 transition-colors text-rb-green hover:bg-rb-green-bg"
+                                title="Hazır işaretle"
+                                aria-label={`${item.productName} hazır`}
+                            >
+                                <Check className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+                            </button>
                         </div>
                         {item.note && (
-                            <p className="text-xs text-rb-amber mt-0.5 pl-4">Not: {item.note}</p>
+                            <p className="mt-1 rounded-md bg-rb-amber-bg border border-rb-amber/30 px-2 py-1 text-sm text-foreground"><span className="font-bold">Not: </span>{item.note}</p>
                         )}
                     </div>
                 ))}
@@ -105,9 +105,10 @@ function KitchenCard({
             <div className="px-4 pb-4">
                 <button
                     onClick={() => onReady(group)}
-                    className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors bg-rb-green-bg hover:opacity-80 text-rb-green"
+                    className="flex w-full h-12 items-center justify-center gap-2 rounded-xl text-base font-semibold transition-colors bg-rb-green text-rb-green-foreground hover:opacity-90"
                 >
-                    Hazır ✓
+                    <Check className="w-5 h-5" strokeWidth={2.5} aria-hidden="true" />
+                    Tümü Hazır
                 </button>
             </div>
         </div>
@@ -127,6 +128,7 @@ function ColumnHeader({ dot, text, bg, label, count }: { dot: string; text: stri
 
 export default function KitchenDashboardPage() {
     const [orders, setOrders] = useState<Order[]>([]);
+    const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
     const [now, setNow] = useState(() => Date.now());
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [categoryNames, setCategoryNames] = useState<string[]>([]);
@@ -167,7 +169,7 @@ export default function KitchenDashboardPage() {
                 })
             );
         } catch (err) {
-            console.error('handleItemStatusUpdate:', err);
+            toast.error(getApiErrorMessage(err, 'Ürün hazır olarak işaretlenemedi. Tekrar deneyin.'));
         }
     };
 
@@ -186,7 +188,7 @@ export default function KitchenDashboardPage() {
                 })
             );
         } catch (err) {
-            console.error('handleStatusUpdate:', err);
+            toast.error(getApiErrorMessage(err, 'Sipariş güncellenemedi. Tekrar deneyin.'));
         }
     };
 
@@ -203,8 +205,8 @@ export default function KitchenDashboardPage() {
 
     useEffect(() => {
         orderService.getAllOrdersToKitchen()
-            .then(setOrders)
-            .catch(console.error);
+            .then(all => { setOrders(all); setLoadState('ready'); })
+            .catch(() => setLoadState('error'));
         categoryService.getCategories()
             .then(categories => setCategoryNames(categories.map(c => c.name)))
             .catch(console.error);
@@ -215,14 +217,14 @@ export default function KitchenDashboardPage() {
 
         kitchenConn.on('ReceiveNewOrder', async () => {
             const all = await orderService.getAllOrdersToKitchen().catch(() => null);
-            if (all) setOrders(all);
+            if (all) { setOrders(all); setLoadState('ready'); }
         });
 
         const { connection: tableConn, stop: stopTableConn } = createHubConnection('/table-hub');
 
         tableConn.on('OrderUpdated', async () => {
             const all = await orderService.getAllOrdersToKitchen().catch(() => null);
-            if (all) setOrders(all);
+            if (all) { setOrders(all); setLoadState('ready'); }
         });
 
         tableConn.on('OrderClosed', (_tableId: number, closedOrderId: number) => {
@@ -239,6 +241,13 @@ export default function KitchenDashboardPage() {
             stopTableConn();
         };
     }, []);
+
+    const retryLoad = () => {
+        setLoadState('loading');
+        orderService.getAllOrdersToKitchen()
+            .then(all => { setOrders(all); setLoadState('ready'); })
+            .catch(() => setLoadState('error'));
+    };
 
     /* Stats portal — header slot'una enjekte et */
     const statsSlot = document.getElementById('kitchen-stats-slot');
@@ -257,9 +266,9 @@ export default function KitchenDashboardPage() {
                 <div className="flex gap-2 px-4 py-3 overflow-x-auto shrink-0 border-b" style={{ scrollbarWidth: 'none' }}>
                     <button
                         onClick={() => setSelectedCategory(null)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+                        className={`min-h-11 px-4 rounded-full text-sm font-semibold whitespace-nowrap shrink-0 transition-colors ${
                             selectedCategory === null
-                                ? 'bg-rb-accent text-white'
+                                ? 'bg-rb-accent text-rb-accent-foreground'
                                 : 'bg-muted text-muted-foreground hover:bg-muted/70'
                         }`}
                     >
@@ -270,9 +279,9 @@ export default function KitchenDashboardPage() {
                         <button
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+                            className={`min-h-11 px-4 rounded-full text-sm font-semibold whitespace-nowrap shrink-0 transition-colors ${
                                 selectedCategory === cat
-                                    ? 'bg-rb-accent text-white'
+                                    ? 'bg-rb-accent text-rb-accent-foreground'
                                     : 'bg-muted text-muted-foreground hover:bg-muted/70'
                             }`}
                         >
@@ -283,8 +292,22 @@ export default function KitchenDashboardPage() {
                 </div>
                 <ColumnHeader dot="bg-rb-amber" text="text-rb-amber" bg="bg-rb-amber-bg" label="Bekliyor" count={pendingGroups.length} />
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 flex-1 overflow-y-auto content-start">
-                    {pendingGroups.length === 0 ? (
-                        <p className="col-span-full text-xs text-muted-foreground text-center py-8">Bekleyen sipariş yok</p>
+                    {loadState === 'loading' ? (
+                        <p className="col-span-full text-base text-muted-foreground text-center py-10">Yükleniyor...</p>
+                    ) : loadState === 'error' ? (
+                        <div role="alert" className="col-span-full flex flex-col items-center gap-3 py-10 text-center">
+                            <p className="text-base font-semibold text-foreground">Siparişler yüklenemedi.</p>
+                            <p className="text-sm text-muted-foreground">Bağlantınızı kontrol edip tekrar deneyin.</p>
+                            <button
+                                type="button"
+                                onClick={retryLoad}
+                                className="h-12 rounded-xl border border-border bg-card px-5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                            >
+                                Tekrar dene
+                            </button>
+                        </div>
+                    ) : pendingGroups.length === 0 ? (
+                        <p className="col-span-full text-lg font-medium text-muted-foreground text-center py-10">Bekleyen sipariş yok</p>
                     ) : (
                         pendingGroups.map(g => (
                             <KitchenCard key={g.order.id} group={g} now={now} onItemUpdate={handleItemStatusUpdate} onReady={handleReadyClick} />
