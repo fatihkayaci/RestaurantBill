@@ -9,9 +9,8 @@ import { getTurkeyProvinces, type Province } from "@/lib/turkeyLocations";
 import { cn } from "@/lib/utils";
 import { formatPrice } from '@/lib/format';
 import { Modal, ModalTitle } from '@/components/ui/modal';
+import { inputClass, labelClass } from '@/lib/formStyles';
 
-const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
-const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 const isValidPhone = (value: string) => {
     if (!value.trim()) return true;

@@ -20,6 +20,7 @@ import { createHubConnection } from "@/lib/signalrConnection";
 import PaymentPanel from '../cashier/components/PaymentPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
 import { formatPrice, formatElapsed } from '@/lib/format';
+import { inputClass, labelClass } from '@/lib/formStyles';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
 
@@ -61,8 +62,6 @@ const PANEL_STATUS_CONFIG: Record<number, { label: string; cls: string }> = {
     3: { label: 'REZERVE', cls: 'bg-rb-amber-bg text-rb-amber' },
 };
 
-const inputClass = "w-full rounded-lg border border-border bg-[rgb(245,240,232)] dark:bg-[#2a2520] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
-const labelClass = "block text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5";
 
 function formatTimeDigits(rawValue: string): string {
     let digits = rawValue.replace(/\D/g, '').slice(0, 4);
