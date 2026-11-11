@@ -131,14 +131,15 @@ function TableCard({
 export default function WaiterTablesPage() {
     const [tables, setTables] = useState<Table[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [filter, setFilter] = useState<FilterType>('all');
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
         tableService.getTables()
-            .then(t => setTables(t))
-            .catch(console.error)
+            .then(t => { setTables(t); setLoadFailed(false); })
+            .catch(() => setLoadFailed(true))
             .finally(() => setLoading(false));
 
     }, []);
@@ -262,7 +263,9 @@ export default function WaiterTablesPage() {
                 ))}
                 {visibleRegions.length === 0 && (
                     <p className="my-10 text-center text-base text-rb-text-sub">
-                        {tables.length === 0 ? 'Henüz masa eklenmemiş.' : 'Bu filtrede masa yok.'}
+                        {loadFailed && tables.length === 0
+                            ? 'Masalar yüklenemedi. Bağlantınızı kontrol edip sayfayı yenileyin.'
+                            : tables.length === 0 ? 'Henüz masa eklenmemiş.' : 'Bu filtrede masa yok.'}
                     </p>
                 )}
             </div>
