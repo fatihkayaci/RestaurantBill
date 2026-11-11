@@ -80,6 +80,7 @@ export default function ReportsPage({ role }: Props) {
                         type="button"
                         onClick={handleRefresh}
                         disabled={refreshing}
+                        aria-label="Yenile"
                         className="flex items-center justify-center rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-60"
                     >
                         <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />

@@ -56,7 +56,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                     <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Toplam Fark</p>
                     <p className={cn(
                         'text-2xl font-bold mt-2 font-serif',
-                        (data?.totalDifference ?? 0) === 0 ? 'text-foreground' : (data?.totalDifference ?? 0) < 0 ? 'text-red-500' : 'text-rb-amber'
+                        (data?.totalDifference ?? 0) === 0 ? 'text-foreground' : (data?.totalDifference ?? 0) < 0 ? 'text-rb-red' : 'text-rb-amber'
                     )}>
                         {formatTL(data?.totalDifference ?? 0)}
                     </p>
@@ -94,7 +94,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                                 <tr key={row.branchId} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                                     <td className="px-5 py-3.5 font-medium text-foreground whitespace-nowrap">{row.branchName}</td>
                                     <td className="px-4 py-3.5 text-foreground">{row.shiftCount}</td>
-                                    <td className={cn('px-4 py-3.5 font-serif', row.totalDifference === 0 ? 'text-muted-foreground' : row.totalDifference < 0 ? 'text-red-500' : 'text-rb-amber')}>
+                                    <td className={cn('px-4 py-3.5 font-serif', row.totalDifference === 0 ? 'text-muted-foreground' : row.totalDifference < 0 ? 'text-rb-red' : 'text-rb-amber')}>
                                         {formatTL(row.totalDifference)}
                                     </td>
                                     <td className="px-4 py-3.5 text-foreground">{row.uncountedCount}</td>
@@ -161,7 +161,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                                                 <td className="px-4 py-3.5 text-right font-serif text-foreground whitespace-nowrap">
                                                     {counted != null ? `₺${formatAmount(counted)}` : '—'}
                                                 </td>
-                                                <td className={cn('px-4 py-3.5 text-right font-serif whitespace-nowrap', !hasDifference ? 'text-muted-foreground' : diff! < 0 ? 'text-red-500' : 'text-rb-amber')}>
+                                                <td className={cn('px-4 py-3.5 text-right font-serif whitespace-nowrap', !hasDifference ? 'text-muted-foreground' : diff! < 0 ? 'text-rb-red' : 'text-rb-amber')}>
                                                     {hasDifference ? `₺${formatAmount(diff!)}` : '—'}
                                                 </td>
                                                 <td className="px-4 py-3.5">
@@ -176,7 +176,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                                                             <span className={cn(
                                                                 'inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold',
                                                                 s.openingDifferenceReviewStatus === REVIEW_PENDING ? 'bg-rb-amber-bg text-rb-amber'
-                                                                    : s.openingDifferenceReviewStatus === REVIEW_REJECTED ? 'bg-rb-red-bg text-red-500'
+                                                                    : s.openingDifferenceReviewStatus === REVIEW_REJECTED ? 'bg-rb-red-bg text-rb-red'
                                                                         : 'bg-rb-neutral-bg text-rb-neutral'
                                                             )}>
                                                                 Açılış {s.openingDifferenceReviewStatus === REVIEW_PENDING ? 'onayı bekliyor' : s.openingDifferenceReviewStatus === REVIEW_REJECTED ? 'reddedildi' : 'onaylandı'}
@@ -186,7 +186,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                                                             <span className={cn(
                                                                 'inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold',
                                                                 s.closingDifferenceReviewStatus === REVIEW_PENDING ? 'bg-rb-amber-bg text-rb-amber'
-                                                                    : s.closingDifferenceReviewStatus === REVIEW_REJECTED ? 'bg-rb-red-bg text-red-500'
+                                                                    : s.closingDifferenceReviewStatus === REVIEW_REJECTED ? 'bg-rb-red-bg text-rb-red'
                                                                         : 'bg-rb-neutral-bg text-rb-neutral'
                                                             )}>
                                                                 Kapanış {s.closingDifferenceReviewStatus === REVIEW_PENDING ? 'onayı bekliyor' : s.closingDifferenceReviewStatus === REVIEW_REJECTED ? 'reddedildi' : 'onaylandı'}

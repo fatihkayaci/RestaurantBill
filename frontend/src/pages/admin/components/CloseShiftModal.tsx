@@ -151,7 +151,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
                                 autoFocus
                             />
                             {hasValidCounted && (
-                                <p className={`mt-1.5 text-sm font-medium ${diff < 0 ? 'text-red-500' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
+                                <p className={`mt-1.5 text-sm font-medium ${diff < 0 ? 'text-rb-red' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
                                     {diff === 0 ? 'Fark yok.' : diff < 0 ? `${formatTL(Math.abs(diff))} eksik` : `${formatTL(diff)} fazla`}
                                 </p>
                             )}

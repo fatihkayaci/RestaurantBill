@@ -16,7 +16,7 @@ export default function HeaderThemeToggle({ large = false }: { large?: boolean }
             <span className={`hidden md:inline font-medium text-sidebar-foreground/70 whitespace-nowrap ${large ? 'text-sm' : 'text-xs'}`}>
                 {isDark ? 'Koyu Tema' : 'Açık Tema'}
             </span>
-            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 shrink-0 ${isDark ? 'bg-rb-accent' : 'bg-gray-600'}`}>
+            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 shrink-0 ${isDark ? 'bg-rb-accent' : 'bg-white/20'}`}>
                 <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200 ${isDark ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </span>
         </button>

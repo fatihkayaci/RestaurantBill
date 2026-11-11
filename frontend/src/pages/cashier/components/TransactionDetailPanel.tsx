@@ -34,8 +34,10 @@ export default function TransactionDetailPanel({ transaction, onClose }: Props) 
                         </p>
                     </div>
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        aria-label="Kapat"
+                        className="w-11 h-11 shrink-0 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>

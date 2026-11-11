@@ -11,7 +11,7 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid } from 'lucide-react';
+import { Check, X, Pencil, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid, Trash2 } from 'lucide-react';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
@@ -608,6 +608,7 @@ export default function Tables() {
                         </button>
                         <button
                             onClick={() => openRegionModal(region)}
+                            aria-label={`${region.name} bölgesini düzenle`}
                             className={cn(
                                 "p-1 rounded-full transition-colors",
                                 selectedRegionId === region.id ? "hover:bg-white/20" : "hover:bg-muted"
@@ -617,12 +618,13 @@ export default function Tables() {
                         </button>
                         <button
                             onClick={() => setRegionDeleteTargetId(region.id)}
+                            aria-label={`${region.name} bölgesini sil`}
                             className={cn(
                                 "p-1 rounded-full transition-colors",
                                 selectedRegionId === region.id ? "hover:bg-white/20" : "hover:bg-muted"
                             )}
                         >
-                            <X className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3" />
                         </button>
                     </div>
                 ))}
@@ -736,15 +738,17 @@ export default function Tables() {
                                         <div className="flex items-center gap-2 shrink-0">
                                             <button
                                                 onClick={e => { e.stopPropagation(); openEditModal(table); }}
+                                                aria-label={`${table.name} masasını düzenle`}
                                                 className="text-muted-foreground hover:text-foreground transition-colors"
                                             >
                                                 <Pencil className="h-3.5 w-3.5" />
                                             </button>
                                             <button
                                                 onClick={e => { e.stopPropagation(); setDeleteTargetId(table.id); }}
+                                                aria-label={`${table.name} masasını sil`}
                                                 className="text-muted-foreground hover:text-destructive transition-colors"
                                             >
-                                                <X className="h-3.5 w-3.5" />
+                                                <Trash2 className="h-3.5 w-3.5" />
                                             </button>
                                             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-md leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
                                                 {cfg.label}

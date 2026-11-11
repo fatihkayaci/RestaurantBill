@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Wallet } from 'lucide-react';
+import { X, Pencil, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Wallet, Trash2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -274,12 +274,12 @@ export default function CashRegisters() {
                                 </div>
                                 <p className="font-semibold text-foreground">{r.name}</p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => openEditModal(r)} className="text-muted-foreground hover:text-foreground transition-colors">
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => openEditModal(r)} aria-label={`${r.name} kasasını düzenle`} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                                     <Pencil className="h-3.5 w-3.5" />
                                 </button>
-                                <button onClick={() => setDeleteTargetId(r.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                                    <X className="h-3.5 w-3.5" />
+                                <button onClick={() => setDeleteTargetId(r.id)} aria-label={`${r.name} kasasını sil`} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-rb-red-bg hover:text-destructive transition-colors">
+                                    <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                             </div>
                         </div>

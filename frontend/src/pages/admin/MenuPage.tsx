@@ -7,7 +7,7 @@ import type { Category } from "@/features/categories/types";
 import ImageCropModal from "@/features/products/components/ImageCropModal";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Check, Pencil, Image as ImageIcon, Upload, Crop, UtensilsCrossed } from 'lucide-react';
+import { X, Check, Pencil, Image as ImageIcon, Upload, Crop, UtensilsCrossed, Trash2 } from 'lucide-react';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { cn } from "@/lib/utils";
 import axios from "axios";
@@ -447,6 +447,7 @@ export default function Menu() {
                             </button>
                             <button
                                 onClick={() => startEditCategory(cat)}
+                                aria-label={`${cat.name} kategorisini düzenle`}
                                 className={cn(
                                     "p-1 rounded-full transition-colors",
                                     selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
@@ -456,12 +457,13 @@ export default function Menu() {
                             </button>
                             <button
                                 onClick={() => setCategoryDeleteTargetId(cat.id)}
+                                aria-label={`${cat.name} kategorisini sil`}
                                 className={cn(
                                     "p-1 rounded-full transition-colors",
                                     selectedCategory === cat.id ? "hover:bg-white/20" : "hover:bg-muted"
                                 )}
                             >
-                                <X className="h-3 w-3" />
+                                <Trash2 className="h-3 w-3" />
                             </button>
                         </div>
                     )
@@ -560,7 +562,8 @@ export default function Menu() {
                                     </span>
                                     <button
                                         onClick={() => openEditModal(product)}
-                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                        aria-label={`${product.name} ürününü düzenle`}
+                                        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                                     >
                                         <Pencil className="h-3.5 w-3.5" />
                                     </button>
@@ -576,7 +579,7 @@ export default function Menu() {
                                 >
                                     <span className={cn(
                                         "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0",
-                                        product.isActive ? "bg-rb-green" : "bg-gray-300 dark:bg-gray-600"
+                                        product.isActive ? "bg-rb-green" : "bg-(--rb-toggle-track-off)"
                                     )}>
                                         <span className={cn(
                                             "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200",

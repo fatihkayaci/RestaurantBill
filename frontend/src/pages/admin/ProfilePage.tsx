@@ -203,7 +203,7 @@ export default function Profile() {
                                     <label className={cn(labelClass, "mb-0")}>E-posta</label>
                                     <div className="flex items-center gap-2">
                                         {isEmailVerified ? (
-                                            <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Doğrulandı</Badge>
+                                            <Badge className="bg-rb-green-bg text-rb-green">Doğrulandı</Badge>
                                         ) : (
                                             <>
                                                 <Badge variant="destructive">Doğrulanmadı</Badge>

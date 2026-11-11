@@ -95,7 +95,7 @@ export default function AppShell() {
         <div className="flex h-screen bg-background">
             {/* Mobil üst bar */}
             <div className="md:hidden fixed top-0 inset-x-0 z-40 h-14 flex items-center justify-between px-4 bg-sidebar border-b border-white/10">
-                <button onClick={() => setMobileOpen(true)} className="text-sidebar-foreground/70 hover:text-sidebar-foreground p-1">
+                <button onClick={() => setMobileOpen(true)} aria-label="Menüyü aç" className="flex h-11 w-11 -ml-2 items-center justify-center text-sidebar-foreground/70 hover:text-sidebar-foreground">
                     <Menu className="w-5 h-5" />
                 </button>
                 <img src={sophramLogo} alt="Sophram" className="h-8 w-auto" />
@@ -124,6 +124,7 @@ export default function AppShell() {
                     <img src={sophramLogo} alt="Sophram" className={cn("h-18 w-auto shrink-0 transition-all duration-300", collapsed && "md:h-10")} />
                     <button
                         onClick={() => setMobileOpen(false)}
+                        aria-label="Menüyü kapat"
                         className="md:hidden absolute right-4 top-1/2 -translate-y-1/2 text-sidebar-foreground/60 hover:text-sidebar-foreground"
                     >
                         <X className="w-5 h-5" />
@@ -212,9 +213,12 @@ export default function AppShell() {
                         </div>
                         <button
                             onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                            role="switch"
+                            aria-checked={isDark}
+                            aria-label="Koyu tema"
                             className={cn(
-                                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none shrink-0',
-                                isDark ? 'bg-rb-accent' : 'bg-gray-600'
+                                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 shrink-0',
+                                isDark ? 'bg-rb-accent' : 'bg-white/20'
                             )}
                         >
                             <span className={cn(

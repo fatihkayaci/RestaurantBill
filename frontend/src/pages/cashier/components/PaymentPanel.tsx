@@ -193,7 +193,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         type="button"
                         onClick={onClose}
                         aria-label="Kapat"
-                        className="w-9 h-9 sm:w-8 sm:h-8 shrink-0 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        className="w-11 h-11 shrink-0 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>

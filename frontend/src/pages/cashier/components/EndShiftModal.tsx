@@ -131,7 +131,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                             </div>
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Fark</span>
-                                <span className={`font-semibold tabular-nums ${diff < 0 ? 'text-red-500' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
+                                <span className={`font-semibold tabular-nums ${diff < 0 ? 'text-rb-red' : diff > 0 ? 'text-rb-amber' : 'text-rb-green'}`}>
                                     {diff === 0 ? 'Fark yok' : diff < 0 ? `-${formatTL(Math.abs(diff))}` : `+${formatTL(diff)}`}
                                 </span>
                             </div>

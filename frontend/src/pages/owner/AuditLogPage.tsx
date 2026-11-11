@@ -360,7 +360,8 @@ export default function AuditLogPage() {
                             type="button"
                             disabled={currentPage === 1}
                             onClick={() => setPage(1)}
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
+                            aria-label="İlk sayfa"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
                         >
                             <ChevronsLeft className="h-4 w-4" />
                         </button>
@@ -368,7 +369,8 @@ export default function AuditLogPage() {
                             type="button"
                             disabled={currentPage === 1}
                             onClick={() => setPage(Math.max(1, currentPage - 1))}
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
+                            aria-label="Önceki sayfa"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
@@ -379,7 +381,8 @@ export default function AuditLogPage() {
                             type="button"
                             disabled={currentPage === totalPages}
                             onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
+                            aria-label="Sonraki sayfa"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
                         >
                             <ChevronRight className="h-4 w-4" />
                         </button>
@@ -387,7 +390,8 @@ export default function AuditLogPage() {
                             type="button"
                             disabled={currentPage === totalPages}
                             onClick={() => setPage(totalPages)}
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
+                            aria-label="Son sayfa"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted/50 disabled:opacity-40 disabled:hover:bg-transparent"
                         >
                             <ChevronsRight className="h-4 w-4" />
                         </button>

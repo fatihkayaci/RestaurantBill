@@ -88,8 +88,8 @@ export default function OverViewPage() {
                 </div>
 
                 {/* Dolu Masalar */}
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700/40 bg-gray-100 dark:bg-gray-800/40 p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-gray-500 dark:text-gray-400">
+                <div className="rounded-xl border border-rb-neutral/30 bg-rb-neutral-bg p-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-neutral">
                         Dolu Masa
                     </p>
                     <p className="text-3xl font-bold text-foreground mt-2">
