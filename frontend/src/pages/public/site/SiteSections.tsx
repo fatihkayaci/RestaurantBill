@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { BookOpen, CalendarCheck, MapPin, Navigation, Phone } from 'lucide-react';
+import { Navigation, Phone } from 'lucide-react';
 import {
     RESERVATION_CANCELLED, RESERVATION_CONFIRMED, RESERVATION_PENDING, RESERVATION_REJECTED,
     type ReservationStatusInfo,
@@ -7,145 +7,48 @@ import {
 import { cn } from '@/lib/utils';
 import { directionsUrl, formatDay, headingFont, initials, telHref } from './siteTheme';
 
-// Restoran sitesinin bölümleri. Verisi olmayan bölüm null döner; backend alanı eklenince kendiliğinden açılır.
+// Restoran sitesinin bölümleri ("Ocak" görünümü). Verisi olmayan bölüm null döner;
+// backend alanı eklenince kendiliğinden açılır.
 
-const accentButton =
-    'flex items-center justify-center gap-2 rounded-[14px] bg-[var(--site-accent)] font-semibold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90';
-const lightButton =
-    'flex items-center justify-center gap-2 rounded-[14px] border border-[var(--site-border)] bg-[var(--site-card)] font-semibold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-accent)]';
-const darkOutlineButton =
-    'flex items-center justify-center gap-2 rounded-xl border border-[var(--site-muted)] px-5 font-semibold text-[var(--site-on-dark)] no-underline transition-colors hover:border-[var(--site-on-dark)]';
+export const accentButton =
+    'inline-flex items-center justify-center gap-2 rounded-full bg-[var(--site-accent)] font-semibold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90';
+export const outlineButton =
+    'inline-flex items-center justify-center gap-2 rounded-full border border-[var(--site-border-strong)] font-semibold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)]';
+
+export const sectionWrap = 'mx-auto w-full max-w-[1200px] px-4 md:px-6';
+const sectionTitle = cn(headingFont, 'text-[28px] font-bold leading-tight md:text-[44px]');
+const eyebrow = 'text-sm font-semibold uppercase tracking-[0.08em] text-[var(--site-accent)]';
 
 export function LogoBadge({ name, logoUrl, className }: { name: string; logoUrl?: string; className?: string }) {
     if (logoUrl) {
-        return <img src={logoUrl} alt={`${name} logosu`} className={cn('rounded-full bg-[var(--site-card)] object-cover', className)} />;
+        return <img src={logoUrl} alt={`${name} logosu`} className={cn('rounded-[10px] object-cover', className)} />;
     }
     return (
         <span
             aria-hidden="true"
-            className={cn('flex items-center justify-center rounded-full bg-[var(--site-card)] font-bold text-[var(--site-accent)]', headingFont, className)}
+            className={cn('flex shrink-0 items-center justify-center rounded-[10px] bg-[var(--site-accent)] font-extrabold text-[var(--site-on-accent)]', headingFont, className)}
         >
             {initials(name)}
         </span>
     );
 }
 
-interface ActionProps {
-    onReserve?: () => void;
-    phone: string;
-    address: string;
-}
-
-function secondaryActions({ phone, address }: ActionProps) {
-    const items: { key: string; label: string; href: string; icon: typeof Phone; external?: boolean }[] = [
-        { key: 'menu', label: 'Menü', href: '#menu', icon: BookOpen },
-    ];
-    if (phone) items.push({ key: 'call', label: 'Ara', href: telHref(phone), icon: Phone });
-    if (address) items.push({ key: 'directions', label: 'Yol tarifi', href: directionsUrl(address), icon: Navigation, external: true });
-    return items;
-}
-
-/** Telefon: Rezervasyon tam genişlik, diğerleri ikişerli; tek kalan tam genişlik. */
-export function QuickActionsPhone(props: ActionProps) {
-    const items = secondaryActions(props);
+export function SiteHeader({ name, logoUrl, showLocation, onReserve }: { name: string; logoUrl?: string; showLocation: boolean; onReserve?: () => void }) {
+    const navLink = 'flex min-h-11 items-center px-3 text-[15px] font-medium text-[var(--site-sub)] no-underline hover:text-[var(--site-text)]';
     return (
-        <nav aria-label="Hızlı eylemler" className="grid grid-cols-2 gap-2.5 px-5 py-5">
-            {props.onReserve && (
-                <button type="button" onClick={props.onReserve} className={cn(accentButton, 'col-span-2 h-[52px] text-base')}>
-                    <CalendarCheck className="h-[18px] w-[18px]" aria-hidden="true" />
-                    Rezervasyon yap
-                </button>
-            )}
-            {items.map(({ key, label, href, icon: Icon, external }, index) => (
-                <a
-                    key={key}
-                    href={href}
-                    {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                    className={cn(lightButton, 'h-12 text-[15px]', index === items.length - 1 && items.length % 2 === 1 && 'col-span-2')}
-                >
-                    <Icon className="h-[17px] w-[17px]" aria-hidden="true" />
-                    {label}
+        <header className="border-b border-[var(--site-border)]">
+            <div className={cn(sectionWrap, 'flex h-[72px] items-center justify-between gap-4 md:h-20')}>
+                <a href="#ust" className="flex min-w-0 items-center gap-3 text-[var(--site-text)] no-underline">
+                    <LogoBadge name={name} logoUrl={logoUrl} className="h-9 w-9 text-base md:h-10 md:w-10 md:text-lg" />
+                    <span className={cn(headingFont, 'truncate text-[19px] font-bold md:text-[22px]')}>{name}</span>
                 </a>
-            ))}
-        </nav>
-    );
-}
-
-/** Masaüstü: kapak üstündeki koyu kartta yan yana. */
-function QuickActionsDesktop(props: ActionProps) {
-    const items = secondaryActions(props).map(item => item.key === 'menu' ? { ...item, label: 'Menüyü gör' } : item);
-    return (
-        <div className="mt-3 flex flex-wrap gap-2.5">
-            {props.onReserve && (
-                <button type="button" onClick={props.onReserve} className={cn(accentButton, 'h-[52px] rounded-xl px-6 text-base')}>
-                    Rezervasyon yap
-                </button>
-            )}
-            {items.map(({ key, label, href, external }) => (
-                <a key={key} href={href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={cn(darkOutlineButton, 'h-[52px] text-base')}>
-                    {label}
-                </a>
-            ))}
-        </div>
-    );
-}
-
-interface HeroProps extends ActionProps {
-    name: string;
-    subtitle: string;
-    coverUrl?: string;
-    logoUrl?: string;
-}
-
-export function SiteHero({ name, subtitle, coverUrl, logoUrl, ...actions }: HeroProps) {
-    return (
-        <>
-            {/* Telefon */}
-            <header className="md:hidden">
-                <div className="relative">
-                    {coverUrl
-                        ? <img src={coverUrl} alt="" className="h-[300px] w-full object-cover" />
-                        : <div className="h-[150px] bg-[var(--site-accent)]" />}
-                    <LogoBadge name={name} logoUrl={logoUrl} className="absolute -bottom-10 left-5 h-[84px] w-[84px] border-4 border-[var(--site-bg)] text-[28px]" />
-                </div>
-                <div className="flex flex-col gap-2 px-5 pt-[52px]">
-                    <h1 className={cn(headingFont, 'text-[36px] font-bold leading-[1.05]')}>{name}</h1>
-                    {subtitle && <p className="text-base text-[var(--site-sub)]">{subtitle}</p>}
-                </div>
-                <QuickActionsPhone {...actions} />
-            </header>
-
-            {/* Masaüstü */}
-            <section className="relative hidden h-[560px] md:block">
-                {coverUrl
-                    ? <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                    : <div className="absolute inset-0 bg-[var(--site-accent)]" />}
-                <div className="relative mx-auto flex h-full max-w-[1280px] items-end px-10 pb-16 lg:px-20">
-                    <div className="flex w-full max-w-[560px] flex-col gap-3 rounded-[20px] bg-[var(--site-dark)] px-10 py-9 text-[var(--site-on-dark)]">
-                        <h1 className={cn(headingFont, 'text-[56px] font-bold leading-none')}>{name}</h1>
-                        {subtitle && <p className="text-[19px] text-[var(--site-on-dark-sub)]">{subtitle}</p>}
-                        <QuickActionsDesktop {...actions} />
-                    </div>
-                </div>
-            </section>
-        </>
-    );
-}
-
-export function SiteHeaderDesktop({ name, logoUrl, showLocation, onReserve }: { name: string; logoUrl?: string; showLocation: boolean; onReserve?: () => void }) {
-    return (
-        <header className="hidden border-b border-[var(--site-border)] md:block">
-            <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-10 lg:px-20">
-                <div className="flex items-center gap-3.5">
-                    <LogoBadge name={name} logoUrl={logoUrl} className="h-12 w-12 border border-[var(--site-border)] text-lg" />
-                    <span className={cn(headingFont, 'text-2xl font-bold')}>{name}</span>
-                </div>
-                <nav aria-label="Ana menü" className="flex items-center gap-2 text-[15px] font-medium">
-                    <a href="#menu" className="px-3.5 py-3 text-[var(--site-text)] no-underline hover:text-[var(--site-accent)]">Menü</a>
-                    {showLocation && <a href="#konum" className="px-3.5 py-3 text-[var(--site-text)] no-underline hover:text-[var(--site-accent)]">Konum</a>}
+                <nav aria-label="Ana menü" className="hidden items-center gap-2 md:flex">
+                    <a href="#menu" className={navLink}>Menü</a>
+                    {onReserve && <a href="#rezervasyon" className={navLink}>Rezervasyon</a>}
+                    {showLocation && <a href="#konum" className={navLink}>Konum</a>}
                     {onReserve && (
-                        <button type="button" onClick={onReserve} className={cn(accentButton, 'ml-2 h-[46px] rounded-xl px-5')}>
-                            Rezervasyon yap
+                        <button type="button" onClick={onReserve} className={cn(accentButton, 'ml-2 h-11 px-5 text-[15px]')}>
+                            Masa ayırt
                         </button>
                     )}
                 </nav>
@@ -154,24 +57,98 @@ export function SiteHeaderDesktop({ name, logoUrl, showLocation, onReserve }: { 
     );
 }
 
-const sectionWrap = 'mx-auto w-full max-w-[1280px] px-5 md:px-10 lg:px-20';
-const sectionTitle = cn(headingFont, 'text-2xl font-bold md:text-[40px]');
+interface HeroProps {
+    name: string;
+    subtitle: string;
+    coverUrl?: string;
+    onReserve?: () => void;
+}
+
+export function SiteHero({ name, subtitle, coverUrl, onReserve }: HeroProps) {
+    return (
+        <section id="ust" className={cn(sectionWrap, 'grid items-center gap-8 pb-8 pt-6 md:gap-12 md:pb-10 md:pt-14', coverUrl && 'md:grid-cols-2')}>
+            {coverUrl && (
+                <img src={coverUrl} alt="" className="aspect-[4/3] w-full rounded-[20px] object-cover md:order-2 md:aspect-[4/5] md:rounded-3xl" />
+            )}
+            <div className="flex flex-col gap-5 md:gap-6">
+                <h1 className={cn(headingFont, 'text-[46px] font-extrabold leading-[0.98] tracking-[-0.03em] md:text-[76px]')}>{name}</h1>
+                {subtitle && <p className="max-w-[34ch] text-base text-[var(--site-sub)] md:text-[19px]">{subtitle}</p>}
+                <div className="hidden flex-wrap gap-3 md:flex">
+                    {onReserve && (
+                        <button type="button" onClick={onReserve} className={cn(accentButton, 'h-14 px-7 text-base')}>Masa ayırt</button>
+                    )}
+                    <a href="#menu" className={cn(outlineButton, 'h-14 px-7 text-base')}>Menüye bak</a>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+interface InfoStripProps {
+    address: string;
+    phone: string;
+    regions: string[];
+}
+
+/** Adres, telefon ve oturma alanları. Olmayan bilgi kutusu çizilmez. */
+export function InfoStrip({ address, phone, regions }: InfoStripProps) {
+    const cell = 'flex min-h-[72px] flex-col justify-center gap-0.5 bg-[var(--site-band)] px-5 py-4 text-[var(--site-text)] no-underline md:px-6 md:py-5';
+    const label = 'text-[13px] text-[var(--site-muted)]';
+    const value = 'text-[15px] font-semibold md:text-base';
+    const cells = [
+        address && (
+            <a key="adres" href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cn(cell, 'hover:bg-[var(--site-card)]')}>
+                <span className={label}>Adres · yol tarifi</span>
+                <span className={value}>{address}</span>
+            </a>
+        ),
+        phone && (
+            <a key="telefon" href={telHref(phone)} className={cn(cell, 'hover:bg-[var(--site-card)]')}>
+                <span className={label}>Telefon</span>
+                <span className={cn(value, 'tabular-nums')}>{phone}</span>
+            </a>
+        ),
+        regions.length > 0 && (
+            <div key="oturma" className={cell}>
+                <span className={label}>Oturma</span>
+                <span className={value}>{regions.join(' · ')}</span>
+            </div>
+        ),
+    ].filter(Boolean);
+    if (cells.length === 0) return null;
+    return (
+        <section aria-label="Restoran bilgileri" className={cn(sectionWrap, 'pb-14 md:pb-[72px]')}>
+            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[20px] border border-[var(--site-border)] bg-[var(--site-border)] sm:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+                {cells}
+            </div>
+        </section>
+    );
+}
 
 export function AboutSection({ text }: { text?: string }) {
     if (!text) return null;
     return (
-        <section className={cn(sectionWrap, 'flex flex-col gap-2.5 py-7 md:py-20')}>
-            <h2 className={sectionTitle}>Hakkımızda</h2>
-            <p className="max-w-[620px] text-base leading-relaxed text-[var(--site-sub)] md:text-[19px]">{text}</p>
+        <section className={cn(sectionWrap, 'flex flex-col gap-3 pb-14 md:pb-20')}>
+            <span className={eyebrow}>Hakkımızda</span>
+            <p className="max-w-[640px] text-base leading-relaxed text-[var(--site-sub)] md:text-[19px]">{text}</p>
         </section>
+    );
+}
+
+export function MenuHeading() {
+    return (
+        <div className="flex flex-col gap-2 px-4 md:px-6">
+            <span className={eyebrow}>Menü</span>
+            <h2 id="menu-baslik" className={sectionTitle}>Ne yemek istersiniz?</h2>
+        </div>
     );
 }
 
 export function HoursSection({ hours }: { hours?: { day: string; time: string }[] }) {
     if (!hours || hours.length === 0) return null;
     return (
-        <section className={cn(sectionWrap, 'flex flex-col gap-3 py-7 md:py-16')}>
-            <h2 className={sectionTitle}>Çalışma saatleri</h2>
+        <section className={cn(sectionWrap, 'flex flex-col gap-4 py-14 md:py-20')}>
+            <span className={eyebrow}>Çalışma saatleri</span>
             <dl className="md:max-w-[480px]">
                 {hours.map(row => (
                     <div key={row.day} className="flex justify-between border-b border-[var(--site-border)] py-3 text-[15px] md:text-base">
@@ -184,35 +161,35 @@ export function HoursSection({ hours }: { hours?: { day: string; time: string }[
     );
 }
 
-export function LocationSection({ address, location, phone }: { address: string; location: string; phone: string }) {
-    if (!address && !location && !phone) return null;
-    const fullAddress = [address, location].filter(Boolean).join(', ');
+/** Masaüstünde ana sayfanın rezervasyon tanıtımı; düğme rezervasyon akışını açar. */
+export function ReservationTeaser({ onReserve }: { onReserve?: () => void }) {
+    if (!onReserve) return null;
+    const steps = ['Gün, saat ve kişi sayısı', 'Ad ve telefon', 'Restoran onaylar'];
     return (
-        <section id="konum" className={cn(sectionWrap, 'scroll-mt-4 py-7 md:py-20')}>
-            <div className="flex flex-col gap-3 md:max-w-[560px]">
-                <h2 className={sectionTitle}>Konum</h2>
-                {fullAddress && (
-                    <p className="flex items-start gap-2 text-[15px] leading-relaxed md:text-lg">
-                        <MapPin className="mt-1 h-4 w-4 shrink-0 text-[var(--site-muted)]" aria-hidden="true" />
-                        <span>
-                            {address && <>{address}<br /></>}
-                            {location}
-                        </span>
+        <section id="rezervasyon" className={cn(sectionWrap, 'py-14 md:py-[88px]')}>
+            <div className="grid items-center gap-8 rounded-3xl bg-[var(--site-paper)] p-6 text-[var(--site-on-paper)] md:grid-cols-2 md:gap-12 md:p-12">
+                <div className="flex flex-col gap-3">
+                    <h2 className={cn(headingFont, 'text-[28px] font-bold leading-[1.05] md:text-[44px]')}>Masanız hazır olsun.</h2>
+                    <p className="max-w-[38ch] text-[15px] text-[var(--site-on-paper-sub)] md:text-[17px]">
+                        Talebinizi gönderin, restoran onayladığında rezervasyonunuz kesinleşir. Masa 2 saat boyunca sizin.
                     </p>
-                )}
-                <div className="grid grid-cols-2 gap-2.5 md:flex">
-                    {fullAddress && (
-                        <a href={directionsUrl(fullAddress)} target="_blank" rel="noopener noreferrer" className={cn(lightButton, 'h-12 px-5 text-[15px]', !phone && 'col-span-2')}>
-                            <Navigation className="h-4 w-4" aria-hidden="true" />
-                            Yol tarifi
-                        </a>
-                    )}
-                    {phone && (
-                        <a href={telHref(phone)} className={cn(lightButton, 'h-12 px-5 text-[15px] tabular-nums', !fullAddress && 'col-span-2')}>
-                            <Phone className="h-4 w-4" aria-hidden="true" />
-                            {phone}
-                        </a>
-                    )}
+                </div>
+                <div className="flex flex-col gap-5">
+                    <ol className="m-0 flex list-none flex-col gap-3 p-0 text-[15px]">
+                        {steps.map((step, i) => (
+                            <li key={step} className="flex items-center gap-3">
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#CFC4B6] text-[13px] font-semibold">{i + 1}</span>
+                                {step}
+                            </li>
+                        ))}
+                    </ol>
+                    <button
+                        type="button"
+                        onClick={onReserve}
+                        className="inline-flex h-14 items-center justify-center rounded-full bg-[var(--site-on-paper)] text-[17px] font-semibold text-[var(--site-paper)] transition-opacity hover:opacity-90"
+                    >
+                        Masa ayırt
+                    </button>
                 </div>
             </div>
         </section>
@@ -222,8 +199,8 @@ export function LocationSection({ address, location, phone }: { address: string;
 export function GallerySection({ images }: { images?: { url: string; alt: string }[] }) {
     if (!images || images.length === 0) return null;
     return (
-        <section className={cn(sectionWrap, 'flex flex-col gap-3 pb-8 md:gap-7 md:pb-24')}>
-            <h2 className={sectionTitle}>Galeri</h2>
+        <section className={cn(sectionWrap, 'flex flex-col gap-4 pb-14 md:gap-7 md:pb-24')}>
+            <span className={eyebrow}>Galeri</span>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
                 {images.map(image => (
                     <img key={image.url} src={image.url} alt={image.alt} loading="lazy" className="h-[130px] w-full rounded-xl object-cover md:h-[220px] md:rounded-2xl" />
@@ -249,35 +226,74 @@ function WhatsAppIcon() {
     );
 }
 
-export function SiteFooter({ name, instagramUrl, whatsappUrl }: { name: string; instagramUrl?: string; whatsappUrl?: string }) {
-    const socialClass = 'flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--site-dark-line)] text-[var(--site-on-dark)] hover:border-[var(--site-on-dark)]';
+interface FooterProps {
+    name: string;
+    address: string;
+    phone: string;
+    instagramUrl?: string;
+    whatsappUrl?: string;
+}
+
+/** Alt bilgi; adres varsa "Konum" bağlantısının hedefi de burası. */
+export function SiteFooter({ name, address, phone, instagramUrl, whatsappUrl }: FooterProps) {
+    const socialClass = 'flex h-11 w-11 items-center justify-center rounded-full border border-[var(--site-border-strong)] text-[var(--site-text)] hover:border-[var(--site-text)]';
+    const label = 'text-[13px] text-[var(--site-muted)]';
     return (
-        <footer className="mt-auto bg-[var(--site-dark)] text-[var(--site-on-dark)]">
-            <div className={cn(sectionWrap, 'flex flex-col gap-5 pb-6 pt-7 md:pb-8 md:pt-12')}>
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <p className={cn(headingFont, 'text-[22px] font-bold md:text-[28px]')}>{name}</p>
-                    {(instagramUrl || whatsappUrl) && (
-                        <div className="flex gap-2.5">
-                            {instagramUrl && <a href={instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className={socialClass}><InstagramIcon /></a>}
-                            {whatsappUrl && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className={socialClass}><WhatsAppIcon /></a>}
-                        </div>
+        <footer id="konum" className="mt-auto scroll-mt-4 border-t border-[var(--site-border)]">
+            <div className={cn(sectionWrap, 'grid gap-8 pb-8 pt-12 md:grid-cols-3 md:gap-10 md:pt-16')}>
+                <div className="flex flex-col gap-3">
+                    <p className={cn(headingFont, 'text-[24px] font-bold md:text-[26px]')}>{name}</p>
+                    {address && <p className="text-[15px] text-[var(--site-sub)]">{address}</p>}
+                    {address && (
+                        <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 self-start font-semibold text-[var(--site-accent)] no-underline hover:underline">
+                            <Navigation className="h-4 w-4" aria-hidden="true" />
+                            Yol tarifi al
+                        </a>
                     )}
                 </div>
-                <div className="flex items-center justify-between border-t border-[var(--site-dark-line)] pt-3.5 text-[13px] text-[var(--site-on-dark-sub)] md:text-sm">
-                    <span>Sophram ile</span>
-                    <Link to="/login" className="py-3 text-[var(--site-on-dark-sub)] underline-offset-4 hover:underline">Personel girişi</Link>
-                </div>
+                {(phone || instagramUrl || whatsappUrl) && (
+                    <div className="flex flex-col gap-2">
+                        <span className={label}>Bize ulaşın</span>
+                        {phone && (
+                            <a href={telHref(phone)} className="inline-flex min-h-11 items-center gap-2 self-start text-[15px] font-semibold tabular-nums text-[var(--site-text)] no-underline hover:underline">
+                                <Phone className="h-4 w-4 text-[var(--site-muted)]" aria-hidden="true" />
+                                {phone}
+                            </a>
+                        )}
+                        {(instagramUrl || whatsappUrl) && (
+                            <div className="flex gap-2.5">
+                                {instagramUrl && <a href={instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className={socialClass}><InstagramIcon /></a>}
+                                {whatsappUrl && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className={socialClass}><WhatsAppIcon /></a>}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+            <div className={cn(sectionWrap, 'flex flex-wrap items-center justify-between gap-3 border-t border-[var(--site-border)] pb-8 pt-3 text-[13px] text-[var(--site-muted)]')}>
+                <span>© {new Date().getFullYear()} {name} · Sophram ile hazırlandı</span>
+                <Link to="/login" className="inline-flex min-h-11 items-center text-[var(--site-muted)] underline-offset-4 hover:underline">Personel girişi</Link>
             </div>
         </footer>
+    );
+}
+
+/** Telefonda ekranın altına yapışan "Menü / Masa ayırt" çubuğu. */
+export function PhoneActionBar({ onReserve }: { onReserve?: () => void }) {
+    if (!onReserve) return null;
+    return (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t border-[var(--site-border)] bg-[var(--site-bg)] px-4 pb-5 pt-3 md:hidden">
+            <a href="#menu" className={cn(outlineButton, 'h-[52px] flex-1')}>Menü</a>
+            <button type="button" onClick={onReserve} className={cn(accentButton, 'h-[52px] flex-[2]')}>Masa ayırt</button>
+        </div>
     );
 }
 
 function statusBadge(status: number): { text: string; className: string } {
     if (status === RESERVATION_CONFIRMED) return { text: 'Onaylandı', className: 'bg-[#DCF2E3] text-[#14532D]' };
     if (status === RESERVATION_REJECTED) return { text: 'Onaylanmadı', className: 'bg-[#FBE1DC] text-[#7F1D1D]' };
-    if (status === RESERVATION_CANCELLED) return { text: 'İptal edildi', className: 'bg-[var(--site-disabled)] text-[var(--site-sub)]' };
+    if (status === RESERVATION_CANCELLED) return { text: 'İptal edildi', className: 'bg-[var(--site-raised)] text-[var(--site-sub)]' };
     if (status === RESERVATION_PENDING) return { text: 'Onay bekliyor', className: 'bg-[#FCEBC7] text-[#713F12]' };
-    return { text: 'Kayıtlı', className: 'bg-[var(--site-disabled)] text-[var(--site-sub)]' };
+    return { text: 'Kayıtlı', className: 'bg-[var(--site-raised)] text-[var(--site-sub)]' };
 }
 
 /** Bu cihazdan gönderilen rezervasyon taleplerinin güncel durumu. */
@@ -290,7 +306,7 @@ export function MyReservations({ items, className }: { items: ReservationStatusI
                 {items.map(reservation => {
                     const badge = statusBadge(reservation.status);
                     return (
-                        <li key={reservation.id} className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--site-border)] bg-[var(--site-card)] p-3.5">
+                        <li key={reservation.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--site-border)] bg-[var(--site-card)] p-4">
                             <div className="min-w-0">
                                 <p className="text-[15px] font-semibold">
                                     {formatDay(reservation.date)} · <span className="tabular-nums">{reservation.time}–{reservation.endTime}</span>
