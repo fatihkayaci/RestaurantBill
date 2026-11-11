@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes';
 import type { LucideIcon } from 'lucide-react';
 import {
     LayoutDashboard, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, UserCircle, Store,
-    Building2, UserCog, Palette, History, Moon, ChevronRight, Menu, X, PanelLeftClose, PanelLeftOpen,
+    Building2, UserCog, Palette, History, Moon, ChevronRight, Menu, X, PanelLeftClose, PanelLeftOpen, LogOut,
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { userService } from '@/features/users/api/userService';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import sophramLogo from '@/assets/sophram-logo-yazisiz.svg';
 import BranchSwitcher from './BranchSwitcher';
 import QuickAccessPanel from './QuickAccessPanel';
+import LogoutConfirmDialog from './LogoutConfirmDialog';
 
 interface NavItem { to: string; icon: LucideIcon; label: string; }
 interface NavGroup { label?: string; items: NavItem[]; }
@@ -64,6 +65,7 @@ export default function AppShell() {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [logoutOpen, setLogoutOpen] = useState(false);
     const [hoverTip, setHoverTip] = useState<{ label: string; top: number } | null>(null);
     const asideRef = useRef<HTMLElement>(null);
 
@@ -223,12 +225,15 @@ export default function AppShell() {
                     </div>
 
                     <button
-                        onClick={handleLogout}
+                        type="button"
+                        onClick={() => { if (!companyMode) { setMobileOpen(false); navigate('/admin/profile'); } }}
+                        disabled={companyMode}
                         className={cn(
-                            "flex items-center gap-2.5 w-full rounded-xl bg-white/5 hover:bg-white/10 px-2.5 py-2.5 transition-colors",
+                            "flex items-center gap-2.5 w-full rounded-xl bg-white/5 px-2.5 py-2.5 transition-colors",
+                            !companyMode && "hover:bg-white/10",
                             collapsed && "md:justify-center md:px-0"
                         )}
-                        title="Çıkış Yap"
+                        title={companyMode ? undefined : "Profil"}
                     >
                         <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", isOwner ? "bg-rb-gold" : "bg-rb-amber")}>
                             <span className={cn("text-sm font-bold", isOwner ? "text-rb-gold-foreground" : "text-white")}>{initials}</span>
@@ -237,8 +242,23 @@ export default function AppShell() {
                             <p className="text-sidebar-foreground text-sm font-medium truncate">{displayName}</p>
                             <p className="text-sidebar-foreground/40 text-xs truncate">{roleLabel}{currentUser?.email ? ` · ${currentUser.email}` : ''}</p>
                         </div>
-                        <ChevronRight className={cn("w-4 h-4 text-sidebar-foreground/30 shrink-0", collapsed && "md:hidden")} />
+                        {!companyMode && <ChevronRight className={cn("w-4 h-4 text-sidebar-foreground/30 shrink-0", collapsed && "md:hidden")} />}
                     </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setLogoutOpen(true)}
+                        aria-label="Çıkış Yap"
+                        title="Çıkış Yap"
+                        className={cn(
+                            "flex h-10 items-center gap-2.5 w-full rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground transition-colors",
+                            collapsed && "md:justify-center md:px-0"
+                        )}
+                    >
+                        <LogOut className="w-4 h-4 shrink-0" />
+                        <span className={cn(collapsed && "md:hidden")}>Çıkış Yap</span>
+                    </button>
+                    <LogoutConfirmDialog open={logoutOpen} onOpenChange={setLogoutOpen} onConfirm={handleLogout} />
                 </div>
             </aside>
 
