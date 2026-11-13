@@ -3,6 +3,28 @@ export interface PublicProduct {
     name: string;
     price: number;
     imageUrl: string;
+    description: string;
+    isFeatured: boolean;
+    /** Tahmini hazırlanma süresi (dk); null ise gösterilmez. */
+    prepMinutes: number | null;
+}
+
+/** Şubenin site içeriği; admin "Restoran sitesi" sayfası da aynı şekli kullanır. Boş alanın bölümü çizilmez. */
+export interface BranchSite {
+    headline: string;
+    tagline: string;
+    /** "Hikâyemiz" bölümünün büyük başlığı. */
+    storyTitle: string;
+    about: string;
+    coverImageUrl: string;
+    aboutImageUrl: string;
+    /** "HH:mm" ya da null */
+    opensAt: string | null;
+    closesAt: string | null;
+    hoursNote: string;
+    instagramUrl: string;
+    /** "#RRGGBB" ya da boş */
+    accentColor: string;
 }
 
 export interface PublicCategory {
@@ -33,6 +55,51 @@ export interface PublicSite {
     branches: { id: string; name: string }[];
     categories: PublicCategory[];
     regions: PublicRegion[];
+    site: BranchSite;
+    /** Şubenin yerel saatine göre; saat girilmemişse null. */
+    isOpenNow: boolean | null;
+    reservation: ReservationRules;
+}
+
+/** Bir günün rezervasyon başlangıç aralığı. day: 0 Pazar … 6 Cumartesi (Date.getDay ile aynı). */
+export interface ReservationDay {
+    day: number;
+    isOpen: boolean;
+    /** "HH:mm" */
+    firstStart: string;
+    lastStart: string;
+}
+
+/** Şubenin rezervasyon kuralları; müşteri sitesi ve admin ayar penceresi aynı şekli kullanır. */
+export interface ReservationRules {
+    enabled: boolean;
+    slotIntervalMinutes: number;
+    /** Masada kalma süresi (dk). */
+    durationMinutes: number;
+    maxDaysAhead: number;
+    maxPartySize: number;
+    /** Pazartesi → Pazar. */
+    days: ReservationDay[];
+    /** false: hiç kaydedilmemiş, değerler varsayılan. */
+    isCustomized: boolean;
+}
+
+/** Sitede rezervasyon arayüzü gösterilsin mi: açık, en az bir gün açık ve masa var. */
+export function canReserveOnline(site: PublicSite): boolean {
+    return site.reservation.enabled && site.reservation.days.some(d => d.isOpen) && site.regions.length > 0;
+}
+
+/** Bir tarihin ("2026-11-14") haftanın günü rezervasyona açık mı. */
+export function isReservationDayOpen(rules: ReservationRules, date: string): boolean {
+    const [year, month, day] = date.split('-').map(Number);
+    const weekday = new Date(year, month - 1, day).getDay();
+    return rules.days.find(d => d.day === weekday)?.isOpen ?? true;
+}
+
+/** 120 → "2 saat", 90 → "1,5 saat", 150 → "2,5 saat". */
+export function formatDuration(minutes: number): string {
+    const hours = minutes / 60;
+    return `${Number.isInteger(hours) ? hours : hours.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} saat`;
 }
 
 export interface PublicTableInfo {
@@ -44,6 +111,12 @@ export interface PublicTableInfo {
 
 export interface Availability {
     unavailableTableIds: string[];
+}
+
+/** Bir günün rezervasyon başlangıcı (şubenin aralığıyla); full: boş masa kalmadı. */
+export interface DaySlot {
+    time: string;
+    full: boolean;
 }
 
 // Backend OrderRequestStatus: 1 bekliyor, 2 onaylandı, 3 reddedildi.

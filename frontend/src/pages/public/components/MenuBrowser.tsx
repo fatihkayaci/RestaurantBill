@@ -1,4 +1,4 @@
-import { Minus, Plus } from 'lucide-react';
+import { Clock, Minus, Plus } from 'lucide-react';
 import type { PublicCategory, PublicProduct } from '@/features/customerSite/types';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -60,6 +60,17 @@ export default function MenuBrowser({
     );
 }
 
+/** "~15 dk": ürünün tahmini hazırlanma süresi. Süre girilmemişse hiçbir şey çizmez. */
+function PrepTime({ minutes, className }: { minutes: number | null | undefined; className?: string }) {
+    if (minutes == null) return null;
+    return (
+        <span className={cn('inline-flex items-center gap-1 text-[13px] font-medium text-[var(--site-sub)]', className)}>
+            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+            <span><span className="sr-only">Hazırlanma süresi yaklaşık </span>~{minutes} dk</span>
+        </span>
+    );
+}
+
 function ReadOnlyRow({ product }: { product: PublicProduct }) {
     return (
         <li className="flex items-center gap-3 border-b border-[var(--site-border)] py-4 md:py-[18px]">
@@ -67,7 +78,10 @@ function ReadOnlyRow({ product }: { product: PublicProduct }) {
                 <img src={product.imageUrl} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
             )}
             <div className="flex min-w-0 flex-1 items-baseline gap-3">
-                <span className="min-w-0 text-base font-semibold leading-snug md:text-lg">{product.name}</span>
+                <span className="min-w-0 text-base font-semibold leading-snug md:text-lg">
+                    {product.name}
+                    <PrepTime minutes={product.prepMinutes} className="ml-2 align-middle" />
+                </span>
                 <span aria-hidden="true" className="min-w-6 flex-1 -translate-y-1 border-b-2 border-dotted border-[var(--site-border-strong)]" />
                 <span className={cn(headingFont, 'shrink-0 text-[17px] font-bold tabular-nums md:text-xl')}>{formatPrice(product.price)} ₺</span>
             </div>
@@ -90,7 +104,10 @@ function OrderableRow({ product, quantity, onAdd, onRemove }: OrderableRowProps)
             )}
             <div className="min-w-0 flex-1">
                 <p className="text-base font-semibold leading-snug">{product.name}</p>
-                <p className={cn(headingFont, 'text-base font-bold tabular-nums text-[var(--site-sub)]')}>{formatPrice(product.price)} ₺</p>
+                <p className="flex flex-wrap items-baseline gap-x-2">
+                    <span className={cn(headingFont, 'text-base font-bold tabular-nums text-[var(--site-sub)]')}>{formatPrice(product.price)} ₺</span>
+                    <PrepTime minutes={product.prepMinutes} />
+                </p>
             </div>
             {quantity === 0 ? (
                 <button
