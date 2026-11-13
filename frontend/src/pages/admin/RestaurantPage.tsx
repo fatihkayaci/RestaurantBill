@@ -8,6 +8,7 @@ import { branchService } from "@/features/branches/api/branchService";
 import type { Branch } from "@/features/branches/types";
 import { downloadCanvasPng, staffLoginHost, staffLoginUrl } from "@/lib/loginAddress";
 import { formatTL } from '@/lib/format';
+import IbanSettingsCard from './components/IbanSettingsCard';
 
 const infoRowClass = "flex items-center justify-between text-sm py-2 border-b border-border last:border-0";
 const labelClass = "text-muted-foreground";
@@ -99,7 +100,7 @@ export default function RestaurantPage() {
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch?.staffCount ?? "—"}</p>
-                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Çalışan</p>
+                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Kullanıcı</p>
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch ? formatTL(branch.revenue) : "—"}</p>
@@ -147,7 +148,7 @@ export default function RestaurantPage() {
                 {/* Restoran QR Kodu */}
                 <div className="rounded-xl border border-border bg-card p-5 h-full flex flex-col">
                     <h2 className="text-base font-semibold text-foreground">Restoran QR Kodu</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">Çalışanlarınız bu adresten restoranınıza giriş yapar</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">Kullanıcılarınız bu adresten restoranınıza giriş yapar</p>
                     <div className="flex flex-col items-center gap-3 py-2 flex-1 justify-center">
                         {restaurantUrl ? (
                             <div className="p-3 rounded-lg bg-white">
@@ -180,6 +181,8 @@ export default function RestaurantPage() {
                     </div>
                 </div>
             </div>
+
+            <IbanSettingsCard />
         </div>
     );
 }

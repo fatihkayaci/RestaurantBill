@@ -17,13 +17,16 @@ export const paymentService = {
         cashRegisterId: string,
         paymentMethod: number,
         items: PaymentItem[],
-        discount?: PaymentDiscount
+        discount?: PaymentDiscount,
+        /** "Tutar gir": ürün seçmeden ödenen tutar (items boş gönderilir). */
+        amount?: number
     ) => {
         const response = await api.post('/payment', {
             OrderId: orderId,
             CashRegisterId: cashRegisterId,
             PaymentMethod: paymentMethod,
             Items: items.map(i => ({ OrderItemId: i.orderItemId, Quantity: i.quantity })),
+            Amount: amount ?? null,
             DiscountPercent: discount?.percent ?? null,
             DiscountAmount: discount?.amount ?? null,
             DiscountNote: discount?.note || null,

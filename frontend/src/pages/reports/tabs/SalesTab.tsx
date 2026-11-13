@@ -18,8 +18,8 @@ interface Props {
 
 const BRANCH_LINE_COLORS = ['var(--rb-orange)', 'var(--rb-accent)', 'var(--rb-green)', 'var(--rb-purple)', 'var(--rb-gold)', 'var(--rb-red)'];
 
-const PAYMENT_COLOR: Record<number, string> = { 1: 'var(--rb-accent)', 2: 'var(--rb-green)', 3: 'var(--rb-gold)' };
-const PAYMENT_LABEL: Record<number, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR / Mobil' };
+const PAYMENT_COLOR: Record<number, string> = { 1: 'var(--rb-accent)', 2: 'var(--rb-green)', 3: 'var(--rb-gold)', 4: 'var(--rb-purple)' };
+const PAYMENT_LABEL: Record<number, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR / Mobil', 4: 'IBAN / Havale' };
 
 const DOW_LABELS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 

@@ -34,16 +34,18 @@ const STATUS_STYLE: Record<BranchOperationalStatus, string> = {
 
 const BRANCH_LINE_COLORS = ['var(--rb-orange)', 'var(--rb-accent)', 'var(--rb-green)', 'var(--rb-purple)', 'var(--rb-gold)', 'var(--rb-red)'];
 
-const PAYMENT_METHOD = { Kart: 1, Nakit: 2, Qr: 3 } as const;
+const PAYMENT_METHOD = { Kart: 1, Nakit: 2, Qr: 3, Iban: 4 } as const;
 const PAYMENT_COLOR: Record<number, string> = {
     [PAYMENT_METHOD.Kart]: 'var(--rb-accent)',
     [PAYMENT_METHOD.Nakit]: 'var(--rb-green)',
     [PAYMENT_METHOD.Qr]: 'var(--rb-gold)',
+    [PAYMENT_METHOD.Iban]: 'var(--rb-purple)',
 };
 const PAYMENT_LABEL: Record<number, string> = {
     [PAYMENT_METHOD.Kart]: 'Kart',
     [PAYMENT_METHOD.Nakit]: 'Nakit',
     [PAYMENT_METHOD.Qr]: 'QR / Mobil',
+    [PAYMENT_METHOD.Iban]: 'IBAN / Havale',
 };
 
 const getTodayIso = () => {

@@ -12,6 +12,10 @@ export const productService = {
             Price: form.price,
             IsActive: form.isActive,
             CategoryId: form.categoryId,
+            Description: form.description,
+            IsFeatured: form.isFeatured,
+            PrepMinutes: form.prepMinutes,
+            TaxRate: form.taxRate,
             IdempotencyKey: crypto.randomUUID()
         });
         return response.data;
@@ -22,7 +26,13 @@ export const productService = {
             Name: form.name,
             Price: form.price,
             IsActive: form.isActive,
-            CategoryId: form.categoryId
+            CategoryId: form.categoryId,
+            // undefined alanlar JSON'a yazılmaz; sunucu onları olduğu gibi bırakır.
+            Description: form.description,
+            IsFeatured: form.isFeatured,
+            // Bu ikisi her zaman gönderilir; null "kaldır / kategori oranını kullan" demektir.
+            PrepMinutes: form.prepMinutes,
+            TaxRate: form.taxRate
         });
     },
     deleteProduct: async (id: string) => {

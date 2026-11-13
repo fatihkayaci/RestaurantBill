@@ -39,96 +39,38 @@ function canNativeShare(): boolean {
     return typeof navigator.share === 'function' && window.matchMedia('(pointer: coarse)').matches;
 }
 
-const sectionTitle = 'text-[11px] font-bold uppercase tracking-[0.08em] text-rb-text-sub';
+interface AddressCardProps {
+    /** Paylaşım başlığı ve QR'ın erişilebilir adı: "Personel giriş adresi". */
+    title: string;
+    /** Ekranda görünen, https'siz adres: "demo.sophram.com/login". */
+    address: string;
+    description: string;
+    /** İndirilen PNG'nin adı. */
+    fileName: string;
+}
 
-// Şube modunda her sayfada sağda duran "Hızlı Erişim" paneli. Tasarım: canvas "Hızlı Erişim Paneli".
-// Bölümlerden oluşur: personel giriş adresi (QR + paylaş) ve kurulum listesi. Kurulum sürerken
-// liste üstte durur; bitince tek satıra iner ve adres kartı öne geçer. Panel kaldırılmaz, yalnızca daraltılır.
-// Yeni bir kart eklemek için gövdeye bir <section> daha koymak yeterli.
-export default function QuickAccessPanel() {
-    const location = useLocation();
-    const [steps, setSteps] = useState<Step[] | null>(null);
-    const [slug, setSlug] = useState<string | null>(null);
-    const [open, setOpen] = useState(readOpen);
-    const [mobileOpen, setMobileOpen] = useState(false);
-    const [setupExpanded, setSetupExpanded] = useState(false);
+// QR + adres + paylaş/indir kartı. Personel girişi ve müşteri sitesi aynı kartı kullanır.
+function AddressCard({ title, address, description, fileName }: AddressCardProps) {
     const [shareMenuOpen, setShareMenuOpen] = useState(false);
     const downloadQrRef = useRef<HTMLCanvasElement>(null);
-    // Her başarılı yazma isteğinde artar; adımlar yeniden sayılır (masa eklenince tik hemen gelsin).
-    const [changeTick, setChangeTick] = useState(0);
-
-    useEffect(() => {
-        const bump = () => setChangeTick(t => t + 1);
-        window.addEventListener(DATA_CHANGED_EVENT, bump);
-        return () => window.removeEventListener(DATA_CHANGED_EVENT, bump);
-    }, []);
-
-    useEffect(() => {
-        let cancelled = false;
-        const count = <T,>(p: Promise<T[]>) => p.then(r => r.length).catch(() => 0);
-
-        Promise.all([
-            count(categoryService.getCategories()),
-            count(productService.getProducts()),
-            count(regionService.getRegions()),
-            count(tableService.getTables()),
-            count(cashRegisterService.getCashRegisters()),
-            count(userService.getUsersByRestaurantId()),
-            branchService.getMyBranch().then(b => b.slug || null).catch(() => null),
-        ]).then(([categories, products, regions, tables, registers, staff, branchSlug]) => {
-            if (cancelled) return;
-            setSlug(branchSlug);
-            setSteps([
-                { key: 'category', label: 'Kategori ekle', hint: 'Ana yemekler, içecekler gibi menü başlıkları', to: '/admin/menu', done: categories > 0, summary: plural(categories, 'kategori') },
-                { key: 'product', label: 'Ürün ekle', hint: 'Fiyatlarıyla birlikte menüdeki ürünler', to: '/admin/menu', done: products > 0, summary: plural(products, 'ürün') },
-                { key: 'region', label: 'Bölge ekle', hint: 'Salon, Bahçe gibi masa grupları; her masa bir bölgeye bağlıdır', to: '/admin/tables', done: regions > 0, summary: plural(regions, 'bölge') },
-                { key: 'table', label: 'Masaları tanımla', hint: 'Garsonlar bu masalara sipariş açar', to: '/admin/tables', done: tables > 0, summary: plural(tables, 'masa') },
-                { key: 'register', label: 'Kasa aç', hint: 'Ödemelerin ve vardiyaların bağlanacağı kasa', to: '/admin/cash-registers', done: registers > 0, summary: plural(registers, 'kasa') },
-                { key: 'staff', label: 'Çalışan ekle', hint: 'Garson, mutfak ve kasiyer hesapları', to: '/admin/staff', done: staff > 0, summary: plural(staff, 'çalışan') },
-            ]);
-        });
-
-        return () => { cancelled = true; };
-    }, [location.pathname, changeTick]);
-
-    const toggleOpen = () => {
-        setOpen(v => {
-            const next = !v;
-            try { localStorage.setItem(OPEN_KEY, next ? '1' : '0'); } catch { /* özel pencere */ }
-            return next;
-        });
-    };
-
-    if (!steps) return null;
-    const doneCount = steps.filter(s => s.done).length;
-    const allDone = doneCount === steps.length;
-
-    // Alan adının kökü artık müşteri sitesi; personel /login'den girer.
-    const loginAddress = slug ? `${slug}.${ROOT_DOMAIN}/login` : null;
-    const loginUrl = loginAddress ? `https://${loginAddress}` : '';
-    const shareText = `Personel giriş adresi: ${loginUrl}`;
-    const nextStep = steps.find(s => !s.done) ?? null;
-    const isOnPage = (step: Step) => location.pathname.startsWith(step.to);
-    const progress = Math.round((doneCount / steps.length) * 100);
+    const url = `https://${address}`;
 
     const copyAddress = async () => {
-        if (!loginUrl) return;
         try {
-            await navigator.clipboard.writeText(loginUrl);
-            toast.success('Giriş adresi kopyalandı.');
+            await navigator.clipboard.writeText(url);
+            toast.success('Adres kopyalandı.');
         } catch {
             toast.error('Kopyalanamadı, adresi elle seçip kopyalayın.');
         }
     };
 
     const share = async () => {
-        if (!loginUrl) return;
         if (!canNativeShare()) {
             setShareMenuOpen(v => !v);
             return;
         }
         try {
-            await navigator.share({ title: 'Personel giriş adresi', text: 'Personel giriş adresi', url: loginUrl });
+            await navigator.share({ title, text: title, url });
         } catch (err) {
             // Kullanıcı paylaşım menüsünü kapattıysa sessiz kal; başka hatada seçenekleri göster.
             if (!(err instanceof DOMException && err.name === 'AbortError')) setShareMenuOpen(true);
@@ -139,19 +81,21 @@ export default function QuickAccessPanel() {
         const canvas = downloadQrRef.current;
         if (!canvas) return;
         const link = document.createElement('a');
-        link.download = `${slug || 'restoran'}-qr.png`;
+        link.download = fileName;
         link.href = canvas.toDataURL('image/png');
         link.click();
     };
 
-    const addressSection = loginAddress && (
-        <section className="space-y-3 px-5 pb-5 pt-4">
-            <h3 className={sectionTitle}>Personel giriş adresi</h3>
+    return (
+        <div className="space-y-3">
+            {/* "QR indir" için görünmeyen, baskıya uygun büyük kopya */}
+            <QRCodeCanvas ref={downloadQrRef} value={url} size={512} marginSize={2} className="hidden" aria-hidden="true" />
+
             <div className="flex justify-center rounded-[14px] border border-border bg-white p-4">
-                <QRCodeSVG value={loginUrl} size={160} role="img" aria-label="Giriş adresinin QR kodu" />
+                <QRCodeSVG value={url} size={160} role="img" aria-label={`${title} QR kodu`} />
             </div>
             <div className="flex h-11 items-center gap-1.5 rounded-[10px] border border-border bg-background pl-3 pr-1">
-                <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-foreground">{loginAddress}</span>
+                <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-foreground">{address}</span>
                 <button
                     type="button"
                     onClick={copyAddress}
@@ -183,7 +127,7 @@ export default function QuickAccessPanel() {
             {shareMenuOpen && (
                 <div className="overflow-hidden rounded-[10px] border border-border">
                     <a
-                        href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+                        href={`https://wa.me/?text=${encodeURIComponent(`${title}: ${url}`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setShareMenuOpen(false)}
@@ -202,7 +146,122 @@ export default function QuickAccessPanel() {
                     </button>
                 </div>
             )}
-            <p className="text-xs leading-relaxed text-rb-text-sub">Personel bu adresi açarak ya da QR kodu okutarak giriş yapar.</p>
+            <p className="text-xs leading-relaxed text-rb-text-sub">{description}</p>
+        </div>
+    );
+}
+
+// Şube modunda her sayfada sağda duran "Hızlı Erişim" paneli. Tasarım: canvas "Hızlı Erişim Paneli".
+// Bölümlerden oluşur: personel giriş ve müşteri sitesi adresleri (QR + paylaş) ve kurulum listesi. Kurulum sürerken
+// liste üstte durur; bitince tek satıra iner ve adres kartı öne geçer. Panel kaldırılmaz, yalnızca daraltılır.
+// Yeni bir kart eklemek için gövdeye bir <section> daha koymak yeterli.
+export default function QuickAccessPanel() {
+    const location = useLocation();
+    const [steps, setSteps] = useState<Step[] | null>(null);
+    const [slug, setSlug] = useState<string | null>(null);
+    const [open, setOpen] = useState(readOpen);
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [setupExpanded, setSetupExpanded] = useState(false);
+    const [addressTab, setAddressTab] = useState<'staff' | 'customer'>('staff');
+    // Her başarılı yazma isteğinde artar; adımlar yeniden sayılır (masa eklenince tik hemen gelsin).
+    const [changeTick, setChangeTick] = useState(0);
+
+    useEffect(() => {
+        const bump = () => setChangeTick(t => t + 1);
+        window.addEventListener(DATA_CHANGED_EVENT, bump);
+        return () => window.removeEventListener(DATA_CHANGED_EVENT, bump);
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        const count = <T,>(p: Promise<T[]>) => p.then(r => r.length).catch(() => 0);
+
+        Promise.all([
+            count(categoryService.getCategories()),
+            count(productService.getProducts()),
+            count(regionService.getRegions()),
+            count(tableService.getTables()),
+            count(cashRegisterService.getCashRegisters()),
+            count(userService.getUsersByRestaurantId()),
+            branchService.getMyBranch().then(b => b.slug || null).catch(() => null),
+        ]).then(([categories, products, regions, tables, registers, staff, branchSlug]) => {
+            if (cancelled) return;
+            setSlug(branchSlug);
+            setSteps([
+                { key: 'category', label: 'Kategori ekle', hint: 'Ana yemekler, içecekler gibi menü başlıkları', to: '/admin/menu', done: categories > 0, summary: plural(categories, 'kategori') },
+                { key: 'product', label: 'Ürün ekle', hint: 'Fiyatlarıyla birlikte menüdeki ürünler', to: '/admin/menu', done: products > 0, summary: plural(products, 'ürün') },
+                { key: 'region', label: 'Bölge ekle', hint: 'Salon, Bahçe gibi masa grupları; her masa bir bölgeye bağlıdır', to: '/admin/tables', done: regions > 0, summary: plural(regions, 'bölge') },
+                { key: 'table', label: 'Masaları tanımla', hint: 'Garsonlar bu masalara sipariş açar', to: '/admin/tables', done: tables > 0, summary: plural(tables, 'masa') },
+                { key: 'register', label: 'Kasa aç', hint: 'Ödemelerin ve vardiyaların bağlanacağı kasa', to: '/admin/cash-registers', done: registers > 0, summary: plural(registers, 'kasa') },
+                { key: 'staff', label: 'Kullanıcı ekle', hint: 'Garson, mutfak ve kasiyer hesapları', to: '/admin/staff', done: staff > 0, summary: plural(staff, 'kullanıcı') },
+            ]);
+        });
+
+        return () => { cancelled = true; };
+    }, [location.pathname, changeTick]);
+
+    const toggleOpen = () => {
+        setOpen(v => {
+            const next = !v;
+            try { localStorage.setItem(OPEN_KEY, next ? '1' : '0'); } catch { /* özel pencere */ }
+            return next;
+        });
+    };
+
+    if (!steps) return null;
+    const doneCount = steps.filter(s => s.done).length;
+    const allDone = doneCount === steps.length;
+
+    const nextStep = steps.find(s => !s.done) ?? null;
+    const isOnPage = (step: Step) => location.pathname.startsWith(step.to);
+    const progress = Math.round((doneCount / steps.length) * 100);
+
+    // Alan adının kökü müşteri sitesi (menü, rezervasyon); personel /login'den girer.
+    const siteAddress = slug ? `${slug}.${ROOT_DOMAIN}` : null;
+    const addressTabs = [
+        { key: 'staff' as const, label: 'Personel' },
+        { key: 'customer' as const, label: 'Müşteri' },
+    ];
+    // İki adres sekmeli: aynı anda tek QR görünür. key, sekme değişince paylaş menüsünü sıfırlar.
+    const addressSection = siteAddress && (
+        <section className="space-y-3 px-5 pb-5 pt-4">
+            <div role="tablist" aria-label="QR adresleri" className="grid grid-cols-2 gap-1 rounded-[10px] bg-muted p-1">
+                {addressTabs.map(tab => {
+                    const active = addressTab === tab.key;
+                    return (
+                        <button
+                            key={tab.key}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setAddressTab(tab.key)}
+                            className={cn(
+                                'h-9 rounded-lg text-[13px] font-semibold transition-colors',
+                                active ? 'bg-card text-foreground shadow-sm' : 'text-rb-text-sub hover:text-foreground'
+                            )}
+                        >
+                            {tab.label}
+                        </button>
+                    );
+                })}
+            </div>
+            {addressTab === 'staff' ? (
+                <AddressCard
+                    key="staff"
+                    title="Personel giriş adresi"
+                    address={`${siteAddress}/login`}
+                    description="Personel bu adresi açarak ya da QR kodu okutarak giriş yapar."
+                    fileName={`${slug}-personel-qr.png`}
+                />
+            ) : (
+                <AddressCard
+                    key="customer"
+                    title="Müşteri adresi"
+                    address={siteAddress}
+                    description="Müşteriler bu QR'ı okutunca restoranın sitesi açılır: menüye bakar, rezervasyon isteği gönderir."
+                    fileName={`${slug}-musteri-qr.png`}
+                />
+            )}
         </section>
     );
 
@@ -324,9 +383,6 @@ export default function QuickAccessPanel() {
 
     return (
         <>
-            {/* "QR indir" için görünmeyen, baskıya uygun büyük kopya */}
-            {loginUrl && <QRCodeCanvas ref={downloadQrRef} value={loginUrl} size={512} marginSize={2} className="hidden" aria-hidden="true" />}
-
             {/* Masaüstü: sağda panel ya da ince ray */}
             <aside
                 aria-label="Hızlı erişim"

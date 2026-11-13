@@ -11,8 +11,8 @@ interface Props {
     onClose: () => void;
 }
 
-const METHOD_ORDER: PaymentMethod[] = [2, 1, 3];
-const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR' };
+const METHOD_ORDER: PaymentMethod[] = [2, 1, 3, 4];
+const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR', 4: 'IBAN' };
 
 function formatTime(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });

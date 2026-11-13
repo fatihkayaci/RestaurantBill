@@ -30,7 +30,7 @@ export default function LateCountModal({ shift, onClose, onCounted }: Props) {
         setSubmitting(true);
         try {
             await shiftService.applyLateCount(shift.id, countedNum, note || undefined);
-            toast.success('Sayım kaydedildi.');
+            toast.success('Gün kapanış sayımıyla kapatıldı.');
             onCounted();
         } catch (err) {
             toast.error(getApiErrorMessage(err, 'Sayım kaydedilemedi.'));
@@ -44,8 +44,8 @@ export default function LateCountModal({ shift, onClose, onCounted }: Props) {
             <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
                 <div className="flex items-start justify-between mb-1">
                     <div>
-                        <ModalTitle className="font-serif text-xl font-bold text-foreground">Sayım Gir</ModalTitle>
-                        <p className="text-sm text-muted-foreground mt-0.5">{shift.cashRegisterName} — sayımsız kapanmıştı</p>
+                        <ModalTitle className="font-serif text-xl font-bold text-foreground">Günü Kapat</ModalTitle>
+                        <p className="text-sm text-muted-foreground mt-0.5">{shift.cashRegisterName} — sayımsız kapanmıştı, kapanış sayımını girin</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -93,7 +93,7 @@ export default function LateCountModal({ shift, onClose, onCounted }: Props) {
                     disabled={submitting}
                     className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-rb-gold-foreground bg-rb-gold hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                    {submitting ? 'Kaydediliyor...' : 'Sayımı Kaydet'}
+                    {submitting ? 'Kaydediliyor...' : 'Günü Kapat'}
                 </button>
             </div>
         </Modal>

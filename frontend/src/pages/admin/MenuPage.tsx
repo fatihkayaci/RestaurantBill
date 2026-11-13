@@ -17,6 +17,13 @@ import { Modal, ModalTitle } from '@/components/ui/modal';
 import { inputClass, labelClass } from '@/lib/formStyles';
 
 
+// Hazırlanma süresi ve KDV metin olarak tutulur: boş alan "yok / kategori varsayılanı" demektir.
+const EMPTY_FORM = {
+    name: '', price: 0, categoryId: '', isActive: true, id: '', description: '', isFeatured: false,
+    prepMinutes: '', useCategoryTax: true, taxRate: '',
+};
+const PREP_MINUTES_MAX = 240;
+
 export default function Menu() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -25,7 +32,7 @@ export default function Menu() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editProduct, setEditProduct] = useState<Product | null>(null);
-    const [form, setForm] = useState({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
+    const [form, setForm] = useState({ ...EMPTY_FORM });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [isSaving, setIsSaving] = useState(false);
     const [cropSource, setCropSource] = useState<{ src: string; revokeOnClose: boolean } | null>(null);
@@ -112,7 +119,7 @@ export default function Menu() {
 
     const openCreateModal = () => {
         setEditProduct(null);
-        setForm({ name: '', price: 0, categoryId: '', isActive: true, id: '' });
+        setForm({ ...EMPTY_FORM });
         setFieldErrors({});
         clearPendingImage();
         setIsModalOpen(true);
@@ -120,7 +127,13 @@ export default function Menu() {
 
     const openEditModal = (product: Product) => {
         setEditProduct(product);
-        setForm({ name: product.name, price: product.price, categoryId: product.categoryId, isActive: product.isActive, id: product.id });
+        setForm({
+            name: product.name, price: product.price, categoryId: product.categoryId, isActive: product.isActive, id: product.id,
+            description: product.description ?? '', isFeatured: product.isFeatured ?? false,
+            prepMinutes: product.prepMinutes != null ? String(product.prepMinutes) : '',
+            useCategoryTax: product.taxRate == null,
+            taxRate: product.taxRate != null ? String(product.taxRate) : '',
+        });
         setFieldErrors({});
         clearPendingImage();
         setIsModalOpen(true);
@@ -269,6 +282,20 @@ export default function Menu() {
         if (!form.name.trim()) errors.name = 'Ürün ismi boş bırakılamaz.';
         if (form.price <= 0) errors.price = "Fiyat 0'dan büyük olmalıdır.";
         if (!form.categoryId) errors.categoryId = 'Kategori seçiniz.';
+        let prepMinutes: number | null = null;
+        if (form.prepMinutes.trim() !== '') {
+            const parsed = Number(form.prepMinutes);
+            if (!Number.isInteger(parsed) || parsed < 1 || parsed > PREP_MINUTES_MAX)
+                errors.prepMinutes = `Hazırlanma süresi 1 ile ${PREP_MINUTES_MAX} dakika arasında olmalıdır.`;
+            else prepMinutes = parsed;
+        }
+        let taxRate: number | null = null;
+        if (!form.useCategoryTax) {
+            const parsed = Number(form.taxRate.replace(',', '.'));
+            if (form.taxRate.trim() === '' || !Number.isFinite(parsed) || parsed < 0 || parsed > 100)
+                errors.taxRate = 'KDV oranı 0 ile 100 arasında olmalıdır.';
+            else taxRate = parsed;
+        }
         if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
         setIsSaving(true);
@@ -276,9 +303,17 @@ export default function Menu() {
             let productId: string | undefined = editProduct?.id;
             if (editProduct) {
                 const currentIsActive = products.find(p => p.id === editProduct.id)?.isActive ?? form.isActive;
-                await productService.updateProduct({ id: form.id, name: form.name, price: form.price, categoryId: form.categoryId, isActive: currentIsActive });
+                await productService.updateProduct({
+                    id: form.id, name: form.name, price: form.price, categoryId: form.categoryId, isActive: currentIsActive,
+                    description: form.description, isFeatured: form.isFeatured,
+                    prepMinutes, taxRate,
+                });
             } else {
-                await productService.createProduct({ name: form.name, price: form.price, categoryId: form.categoryId, isActive: true });
+                await productService.createProduct({
+                    name: form.name, price: form.price, categoryId: form.categoryId, isActive: true,
+                    description: form.description, isFeatured: form.isFeatured,
+                    prepMinutes, taxRate,
+                });
                 const created = await productService.getProducts();
                 setProducts(created);
                 productId = created.find(p => p.name === form.name && p.categoryId === form.categoryId)?.id;
@@ -535,7 +570,7 @@ export default function Menu() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredProducts.map(product => (
-                        <div key={product.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                        <div key={product.id} className="flex h-full flex-col gap-3 rounded-xl border border-border bg-card p-4">
                             <div className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                                 {product.imageUrl ? (
                                     <img
@@ -553,6 +588,14 @@ export default function Menu() {
                                 <div className="min-w-0">
                                     <p className="font-semibold text-foreground text-sm">{product.name}</p>
                                     <p className="text-xs text-muted-foreground truncate">{product.categoryName}</p>
+                                    {(product.prepMinutes != null || product.taxRate != null) && (
+                                        <p className="text-xs text-muted-foreground truncate">
+                                            {[
+                                                product.prepMinutes != null ? `~${product.prepMinutes} dk` : null,
+                                                product.taxRate != null ? `KDV %${product.taxRate} (özel)` : null,
+                                            ].filter(Boolean).join(' · ')}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
                                     <span className={cn(
@@ -571,20 +614,24 @@ export default function Menu() {
                                 </div>
                             </div>
 
-                            <p className="text-lg font-bold text-foreground">₺{formatPrice(product.price)}</p>
+                            {/* Alt blok (fiyat + çizgi + anahtarlar) karta en alta itilir; isteğe bağlı satırlar
+                                olsa da olmasa da aynı satırdaki kartlarda fiyat ve çizgi hizalı kalır. */}
+                            <div className="mt-auto space-y-3">
+                                <p className="text-lg font-bold text-foreground">₺{formatPrice(product.price)}</p>
 
-                            <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
-                                <Switch
-                                    checked={product.isActive}
-                                    onCheckedChange={() => handleToggleActive(product)}
-                                    label={<span className="text-xs text-muted-foreground">{product.isActive ? 'Satışta' : 'Satış dışı'}</span>}
-                                />
-                                <button
-                                    onClick={() => setDeleteTargetId(product.id)}
-                                    className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"
-                                >
-                                    Sil
-                                </button>
+                                <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
+                                    <Switch
+                                        checked={product.isActive}
+                                        onCheckedChange={() => handleToggleActive(product)}
+                                        label={<span className="text-xs text-muted-foreground">{product.isActive ? 'Satışta' : 'Satış dışı'}</span>}
+                                    />
+                                    <button
+                                        onClick={() => setDeleteTargetId(product.id)}
+                                        className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors shrink-0"
+                                    >
+                                        Sil
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ))}
@@ -692,6 +739,90 @@ export default function Menu() {
                                 </select>
                                 {fieldErrors.categoryId && <p className="text-xs text-destructive mt-1">{fieldErrors.categoryId}</p>}
                             </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="product-prep" className={labelClass}>
+                                        Hazırlanma süresi <span className="font-normal text-muted-foreground">(dk · isteğe bağlı)</span>
+                                    </label>
+                                    <input
+                                        id="product-prep"
+                                        type="number"
+                                        inputMode="numeric"
+                                        min={1}
+                                        max={PREP_MINUTES_MAX}
+                                        className={cn(inputClass, fieldErrors.prepMinutes && "border-destructive")}
+                                        placeholder="Örn. 15"
+                                        value={form.prepMinutes}
+                                        onChange={e => setForm({ ...form, prepMinutes: e.target.value })}
+                                    />
+                                    {fieldErrors.prepMinutes
+                                        ? <p className="text-xs text-destructive mt-1">{fieldErrors.prepMinutes}</p>
+                                        : <p className="text-xs text-muted-foreground mt-1">Müşteri menüsünde, garsonda ve mutfakta görünür; süre aşılınca panele uyarı düşer.</p>}
+                                </div>
+                                <div>
+                                    <label htmlFor="product-tax" className={labelClass}>KDV</label>
+                                    {(() => {
+                                        const cat = categories.find(c => c.id === form.categoryId);
+                                        const inherited = cat?.effectiveTaxRate ?? branchTaxRate;
+                                        return (
+                                            <select
+                                                id="product-tax"
+                                                className={inputClass}
+                                                value={form.useCategoryTax ? 'category' : 'custom'}
+                                                onChange={e => setForm({ ...form, useCategoryTax: e.target.value === 'category' })}
+                                            >
+                                                <option value="category">
+                                                    Kategori varsayılanı{inherited != null ? ` (%${inherited})` : ''}
+                                                </option>
+                                                <option value="custom">Bu ürüne özel oran</option>
+                                            </select>
+                                        );
+                                    })()}
+                                    {!form.useCategoryTax && (
+                                        <div className="relative mt-2">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                                            <input
+                                                aria-label="Ürüne özel KDV oranı"
+                                                inputMode="decimal"
+                                                className={cn(inputClass, "pl-7", fieldErrors.taxRate && "border-destructive")}
+                                                placeholder="Örn. 20"
+                                                value={form.taxRate}
+                                                onChange={e => setForm({ ...form, taxRate: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+                                    {fieldErrors.taxRate && <p className="text-xs text-destructive mt-1">{fieldErrors.taxRate}</p>}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="product-description" className={labelClass}>
+                                    Kısa açıklama <span className="font-normal text-muted-foreground">(isteğe bağlı · sitede görünür)</span>
+                                </label>
+                                <input
+                                    id="product-description"
+                                    className={cn(inputClass, fieldErrors.description && "border-destructive")}
+                                    placeholder="Çift shot, günün çekirdeği"
+                                    maxLength={160}
+                                    value={form.description}
+                                    onChange={e => setForm({ ...form, description: e.target.value })}
+                                />
+                                {fieldErrors.description && <p className="text-xs text-destructive mt-1">{fieldErrors.description}</p>}
+                            </div>
+
+                            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border px-3 py-2.5">
+                                <input
+                                    type="checkbox"
+                                    className="mt-0.5 h-4 w-4 accent-[var(--rb-gold)]"
+                                    checked={form.isFeatured}
+                                    onChange={e => setForm({ ...form, isFeatured: e.target.checked })}
+                                />
+                                <span className="flex flex-col">
+                                    <span className="text-sm font-medium text-foreground">Sitede öne çıkar</span>
+                                    <span className="text-xs text-muted-foreground">Restoran sitesinin ana sayfasında "Ustanın seçtikleri" bölümünde gösterilir.</span>
+                                </span>
+                            </label>
                         </form>
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">

@@ -67,6 +67,11 @@ export const orderService = {
         });
         return response.data;
     },
+    /** Hesabı kasaya bildirir; cancel=true isteği geri alır. */
+    requestBill: async (orderId: number | string, cancel = false) => {
+        const response = await api.post(`/order/${orderId}/request-bill`, { cancel });
+        return response.data;
+    },
     transferOrder: async (sourceTableId: string, destinationTableId: string, mode: 1 | 2 | 3) => {
         const response = await api.post(`/order/transfer`, {
             SourceTableId: sourceTableId,

@@ -1,160 +1,111 @@
-import { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useCallback, useEffect, useState } from 'react';
+import { Plus, SlidersHorizontal } from 'lucide-react';
 import { statsService } from '@/features/stats/api/statsService';
-import type { OverviewStats } from '@/features/stats/types';
-import { formatPrice } from '@/lib/format';
-import { chartTooltipProps } from '@/lib/chartTheme';
+import type { DashboardCardId, DashboardStats } from '@/features/stats/types';
+import { DashboardCard } from '@/features/stats/components/DashboardCards';
+import { ALL_CARDS, CARD_META } from '@/features/stats/dashboardCards';
+import DashboardCustomizeDrawer from '@/features/stats/components/DashboardCustomizeDrawer';
+import { PageError, PageLoading } from '@/components/ui/page-state';
+import { DATA_CHANGED_EVENT } from '@/lib/axiosInstance';
+import { OVERDUE_EVENT } from '@/components/layout/OverdueAlerts';
+import { cn } from '@/lib/utils';
 
+/** Canlı kartlar (masa, mutfak, bekleyenler) bu aralıkla yenilenir. */
+const REFRESH_MS = 30_000;
+
+// Şube Genel Bakış'ı: kullanıcının seçtiği kartlar, seçtiği sırayla. Tasarım: canvas "Genel Bakış Dashboard".
 export default function OverViewPage() {
-    const [stats, setStats] = useState<OverviewStats | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [cards, setCards] = useState<DashboardCardId[] | null>(null);
     const [failed, setFailed] = useState(false);
-    const [reloadTick, setReloadTick] = useState(0);
+    const [now, setNow] = useState(() => Date.now());
+    const [customizeOpen, setCustomizeOpen] = useState(false);
+
+    const load = useCallback(() => {
+        statsService.getDashboard()
+            .then(data => { setStats(data); setFailed(false); setNow(Date.now()); })
+            .catch(() => setFailed(true));
+    }, []);
 
     useEffect(() => {
-        let cancelled = false;
-        statsService.getOverview()
-            .then(data => { if (!cancelled) { setStats(data); setFailed(false); } })
-            .catch(() => { if (!cancelled) setFailed(true); })
-            .finally(() => { if (!cancelled) setLoading(false); });
-        return () => { cancelled = true; };
-    }, [reloadTick]);
+        load();
+        statsService.getDashboardLayout()
+            .then(setCards)
+            .catch(() => setCards([...ALL_CARDS]));
 
-    const retry = () => {
-        setLoading(true);
-        setFailed(false);
-        setReloadTick(t => t + 1);
-    };
+        const timer = window.setInterval(load, REFRESH_MS);
+        // Sekmeye dönünce ya da bu sayfadan bir kayıt değişince beklemeden yenile.
+        const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+        document.addEventListener('visibilitychange', onVisible);
+        window.addEventListener(DATA_CHANGED_EVENT, load);
+        window.addEventListener(OVERDUE_EVENT, load);
+        return () => {
+            window.removeEventListener(OVERDUE_EVENT, load);
+            window.clearInterval(timer);
+            document.removeEventListener('visibilitychange', onVisible);
+            window.removeEventListener(DATA_CHANGED_EVENT, load);
+        };
+    }, [load]);
 
-    const chartData = stats?.topProducts.map(p => ({ name: p.name, adet: p.sold })) ?? [];
-    const occupiedPercent = stats && stats.totalTables > 0
-        ? Math.round((stats.occupiedTables / stats.totalTables) * 100)
-        : 0;
+    const updatedAt = stats ? new Date(stats.generatedAt) : null;
+    const hiddenCount = cards ? ALL_CARDS.filter(id => !cards.includes(id)).length : 0;
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
-            <div>
-                <h1 className="text-2xl font-serif font-bold text-foreground">Genel Bakış</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Şubenizin genel durumu</p>
+        <div className="space-y-5">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h1 className="font-serif text-[32px] font-bold leading-tight text-foreground">Genel Bakış</h1>
+                    <p className="mt-0.5 text-sm text-rb-text-sub">
+                        Bugün · {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}
+                        {updatedAt && ` · Son güncelleme ${updatedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`}
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => setCustomizeOpen(true)}
+                    disabled={!cards}
+                    className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                    <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                    Paneli düzenle
+                </button>
             </div>
 
-            {failed && (
-                <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rb-red/30 bg-rb-red-bg px-4 py-3">
-                    <p className="text-sm text-foreground">Veriler yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.</p>
-                    <button
-                        type="button"
-                        onClick={retry}
-                        className="h-10 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-                    >
-                        Tekrar dene
-                    </button>
-                </div>
+            {failed && !stats ? (
+                <PageError onRetry={load} />
+            ) : !stats || !cards ? (
+                <PageLoading />
+            ) : (
+                <>
+                    {failed && (
+                        <p role="status" className="rounded-xl border border-rb-red/30 bg-rb-red-bg px-4 py-2 text-sm text-rb-red">
+                            Son yenileme başarısız oldu; gördüğünüz veriler {updatedAt?.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibarıyla.
+                        </p>
+                    )}
+                    <div className="grid grid-flow-row-dense grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
+                        {cards.map(id => (
+                            <div key={id} className={cn('min-w-0 [&>section]:h-full', CARD_META[id].span)}>
+                                <DashboardCard id={id} stats={stats} now={now} />
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() => setCustomizeOpen(true)}
+                            className="flex min-h-40 flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-border text-rb-text-sub transition-colors hover:border-rb-gold/60 hover:text-foreground md:col-span-2 lg:col-span-3"
+                        >
+                            <Plus className="h-6 w-6" aria-hidden="true" />
+                            <span className="text-sm font-semibold text-foreground">{hiddenCount > 0 ? 'Kart ekle' : 'Paneli düzenle'}</span>
+                            <span className="text-xs">
+                                {hiddenCount > 0 ? `${hiddenCount} kart eklenebilir` : 'Kartların sırasını değiştirin ya da gizleyin'}
+                            </span>
+                        </button>
+                    </div>
+                </>
             )}
 
-            {/* Stat Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Toplam Gelir */}
-                <div className="rounded-xl border border-rb-amber/30 bg-rb-amber-bg p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-amber">
-                        Toplam Gelir
-                    </p>
-                    <p className="text-3xl font-bold text-foreground mt-2">
-                        {stats ? `₺${formatPrice(stats.totalRevenue)}` : '—'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">tüm zamanlar</p>
-                </div>
-
-                {/* Toplam Sipariş */}
-                <div className="rounded-xl border border-rb-accent/30 bg-rb-accent-bg p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-accent">
-                        Toplam Sipariş
-                    </p>
-                    <p className="text-3xl font-bold text-foreground mt-2">
-                        {stats ? stats.totalOrders : '—'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">ödeme alınan sipariş</p>
-                </div>
-
-                {/* Ort. Sipariş */}
-                <div className="rounded-xl border border-rb-green/30 bg-rb-green-bg p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-green">
-                        Ort. Sipariş
-                    </p>
-                    <p className="text-3xl font-bold text-foreground mt-2">
-                        {stats ? `₺${formatPrice(stats.avgOrderValue)}` : '—'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">sipariş başına</p>
-                </div>
-
-                {/* Dolu Masalar */}
-                <div className="rounded-xl border border-rb-neutral/30 bg-rb-neutral-bg p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-neutral">
-                        Dolu Masa
-                    </p>
-                    <p className="text-3xl font-bold text-foreground mt-2">
-                        {stats ? `${stats.occupiedTables}/${stats.totalTables}` : '—'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {stats ? `%${occupiedPercent} doluluk` : ''}
-                    </p>
-                </div>
-            </div>
-
-            {/* Bottom Sections */}
-            <div className="grid lg:grid-cols-2 gap-4">
-                {/* En Çok Satan Ürünler */}
-                <div className="rounded-xl border border-border bg-card p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">
-                        En Çok Satan Ürünler
-                    </p>
-                    {loading ? (
-                        <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">
-                            Yükleniyor...
-                        </div>
-                    ) : chartData.length === 0 ? (
-                        <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">
-                            {failed ? 'Veri yüklenemedi.' : 'Henüz sipariş verisi yok.'}
-                        </div>
-                    ) : (
-                        <ResponsiveContainer width="100%" height={224}>
-                            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                                <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-30} textAnchor="end" height={60} />
-                                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                                <Tooltip {...chartTooltipProps} formatter={(value) => [value, 'Satış Adedi']} />
-                                <Bar dataKey="adet" fill="var(--rb-amber)" radius={[4, 4, 0, 0]} maxBarSize={56} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    )}
-                </div>
-
-                {/* Popüler Ürünler */}
-                <div className="rounded-xl border border-border bg-card p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">
-                        Popüler Ürünler
-                    </p>
-                    {loading ? (
-                        <p className="text-muted-foreground text-sm">Yükleniyor...</p>
-                    ) : !stats || stats.topProducts.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">{failed ? 'Veri yüklenemedi.' : 'Henüz sipariş verisi yok.'}</p>
-                    ) : (
-                        <div className="space-y-3">
-                            {stats.topProducts.map((item, idx) => (
-                                <div key={item.name} className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rb-amber-bg text-rb-amber text-xs font-bold">
-                                            {idx + 1}
-                                        </span>
-                                        <span className="text-sm font-medium text-foreground">{item.name}</span>
-                                    </div>
-                                    <span className="text-sm font-semibold text-muted-foreground">{item.sold} adet</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
+            {customizeOpen && cards && (
+                <DashboardCustomizeDrawer cards={cards} onSaved={setCards} onClose={() => setCustomizeOpen(false)} />
+            )}
         </div>
     );
 }

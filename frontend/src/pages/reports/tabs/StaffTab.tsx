@@ -7,7 +7,7 @@ interface Props {
     loading: boolean;
 }
 
-const METHOD_LABELS: Record<number, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR' };
+const METHOD_LABELS: Record<number, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR', 4: 'IBAN' };
 
 export default function StaffTab({ data, loading }: Props) {
     if (loading && !data) {

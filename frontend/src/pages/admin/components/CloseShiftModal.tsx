@@ -13,8 +13,8 @@ interface Props {
     onClosed: () => void;
 }
 
-const METHOD_ORDER: PaymentMethod[] = [2, 1, 3];
-const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR' };
+const METHOD_ORDER: PaymentMethod[] = [2, 1, 3, 4];
+const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR', 4: 'IBAN' };
 
 function formatTime(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -82,7 +82,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
             <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
                 <div className="flex items-start justify-between mb-1">
                     <div>
-                        <ModalTitle className="font-serif text-xl font-bold text-foreground">Vardiyayı Kapat</ModalTitle>
+                        <ModalTitle className="font-serif text-xl font-bold text-foreground">Günü Kapat</ModalTitle>
                         <p className="text-sm text-muted-foreground mt-0.5">{shift.cashRegisterName}</p>
                     </div>
                     <button
@@ -168,7 +168,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
                                 disabled={submitting}
                                 className="w-full rounded-xl py-3.5 text-sm font-semibold text-rb-gold-foreground bg-rb-gold hover:opacity-90 transition-opacity disabled:opacity-50"
                             >
-                                {submitting ? 'Kapatılıyor...' : 'Sayarak Kapat'}
+                                {submitting ? 'Kapatılıyor...' : 'Günü Kapat'}
                             </button>
                             <button
                                 onClick={handleCloseWithoutCount}

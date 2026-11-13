@@ -37,3 +37,14 @@ export function formatMinutes(totalMinutes: number): string {
 export function formatElapsed(since: string, now: number = Date.now()): string {
     return formatMinutes((now - new Date(since).getTime()) / 60000);
 }
+
+// Hazırlanma süresi geri sayımı: kalemin hedef anına kalan (ya da geçen) dakika. Süresi yoksa null.
+export function prepCountdown(createdAt: string, prepMinutes: number | null | undefined, now: number = Date.now()):
+    { overdue: boolean; minutes: number } | null {
+    if (prepMinutes == null) return null;
+    const dueAt = new Date(createdAt).getTime() + prepMinutes * 60000;
+    const diffMinutes = (dueAt - now) / 60000;
+    return diffMinutes > 0
+        ? { overdue: false, minutes: Math.ceil(diffMinutes) }
+        : { overdue: true, minutes: Math.floor(-diffMinutes) };
+}
