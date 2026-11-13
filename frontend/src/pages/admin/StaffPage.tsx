@@ -10,10 +10,33 @@ import { cn } from "@/lib/utils";
 import { Switch } from '@/components/ui/switch';
 import { Modal, ModalTitle } from '@/components/ui/modal';
 import { inputClass, labelClass } from '@/lib/formStyles';
+import { regionService } from '@/features/regions/api/regionService';
+import type { Region } from '@/features/regions/types';
+import { categoryService } from '@/features/categories/api/categoryService';
+import type { Category } from '@/features/categories/types';
 
 const roleMap: Record<number, string> = { 1: "Admin", 2: "Garson", 3: "Kasiyer", 4: "Mutfak" };
 
-const todayDateString = () => new Date().toISOString().slice(0, 10);
+// Bölge ve yetkiler yalnızca garsonda, menü kategorileri yalnızca mutfakta.
+const WAITER = 2;
+const KITCHEN = 4;
+const usesRegions = (role: number) => role === WAITER;
+const usesCategories = (role: number) => role === KITCHEN;
+const hasAccessTab = (role: number) => usesRegions(role) || usesCategories(role);
+
+type PermissionKey = 'canTakeOrders' | 'canTakePayment' | 'canCancelAndDiscount' | 'canTransferAndReserve';
+
+const WAITER_PERMISSIONS: { key: PermissionKey; label: string; short: string; hint: string }[] = [
+    { key: 'canTakeOrders', label: 'Masa aç / sipariş al', short: 'Sipariş', hint: 'Boş masada sipariş başlatır, siparişe ürün ekler.' },
+    { key: 'canTakePayment', label: 'Hesap al (ödeme)', short: 'Ödeme', hint: 'Masanın hesabını kapatır; nakit, kart, IBAN ödeme alır.' },
+    { key: 'canCancelAndDiscount', label: 'İptal ve indirim', short: 'İptal/İndirim', hint: 'Gönderilmiş ürünü ya da siparişi iptal eder, indirim/ikram uygular.' },
+    { key: 'canTransferAndReserve', label: 'Masa taşı ve rezervasyon', short: 'Taşıma/Rezervasyon', hint: 'Masa taşır/birleştirir, rezervasyonları ve QR sipariş taleplerini yönetir.' },
+];
+
+// Yeni garson yalnızca sipariş alabilir; diğer yetkileri yönetici açar.
+const DEFAULT_WAITER_PERMISSIONS: Record<PermissionKey, boolean> = {
+    canTakeOrders: true, canTakePayment: false, canCancelAndDiscount: false, canTransferAndReserve: false,
+};
 
 const roleStyle: Record<number, { avatar: string; badge: string }> = {
     1: { avatar: 'bg-rb-purple-bg text-rb-purple', badge: 'bg-rb-purple-bg text-rb-purple' },
@@ -32,18 +55,49 @@ export default function StaffPage() {
     const [loaded, setLoaded] = useState(false);
     const [form, setForm] = useState<CreateUser>({
         fullName: '', userName: '', email: '', phoneNumber: '',
-        passwordHash: '', role: 2, hireDate: todayDateString()
+        passwordHash: '', role: 2
     });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'personal' | 'login'>('personal');
+    const [activeTab, setActiveTab] = useState<'personal' | 'login' | 'access'>('personal');
+    const [regions, setRegions] = useState<Region[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
 
     useEffect(() => {
         userService.getUsersByRestaurantId()
             .then(setUsers)
             .catch(console.error)
             .finally(() => setLoaded(true));
+        regionService.getRegions()
+            .then(setRegions)
+            .catch(console.error);
+        categoryService.getCategories()
+            .then(setCategories)
+            .catch(console.error);
     }, []);
+
+    const regionNameById = new Map(regions.map(r => [r.id, r.name]));
+    const categoryNameById = new Map(categories.map(c => [c.id, c.name]));
+
+    const toggleRegion = (regionId: string) => {
+        setForm(prev => {
+            const current = prev.regionIds ?? [];
+            return {
+                ...prev,
+                regionIds: current.includes(regionId) ? current.filter(id => id !== regionId) : [...current, regionId],
+            };
+        });
+    };
+
+    const toggleCategory = (categoryId: string) => {
+        setForm(prev => {
+            const current = prev.categoryIds ?? [];
+            return {
+                ...prev,
+                categoryIds: current.includes(categoryId) ? current.filter(id => id !== categoryId) : [...current, categoryId],
+            };
+        });
+    };
 
     const generatePassword = () => {
         const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -52,7 +106,10 @@ export default function StaffPage() {
 
     const openCreateModal = () => {
         setEditUser(null);
-        setForm({ fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: 2, hireDate: todayDateString() });
+        setForm({
+            fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: 2,
+            regionIds: [], categoryIds: [], ...DEFAULT_WAITER_PERMISSIONS,
+        });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -60,7 +117,21 @@ export default function StaffPage() {
 
     const openEditModal = (user: User) => {
         setEditUser(user);
-        setForm({ fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', role: user.role, hireDate: user.hireDate ? user.hireDate.slice(0, 10) : todayDateString() });
+        // Garson olmayan biri garsona çevrilirse yeni garson varsayılanlarıyla başlar.
+        const permissions = user.role === WAITER
+            ? {
+                canTakeOrders: user.canTakeOrders ?? true,
+                canTakePayment: user.canTakePayment ?? false,
+                canCancelAndDiscount: user.canCancelAndDiscount ?? false,
+                canTransferAndReserve: user.canTransferAndReserve ?? false,
+            }
+            : DEFAULT_WAITER_PERMISSIONS;
+        setForm({
+            fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', role: user.role,
+            regionIds: usesRegions(user.role) ? (user.regionIds ?? []) : [],
+            categoryIds: usesCategories(user.role) ? (user.categoryIds ?? []) : [],
+            ...permissions,
+        });
         setFieldErrors({});
         setActiveTab('personal');
         setIsModalOpen(true);
@@ -74,10 +145,10 @@ export default function StaffPage() {
         try {
             await userService.deleteUser(deleteTargetId);
             setUsers(prev => prev.filter(u => u.id !== deleteTargetId));
-            toast.success('Çalışan silindi.');
+            toast.success('Kullanıcı silindi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Çalışan silinemedi.');
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Kullanıcı silinemedi.');
             }
         } finally {
             setDeleteTargetId(null);
@@ -91,7 +162,7 @@ export default function StaffPage() {
                 phoneNumber: user.phoneNumber, role: user.role, isActive: !user.isActive
             });
             setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
-            toast.success(user.isActive ? 'Çalışan pasif yapıldı.' : 'Çalışan aktif yapıldı.');
+            toast.success(user.isActive ? 'Kullanıcı pasif yapıldı.' : 'Kullanıcı aktif yapıldı.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Durum güncellenemedi.');
@@ -120,16 +191,27 @@ export default function StaffPage() {
             return;
         }
         setFieldErrors({});
+        // Bölge ve yetkiler yalnızca garsonda, kategoriler yalnızca mutfakta gönderilir.
+        const isWaiter = form.role === WAITER;
+        const payload: CreateUser = {
+            ...form,
+            regionIds: usesRegions(form.role) ? (form.regionIds ?? []) : [],
+            categoryIds: usesCategories(form.role) ? (form.categoryIds ?? []) : [],
+            canTakeOrders: isWaiter ? form.canTakeOrders : undefined,
+            canTakePayment: isWaiter ? form.canTakePayment : undefined,
+            canCancelAndDiscount: isWaiter ? form.canCancelAndDiscount : undefined,
+            canTransferAndReserve: isWaiter ? form.canTransferAndReserve : undefined,
+        };
         try {
             if (editUser) {
-                await userService.updateUser({ id: editUser.id, ...form, password: form.passwordHash, isActive: editUser.isActive });
+                await userService.updateUser({ id: editUser.id, ...payload, password: form.passwordHash, isActive: editUser.isActive });
             } else {
-                await userService.createUser(form);
+                await userService.createUser(payload);
             }
             const updated = await userService.getUsersByRestaurantId();
             setUsers(updated);
             setIsModalOpen(false);
-            toast.success(editUser ? 'Çalışan güncellendi.' : 'Çalışan eklendi.');
+            toast.success(editUser ? 'Kullanıcı güncellendi.' : 'Kullanıcı eklendi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 const data = err.response?.data;
@@ -167,14 +249,14 @@ export default function StaffPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Çalışanlar</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">{users.length} çalışan</p>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Kullanıcılar</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">{users.length} kullanıcı</p>
                 </div>
                 <button
                     onClick={openCreateModal}
                     className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
-                    + Çalışan Ekle
+                    + Kullanıcı Ekle
                 </button>
             </div>
 
@@ -183,7 +265,7 @@ export default function StaffPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                     className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    placeholder="Çalışan ara..."
+                    placeholder="Kullanıcı ara..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
@@ -193,13 +275,13 @@ export default function StaffPage() {
             {!loaded ? null : users.length === 0 ? (
                 <EmptyState
                     icon={Users}
-                    title="Henüz çalışan yok"
+                    title="Henüz kullanıcı yok"
                     description="Garson, mutfak ve kasiyer hesapları oluştur. Her biri kullanıcı adıyla giriş yapar."
-                    action={{ label: 'İlk çalışanı ekle', onClick: openCreateModal }}
+                    action={{ label: 'İlk kullanıcıyı ekle', onClick: openCreateModal }}
                     hint="Kurulum listesinde 6. adım · son adım"
                 />
             ) : filtered.length === 0 ? (
-                <SearchEmptyState query={search} noun="çalışan" onClear={() => setSearch('')} />
+                <SearchEmptyState query={search} noun="kullanıcı" onClear={() => setSearch('')} />
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filtered.map(user => {
@@ -207,7 +289,9 @@ export default function StaffPage() {
                         const initials = user.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
                         const isActive = user.isActive;
                         return (
-                            <div key={user.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                            // Kart tam yükseklikte bir sütun: alt kısım (çizgi + erişim/sil) mt-auto ile dibe itilir ki
+                            // aynı satırdaki kartların çizgileri, rozet sayısından bağımsız aynı hizada olsun.
+                            <div key={user.id} className="flex h-full flex-col gap-3 rounded-xl border border-border bg-card p-4">
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className={cn("w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0", style.avatar)}>
@@ -238,10 +322,49 @@ export default function StaffPage() {
                                     <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase", style.badge)}>
                                         {roleMap[user.role] ?? 'Bilinmiyor'}
                                     </span>
-                                    <span>{user.hireDate ? new Date(user.hireDate).toLocaleDateString('tr-TR') : '—'}</span>
+                                    {usesRegions(user.role) && (
+                                        <span className="truncate text-right" title="Bölgeler">
+                                            {(user.regionIds?.length ?? 0) === 0
+                                                ? 'Tüm bölgeler'
+                                                : (user.regionIds ?? []).map(id => regionNameById.get(id) ?? '—').join(', ')}
+                                        </span>
+                                    )}
+                                    {usesCategories(user.role) && (user.categoryIds?.length ?? 0) === 0 && (
+                                        <span className="truncate text-right" title="Kategoriler">Tüm kategoriler</span>
+                                    )}
                                 </div>
 
-                                <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
+                                {usesCategories(user.role) && (user.categoryIds?.length ?? 0) > 0 && (
+                                    <div className="flex flex-wrap gap-1" aria-label="Mutfak kategorileri">
+                                        {(user.categoryIds ?? []).map(id => (
+                                            <span key={id} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-rb-amber-bg text-rb-amber">
+                                                {categoryNameById.get(id) ?? '—'}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {user.role === WAITER && (
+                                    <div className="flex flex-wrap gap-1" aria-label="Garson yetkileri">
+                                        {WAITER_PERMISSIONS.map(p => {
+                                            const on = user[p.key] ?? false;
+                                            return (
+                                                <span
+                                                    key={p.key}
+                                                    title={`${p.label}: ${on ? 'açık' : 'kapalı'}`}
+                                                    className={cn(
+                                                        "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                                                        on ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground line-through"
+                                                    )}
+                                                >
+                                                    {p.short}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                <div className="mt-auto border-t border-border pt-3 flex items-center justify-between gap-2">
                                     <Switch
                                         checked={isActive}
                                         onCheckedChange={() => toggleActive(user)}
@@ -266,7 +389,7 @@ export default function StaffPage() {
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
                             <ModalTitle className="text-xl font-bold text-foreground">
-                                {editUser ? 'Çalışanı Düzenle' : 'Çalışan Ekle'}
+                                {editUser ? 'Kullanıcıyı Düzenle' : 'Kullanıcı Ekle'}
                             </ModalTitle>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -301,6 +424,20 @@ export default function StaffPage() {
                             >
                                 Giriş Bilgileri
                             </button>
+                            {hasAccessTab(form.role) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('access')}
+                                    className={cn(
+                                        "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                                        activeTab === 'access'
+                                            ? "border-rb-accent text-foreground"
+                                            : "border-transparent text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    {form.role === WAITER ? 'Bölge ve Yetkiler' : 'Kategoriler'}
+                                </button>
+                            )}
                         </div>
 
                         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -336,16 +473,6 @@ export default function StaffPage() {
                                             placeholder="0532 000 00 00"
                                             value={form.phoneNumber}
                                             onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className={labelClass}>İşe Giriş Tarihi</label>
-                                        <input
-                                            type="date"
-                                            className={inputClass}
-                                            value={form.hireDate ?? ''}
-                                            onChange={e => setForm({ ...form, hireDate: e.target.value })}
                                         />
                                     </div>
                                 </>
@@ -390,6 +517,97 @@ export default function StaffPage() {
                                     </div>
                                 </>
                             )}
+
+                            {activeTab === 'access' && usesCategories(form.role) && (
+                                <div>
+                                    <label className={labelClass}>Kategoriler</label>
+                                    {categories.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground">Bu şubede henüz menü kategorisi yok.</p>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-2">
+                                            {categories.map(category => {
+                                                const selected = form.categoryIds?.includes(category.id) ?? false;
+                                                return (
+                                                    <button
+                                                        key={category.id}
+                                                        type="button"
+                                                        role="checkbox"
+                                                        aria-checked={selected}
+                                                        onClick={() => toggleCategory(category.id)}
+                                                        className={cn(
+                                                            "px-3 py-1.5 rounded-full border text-sm transition-colors",
+                                                            selected
+                                                                ? "border-rb-accent bg-rb-accent-bg text-rb-accent font-medium"
+                                                                : "border-border text-muted-foreground hover:text-foreground"
+                                                        )}
+                                                    >
+                                                        {category.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    <p className="text-xs text-muted-foreground mt-1.5">
+                                        Boş bırakılırsa tüm kategoriler. Mutfak ekranında yalnızca seçili kategorilerdeki ürünler görünür
+                                        (ör. ızgara ustası aynı masanın tatlılarını görmez).
+                                    </p>
+                                </div>
+                            )}
+
+                            {activeTab === 'access' && usesRegions(form.role) && (
+                                <>
+                                    <div>
+                                        <label className={labelClass}>Bölgeler</label>
+                                        {regions.length === 0 ? (
+                                            <p className="text-xs text-muted-foreground">Bu şubede henüz bölge yok.</p>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-2">
+                                                {regions.map(region => {
+                                                    const selected = form.regionIds?.includes(region.id) ?? false;
+                                                    return (
+                                                        <button
+                                                            key={region.id}
+                                                            type="button"
+                                                            role="checkbox"
+                                                            aria-checked={selected}
+                                                            onClick={() => toggleRegion(region.id)}
+                                                            className={cn(
+                                                                "px-3 py-1.5 rounded-full border text-sm transition-colors",
+                                                                selected
+                                                                    ? "border-rb-accent bg-rb-accent-bg text-rb-accent font-medium"
+                                                                    : "border-border text-muted-foreground hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            {region.name}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        <p className="text-xs text-muted-foreground mt-1.5">
+                                            Boş bırakılırsa tüm bölgeler. Garson yalnızca seçili bölgelerin masalarını görür.
+                                        </p>
+                                    </div>
+
+                                    {form.role === WAITER && (
+                                        <div>
+                                            <label className={labelClass}>Yetkiler</label>
+                                            <div className="space-y-3">
+                                                {WAITER_PERMISSIONS.map(p => (
+                                                    <div key={p.key}>
+                                                        <Switch
+                                                            checked={form[p.key] ?? false}
+                                                            onCheckedChange={checked => setForm(prev => ({ ...prev, [p.key]: checked }))}
+                                                            label={<span className="text-sm text-foreground">{p.label}</span>}
+                                                        />
+                                                        <p className="text-xs text-muted-foreground mt-0.5 pl-11">{p.hint}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </form>
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
@@ -416,9 +634,9 @@ export default function StaffPage() {
             <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Çalışanı sil</AlertDialogTitle>
+                        <AlertDialogTitle>Kullanıcıyı sil</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Bu çalışanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                            Bu kullanıcıyı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

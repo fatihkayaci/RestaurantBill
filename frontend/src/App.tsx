@@ -43,6 +43,12 @@ import RefundPolicyPage from './pages/legal/RefundPolicyPage';
 import ContactPage from './pages/legal/ContactPage';
 
 import RestaurantSitePage from './pages/public/RestaurantSitePage';
+import RestaurantMenuPage from './pages/public/RestaurantMenuPage';
+import RestaurantAboutPage from './pages/public/RestaurantAboutPage';
+import RestaurantVenuePage from './pages/public/RestaurantVenuePage';
+import RestaurantContactPage from './pages/public/RestaurantContactPage';
+import RestaurantReservationPage from './pages/public/RestaurantReservationPage';
+import SiteSettingsPage from './pages/admin/SiteSettingsPage';
 import TableOrderPage from './pages/public/TableOrderPage';
 import ReservationsPage from './pages/admin/ReservationsPage';
 
@@ -95,6 +101,7 @@ function App() {
                     <Route path="day-end" element={<Navigate to="/admin/shifts" replace />} />
                     <Route path="reports" element={<ReportsPage role="admin" />} />
                     <Route path="restaurant" element={<AdminRestaurantPage />} />
+                    <Route path="site" element={<SiteSettingsPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                 </Route>
 
@@ -108,11 +115,15 @@ function App() {
                 <Route path="/kullanim-kosullari" element={<TermsOfServicePage />} />
                 <Route path="/mesafeli-satis-sozlesmesi" element={<DistanceSalesAgreementPage />} />
                 <Route path="/iptal-ve-iade" element={<RefundPolicyPage />} />
-                <Route path="/iletisim" element={<ContactPage />} />
+                {/* Restoranın alan adında /iletisim restoranın iletişim sayfasıdır; ana alan adında Sophram'ın. */}
+                <Route path="/iletisim" element={getTenantSlug() ? <RestaurantContactPage /> : <ContactPage />} />
 
                 {/* Restoranın müşteriye açık sitesi: slug'lı alan adının kökü. /menu, slug'sız (yerel) ortamda denemek için. */}
                 <Route path="/" element={getTenantSlug() ? <RestaurantSitePage /> : <LandingPage />} />
-                <Route path="/menu" element={<RestaurantSitePage />} />
+                <Route path="/menu" element={<RestaurantMenuPage />} />
+                <Route path="/hakkimizda" element={<RestaurantAboutPage />} />
+                <Route path="/mekan" element={<RestaurantVenuePage />} />
+                <Route path="/rezervasyon" element={<RestaurantReservationPage />} />
                 <Route path="/masa/:tableId" element={<TableOrderPage />} />
             </Routes>
             <Toaster position="top-right" richColors />

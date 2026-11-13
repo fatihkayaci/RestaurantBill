@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { CalendarCheck, Phone, Users } from 'lucide-react';
+import { CalendarCheck, Phone, Settings2, Users } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
-import { RESERVATION_CONFIRMED, RESERVATION_PENDING, type StaffReservation } from '@/features/customerSite/types';
+import { reservationSettingsService } from '@/features/customerSite/api/reservationSettingsService';
+import {
+    formatDuration, RESERVATION_CONFIRMED, RESERVATION_PENDING, type ReservationRules, type StaffReservation,
+} from '@/features/customerSite/types';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { getApiErrorMessage } from '@/lib/apiError';
+import ReservationSettingsModal from './components/ReservationSettingsModal';
 
 type Decision = 'confirm' | 'reject' | 'cancel';
 
@@ -27,6 +31,14 @@ export default function ReservationsPage() {
     const [reservations, setReservations] = useState<StaffReservation[]>([]);
     const [loading, setLoading] = useState(true);
     const [busyId, setBusyId] = useState<string | null>(null);
+    const [rules, setRules] = useState<ReservationRules | null>(null);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+
+    useEffect(() => {
+        reservationSettingsService.get()
+            .then(setRules)
+            .catch(err => toast.error(getApiErrorMessage(err, 'Rezervasyon ayarları yüklenemedi.')));
+    }, []);
 
     const load = useCallback(() => {
         customerRequestService.getReservations()
@@ -136,10 +148,37 @@ export default function ReservationsPage() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-serif font-bold text-foreground">Rezervasyonlar</h1>
-                <p className="mt-0.5 text-sm text-muted-foreground">Müşterilerin siteden gönderdiği talepler. Onayladığınız rezervasyon masayı 2 saat için ayırır.</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Rezervasyonlar</h1>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                        Müşterilerin siteden gönderdiği talepler.
+                        {rules && ` Onayladığınız rezervasyon masayı ${formatDuration(rules.durationMinutes)} için ayırır.`}
+                    </p>
+                    {rules && !rules.enabled && (
+                        <p className="mt-2 inline-flex rounded-lg bg-rb-red-bg px-2.5 py-1 text-xs font-semibold text-rb-red">
+                            Online rezervasyon kapalı: sitede rezervasyon bölümü görünmüyor.
+                        </p>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    onClick={() => setSettingsOpen(true)}
+                    disabled={!rules}
+                    className="flex h-10 items-center gap-2 rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground transition-colors hover:border-rb-gold disabled:opacity-50"
+                >
+                    <Settings2 className="h-4 w-4" aria-hidden="true" />
+                    Rezervasyon ayarları
+                </button>
             </div>
+
+            {settingsOpen && rules && (
+                <ReservationSettingsModal
+                    rules={rules}
+                    onClose={() => setSettingsOpen(false)}
+                    onSaved={saved => { setRules(saved); setSettingsOpen(false); }}
+                />
+            )}
 
             {loading ? (
                 <div className={grid} aria-busy="true">

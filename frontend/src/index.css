@@ -211,6 +211,11 @@
   html {
     font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   }
+  /* Restoranın müşteri sitesi açıkken (SiteShell ekler): sayfa, bildirimler ve pencereler dahil Inter Tight. */
+  html.restaurant-site,
+  html.restaurant-site body {
+    font-family: 'Inter Tight', system-ui, sans-serif;
+  }
 }
 
 @keyframes float {
@@ -246,4 +251,69 @@ html.theme-transition *::after {
 }
 .sidebar-nav-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.28);
+}
+
+/* Mutfak ekranı durum renkleri: genel rb-red/green/amber yerine uygulamanın toprak tonlarına uyan, soluk
+   kiremit / zeytin / hardal. Yalnızca mutfak kabuğunda (.kitchen-screen) tanımlı; diğer ekranlar etkilenmez.
+   Gecikme yalnız renkle değil, kalın bant + ikon + "GECİKTİ" etiketiyle de ayrışır. */
+.kitchen-screen {
+  --kitchen-ok: #4A7546;
+  --kitchen-warn: #8F6A1E;
+  --kitchen-late: #9E4430;
+  --kitchen-ok-on-bar: #9DBB8E; /* üst çubuk her temada koyu */
+}
+.dark .kitchen-screen {
+  --kitchen-ok: #8DB38A;
+  --kitchen-warn: #D2AE62;
+  --kitchen-late: #CF7A64;
+}
+
+/* Mutfak bileti: koyu temada da açık "kâğıt" kalır (2 m'den en iyi okunan zıtlık). İçerideki renk tokenları
+   açık temanın değerlerine sabitlenir; böylece bg-rb-red, text-muted-foreground vb. kâğıt üstünde doğru görünür. */
+.kitchen-paper {
+  --foreground: #2A1F14;
+  --card: #FDFAF5;
+  --muted: #EFE8DB;
+  --muted-foreground: #6B5E52;
+  --border: #E2D8C6;
+  --rb-text-sub: #6B5E52;
+  --rb-text-muted: #A39080;
+  --rb-green: #1F8A52;
+  --rb-green-bg: rgba(31,138,82,0.09);
+  --rb-green-foreground: #FFFFFF;
+  --rb-amber: #B8880A;
+  --rb-amber-bg: rgba(184,136,10,0.12);
+  --rb-amber-foreground: #1C1510;
+  --rb-red: #C83030;
+  --rb-red-bg: rgba(200,48,48,0.09);
+  --rb-red-foreground: #FFFFFF;
+  --rb-gold: #C8A96E;
+  --rb-gold-foreground: #1C1510;
+  /* Kâğıt her temada açık: durum renkleri de açık değerlerde sabit (kâğıt üstünde ≥4,5:1). */
+  --kitchen-ok: #4A7546;
+  --kitchen-ok-soft: rgba(74,117,70,0.10);
+  --kitchen-warn: #8F6A1E;
+  --kitchen-warn-soft: rgba(143,106,30,0.10);
+  --kitchen-late: #9E4430;
+  --kitchen-late-soft: rgba(158,68,48,0.12);
+  --kitchen-late-line: rgba(158,68,48,0.55);
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+/* Bilet rayının yatay kaydırma çubuğu: ince, rayın tonunda. */
+.kitchen-rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 152, 128, 0.35) transparent;
+}
+
+@keyframes kitchen-ticket-in {
+  from { opacity: 0; transform: translateX(-48px); } /* yeni bilet soldan girer */
+  to { opacity: 1; transform: translateX(0); }
+}
+.kitchen-ticket-in {
+  animation: kitchen-ticket-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; /* "both" değil: bitince transform serbest kalsın, raydaki kayma (FLIP) yeni biletlerde de çalışsın */
+}
+@media (prefers-reduced-motion: reduce) {
+  .kitchen-ticket-in { animation: none; }
 }

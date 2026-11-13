@@ -22,7 +22,13 @@ export const userService = {
             Role: data.role,
             BranchId: data.branchId,
             BranchIds: data.branchIds,
-            HireDate: data.hireDate
+            HireDate: data.hireDate,
+            RegionIds: data.regionIds,
+            CategoryIds: data.categoryIds,
+            CanTakeOrders: data.canTakeOrders,
+            CanTakePayment: data.canTakePayment,
+            CanCancelAndDiscount: data.canCancelAndDiscount,
+            CanTransferAndReserve: data.canTransferAndReserve
         });
     },
     updateUser: async (data: UpdateUser) => {
@@ -38,7 +44,13 @@ export const userService = {
             IsActive: data.isActive,
             BranchId: data.branchId,
             BranchIds: data.branchIds,
-            HireDate: data.hireDate
+            HireDate: data.hireDate,
+            RegionIds: data.regionIds,
+            CategoryIds: data.categoryIds,
+            CanTakeOrders: data.canTakeOrders,
+            CanTakePayment: data.canTakePayment,
+            CanCancelAndDiscount: data.canCancelAndDiscount,
+            CanTransferAndReserve: data.canTransferAndReserve
         });
     },
     deleteUser: async (id: string) => {

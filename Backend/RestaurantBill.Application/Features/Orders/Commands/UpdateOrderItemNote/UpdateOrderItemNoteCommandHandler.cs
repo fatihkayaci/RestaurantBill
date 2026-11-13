@@ -30,6 +30,10 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemNot
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
+            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, order.TableId, WaiterPermission.TakeOrders, cancellationToken);
+            if (accessError is not null)
+                return Result.Failure(accessError);
+
             order.UpdateItemNote(request.OrderItemId, request.Note ?? string.Empty);
 
             await _db.SaveChangesAsync(cancellationToken);

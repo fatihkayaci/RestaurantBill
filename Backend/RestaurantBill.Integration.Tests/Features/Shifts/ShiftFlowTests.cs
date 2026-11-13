@@ -32,10 +32,13 @@ public class ShiftFlowTests : IntegrationTestBase
     private static FakeCurrentUserService Cashier(Guid userId) =>
         new() { BranchId = RestaurantId, UserId = userId, Role = "Cashier" };
 
+    // Kasiyer şubeye kasiyer olarak bağlıdır: yönetici günü ancak böyle birine atayabilir.
     private async Task<Guid> SeedUserAsync(string fullName)
     {
         User user = User.Create(fullName, $"{Guid.NewGuid():N}@test.com", "05000000000");
         await DbContext.Users.AddAsync(user);
+        Branch branch = await DbContext.Branches.SingleAsync(b => b.Id == RestaurantId);
+        await DbContext.UserBranches.AddAsync(UserBranch.Create(user, branch, $"u{Guid.NewGuid():N}"[..12], null, UserRole.Cashier));
         await DbContext.SaveChangesAsync();
         return user.Id;
     }
@@ -48,9 +51,13 @@ public class ShiftFlowTests : IntegrationTestBase
         return register;
     }
 
+    // Kasiyer günü kendisi başlatamaz: kasiyer için açılan gün yönetici (CurrentUser) tarafından ona atanır.
     private Task<Domain.Shared.Result<Application.DTOs.ShiftDto>> OpenAsync(ICurrentUserService user, Guid registerId, decimal? counted = null) =>
-        new OpenShiftCommandHandler(AppDb, user)
-            .Handle(new OpenShiftCommand { CashRegisterId = registerId, CountedBalance = counted }, CancellationToken.None);
+        user.Role == "Cashier"
+            ? new OpenShiftCommandHandler(AppDb, CurrentUser, new NullCashierNotificationService())
+                .Handle(new OpenShiftCommand { CashRegisterId = registerId, CountedBalance = counted, ForUserId = user.UserId }, CancellationToken.None)
+            : new OpenShiftCommandHandler(AppDb, user, new NullCashierNotificationService())
+                .Handle(new OpenShiftCommand { CashRegisterId = registerId, CountedBalance = counted }, CancellationToken.None);
 
     private Task<Domain.Shared.Result<Application.DTOs.ShiftDto>> CloseAsync(ICurrentUserService user, Guid shiftId, decimal counted) =>
         new CloseShiftCommandHandler(AppDb, user, _calculator)
@@ -104,12 +111,29 @@ public class ShiftFlowTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Cashier_CannotStartOwnShift_OrTakeOver()
+    {
+        CashRegister register = await SeedRegisterAsync(100m);
+        var alice = Cashier(await SeedUserAsync("Ayşe"));
+
+        var open = await new OpenShiftCommandHandler(AppDb, alice, new NullCashierNotificationService())
+            .Handle(new OpenShiftCommand { CashRegisterId = register.Id }, CancellationToken.None);
+        Assert.False(open.IsSuccess);
+
+        await OpenAsync(Cashier(await SeedUserAsync("Bora")), register.Id);
+        var takeOver = await new TakeOverShiftCommandHandler(AppDb, alice, _calculator)
+            .Handle(new TakeOverShiftCommand { CashRegisterId = register.Id, CountedBalance = 100m }, CancellationToken.None);
+        Assert.False(takeOver.IsSuccess);
+    }
+
+    // Devral artık yalnızca yönetici içindir (kasiyer ekranında devral yok).
+    [Fact]
     public async Task TakeOver_ClosesTheOpenShiftWithTheCountAndOpensANewOne()
     {
         CashRegister register = await SeedRegisterAsync(100m);
         Guid aliceId = await SeedUserAsync("Ayşe");
         var alice = Cashier(aliceId);
-        var bora = Cashier(await SeedUserAsync("Bora"));
+        var bora = new FakeCurrentUserService { BranchId = RestaurantId, UserId = await SeedUserAsync("Bora"), Role = "Admin" };
 
         var first = await OpenAsync(alice, register.Id);
         DbContext.CashTransactions.Add(register.AddTransaction(CashTransactionType.In, 50m, aliceId));
@@ -173,7 +197,7 @@ public class ShiftFlowTests : IntegrationTestBase
             .Handle(new CreatePaymentCommand { OrderId = order.Id, CashRegisterId = register.Id, PaymentMethod = PaymentMethod.Nakit }, CancellationToken.None);
 
         Assert.True(result.IsFailure);
-        Assert.Contains("devralmanız", result.Error);
+        Assert.Contains("gününe atanmış", result.Error);
     }
 
     [Fact]

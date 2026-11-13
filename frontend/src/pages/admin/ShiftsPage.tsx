@@ -20,7 +20,7 @@ import LateCountModal from './components/LateCountModal';
 import ShiftDetailModal from './components/ShiftDetailModal';
 import StartShiftModal from './components/StartShiftModal';
 
-const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR' };
+const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR', 4: 'IBAN' };
 const REVIEW_PENDING = 1;
 const REVIEW_REJECTED = 3;
 const COUNT_NOT_COUNTED = 2;
@@ -123,9 +123,11 @@ export default function ShiftsPage() {
     useEffect(() => {
         const { connection, stop } = createHubConnection('/cashier-hub');
         connection.on('ShiftAutoClosed', (cashRegisterName: string) => {
-            toast.info(`${cashRegisterName} kasasındaki vardiya gün sonu saatinde sayımsız kapatıldı.`);
+            toast.info(`${cashRegisterName} kasasındaki gün, gün sonu saatinde sayımsız kapatıldı.`);
             refreshAll();
         });
+        // Başka bir yönetici (ya da sahip) bir kasada gün başlattı.
+        connection.on('ShiftsChanged', () => refreshAll());
         connection.start().catch((err: Error) => {
             if (!err.message.includes('stopped during negotiation')) console.error('SignalR Connection Error:', err);
         });
@@ -190,7 +192,7 @@ export default function ShiftsPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-serif font-bold text-foreground">Vardiyalar</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">Kasa başına açık vardiya, sayım ve fark onayı</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">Günü başlat, kasayı kasiyere ata; kapanış sayımı ve fark onayı</p>
                 </div>
                 {dayEndTime && (
                     <p className="text-xs text-muted-foreground">Gün sonu saati {dayEndTime} · sayılmayan vardiyalar o saatte sistem tarafından kapanır</p>
@@ -265,14 +267,19 @@ export default function ShiftsPage() {
                                                 <p className="font-semibold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister ?? 0)}</p>
                                             </div>
                                         </div>
-                                        {summary.breakdown.some(b => b.method === 3 && b.amount > 0) && (
-                                            <p className="text-xs text-muted-foreground">{METHOD_LABELS[3]} {formatTL(summary.breakdown.find(b => b.method === 3)!.amount)}</p>
+                                        {summary.breakdown.some(b => (b.method === 3 || b.method === 4) && b.amount > 0) && (
+                                            <p className="text-xs text-muted-foreground">
+                                                {summary.breakdown
+                                                    .filter(b => (b.method === 3 || b.method === 4) && b.amount > 0)
+                                                    .map(b => `${METHOD_LABELS[b.method]} ${formatTL(b.amount)}`)
+                                                    .join(' · ')}
+                                            </p>
                                         )}
                                         {summary.openTablesCount > 0 && (
                                             <p className="text-sm text-rb-amber">⚠ {summary.openTablesCount} masanın hesabı hâlâ açık</p>
                                         )}
                                         <div className="flex gap-2 mt-auto">
-                                            <button onClick={() => setCloseTarget({ id: shift.id, cashRegisterName: candidate.cashRegisterName })} className="flex-1 rounded-lg bg-rb-gold text-rb-gold-foreground text-sm font-semibold py-2 hover:opacity-90 transition-opacity">Sayımla kapat</button>
+                                            <button onClick={() => setCloseTarget({ id: shift.id, cashRegisterName: candidate.cashRegisterName })} className="flex-1 rounded-lg bg-rb-gold text-rb-gold-foreground text-sm font-semibold py-2 hover:opacity-90 transition-opacity">Gün kapat</button>
                                             <button onClick={() => setCloseWithoutCountTarget({ id: shift.id, cashRegisterName: candidate.cashRegisterName })} className="rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors">Sayımsız kapat</button>
                                             <button onClick={() => setDetailTarget({ id: shift.id, cashRegisterName: candidate.cashRegisterName })} className="rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors">Detay</button>
                                         </div>
@@ -283,19 +290,19 @@ export default function ShiftsPage() {
 
                                 {state === 'empty' && (
                                     <>
-                                        <p className="text-sm leading-relaxed text-muted-foreground">Kasa hazır. Kendi vardiyanı başlatabilir ya da gelecek kasiyer için açabilirsin; kasiyer girince sayım istenmez.</p>
-                                        <button onClick={() => setStartTarget(candidate)} className="mt-auto rounded-lg bg-rb-gold text-rb-gold-foreground text-sm font-semibold py-2 hover:opacity-90 transition-opacity">Vardiya başlat</button>
+                                        <p className="text-sm leading-relaxed text-muted-foreground">Kasa hazır. Günü başlatıp bir kasiyere ata; kasiyer, kasası atanmadan ödeme ekranına giremez. İstersen günü kendi adına da başlatabilirsin.</p>
+                                        <button onClick={() => setStartTarget(candidate)} className="mt-auto rounded-lg bg-rb-gold text-rb-gold-foreground text-sm font-semibold py-2 hover:opacity-90 transition-opacity">Gün başlat</button>
                                     </>
                                 )}
 
                                 {state === 'uncounted' && (
                                     <>
                                         <p className="text-sm leading-relaxed text-muted-foreground">
-                                            Vardiya sayılmadan kapandı. Sayımı şimdi girersen fark {candidate.lastShiftOwnerName ? `${candidate.lastShiftOwnerName} adlı kişinin` : 'o'} vardiyasına yazılır; girmezsen sıradaki kişi açılışta sayar.
+                                            Gün sayılmadan kapandı. Kapanış sayımını şimdi girersen fark {candidate.lastShiftOwnerName ? `${candidate.lastShiftOwnerName} adlı kişinin` : 'o'} gününe yazılır; girmezsen sayım bir sonraki gün başlatılırken istenir.
                                         </p>
                                         <div className="flex gap-2 mt-auto">
-                                            <button onClick={() => candidate.lastClosedShiftId && openLateCount(candidate.lastClosedShiftId)} className="flex-1 rounded-lg bg-rb-gold text-rb-gold-foreground text-sm font-semibold py-2 hover:opacity-90 transition-opacity">Sayım gir</button>
-                                            <button onClick={() => setStartTarget(candidate)} className="rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors">Vardiya başlat</button>
+                                            <button onClick={() => candidate.lastClosedShiftId && openLateCount(candidate.lastClosedShiftId)} className="flex-1 rounded-lg bg-rb-gold text-rb-gold-foreground text-sm font-semibold py-2 hover:opacity-90 transition-opacity">Gün kapat</button>
+                                            <button onClick={() => setStartTarget(candidate)} className="rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors">Gün başlat</button>
                                         </div>
                                     </>
                                 )}
@@ -409,8 +416,8 @@ export default function ShiftsPage() {
                                                         <button onClick={() => { setReviewTarget({ shift: s, type: 'closing', action: 'reject' }); setRejectNote(''); }} className="text-rb-red hover:underline">Reddet</button>
                                                     </div>
                                                 )}
-                                                {isOpen && <button onClick={() => setCloseTarget({ id: s.id, cashRegisterName: s.cashRegisterName })} className="text-rb-amber hover:underline">Sayımla kapat</button>}
-                                                {requiresCount(s) && <button onClick={() => setLateCountTarget(s)} className="text-rb-amber hover:underline">Sayım gir</button>}
+                                                {isOpen && <button onClick={() => setCloseTarget({ id: s.id, cashRegisterName: s.cashRegisterName })} className="text-rb-amber hover:underline">Gün kapat</button>}
+                                                {requiresCount(s) && <button onClick={() => setLateCountTarget(s)} className="text-rb-amber hover:underline">Gün kapat</button>}
                                                 <button onClick={() => setDetailTarget({ id: s.id, cashRegisterName: s.cashRegisterName })} className="text-muted-foreground hover:text-foreground">Detay</button>
                                             </div>
                                         </td>

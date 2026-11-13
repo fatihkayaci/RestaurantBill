@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import type { Table, Reservation } from "@/features/tables/types";
 import type { Order, OrderItem } from "@/features/orders/types";
@@ -20,6 +21,7 @@ import { createHubConnection } from "@/lib/signalrConnection";
 import PaymentPanel from '../cashier/components/PaymentPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
 import TableQrModal from '@/features/tables/components/TableQrModal';
+import BulkTableQrModal from '@/features/tables/components/BulkTableQrModal';
 import CustomerOrderRequests from '../waiter/components/CustomerOrderRequests';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import type { OrderRequest } from '@/features/customerSite/types';
@@ -91,6 +93,7 @@ export default function Tables() {
     const [editTable, setEditTable] = useState<Table | null>(null);
     // Müşteri QR'ı gösterilen masa.
     const [qrTable, setQrTable] = useState<Table | null>(null);
+    const [bulkQrOpen, setBulkQrOpen] = useState(false);
     // Masa QR'ından gelen, onay bekleyen müşteri siparişleri (garsonu olmayan işletmede sahibi onaylar).
     const [orderRequests, setOrderRequests] = useState<OrderRequest[]>([]);
     const [newTableName, setNewTableName] = useState('');
@@ -110,10 +113,20 @@ export default function Tables() {
     const [regionDeleteTargetId, setRegionDeleteTargetId] = useState<string | null>(null);
     const [regionDeleteError, setRegionDeleteError] = useState<string | null>(null);
 
-    const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [selectedTableId, setSelectedTableId] = useState<string | null>(() => searchParams.get('table'));
     const selectedTable = tables.find(t => t.id === selectedTableId) ?? null;
     const selectedTableIdRef = useRef<string | null>(null);
     useEffect(() => { selectedTableIdRef.current = selectedTableId; }, [selectedTableId]);
+
+    // Genel Bakış'taki masa haritasından gelinince (?table=<id>) o masa seçili açılır (yukarıdaki ilk değer);
+    // adres temizlenir ki sayfa yenilenince panel kendiliğinden tekrar açılmasın.
+    useEffect(() => {
+        if (!searchParams.has('table')) return;
+        const next = new URLSearchParams(searchParams);
+        next.delete('table');
+        setSearchParams(next, { replace: true });
+    }, [searchParams, setSearchParams]);
 
     const [activeTab, setActiveTab] = useState<PanelTab>('new-order');
     const [panelLoading, setPanelLoading] = useState(true);
@@ -189,7 +202,13 @@ export default function Tables() {
         const { connection, stop } = createHubConnection('/table-hub');
 
         connection.on("TableStatusChanged", (changedTableId: string, status: number) => {
-            setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, status } : t));
+            // Masa boşaldıysa (ödeme/iptal/taşıma) "hesap istendi" de kalkar.
+            setTables(prev => prev.map(t => t.id === changedTableId
+                ? { ...t, status, billRequestedAt: status === 2 ? t.billRequestedAt : null }
+                : t));
+        });
+        connection.on("BillRequestChanged", (changedTableId: string, billRequestedAt: string | null) => {
+            setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, billRequestedAt } : t));
         });
         connection.on("OrderUpdated", (changedTableId: string, totalPrice: number, createdByUserName: string) => {
             setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, activeOrderTotal: totalPrice, createdByUserName } : t));
@@ -389,7 +408,8 @@ export default function Tables() {
                 setPanelLoading(false);
             }
         })();
-    }, [selectedTableId]);
+        // selectedTable?.id: Genel Bakış'tan ?table= ile gelince masa listesi seçimden sonra yüklenir; liste gelince de çalışsın.
+    }, [selectedTable?.id]);
 
     const closePanel = () => {
         setSelectedTableId(null);
@@ -409,7 +429,7 @@ export default function Tables() {
         setNewItems(prev => {
             const existing = prev.find(i => i.productId === product.id);
             if (existing) return prev.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
-            return [...prev, { id: 0, productId: product.id, productName: product.name, unitPrice: product.price, quantity: 1, status: 1, is_load: false, categoryName: product.categoryName, taxRate: 0, note: '' }];
+            return [...prev, { id: 0, productId: product.id, productName: product.name, unitPrice: product.price, quantity: 1, status: 1, is_load: false, categoryName: product.categoryName, taxRate: 0, note: '', createdAt: new Date().toISOString(), prepMinutes: product.prepMinutes }];
         });
     };
     const decreaseNewItem = (productId: string) => {
@@ -580,12 +600,23 @@ export default function Tables() {
                     <h1 className="text-2xl font-serif font-bold text-foreground">Masalar</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">{tables.length} masa</p>
                 </div>
-                <button
-                    onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                >
-                    + Masa Ekle
-                </button>
+                <div className="flex items-center gap-2">
+                    {tables.length > 0 && (
+                        <button
+                            onClick={() => setBulkQrOpen(true)}
+                            className="flex items-center gap-1.5 border border-border bg-card hover:bg-muted text-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                        >
+                            <QrCode className="w-4 h-4" aria-hidden="true" />
+                            Toplu QR
+                        </button>
+                    )}
+                    <button
+                        onClick={openCreateModal}
+                        className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    >
+                        + Masa Ekle
+                    </button>
+                </div>
             </div>
 
             <CustomerOrderRequests requests={orderRequests} onChanged={loadOrderRequests} />
@@ -786,10 +817,21 @@ export default function Tables() {
                                         )}
                                         {table.status === 2 && (
                                             <>
+                                                {table.billRequestedAt && (
+                                                    <span className="self-start mt-1 rounded-md bg-rb-accent-bg px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.6px] text-rb-accent">
+                                                        Hesap istendi · {formatElapsed(table.billRequestedAt, now)}
+                                                    </span>
+                                                )}
                                                 <div className="flex items-center justify-between mt-1">
                                                     <span className={cn("text-xs", cfg.hint)}>Aktif sipariş</span>
                                                     <span className="text-sm font-bold text-foreground">₺{formatPrice(table.activeOrderTotal)}</span>
                                                 </div>
+                                                {(table.paidAmount ?? 0) > 0 && (
+                                                    <div className="flex items-center justify-between text-[11px] font-semibold">
+                                                        <span className="text-rb-green">Ödenen ₺{formatPrice(table.paidAmount ?? 0)}</span>
+                                                        <span className="text-foreground">Kalan ₺{formatPrice(table.activeOrderTotal - (table.paidAmount ?? 0))}</span>
+                                                    </div>
+                                                )}
                                                 {table.occupiedSince && (
                                                     <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">
                                                         <span>Açılış: {new Date(table.occupiedSince).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -922,6 +964,7 @@ export default function Tables() {
             )}
 
             {qrTable && <TableQrModal table={qrTable} onClose={() => setQrTable(null)} />}
+            {bulkQrOpen && <BulkTableQrModal tables={tables} regions={regions} onClose={() => setBulkQrOpen(false)} />}
 
             {/* Bölge Silme Onay */}
             <AlertDialog open={regionDeleteTargetId !== null} onOpenChange={open => !open && closeRegionDeleteDialog()}>
@@ -1294,32 +1337,41 @@ export default function Tables() {
                                             <span>Ara Toplam</span>
                                             <span>₺{formatPrice(tableOrder.totalPrice)}</span>
                                         </div>
+                                        {(tableOrder.paidAmount ?? 0) > 0 && (
+                                            <div className="flex justify-between pt-1.5 text-sm font-semibold">
+                                                <span className="text-rb-green">Ödenen ₺{formatPrice(tableOrder.paidAmount ?? 0)}</span>
+                                                <span className="text-foreground">Kalan ₺{formatPrice(tableOrder.remainingAmount ?? tableOrder.totalPrice)}</span>
+                                            </div>
+                                        )}
                                     </>
                                 )}
 
-                                {/* Ödeme Al + Masayı Kapat — masa durumu ne olursa olsun, aktif bir sipariş varsa görünür */}
+                                {/* Masayı Taşı · Ödeme Al · Siparişi İptal Et — tek satır, panelin altına yapışık.
+                                    Masa durumu ne olursa olsun, aktif bir sipariş varsa görünür. */}
                                 {tableOrder && (
-                                    <div className={tableOrder.orderItems.length === 0 ? 'mt-4 pt-4 border-t space-y-2' : 'mt-3 space-y-2'}>
-                                        {tableOrder.orderItems.length > 0 && (
+                                    <div className="sticky bottom-0 mt-auto -mx-4 px-4 pt-3 pb-1 bg-background border-t">
+                                        <div className="flex gap-2">
                                             <button
-                                                onClick={() => setPaymentOrder(tableOrder)}
-                                                className="w-full h-12 rounded-xl bg-rb-gold text-rb-gold-foreground font-semibold text-sm hover:bg-rb-gold/85 transition-colors"
+                                                onClick={() => setTransferModalOpen(true)}
+                                                className="flex-1 basis-0 min-w-0 min-h-12 px-2 rounded-xl border border-border text-foreground font-semibold text-sm leading-tight hover:bg-muted transition-colors"
                                             >
-                                                Ödeme Al
+                                                Masayı Taşı
                                             </button>
-                                        )}
-                                        <button
-                                            onClick={() => setTransferModalOpen(true)}
-                                            className="w-full rounded-xl border border-border text-foreground font-semibold text-sm py-2.5 hover:bg-muted transition-colors"
-                                        >
-                                            Masayı Taşı
-                                        </button>
-                                        <button
-                                            onClick={() => setCancelConfirmOpen(true)}
-                                            className="w-full rounded-xl border border-destructive/30 text-destructive font-semibold text-sm py-2.5 hover:bg-destructive/10 transition-colors"
-                                        >
-                                            Masayı Kapat
-                                        </button>
+                                            {tableOrder.orderItems.length > 0 && (
+                                                <button
+                                                    onClick={() => setPaymentOrder(tableOrder)}
+                                                    className="flex-1 basis-0 min-w-0 min-h-12 px-2 rounded-xl bg-rb-gold text-rb-gold-foreground font-semibold text-sm leading-tight hover:bg-rb-gold/85 transition-colors"
+                                                >
+                                                    Ödeme Al
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => setCancelConfirmOpen(true)}
+                                                className="flex-1 basis-0 min-w-0 min-h-12 px-2 rounded-xl border border-destructive/30 text-destructive font-semibold text-sm leading-tight hover:bg-destructive/10 transition-colors"
+                                            >
+                                                Siparişi İptal Et
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1339,6 +1391,7 @@ export default function Tables() {
                         <PaymentPanel
                             order={paymentOrder}
                             cashRegisterMode="manual"
+                            onPartialPayment={() => void refreshTables()}
                             onClose={() => setPaymentOrder(null)}
                             onComplete={async () => {
                                 setPaymentOrder(null);
@@ -1364,16 +1417,16 @@ export default function Tables() {
                 />
             )}
 
-            {/* Masayı Kapat Onay */}
+            {/* Siparişi İptal Et onayı (eski adı "Masayı Kapat"; iptal ediyordu, adı yanıltıcıydı) */}
             <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Masayı kapat</AlertDialogTitle>
-                        <AlertDialogDescription>{selectedTable?.name} için aktif sipariş iptal edilecek ve masa boşaltılacaktır. Emin misiniz?</AlertDialogDescription>
+                        <AlertDialogTitle>Siparişi iptal et</AlertDialogTitle>
+                        <AlertDialogDescription>{selectedTable?.name} için aktif sipariş iptal edilecek ve masa boşaltılacak. Bu işlem ödeme almaz ve geri alınamaz. Emin misiniz?</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Masayı Kapat</AlertDialogAction>
+                        <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Siparişi İptal Et</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

@@ -45,7 +45,7 @@ public class OpenShiftForUserTests : ApplicationTestBase
     {
         var (_, register, cashier) = await SeedAsync();
         var admin = new FakeCurrentUserService { UserId = CurrentUser.UserId, Role = "Admin", BranchId = CurrentUser.BranchId, CompanyId = CurrentUser.CompanyId };
-        var handler = new OpenShiftCommandHandler(Db, admin);
+        var handler = new OpenShiftCommandHandler(Db, admin, new FakeCashierNotificationService());
 
         var result = await handler.Handle(new OpenShiftCommand { CashRegisterId = register.Id, ForUserId = cashier.Id }, CancellationToken.None);
 
@@ -61,7 +61,7 @@ public class OpenShiftForUserTests : ApplicationTestBase
     {
         var (_, register, cashier) = await SeedAsync();
         var otherCashier = new FakeCurrentUserService { UserId = Guid.NewGuid(), Role = "Cashier", BranchId = CurrentUser.BranchId, CompanyId = CurrentUser.CompanyId };
-        var handler = new OpenShiftCommandHandler(Db, otherCashier);
+        var handler = new OpenShiftCommandHandler(Db, otherCashier, new FakeCashierNotificationService());
 
         var result = await handler.Handle(new OpenShiftCommand { CashRegisterId = register.Id, ForUserId = cashier.Id }, CancellationToken.None);
 
@@ -81,11 +81,39 @@ public class OpenShiftForUserTests : ApplicationTestBase
         await DbContext.SaveChangesAsync();
 
         var admin = new FakeCurrentUserService { UserId = CurrentUser.UserId, Role = "Admin", BranchId = CurrentUser.BranchId, CompanyId = CurrentUser.CompanyId };
-        var handler = new OpenShiftCommandHandler(Db, admin);
+        var handler = new OpenShiftCommandHandler(Db, admin, new FakeCashierNotificationService());
 
         var result = await handler.Handle(new OpenShiftCommand { CashRegisterId = register.Id, ForUserId = waiter.Id }, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Empty(DbContext.Shifts);
+    }
+
+    [Fact]
+    public async Task Cashier_CannotOpenShift_ForThemselves()
+    {
+        var (_, register, cashier) = await SeedAsync();
+        var asCashier = new FakeCurrentUserService { UserId = cashier.Id, Role = "Cashier", BranchId = CurrentUser.BranchId, CompanyId = CurrentUser.CompanyId };
+        var notifications = new FakeCashierNotificationService();
+
+        var result = await new OpenShiftCommandHandler(Db, asCashier, notifications)
+            .Handle(new OpenShiftCommand { CashRegisterId = register.Id }, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Empty(DbContext.Shifts);
+        Assert.Equal(0, notifications.ShiftsChangedCount);
+    }
+
+    [Fact]
+    public async Task Admin_OpeningShiftForCashier_NotifiesWaitingScreens()
+    {
+        var (_, register, cashier) = await SeedAsync();
+        var notifications = new FakeCashierNotificationService();
+
+        var result = await new OpenShiftCommandHandler(Db, CurrentUser, notifications)
+            .Handle(new OpenShiftCommand { CashRegisterId = register.Id, ForUserId = cashier.Id }, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(1, notifications.ShiftsChangedCount);
     }
 }

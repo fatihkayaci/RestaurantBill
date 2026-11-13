@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getTenantSlug } from '@/lib/tenant';
 import type {
-    Availability, OrderRequestStatus, PublicSite, PublicTableInfo, ReservationStatusInfo,
+    Availability, DaySlot, OrderRequestStatus, PublicSite, PublicTableInfo, ReservationStatusInfo,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5077';
@@ -47,6 +47,10 @@ export const publicService = {
     },
     getAvailability: async (branchId: string, date: string, time: string) => {
         const response = await publicApi.get<Availability>('/availability', { params: { branchId, date, time } });
+        return response.data;
+    },
+    getDaySlots: async (branchId: string, date: string) => {
+        const response = await publicApi.get<DaySlot[]>('/day-slots', { params: { branchId, date } });
         return response.data;
     },
     createOrderRequest: async (tableId: string, items: OrderRequestItemInput[], note: string) => {

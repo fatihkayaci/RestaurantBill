@@ -12,6 +12,11 @@ public class CreatePaymentCommand : IRequest<Result<bool>>, IIdempotent
     public Guid CashRegisterId { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
     public ICollection<PaymentItemDto> Items { get; set; } = new List<PaymentItemDto>();
+    /// <summary>
+    /// "Tutar gir": ürün seçmeden ödenen tutar. Doluysa Items boş gönderilir; kalan tutardan azsa hesaba ödeme
+    /// olarak yazılır (ürünler masada kalır), kalana eşitse hesap kapanır.
+    /// </summary>
+    public decimal? Amount { get; set; }
     public decimal? DiscountPercent { get; set; }
     public decimal? DiscountAmount { get; set; }
     public string? DiscountNote { get; set; }

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.Features.Users;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -111,6 +112,14 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
                 membership.Update(request.UserName, request.UserCode, request.Role);
                 if (request.HireDate.HasValue)
                     membership.SetHireDate(request.HireDate.Value);
+            }
+
+            // Garson/mutfak tek şubede çalışır; bölge, kategori ve yetkiler o üyeliğe yazılır.
+            if (userBranch is not null)
+            {
+                string? assignmentError = await StaffAssignment.ApplyAsync(_db, userBranch, request.Role, request, cancellationToken);
+                if (assignmentError is not null)
+                    return Result.Failure(assignmentError);
             }
 
             if (!string.IsNullOrWhiteSpace(request.Password))

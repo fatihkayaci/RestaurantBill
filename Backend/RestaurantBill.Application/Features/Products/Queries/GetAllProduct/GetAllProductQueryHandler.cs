@@ -37,7 +37,12 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
                     IsActive = p.IsActive,
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category.Name,
-                    ImageUrl = p.ImageUrl
+                    ImageUrl = p.ImageUrl,
+                    Description = p.Description,
+                    IsFeatured = p.IsFeatured,
+                    PrepMinutes = p.PrepMinutes,
+                    TaxRate = p.TaxRate,
+                    EffectiveTaxRate = p.TaxRate ?? p.Category.TaxRate ?? p.Category.Branch.TaxRate
                 })
                 .ToListAsync(cancellationToken);
 

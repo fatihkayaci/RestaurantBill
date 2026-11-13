@@ -29,6 +29,10 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTab
             if (!tableAccessible)
                 return Result<OrderDto?>.Failure("Böyle bir masa bulunamadı.");
 
+            string? accessError = await _db.CheckTableAccessAsync(_currentUser, request.TableId, null, cancellationToken);
+            if (accessError is not null)
+                return Result<OrderDto?>.Failure(accessError);
+
             var order = await _orderQueries.GetActiveOrderByTableIdAsync(request.TableId, trackChanges: false, cancellationToken);
             return Result<OrderDto?>.Success(order?.ToDto());
         }

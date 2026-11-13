@@ -9,7 +9,7 @@ namespace RestaurantBill.Application.Features.Reports.Queries.GetTaxReport;
 
 public class GetTaxReportQueryHandler : IRequestHandler<GetTaxReportQuery, Result<TaxReportDto>>
 {
-    private record TaxRow(decimal Matrah, decimal TaxAmount, decimal TotalAmount);
+    private record TaxRow(decimal TaxRate, decimal Matrah, decimal TaxAmount, decimal TotalAmount);
 
     private readonly IAppDbContext _db;
     private readonly IReportScopeResolver _scope;
@@ -39,13 +39,15 @@ public class GetTaxReportQueryHandler : IRequestHandler<GetTaxReportQuery, Resul
             List<TaxRow> rows = await _db.Payments
                 .AsNoTracking()
                 .Where(p => p.CashRegister.BranchId == branch.Id && p.CreatedAt >= fromUtc && p.CreatedAt < toUtc)
-                .Select(p => new TaxRow(p.Matrah, p.TaxAmount, p.TotalAmount))
+                .Select(p => new TaxRow(p.TaxRate, p.Matrah, p.TaxAmount, p.TotalAmount))
                 .ToListAsync(cancellationToken);
             allRows.AddRange(rows);
         }
 
         List<TaxRateRowDto> rates = allRows
-            .GroupBy(r => r.Matrah > 0 ? Math.Round(r.TaxAmount / r.Matrah * 100, 0) : 0)
+            // Satırın kendi oranı kullanılır: tutar girerek alınan küçük ödemelerde kuruşa yuvarlı matrah/KDV'den
+            // geri hesaplanan oran sapabilir. Oranı yazılmamış eski satırlarda (yalnızca KDV'si olan) geri hesaplanır.
+            .GroupBy(r => r.TaxRate != 0 || r.TaxAmount == 0 || r.Matrah <= 0 ? r.TaxRate : Math.Round(r.TaxAmount / r.Matrah * 100, 0))
             .Select(g => new TaxRateRowDto
             {
                 TaxRatePercent = g.Key,

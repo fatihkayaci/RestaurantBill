@@ -10,6 +10,8 @@ interface Props {
     requests: OrderRequest[];
     /** Onay/red sonrası liste yeniden çekilsin. */
     onChanged: () => void;
+    /** Garsonun "Masa taşı ve rezervasyon" yetkisi yoksa talepler yalnızca görüntülenir. */
+    canDecide?: boolean;
 }
 
 function minutesAgo(createdAt: string, now: number): string {
@@ -21,7 +23,7 @@ function minutesAgo(createdAt: string, now: number): string {
 
 // Müşterilerin masadaki QR'dan gönderdiği, garson onayı bekleyen siparişler.
 // Onaylanan sipariş masanın adisyonuna eklenir ve mutfağa düşer; reddedilen hiçbir yere gitmez.
-export default function CustomerOrderRequests({ requests, onChanged }: Props) {
+export default function CustomerOrderRequests({ requests, onChanged, canDecide = true }: Props) {
     const [busyId, setBusyId] = useState<string | null>(null);
     const [now] = useState(() => Date.now());
 
@@ -78,26 +80,30 @@ export default function CustomerOrderRequests({ requests, onChanged }: Props) {
 
                         <p className="mt-3 text-base font-semibold text-foreground">Toplam {formatPrice(request.total)} ₺</p>
 
-                        <div className="mt-3 grid grid-cols-2 gap-2.5">
-                            <button
-                                type="button"
-                                onClick={() => decide(request, false)}
-                                disabled={busyId !== null}
-                                className="flex h-12 items-center justify-center gap-2 rounded-xl border-[1.5px] border-border bg-card text-base font-semibold text-foreground transition-colors hover:border-rb-red hover:text-rb-red disabled:opacity-50"
-                            >
-                                <X className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
-                                Reddet
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => decide(request, true)}
-                                disabled={busyId !== null}
-                                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-rb-gold text-base font-semibold text-rb-gold-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-                            >
-                                <Check className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
-                                {busyId === request.id ? 'İşleniyor…' : 'Onayla'}
-                            </button>
-                        </div>
+                        {!canDecide ? (
+                            <p className="mt-3 text-sm text-rb-text-sub">Onaylamak için yetkiniz yok; yöneticinize haber verin.</p>
+                        ) : (
+                            <div className="mt-3 grid grid-cols-2 gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => decide(request, false)}
+                                    disabled={busyId !== null}
+                                    className="flex h-12 items-center justify-center gap-2 rounded-xl border-[1.5px] border-border bg-card text-base font-semibold text-foreground transition-colors hover:border-rb-red hover:text-rb-red disabled:opacity-50"
+                                >
+                                    <X className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
+                                    Reddet
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => decide(request, true)}
+                                    disabled={busyId !== null}
+                                    className="flex h-12 items-center justify-center gap-2 rounded-xl bg-rb-gold text-base font-semibold text-rb-gold-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                                >
+                                    <Check className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
+                                    {busyId === request.id ? 'İşleniyor…' : 'Onayla'}
+                                </button>
+                            </div>
+                        )}
                     </article>
                 ))}
             </div>

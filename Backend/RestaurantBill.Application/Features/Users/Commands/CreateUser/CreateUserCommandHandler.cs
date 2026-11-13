@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Features.Users;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Shared;
@@ -81,6 +82,9 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
             user.SetPasswordHash(_passwordHasher.HashPassword(user, request.PasswordHash));
             UserBranch userBranch = UserBranch.Create(user, branch, request.UserName, request.UserCode, request.Role);
             userBranch.SetHireDate(request.HireDate ?? DateTime.UtcNow);
+            string? assignmentError = await StaffAssignment.ApplyAsync(_db, userBranch, request.Role, request, cancellationToken);
+            if (assignmentError is not null)
+                return Result.Failure(assignmentError);
 
             _db.Users.Add(user);
             _db.UserBranches.Add(userBranch);

@@ -44,6 +44,15 @@ public class PublicController : BaseController
         return HandleResult(result);
     }
 
+    /// <summary>Bir günün saat başı rezervasyon başlangıçları ve hangilerinde boş masa kalmadığı.</summary>
+    [EnableRateLimiting("public-read")]
+    [HttpGet("day-slots")]
+    public async Task<IActionResult> GetDaySlots([FromQuery] Guid? branchId, [FromQuery] string date, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetDaySlotsQuery { BranchId = branchId, Date = date ?? string.Empty }, cancellationToken);
+        return HandleResult(result);
+    }
+
     [EnableRateLimiting("public-write")]
     [HttpPost("order-requests")]
     public async Task<IActionResult> CreateOrderRequest([FromBody] CreateOrderRequestCommand command, CancellationToken cancellationToken)

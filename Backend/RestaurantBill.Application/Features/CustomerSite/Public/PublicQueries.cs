@@ -40,7 +40,7 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
         var products = await db.Products.AsNoTracking()
             .Where(p => p.Category.BranchId == branch.Id && p.IsActive)
             .OrderBy(p => p.Name)
-            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId })
+            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.PrepMinutes })
             .ToListAsync(cancellationToken);
 
         foreach (PublicCategoryDto category in categories)
@@ -52,7 +52,10 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
                     Id = p.Id,
                     Name = p.Name,
                     Price = p.Price,
-                    ImageUrl = string.IsNullOrWhiteSpace(p.ImageUrl) ? string.Empty : $"{cdnBaseUrl}/{p.ImageUrl}"
+                    ImageUrl = string.IsNullOrWhiteSpace(p.ImageUrl) ? string.Empty : $"{cdnBaseUrl}/{p.ImageUrl}",
+                    Description = p.Description,
+                    IsFeatured = p.IsFeatured,
+                    PrepMinutes = p.PrepMinutes
                 })
                 .ToList();
         }
@@ -94,8 +97,21 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
             Phone = branch.Number,
             Branches = branches,
             Categories = categories.Where(c => c.Products.Count > 0).ToList(),
-            Regions = regions.Where(r => r.Tables.Count > 0).ToList()
+            Regions = regions.Where(r => r.Tables.Count > 0).ToList(),
+            Site = BranchSiteDto.From(branch, cdnBaseUrl),
+            IsOpenNow = IsOpenNow(branch),
+            Reservation = ReservationRulesDto.From(branch)
         });
+    }
+
+    // Kapanış açılıştan önceyse (ör. 18:00–02:00) gece yarısını aşan aralık sayılır.
+    private static bool? IsOpenNow(Branch branch)
+    {
+        if (branch.OpensAt is not TimeOnly opens || branch.ClosesAt is not TimeOnly closes) return null;
+        TimeZoneInfo zone = CustomerSiteScope.ZoneOf(branch.TimeZoneId);
+        TimeOnly now = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone));
+        if (opens == closes) return true;
+        return opens < closes ? now >= opens && now < closes : now >= opens || now < closes;
     }
 }
 
@@ -148,7 +164,7 @@ public class GetReservationAvailabilityQueryHandler(IAppDbContext db, ITenantRes
         if (branch is null)
             return Result<AvailabilityDto>.Failure("Restoran bulunamadı.");
 
-        string? error = CustomerSiteScope.TryResolveSlot(branch.TimeZoneId, request.Date, request.Time, DateTime.UtcNow, out DateTime startUtc, out DateTime endUtc);
+        string? error = CustomerSiteScope.TryResolveSlot(branch, request.Date, request.Time, DateTime.UtcNow, out DateTime startUtc, out DateTime endUtc);
         if (error is not null)
             return Result<AvailabilityDto>.Failure(error);
 
@@ -164,6 +180,67 @@ public class GetReservationAvailabilityQueryHandler(IAppDbContext db, ITenantRes
         {
             UnavailableTableIds = overlapping.Select(r => r.TableId).Distinct().ToList()
         });
+    }
+}
+
+// ── Rezervasyon saatleri (ana sayfa seçicisi ve tam akış): bir günün başlangıçları ve doluluğu ────────
+public class GetDaySlotsQuery : IRequest<Result<List<DaySlotDto>>>
+{
+    public Guid? BranchId { get; set; }
+    public string Date { get; set; } = string.Empty;
+}
+
+public class GetDaySlotsQueryHandler(IAppDbContext db, ITenantResolver tenant)
+    : IRequestHandler<GetDaySlotsQuery, Result<List<DaySlotDto>>>
+{
+    public async Task<Result<List<DaySlotDto>>> Handle(GetDaySlotsQuery request, CancellationToken cancellationToken)
+    {
+        Company? company = await CustomerSiteScope.ResolveCompanyAsync(db, tenant, cancellationToken);
+        if (company is null) return Result<List<DaySlotDto>>.Failure("Restoran bulunamadı.");
+
+        Branch? branch = await CustomerSiteScope.ResolveBranchAsync(db, company.Id, request.BranchId, cancellationToken);
+        if (branch is null) return Result<List<DaySlotDto>>.Failure("Restoran bulunamadı.");
+
+        ReservationSettings settings = branch.GetReservationSettings();
+        if (!settings.Enabled) return Result<List<DaySlotDto>>.Failure(CustomerSiteScope.ReservationsClosedMessage);
+
+        if (!DateOnly.TryParseExact(request.Date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out DateOnly day))
+            return Result<List<DaySlotDto>>.Failure(CustomerSiteScope.InvalidSlotMessage);
+
+        // Şubenin o gün için ayarladığı başlangıçlar (kapalı günde hiç yok).
+        IReadOnlyList<TimeOnly> times = settings.StartTimes(day.DayOfWeek);
+
+        List<Guid> tableIds = await db.Tables.AsNoTracking()
+            .Where(t => t.Region.BranchId == branch.Id && t.Status != TableStatus.OutOfService)
+            .Select(t => t.Id)
+            .ToListAsync(cancellationToken);
+
+        DateTime nowUtc = DateTime.UtcNow;
+        var slots = new List<DaySlotDto>();
+        List<(string Time, DateTime Start, DateTime End)> open = [];
+        foreach (TimeOnly t in times)
+        {
+            string time = t.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+            string? error = CustomerSiteScope.TryResolveSlot(settings, branch.TimeZoneId, request.Date, time, nowUtc, out DateTime start, out DateTime end);
+            if (error is null) open.Add((time, start, end));
+            // Geçmişte kalan ya da çok ileri saat listede hiç görünmez.
+        }
+
+        if (open.Count == 0 || tableIds.Count == 0)
+            return Result<List<DaySlotDto>>.Success(open.Select(o => new DaySlotDto { Time = o.Time, Full = tableIds.Count == 0 }).ToList());
+
+        // Günün tüm adaylarını tek sorguda çekip her saat için bellekte say.
+        List<Reservation> overlapping = await CustomerSiteScope.FindOverlappingAsync(
+            db, tableIds, open[0].Start, open[^1].End, CustomerSiteScope.BlockingStatuses, cancellationToken);
+
+        foreach (var (time, start, end) in open)
+        {
+            int busy = overlapping.Where(r => CustomerSiteScope.Overlaps(r, start, end)).Select(r => r.TableId).Distinct().Count();
+            slots.Add(new DaySlotDto { Time = time, Full = busy >= tableIds.Count });
+        }
+
+        return Result<List<DaySlotDto>>.Success(slots);
     }
 }
 
@@ -221,7 +298,7 @@ public class GetReservationStatusQueryHandler(IAppDbContext db, ITenantResolver 
             return Result<ReservationStatusDto>.Failure("Rezervasyon bulunamadı.");
 
         TimeZoneInfo zone = CustomerSiteScope.ZoneOf(row.TimeZoneId);
-        DateTime end = row.EndTime ?? row.ReservationTime.AddMinutes(CustomerSiteScope.ReservationDurationMinutes);
+        DateTime end = row.EndTime ?? row.ReservationTime.AddMinutes(CustomerSiteScope.LegacyReservationDurationMinutes);
 
         return Result<ReservationStatusDto>.Success(new ReservationStatusDto
         {

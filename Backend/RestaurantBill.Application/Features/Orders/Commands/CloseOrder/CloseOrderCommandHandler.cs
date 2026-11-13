@@ -32,10 +32,18 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
+            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, order.TableId, WaiterPermission.TakePayment, cancellationToken);
+            if (accessError is not null)
+                return Result.Failure(accessError);
+
             Table? table = await _db.Tables.FirstOrDefaultAsync(t => t.Id == order.TableId, cancellationToken);
 
             if (table is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
+
+            // Ödemesiz kapatma, tutar girerek alınmış ödemeyi ürünlere mahsup etmeden siler; kalan ödeme ekranından alınır.
+            if (order.PaidOnAccount > 0)
+                return Result.Failure("Bu hesaptan tutar girilerek ödeme alınmış. Kalan tutarı ödeme ekranından alarak hesabı kapatın.");
 
             order.Close();
             table.Release();

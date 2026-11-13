@@ -1,27 +1,16 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Check, ChevronLeft, Minus, Plus } from 'lucide-react';
 import { publicService } from '@/features/customerSite/api/publicService';
-import type { PublicSite, PublicTable, ReservationStatusInfo } from '@/features/customerSite/types';
+import {
+    formatDuration, isReservationDayOpen, type DaySlot, type PublicSite, type PublicTable, type ReservationStatusInfo,
+} from '@/features/customerSite/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
-import { MyReservations } from './SiteSections';
+import { MyReservations } from './SiteChrome';
 import { formatDay, headingFont } from './siteTheme';
 
-const MAX_DAYS_AHEAD = 60;
 const DAY_CHIPS = 14;
-const MAX_PARTY = 20;
 const DEFAULT_TIME = '19:00';
-
-// 09:00 – 23:30 arası yarım saatlik başlangıçlar.
-const TIME_OPTIONS = Array.from({ length: 30 }, (_, i) => {
-    const hour = 9 + Math.floor(i / 2);
-    return `${String(hour).padStart(2, '0')}:${i % 2 === 0 ? '00' : '30'}`;
-});
-
-const toMinutes = (time: string) => {
-    const [h, m] = time.split(':').map(Number);
-    return h * 60 + m;
-};
 
 function toDateInput(date: Date): string {
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -35,13 +24,11 @@ function dateAfter(base: Date, days: number): Date {
     return date;
 }
 
-// Bugün geçmiş saatler seçilemez; hiç saat kalmadıysa yarından başlanır.
-function initialSlot(now: Date): { date: string; time: string } {
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const future = TIME_OPTIONS.filter(t => toMinutes(t) > nowMinutes);
-    if (future.length === 0) return { date: toDateInput(dateAfter(now, 1)), time: DEFAULT_TIME };
-    const time = future.includes(DEFAULT_TIME) ? DEFAULT_TIME : future[0];
-    return { date: toDateInput(now), time };
+// Seçili saat o günün boş başlangıçları arasında yoksa: 19:00, o da yoksa ilk boş saat.
+function pickTime(slots: DaySlot[], current: string): string {
+    const free = slots.filter(s => !s.full).map(s => s.time);
+    if (free.includes(current)) return current;
+    return free.includes(DEFAULT_TIME) ? DEFAULT_TIME : (free[0] ?? '');
 }
 
 const chipOn = 'border-[1.5px] border-[var(--site-accent)] bg-[var(--site-accent)] text-[var(--site-on-accent)]';
@@ -60,27 +47,42 @@ interface Props {
     mine: ReservationStatusInfo[];
     onSent: (created: ReservationStatusInfo) => void;
     onClose: () => void;
+    /** Ana sayfadaki hızlı seçiciden gelinirse başlangıç seçimi. */
+    initial?: { date: string; time: string; partySize: number };
+    /** Sitenin sayfası içinde (ortak başlık/alt bilgiyle): akışın başlığı yapışmaz, sayfa başlığı h1 olur. */
+    embedded?: boolean;
 }
 
 // Rezervasyon talebi: 1) tarih, saat, kişi ve masa  2) ad, telefon, not  → restoran onaylayınca kesinleşir.
-export default function ReservationFlow({ site, restaurantName, mine, onSent, onClose }: Props) {
+export default function ReservationFlow({ site, restaurantName, mine, onSent, onClose, initial, embedded = false }: Props) {
+    const rules = site.reservation;
+    const maxParty = rules.maxPartySize;
     const [now] = useState(() => new Date());
     const today = toDateInput(now);
-    const maxDate = toDateInput(dateAfter(now, MAX_DAYS_AHEAD));
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const dayChips = useMemo(() => Array.from({ length: DAY_CHIPS }, (_, i) => {
+    const maxDate = toDateInput(dateAfter(now, rules.maxDaysAhead));
+    // Şubenin kapalı günleri seçilemez; şerit "en fazla kaç gün sonrası" ayarını aşmaz.
+    const dayChips = useMemo(() => Array.from({ length: Math.min(DAY_CHIPS, rules.maxDaysAhead + 1) }, (_, i) => {
         const date = dateAfter(now, i);
+        const value = toDateInput(date);
         return {
-            value: toDateInput(date),
+            value,
             top: i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : date.toLocaleDateString('tr-TR', { weekday: 'short' }),
             num: String(date.getDate()),
+            open: isReservationDayOpen(rules, value),
         };
-    }), [now]);
+    }), [now, rules]);
 
     const [step, setStep] = useState<Step>('slot');
-    const [slot, setSlot] = useState(() => initialSlot(now));
+    const [slot, setSlot] = useState(() => (initial
+        ? { date: initial.date, time: initial.time }
+        : { date: dayChips.find(chip => chip.open)?.value ?? today, time: DEFAULT_TIME }));
     const { date, time } = slot;
-    const [partySize, setPartySize] = useState(2);
+    // Tarih kendiliğinden seçildiyse (kullanıcı dokunmadıysa) ve o gün boş saat kalmadıysa sonraki açık güne geçilir.
+    const [autoDate, setAutoDate] = useState(!initial);
+    // Günün başlangıç saatleri (şubenin aralığı ve o günün saatleriyle); null: yükleniyor.
+    const [daySlots, setDaySlots] = useState<DaySlot[] | null>(null);
+    const [daySlotsError, setDaySlotsError] = useState<string | null>(null);
+    const [partySize, setPartySize] = useState(() => Math.max(1, Math.min(initial?.partySize ?? 2, maxParty)));
     const [unavailable, setUnavailable] = useState<Set<string> | null>(null);
     const [slotError, setSlotError] = useState<string | null>(null);
     const [selected, setSelected] = useState<PublicTable | null>(null);
@@ -94,6 +96,41 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
     useEffect(() => {
         let cancelled = false;
+        publicService.getDaySlots(site.branchId, date)
+            .then(result => {
+                if (cancelled) return;
+                if (autoDate && !result.some(s => !s.full)) {
+                    const next = dayChips.find(chip => chip.open && chip.value > date);
+                    if (next) {
+                        setSlot(prev => ({ ...prev, date: next.value }));
+                        return;
+                    }
+                }
+                setDaySlots(result);
+                setDaySlotsError(null);
+                const nextTime = pickTime(result, time);
+                if (nextTime !== time) {
+                    setSlot({ date, time: nextTime });
+                    setSelected(null);
+                    setUnavailable(null);
+                }
+            })
+            .catch(err => {
+                if (cancelled) return;
+                setDaySlots([]);
+                setDaySlotsError(getApiErrorMessage(err, 'Saatler yüklenemedi. Lütfen tekrar deneyin.'));
+            });
+        return () => { cancelled = true; };
+        // Saat değişince günün saatleri yeniden çekilmez; yalnızca tarih ya da gönderim sonrası.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [site.branchId, date, refreshTick, autoDate, dayChips]);
+
+    // Seçili saat o günün boş başlangıçlarından biriyse masaların doluluğu çekilir.
+    const timeReady = daySlots?.some(s => s.time === time && !s.full) ?? false;
+
+    useEffect(() => {
+        if (!timeReady) return;
+        let cancelled = false;
         publicService.getAvailability(site.branchId, date, time)
             .then(result => {
                 if (cancelled) return;
@@ -106,15 +143,15 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                 setSlotError(getApiErrorMessage(err, 'Uygun masalar yüklenemedi. Lütfen tekrar deneyin.'));
             });
         return () => { cancelled = true; };
-    }, [site.branchId, date, time, refreshTick]);
+    }, [site.branchId, date, time, refreshTick, timeReady]);
 
     const changeSlot = (nextDate: string, nextTime: string) => {
-        // Bugüne dönülürken seçili saat geçmişte kaldıysa ilk uygun saate kay.
-        let fixedTime = nextTime;
-        if (nextDate === today && toMinutes(nextTime) <= nowMinutes) {
-            fixedTime = TIME_OPTIONS.find(t => toMinutes(t) > nowMinutes) ?? nextTime;
+        if (nextDate !== date) {
+            setDaySlots(null);
+            setDaySlotsError(null);
+            setAutoDate(false);
         }
-        setSlot({ date: nextDate, time: fixedTime });
+        setSlot({ date: nextDate, time: nextTime });
         setSelected(null);
         setUnavailable(null);
         setSlotError(null);
@@ -162,10 +199,11 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
         : `${formatDay(date)} · ${time} · ${partySize} kişi`;
     const stepLabel = step === 'slot' ? 'Adım 1 / 2' : step === 'details' ? 'Adım 2 / 2' : 'Talep gönderildi';
     const dateInChips = dayChips.some(chip => chip.value === date);
+    const Title = embedded ? 'h2' : 'h1';
 
     return (
-        <div className="flex min-h-screen flex-col">
-            <header className="sticky top-0 z-20 border-b border-[var(--site-border)] bg-[var(--site-bg)]">
+        <div className={cn('flex flex-col', embedded ? 'min-h-[70vh]' : 'min-h-screen')}>
+            <header className={cn('z-20 border-b border-[var(--site-border)] bg-[var(--site-bg)]', !embedded && 'sticky top-0')}>
                 <div className="mx-auto flex h-[60px] max-w-2xl items-center gap-1 px-2">
                     <button
                         type="button"
@@ -176,7 +214,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                         <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <div className="min-w-0">
-                        <h1 className={cn(headingFont, 'text-lg font-bold leading-tight')}>Rezervasyon</h1>
+                        <Title className={cn(headingFont, 'text-lg font-bold leading-tight')}>Rezervasyon</Title>
                         <p className="truncate text-xs text-[var(--site-muted)]">{restaurantName} · {stepLabel}</p>
                     </div>
                 </div>
@@ -212,7 +250,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-[26px] px-5 pb-8 pt-5">
                         <MyReservations items={mine} />
 
-                        <fieldset className="m-0 border-0 p-0">
+                        <fieldset className="m-0 min-w-0 border-0 p-0">
                             <legend className={legendClass}>Tarih</legend>
                             <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
                                 {dayChips.map(chip => {
@@ -222,9 +260,10 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                             key={chip.value}
                                             type="button"
                                             aria-pressed={on}
-                                            aria-label={formatDay(chip.value)}
+                                            disabled={!chip.open}
+                                            aria-label={chip.open ? formatDay(chip.value) : `${formatDay(chip.value)}, rezervasyon alınmıyor`}
                                             onClick={() => changeSlot(chip.value, time)}
-                                            className={cn('flex h-16 w-[62px] shrink-0 flex-col items-center justify-center rounded-[14px] transition-colors', on ? chipOn : chipOff)}
+                                            className={cn('flex h-16 w-[62px] shrink-0 flex-col items-center justify-center rounded-[14px] transition-colors', !chip.open ? chipDisabled : on ? chipOn : chipOff)}
                                         >
                                             <span className="text-xs font-medium">{chip.top}</span>
                                             <span className="text-lg font-bold tabular-nums">{chip.num}</span>
@@ -246,26 +285,42 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             </div>
                         </fieldset>
 
-                        <fieldset className="m-0 border-0 p-0">
+                        <fieldset className="m-0 min-w-0 border-0 p-0">
                             <legend className={legendClass}>Saat</legend>
-                            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-                                {TIME_OPTIONS.map(option => {
-                                    const past = date === today && toMinutes(option) <= nowMinutes;
-                                    const on = option === time;
-                                    return (
-                                        <button
-                                            key={option}
-                                            type="button"
-                                            aria-pressed={on}
-                                            disabled={past}
-                                            onClick={() => changeSlot(date, option)}
-                                            className={cn('h-12 rounded-xl text-[15px] font-semibold tabular-nums transition-colors', past ? chipDisabled : on ? chipOn : chipOff)}
-                                        >
-                                            {option}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            {daySlotsError ? (
+                                <p role="alert" className="rounded-xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3 text-sm font-medium text-[var(--site-error)]">{daySlotsError}</p>
+                            ) : daySlots === null ? (
+                                <div className="grid grid-cols-4 gap-2 sm:grid-cols-6" aria-busy="true">
+                                    {[...Array(8)].map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-[var(--site-card)]" />)}
+                                </div>
+                            ) : !daySlots.some(s => !s.full) ? (
+                                <p className="text-sm text-[var(--site-sub)]">
+                                    {!isReservationDayOpen(rules, date)
+                                        ? 'Bu gün rezervasyon alınmıyor. Başka bir gün seçin.'
+                                        : daySlots.length > 0
+                                            ? 'Bu günün tüm saatleri dolu. Başka bir gün seçin.'
+                                            : 'Bu gün için uygun saat kalmadı. Başka bir gün seçin.'}
+                                </p>
+                            ) : (
+                                <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                                    {daySlots.map(option => {
+                                        const on = option.time === time;
+                                        return (
+                                            <button
+                                                key={option.time}
+                                                type="button"
+                                                aria-pressed={on}
+                                                disabled={option.full}
+                                                aria-label={option.full ? `${option.time}, dolu` : option.time}
+                                                onClick={() => changeSlot(date, option.time)}
+                                                className={cn('h-12 rounded-xl text-[15px] font-semibold tabular-nums transition-colors', option.full ? chipDisabled : on ? chipOn : chipOff)}
+                                            >
+                                                {option.time}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </fieldset>
 
                         <div className="flex items-center justify-between">
@@ -284,8 +339,8 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                 <button
                                     type="button"
                                     aria-label="Kişi sayısını artır"
-                                    disabled={partySize >= MAX_PARTY}
-                                    onClick={() => setPartySize(n => Math.min(MAX_PARTY, n + 1))}
+                                    disabled={partySize >= maxParty}
+                                    onClick={() => setPartySize(n => Math.min(maxParty, n + 1))}
                                     className="flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-40"
                                 >
                                     <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
@@ -293,7 +348,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             </div>
                         </div>
 
-                        <fieldset className="m-0 flex flex-col gap-[18px] border-0 p-0">
+                        {timeReady && <fieldset className="m-0 flex min-w-0 flex-col gap-[18px] border-0 p-0">
                             <legend className={legendClass}>
                                 Masa seçin <span className="font-normal text-[var(--site-muted)]">· {formatDay(date)}, {time}</span>
                             </legend>
@@ -331,10 +386,11 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                     </div>
                                 </div>
                             ))}
-                        </fieldset>
+                        </fieldset>}
 
                         <p className="text-[13px] leading-relaxed text-[var(--site-muted)]">
-                            Talebiniz restorana iletilir; restoran onaylayınca kesinleşir. Masa 2 saat ayrılır.
+                            Talebiniz restorana iletilir; restoran onaylayınca kesinleşir. Masa {formatDuration(rules.durationMinutes)} ayrılır.
+                            {' '}Online en fazla {maxParty} kişilik rezervasyon yapılabilir.
                         </p>
                     </main>
 

@@ -1,63 +1,69 @@
 import type { CSSProperties } from 'react';
 
-// Restoran sitesinin "Ocak" görünümü (tasarım: canvas "Restoran Sitesi v2").
-// Koyu kömür zemin, köz turuncusu vurgu. Renkler tek yerde CSS değişkeni olarak tanımlı;
-// bileşenler yalnızca bu değişkenleri kullanır. Vurgu rengi ileride restoranın kendi ayarından gelecek.
+// Restoranın müşteri sitesinin görünümü (tasarım: canvas "Restoran Sitesi v2" · "Kafe sitesi").
+// Tek nötr palet + tek vurgu: beyaz / açık gri (#F7F7F5) zemin, #EAEAEA çizgi, #111 yazı, #6B6B6B ikincil yazı,
+// koyu bölümler (giriş, alt bilgi) #111. Bölümler renkle değil boşluk ve ince çizgiyle ayrılır.
+// Vurgu rengi restoranın "Restoran sitesi" ayarından gelir ve sitede yalnız şuralarda kullanılır: girişteki
+// "Menüyü gör", rezervasyondaki "Devam et" ve yazı logosundaki nokta (vurgudan türetilmiş açık ton yok).
+// Renkler tek yerde CSS değişkeni olarak tanımlı; site, rezervasyon akışı ve masa QR sayfası bu değişkenleri kullanır.
 
 export const SITE_FONTS_HREF =
-    'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap';
+    'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap';
 
-export const DEFAULT_ACCENT = '#E8743B';
+export const DEFAULT_ACCENT = '#E2531F';
 
-export function siteRootStyle(accent: string = DEFAULT_ACCENT): CSSProperties {
+/** Fotoğrafsız kapak ve alt bilginin koyu zemini. */
+export const SITE_INK = '#111111';
+
+function isHex(value: string | undefined | null): value is string {
+    return !!value && /^#[0-9A-Fa-f]{6}$/.test(value);
+}
+
+export function siteRootStyle(accentColor?: string | null): CSSProperties {
+    const accent = isHex(accentColor) ? accentColor : DEFAULT_ACCENT;
     return {
         '--site-accent': accent,
-        '--site-on-accent': '#15110E',
-        '--site-bg': '#15110E',
-        '--site-band': '#1B1612',
-        '--site-card': '#1F1915',
-        '--site-raised': '#241D18',
-        '--site-text': '#F5EFE7',
-        '--site-sub': '#BDB1A3',
-        '--site-muted': '#A39689',
-        '--site-border': '#2E2520',
-        '--site-border-strong': '#4A3D34',
-        '--site-disabled': '#1A1512',
-        // Açık kart (rezervasyon özeti gibi vurgulu yüzeyler)
-        '--site-paper': '#F5EFE7',
-        '--site-on-paper': '#15110E',
-        '--site-on-paper-sub': '#5C5047',
-        // Durum renkleri (koyu zeminde okunur)
-        '--site-ok-bg': '#13261A',
-        '--site-ok-line': '#2F6B45',
-        '--site-ok': '#5FCB8A',
-        '--site-error-bg': '#2A1512',
-        '--site-error-line': '#7A3328',
-        '--site-error': '#F4B4A8',
-        colorScheme: 'dark',
-        fontFamily: "Inter, system-ui, sans-serif",
+        '--site-on-accent': '#FFFFFF',
+        '--site-ink': SITE_INK,
+        '--site-bg': '#FFFFFF',
+        '--site-band': '#FFFFFF',
+        '--site-card': '#FFFFFF',
+        // Açık gri zemin (hikâye bandı, sayaç, iskelet)
+        '--site-raised': '#F7F7F5',
+        // Fotoğrafı olmayan görsel yuvası (logo yer tutucusu)
+        '--site-placeholder': '#F2F2F0',
+        '--site-text': '#111111',
+        '--site-sub': '#6B6B6B',
+        '--site-muted': '#6B6B6B',
+        '--site-border': '#EAEAEA',
+        // Form alanı ve rezervasyon akışı seçeneklerinin çerçevesi: çizgiden bir ton koyu, yine nötr
+        '--site-border-strong': '#D6D6D6',
+        '--site-disabled': '#B0B0B0',
+        // Koyu vurgulu yüzey (rezervasyon özeti, seçili seçenek)
+        '--site-paper': '#111111',
+        '--site-on-paper': '#FFFFFF',
+        '--site-on-paper-sub': '#BDBDBD',
+        // Durum renkleri (açık zeminde okunur)
+        '--site-ok-bg': '#E3F1E6',
+        '--site-ok-line': '#9CCBA9',
+        '--site-ok': '#1B6A43',
+        '--site-error-bg': '#FDECE7',
+        '--site-error-line': '#F0B4A3',
+        '--site-error': '#A3301A',
+        colorScheme: 'light',
+        fontFamily: "'Inter Tight', system-ui, sans-serif",
         backgroundColor: 'var(--site-bg)',
         color: 'var(--site-text)',
     } as CSSProperties;
 }
 
-/** Başlıklar ve fiyatlar için Bricolage Grotesque. */
-export const headingFont = "font-[family-name:'Bricolage_Grotesque',system-ui,sans-serif] tracking-[-0.02em]";
+/** Başlıklar ve fiyatlar: Inter Tight, sıkı aralık. */
+export const headingFont = "font-[family-name:'Inter_Tight',system-ui,sans-serif] tracking-[-0.04em]";
 
-/**
- * Backend'in henüz vermediği site bilgileri. Alan doluysa ilgili bölüm kendiliğinden görünür,
- * boşsa hiç çizilmez (uydurma içerik ya da yer tutucu yok).
- */
-export interface SiteExtras {
-    accentColor?: string;
-    coverUrl?: string;
-    logoUrl?: string;
-    slogan?: string;
-    about?: string;
-    hours?: { day: string; time: string }[];
-    gallery?: { url: string; alt: string }[];
-    instagramUrl?: string;
-    whatsappUrl?: string;
+// "Dost Kafe" → "Dost Kafe" (aradaki boşluk vurgu noktasına döner; tek kelimede nokta sona gelir).
+export function wordmarkParts(name: string): { first: string; rest: string } {
+    const words = name.trim().split(/\s+/).filter(Boolean);
+    return { first: words[0] ?? '', rest: words.slice(1).join(' ') };
 }
 
 // "Dost Lokanta" → "DL"
@@ -83,3 +89,13 @@ export function formatDay(date: string): string {
 export function directionsUrl(address: string): string {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }
+
+// 1250 → "1.250 ₺"
+export function formatSitePrice(value: number): string {
+    return `${value.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺`;
+}
+
+// ── Ortak sınıf dizileri (site, menü, alt bilgi) ─────────────────────────────────────────────────
+export const glass = 'border border-white/25 bg-white/15 backdrop-blur-[14px]';
+export const container = 'mx-auto w-full max-w-[1312px] px-5 md:px-16';
+export const pill = 'inline-flex items-center justify-center rounded-full font-bold no-underline transition-opacity hover:opacity-90';

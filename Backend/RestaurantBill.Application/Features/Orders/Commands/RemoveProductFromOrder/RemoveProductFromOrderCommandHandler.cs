@@ -30,6 +30,10 @@ namespace RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromO
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
+            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, order.TableId, WaiterPermission.CancelAndDiscount, cancellationToken);
+            if (accessError is not null)
+                return Result.Failure(accessError);
+
             order.RemoveItem(request.ProductId);
 
             await _db.SaveChangesAsync(cancellationToken);

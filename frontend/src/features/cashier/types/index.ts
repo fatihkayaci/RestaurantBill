@@ -39,7 +39,17 @@ export interface ShiftStartCandidate {
     lastShiftOwnerName?: string | null;
 }
 
-export type PaymentMethod = 1 | 2 | 3;
+/** Açık günü olan kasa: ödeme bu kasanın açık vardiyasına yazılır. */
+export interface OpenRegister {
+    cashRegisterId: string;
+    cashRegisterName: string;
+    shiftId: string;
+    openedAt: string;
+    shiftOwnerName: string;
+}
+
+/** 1 Kart, 2 Nakit, 3 QR, 4 IBAN (havale/EFT; kasaya nakit girmez). */
+export type PaymentMethod = 1 | 2 | 3 | 4;
 
 export interface ShiftPaymentBreakdown {
     method: PaymentMethod;

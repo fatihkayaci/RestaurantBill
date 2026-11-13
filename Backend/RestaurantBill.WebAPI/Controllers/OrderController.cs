@@ -6,6 +6,7 @@ using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
+using RestaurantBill.Application.Features.Orders.Commands.RequestBill;
 using RestaurantBill.Application.Features.Orders.Commands.TransferOrder;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
@@ -93,7 +94,8 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary> Moves, merges or swaps an order with another table. </summary>
         /// <param name="command"></param>
         /// <param name="cancellationToken"></param>
-        [Authorize(Roles = "Owner,Admin,Cashier")]
+        // Garson yalnızca "Masa taşı ve rezervasyon" yetkisi açıksa taşıyabilir (handler denetler).
+        [Authorize(Roles = "Owner,Admin,Cashier,Waiter")]
         [HttpPost("transfer")]
         public async Task<IActionResult> Transfer([FromBody] TransferOrderCommand command, CancellationToken cancellationToken)
         {
@@ -163,6 +165,20 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             command.OrderId = orderId;
             command.OrderItemId = itemId;
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
+        /// <summary>
+        /// Marks the order as "bill requested" (or withdraws the request with Cancel = true) and notifies
+        /// the branch's cashiers and managers. Any waiter who can access the table's region may request it.
+        /// </summary>
+        [Authorize(Roles = "Owner,Admin,Waiter")]
+        [HttpPost("{orderId}/request-bill")]
+        public async Task<IActionResult> RequestBill([FromRoute] Guid orderId, [FromBody] RequestBillCommand? command, CancellationToken cancellationToken)
+        {
+            command ??= new RequestBillCommand();
+            command.OrderId = orderId;
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);
         }

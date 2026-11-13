@@ -15,8 +15,9 @@ import type { Table, Reservation } from '@/features/tables/types';
 import type { Product } from '@/features/products/types';
 import type { Category } from '@/features/categories/types';
 import type { Order } from '@/features/orders/types';
+import { ALL_WAITER_PERMISSIONS, type WaiterPermissions } from '@/features/users/types';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { formatPrice } from '@/lib/format';
+import { formatMinutes, formatPrice, prepCountdown } from '@/lib/format';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
 
@@ -54,9 +55,12 @@ interface Props {
     table: Table;
     onClose: () => void;
     onTableUpdated?: (tableId: string, status: number) => void;
+    /** Garsonun yetkileri; yetkisi olmayan işlemler gösterilmez. */
+    permissions?: WaiterPermissions;
 }
 
-export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
+export default function TablePanel({ table, onClose, onTableUpdated, permissions = ALL_WAITER_PERMISSIONS }: Props) {
+    const { canTakeOrders, canCancelAndDiscount, canTransferAndReserve } = permissions;
     const [activeTab, setActiveTab] = useState<PanelTab>('new-order');
     const [categories, setCategories] = useState<Category[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
@@ -235,6 +239,8 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                     categoryName: '',
                     taxRate: 0,
                     note: c.note,
+                    createdAt: new Date().toISOString(),
+                    prepMinutes: null,
                 })),
             };
 
@@ -382,6 +388,19 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
 
     const statusCfg = STATUS_CONFIG[table.status as 1 | 2 | 3] ?? { label: '', cls: '' };
 
+    // Yetkisi olmayan sekmeler gizlenir. Rezerve masada sekme hep kalır ki garson rezervasyonu görebilsin.
+    const tabs: PanelTab[] = (
+        table.status === 3
+            ? (['reservation'] as PanelTab[])
+            : table.status === 1 && !activeOrder
+            ? (['new-order', 'reservation'] as PanelTab[])
+            : (['orders', 'new-order'] as PanelTab[])
+    ).filter(tab =>
+        (tab !== 'new-order' || canTakeOrders) &&
+        (tab !== 'reservation' || table.status === 3 || canTransferAndReserve)
+    );
+    const currentTab: PanelTab | null = tabs.includes(activeTab) ? activeTab : (tabs[0] ?? null);
+
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
@@ -408,18 +427,12 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
 
             {/* Tabs */}
             <div className="flex border-b shrink-0">
-                {(
-                    table.status === 3
-                        ? (['reservation'] as PanelTab[])
-                        : table.status === 1 && !activeOrder
-                        ? (['new-order', 'reservation'] as PanelTab[])
-                        : (['orders', 'new-order'] as PanelTab[])
-                ).map(tab => (
+                {tabs.map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                            activeTab === tab
+                            currentTab === tab
                                 ? 'text-foreground border-b-2 border-rb-accent'
                                 : 'text-muted-foreground hover:text-foreground'
                         }`}
@@ -434,7 +447,11 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                 <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
                     Yükleniyor...
                 </div>
-            ) : activeTab === 'new-order' ? (
+            ) : currentTab === null ? (
+                <div className="flex-1 flex items-center justify-center px-6 text-center text-muted-foreground text-sm">
+                    Bu masada sipariş açma ve rezervasyon yetkiniz yok. Yöneticinizden yetki isteyebilirsiniz.
+                </div>
+            ) : currentTab === 'new-order' ? (
                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
                     {/* Sol: Kategori pilleri + Ürün listesi */}
                     <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
@@ -484,7 +501,10 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                     )}
                                                     <div className="min-w-0">
                                                         <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                                                        <p className="text-xs text-muted-foreground mt-0.5">₺{formatPrice(product.price)}</p>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                                            ₺{formatPrice(product.price)}
+                                                            {product.prepMinutes != null && <span> · ~{product.prepMinutes} dk</span>}
+                                                        </p>
                                                     </div>
                                                 </div>
                                                 {qty > 0 && (
@@ -568,7 +588,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                         )}
                     </div>
                 </div>
-            ) : activeTab === 'reservation' ? (
+            ) : currentTab === 'reservation' ? (
                 table.status === 3 ? (
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                         <div className="rounded-xl bg-rb-amber-bg text-rb-amber text-xs px-4 py-3">
@@ -602,25 +622,34 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                             </p>
                         )}
 
-                        <Button
-                            onClick={handleCustomerArrived}
-                            disabled={arriving}
-                            variant="success"
-                            size="touch"
-                            className="w-full"
-                        >
-                            {arriving ? 'Açılıyor...' : 'Müşteri Geldi (Masayı Aç)'}
-                        </Button>
+                        {/* Müşteri gelince rezervasyon kapanır ve masa açılır: iki yetki de gerekir. */}
+                        {canTransferAndReserve && canTakeOrders && (
+                            <Button
+                                onClick={handleCustomerArrived}
+                                disabled={arriving}
+                                variant="success"
+                                size="touch"
+                                className="w-full"
+                            >
+                                {arriving ? 'Açılıyor...' : 'Müşteri Geldi (Masayı Aç)'}
+                            </Button>
+                        )}
 
-                        <Button
-                            onClick={() => setConfirmAction('cancel-reservation')}
-                            variant="danger-ghost"
-                            size="touch"
-                            disabled={arriving}
-                            className="w-full"
-                        >
-                            Rezervasyonu İptal Et
-                        </Button>
+                        {canTransferAndReserve ? (
+                            <Button
+                                onClick={() => setConfirmAction('cancel-reservation')}
+                                variant="danger-ghost"
+                                size="touch"
+                                disabled={arriving}
+                                className="w-full"
+                            >
+                                Rezervasyonu İptal Et
+                            </Button>
+                        ) : (
+                            <p className="text-center text-muted-foreground text-xs">
+                                Rezervasyon işlemleri için yetkiniz yok.
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -699,6 +728,7 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                             )}
                             <div className="space-y-0 divide-y divide-border">
                                 {activeOrder.orderItems.map((item) => {
+                                    const countdown = prepCountdown(item.createdAt, item.prepMinutes);
                                     const statusLabel = item.status === 1 ? 'Bekliyor' : item.status === 2 ? 'Hazırlanıyor' : item.status === 3 ? 'Hazır' : 'Servis Edildi';
                                     const statusColor = item.status === 1
                                         ? 'text-rb-amber'
@@ -711,10 +741,19 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                         <div key={item.id} className="flex items-center justify-between py-3 gap-3">
                                             <div
                                                 className="min-w-0 flex-1 cursor-pointer"
-                                                onClick={() => { if (editingItemNoteId !== item.id) startEditingItemNote(item.id, item.note); }}
+                                                onClick={() => { if (canTakeOrders && editingItemNoteId !== item.id) startEditingItemNote(item.id, item.note); }}
                                             >
                                                 <p className="text-sm font-medium text-foreground truncate">{item.productName}</p>
-                                                <p className={`text-xs mt-0.5 ${statusColor}`}>{item.quantity}x · {statusLabel}</p>
+                                                <p className={`text-xs mt-0.5 ${statusColor}`}>
+                                                    {item.quantity}x · {statusLabel}
+                                                    {countdown && (item.status === 1 || item.status === 2) && (
+                                                        <span className={countdown.overdue ? 'font-semibold text-rb-red' : 'text-muted-foreground'}>
+                                                            {' · '}{countdown.overdue
+                                                                ? (countdown.minutes > 0 ? `${formatMinutes(countdown.minutes)} gecikti` : 'süre doldu')
+                                                                : `~${formatMinutes(countdown.minutes)} kaldı`}
+                                                        </span>
+                                                    )}
+                                                </p>
                                                 {editingItemNoteId === item.id ? (
                                                     <input
                                                         autoFocus
@@ -728,9 +767,9 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                                     />
                                                 ) : item.note ? (
                                                     <p className="text-xs text-rb-amber mt-0.5 truncate">Not: {item.note}</p>
-                                                ) : (
+                                                ) : canTakeOrders ? (
                                                     <p className="text-xs text-muted-foreground mt-0.5">Not eklemek için dokunun</p>
-                                                )}
+                                                ) : null}
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
                                                 {item.status === 3 && (
@@ -769,14 +808,16 @@ export default function TablePanel({ table, onClose, onTableUpdated }: Props) {
                                     {servingAll ? 'İşleniyor...' : 'Hazır Olanları Servis Et'}
                                 </Button>
                             )}
-                            <Button
-                                onClick={() => setConfirmAction('cancel-order')}
-                                variant="danger-ghost"
-                                size="lg"
-                                className="w-full rounded-xl font-semibold"
-                            >
-                                Siparişi İptal Et
-                            </Button>
+                            {canCancelAndDiscount && (
+                                <Button
+                                    onClick={() => setConfirmAction('cancel-order')}
+                                    variant="danger-ghost"
+                                    size="lg"
+                                    className="w-full rounded-xl font-semibold"
+                                >
+                                    Siparişi İptal Et
+                                </Button>
+                            )}
                         </div>
                     )}
                 </div>

@@ -1,5 +1,5 @@
 import { api } from '@/lib/axiosInstance';
-import type { Shift, ShiftStartCandidate, ShiftSummary, ShiftTransaction } from '../types';
+import type { OpenRegister, Shift, ShiftStartCandidate, ShiftSummary, ShiftTransaction } from '../types';
 
 export const shiftService = {
     getAll: async (cashRegisterId?: string) => {
@@ -26,6 +26,11 @@ export const shiftService = {
     },
     getStartCandidates: async () => {
         const response = await api.get<ShiftStartCandidate[]>('/shift/start-candidates');
+        return response.data;
+    },
+    /** Açık günü olan kasalar (garson ödeme alırken kasa seçer). */
+    getOpenRegisters: async () => {
+        const response = await api.get<OpenRegister[]>('/shift/open-registers');
         return response.data;
     },
     getMyCurrent: async () => {

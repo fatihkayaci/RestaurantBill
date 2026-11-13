@@ -13,15 +13,20 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result<
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly ICashierNotificationService _notifications;
 
-    public OpenShiftCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
+    public OpenShiftCommandHandler(IAppDbContext db, ICurrentUserService currentUser, ICashierNotificationService notifications)
     {
         _db = db;
         _currentUser = currentUser;
+        _notifications = notifications;
     }
 
     public async Task<Result<ShiftDto>> Handle(OpenShiftCommand request, CancellationToken cancellationToken)
     {
+        if (!_currentUser.CanStartShift())
+            return Result<ShiftDto>.Failure(ShiftDtoLoader.CashierCannotStartShiftMessage);
+
         List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
 
         CashRegister? register = await _db.CashRegisters
@@ -105,6 +110,8 @@ public class OpenShiftCommandHandler : IRequestHandler<OpenShiftCommand, Result<
         _db.AuditLogs.Add(log);
 
         await _db.SaveChangesAsync(cancellationToken);
+        // Kasa atanmayı bekleyen kasiyerin ekranı bu olayla kendiliğinden açılır.
+        await _notifications.SendShiftsChangedAsync(register.BranchId);
         return Result<ShiftDto>.Success(await _db.ToDtoWithOwnerAsync(shift, cancellationToken));
     }
 }

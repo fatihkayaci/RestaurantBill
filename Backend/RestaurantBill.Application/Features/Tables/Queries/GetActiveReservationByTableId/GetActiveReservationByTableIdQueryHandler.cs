@@ -28,6 +28,10 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetActiveReservatio
             if (!tableAccessible)
                 return Result<ReservationDto>.Failure("Böyle bir masa bulunamadı.");
 
+            string? accessError = await _db.CheckTableAccessAsync(_currentUser, request.TableId, null, cancellationToken);
+            if (accessError is not null)
+                return Result<ReservationDto>.Failure(accessError);
+
             var reservation = await _reservationQueries.GetActiveReservationByTableIdAsync(request.TableId, trackChanges: false, cancellationToken);
             if (reservation is null) return Result<ReservationDto>.Failure("Bu masaya ait bir reservasyon bulunamadı.");
             return Result<ReservationDto>.Success(reservation.ToDto());

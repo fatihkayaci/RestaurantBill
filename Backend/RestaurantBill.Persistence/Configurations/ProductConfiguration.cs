@@ -14,5 +14,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.Price)
             .HasPrecision(18, 2);
+
+        builder.Property(p => p.TaxRate)
+            .HasPrecision(5, 2);
     }
 }

@@ -31,6 +31,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemSta
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
+            // Garson: masanın bölgesi; kategori atanmış mutfak: ürünün kategorisi.
+            StaffAccess access = await _db.GetStaffAccessAsync(_currentUserService, cancellationToken);
+            string? accessError = await _db.CheckTableAccessAsync(access, order.TableId, null, cancellationToken)
+                ?? await _db.CheckOrderItemCategoryAsync(access, request.OrderItemId, cancellationToken);
+            if (accessError is not null)
+                return Result.Failure(accessError);
+
             order.UpdateItemStatus(request.OrderItemId, (OrderItemStatus)request.Status);
 
             await _db.SaveChangesAsync(cancellationToken);

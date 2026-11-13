@@ -9,4 +9,11 @@ public class ProductDto
 
     public string CategoryName { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool IsFeatured { get; set; }
+    public int? PrepMinutes { get; set; }
+    /// <summary>Ürüne özel KDV; null ise kategori oranı geçerli.</summary>
+    public decimal? TaxRate { get; set; }
+    /// <summary>Siparişe yazılacak oran: ürün ?? kategori ?? şube.</summary>
+    public decimal EffectiveTaxRate { get; set; }
 }

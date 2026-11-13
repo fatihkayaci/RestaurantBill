@@ -26,6 +26,9 @@ public class TakeOverShiftCommandHandler : IRequestHandler<TakeOverShiftCommand,
 
     public async Task<Result<ShiftDto>> Handle(TakeOverShiftCommand request, CancellationToken cancellationToken)
     {
+        if (!_currentUser.CanStartShift())
+            return Result<ShiftDto>.Failure(ShiftDtoLoader.CashierCannotStartShiftMessage);
+
         List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
 
         CashRegister? register = await _db.CashRegisters

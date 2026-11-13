@@ -20,6 +20,16 @@ public class FakeImageStorageService : IImageStorageService
         return Task.FromResult(NextKey);
     }
 
+    public string? LastFolder { get; private set; }
+    public int? LastMaxSize { get; private set; }
+
+    public Task<string> UploadAsync(Stream content, Guid branchId, string folder, int maxSize, CancellationToken cancellationToken)
+    {
+        LastFolder = folder;
+        LastMaxSize = maxSize;
+        return UploadAsync(content, branchId, cancellationToken);
+    }
+
     public Task DeleteAsync(string key, CancellationToken cancellationToken)
     {
         DeletedKeys.Add(key);

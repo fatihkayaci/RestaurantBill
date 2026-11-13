@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, ChevronDown, CreditCard, QrCode, Minus, Plus, Landmark } from 'lucide-react';
+import { X, ChevronDown, CreditCard, QrCode, Minus, Plus, Landmark, Banknote, Copy } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { paymentSettingsService, type BranchPaymentSettings } from '@/features/branches/api/paymentSettingsService';
+import { getSession } from '@/lib/auth';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import { paymentService } from '@/features/cashier/api/paymentService';
@@ -10,28 +13,39 @@ import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatAmount, formatPrice, formatElapsed } from '@/lib/format';
 
-type PaymentMethod = 'kart' | 'nakit' | 'qr';
+type PaymentMethod = 'kart' | 'nakit' | 'qr' | 'iban';
 
 const PAYMENT_METHODS: { key: PaymentMethod; label: string; icon: React.ReactNode; selectedClass: string }[] = [
     { key: 'kart', label: 'Kart', icon: <CreditCard className="w-4 h-4" />, selectedClass: 'border-rb-accent text-rb-accent bg-rb-accent-bg' },
     { key: 'nakit', label: 'Nakit', icon: <span className="text-sm font-bold leading-none">₺</span>, selectedClass: 'border-rb-green text-rb-green bg-rb-green-bg' },
     { key: 'qr', label: 'QR', icon: <QrCode className="w-4 h-4" />, selectedClass: 'border-rb-amber text-rb-amber bg-rb-amber-bg' },
+    { key: 'iban', label: 'IBAN', icon: <Banknote className="w-4 h-4" />, selectedClass: 'border-rb-purple text-rb-purple bg-rb-purple-bg' },
 ];
 
-const PAYMENT_METHOD_VALUES: Record<PaymentMethod, number> = { kart: 1, nakit: 2, qr: 3 };
+const PAYMENT_METHOD_VALUES: Record<PaymentMethod, number> = { kart: 1, nakit: 2, qr: 3, iban: 4 };
+
+/** Tamamı: kalan hesap · Ürün seç: seçilen kalemler · Tutar gir: ürün seçmeden belirli bir tutar (ürünler masada kalır). */
+type Split = 'full' | 'items' | 'amount';
+const SPLITS: [Split, string][] = [['full', 'Tamamı'], ['items', 'Ürün seç'], ['amount', 'Tutar gir']];
+const AMOUNT_CHIPS: [string, number][] = [['½', 2], ['⅓', 3], ['¼', 4], ['Kalan', 1]];
+const round2 = (value: number) => Math.round(value * 100) / 100;
 
 interface Props {
     order: Order;
     onClose: () => void;
     onComplete: (orderId: number) => void;
     cashRegisterMode?: 'shift' | 'manual';
+    /** Kısmi ödeme sonrası (masa açık kalır) üst ekrandaki listeyi tazelemek için. */
+    onPartialPayment?: () => void;
 }
 
-export default function PaymentPanel({ order, onClose, onComplete, cashRegisterMode = 'shift' }: Props) {
+export default function PaymentPanel({ order, onClose, onComplete, cashRegisterMode = 'shift', onPartialPayment }: Props) {
     const [displayOrder, setDisplayOrder] = useState<Order>(order);
     const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent');
     const [discountValueInput, setDiscountValueInput] = useState('');
     const [discountNote, setDiscountNote] = useState('');
+    const [split, setSplit] = useState<Split>('full');
+    const [amountInput, setAmountInput] = useState('');
 
     const resetDiscount = () => {
         setDiscountType('percent');
@@ -39,11 +53,17 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         setDiscountNote('');
     };
 
+    const resetSplit = () => {
+        setSplit('full');
+        setAmountInput('');
+    };
+
     // Keep the displayed order in sync when the parent passes a freshly-updated order object.
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setDisplayOrder(order);
         resetDiscount();
+        resetSplit();
     }, [order]);
 
     const { shift: cashierActiveShift } = useActiveShift();
@@ -56,6 +76,13 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
     const [submitting, setSubmitting] = useState(false);
     const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
     const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
+    // Şubenin IBAN'ı: yoksa IBAN seçeneği kapalıdır.
+    const [ibanSettings, setIbanSettings] = useState<BranchPaymentSettings | null>(null);
+    const hasIban = !!ibanSettings?.iban;
+
+    useEffect(() => {
+        paymentSettingsService.get().then(setIbanSettings).catch(() => setIbanSettings(null));
+    }, []);
 
     const onDiscountTypeChange = (type: 'percent' | 'amount') => {
         setDiscountType(type);
@@ -66,18 +93,34 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         (sum, item) => sum + (selectedQuantities[item.id] ?? 0) * item.unitPrice,
         0
     );
-    const hasSelection = selectedTotal > 0;
+    const hasSelection = split === 'items' && selectedTotal > 0;
+    // Tutar girerek alınmış ödemeler düşülünce kalan; o durumda ürün seçerek ödeme alınmaz.
+    const paidOnAccount = displayOrder.paidAmount ?? 0;
+    const due = displayOrder.remainingAmount ?? displayOrder.totalPrice;
+    const itemsLocked = paidOnAccount > 0;
+    const amountValue = round2(parseFloat(amountInput.replace(',', '.')) || 0);
+    const amountTooHigh = split === 'amount' && amountValue > due;
 
-    const chargeBase = hasSelection ? selectedTotal : displayOrder.totalPrice;
-    const discountValue = Math.min(
+    const chargeBase = split === 'items' ? selectedTotal : split === 'amount' ? Math.min(amountValue, due) : due;
+    // İndirim yalnızca ürünlerle kapanan ödemede; tutar girilen ödeme olduğu gibi tahsil edilir.
+    const discountAllowed = split !== 'amount';
+    const discountValue = discountAllowed ? Math.min(
         discountType === 'percent'
             ? chargeBase * (parseFloat(discountValueInput) || 0) / 100
             : parseFloat(discountValueInput) || 0,
         chargeBase
-    );
+    ) : 0;
     const netAmount = Math.max(chargeBase - discountValue, 0);
 
+    const chooseSplit = (next: Split) => {
+        setSplit(next);
+        if (next !== 'items') setSelectedQuantities({});
+        if (next !== 'amount') setAmountInput('');
+    };
+
     const adjustSelection = (itemId: number, maxQuantity: number, delta: number) => {
+        setSplit('items');
+        setAmountInput('');
         setSelectedQuantities(prev => {
             const next = Math.min(Math.max((prev[itemId] ?? 0) + delta, 0), maxQuantity);
             return { ...prev, [itemId]: next };
@@ -85,6 +128,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
     };
 
     const setSelectionValue = (itemId: number, maxQuantity: number, value: number) => {
+        setSplit('items');
+        setAmountInput('');
         const next = Math.min(Math.max(Number.isFinite(value) ? Math.trunc(value) : 0, 0), maxQuantity);
         setSelectedQuantities(prev => ({ ...prev, [itemId]: next }));
     };
@@ -127,20 +172,23 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
     };
 
     const cashRegisterId = activeShift?.cashRegisterId;
-    const canComplete = !submitting && !ensuringShift && !!cashRegisterId;
+    const splitReady = split === 'items' ? hasSelection : split === 'amount' ? amountValue > 0 && !amountTooHigh : true;
+    const canComplete = !submitting && !ensuringShift && !!cashRegisterId && splitReady && (paymentMethod !== 'iban' || hasIban);
 
     const handleComplete = async () => {
         if (!cashRegisterId) {
             toast.error(cashRegisterMode === 'shift' ? 'Ödeme almak için açık bir vardiyanız olmalı.' : 'Ödeme almak için bir kasa seçmelisiniz.');
             return;
         }
-        const itemsToPay = hasSelection
-            ? displayOrder.orderItems
-                .filter(item => (selectedQuantities[item.id] ?? 0) > 0)
-                .map(item => ({ orderItemId: item.id, quantity: selectedQuantities[item.id] }))
-            : displayOrder.orderItems.map(item => ({ orderItemId: item.id, quantity: item.quantity }));
+        const itemsToPay = split === 'amount'
+            ? []
+            : hasSelection
+                ? displayOrder.orderItems
+                    .filter(item => (selectedQuantities[item.id] ?? 0) > 0)
+                    .map(item => ({ orderItemId: item.id, quantity: selectedQuantities[item.id] }))
+                : displayOrder.orderItems.map(item => ({ orderItemId: item.id, quantity: item.quantity }));
 
-        const discount = discountValueInput
+        const discount = discountAllowed && discountValueInput
             ? {
                 percent: discountType === 'percent' ? parseFloat(discountValueInput) : undefined,
                 amount: discountType === 'amount' ? parseFloat(discountValueInput) : undefined,
@@ -150,22 +198,52 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
 
         try {
             setSubmitting(true);
-            const fullyPaid: boolean = await paymentService.createPayment(displayOrder.id, cashRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay, discount);
+            const fullyPaid: boolean = await paymentService.createPayment(displayOrder.id, cashRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay, discount,
+                split === 'amount' ? amountValue : undefined);
+            const remainingAfter = round2(due - chargeBase);
             setSelectedQuantities({});
             resetDiscount();
+            setAmountInput('');
             const paidMessage = discountValue > 0 ? `Ödeme tamamlandı! (₺${formatPrice(netAmount)})` : 'Ödeme tamamlandı!';
             if (fullyPaid) {
                 toast.success(paidMessage);
                 onComplete(displayOrder.id);
             } else {
-                toast.success('Kısmi ödeme alındı, kalan tutar için masa açık kalıyor.');
+                toast.success(split === 'amount'
+                    ? `₺${formatPrice(netAmount)} alındı, kalan ₺${formatPrice(remainingAfter)} için masa açık kalıyor.`
+                    : 'Kısmi ödeme alındı, kalan tutar için masa açık kalıyor.');
                 const refreshed = await orderService.getOrderByTableId(displayOrder.tableId);
                 if (refreshed) setDisplayOrder(refreshed);
+                onPartialPayment?.();
             }
         } catch (err) {
             toast.error(getApiErrorMessage(err, 'Ödeme tamamlanamadı.'));
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    // QR içeriği düz metin: müşteri telefonla tarayıp IBAN'ı ve açıklamayı kopyalayabilir.
+    const shortOrderId = String(displayOrder.id).replace(/-/g, '').slice(0, 6).toUpperCase();
+    // Admin Masalar ekranından gelen siparişte masa adı boş olabilir.
+    const transferDescription = displayOrder.tableName ? `${displayOrder.tableName} · #${shortOrderId}` : `Sipariş #${shortOrderId}`;
+    const ibanQrText = ibanSettings && hasIban
+        ? [
+            `IBAN: ${ibanSettings.ibanFormatted || ibanSettings.iban}`,
+            `Alıcı: ${ibanSettings.accountHolderName}`,
+            `Tutar: ${formatAmount(netAmount)} TL`,
+            `Açıklama: ${transferDescription}`,
+        ].join('\n')
+        : '';
+    const isAdmin = ['Admin', 'Owner'].includes(getSession()?.role ?? '');
+
+    const copyIban = async () => {
+        if (!ibanSettings?.iban) return;
+        try {
+            await navigator.clipboard.writeText(ibanSettings.iban);
+            toast.success('IBAN kopyalandı.');
+        } catch {
+            toast.error('IBAN kopyalanamadı.');
         }
     };
 
@@ -220,7 +298,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                     >
                                         <button
                                             onClick={() => adjustSelection(item.id, item.quantity, -1)}
-                                            disabled={selectedQty === 0}
+                                            disabled={selectedQty === 0 || itemsLocked}
                                             aria-label={`${item.productName}: bu ödemedeki adedi azalt`}
                                             className="w-10 h-10 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
@@ -231,13 +309,14 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                             value={selectedQty}
                                             min={0}
                                             max={item.quantity}
+                                            disabled={itemsLocked}
                                             onChange={(e) => setSelectionValue(item.id, item.quantity, e.target.valueAsNumber)}
                                             aria-label={`${item.productName}: bu ödemede ödenecek adet`}
                                             className={`w-9 text-center text-sm font-semibold tabular-nums bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${selectedQty > 0 ? 'text-rb-accent' : 'text-muted-foreground'}`}
                                         />
                                         <button
                                             onClick={() => adjustSelection(item.id, item.quantity, 1)}
-                                            disabled={selectedQty >= item.quantity}
+                                            disabled={selectedQty >= item.quantity || itemsLocked}
                                             aria-label={`${item.productName}: bu ödemedeki adedi artır`}
                                             className="w-10 h-10 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
@@ -260,9 +339,16 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         <p className="mt-1 text-4xl font-serif font-bold tabular-nums text-foreground">
                             ₺{formatPrice(netAmount)}
                         </p>
-                        {(hasSelection || discountValue > 0) && (
+                        {(hasSelection || discountValue > 0 || split === 'amount' || paidOnAccount > 0) && (
                             <p className="mt-1 text-sm text-muted-foreground tabular-nums">
                                 Sipariş toplamı ₺{formatPrice(displayOrder.totalPrice)}
+                            </p>
+                        )}
+                        {paidOnAccount > 0 && (
+                            <p className="mt-0.5 text-sm font-semibold tabular-nums">
+                                <span className="text-rb-green">Ödenen ₺{formatPrice(paidOnAccount)}</span>
+                                <span className="text-muted-foreground"> · </span>
+                                <span className="text-foreground">Kalan ₺{formatPrice(due)}</span>
                             </p>
                         )}
                         {taxGroups.length > 1 ? (
@@ -320,6 +406,78 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                     </div>
 
                     <div className="px-6 py-5 space-y-4">
+                        <div className="space-y-2">
+                            <div role="tablist" aria-label="Bölme" className="grid grid-cols-3 gap-1 rounded-xl border border-border p-1">
+                                {SPLITS.map(([key, label]) => (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={split === key}
+                                        disabled={key === 'items' && itemsLocked}
+                                        onClick={() => chooseSplit(key)}
+                                        className={`h-10 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                            split === key ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                            {itemsLocked && (
+                                <p className="text-xs text-muted-foreground">
+                                    Bu hesaptan ₺{formatPrice(paidOnAccount)} tutar girilerek ödendi; kalan, tutar girerek ya da tamamıyla ödenir.
+                                </p>
+                            )}
+                            {split === 'items' && !hasSelection && (
+                                <p className="text-xs text-muted-foreground">Bu ödemede ödenecek ürünlerin adedini soldan seçin.</p>
+                            )}
+                            {split === 'amount' && (
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-base font-semibold text-muted-foreground" aria-hidden="true">₺</span>
+                                        <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={amountInput}
+                                            onChange={e => setAmountInput(e.target.value.replace(/[^\d.,]/g, ''))}
+                                            placeholder={formatPrice(due)}
+                                            aria-label="Bu ödemede alınacak tutar"
+                                            aria-invalid={amountTooHigh}
+                                            className={`w-full rounded-lg border bg-muted/50 py-2.5 pr-3 pl-8 text-lg font-semibold tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent ${amountTooHigh ? 'border-rb-red' : 'border-border'}`}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-1.5">
+                                        {AMOUNT_CHIPS.map(([label, parts]) => {
+                                            const value = round2(due / parts);
+                                            const on = amountInput !== '' && amountValue === value;
+                                            return (
+                                                <button
+                                                    key={label}
+                                                    type="button"
+                                                    aria-pressed={on}
+                                                    aria-label={parts === 1 ? `Kalanın tamamı, ₺${formatPrice(value)}` : `Kalanın ${label} kadarı, ₺${formatPrice(value)}`}
+                                                    onClick={() => setAmountInput(String(value).replace('.', ','))}
+                                                    className={`flex min-h-11 flex-col items-center justify-center rounded-lg border text-sm font-semibold leading-tight transition-colors ${
+                                                        on ? 'border-rb-accent bg-rb-accent-bg text-rb-accent' : 'border-border text-foreground hover:bg-muted'
+                                                    }`}
+                                                >
+                                                    <span>{label}</span>
+                                                    <span className="text-[11px] font-medium tabular-nums text-muted-foreground">₺{formatPrice(value)}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className={`text-xs ${amountTooHigh ? 'font-semibold text-rb-red' : 'text-muted-foreground'}`}>
+                                        {amountTooHigh
+                                            ? `Kalan tutardan (₺${formatPrice(due)}) fazla olamaz.`
+                                            : 'Ürünler masada kalır, tutar kalandan düşer. Kalan 0 olunca hesap kapanır. İndirim, kalanı kapatırken uygulanır.'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {discountAllowed && (
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <p className="text-xs text-muted-foreground">İndirim</p>
@@ -364,6 +522,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 />
                             )}
                         </div>
+                        )}
 
                         {cashRegisterMode === 'shift' ? (
                             activeShift ? (
@@ -413,20 +572,55 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                             </div>
                         )}
 
-                        <div className="flex gap-2">
-                            {PAYMENT_METHODS.map(({ key, label, icon, selectedClass }) => (
-                                <button
-                                    key={key}
-                                    onClick={() => setPaymentMethod(key)}
-                                    className={`flex-1 flex h-14 items-center justify-center gap-2 rounded-xl border-[1.5px] text-base font-semibold transition-colors ${
-                                        paymentMethod === key ? selectedClass : 'border-border text-muted-foreground hover:border-muted-foreground'
-                                    }`}
-                                >
-                                    {icon}
-                                    {label}
-                                </button>
-                            ))}
+                        <div className="grid grid-cols-4 gap-2">
+                            {PAYMENT_METHODS.map(({ key, label, icon, selectedClass }) => {
+                                const disabled = key === 'iban' && !hasIban;
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => setPaymentMethod(key)}
+                                        disabled={disabled}
+                                        title={disabled ? 'IBAN tanımlı değil' : undefined}
+                                        className={`flex h-14 items-center justify-center gap-1.5 rounded-xl border-[1.5px] px-1 text-[15px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                            paymentMethod === key ? selectedClass : 'border-border text-muted-foreground hover:border-muted-foreground'
+                                        }`}
+                                    >
+                                        {icon}
+                                        {label}
+                                    </button>
+                                );
+                            })}
                         </div>
+                        {!hasIban && ibanSettings !== null && (
+                            <p className="text-xs text-muted-foreground">
+                                IBAN ile ödeme kapalı: şubede IBAN tanımlı değil. {isAdmin ? 'Restoran sayfasından ekleyebilirsin.' : 'Yöneticiniz Restoran ayarlarından ekleyebilir.'}
+                            </p>
+                        )}
+
+                        {paymentMethod === 'iban' && hasIban && ibanSettings && (
+                            <div className="rounded-xl border border-rb-purple/40 bg-rb-purple-bg p-4 space-y-3">
+                                <div className="flex justify-center">
+                                    <div className="rounded-lg bg-white p-2.5">
+                                        <QRCodeSVG value={ibanQrText} size={168} aria-label="IBAN bilgisi QR kodu" />
+                                    </div>
+                                </div>
+                                <dl className="space-y-1 text-sm">
+                                    <div className="flex justify-between gap-3"><dt className="text-muted-foreground">IBAN</dt><dd className="font-mono text-[13px] text-foreground text-right">{ibanSettings.ibanFormatted || ibanSettings.iban}</dd></div>
+                                    <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Alıcı</dt><dd className="text-foreground text-right">{ibanSettings.accountHolderName}</dd></div>
+                                    <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Tutar</dt><dd className="font-semibold text-foreground tabular-nums">₺{formatAmount(netAmount)}</dd></div>
+                                    <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Açıklama</dt><dd className="text-foreground text-right">{transferDescription}</dd></div>
+                                </dl>
+                                <button
+                                    type="button"
+                                    onClick={copyIban}
+                                    className="flex w-full h-11 items-center justify-center gap-2 rounded-lg border border-border bg-card text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+                                >
+                                    <Copy className="h-4 w-4" aria-hidden="true" />
+                                    IBAN'ı kopyala
+                                </button>
+                                <p className="text-xs text-muted-foreground">Havale hesaba geçince aşağıdan onaylayın; ödeme IBAN olarak kaydedilir, kasadaki nakde eklenmez.</p>
+                            </div>
+                        )}
 
                         <button
                             onClick={handleComplete}
@@ -439,8 +633,14 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         >
                             {submitting
                                 ? 'İşleniyor...'
-                                : hasSelection
-                                    ? `Seçilenleri Öde (₺${formatPrice(netAmount)})`
+                                : paymentMethod === 'iban'
+                                    ? `Havale geldi, onayla (₺${formatPrice(netAmount)})`
+                                    : split === 'amount'
+                                    ? (amountTooHigh ? 'Tutar kalandan fazla' : amountValue > 0 ? `Tutarı Öde (₺${formatPrice(netAmount)})` : 'Tutar girin')
+                                    : split === 'items'
+                                    ? (hasSelection ? `Seçilenleri Öde (₺${formatPrice(netAmount)})` : 'Ürün seçin')
+                                    : paidOnAccount > 0
+                                    ? `Kalanı Öde (₺${formatPrice(netAmount)})`
                                     : `Tümünü Öde (₺${formatPrice(netAmount)})`}
                         </button>
                     </div>

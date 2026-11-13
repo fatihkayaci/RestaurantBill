@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Check, ChevronsUpDown, Landmark, Plus } from 'lucide-react';
+import { Building2, Check, ChevronsUpDown, Landmark, Settings2 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
@@ -91,7 +91,7 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, activeB
         <DropdownMenu>
             <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
             <DropdownMenuContent
-                side="top"
+                side="bottom"
                 align="start"
                 sideOffset={8}
                 className="w-56 rounded-2xl border-white/10 bg-[#241D16] p-2 text-sidebar-foreground shadow-2xl"
@@ -141,8 +141,11 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, activeB
                             onSelect={() => navigate(companyMode ? '/owner/branches' : '/admin/branches')}
                             className={cn(itemClass, 'text-rb-gold focus:text-rb-gold')}
                         >
-                            <Plus className="w-3.5 h-3.5" />
-                            Yeni şube ekle
+                            <Settings2 className="w-4 h-4" />
+                            <span className="flex-1 flex flex-col">
+                                <span>Şubeleri yönet</span>
+                                <span className="text-[11px] text-sidebar-foreground/45">Düzenle veya yeni şube ekle</span>
+                            </span>
                         </DropdownMenuItem>
                     </>
                 )}

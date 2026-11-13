@@ -21,8 +21,10 @@ public class GetCustomerReservationsQueryHandler(IAppDbContext db, ICurrentUserS
     {
         List<Guid> branchIds = await db.GetWorkingBranchIdsAsync(currentUser, cancellationToken);
         DateTime nowUtc = DateTime.UtcNow;
+        StaffAccess access = await db.GetStaffAccessAsync(currentUser, cancellationToken);
 
         var rows = await db.Reservations.AsNoTracking()
+            .InStaffRegions(access)
             .Where(r => branchIds.Contains(r.Table.Region.BranchId)
                 && (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed)
                 && r.EndTime != null && r.EndTime > nowUtc)
@@ -88,8 +90,12 @@ public class DecideReservationCommandHandler(IAppDbContext db, ICurrentUserServi
             .FirstOrDefaultAsync(r => r.Id == request.Id && branchIds.Contains(r.Table.Region.BranchId), cancellationToken);
 
         // Personelin açtığı eski tip (Active) kayıtlar bu uçtan yönetilmez; onların kendi iptal akışı var.
-        if (reservation is null || reservation.EndTime is null)
+        if (reservation is null || reservation.EndTime is null || reservation.Status == ReservationStatus.Active)
             return Result.Failure("Böyle bir rezervasyon bulunamadı.");
+
+        string? accessError = await db.CheckTableAccessAsync(currentUser, reservation.TableId, WaiterPermission.TransferAndReserve, cancellationToken);
+        if (accessError is not null)
+            return Result.Failure(accessError);
 
         switch (request.Decision)
         {
