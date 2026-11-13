@@ -32,18 +32,23 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
+            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, order.TableId, WaiterPermission.TakeOrders, cancellationToken);
+            if (accessError is not null)
+                return Result.Failure(accessError);
+
             foreach (var item in request.OrderItems)
             {
                 Product? product = await _db.Products.InBranches(branchIds).FirstOrDefaultAsync(p => p.Id == item.ProductId, cancellationToken);
                 if (product is null)
                     return Result.Failure("Böyle bir ürün bulunamadı.");
 
-                Category? category = await _db.Categories
+                // Kategori şubesiyle yüklenince ürünün Category gezinmesi de dolar.
+                await _db.Categories
                     .Include(c => c.Branch)
                     .FirstOrDefaultAsync(c => c.Id == product.CategoryId, cancellationToken);
-                decimal taxRate = category?.GetEffectiveTaxRate() ?? 0m;
 
-                order.AddItem(product, item.Quantity, taxRate, item.Note);
+                // Ürüne özel oran > kategori oranı > şube oranı.
+                order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
             }
 
             if (!string.IsNullOrWhiteSpace(request.Note))

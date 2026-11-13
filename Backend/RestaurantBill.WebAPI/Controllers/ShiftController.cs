@@ -14,6 +14,7 @@ using RestaurantBill.Application.Features.Shifts.Commands.TakeOverShift;
 using RestaurantBill.Application.Features.Shifts.Queries.GetAllShifts;
 using RestaurantBill.Application.Features.Shifts.Queries.GetCurrentShift;
 using RestaurantBill.Application.Features.Shifts.Queries.GetMyCurrentShift;
+using RestaurantBill.Application.Features.Shifts.Queries.GetOpenRegisters;
 using RestaurantBill.Application.Features.Shifts.Queries.GetShiftById;
 using RestaurantBill.Application.Features.Shifts.Queries.GetShiftStartCandidates;
 using RestaurantBill.Application.Features.Shifts.Queries.GetShiftSummary;
@@ -74,6 +75,18 @@ public class ShiftController : BaseController
     {
         var query = new GetShiftStartCandidatesQuery();
         var values = await _mediator.Send(query, cancellationToken);
+        return HandleResult(values);
+    }
+
+    /// <summary>
+    /// Returns the branch's cash registers that currently have an open shift (register name + day owner).
+    /// Waiters use it to pick the register a payment is written to; they need the "take payment" permission.
+    /// </summary>
+    [Authorize(Roles = "Owner,Admin,Cashier,Waiter")]
+    [HttpGet("open-registers")]
+    public async Task<IActionResult> GetOpenRegisters(CancellationToken cancellationToken)
+    {
+        var values = await _mediator.Send(new GetOpenRegistersQuery(), cancellationToken);
         return HandleResult(values);
     }
 

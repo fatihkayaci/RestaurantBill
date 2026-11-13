@@ -32,5 +32,10 @@ namespace RestaurantBill.Infrastructure.Services
         {
             await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("CustomerRequestsChanged");
         }
+
+        public async Task SendBillRequestChangedAsync(Guid restaurantId, Guid tableId, DateTime? billRequestedAt)
+        {
+            await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("BillRequestChanged", tableId, billRequestedAt);
+        }
     }
 }

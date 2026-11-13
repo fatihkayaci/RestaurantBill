@@ -9,7 +9,7 @@ namespace RestaurantBill.Application.Features.Reports.Queries.GetProductReport;
 
 public class GetProductReportQueryHandler : IRequestHandler<GetProductReportQuery, Result<ProductReportDto>>
 {
-    private record LineRow(Guid ProductId, string ProductName, Guid CategoryId, string CategoryName, decimal UnitPrice, int Quantity, decimal PaymentTotalAmount, decimal PaymentDiscountAmount);
+    private record LineRow(Guid ProductId, string ProductName, Guid CategoryId, string CategoryName, decimal UnitPrice, int Quantity, decimal PaymentTotalAmount, decimal PaymentDiscountAmount, decimal PaymentPrepaidAmount);
     private record ProductAgg(string ProductName, string CategoryName, int Sold, decimal Revenue);
     private record CategoryAgg(string CategoryName, int Sold, decimal Revenue);
 
@@ -45,13 +45,15 @@ public class GetProductReportQueryHandler : IRequestHandler<GetProductReportQuer
             List<LineRow> rows = await _db.PaymentLineItems
                 .AsNoTracking()
                 .Where(l => l.Payment.CashRegister.BranchId == branch.Id && l.Payment.CreatedAt >= fromUtc && l.Payment.CreatedAt < toUtc)
-                .Select(l => new LineRow(l.ProductId, l.ProductName, l.CategoryId, l.CategoryName, l.UnitPrice, l.Quantity, l.Payment.TotalAmount, l.Payment.DiscountAmount))
+                .Select(l => new LineRow(l.ProductId, l.ProductName, l.CategoryId, l.CategoryName, l.UnitPrice, l.Quantity, l.Payment.TotalAmount, l.Payment.DiscountAmount, l.Payment.PrepaidAmount))
                 .ToListAsync(cancellationToken);
 
             foreach (LineRow row in rows)
             {
                 decimal grossLineTotal = row.UnitPrice * row.Quantity;
-                decimal grossPaymentTotal = row.PaymentTotalAmount + row.PaymentDiscountAmount;
+                // Kapanış ödemesinde ürünlerin bir kısmı önceden tutar girerek ödenmiştir (PrepaidAmount); brüt onu da kapsar.
+                // Hesaba ödemelerin satır kalemi yoktur, ürün cirosu yalnızca burada, bir kez sayılır.
+                decimal grossPaymentTotal = row.PaymentTotalAmount + row.PaymentDiscountAmount + row.PaymentPrepaidAmount;
                 decimal discountRatio = grossPaymentTotal > 0 ? row.PaymentDiscountAmount / grossPaymentTotal : 0;
                 decimal effectiveRevenue = grossLineTotal * (1 - discountRatio);
 

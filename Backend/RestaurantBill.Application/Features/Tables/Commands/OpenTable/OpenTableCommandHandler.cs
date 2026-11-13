@@ -34,6 +34,9 @@ namespace RestaurantBill.Application.Features.Tables.Commands.OpenTable
                 .InBranches(branchIds).FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
             if (table is null) return Result<Guid>.Failure("Böyle bir masa bulunamadı.");
 
+            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, table.Id, WaiterPermission.TakeOrders, cancellationToken);
+            if (accessError is not null) return Result<Guid>.Failure(accessError);
+
             if (table.Status == TableStatus.Occupied)
             {
                 // Masa "dolu" görünüyor olabilir ama arkasında aktif bir sipariş kalmamış olabilir

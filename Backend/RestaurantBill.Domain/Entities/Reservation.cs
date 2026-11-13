@@ -11,7 +11,7 @@ namespace RestaurantBill.Domain.Entities
         public string GuestName { get; private set; } = string.Empty;
         public string Contact { get; private set; } = string.Empty;
         public DateTime ReservationTime { get; private set; }
-        // Yalnızca müşteri taleplerinde dolu; personelin açtığı eski kayıtlarda null.
+        // Müşteri taleplerinde ve personelin yeni açtığı kayıtlarda dolu; eski personel kayıtlarında null (2 saat sayılır).
         public DateTime? EndTime { get; private set; }
         public int PartySize { get; private set; }
         public string Note { get; private set; } = string.Empty;
@@ -19,13 +19,15 @@ namespace RestaurantBill.Domain.Entities
 
         protected Reservation() { }
 
-        public static Reservation Create(Table table, string guestName, string contact, DateTime reservationTime, string note)
+        public static Reservation Create(Table table, string guestName, string contact, DateTime reservationTime, string note, DateTime? endTime = null)
         {
             if (table == null)
                 throw new DomainException("Geçersiz masa.");
 
             if (string.IsNullOrWhiteSpace(guestName))
                 throw new DomainException("Misafir adı boş olamaz.");
+            if (endTime is DateTime end && end <= reservationTime)
+                throw new DomainException("Geçersiz rezervasyon aralığı.");
 
             return new Reservation
             {
@@ -33,6 +35,7 @@ namespace RestaurantBill.Domain.Entities
                 GuestName = guestName,
                 Contact = contact ?? string.Empty,
                 ReservationTime = reservationTime,
+                EndTime = endTime,
                 Note = note ?? string.Empty,
                 Status = ReservationStatus.Active
             };

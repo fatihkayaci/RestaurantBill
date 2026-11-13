@@ -19,4 +19,12 @@ public class UserDto
     public DateTime? HireDate { get; set; }
     public bool IsPhoneVerified { get; set; }
     public bool IsEmailVerified { get; set; }
+    // Garson bölgeleri (boş = tüm bölgeler) ve garson yetkileri; mutfak kategorileri (boş = tüm kategoriler).
+    // Diğer rollerde anlamsızdır.
+    public List<Guid> RegionIds { get; set; } = [];
+    public List<Guid> CategoryIds { get; set; } = [];
+    public bool CanTakeOrders { get; set; }
+    public bool CanTakePayment { get; set; }
+    public bool CanCancelAndDiscount { get; set; }
+    public bool CanTransferAndReserve { get; set; }
 }

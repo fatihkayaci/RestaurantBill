@@ -20,8 +20,10 @@ public class GetPendingOrderRequestsQueryHandler(IAppDbContext db, ICurrentUserS
     public async Task<Result<List<OrderRequestDto>>> Handle(GetPendingOrderRequestsQuery request, CancellationToken cancellationToken)
     {
         List<Guid> branchIds = await db.GetWorkingBranchIdsAsync(currentUser, cancellationToken);
+        StaffAccess access = await db.GetStaffAccessAsync(currentUser, cancellationToken);
 
         List<OrderRequest> requests = await db.OrderRequests.AsNoTracking()
+            .InStaffRegions(access)
             .Include(r => r.Items).ThenInclude(i => i.Product)
             .Include(r => r.Table).ThenInclude(t => t.Region)
             .Where(r => r.Status == OrderRequestStatus.Pending && branchIds.Contains(r.Table.Region.BranchId))
@@ -77,6 +79,10 @@ public class ApproveOrderRequestCommandHandler(
         if (orderRequest.Status != OrderRequestStatus.Pending)
             return Result.Failure("Bu talep zaten işlendi.");
 
+        string? accessError = await db.CheckTableAccessAsync(currentUser, orderRequest.TableId, WaiterPermission.TransferAndReserve, cancellationToken);
+        if (accessError is not null)
+            return Result.Failure(accessError);
+
         Table table = await db.Tables
             .Include(t => t.Region)
             .FirstAsync(t => t.Id == orderRequest.TableId, cancellationToken);
@@ -117,7 +123,7 @@ public class ApproveOrderRequestCommandHandler(
             if (product is null)
                 return Result.Failure("Talepteki ürünlerden biri artık menüde yok. Talebi reddedip müşteriye haber verin.");
 
-            order.AddItem(product, item.Quantity, product.Category.GetEffectiveTaxRate(), item.Note);
+            order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
         }
 
         if (!string.IsNullOrWhiteSpace(orderRequest.Note))
@@ -171,6 +177,10 @@ public class RejectOrderRequestCommandHandler(IAppDbContext db, ICurrentUserServ
             return Result.Failure("Böyle bir sipariş talebi bulunamadı.");
         if (orderRequest.Status != OrderRequestStatus.Pending)
             return Result.Failure("Bu talep zaten işlendi.");
+
+        string? accessError = await db.CheckTableAccessAsync(currentUser, orderRequest.TableId, WaiterPermission.TransferAndReserve, cancellationToken);
+        if (accessError is not null)
+            return Result.Failure(accessError);
 
         orderRequest.Reject();
         await db.SaveChangesAsync(cancellationToken);

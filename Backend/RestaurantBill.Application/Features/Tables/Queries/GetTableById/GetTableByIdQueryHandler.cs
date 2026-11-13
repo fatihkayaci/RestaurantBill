@@ -36,6 +36,9 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetTableById
                 })
                 .FirstOrDefaultAsync(cancellationToken);
             if (table is null) return Result<TableDto>.Failure("Sipariş bulunamadı.");
+
+            string? accessError = await _db.CheckTableAccessAsync(_currentUser, table.Id, null, cancellationToken);
+            if (accessError is not null) return Result<TableDto>.Failure(accessError);
             return Result<TableDto>.Success(table);
         }
     }

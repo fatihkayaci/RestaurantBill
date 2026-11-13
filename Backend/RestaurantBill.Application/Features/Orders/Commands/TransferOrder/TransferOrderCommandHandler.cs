@@ -39,6 +39,12 @@ public class TransferOrderCommandHandler : IRequestHandler<TransferOrderCommand,
         if (destination is null)
             return Result<bool>.Failure("Hedef masa bulunamadı.");
 
+        StaffAccess access = await _db.GetStaffAccessAsync(_currentUserService, cancellationToken);
+        string? accessError = await _db.CheckTableAccessAsync(access, source.Id, WaiterPermission.TransferAndReserve, cancellationToken)
+            ?? await _db.CheckTableAccessAsync(access, destination.Id, null, cancellationToken);
+        if (accessError is not null)
+            return Result<bool>.Failure(accessError);
+
         List<Guid> tableBranchIds = await _db.Regions
             .Where(r => r.Id == source.RegionId || r.Id == destination.RegionId)
             .Select(r => r.BranchId)
@@ -73,6 +79,16 @@ public class TransferOrderCommandHandler : IRequestHandler<TransferOrderCommand,
                 Order? mergeTarget = await _orderQueries.GetActiveOrderByTableIdAsync(destination.Id, trackChanges: true, cancellationToken);
                 if (mergeTarget is null)
                     return Result<bool>.Failure("Hedef masada aktif bir sipariş yok.");
+
+                // Kaynak hesaptan tutar girerek alınmış ödemeler birleşen hesaba taşınır (kapanışta mahsup edilir).
+                if (sourceOrder.PaidOnAccount > 0)
+                {
+                    List<Payment> onAccountPayments = await _db.Payments
+                        .Where(p => p.OrderId == sourceOrder.Id && p.IsOnAccount)
+                        .ToListAsync(cancellationToken);
+                    foreach (Payment payment in onAccountPayments)
+                        payment.MoveToOrder(mergeTarget.Id);
+                }
 
                 mergeTarget.MergeFrom(sourceOrder);
                 sourceOrder.Cancel();
@@ -139,6 +155,16 @@ public class TransferOrderCommandHandler : IRequestHandler<TransferOrderCommand,
                 await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, destination.Id, sourceOrder.TotalPrice, actor?.FullName ?? string.Empty);
                 break;
         }
+
+        // "Hesap istendi" siparişle birlikte yer değiştirir; masa ekranlarındaki rozet buna göre güncellenir.
+        (DateTime? sourceBill, DateTime? destinationBill) = request.Mode switch
+        {
+            TableTransferMode.Move => ((DateTime?)null, sourceOrder.BillRequestedAt),
+            TableTransferMode.Merge => (null, mergedOrClosedOrder!.BillRequestedAt),
+            _ => (swapTarget!.BillRequestedAt, sourceOrder.BillRequestedAt),
+        };
+        await _tableNotificationService.SendBillRequestChangedAsync(_currentUserService.BranchId, source.Id, sourceBill);
+        await _tableNotificationService.SendBillRequestChangedAsync(_currentUserService.BranchId, destination.Id, destinationBill);
         await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.BranchId);
 
         return Result<bool>.Success(true);

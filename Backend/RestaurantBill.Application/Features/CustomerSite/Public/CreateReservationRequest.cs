@@ -40,7 +40,7 @@ public class CreateReservationRequestCommandValidator : AbstractValidator<Create
         RuleFor(x => x.Time)
             .Matches(@"^([01]\d|2[0-3]):[0-5]\d$").WithMessage("Geçerli bir saat seçin.");
         RuleFor(x => x.PartySize)
-            .InclusiveBetween(1, 30).WithMessage("Kişi sayısı 1 ile 30 arasında olmalı.");
+            .InclusiveBetween(1, ReservationSettings.PartySizeMax).WithMessage($"Kişi sayısı 1 ile {ReservationSettings.PartySizeMax} arasında olmalı.");
         RuleFor(x => x.Note)
             .MaximumLength(500).WithMessage("Not en fazla 500 karakter olabilir.");
     }
@@ -66,10 +66,14 @@ public class CreateReservationRequestCommandHandler(IAppDbContext db, ITenantRes
             return Result<ReservationStatusDto>.Failure("Bu masa rezervasyona uygun değil.");
 
         Branch branch = table.Region.Branch;
+        ReservationSettings settings = branch.GetReservationSettings();
 
-        string? error = CustomerSiteScope.TryResolveSlot(branch.TimeZoneId, request.Date, request.Time, DateTime.UtcNow, out DateTime startUtc, out DateTime endUtc);
+        string? error = CustomerSiteScope.TryResolveSlot(settings, branch.TimeZoneId, request.Date, request.Time, DateTime.UtcNow, out DateTime startUtc, out DateTime endUtc);
         if (error is not null)
             return Result<ReservationStatusDto>.Failure(error);
+
+        if (request.PartySize > settings.MaxPartySize)
+            return Result<ReservationStatusDto>.Failure($"Online en fazla {settings.MaxPartySize} kişilik rezervasyon yapılabilir. Daha kalabalık gruplar için restoranı arayın.");
 
         List<Reservation> overlapping = await CustomerSiteScope.FindOverlappingAsync(
             db, [table.Id], startUtc, endUtc, CustomerSiteScope.BlockingStatuses, cancellationToken);

@@ -13,4 +13,7 @@ public class OrderItemDto
     public string CategoryName { get; set; } = string.Empty;
     public decimal TaxRate { get; set; }
     public string Note { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    /// <summary>Sipariş anındaki hazırlanma süresi (dk); null ise geri sayım yok.</summary>
+    public int? PrepMinutes { get; set; }
 }

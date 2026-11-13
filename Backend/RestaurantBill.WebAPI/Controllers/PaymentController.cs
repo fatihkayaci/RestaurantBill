@@ -19,7 +19,8 @@ public class PaymentController : BaseController
     /// <summary>
     /// Closes the order, records the cash register transaction and creates the payment record (matrah/KDV breakdown).
     /// </summary>
-    [Authorize(Roles = "Owner,Admin,Cashier")]
+    // Garson yalnızca "Hesap al" yetkisi açıksa ödeme alabilir (handler denetler).
+    [Authorize(Roles = "Owner,Admin,Cashier,Waiter")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreatePaymentCommand command, CancellationToken cancellationToken)
     {

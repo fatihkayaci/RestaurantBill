@@ -9,7 +9,16 @@ public class CreatePaymentCommandValidator : AbstractValidator<CreatePaymentComm
         RuleFor(x => x.OrderId).NotEqual(Guid.Empty).WithMessage("Geçerli bir sipariş numarası girmelisiniz.");
         RuleFor(x => x.CashRegisterId).NotEqual(Guid.Empty).WithMessage("Geçersiz kasa Id.");
         RuleFor(x => x.PaymentMethod).IsInEnum().WithMessage("Geçersiz ödeme yöntemi.");
-        RuleFor(x => x.Items).NotEmpty().WithMessage("Ödenecek en az bir ürün seçilmeli.");
+        RuleFor(x => x.Items).NotEmpty().When(x => !x.Amount.HasValue).WithMessage("Ödenecek en az bir ürün seçilmeli.");
+        RuleFor(x => x.Items).Empty().When(x => x.Amount.HasValue).WithMessage("Tutar girerek ödemede ürün seçilmez.");
+        RuleFor(x => x.Amount)
+            .GreaterThan(0).WithMessage("Ödenecek tutar 0'dan büyük olmalı.")
+            .Must(a => decimal.Round(a!.Value, 2) == a.Value).WithMessage("Tutar en fazla iki ondalık basamak içerebilir.")
+            .When(x => x.Amount.HasValue);
+        RuleFor(x => x)
+            .Must(x => !x.Amount.HasValue || ((x.DiscountPercent ?? 0) == 0 && (x.DiscountAmount ?? 0) == 0))
+            .WithMessage("Tutar girerek alınan ödemede indirim uygulanamaz.")
+            .WithName("Amount");
         RuleFor(x => x.Items)
             .Must(items => items.Select(i => i.OrderItemId).Distinct().Count() == items.Count)
             .WithMessage("Aynı ürün birden fazla kez gönderilemez.");

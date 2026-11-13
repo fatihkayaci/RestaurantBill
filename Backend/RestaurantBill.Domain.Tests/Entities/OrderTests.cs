@@ -194,6 +194,38 @@ public class OrderTests
         }
     }
 
+    public class UpdateStatusForItems
+    {
+        [Fact]
+        public void MovesOnlyScopedItems_AndKeepsOrderStatusUntilAllItemsAreDone()
+        {
+            Order order = Order.Create(Guid.NewGuid());
+            Product grill = OrderTests.CreateProduct();
+            Product dessert = OrderTests.CreateProduct();
+            order.AddItem(grill, 1);
+            order.AddItem(dessert, 1);
+            OrderStatus before = order.Status;
+
+            order.UpdateStatusForItems(OrderStatus.Ready, i => i.ProductId == grill.Id);
+
+            Assert.Equal(before, order.Status);
+            Assert.Equal(OrderItemStatus.Ready, order.OrderItems.Single(i => i.ProductId == grill.Id).Status);
+            Assert.Equal(OrderItemStatus.Pending, order.OrderItems.Single(i => i.ProductId == dessert.Id).Status);
+
+            order.UpdateStatusForItems(OrderStatus.Ready, i => i.ProductId == dessert.Id);
+
+            Assert.Equal(OrderStatus.Ready, order.Status);
+        }
+
+        [Fact]
+        public void WithWholeOrderStatus_ThrowsDomainException()
+        {
+            Order order = Order.Create(Guid.NewGuid());
+
+            Assert.Throws<DomainException>(() => order.UpdateStatusForItems(OrderStatus.Cancelled, _ => true));
+        }
+    }
+
     public class UpdateItemStatus
     {
         [Fact]
@@ -252,6 +284,56 @@ public class OrderTests
             order.Close();
 
             Assert.Equal(OrderStatus.Paid, order.Status);
+        }
+    }
+
+    public class BillRequest
+    {
+        [Fact]
+        public void RequestBill_SetsTimestamp_AndKeepsFirstRequestTime()
+        {
+            Order order = Order.Create(Guid.NewGuid());
+            DateTime first = new(2026, 11, 13, 12, 0, 0, DateTimeKind.Utc);
+
+            order.RequestBill(first);
+            order.RequestBill(first.AddMinutes(5));
+
+            Assert.Equal(first, order.BillRequestedAt);
+        }
+
+        [Fact]
+        public void CloseAndCancel_ClearBillRequest()
+        {
+            Order paid = Order.Create(Guid.NewGuid());
+            paid.RequestBill(DateTime.UtcNow);
+            paid.Close();
+
+            Order cancelled = Order.Create(Guid.NewGuid());
+            cancelled.RequestBill(DateTime.UtcNow);
+            cancelled.Cancel();
+
+            Assert.Null(paid.BillRequestedAt);
+            Assert.Null(cancelled.BillRequestedAt);
+        }
+
+        [Fact]
+        public void RequestBill_OnClosedOrder_Throws()
+        {
+            Order order = Order.Create(Guid.NewGuid());
+            order.Close();
+
+            Assert.Throws<DomainException>(() => order.RequestBill(DateTime.UtcNow));
+        }
+
+        [Fact]
+        public void ClearBillRequest_RemovesRequest()
+        {
+            Order order = Order.Create(Guid.NewGuid());
+            order.RequestBill(DateTime.UtcNow);
+
+            order.ClearBillRequest();
+
+            Assert.Null(order.BillRequestedAt);
         }
     }
 }

@@ -26,4 +26,12 @@ public static class ShiftDtoLoader
     // Kör sayım: kasiyer, sayımdan önce "olması gereken" tutarı hiçbir ekrandan görmemeli.
     public static bool CanSeeExpectedBalance(this ICurrentUserService currentUser)
         => currentUser.Role is "Owner" or "Admin";
+
+    // Günü (vardiyayı) yalnızca yönetici başlatır ve bir kasiyere atar; kasiyer kendi kendine
+    // gün başlatamaz ya da başkasının kasasını devralamaz.
+    public static bool CanStartShift(this ICurrentUserService currentUser)
+        => currentUser.Role is "Owner" or "Admin";
+
+    public const string CashierCannotStartShiftMessage =
+        "Günü yöneticiniz başlatır ve kasayı size atar. Yöneticinize başvurun.";
 }

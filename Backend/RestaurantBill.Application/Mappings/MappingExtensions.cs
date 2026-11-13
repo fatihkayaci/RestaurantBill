@@ -1,5 +1,6 @@
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.Mappings;
 
@@ -91,8 +92,11 @@ public static class MappingExtensions
         TableName = o.Table?.Name ?? string.Empty,
         Note = o.Note,
         TotalPrice = o.TotalPrice,
+        PaidAmount = o.PaidOnAccount,
+        RemainingAmount = o.RemainingAmount,
         Status = o.Status,
         CreatedAt = o.CreatedAt,
+        BillRequestedAt = o.BillRequestedAt,
         OrderItems = o.OrderItems.Select(i => i.ToDto()).ToList()
     };
 
@@ -106,7 +110,9 @@ public static class MappingExtensions
         Status = i.Status,
         CategoryName = i.Product?.Category?.Name ?? string.Empty,
         TaxRate = i.TaxRate,
-        Note = i.Note
+        Note = i.Note,
+        CreatedAt = i.CreatedAt,
+        PrepMinutes = i.PrepMinutes
     };
 
     public static ProductDto ToDto(this Product p) => new()
@@ -117,7 +123,11 @@ public static class MappingExtensions
         IsActive = p.IsActive,
         CategoryId = p.CategoryId,
         CategoryName = p.Category?.Name ?? string.Empty,
-        ImageUrl = p.ImageUrl
+        ImageUrl = p.ImageUrl,
+        Description = p.Description,
+        IsFeatured = p.IsFeatured,
+        PrepMinutes = p.PrepMinutes,
+        TaxRate = p.TaxRate
     };
 
     public static MembershipDto ToDto(this Membership m) => new()
@@ -203,6 +213,13 @@ public static class MappingExtensions
         RestaurantName = ub.Branch?.Company?.Name,
         HireDate = ub.HireDate,
         IsPhoneVerified = u.IsPhoneVerified,
-        IsEmailVerified = u.IsEmailVerified
+        IsEmailVerified = u.IsEmailVerified,
+        RegionIds = ub.RegionIds.ToList(),
+        CategoryIds = ub.CategoryIds.ToList(),
+        // Garson dışındaki roller kendi ekranlarında kısıtsızdır.
+        CanTakeOrders = ub.Role != UserRole.Waiter || ub.CanTakeOrders,
+        CanTakePayment = ub.Role != UserRole.Waiter || ub.CanTakePayment,
+        CanCancelAndDiscount = ub.Role != UserRole.Waiter || ub.CanCancelAndDiscount,
+        CanTransferAndReserve = ub.Role != UserRole.Waiter || ub.CanTransferAndReserve
     };
 }

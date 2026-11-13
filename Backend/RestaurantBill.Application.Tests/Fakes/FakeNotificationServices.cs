@@ -1,3 +1,4 @@
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Tests.Fakes;
@@ -13,10 +14,34 @@ public class FakeTableNotificationService : ITableNotificationService
         CustomerRequestsChangedCount++;
         return Task.CompletedTask;
     }
+    public List<(Guid TableId, DateTime? BillRequestedAt)> BillRequestChanges { get; } = [];
+    public Task SendBillRequestChangedAsync(Guid restaurantId, Guid tableId, DateTime? billRequestedAt)
+    {
+        BillRequestChanges.Add((tableId, billRequestedAt));
+        return Task.CompletedTask;
+    }
 }
 
 public class FakeCashierNotificationService : ICashierNotificationService
 {
     public Task SendOrdersChangedAsync(Guid restaurantId) => Task.CompletedTask;
     public Task SendShiftAutoClosedAsync(Guid restaurantId, string cashRegisterName) => Task.CompletedTask;
+    public int ShiftsChangedCount { get; private set; }
+    public Task SendShiftsChangedAsync(Guid restaurantId)
+    {
+        ShiftsChangedCount++;
+        return Task.CompletedTask;
+    }
+    public List<(Guid BranchId, IReadOnlyList<OverdueOrderItemDto> Items)> OverdueSent { get; } = [];
+    public Task SendOrderItemsOverdueAsync(Guid restaurantId, IReadOnlyList<OverdueOrderItemDto> items)
+    {
+        OverdueSent.Add((restaurantId, items));
+        return Task.CompletedTask;
+    }
+    public List<(Guid BranchId, Guid TableId, string TableName, string RequestedBy)> BillRequestsSent { get; } = [];
+    public Task SendBillRequestedAsync(Guid restaurantId, Guid tableId, string tableName, string requestedByName)
+    {
+        BillRequestsSent.Add((restaurantId, tableId, tableName, requestedByName));
+        return Task.CompletedTask;
+    }
 }

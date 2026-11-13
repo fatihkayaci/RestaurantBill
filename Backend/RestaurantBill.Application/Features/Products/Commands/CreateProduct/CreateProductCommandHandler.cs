@@ -33,6 +33,9 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
                 return Result.Failure("Bu kategoride bu isimde bir ürün zaten mevcut.");
 
             Product product = Product.Create(request.Name, request.Price, request.ImageUrl, request.CategoryId);
+            product.UpdateSiteDetails(request.Description, request.IsFeatured);
+            product.SetPrepMinutes(request.PrepMinutes);
+            product.SetTaxRate(request.TaxRate);
             _db.Products.Add(product);
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);

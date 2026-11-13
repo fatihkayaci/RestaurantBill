@@ -32,6 +32,10 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CancelReservationT
             if (table is null)
                 return Result.Failure("Böyle bir masa bulunamadı.");
 
+            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, table.Id, WaiterPermission.TransferAndReserve, cancellationToken);
+            if (accessError is not null)
+                return Result.Failure(accessError);
+
             table.Release();
 
             Reservation? reservation = await _reservationQueries.GetActiveReservationByTableIdAsync(request.TableId, trackChanges: true, cancellationToken);

@@ -31,6 +31,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQua
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
+            // Adet artırmak sipariş almaktır, azaltmak gönderilmiş ürünü iptal etmektir.
+            int currentQuantity = order.OrderItems.FirstOrDefault(i => i.ProductId == request.ProductId)?.Quantity ?? 0;
+            WaiterPermission permission = request.Quantity > currentQuantity ? WaiterPermission.TakeOrders : WaiterPermission.CancelAndDiscount;
+            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, order.TableId, permission, cancellationToken);
+            if (accessError is not null)
+                return Result.Failure(accessError);
+
             order.UpdateItemQuantity(request.ProductId, request.Quantity);
 
             await _db.SaveChangesAsync(cancellationToken);

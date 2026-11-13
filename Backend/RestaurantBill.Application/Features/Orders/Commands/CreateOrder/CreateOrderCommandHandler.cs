@@ -29,6 +29,10 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
             if (table is null)
                 return Result<OrderDto>.Failure("Böyle bir Masa bulunamadı.");
 
+            string? accessError = await _db.CheckTableAccessAsync(_currentUser, table.Id, WaiterPermission.TakeOrders, cancellationToken);
+            if (accessError is not null)
+                return Result<OrderDto>.Failure(accessError);
+
             table.Occupy();
 
             Order order = Order.Create(request.TableId);

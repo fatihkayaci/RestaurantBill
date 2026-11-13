@@ -23,6 +23,9 @@ public class EnsureShiftOpenCommandHandler : IRequestHandler<EnsureShiftOpenComm
 
     public async Task<Result<ShiftDto>> Handle(EnsureShiftOpenCommand request, CancellationToken cancellationToken)
     {
+        if (!_currentUser.CanStartShift())
+            return Result<ShiftDto>.Failure(ShiftDtoLoader.CashierCannotStartShiftMessage);
+
         List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
 
         CashRegister? register = await _db.CashRegisters
