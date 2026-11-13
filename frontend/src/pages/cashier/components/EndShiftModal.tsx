@@ -13,8 +13,8 @@ interface Props {
     onShiftClosed: () => void;
 }
 
-const METHOD_ORDER: PaymentMethod[] = [2, 1, 3];
-const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR' };
+const METHOD_ORDER: PaymentMethod[] = [2, 1, 3, 4];
+const METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'Kart', 2: 'Nakit', 3: 'QR', 4: 'IBAN' };
 
 function formatTime(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -51,14 +51,14 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
         setSubmitting(true);
         try {
             const closed = await shiftService.closeShift(summary.shiftId, amount);
-            toast.success('Vardiya kapatıldı.');
+            toast.success('Gün kapatıldı.');
             if (showReport) {
                 setClosedShift(closed);
             } else {
                 onShiftClosed();
             }
         } catch (err) {
-            toast.error(getApiErrorMessage(err, 'Vardiya kapatılamadı.'));
+            toast.error(getApiErrorMessage(err, 'Gün kapatılamadı.'));
         } finally {
             setSubmitting(false);
         }
@@ -78,7 +78,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                 <div className="flex items-start justify-between mb-1">
                     <div>
                         <ModalTitle className="font-serif text-xl font-bold text-foreground">
-                            {closedAt ? 'Z Raporu' : 'Vardiyayı Bitir'}
+                            {closedAt ? 'Z Raporu' : 'Günü Kapat'}
                         </ModalTitle>
                         <p className="text-sm text-muted-foreground mt-0.5">
                             {summary ? `${formatTime(summary.openedAt)} — ${formatTime(closedAt ?? now)} · ${shift?.openedByUserName ?? ''}` : shift?.openedByUserName}
@@ -147,7 +147,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                         {summary.openTablesCount > 0 && (
                             <div className="mt-4 rounded-lg bg-rb-amber-bg px-4 py-3">
                                 <p className="text-sm text-rb-amber">
-                                    {summary.openTablesCount} masanın hesabı hâlâ açık. Vardiyayı kapatmadan önce kapatmanız önerilir.
+                                    {summary.openTablesCount} masanın hesabı hâlâ açık. Günü kapatmadan önce kapatmanız önerilir.
                                 </p>
                             </div>
                         )}
@@ -179,7 +179,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 Kasada Sayılan Nakit
                             </label>
                             <p className="text-xs text-muted-foreground mb-2">
-                                Kasadaki nakdi sayıp yazın. Beklenen tutar ve fark, vardiyayı kapattıktan sonra Z raporunda görünür.
+                                Kasadaki nakdi sayıp yazın. Beklenen tutar ve fark, günü kapattıktan sonra Z raporunda görünür.
                             </p>
                             <input
                                 id="end-shift-count"
@@ -198,14 +198,14 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 disabled={submitting}
                                 className="w-full rounded-xl py-3.5 text-sm font-semibold text-rb-red-foreground bg-rb-red hover:opacity-90 transition-opacity disabled:opacity-50"
                             >
-                                {submitting ? 'Kapatılıyor...' : 'Vardiyayı Kapat, Z Raporu Al'}
+                                {submitting ? 'Kapatılıyor...' : 'Günü Kapat, Z Raporu Al'}
                             </button>
                             <button
                                 onClick={() => handleCloseShift(false)}
                                 disabled={submitting}
                                 className="w-full rounded-xl py-3.5 text-sm font-semibold text-foreground border border-border hover:bg-muted transition-colors disabled:opacity-50"
                             >
-                                {submitting ? 'Kapatılıyor...' : 'Vardiyayı Kapat'}
+                                {submitting ? 'Kapatılıyor...' : 'Günü Kapat'}
                             </button>
                         </div>
                     </>

@@ -16,11 +16,12 @@ import { formatAmount, formatElapsed } from '@/lib/format';
 
 const OrderStatus = { Served: 5 } as const;
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'KART', 2: 'NAKİT', 3: 'QR' };
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'KART', 2: 'NAKİT', 3: 'QR', 4: 'IBAN' };
 const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
     1: 'bg-rb-accent-bg text-rb-accent',
     2: 'bg-rb-green-bg text-rb-green',
     3: 'bg-rb-amber-bg text-rb-amber',
+    4: 'bg-rb-purple-bg text-rb-purple',
 };
 
 function formatShortName(fullName: string): string {
@@ -186,38 +187,56 @@ export default function CashierDashboardPage() {
                         <p className="text-sm text-muted-foreground">Açık masa yok.</p>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {servedOrders.map(order => (
+                            {/* Garsonun "Hesap iste" dediği masalar önce, en eski istek en üstte. */}
+                            {[...servedOrders].sort((a, b) =>
+                                (a.billRequestedAt ? 0 : 1) - (b.billRequestedAt ? 0 : 1)
+                                || (a.billRequestedAt ?? '').localeCompare(b.billRequestedAt ?? '')
+                            ).map(order => (
                                 <div
                                     key={order.id}
-                                    className="bg-card border rounded-2xl p-4 flex flex-col gap-3 hover:shadow-md transition-shadow"
+                                    className={`bg-card border rounded-2xl p-4 flex flex-col gap-3 hover:shadow-md transition-shadow ${order.billRequestedAt ? 'border-rb-accent/60 ring-1 ring-rb-accent/30' : ''}`}
                                 >
-                                    <div className="flex items-start justify-between">
+                                    <div className="flex items-start justify-between gap-2">
                                         <span className="font-serif font-bold text-lg text-foreground">
                                             {order.tableName}
                                         </span>
+                                        {order.billRequestedAt && (
+                                            <span className="shrink-0 rounded-full bg-rb-accent-bg px-2 py-0.5 text-[11px] font-bold text-rb-accent">
+                                                Hesap istendi · {formatElapsed(order.billRequestedAt, now)}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <p className="text-2xl font-serif font-bold text-foreground">
                                         ₺{formatAmount(order.totalPrice)}
                                     </p>
+                                    {(order.paidAmount ?? 0) > 0 && (
+                                        <p className="-mt-2 text-sm font-semibold tabular-nums">
+                                            <span className="text-rb-green">Ödenen ₺{formatAmount(order.paidAmount ?? 0)}</span>
+                                            <span className="text-muted-foreground"> · </span>
+                                            <span className="text-foreground">Kalan ₺{formatAmount(order.remainingAmount ?? order.totalPrice)}</span>
+                                        </p>
+                                    )}
 
                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                         <span>{order.createdByUserName} · {formatElapsed(order.createdAt, now)}</span>
                                         <span>{order.orderItems.length} ürün</span>
                                     </div>
 
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setSelectedOrder(order)}
-                                            className="flex-[2] h-12 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-semibold rounded-xl transition-colors"
-                                        >
-                                            Ödeme Al
-                                        </button>
+                                    {/* Masayı Taşı · Ödeme Al — admin masa paneliyle aynı sıra.
+                                        "Siparişi İptal Et" kasiyer rolüne kapalı (/order/cancel). */}
+                                    <div className="flex gap-2 mt-auto">
                                         <button
                                             onClick={() => setTransferSourceOrder(order)}
-                                            className="flex-1 h-12 border border-border hover:bg-muted text-foreground text-sm font-semibold rounded-xl transition-colors"
+                                            className="flex-1 basis-0 min-w-0 min-h-12 px-2 border border-border hover:bg-muted text-foreground text-sm font-semibold leading-tight rounded-xl transition-colors"
                                         >
                                             Masayı Taşı
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedOrder(order)}
+                                            className="flex-1 basis-0 min-w-0 min-h-12 px-2 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-semibold leading-tight rounded-xl transition-colors"
+                                        >
+                                            Ödeme Al
                                         </button>
                                     </div>
                                 </div>

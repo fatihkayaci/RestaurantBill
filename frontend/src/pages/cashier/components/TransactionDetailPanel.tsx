@@ -2,11 +2,12 @@ import { X } from 'lucide-react';
 import type { PaymentMethod, ShiftTransaction } from '@/features/cashier/types';
 import { formatAmount, formatPrice } from '@/lib/format';
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'KART', 2: 'NAKİT', 3: 'QR' };
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = { 1: 'KART', 2: 'NAKİT', 3: 'QR', 4: 'IBAN' };
 const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
     1: 'bg-rb-accent-bg text-rb-accent',
     2: 'bg-rb-green-bg text-rb-green',
     3: 'bg-rb-amber-bg text-rb-amber',
+    4: 'bg-rb-purple-bg text-rb-purple',
 };
 
 interface Props {
