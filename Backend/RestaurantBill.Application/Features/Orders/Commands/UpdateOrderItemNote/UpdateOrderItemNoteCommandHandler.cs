@@ -30,7 +30,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemNot
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
-            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, order.TableId, WaiterPermission.TakeOrders, cancellationToken);
+            string? accessError = await _db.CheckOrderAccessAsync(_currentUserService, order, WaiterPermission.TakeOrders, cancellationToken);
             if (accessError is not null)
                 return Result.Failure(accessError);
 
@@ -39,7 +39,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemNot
             await _db.SaveChangesAsync(cancellationToken);
 
             User? creator = await _db.Users.FirstOrDefaultAsync(u => u.Id == order.CreatedUser, cancellationToken);
-            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, order.TableId, order.TotalPrice, creator?.FullName ?? string.Empty);
+            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, order, creator?.FullName ?? string.Empty);
             return Result.Success();
         }
     }

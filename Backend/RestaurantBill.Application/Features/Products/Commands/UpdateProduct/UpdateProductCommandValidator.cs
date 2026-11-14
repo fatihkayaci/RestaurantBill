@@ -18,6 +18,10 @@ public class UpdateProductCommandValidator : AbstractValidator<UpdateProductComm
         RuleFor(x => x.Price)
             .GreaterThan(0).WithMessage("Fiyat 0'dan büyük olmalıdır.");
 
+        RuleFor(x => x.Cost)
+            .GreaterThanOrEqualTo(0).WithMessage("Maliyet 0'dan küçük olamaz.")
+            .When(x => x.Cost.HasValue);
+
         RuleFor(x => x.Description)
             .MaximumLength(RestaurantBill.Domain.Entities.Product.DescriptionMaxLength)
             .WithMessage($"Ürün açıklaması en fazla {RestaurantBill.Domain.Entities.Product.DescriptionMaxLength} karakter olabilir.");

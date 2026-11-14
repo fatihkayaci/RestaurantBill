@@ -26,7 +26,7 @@ public class GetPendingOrderRequestsQueryHandler(IAppDbContext db, ICurrentUserS
             .InStaffRegions(access)
             .Include(r => r.Items).ThenInclude(i => i.Product)
             .Include(r => r.Table).ThenInclude(t => t.Region)
-            .Where(r => r.Status == OrderRequestStatus.Pending && branchIds.Contains(r.Table.Region.BranchId))
+            .Where(r => r.Status == OrderRequestStatus.Pending && r.Kind != OrderRequestKind.PreOrder && branchIds.Contains(r.Table.Region.BranchId))
             .OrderBy(r => r.CreatedAt)
             .ToListAsync(cancellationToken);
 
@@ -76,6 +76,8 @@ public class ApproveOrderRequestCommandHandler(
 
         if (orderRequest is null)
             return Result.Failure("Böyle bir sipariş talebi bulunamadı.");
+        if (orderRequest.Kind == OrderRequestKind.PreOrder)
+            return Result.Failure(ApplyRequestToTableOrder.PreOrderManagedByReservationMessage);
         if (orderRequest.Status != OrderRequestStatus.Pending)
             return Result.Failure("Bu talep zaten işlendi.");
 
@@ -83,53 +85,12 @@ public class ApproveOrderRequestCommandHandler(
         if (accessError is not null)
             return Result.Failure(accessError);
 
-        Table table = await db.Tables
-            .Include(t => t.Region)
-            .FirstAsync(t => t.Id == orderRequest.TableId, cancellationToken);
-        Guid branchId = table.Region.BranchId;
+        Result<TableOrderTarget> applied = await ApplyRequestToTableOrder.ApplyAsync(db, orderRequest, noteLabel: null, cancellationToken);
+        if (applied.IsFailure)
+            return Result.Failure(applied.Error!);
 
-        Order? order = await db.Orders
-            .Include(o => o.OrderItems)
-            .Where(o => o.TableId == table.Id && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled)
-            .OrderByDescending(o => o.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        bool tableOpened = false;
-        if (order is null)
-        {
-            if (table.Status == TableStatus.OutOfService)
-                return Result.Failure("Masa hizmet dışı; sipariş açılamaz.");
-
-            // Rezerve masaya müşteri oturmuş demektir; boş masa normal yoldan açılır.
-            if (table.Status == TableStatus.Reserved)
-                table.SetStatus(TableStatus.Occupied);
-            else if (table.Status == TableStatus.Available)
-                table.Occupy();
-
-            order = Order.Create(table.Id);
-            db.Orders.Add(order);
-            tableOpened = true;
-        }
-
-        List<Guid> productIds = orderRequest.Items.Select(i => i.ProductId).Distinct().ToList();
-        List<Product> products = await db.Products
-            .Include(p => p.Category).ThenInclude(c => c.Branch)
-            .Where(p => productIds.Contains(p.Id))
-            .ToListAsync(cancellationToken);
-
-        foreach (OrderRequestItem item in orderRequest.Items)
-        {
-            Product? product = products.FirstOrDefault(p => p.Id == item.ProductId);
-            if (product is null)
-                return Result.Failure("Talepteki ürünlerden biri artık menüde yok. Talebi reddedip müşteriye haber verin.");
-
-            order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
-        }
-
-        if (!string.IsNullOrWhiteSpace(orderRequest.Note))
-            order.UpdateNote(string.IsNullOrWhiteSpace(order.Note) ? orderRequest.Note : $"{order.Note} / {orderRequest.Note}");
-
-        orderRequest.Approve();
+        var (table, order, tableOpened) = applied.Value!;
+        Guid branchId = applied.Value!.BranchId;
 
         User? actor = await db.Users.FirstOrDefaultAsync(u => u.Id == currentUser.UserId, cancellationToken);
         string actorName = actor?.FullName ?? string.Empty;
@@ -148,7 +109,7 @@ public class ApproveOrderRequestCommandHandler(
 
         if (tableOpened)
             await tableNotifications.SendTableStatusChangedAsync(branchId, table.Id, (int)table.Status);
-        await tableNotifications.SendOrderUpdatedAsync(branchId, table.Id, order.TotalPrice, actorName);
+        await tableNotifications.SendOrderUpdatedAsync(branchId, order, actorName);
         await tableNotifications.SendCustomerRequestsChangedAsync(branchId);
         await cashierNotifications.SendOrdersChangedAsync(branchId);
 
@@ -175,6 +136,8 @@ public class RejectOrderRequestCommandHandler(IAppDbContext db, ICurrentUserServ
 
         if (orderRequest is null)
             return Result.Failure("Böyle bir sipariş talebi bulunamadı.");
+        if (orderRequest.Kind == OrderRequestKind.PreOrder)
+            return Result.Failure(ApplyRequestToTableOrder.PreOrderManagedByReservationMessage);
         if (orderRequest.Status != OrderRequestStatus.Pending)
             return Result.Failure("Bu talep zaten işlendi.");
 

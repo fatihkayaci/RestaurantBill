@@ -38,7 +38,7 @@ public static class BranchScope
     }
 
     public static IQueryable<Order> InBranches(this IQueryable<Order> query, IReadOnlyCollection<Guid> branchIds)
-        => query.Where(o => branchIds.Contains(o.Table.Region.BranchId));
+        => query.Where(o => branchIds.Contains(o.BranchId));
 
     public static IQueryable<Table> InBranches(this IQueryable<Table> query, IReadOnlyCollection<Guid> branchIds)
         => query.Where(t => branchIds.Contains(t.Region.BranchId));

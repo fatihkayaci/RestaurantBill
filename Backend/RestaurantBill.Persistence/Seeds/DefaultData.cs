@@ -53,6 +53,7 @@ public static class DefaultData
             new { FullName = "Demo Garson",     UserName = "waiter",  Email = "waiter@demo.com",  Phone = "05000000002", UserCode = "1001", Password = "Waiter123*",  Role = UserRole.Waiter  },
             new { FullName = "Demo Mutfak",     UserName = "kitchen", Email = "kitchen@demo.com", Phone = "05000000003", UserCode = "1002", Password = "Kitchen123*", Role = UserRole.Kitchen },
             new { FullName = "Demo Kasiyer",    UserName = "cashier", Email = "cashier@demo.com", Phone = "05000000004", UserCode = "1003", Password = "Cashier123*", Role = UserRole.Cashier },
+            new { FullName = "Demo Kurye",      UserName = "courier", Email = "courier@demo.com", Phone = "05000000005", UserCode = "1004", Password = "Courier123*", Role = UserRole.Courier },
         };
 
         foreach (var s in staffUsers)

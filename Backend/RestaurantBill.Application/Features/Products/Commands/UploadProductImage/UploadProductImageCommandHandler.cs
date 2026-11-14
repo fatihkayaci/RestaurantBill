@@ -46,6 +46,10 @@ namespace RestaurantBill.Application.Features.Products.Commands.UploadProductIma
             {
                 newKey = await _imageStorage.UploadAsync(request.Content, _currentUser.BranchId, cancellationToken);
             }
+            catch (ImageUploadException ex)
+            {
+                return Result<string>.Failure(ex.Message);
+            }
             catch
             {
                 return Result<string>.Failure("Görsel dosyası işlenemedi. Lütfen geçerli bir resim yükleyin.");

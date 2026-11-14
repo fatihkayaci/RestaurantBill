@@ -42,7 +42,8 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
                     IsFeatured = p.IsFeatured,
                     PrepMinutes = p.PrepMinutes,
                     TaxRate = p.TaxRate,
-                    EffectiveTaxRate = p.TaxRate ?? p.Category.TaxRate ?? p.Category.Branch.TaxRate
+                    EffectiveTaxRate = p.TaxRate ?? p.Category.TaxRate ?? p.Category.Branch.TaxRate,
+                    IsOutOfStock = p.IsOutOfStock
                 })
                 .ToListAsync(cancellationToken);
 

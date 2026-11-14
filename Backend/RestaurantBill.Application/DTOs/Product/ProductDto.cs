@@ -16,4 +16,6 @@ public class ProductDto
     public decimal? TaxRate { get; set; }
     /// <summary>Siparişe yazılacak oran: ürün ?? kategori ?? şube.</summary>
     public decimal EffectiveTaxRate { get; set; }
+    /// <summary>"Tükendi": ürün aktif kalır ama online siparişte seçilemez.</summary>
+    public bool IsOutOfStock { get; set; }
 }

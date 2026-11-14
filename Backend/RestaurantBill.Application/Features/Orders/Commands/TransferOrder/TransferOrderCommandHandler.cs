@@ -40,7 +40,8 @@ public class TransferOrderCommandHandler : IRequestHandler<TransferOrderCommand,
             return Result<bool>.Failure("Hedef masa bulunamadı.");
 
         StaffAccess access = await _db.GetStaffAccessAsync(_currentUserService, cancellationToken);
-        string? accessError = await _db.CheckTableAccessAsync(access, source.Id, WaiterPermission.TransferAndReserve, cancellationToken)
+        string? accessError = access.Check(CashierPermission.TransferTables)
+            ?? await _db.CheckTableAccessAsync(access, source.Id, WaiterPermission.TransferAndReserve, cancellationToken)
             ?? await _db.CheckTableAccessAsync(access, destination.Id, null, cancellationToken);
         if (accessError is not null)
             return Result<bool>.Failure(accessError);

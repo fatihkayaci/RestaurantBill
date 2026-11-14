@@ -94,6 +94,27 @@ public class ProductTests
         }
     }
 
+    public class SetCost
+    {
+        [Fact]
+        public void WithZeroOrPositiveCost_SetsCost()
+        {
+            Product product = Product.Create("Çay", 15m, "img.png", Guid.NewGuid());
+
+            product.SetCost(4.5m);
+
+            Assert.Equal(4.5m, product.Cost);
+        }
+
+        [Fact]
+        public void WithNegativeCost_ThrowsDomainException()
+        {
+            Product product = Product.Create("Çay", 15m, "img.png", Guid.NewGuid());
+
+            Assert.Throws<DomainException>(() => product.SetCost(-1m));
+        }
+    }
+
     public class EnsureCanBeDeleted
     {
         [Fact]
@@ -113,7 +134,7 @@ public class ProductTests
             Product product = Product.Create("Çay", 15m, "img.png", Guid.NewGuid());
             typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(product, Guid.NewGuid());
             typeof(Product).GetProperty(nameof(Product.Category))!.SetValue(product, Category.Create("Test Category", Guid.NewGuid(), taxRate: 0m));
-            Order order = Order.Create(Guid.NewGuid());
+            Order order = Order.Create(Guid.NewGuid(), Guid.NewGuid());
             order.AddItem(product, 1);
 
             Assert.Throws<DomainException>(() =>

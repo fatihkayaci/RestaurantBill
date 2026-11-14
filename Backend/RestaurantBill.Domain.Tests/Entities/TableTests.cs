@@ -168,7 +168,7 @@ public class TableTests
         public void WithActiveOrders_ThrowsDomainException()
         {
             Table table = Table.Create("Masa 1", "", Guid.NewGuid());
-            Order[] orders = [Order.Create(Guid.NewGuid())];
+            Order[] orders = [Order.Create(Guid.NewGuid(), Guid.NewGuid())];
 
             Assert.Throws<DomainException>(() =>
                 table.EnsureCanBeDeleted(orders));

@@ -57,7 +57,7 @@ public class AmountPaymentTests : IntegrationTestBase
         DbContext.Tables.Add(table);
         await DbContext.SaveChangesAsync();
 
-        Order order = Order.Create(table.Id);
+        Order order = CreateOrder(table);
         if (kofte > 0) order.AddItem(_kofte, kofte, FoodRate);
         if (bira > 0) order.AddItem(_bira, bira, DrinkRate);
         DbContext.Orders.Add(order);
@@ -335,5 +335,8 @@ public class AmountPaymentTests : IntegrationTestBase
         public Task SendOrderClosedAsync(Guid restaurantId, Guid tableId, Guid orderId) => Task.CompletedTask;
         public Task SendCustomerRequestsChangedAsync(Guid restaurantId) => Task.CompletedTask;
         public Task SendBillRequestChangedAsync(Guid restaurantId, Guid tableId, DateTime? billRequestedAt) => Task.CompletedTask;
+        public Task SendItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload) => Task.CompletedTask;
+        public Task SendDeliveryItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload) => Task.CompletedTask;
+        public Task SendWaiterCalledAsync(Guid restaurantId, WaiterCalledDto payload) => Task.CompletedTask;
     }
 }

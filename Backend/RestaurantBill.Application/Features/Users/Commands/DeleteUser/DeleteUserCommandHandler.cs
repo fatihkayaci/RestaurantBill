@@ -31,7 +31,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.DeleteUser
                 .InBranches(branchIds)
                 .FirstOrDefaultAsync(ur => ur.UserId == request.UserId && !ur.IsDeleted, cancellationToken);
             if (userBranch is null)
-                return Result.Failure("Kullanıcı bulunamadı.");
+                return Result.Failure("Çalışan bulunamadı.");
 
             if (userBranch.Role == UserRole.Admin && _currentUser.Role != nameof(UserRole.Owner))
                 return Result.Failure("Admin kullanıcıları yalnızca Owner silebilir.");
@@ -40,7 +40,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.DeleteUser
                 .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
             if (user is null)
             {
-                return Result.Failure("Kullanıcı bulunamadı.");
+                return Result.Failure("Çalışan bulunamadı.");
             }
 
             user.MarkAsDeleted();

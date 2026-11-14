@@ -45,7 +45,8 @@ public class GetProductReportQueryHandler : IRequestHandler<GetProductReportQuer
             List<LineRow> rows = await _db.PaymentLineItems
                 .AsNoTracking()
                 .Where(l => l.Payment.CashRegister.BranchId == branch.Id && l.Payment.CreatedAt >= fromUtc && l.Payment.CreatedAt < toUtc)
-                .Select(l => new LineRow(l.ProductId, l.ProductName, l.CategoryId, l.CategoryName, l.UnitPrice, l.Quantity, l.Payment.TotalAmount, l.Payment.DiscountAmount, l.Payment.PrepaidAmount))
+                // Menü satırı menünün Id'siyle tek satır olur; menünün içindeki ürünler satır kalemi değildir, ciro bir kez sayılır.
+                .Select(l => new LineRow(l.SetMenuId ?? l.ProductId ?? Guid.Empty, l.ProductName, l.CategoryId, l.CategoryName, l.UnitPrice, l.Quantity, l.Payment.TotalAmount, l.Payment.DiscountAmount, l.Payment.PrepaidAmount))
                 .ToListAsync(cancellationToken);
 
             foreach (LineRow row in rows)

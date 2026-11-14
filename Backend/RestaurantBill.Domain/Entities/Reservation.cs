@@ -16,6 +16,14 @@ namespace RestaurantBill.Domain.Entities
         public int PartySize { get; private set; }
         public string Note { get; private set; } = string.Empty;
         public ReservationStatus Status { get; private set; } = ReservationStatus.Active;
+        // Müşteriye giden rezervasyon bağlantısının (ön sipariş) gizli anahtarı; kimlikten türetilmez.
+        public string AccessToken { get; private set; } = Shared.AccessToken.New();
+        // Telefonda okunabilen kısa kod (tiresiz saklanır, "K7M-2QP" diye gösterilir). Tek başına rezervasyonu açmaz:
+        // "Rezervasyon sorgula" kodu telefon numarasıyla birlikte ister. Tüm sistemde tekildir; çakışırsa kaydeden
+        // taraf RegenerateCode ile yenisini çeker.
+        public string Code { get; private set; } = Shared.ReservationCode.New();
+        public DateTime? SeatedAt { get; private set; }
+        public DateTime? NoShowAt { get; private set; }
 
         protected Reservation() { }
 
@@ -69,6 +77,9 @@ namespace RestaurantBill.Domain.Entities
             };
         }
 
+        /// <summary>Kaydetmeden önce kodun başka bir rezervasyonda olduğu görülürse yeni bir kod çekilir.</summary>
+        public void RegenerateCode() => Code = Shared.ReservationCode.New();
+
         public void Confirm()
         {
             if (Status != ReservationStatus.Pending)
@@ -91,6 +102,28 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException("Sadece aktif rezervasyonlar iptal edilebilir.");
 
             Status = ReservationStatus.Cancelled;
+        }
+
+        /// <summary>Misafir geldi ("Geldi"). Bekleyen ön sipariş varsa çağıran mutfağa gönderir.</summary>
+        public void Seat(DateTime utcNow)
+        {
+            if (Status != ReservationStatus.Active && Status != ReservationStatus.Confirmed)
+                throw new DomainException("Sadece aktif ya da onaylı rezervasyonun misafiri oturtulabilir.");
+
+            Status = ReservationStatus.Seated;
+            SeatedAt = utcNow;
+        }
+
+        public void MarkNoShow(DateTime utcNow)
+        {
+            if (Status != ReservationStatus.Active && Status != ReservationStatus.Confirmed)
+                throw new DomainException("Sadece aktif ya da onaylı rezervasyon 'gelmedi' olarak işaretlenebilir.");
+
+            if (utcNow < ReservationTime)
+                throw new DomainException("Rezervasyon saati gelmeden 'gelmedi' işaretlenemez.");
+
+            Status = ReservationStatus.NoShow;
+            NoShowAt = utcNow;
         }
     }
 }

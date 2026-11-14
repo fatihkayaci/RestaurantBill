@@ -6,7 +6,8 @@ public class OverdueOrderItemDto
 {
     public Guid OrderItemId { get; set; }
     public Guid OrderId { get; set; }
-    public Guid TableId { get; set; }
+    /// <summary>Paket siparişte null.</summary>
+    public Guid? TableId { get; set; }
     public string TableName { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
     public int Quantity { get; set; }

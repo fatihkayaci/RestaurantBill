@@ -16,6 +16,11 @@ namespace RestaurantBill.Domain.Entities
         public DateTime? HireDate { get; private set; }
         // Garsonun çalıştığı bölgeler. Boş liste = şubenin tüm bölgeleri. Diğer rollerde yok sayılır.
         public List<Guid> RegionIds { get; private set; } = [];
+        // Masa masa bakılan bölgeler (RegionIds'in alt kümesi; yönetici "Seçili masalar" demiş). Bu bölgelerde garson
+        // yalnızca TableIds'teki masalara bakar, diğer bölgelerinin tamamına. RegionIds boşken ikisi de anlamsızdır.
+        public List<Guid> RestrictedRegionIds { get; private set; } = [];
+        // Masa masa bakılan bölgelerde seçilmiş masalar.
+        public List<Guid> TableIds { get; private set; } = [];
         // Mutfak kullanıcısının hazırladığı menü kategorileri ("Izgara", "Tatlılar"). Boş liste = tüm kategoriler.
         // Diğer rollerde yok sayılır.
         public List<Guid> CategoryIds { get; private set; } = [];
@@ -24,6 +29,11 @@ namespace RestaurantBill.Domain.Entities
         public bool CanTakePayment { get; private set; }
         public bool CanCancelAndDiscount { get; private set; }
         public bool CanTransferAndReserve { get; private set; }
+        // Kasiyer yetkileri; diğer rollerde yok sayılır. Kasiyer bugüne kadar bunların hepsini yapabiliyordu,
+        // varsayılan bu yüzden açık ve indirim sınırı %100 (sınırsız).
+        public bool CanApplyDiscount { get; private set; } = true;
+        public int MaxDiscountPercent { get; private set; } = 100;
+        public bool CanTransferTables { get; private set; } = true;
 
         protected UserBranch() { }
 
@@ -82,6 +92,12 @@ namespace RestaurantBill.Domain.Entities
             RegionIds = (regionIds ?? []).Where(id => id != Guid.Empty).Distinct().ToList();
         }
 
+        public void SetTableRestriction(IEnumerable<Guid>? restrictedRegionIds, IEnumerable<Guid>? tableIds)
+        {
+            RestrictedRegionIds = (restrictedRegionIds ?? []).Where(id => id != Guid.Empty).Distinct().ToList();
+            TableIds = (tableIds ?? []).Where(id => id != Guid.Empty).Distinct().ToList();
+        }
+
         public void SetCategories(IEnumerable<Guid>? categoryIds)
         {
             CategoryIds = (categoryIds ?? []).Where(id => id != Guid.Empty).Distinct().ToList();
@@ -93,6 +109,16 @@ namespace RestaurantBill.Domain.Entities
             CanTakePayment = canTakePayment;
             CanCancelAndDiscount = canCancelAndDiscount;
             CanTransferAndReserve = canTransferAndReserve;
+        }
+
+        public void SetCashierPermissions(bool canApplyDiscount, int maxDiscountPercent, bool canTransferTables)
+        {
+            if (maxDiscountPercent is < 1 or > 100)
+                throw new DomainException("İndirim sınırı %1 ile %100 arasında olmalıdır.");
+
+            CanApplyDiscount = canApplyDiscount;
+            MaxDiscountPercent = maxDiscountPercent;
+            CanTransferTables = canTransferTables;
         }
 
         public void SetHireDate(DateTime hireDate)

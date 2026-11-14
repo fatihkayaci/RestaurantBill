@@ -1,9 +1,6 @@
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.Processing;
 
 namespace RestaurantBill.Infrastructure.Services
 {
@@ -23,24 +20,19 @@ namespace RestaurantBill.Infrastructure.Services
 
         public async Task<string> UploadAsync(Stream content, Guid branchId, string folder, int maxSize, CancellationToken cancellationToken)
         {
-            using Image image = await Image.LoadAsync(content, cancellationToken);
+            // Dosya boyutu controller/validator'da sınırlı (en çok 10 MB); Skia bayt dizisinden çözer.
+            using var buffer = new MemoryStream();
+            await content.CopyToAsync(buffer, cancellationToken);
 
-            image.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Mode = ResizeMode.Max,
-                Size = new Size(maxSize, maxSize)
-            }));
-
-            using var output = new MemoryStream();
-            await image.SaveAsWebpAsync(output, new WebpEncoder { Quality = 80 }, cancellationToken);
-            output.Position = 0;
+            // Doğrulama (yalnızca JPEG/PNG/WebP, en çok 40 MP), sığdırma, EXIF yönü ve WebP kalite 80: UploadImageProcessor.
+            byte[] webp = UploadImageProcessor.ToWebp(buffer.ToArray(), maxSize);
 
             string key = $"{folder}/{branchId:N}/{Guid.NewGuid():N}.webp";
             string url = $"https://storage.bunnycdn.com/{_options.StorageZoneName}/{key}";
 
             using var request = new HttpRequestMessage(HttpMethod.Put, url);
             request.Headers.Add("AccessKey", _options.AccessKey);
-            request.Content = new StreamContent(output);
+            request.Content = new ByteArrayContent(webp);
             request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/webp");
 
             HttpResponseMessage response = await _http.SendAsync(request, cancellationToken);

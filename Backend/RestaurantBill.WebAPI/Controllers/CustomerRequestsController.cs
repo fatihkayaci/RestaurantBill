@@ -72,6 +72,27 @@ public class ReservationController : BaseController
     public Task<IActionResult> Cancel([FromRoute] Guid id, CancellationToken cancellationToken)
         => Decide(id, ReservationDecision.Cancel, cancellationToken);
 
+    /// <summary>"Geldi": masa dolu olur, bekleyen ön sipariş masanın siparişine yazılıp mutfağa gider.</summary>
+    [HttpPost("{id:guid}/seat")]
+    public Task<IActionResult> Seat([FromRoute] Guid id, CancellationToken cancellationToken)
+        => Arrival(id, ReservationArrival.Seat, cancellationToken);
+
+    /// <summary>"Gelmedi": bekleyen ön sipariş iptal edilir.</summary>
+    [HttpPost("{id:guid}/no-show")]
+    public Task<IActionResult> NoShow([FromRoute] Guid id, CancellationToken cancellationToken)
+        => Arrival(id, ReservationArrival.NoShow, cancellationToken);
+
+    /// <summary>"Mutfağa şimdi gönder": ön sipariş misafir gelmeden mutfağa gider; rezervasyon "geldi" sayılır.</summary>
+    [HttpPost("{id:guid}/fire-pre-order")]
+    public Task<IActionResult> FirePreOrder([FromRoute] Guid id, CancellationToken cancellationToken)
+        => Arrival(id, ReservationArrival.FirePreOrder, cancellationToken);
+
+    private async Task<IActionResult> Arrival(Guid id, ReservationArrival action, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new ReservationArrivalCommand { Id = id, Action = action }, cancellationToken);
+        return HandleResult(result);
+    }
+
     private async Task<IActionResult> Decide(Guid id, ReservationDecision decision, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new DecideReservationCommand { Id = id, Decision = decision }, cancellationToken);

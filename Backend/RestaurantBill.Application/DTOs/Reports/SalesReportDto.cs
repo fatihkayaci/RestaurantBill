@@ -9,6 +9,8 @@ public class SalesReportDto
     public decimal TotalTax { get; set; }
     public int TransactionCount { get; set; }
     public decimal AvgBasket { get; set; }
+    /// <summary>Ciroya dahil paket servis teslimat ücretleri (Payment.IsDeliveryFee).</summary>
+    public decimal DeliveryFeeRevenue { get; set; }
 
     /// <summary>Aralık tek günse saatlik (24 nokta), çok günse günlük (iş günü bazlı) noktalar.</summary>
     public List<SalesTrendPointDto> Trend { get; set; } = [];

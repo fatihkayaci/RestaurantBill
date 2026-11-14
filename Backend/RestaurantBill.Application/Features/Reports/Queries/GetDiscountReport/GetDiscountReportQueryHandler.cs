@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs.Reports;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Shared;
 
@@ -106,7 +107,7 @@ public class GetDiscountReportQueryHandler : IRequestHandler<GetDiscountReportQu
             Dictionary<Guid, (string TableName, decimal Amount)> orderInfo = await _db.Orders
                 .AsNoTracking()
                 .Where(o => orderIds.Contains(o.Id))
-                .Select(o => new { o.Id, o.Table.Name, o.TotalPrice })
+                .Select(o => new { o.Id, Name = o.Table != null ? o.Table.Name : MappingExtensions.DeliveryTableName, o.TotalPrice })
                 .ToDictionaryAsync(o => o.Id, o => (o.Name, o.TotalPrice), cancellationToken);
 
             cancelledOrders = allCancellations

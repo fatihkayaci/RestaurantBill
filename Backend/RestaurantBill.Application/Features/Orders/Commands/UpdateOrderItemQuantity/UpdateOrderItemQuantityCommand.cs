@@ -7,6 +7,8 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQua
     {
         public Guid OrderId { get; set; }
         public Guid ProductId { get; set; }
+        /// <summary>Doluysa satır Id ile güncellenir (menü satırları için zorunlu; ProductId yok sayılır).</summary>
+        public Guid? OrderItemId { get; set; }
         public int Quantity { get; set; }
     }
 }

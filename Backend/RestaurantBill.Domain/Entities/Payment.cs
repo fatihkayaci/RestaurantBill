@@ -29,12 +29,14 @@ public class Payment : BaseEntity
     // Kapanış ödemesinde bu satırın ürünlerine, daha önce hesaba alınan ödemelerden düşülen pay.
     // Ürün raporu ciroyu satır kalemlerinden hesaplar: brüt = TotalAmount + DiscountAmount + PrepaidAmount.
     public decimal PrepaidAmount { get; private set; }
+    // Paket siparişin teslimat ücreti: ürün satırı taşımaz, ürün raporlarına girmez; ciroya kendi yöntemiyle girer.
+    public bool IsDeliveryFee { get; private set; }
 
     protected Payment() { }
 
     public static Payment Create(Guid orderId, Guid cashRegisterId, decimal totalAmount, decimal matrah, decimal taxAmount, PaymentMethod paymentMethod, int itemCount,
         decimal discountAmount = 0m, decimal? discountPercent = null, string? discountNote = null, Guid? userId = null, Guid? shiftId = null,
-        decimal taxRate = 0m, bool isOnAccount = false, decimal prepaidAmount = 0m)
+        decimal taxRate = 0m, bool isOnAccount = false, decimal prepaidAmount = 0m, bool isDeliveryFee = false)
     {
         if (orderId == Guid.Empty)
             throw new DomainException("Geçersiz sipariş.");
@@ -63,6 +65,9 @@ public class Payment : BaseEntity
         if (isOnAccount && (itemCount > 0 || discountAmount > 0 || prepaidAmount > 0 || totalAmount <= 0))
             throw new DomainException("Hesaba ödeme ürün, indirim içermez ve tutarı 0'dan büyük olmalı.");
 
+        if (isDeliveryFee && (isOnAccount || itemCount > 0 || discountAmount > 0 || prepaidAmount > 0 || totalAmount <= 0))
+            throw new DomainException("Teslimat ücreti ödemesi ürün, indirim içermez ve tutarı 0'dan büyük olmalı.");
+
         return new Payment
         {
             OrderId = orderId,
@@ -79,7 +84,8 @@ public class Payment : BaseEntity
             ShiftId = shiftId,
             TaxRate = taxRate,
             IsOnAccount = isOnAccount,
-            PrepaidAmount = prepaidAmount
+            PrepaidAmount = prepaidAmount,
+            IsDeliveryFee = isDeliveryFee
         };
     }
 

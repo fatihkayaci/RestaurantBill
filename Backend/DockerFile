@@ -10,12 +10,14 @@ COPY ["RestaurantBill.Infrastructure/RestaurantBill.Infrastructure.csproj", "Res
 COPY ["RestaurantBill.Persistence/RestaurantBill.Persistence.csproj", "RestaurantBill.Persistence/"]
 
 # Kütüphaneleri indir
-RUN dotnet restore "RestaurantBill.WebAPI/RestaurantBill.WebAPI.csproj"
+# Yalnızca linux-x64: SkiaSharp'ın diğer platform native dosyaları (≈480 MB, Windows pdb'leri dahil) imaja girmesin.
+# Restore ile publish aynı -r değerini kullanmalı, yoksa publish 'assets file' hatası verir.
+RUN dotnet restore "RestaurantBill.WebAPI/RestaurantBill.WebAPI.csproj" -r linux-x64
 
 # Geri kalan her şeyi kopyala ve derle
 COPY . .
 WORKDIR "/src/RestaurantBill.WebAPI"
-RUN dotnet publish -c Release -o /app/publish /p:UseSharedCompilation=false
+RUN dotnet publish -c Release -r linux-x64 --self-contained false --no-restore -o /app/publish /p:UseSharedCompilation=false -p:DebugType=None -p:DebugSymbols=false
 
 # 2. Runtime Aşaması: Sadece çalıştırmak için (Servis bölümü)
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final

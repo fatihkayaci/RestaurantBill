@@ -27,6 +27,14 @@ public interface IAppDbContext
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<OrderRequest> OrderRequests { get; }
     DbSet<OrderRequestItem> OrderRequestItems { get; }
+    DbSet<SetMenu> SetMenus { get; }
+    DbSet<SetMenuSlot> SetMenuSlots { get; }
+    DbSet<SetMenuSlotOption> SetMenuSlotOptions { get; }
+    DbSet<DeliveryOrder> DeliveryOrders { get; }
+    DbSet<DeliveryOrderLine> DeliveryOrderLines { get; }
+    DbSet<DeliveryZone> DeliveryZones { get; }
+    DbSet<BlockedPhone> BlockedPhones { get; }
+    DbSet<CustomerPhoneVerification> CustomerPhoneVerifications { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

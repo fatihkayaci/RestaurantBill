@@ -35,6 +35,14 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
                 .ToListAsync(cancellationToken);
             product.EnsureCanBeDeleted(linkedOrderItems);
 
+            List<string> setMenuNames = await _db.SetMenuSlotOptions
+                .Where(o => o.ProductId == request.Id)
+                .Select(o => o.SetMenuSlot.SetMenu.Name)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+            if (setMenuNames.Count > 0)
+                return Result.Failure($"Bu ürün şu menülerde kullanılıyor: {string.Join(", ", setMenuNames)}. Önce ürünü menülerden çıkarın.");
+
             _db.Products.Remove(product);
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);

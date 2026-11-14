@@ -12,6 +12,8 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
             .MaximumLength(50).WithMessage("Ürün adı en fazla 50 karakter olabilir.");
         RuleFor(x => x.Price)
             .GreaterThan(0).WithMessage("Fiyat 0'dan büyük olmalıdır.");
+        RuleFor(x => x.Cost)
+            .GreaterThanOrEqualTo(0).WithMessage("Maliyet 0'dan küçük olamaz.");
 
         RuleFor(x => x.Description)
             .MaximumLength(RestaurantBill.Domain.Entities.Product.DescriptionMaxLength)

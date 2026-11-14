@@ -3,7 +3,8 @@ using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Domain.Entities
 {
-    // Müşterinin masadaki QR'dan gönderdiği sipariş talebi. Personel onaylayınca masanın siparişine eklenir.
+    // Müşterinin masadaki QR'dan gönderdiği sipariş talebi ya da rezervasyonun ön siparişi. Personel onaylayınca
+    // (ön siparişte misafir gelince) masanın siparişine eklenir.
     public class OrderRequest : BaseEntity
     {
         public const int MaxItems = 50;
@@ -13,6 +14,14 @@ namespace RestaurantBill.Domain.Entities
         public Table Table { get; private set; } = default!;
         public string Note { get; private set; } = string.Empty;
         public OrderRequestStatus Status { get; private set; } = OrderRequestStatus.Pending;
+        public OrderRequestKind Kind { get; private set; } = OrderRequestKind.TableQr;
+        // Ön siparişin rezervasyonu; QR talebinde null.
+        public Guid? ReservationId { get; private set; }
+        public Reservation? Reservation { get; private set; }
+        // Müşteriye gösterilen ret nedeni; boş olabilir.
+        public string RejectReason { get; private set; } = string.Empty;
+
+        public const int RejectReasonMaxLength = 300;
 
         private readonly List<OrderRequestItem> _items = new();
         public IReadOnlyCollection<OrderRequestItem> Items => _items.AsReadOnly();
@@ -32,7 +41,27 @@ namespace RestaurantBill.Domain.Entities
             };
         }
 
-        public void AddItem(Product product, int quantity, string? note)
+        /// <summary>Rezervasyonun ön siparişi: rezervasyonun masasına yazılır, misafir gelene kadar Pending kalır.</summary>
+        public static OrderRequest CreatePreOrder(Reservation reservation, string? note)
+        {
+            if (reservation is null)
+                throw new DomainException("Geçersiz rezervasyon.");
+
+            if (reservation.Status != ReservationStatus.Confirmed)
+                throw new DomainException("Ön sipariş yalnızca onaylı rezervasyona verilebilir.");
+
+            return new OrderRequest
+            {
+                TableId = reservation.TableId,
+                ReservationId = reservation.Id,
+                Kind = OrderRequestKind.PreOrder,
+                Note = note?.Trim() ?? string.Empty,
+                Status = OrderRequestStatus.Pending
+            };
+        }
+
+        /// <param name="unitPrice">Ön siparişte müşterinin gördüğü fiyat; QR talebinde null (onayda güncel fiyat).</param>
+        public void AddItem(Product product, int quantity, string? note, decimal? unitPrice = null)
         {
             if (product is null)
                 throw new DomainException("Geçersiz ürün.");
@@ -41,7 +70,10 @@ namespace RestaurantBill.Domain.Entities
             if (_items.Count >= MaxItems)
                 throw new DomainException($"Bir talepte en fazla {MaxItems} kalem olabilir.");
 
-            _items.Add(OrderRequestItem.Create(product, quantity, note?.Trim() ?? string.Empty));
+            if (unitPrice is < 0)
+                throw new DomainException("Birim fiyat negatif olamaz.");
+
+            _items.Add(OrderRequestItem.Create(product, quantity, note?.Trim() ?? string.Empty, unitPrice));
         }
 
         public void Approve()
@@ -50,10 +82,46 @@ namespace RestaurantBill.Domain.Entities
             Status = OrderRequestStatus.Approved;
         }
 
-        public void Reject()
+        public void Reject(string? reason = null)
         {
             EnsurePending();
+
+            string trimmed = reason?.Trim() ?? string.Empty;
+            if (trimmed.Length > RejectReasonMaxLength)
+                throw new DomainException($"Ret nedeni en fazla {RejectReasonMaxLength} karakter olabilir.");
+
             Status = OrderRequestStatus.Rejected;
+            RejectReason = trimmed;
+        }
+
+        /// <summary>Ön siparişi müşteri iptal etti ya da rezervasyon iptal/ret/gelmedi oldu.</summary>
+        public void Cancel()
+        {
+            EnsurePending();
+            Status = OrderRequestStatus.Cancelled;
+        }
+
+        /// <summary>Misafir gelmeden süresi geçen ön sipariş.</summary>
+        public void Expire()
+        {
+            EnsurePending();
+            if (Kind != OrderRequestKind.PreOrder)
+                throw new DomainException("Yalnızca ön siparişlerin süresi dolar.");
+            Status = OrderRequestStatus.Expired;
+        }
+
+        /// <summary>Ön siparişin kalemleri değiştirilecekse (misafir gelene kadar) önce eskileri silinir.</summary>
+        public void ClearItems()
+        {
+            EnsurePending();
+            _items.Clear();
+        }
+
+        /// <summary>Ön siparişi değiştiren müşteri notunu da yeniler (misafir gelene kadar).</summary>
+        public void UpdateNote(string? note)
+        {
+            EnsurePending();
+            Note = note?.Trim() ?? string.Empty;
         }
 
         private void EnsurePending()
@@ -71,17 +139,20 @@ namespace RestaurantBill.Domain.Entities
         public Product Product { get; private set; } = default!;
         public int Quantity { get; private set; }
         public string Note { get; private set; } = string.Empty;
+        // Ön siparişte fiyat anlık görüntüsü; QR talebinde null.
+        public decimal? UnitPrice { get; private set; }
 
         protected OrderRequestItem() { }
 
-        internal static OrderRequestItem Create(Product product, int quantity, string note)
+        internal static OrderRequestItem Create(Product product, int quantity, string note, decimal? unitPrice)
         {
             return new OrderRequestItem
             {
                 Product = product,
                 ProductId = product.Id,
                 Quantity = quantity,
-                Note = note
+                Note = note,
+                UnitPrice = unitPrice
             };
         }
     }

@@ -34,7 +34,7 @@ public class OverdueAndTaxTests : ApplicationTestBase
         Product product = Product.Create("Köfte", 100m, "", categoryId);
         product.SetPrepMinutes(prepMinutes);
         DbContext.Products.Add(product);
-        Order order = Order.Create(table.Id);
+        Order order = Order.Create(table.Id, CurrentUser.BranchId);
         order.AddItem(product, 2);
         DbContext.Orders.Add(order);
         await DbContext.SaveChangesAsync();
@@ -102,7 +102,7 @@ public class OverdueAndTaxTests : ApplicationTestBase
         Product product = Product.Create("Ayran", 30m, "", category.Id);
         product.SetTaxRate((decimal?)productTax);
         DbContext.Products.Add(product);
-        Order order = Order.Create(table.Id);
+        Order order = Order.Create(table.Id, CurrentUser.BranchId);
         DbContext.Orders.Add(order);
         await DbContext.SaveChangesAsync();
 

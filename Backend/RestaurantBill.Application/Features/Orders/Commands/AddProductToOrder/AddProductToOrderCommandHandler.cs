@@ -1,5 +1,6 @@
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -32,9 +33,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
-            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, order.TableId, WaiterPermission.TakeOrders, cancellationToken);
+            string? accessError = await _db.CheckOrderAccessAsync(_currentUserService, order, WaiterPermission.TakeOrders, cancellationToken);
             if (accessError is not null)
                 return Result.Failure(accessError);
+
+            // Yola çıkmış paket siparişin hesabı büyürse kuryenin tahsilatı tutmaz ve kasada "Teslim al" durur.
+            if (await _db.CheckDeliveryAcceptsItemsAsync(order, cancellationToken) is { } dispatched)
+                return Result.Failure(dispatched);
 
             foreach (var item in request.OrderItems)
             {
@@ -57,7 +62,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
             await _db.SaveChangesAsync(cancellationToken);
 
             User? creator = await _db.Users.FirstOrDefaultAsync(u => u.Id == order.CreatedUser, cancellationToken);
-            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, order.TableId, order.TotalPrice, creator?.FullName ?? string.Empty);
+            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, order, creator?.FullName ?? string.Empty);
             await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.BranchId);
             return Result.Success();
         }

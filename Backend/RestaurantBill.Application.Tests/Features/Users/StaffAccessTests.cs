@@ -2,6 +2,7 @@ using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemStatus;
+using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemsStatus;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitchen;
 using RestaurantBill.Application.Features.Tables.Commands.ReservationTable;
@@ -99,7 +100,7 @@ public class StaffAccessTests : ApplicationTestBase
     {
         Table table = await SeedTableAsync();
         table.Occupy();
-        Order order = Order.Create(table.Id);
+        Order order = Order.Create(table.Id, CurrentUser.BranchId);
         DbContext.Orders.Add(order);
         await DbContext.SaveChangesAsync();
         FakeCurrentUserService waiter = await SeedStaffAsync(UserRole.Waiter); // yeni garson varsayılanı: yalnızca sipariş
@@ -177,7 +178,7 @@ public class StaffAccessTests : ApplicationTestBase
         Product kofte = await SeedProductAsync(izgara, "Köfte");
         Product kunefe = await SeedProductAsync(tatli, "Künefe");
         Table table = await SeedTableAsync();
-        Order order = Order.Create(table.Id);
+        Order order = Order.Create(table.Id, CurrentUser.BranchId);
         order.AddItem(kofte, 2);
         order.AddItem(kunefe, 1);
         DbContext.Orders.Add(order);
@@ -194,7 +195,7 @@ public class StaffAccessTests : ApplicationTestBase
         (Order mixed, Category izgara, Category tatli) = await SeedMixedOrderAsync();
         // Yalnızca tatlı içeren ikinci sipariş ızgaracıya hiç görünmez.
         Product sutlac = await SeedProductAsync(tatli, "Sütlaç");
-        Order dessertOnly = Order.Create((await SeedTableAsync()).Id);
+        Order dessertOnly = Order.Create((await SeedTableAsync()).Id, CurrentUser.BranchId);
         dessertOnly.AddItem(sutlac, 1);
         DbContext.Orders.Add(dessertOnly);
         await DbContext.SaveChangesAsync();
@@ -232,7 +233,7 @@ public class StaffAccessTests : ApplicationTestBase
         Region salon = await SeedRegionAsync();
         Region teras = await SeedRegionAsync();
         Table terasTable = await SeedTableInAsync(teras, "T1");
-        DbContext.Orders.Add(Order.Create(terasTable.Id));
+        DbContext.Orders.Add(Order.Create(terasTable.Id, teras.BranchId));
         await DbContext.SaveChangesAsync();
         // Eski veride kalmış bir bölge ataması mutfağı kısıtlamaz.
         FakeCurrentUserService kitchen = await SeedStaffAsync(UserRole.Kitchen, m => m.SetRegions([salon.Id]));
@@ -246,10 +247,10 @@ public class StaffAccessTests : ApplicationTestBase
     public async Task Kitchen_ItemStatusOutsideCategories_IsRejected()
     {
         (Order order, Category izgara, _) = await SeedMixedOrderAsync();
-        OrderItem kunefe = order.OrderItems.Single(i => i.Product.Name == "Künefe");
-        OrderItem kofte = order.OrderItems.Single(i => i.Product.Name == "Köfte");
+        OrderItem kunefe = order.OrderItems.Single(i => i.Product?.Name == "Künefe");
+        OrderItem kofte = order.OrderItems.Single(i => i.Product?.Name == "Köfte");
         FakeCurrentUserService grill = await SeedStaffAsync(UserRole.Kitchen, m => m.SetCategories([izgara.Id]));
-        var handler = new UpdateOrderItemStatusCommandHandler(Db, new FakeTableNotificationService(), grill);
+        var handler = new UpdateOrderItemStatusCommandHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), grill);
 
         var denied = await handler.Handle(new UpdateOrderItemStatusCommand { OrderId = order.Id, OrderItemId = kunefe.Id, Status = (int)OrderItemStatus.Ready }, CancellationToken.None);
         var allowed = await handler.Handle(new UpdateOrderItemStatusCommand { OrderId = order.Id, OrderItemId = kofte.Id, Status = (int)OrderItemStatus.Ready }, CancellationToken.None);
@@ -272,8 +273,8 @@ public class StaffAccessTests : ApplicationTestBase
         var grillReady = await OrderStatusHandler(grill).Handle(new UpdateOrderStatusCommand { OrderId = order.Id, Status = (int)OrderStatus.Ready }, CancellationToken.None);
 
         Assert.True(grillReady.IsSuccess);
-        Assert.Equal(OrderItemStatus.Ready, order.OrderItems.Single(i => i.Product.Name == "Köfte").Status);
-        Assert.Equal(OrderItemStatus.Pending, order.OrderItems.Single(i => i.Product.Name == "Künefe").Status);
+        Assert.Equal(OrderItemStatus.Ready, order.OrderItems.Single(i => i.Product?.Name == "Köfte").Status);
+        Assert.Equal(OrderItemStatus.Pending, order.OrderItems.Single(i => i.Product?.Name == "Künefe").Status);
         Assert.Equal(before, order.Status);
 
         var dessertReady = await OrderStatusHandler(dessert).Handle(new UpdateOrderStatusCommand { OrderId = order.Id, Status = (int)OrderStatus.Ready }, CancellationToken.None);
@@ -288,8 +289,8 @@ public class StaffAccessTests : ApplicationTestBase
     public async Task Kitchen_Query_ReturnsReadyItemsOfOwnCategories_ForThePass()
     {
         (Order order, Category izgara, _) = await SeedMixedOrderAsync();
-        order.OrderItems.Single(i => i.Product.Name == "Köfte").UpdateStatus(OrderItemStatus.Ready);
-        order.OrderItems.Single(i => i.Product.Name == "Künefe").UpdateStatus(OrderItemStatus.Ready);
+        order.OrderItems.Single(i => i.Product?.Name == "Köfte").UpdateStatus(OrderItemStatus.Ready);
+        order.OrderItems.Single(i => i.Product?.Name == "Künefe").UpdateStatus(OrderItemStatus.Ready);
         await DbContext.SaveChangesAsync();
         FakeCurrentUserService grill = await SeedStaffAsync(UserRole.Kitchen, m => m.SetCategories([izgara.Id]));
 
@@ -305,13 +306,13 @@ public class StaffAccessTests : ApplicationTestBase
     public async Task Kitchen_PassActions_ServedAndUndo_AreCategoryGuarded()
     {
         (Order order, Category izgara, _) = await SeedMixedOrderAsync();
-        OrderItem kofte = order.OrderItems.Single(i => i.Product.Name == "Köfte");
-        OrderItem kunefe = order.OrderItems.Single(i => i.Product.Name == "Künefe");
+        OrderItem kofte = order.OrderItems.Single(i => i.Product?.Name == "Köfte");
+        OrderItem kunefe = order.OrderItems.Single(i => i.Product?.Name == "Künefe");
         kofte.UpdateStatus(OrderItemStatus.Ready);
         kunefe.UpdateStatus(OrderItemStatus.Ready);
         await DbContext.SaveChangesAsync();
         FakeCurrentUserService grill = await SeedStaffAsync(UserRole.Kitchen, m => m.SetCategories([izgara.Id]));
-        var handler = new UpdateOrderItemStatusCommandHandler(Db, new FakeTableNotificationService(), grill);
+        var handler = new UpdateOrderItemStatusCommandHandler(Db, new FakeTableNotificationService(), new FakeCashierNotificationService(), grill);
 
         var undo = await handler.Handle(new UpdateOrderItemStatusCommand { OrderId = order.Id, OrderItemId = kofte.Id, Status = (int)OrderItemStatus.Pending }, CancellationToken.None);
         Assert.True(undo.IsSuccess);
@@ -326,6 +327,33 @@ public class StaffAccessTests : ApplicationTestBase
         Assert.False(foreign.IsSuccess);
         Assert.Equal(StaffAccess.CategoryDeniedMessage, foreign.Error);
         Assert.Equal(OrderItemStatus.Ready, kunefe.Status);
+    }
+
+    // Toplu uç da tek ürün ucu gibi davranır: listede kategori dışı ürün varsa istek reddedilir, hiçbir ürün değişmez
+    // ve garsona bildirim gitmez. Yalnızca kendi ürünleri gönderildiğinde geçer ve bildirim o ürünleri taşır.
+    [Fact]
+    public async Task Kitchen_BatchItemStatus_OutsideCategories_IsRejected()
+    {
+        (Order order, Category izgara, _) = await SeedMixedOrderAsync();
+        OrderItem kofte = order.OrderItems.Single(i => i.Product?.Name == "Köfte");
+        OrderItem kunefe = order.OrderItems.Single(i => i.Product?.Name == "Künefe");
+        FakeCurrentUserService grill = await SeedStaffAsync(UserRole.Kitchen, m => m.SetCategories([izgara.Id]));
+        var notifications = new FakeTableNotificationService();
+        var handler = new UpdateOrderItemsStatusCommandHandler(Db, notifications, new FakeCashierNotificationService(), grill);
+
+        var denied = await handler.Handle(new UpdateOrderItemsStatusCommand { OrderId = order.Id, OrderItemIds = [kofte.Id, kunefe.Id], Status = (int)OrderItemStatus.Ready }, CancellationToken.None);
+
+        Assert.False(denied.IsSuccess);
+        Assert.Equal(StaffAccess.CategoryDeniedMessage, denied.Error);
+        Assert.All(order.OrderItems, i => Assert.Equal(OrderItemStatus.Pending, i.Status));
+        Assert.Empty(notifications.ItemsReadySent);
+
+        var allowed = await handler.Handle(new UpdateOrderItemsStatusCommand { OrderId = order.Id, OrderItemIds = [kofte.Id], Status = (int)OrderItemStatus.Ready }, CancellationToken.None);
+
+        Assert.True(allowed.IsSuccess);
+        Assert.Equal(OrderItemStatus.Ready, kofte.Status);
+        Assert.Equal(OrderItemStatus.Pending, kunefe.Status);
+        Assert.Equal(kofte.Id, Assert.Single(Assert.Single(notifications.ItemsReadySent).Payload.Items).OrderItemId);
     }
 
     [Fact]

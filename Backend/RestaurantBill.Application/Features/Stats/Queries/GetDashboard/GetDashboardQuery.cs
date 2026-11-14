@@ -69,11 +69,16 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, Resul
             .Sum(p => p.TotalAmount);
         int closedBills = todayPayments.Select(p => p.OrderId).Distinct().Count();
 
+        // Yöntem kırılımı tüm ödeme satırlarından: hesaba ödemeler (IsOnAccount) alındıkları an, teslimat ücreti
+        // satırları (IsDeliveryFee) da kendi yöntemlerinde sayılır. Kapanış ödemesi önceden alınanı içermez, çift sayım olmaz.
+        decimal TodayBy(PaymentMethod method) => todayPayments.Where(p => p.PaymentMethod == method).Sum(p => p.TotalAmount);
         var revenue = new DashboardRevenueDto
         {
             Today = today,
-            Cash = todayPayments.Where(p => p.PaymentMethod == PaymentMethod.Nakit).Sum(p => p.TotalAmount),
-            Card = todayPayments.Where(p => p.PaymentMethod == PaymentMethod.Kart).Sum(p => p.TotalAmount),
+            Cash = TodayBy(PaymentMethod.Nakit),
+            Card = TodayBy(PaymentMethod.Kart),
+            Qr = TodayBy(PaymentMethod.Qr),
+            Iban = TodayBy(PaymentMethod.Iban),
             Other = todayPayments.Where(p => p.PaymentMethod != PaymentMethod.Nakit && p.PaymentMethod != PaymentMethod.Kart).Sum(p => p.TotalAmount),
             SameTimeYesterday = sameTimeYesterday,
             ChangePercent = sameTimeYesterday == 0 ? null : Math.Round((today - sameTimeYesterday) / sameTimeYesterday * 100, 1),
@@ -102,18 +107,44 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, Resul
 
         var openOrders = await _db.Orders
             .AsNoTracking()
-            .Where(o => tableIds.Contains(o.TableId) && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled)
+            .Where(o => o.BranchId == branchId && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled)
             .Select(o => new
             {
                 o.TableId,
                 o.TotalPrice,
+                o.PaidOnAccount,
+                o.BillRequestedAt,
                 o.CreatedAt,
                 InKitchen = o.OrderItems.Any(i => i.Status == OrderItemStatus.Pending || i.Status == OrderItemStatus.Preparing)
             })
             .ToListAsync(cancellationToken);
+        // Paket siparişler açık sipariş/mutfak sayısına girer, masa haritasına girmez.
         var orderByTable = openOrders
-            .GroupBy(o => o.TableId)
-            .ToDictionary(g => g.Key, g => new { Since = g.Min(o => o.CreatedAt), Total = g.Sum(o => o.TotalPrice) });
+            .Where(o => o.TableId is not null)
+            .GroupBy(o => o.TableId!.Value)
+            .ToDictionary(g => g.Key, g => new
+            {
+                Since = g.Min(o => o.CreatedAt),
+                Total = g.Sum(o => o.TotalPrice),
+                Paid = g.Sum(o => o.PaidOnAccount),
+                BillRequestedAt = g.Min(o => o.BillRequestedAt),
+            });
+
+        // Masa kartındaki "x/y servis edildi" ilerlemesi. Menü satırı değil içindeki ürünler sayılır; mutfak ekranı da öyle gösterir.
+        var tableItems = await _db.OrderItems
+            .AsNoTracking()
+            .Where(i => i.SetMenuId == null && i.Order.BranchId == branchId && i.Order.TableId != null
+                && i.Order.Status != OrderStatus.Paid && i.Order.Status != OrderStatus.Cancelled)
+            .Select(i => new { TableId = i.Order.TableId!.Value, i.Status, i.Quantity })
+            .ToListAsync(cancellationToken);
+        var itemsByTable = tableItems
+            .GroupBy(i => i.TableId)
+            .ToDictionary(g => g.Key, g => new
+            {
+                Kitchen = g.Where(i => i.Status is OrderItemStatus.Pending or OrderItemStatus.Preparing).Sum(i => i.Quantity),
+                Ready = g.Where(i => i.Status == OrderItemStatus.Ready).Sum(i => i.Quantity),
+                Served = g.Where(i => i.Status == OrderItemStatus.Served).Sum(i => i.Quantity),
+            });
 
         var reservations = await _db.Reservations
             .AsNoTracking()
@@ -144,6 +175,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, Resul
                     {
                         var order = orderByTable.GetValueOrDefault(t.Id);
                         var next = nextReservationByTable.GetValueOrDefault(t.Id);
+                        var items = itemsByTable.GetValueOrDefault(t.Id);
                         return new DashboardTableDto
                         {
                             Id = t.Id,
@@ -151,6 +183,12 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, Resul
                             Status = t.Status,
                             OccupiedSince = order?.Since,
                             ActiveOrderTotal = order?.Total ?? 0,
+                            PaidAmount = order?.Paid ?? 0,
+                            RemainingAmount = (order?.Total ?? 0) - (order?.Paid ?? 0),
+                            BillRequestedAt = order?.BillRequestedAt,
+                            KitchenItems = items?.Kitchen ?? 0,
+                            ReadyItems = items?.Ready ?? 0,
+                            ServedItems = items?.Served ?? 0,
                             NextReservationTime = next is null ? null : ToLocal(next.ReservationTime).ToString("HH:mm", CultureInfo.InvariantCulture),
                             NextReservationGuest = next?.GuestName,
                         };
@@ -175,7 +213,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, Resul
             .AsNoTracking()
             .Where(r => r.Status == OrderRequestStatus.Pending && tableIds.Contains(r.TableId))
             .OrderBy(r => r.CreatedAt)
-            .Select(r => new { r.CreatedAt, TableName = r.Table.Name })
+            .Select(r => new { r.CreatedAt, r.TableId, TableName = r.Table.Name })
             .ToListAsync(cancellationToken);
 
         var reservationRequests = await _db.Reservations
@@ -209,6 +247,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, Resul
             OrderRequests = orderRequests.Count,
             OldestOrderRequestAt = orderRequests.FirstOrDefault()?.CreatedAt,
             OrderRequestTables = orderRequests.Select(r => r.TableName).Distinct().Take(3).ToList(),
+            OrderRequestTableIds = orderRequests.Select(r => r.TableId).Distinct().ToList(),
             ReservationRequests = reservationRequests.Count,
             ReservationRequestTimes = reservationRequests.Take(3).Select(t => ToLocal(t).ToString("d MMM HH:mm", Tr)).ToList(),
             UncountedShifts = uncountedRegisters.Count,
@@ -236,7 +275,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, Resul
 
         List<OverdueOrderItemDto> overdue = (await OverdueOrderItems.Candidates(_db, nowUtc)
                 .AsNoTracking()
-                .Where(i => i.Order.Table.Region.BranchId == branchId)
+                .Where(i => i.Order.BranchId == branchId)
                 .ToListAsync(cancellationToken))
             .Where(i => i.IsOverdue(nowUtc))
             .OrderBy(i => i.GetDueAt())

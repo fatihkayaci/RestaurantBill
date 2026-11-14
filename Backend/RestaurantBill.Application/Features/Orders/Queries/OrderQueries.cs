@@ -16,7 +16,10 @@ public class OrderQueries(IAppDbContext db)
         return query
             .Include(o => o.OrderItems)
                 .ThenInclude(i => i.Product)
-                    .ThenInclude(p => p.Category)
+                    .ThenInclude(p => p!.Category)
+            .Include(o => o.OrderItems)
+                .ThenInclude(i => i.SetMenu)
+                    .ThenInclude(s => s!.Category)
             .OrderByDescending(o => o.Id)
             .FirstOrDefaultAsync(o => o.TableId == tableId &&
                 (o.Status == OrderStatus.Active ||

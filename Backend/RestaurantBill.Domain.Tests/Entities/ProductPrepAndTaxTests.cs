@@ -59,7 +59,7 @@ public class ProductPrepAndTaxTests
         {
             Product product = CreateProduct(categoryTax: 20m);
             product.SetTaxRate(8m);
-            Order order = Order.Create(Guid.NewGuid());
+            Order order = Order.Create(Guid.NewGuid(), Guid.NewGuid());
             order.AddItem(product, 1, product.GetEffectiveTaxRate());
 
             Assert.Equal(8m, Assert.Single(order.OrderItems).TaxRate);
@@ -90,7 +90,7 @@ public class ProductPrepAndTaxTests
         {
             Product product = CreateProduct(categoryTax: null);
             product.SetPrepMinutes(prepMinutes);
-            Order order = Order.Create(Guid.NewGuid());
+            Order order = Order.Create(Guid.NewGuid(), Guid.NewGuid());
             order.AddItem(product, 1);
             OrderItem item = Assert.Single(order.OrderItems);
             typeof(BaseEntity).GetProperty(nameof(BaseEntity.CreatedAt))!.SetValue(item, createdAt);

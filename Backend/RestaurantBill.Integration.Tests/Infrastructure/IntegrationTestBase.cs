@@ -43,5 +43,9 @@ public abstract class IntegrationTestBase : IDisposable
         OtherDefaultRegionId = otherDefaultRegion.Id;
     }
 
+    // Masa siparişi, masanın bölgesinin şubesiyle (bölge önceden kaydedilmiş olmalı).
+    protected Order CreateOrder(Table table)
+        => Order.Create(table.Id, DbContext.Regions.Single(r => r.Id == table.RegionId).BranchId);
+
     public void Dispose() => DbContext.Dispose();
 }

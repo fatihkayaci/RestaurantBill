@@ -8,5 +8,8 @@ public enum ReservationStatus
     // Müşterinin siteden gönderdiği, saat aralıklı talepler.
     Pending = 3,
     Confirmed = 4,
-    Rejected = 5
+    Rejected = 5,
+    // Misafir geldi ("Geldi"); ön sipariş varsa mutfağa bu anda gider.
+    Seated = 6,
+    NoShow = 7
 }

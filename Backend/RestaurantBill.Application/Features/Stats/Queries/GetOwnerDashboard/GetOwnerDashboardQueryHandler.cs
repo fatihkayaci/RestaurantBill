@@ -78,8 +78,8 @@ namespace RestaurantBill.Application.Features.Stats.Queries.GetOwnerDashboard
 
             List<Guid> pendingOrderBranchIds = await _db.Orders
                 .AsNoTracking()
-                .Where(o => branchIds.Contains(o.Table.Region.BranchId) && o.Status >= OrderStatus.Pending && o.Status < OrderStatus.Paid)
-                .Select(o => o.Table.Region.BranchId)
+                .Where(o => branchIds.Contains(o.BranchId) && o.Status >= OrderStatus.Pending && o.Status < OrderStatus.Paid)
+                .Select(o => o.BranchId)
                 .ToListAsync(cancellationToken);
 
             decimal RevenueFor(DateTime from, DateTime to, Guid? branchId = null) =>

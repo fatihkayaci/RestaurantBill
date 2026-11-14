@@ -144,7 +144,7 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
     {
         var (table, product) = await SeedRestaurantAsync();
         table.Occupy();
-        Order existing = Order.Create(table.Id);
+        Order existing = Order.Create(table.Id, CurrentUser.BranchId);
         existing.AddItem(product, 1);
         DbContext.Orders.Add(existing);
         await DbContext.SaveChangesAsync();
@@ -251,8 +251,11 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
         var created = await new CreateReservationRequestCommandHandler(Db, _tenant, _tableNotifications)
             .Handle(ReservationCommand(table, "19:00"), CancellationToken.None);
         var handler = new DecideReservationCommandHandler(Db, CurrentUser, _tableNotifications);
+        // Yanıt rezervasyonun kimliğini değil, bağlantının rastgele anahtarını taşır.
+        Guid reservationId = DbContext.Reservations.Single().Id;
+        Assert.Equal(DbContext.Reservations.Single().AccessToken, created.Value!.AccessToken);
 
-        var confirm = await handler.Handle(new DecideReservationCommand { Id = created.Value!.Id, Decision = ReservationDecision.Confirm }, CancellationToken.None);
+        var confirm = await handler.Handle(new DecideReservationCommand { Id = reservationId, Decision = ReservationDecision.Confirm }, CancellationToken.None);
         Assert.True(confirm.IsSuccess, confirm.Error);
         Assert.Equal(ReservationStatus.Confirmed, DbContext.Reservations.Single().Status);
         Assert.Equal(TableStatus.Available, table.Status);
@@ -260,7 +263,7 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
         var list = await new GetCustomerReservationsQueryHandler(Db, CurrentUser).Handle(new GetCustomerReservationsQuery(), CancellationToken.None);
         Assert.Single(list.Value!);
 
-        var cancel = await handler.Handle(new DecideReservationCommand { Id = created.Value.Id, Decision = ReservationDecision.Cancel }, CancellationToken.None);
+        var cancel = await handler.Handle(new DecideReservationCommand { Id = reservationId, Decision = ReservationDecision.Cancel }, CancellationToken.None);
         Assert.True(cancel.IsSuccess, cancel.Error);
         Assert.Equal(ReservationStatus.Cancelled, DbContext.Reservations.Single().Status);
     }
@@ -274,7 +277,8 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
 
         var stranger = new FakeCurrentUserService { Role = "Admin" };
         var handler = new DecideReservationCommandHandler(Db, stranger, _tableNotifications);
-        var result = await handler.Handle(new DecideReservationCommand { Id = created.Value!.Id, Decision = ReservationDecision.Confirm }, CancellationToken.None);
+        Assert.True(created.IsSuccess, created.Error);
+        var result = await handler.Handle(new DecideReservationCommand { Id = DbContext.Reservations.Single().Id, Decision = ReservationDecision.Confirm }, CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ReservationStatus.Pending, DbContext.Reservations.Single().Status);

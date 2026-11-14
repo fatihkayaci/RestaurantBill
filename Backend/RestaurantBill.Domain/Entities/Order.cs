@@ -5,8 +5,19 @@ namespace RestaurantBill.Domain.Entities
 {
     public class Order : BaseEntity
     {
-        public Guid TableId { get; private set; }
-        public Table Table { get; private set; } = default!;
+        public const string TableOnlyMessage = "Paket siparişte masa işlemi yapılamaz.";
+
+        // Şube filtreleri buna bakar; masasız (paket) siparişte de doludur.
+        public Guid BranchId { get; private set; }
+        // Masa siparişinde dolu, paket siparişte null.
+        public Guid? TableId { get; private set; }
+        public Table? Table { get; private set; }
+        public OrderType OrderType { get; private set; } = OrderType.DineIn;
+
+        // Paket siparişin teslimat ücreti. Ürün satırı değildir: kendi ödeme satırıyla (Payment.IsDeliveryFee) tahsil
+        // edilir, tahsil edilene kadar TotalPrice'a dahildir.
+        public decimal DeliveryFee { get; private set; }
+        public bool DeliveryFeeSettled { get; private set; }
 
         public string Note { get; private set; } = string.Empty;
         public decimal TotalPrice { get; private set; }
@@ -23,27 +34,80 @@ namespace RestaurantBill.Domain.Entities
 
         protected Order() { }
 
-        public static Order Create(Guid tableId)
+        /// <summary>Masa siparişi. branchId, masanın bölgesinin şubesidir.</summary>
+        public static Order Create(Guid tableId, Guid branchId)
         {
             if (tableId == Guid.Empty)
                 throw new DomainException("Geçersiz masa.");
 
+            if (branchId == Guid.Empty)
+                throw new DomainException("Geçersiz şube.");
+
             return new Order
             {
+                BranchId = branchId,
                 TableId = tableId,
+                OrderType = OrderType.DineIn,
                 Status = OrderStatus.Active
             };
         }
 
+        /// <summary>Kabul edilen online paket siparişin mutfak/hesap kaydı: masası yoktur, teslimat ücretini taşır.</summary>
+        public static Order CreateDelivery(Guid branchId, decimal deliveryFee, string? note = null)
+        {
+            if (branchId == Guid.Empty)
+                throw new DomainException("Geçersiz şube.");
+
+            if (deliveryFee < 0)
+                throw new DomainException("Teslimat ücreti negatif olamaz.");
+
+            Order order = new()
+            {
+                BranchId = branchId,
+                OrderType = OrderType.Delivery,
+                DeliveryFee = deliveryFee,
+                Note = note?.Trim() ?? string.Empty,
+                Status = OrderStatus.Active
+            };
+            order.RecalculateTotal();
+            return order;
+        }
+
+        public bool HasTable => TableId is not null;
+
+        /// <summary>Masa taşıma, birleştirme, hesap isteme gibi yalnızca masada anlamı olan işlemlerin koruması.</summary>
+        public void EnsureHasTable()
+        {
+            if (!HasTable)
+                throw new DomainException(TableOnlyMessage);
+        }
+
         public void AddItem(Product product, int quantity, decimal taxRate = 0m, string? note = null)
+        {
+            AddProductLine(product, product.Price, quantity, taxRate, note);
+        }
+
+        /// <summary>
+        /// Ürünü verilen birim fiyatla ekler (paket siparişte müşterinin onayladığı fiyat). Ürünün güncel fiyatı
+        /// sonradan değişmiş olsa da satır bu fiyatla yazılır.
+        /// </summary>
+        public void AddItemAtPrice(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note = null)
+        {
+            AddProductLine(product, unitPrice, quantity, taxRate, note);
+        }
+
+        private void AddProductLine(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note)
         {
             if (quantity <= 0)
                 throw new DomainException("Miktar 0'dan büyük olmalı.");
 
             string normalizedNote = note?.Trim() ?? string.Empty;
 
+            // Menü satırlarının ProductId'si yoktur; menü içeriği ise kendi menüsüne aittir, tek ürünle birleşmez.
+            // Fiyatı farklı satırla birleşmez; aksi halde yeni adetler eski fiyattan yazılırdı.
             OrderItem? existing = _orderItems.FirstOrDefault(x =>
-                x.ProductId == product.Id && x.Status == OrderItemStatus.Pending && x.Note == normalizedNote);
+                x.ProductId == product.Id && !x.IsSetMenuComponent && x.Status == OrderItemStatus.Pending && x.Note == normalizedNote
+                && x.UnitPrice == unitPrice);
 
             if (existing != null)
             {
@@ -52,13 +116,70 @@ namespace RestaurantBill.Domain.Entities
             }
             else
             {
-                _orderItems.Add(OrderItem.Create(product.Price, quantity, product, taxRate, normalizedNote));
+                _orderItems.Add(OrderItem.Create(unitPrice, quantity, product, taxRate, normalizedNote));
             }
 
             RecalculateTotal();
 
             if (Status < OrderStatus.Preparing)
                 Status = OrderStatus.Pending;
+        }
+
+        /// <summary>
+        /// Menüyü tek satır olarak ekler: fiyat = menü fiyatı + seçilen seçeneklerin ek ücreti. Seçilen her ürün bu satıra
+        /// bağlı, fiyatı 0 olan ayrı bir kalem olur (mutfakta kendi istasyonuna düşer). Menü satırları hiçbir zaman
+        /// birleştirilmez: aynı menü iki kez eklenirse iki ayrı satır olur.
+        /// </summary>
+        /// <param name="selections">Bölüm Id → seçilen ürün Id; seçilmeyen bölümde varsayılan seçenek kullanılır.</param>
+        public OrderItem AddSetMenu(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, int quantity, decimal taxRate, string? note = null)
+            => AddSetMenuLine(setMenu, selections, unitPrice: null, quantity, taxRate, note);
+
+        /// <summary>Menüyü verilen birim fiyatla ekler (paket siparişte müşterinin onayladığı, ek ücretler dahil fiyat).</summary>
+        public OrderItem AddSetMenuAtPrice(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal unitPrice, int quantity, decimal taxRate, string? note = null)
+            => AddSetMenuLine(setMenu, selections, unitPrice, quantity, taxRate, note);
+
+        // unitPrice null: menünün güncel fiyatı + seçilen seçeneklerin ek ücreti.
+        private OrderItem AddSetMenuLine(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal? unitPrice, int quantity, decimal taxRate, string? note)
+        {
+            if (setMenu is null)
+                throw new DomainException("Geçersiz menü.");
+
+            if (quantity <= 0)
+                throw new DomainException("Miktar 0'dan büyük olmalı.");
+
+            if (!setMenu.IsActive)
+                throw new DomainException($"{setMenu.Name} şu an satışta değil.");
+
+            IReadOnlyList<SetMenuSlotOption> chosen = setMenu.ResolveSelections(selections);
+            SetMenuSlotOption? inactive = chosen.FirstOrDefault(o => !o.Product.IsActive);
+            if (inactive is not null)
+                throw new DomainException($"{inactive.Product.Name} şu an satışta değil, {setMenu.Name} için başka bir seçim yapın.");
+
+            decimal linePrice = unitPrice ?? setMenu.Price + chosen.Sum(o => o.Surcharge);
+            OrderItem parent = OrderItem.CreateSetMenu(setMenu, linePrice, quantity, taxRate, note?.Trim() ?? string.Empty);
+            _orderItems.Add(parent);
+            foreach (SetMenuSlotOption option in chosen)
+                _orderItems.Add(OrderItem.CreateSetMenuComponent(parent, option.Product));
+
+            RecalculateTotal();
+
+            if (Status < OrderStatus.Preparing)
+                Status = OrderStatus.Pending;
+
+            return parent;
+        }
+
+        /// <summary>Menü satırının içindeki ürün kalemleri (menü satırı değilse boş).</summary>
+        public IReadOnlyList<OrderItem> GetSetMenuComponents(OrderItem setMenuItem)
+        {
+            if (!setMenuItem.IsSetMenu)
+                return [];
+
+            // Yeni eklenen kalemlerde henüz Id yoktur, bağ gezinme özelliğindedir; veritabanından gelenlerde Id ile kurulur.
+            return _orderItems
+                .Where(i => i.ParentOrderItem == setMenuItem
+                    || (i.ParentOrderItemId is not null && i.ParentOrderItemId == setMenuItem.Id))
+                .ToList();
         }
 
         public void UpdateNote(string note)
@@ -68,24 +189,67 @@ namespace RestaurantBill.Domain.Entities
 
         public void RemoveItem(Guid productId)
         {
-            OrderItem? item = _orderItems.FirstOrDefault(x => x.ProductId == productId);
+            OrderItem? item = _orderItems.FirstOrDefault(x => x.ProductId == productId && !x.IsSetMenuComponent);
             if (item == null)
                 throw new DomainException("İptal etmek istediğiniz ürün zaten bu siparişte yok.");
 
-            EnsureTotalCoversPaidOnAccount(TotalPrice - item.UnitPrice * item.Quantity);
-            _orderItems.Remove(item);
-            RecalculateTotal();
+            RemoveLine(item);
+        }
+
+        /// <summary>Satırı Id ile çıkarır; menü satırıysa içindeki ürünlerle birlikte.</summary>
+        public void RemoveOrderItem(Guid orderItemId)
+        {
+            RemoveLine(FindLine(orderItemId, "İptal etmek istediğiniz ürün zaten bu siparişte yok."));
         }
 
         public void UpdateItemQuantity(Guid productId, int quantity)
         {
-            OrderItem? item = _orderItems.FirstOrDefault(x => x.ProductId == productId);
+            OrderItem? item = _orderItems.FirstOrDefault(x => x.ProductId == productId && !x.IsSetMenuComponent);
             if (item == null)
                 throw new DomainException("Güncellemek istediğiniz ürün bu siparişte yok.");
 
+            ChangeLineQuantity(item, quantity);
+        }
+
+        /// <summary>Satırın adedini Id ile değiştirir; menü satırıysa içindeki ürünlerin adedi de değişir.</summary>
+        public void UpdateOrderItemQuantity(Guid orderItemId, int quantity)
+        {
+            ChangeLineQuantity(FindLine(orderItemId, "Güncellemek istediğiniz ürün bu siparişte yok."), quantity);
+        }
+
+        // Hesapta görünen satır: tek ürün ya da menü. Menü içeriği tek başına iptal edilemez, adedi değiştirilemez.
+        private OrderItem FindLine(Guid orderItemId, string notFoundMessage)
+        {
+            OrderItem item = _orderItems.FirstOrDefault(x => x.Id == orderItemId)
+                ?? throw new DomainException(notFoundMessage);
+
+            if (item.IsSetMenuComponent)
+                throw new DomainException("Menüdeki bir ürün tek başına değiştirilemez; menünün tamamını değiştirin.");
+
+            return item;
+        }
+
+        private void RemoveLine(OrderItem item)
+        {
+            EnsureTotalCoversPaidOnAccount(TotalPrice - item.UnitPrice * item.Quantity);
+            foreach (OrderItem component in GetSetMenuComponents(item))
+                _orderItems.Remove(component);
+            _orderItems.Remove(item);
+            RecalculateTotal();
+        }
+
+        private void ChangeLineQuantity(OrderItem item, int quantity)
+        {
             if (quantity < item.Quantity)
                 EnsureTotalCoversPaidOnAccount(TotalPrice - item.UnitPrice * (item.Quantity - quantity));
+
+            IReadOnlyList<OrderItem> components = GetSetMenuComponents(item);
+            if (components.Any(c => c.Status != OrderItemStatus.Pending))
+                throw new DomainException("Mutfağa geçmiş bir menünün adedi değiştirilemez.");
+
             item.UpdateQuantity(quantity);
+            foreach (OrderItem component in components)
+                component.UpdateQuantity(quantity);
             RecalculateTotal();
         }
 
@@ -95,16 +259,23 @@ namespace RestaurantBill.Domain.Entities
             if (item == null)
                 throw new DomainException("Ödenmek istenen ürün bu siparişte yok.");
 
+            if (item.IsSetMenuComponent)
+                throw new DomainException("Menüdeki bir ürün ayrı ödenemez; menü satırını seçin.");
+
             if (paidQuantity <= 0)
                 throw new DomainException("Ödenen miktar 0'dan büyük olmalı.");
 
             if (paidQuantity > item.Quantity)
                 throw new DomainException("Ödenen miktar sipariş kalemindeki miktardan fazla olamaz.");
 
-            if (paidQuantity == item.Quantity)
-                _orderItems.Remove(item);
-            else
-                item.ReduceQuantity(paidQuantity);
+            // Menü satırı ödenince içindeki ürünler de aynı adet kadar düşer.
+            foreach (OrderItem line in GetSetMenuComponents(item).Append(item))
+            {
+                if (paidQuantity == line.Quantity)
+                    _orderItems.Remove(line);
+                else
+                    line.ReduceQuantity(paidQuantity);
+            }
 
             RecalculateTotal();
         }
@@ -128,8 +299,9 @@ namespace RestaurantBill.Domain.Entities
 
             if (ItemTransitions.TryGetValue(newStatus, out var transition))
             {
-                foreach (OrderItem item in _orderItems.Where(i => transition.from.Contains(i.Status)))
+                foreach (OrderItem item in _orderItems.Where(i => !i.IsSetMenu && transition.from.Contains(i.Status)))
                     item.UpdateStatus(transition.to);
+                SyncSetMenuStatuses();
             }
         }
 
@@ -140,8 +312,10 @@ namespace RestaurantBill.Domain.Entities
             if (!ItemTransitions.TryGetValue(newStatus, out var transition))
                 throw new DomainException("Bu durum yalnızca siparişin tamamı için değiştirilebilir.");
 
-            foreach (OrderItem item in _orderItems.Where(i => isInScope(i) && transition.from.Contains(i.Status)))
+            // Menü satırının kategorisi yoktur; durumu içindeki ürünlerden türetilir.
+            foreach (OrderItem item in _orderItems.Where(i => !i.IsSetMenu && isInScope(i) && transition.from.Contains(i.Status)))
                 item.UpdateStatus(transition.to);
+            SyncSetMenuStatuses();
 
             if (_orderItems.All(i => i.Status >= transition.to))
                 Status = newStatus;
@@ -156,7 +330,28 @@ namespace RestaurantBill.Domain.Entities
             if (item == null)
                 throw new DomainException("Böyle bir sipariş kalemi bulunamadı.");
 
-            item.UpdateStatus(status);
+            // Menü satırına verilen durum (ör. garson "Servis edildi") içindeki tüm ürünlere uygulanır.
+            if (item.IsSetMenu)
+            {
+                foreach (OrderItem component in GetSetMenuComponents(item))
+                    component.UpdateStatus(status);
+            }
+            else
+            {
+                item.UpdateStatus(status);
+            }
+            SyncSetMenuStatuses();
+        }
+
+        // Menü satırı, içindeki en geride kalan ürünün durumundadır: hepsi hazırsa Hazır, hepsi servis edildiyse Servis edildi.
+        private void SyncSetMenuStatuses()
+        {
+            foreach (OrderItem setMenuItem in _orderItems.Where(i => i.IsSetMenu))
+            {
+                IReadOnlyList<OrderItem> components = GetSetMenuComponents(setMenuItem);
+                if (components.Count > 0)
+                    setMenuItem.UpdateStatus(components.Min(c => c.Status));
+            }
         }
 
         public void UpdateItemNote(Guid orderItemId, string note)
@@ -189,8 +384,27 @@ namespace RestaurantBill.Domain.Entities
             PaidOnAccount += amount;
         }
 
+        /// <summary>Teslimat ücretinin ödeme satırı (Payment.IsDeliveryFee) yazıldı; ücret artık kalan tutara dahil değil.</summary>
+        public void SettleDeliveryFee()
+        {
+            if (DeliveryFee <= 0)
+                throw new DomainException("Bu siparişin tahsil edilecek teslimat ücreti yok.");
+
+            if (DeliveryFeeSettled)
+                throw new DomainException("Teslimat ücreti zaten tahsil edildi.");
+
+            if (IsClosed())
+                throw new DomainException("Kapanmış bir siparişe ödeme alınamaz.");
+
+            DeliveryFeeSettled = true;
+            RecalculateTotal();
+        }
+
         public void Close()
         {
+            if (DeliveryFee > 0 && !DeliveryFeeSettled)
+                throw new DomainException("Teslimat ücreti tahsil edilmeden paket sipariş kapatılamaz.");
+
             Status = OrderStatus.Paid;
             BillRequestedAt = null;
             // Kapanış ödemesi hesaba alınanları ürünlere mahsup eder; bekleyen hesaba ödeme kalmaz.
@@ -211,6 +425,8 @@ namespace RestaurantBill.Domain.Entities
         // İlk istek anı korunur: tekrar basmak kasaya yeniden haber verir ama bekleme süresini sıfırlamaz.
         public void RequestBill(DateTime utcNow)
         {
+            EnsureHasTable();
+
             if (IsClosed())
                 throw new DomainException("Kapanmış bir sipariş için hesap istenemez.");
 
@@ -224,6 +440,8 @@ namespace RestaurantBill.Domain.Entities
 
         public void MoveToTable(Guid newTableId)
         {
+            EnsureHasTable();
+
             if (newTableId == Guid.Empty)
                 throw new DomainException("Geçersiz masa.");
 
@@ -235,9 +453,15 @@ namespace RestaurantBill.Domain.Entities
             if (source is null)
                 throw new DomainException("Geçersiz kaynak sipariş.");
 
+            EnsureHasTable();
+            source.EnsureHasTable();
+
             foreach (OrderItem item in source._orderItems.ToList())
             {
-                OrderItem? existing = _orderItems.FirstOrDefault(x =>
+                // Menü satırları ve içerikleri birleştirilmeden, aralarındaki bağla birlikte taşınır.
+                bool isSetMenuLine = item.IsSetMenu || item.IsSetMenuComponent;
+                OrderItem? existing = isSetMenuLine ? null : _orderItems.FirstOrDefault(x =>
+                    !x.IsSetMenu && !x.IsSetMenuComponent &&
                     x.ProductId == item.ProductId && x.Status == item.Status &&
                     x.UnitPrice == item.UnitPrice && x.TaxRate == item.TaxRate && x.Note == item.Note);
 
@@ -274,9 +498,10 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"Bu siparişten ₺{PaidOnAccount:0.##} ödeme alınmış; ürün iptaliyle hesap ödenen tutarın altına inemez.");
         }
 
+        // Tahsil edilmemiş teslimat ücreti hesabın parçasıdır; SettleDeliveryFee ile düşer.
         private void RecalculateTotal()
         {
-            TotalPrice = _orderItems.Sum(x => x.UnitPrice * x.Quantity);
+            TotalPrice = _orderItems.Sum(x => x.UnitPrice * x.Quantity) + (DeliveryFeeSettled ? 0m : DeliveryFee);
         }
         
     }

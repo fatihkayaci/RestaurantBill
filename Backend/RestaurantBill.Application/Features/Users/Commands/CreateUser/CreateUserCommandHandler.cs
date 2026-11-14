@@ -44,7 +44,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
             if (requestedBranchIds.Any(id => id != _currentUser.BranchId))
             {
                 if (_currentUser.Role != nameof(UserRole.Owner))
-                    return Result.Failure("Bu şubeye kullanıcı ekleme yetkiniz yok.");
+                    return Result.Failure("Bu şubeye çalışan ekleme yetkiniz yok.");
 
                 int ownedCount = await _db.Branches
                     .CountAsync(b => requestedBranchIds.Contains(b.Id) && b.Company.OwnerUserId == _currentUser.UserId && !b.IsDeleted, cancellationToken);

@@ -36,6 +36,14 @@ public class RestaurantBillDbContext : DbContext, IAppDbContext
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<OrderRequest> OrderRequests { get; set; }
     public DbSet<OrderRequestItem> OrderRequestItems { get; set; }
+    public DbSet<SetMenu> SetMenus { get; set; }
+    public DbSet<SetMenuSlot> SetMenuSlots { get; set; }
+    public DbSet<SetMenuSlotOption> SetMenuSlotOptions { get; set; }
+    public DbSet<DeliveryOrder> DeliveryOrders { get; set; }
+    public DbSet<DeliveryOrderLine> DeliveryOrderLines { get; set; }
+    public DbSet<DeliveryZone> DeliveryZones { get; set; }
+    public DbSet<BlockedPhone> BlockedPhones { get; set; }
+    public DbSet<CustomerPhoneVerification> CustomerPhoneVerifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

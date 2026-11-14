@@ -38,6 +38,8 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
                 return Result.Failure("Böyle bir kategori bulunamadı.");
 
             product.Update(request.Name, request.Price, request.IsActive, request.CategoryId);
+            if (request.Cost is not null)
+                product.SetCost(request.Cost.Value);
             product.UpdateSiteDetails(request.Description, request.IsFeatured);
             product.SetPrepMinutes(request.PrepMinutes);
             product.SetTaxRate(request.TaxRate);

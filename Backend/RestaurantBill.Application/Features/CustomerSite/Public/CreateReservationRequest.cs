@@ -1,6 +1,7 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -10,7 +11,7 @@ using RestaurantBill.Domain.Shared;
 namespace RestaurantBill.Application.Features.CustomerSite.Public;
 
 // Müşteri siteden masa + saat seçip rezervasyon talebi gönderir; restoran onaylayınca kesinleşir.
-public class CreateReservationRequestCommand : IRequest<Result<ReservationStatusDto>>
+public class CreateReservationRequestCommand : IRequest<Result<ReservationCreatedDto>>
 {
     public Guid TableId { get; set; }
     public string GuestName { get; set; } = string.Empty;
@@ -50,46 +51,48 @@ public class CreateReservationRequestCommandValidator : AbstractValidator<Create
 }
 
 public class CreateReservationRequestCommandHandler(IAppDbContext db, ITenantResolver tenant, ITableNotificationService tableNotifications)
-    : IRequestHandler<CreateReservationRequestCommand, Result<ReservationStatusDto>>
+    : IRequestHandler<CreateReservationRequestCommand, Result<ReservationCreatedDto>>
 {
-    public async Task<Result<ReservationStatusDto>> Handle(CreateReservationRequestCommand request, CancellationToken cancellationToken)
+    public async Task<Result<ReservationCreatedDto>> Handle(CreateReservationRequestCommand request, CancellationToken cancellationToken)
     {
         Company? company = await CustomerSiteScope.ResolveCompanyAsync(db, tenant, cancellationToken);
         if (company is null)
-            return Result<ReservationStatusDto>.Failure("Restoran bulunamadı.");
+            return Result<ReservationCreatedDto>.Failure("Restoran bulunamadı.");
 
         Table? table = await db.Tables
             .Include(t => t.Region).ThenInclude(r => r.Branch)
             .FirstOrDefaultAsync(t => t.Id == request.TableId && t.Region.Branch.CompanyId == company.Id, cancellationToken);
 
         if (table is null || table.Status == TableStatus.OutOfService)
-            return Result<ReservationStatusDto>.Failure("Bu masa rezervasyona uygun değil.");
+            return Result<ReservationCreatedDto>.Failure("Bu masa rezervasyona uygun değil.");
 
         Branch branch = table.Region.Branch;
         ReservationSettings settings = branch.GetReservationSettings();
 
         string? error = CustomerSiteScope.TryResolveSlot(settings, branch.TimeZoneId, request.Date, request.Time, DateTime.UtcNow, out DateTime startUtc, out DateTime endUtc);
         if (error is not null)
-            return Result<ReservationStatusDto>.Failure(error);
+            return Result<ReservationCreatedDto>.Failure(error);
 
         if (request.PartySize > settings.MaxPartySize)
-            return Result<ReservationStatusDto>.Failure($"Online en fazla {settings.MaxPartySize} kişilik rezervasyon yapılabilir. Daha kalabalık gruplar için restoranı arayın.");
+            return Result<ReservationCreatedDto>.Failure($"Online en fazla {settings.MaxPartySize} kişilik rezervasyon yapılabilir. Daha kalabalık gruplar için restoranı arayın.");
 
         List<Reservation> overlapping = await CustomerSiteScope.FindOverlappingAsync(
             db, [table.Id], startUtc, endUtc, CustomerSiteScope.BlockingStatuses, cancellationToken);
         if (overlapping.Count > 0)
-            return Result<ReservationStatusDto>.Failure("Bu masa seçtiğiniz saatte dolu. Başka bir masa ya da saat seçin.");
+            return Result<ReservationCreatedDto>.Failure("Bu masa seçtiğiniz saatte dolu. Başka bir masa ya da saat seçin.");
 
         Reservation reservation = Reservation.CreateRequest(table, request.GuestName, request.Contact, startUtc, endUtc, request.PartySize, request.Note);
+        await ReservationCodes.EnsureUniqueAsync(db, reservation, cancellationToken);
         db.Reservations.Add(reservation);
         await db.SaveChangesAsync(cancellationToken);
 
         await tableNotifications.SendCustomerRequestsChangedAsync(branch.Id);
 
         TimeZoneInfo zone = CustomerSiteScope.ZoneOf(branch.TimeZoneId);
-        return Result<ReservationStatusDto>.Success(new ReservationStatusDto
+        return Result<ReservationCreatedDto>.Success(new ReservationCreatedDto
         {
-            Id = reservation.Id,
+            AccessToken = reservation.AccessToken,
+            Code = ReservationCode.Format(reservation.Code),
             Status = (int)reservation.Status,
             TableName = table.Name,
             GuestName = reservation.GuestName,

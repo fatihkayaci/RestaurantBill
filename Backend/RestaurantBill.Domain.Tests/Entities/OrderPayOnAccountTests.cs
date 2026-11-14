@@ -18,7 +18,7 @@ public class OrderPayOnAccountTests
 
     private static (Order Order, Product Product) OrderOf(decimal price, int quantity)
     {
-        Order order = Order.Create(Guid.NewGuid());
+        Order order = Order.Create(Guid.NewGuid(), Guid.NewGuid());
         Product product = CreateProduct(price);
         order.AddItem(product, quantity, 10m);
         return (order, product);

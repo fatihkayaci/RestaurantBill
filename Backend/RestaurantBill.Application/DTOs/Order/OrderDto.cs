@@ -4,8 +4,15 @@ namespace RestaurantBill.Application.DTOs;
 public class OrderDto
 {
     public Guid Id { get; set; }
-    public Guid TableId { get; set; }
+    /// <summary>Paket siparişte null.</summary>
+    public Guid? TableId { get; set; }
+    /// <summary>Masa adı; paket siparişte "PAKET #123 · Moda" (etiket yüklenmediyse "Paket").</summary>
     public string TableName { get; set; } = string.Empty;
+    public OrderType OrderType { get; set; }
+    /// <summary>Paket siparişin şube içindeki numarası; masa siparişinde null.</summary>
+    public int? DeliveryNumber { get; set; }
+    /// <summary>Paket siparişin teslimat bölgesi (mahalle); masa siparişinde null.</summary>
+    public string? ZoneName { get; set; }
     public string Note { get; set; } = string.Empty;
     public decimal TotalPrice { get; set; }
     /// <summary>Tutar girerek (ürün seçmeden) alınmış, henüz kapanmamış ödemelerin toplamı.</summary>

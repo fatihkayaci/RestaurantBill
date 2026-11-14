@@ -19,8 +19,9 @@ public class UpdateDashboardLayoutCommandValidator : AbstractValidator<UpdateDas
     {
         When(x => x.Cards is not null, () =>
         {
+            // Bilinmeyen kimlik reddedilmez, kaydederken atlanır: eski bir istemci kaldırılmış bir kartı
+            // ("live", "overdue") hâlâ gönderebilir.
             RuleFor(x => x.Cards!)
-                .Must(cards => cards.All(DashboardCards.IsKnown)).WithMessage("Bilinmeyen bir kart seçildi.")
                 .Must(cards => cards.Distinct().Count() == cards.Count).WithMessage("Bir kart birden fazla kez seçilemez.");
         });
     }
@@ -42,9 +43,10 @@ public class UpdateDashboardLayoutCommandHandler : IRequestHandler<UpdateDashboa
         User? user = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         if (user is null) return Result<List<string>>.Failure("Kullanıcı bulunamadı.");
 
-        user.SetDashboardCards(request.Cards);
+        List<string>? cards = request.Cards?.Where(DashboardCards.IsKnown).ToList();
+        user.SetDashboardCards(cards);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return Result<List<string>>.Success(request.Cards ?? DashboardCards.Default.ToList());
+        return Result<List<string>>.Success(cards ?? DashboardCards.Default.ToList());
     }
 }

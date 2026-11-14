@@ -23,7 +23,7 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
         await DbContext.Tables.AddAsync(table);
         await DbContext.SaveChangesAsync();
 
-        var order = Order.Create(table.Id);
+        var order = CreateOrder(table);
         await DbContext.Orders.AddAsync(order);
         await DbContext.SaveChangesAsync();
 
@@ -47,8 +47,8 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
         await DbContext.Tables.AddRangeAsync(table1, table2);
         await DbContext.SaveChangesAsync();
 
-        var orderForTable1 = Order.Create(table1.Id);
-        var orderForTable2 = Order.Create(table2.Id);
+        var orderForTable1 = CreateOrder(table1);
+        var orderForTable2 = CreateOrder(table2);
         await DbContext.Orders.AddRangeAsync(orderForTable1, orderForTable2);
         await DbContext.SaveChangesAsync();
 
@@ -85,7 +85,7 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
         await DbContext.Tables.AddAsync(table);
         await DbContext.SaveChangesAsync();
 
-        var order = Order.Create(table.Id);
+        var order = CreateOrder(table);
         order.Close();
         await DbContext.Orders.AddAsync(order);
         await DbContext.SaveChangesAsync();
@@ -106,7 +106,7 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
         await DbContext.Tables.AddAsync(table);
         await DbContext.SaveChangesAsync();
 
-        var order = Order.Create(table.Id);
+        var order = CreateOrder(table);
         order.Cancel();
         await DbContext.Orders.AddAsync(order);
         await DbContext.SaveChangesAsync();
@@ -127,7 +127,7 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
         await DbContext.Tables.AddAsync(foreignTable);
         await DbContext.SaveChangesAsync();
 
-        var foreignOrder = Order.Create(foreignTable.Id);
+        var foreignOrder = CreateOrder(foreignTable);
         await DbContext.Orders.AddAsync(foreignOrder);
         await DbContext.SaveChangesAsync();
 

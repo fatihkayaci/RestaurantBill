@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
@@ -30,7 +31,8 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashi
                 .AsNoTracking()
                 .Include(o => o.Table)
                 .Include(o => o.OrderItems).ThenInclude(i => i.Product).ThenInclude(p => p!.Category).ThenInclude(c => c!.Branch)
-                .Where(o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.Table.Region.BranchId == restaurantId)
+                .Include(o => o.OrderItems).ThenInclude(i => i.SetMenu).ThenInclude(s => s!.Category)
+                .Where(o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.BranchId == restaurantId)
                 .ToListAsync(cancellationToken);
 
             List<Guid> creatorIds = orders.Select(o => o.CreatedUser).Distinct().ToList();
@@ -38,11 +40,14 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashi
                 .AsNoTracking()
                 .Where(u => creatorIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+            // Paket siparişin bileti "PAKET #123 · Moda" olarak görünür.
+            Dictionary<Guid, DeliveryScope.DeliveryLabel> deliveryLabels = await _db.LoadDeliveryLabelsAsync(orders, cancellationToken);
 
             return Result<List<OrderDto>>.Success(orders.Select(o =>
             {
                 var dto = o.ToDto();
                 dto.CreatedByUserName = creatorNameById.GetValueOrDefault(o.CreatedUser, string.Empty);
+                dto.ApplyDeliveryLabel(deliveryLabels);
                 return dto;
             }).ToList());
         }

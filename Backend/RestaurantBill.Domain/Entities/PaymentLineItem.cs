@@ -14,7 +14,10 @@ public class PaymentLineItem : BaseEntity
     public Guid PaymentId { get; private set; }
     public Payment Payment { get; private set; } = default!;
 
-    public Guid ProductId { get; private set; }
+    // Ürün satırında ProductId, menü satırında SetMenuId dolu (ikisinden yalnızca biri). Menünün içindeki ürünler
+    // satır kalemi olarak yazılmaz: menü raporda tek satır, ciro bir kez sayılır.
+    public Guid? ProductId { get; private set; }
+    public Guid? SetMenuId { get; private set; }
     public string ProductName { get; private set; } = string.Empty;
     public Guid CategoryId { get; private set; }
     public string CategoryName { get; private set; } = string.Empty;
@@ -26,11 +29,29 @@ public class PaymentLineItem : BaseEntity
 
     public static PaymentLineItem Create(Payment payment, Guid productId, string productName, Guid categoryId, string categoryName, decimal unitPrice, int quantity, decimal taxRate)
     {
-        if (payment is null)
-            throw new DomainException("Geçersiz ödeme.");
-
         if (productId == Guid.Empty)
             throw new DomainException("Geçersiz ürün.");
+
+        PaymentLineItem line = CreateLine(payment, productName, categoryId, categoryName, unitPrice, quantity, taxRate);
+        line.ProductId = productId;
+        return line;
+    }
+
+    /// <summary>Menü satırı: ad menünün adı, kategori menünün (varsa) gösterim kategorisi.</summary>
+    public static PaymentLineItem CreateForSetMenu(Payment payment, Guid setMenuId, string setMenuName, Guid categoryId, string categoryName, decimal unitPrice, int quantity, decimal taxRate)
+    {
+        if (setMenuId == Guid.Empty)
+            throw new DomainException("Geçersiz menü.");
+
+        PaymentLineItem line = CreateLine(payment, setMenuName, categoryId, categoryName, unitPrice, quantity, taxRate);
+        line.SetMenuId = setMenuId;
+        return line;
+    }
+
+    private static PaymentLineItem CreateLine(Payment payment, string productName, Guid categoryId, string categoryName, decimal unitPrice, int quantity, decimal taxRate)
+    {
+        if (payment is null)
+            throw new DomainException("Geçersiz ödeme.");
 
         if (unitPrice < 0)
             throw new DomainException("Birim fiyat negatif olamaz.");
@@ -41,7 +62,6 @@ public class PaymentLineItem : BaseEntity
         return new PaymentLineItem
         {
             Payment = payment,
-            ProductId = productId,
             ProductName = productName,
             CategoryId = categoryId,
             CategoryName = categoryName,

@@ -8,6 +8,8 @@ namespace RestaurantBill.Domain.Entities
         public Category Category { get; private set; } = default!;
         public string Name { get; private set; } = string.Empty;
         public decimal Price { get; private set; }
+        // Birim maliyet (₺). Yalnızca Admin/Owner görür; girilmemişse 0.
+        public decimal Cost { get; private set; }
         public bool IsActive { get; private set; }
         public string ImageUrl { get; private set; } = string.Empty;
         // Restoran sitesinde ürün adının altında görünen kısa açıklama ("Çift shot, günün çekirdeği").
@@ -19,6 +21,8 @@ namespace RestaurantBill.Domain.Entities
         public int? PrepMinutes { get; private set; }
         // Ürüne özel KDV oranı. null: kategorinin (o da yoksa şubenin) oranı kullanılır.
         public decimal? TaxRate { get; private set; }
+        // "Tükendi": ürün aktif kalır ama online siparişte seçilemez.
+        public bool IsOutOfStock { get; private set; }
 
         public const int DescriptionMaxLength = 160;
         public const int PrepMinutesMax = 240;
@@ -46,6 +50,19 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"Hazırlanma süresi 1 ile {PrepMinutesMax} dakika arasında olmalıdır.");
 
             PrepMinutes = prepMinutes;
+        }
+
+        public void SetOutOfStock(bool isOutOfStock)
+        {
+            IsOutOfStock = isOutOfStock;
+        }
+
+        public void SetCost(decimal cost)
+        {
+            if (cost < 0)
+                throw new DomainException("Maliyet 0'dan küçük olamaz.");
+
+            Cost = cost;
         }
 
         public void SetTaxRate(decimal? taxRate)

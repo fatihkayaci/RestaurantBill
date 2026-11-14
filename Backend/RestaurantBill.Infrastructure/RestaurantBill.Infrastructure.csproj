@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\RestaurantBill.Application\RestaurantBill.Application.csproj" />
@@ -7,7 +7,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.11" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.13" />
+    <PackageReference Include="SkiaSharp" Version="4.156.0" />
+    <!-- Docker imajı (aspnet:9.0, Debian/glibc) için libSkiaSharp.so; fontconfig bağımlılığı yok, ek apt paketi gerekmez. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.156.0" />
   </ItemGroup>
 
   <PropertyGroup>

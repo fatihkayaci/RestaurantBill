@@ -37,15 +37,15 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
     {
         var table = await SeedTableAsync(RestaurantId);
 
-        var activeOrder = Order.Create(table.Id);
+        var activeOrder = CreateOrder(table);
 
-        var servedOrder = Order.Create(table.Id);
+        var servedOrder = CreateOrder(table);
         servedOrder.UpdateStatus(OrderStatus.Served);
 
-        var paidOrder = Order.Create(table.Id);
+        var paidOrder = CreateOrder(table);
         paidOrder.Close();
 
-        var cancelledOrder = Order.Create(table.Id);
+        var cancelledOrder = CreateOrder(table);
         cancelledOrder.Cancel();
 
         await DbContext.Orders.AddRangeAsync(activeOrder, servedOrder, paidOrder, cancelledOrder);
@@ -65,10 +65,10 @@ public class GetAllOrdersToCashierQueryTests : IntegrationTestBase
         var myTable = await SeedTableAsync(RestaurantId);
         var otherTable = await SeedTableAsync(OtherRestaurantId);
 
-        var myServedOrder = Order.Create(myTable.Id);
+        var myServedOrder = CreateOrder(myTable);
         myServedOrder.UpdateStatus(OrderStatus.Served);
 
-        var otherServedOrder = Order.Create(otherTable.Id);
+        var otherServedOrder = CreateOrder(otherTable);
         otherServedOrder.UpdateStatus(OrderStatus.Served);
 
         await DbContext.Orders.AddRangeAsync(myServedOrder, otherServedOrder);

@@ -46,6 +46,7 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger
 app.MapHub<KitchenHub>("/kitchen-hub");
 app.MapHub<TableHub>("/table-hub");
 app.MapHub<CashierHub>("/cashier-hub");
+app.MapHub<CourierHub>("/courier-hub");
 app.MapHealthCheck();
 
 await app.MigrateAndSeedAsync();
