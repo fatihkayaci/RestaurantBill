@@ -60,7 +60,7 @@ New-IssueSafe "Review page/folder organization" "Review front-end page/folder st
 New-IssueSafe "Review and complete backend validation rules" "Review existing backend validation rules and implement the missing business rules." @("backend")
 New-IssueSafe "Move from anemic model toward a rich domain model" "Refactor entities from an anemic model toward a richer domain model." @("backend","refactor")
 New-IssueSafe "Add more domain exception types" "Add more domain exception types and broaden coverage." @("backend","refactor")
-New-IssueSafe "Review and optimize DTOs and AutoMapper configs" "Review incoming DTOs and AutoMapper configurations and optimize them." @("backend","refactor")
+New-IssueSafe "Review and optimize DTOs and manual mappings" "Review incoming DTOs and the manual MappingExtensions and optimize them." @("backend","refactor")
 New-IssueSafe "Introduce a lightweight RestaurantDto for name-only needs" "Currently the full restaurant entity is sent just to render the header. Introduce a lightweight RestaurantDto for name-only needs." @("backend","refactor")
 New-IssueSafe "Rename generic Update to UpdateTable in table operations" "Rename the generic Update method in table operations to UpdateTable for naming consistency." @("backend","refactor","good first issue")
 New-IssueSafe "Optimize DeleteCategoryCommandHandler logic" "Review and optimize the business logic inside DeleteCategoryCommandHandler." @("backend","refactor")

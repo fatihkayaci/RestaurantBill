@@ -74,7 +74,7 @@
 - [ ] **Validation:** Review and complete all backend validation rules; implement missing business rules.
 - [ ] **Refactor:** Move from an anemic model toward a richer domain model.
 - [ ] **Refactor:** Add more domain exception types and broaden coverage.
-- [ ] **Refactor:** Review and optimize incoming DTOs and AutoMapper configurations.
+- [ ] **Refactor:** Review and optimize incoming DTOs and the manual mappings (`MappingExtensions`).
 - [ ] **Refactor:** Introduce a lightweight `RestaurantDto` for name-only needs (currently the full entity is sent just to render the header).
 - [ ] **Refactor:** Rename the generic `Update` in table operations to `UpdateTable` for naming consistency.
 - [ ] **Refactor [Category]:** Review and optimize the logic in `DeleteCategoryCommandHandler`.
