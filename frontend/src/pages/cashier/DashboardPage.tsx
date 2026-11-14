@@ -1,18 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import { orderService } from '@/features/orders/api/orderService';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import { tableService } from '@/features/tables/api/tableService';
+import { userService } from '@/features/users/api/userService';
+import { ALL_CASHIER_PERMISSIONS, cashierPermissionsOf, type CashierPermissions } from '@/features/users/types';
 import type { Order } from '@/features/orders/types';
 import type { PaymentMethod, ShiftSummary, ShiftTransaction } from '@/features/cashier/types';
 import type { Table } from '@/features/tables/types';
 import PaymentPanel from './components/PaymentPanel';
 import TransactionDetailPanel from './components/TransactionDetailPanel';
+import OnlineOrdersBoard from '@/features/delivery/components/OnlineOrdersBoard';
+import { useNewOnlineOrderCounts } from '@/features/delivery/onlineOrdersHub';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
 import HeaderStatCounter from '@/components/layout/HeaderStatCounter';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { formatAmount, formatElapsed } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 const OrderStatus = { Served: 5 } as const;
 
@@ -30,8 +36,14 @@ function formatShortName(fullName: string): string {
     return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
 }
 
+/** Kasiyer ekranının ikinci sekmesi (?sekme=paket): online paket siparişler; kurye kasası panonun içinde. */
+const DELIVERY_TAB = 'paket';
+
 export default function CashierDashboardPage() {
     const { shift } = useActiveShift();
+    const [params, setParams] = useSearchParams();
+    const deliveryTab = params.get('sekme') === DELIVERY_TAB;
+    const { newCount: newDeliveryCount } = useNewOnlineOrderCounts();
     const [servedOrders, setServedOrders] = useState<Order[]>([]);
     const [tables, setTables] = useState<Table[]>([]);
     const [shiftTransactions, setShiftTransactions] = useState<ShiftTransaction[]>([]);
@@ -41,6 +53,14 @@ export default function CashierDashboardPage() {
     const [transferSourceOrder, setTransferSourceOrder] = useState<Order | null>(null);
     const [now, setNow] = useState(() => Date.now());
     const [loadFailed, setLoadFailed] = useState(false);
+    // Yöneticinin verdiği kasiyer yetkileri; yetkisiz işlemin düğmesi gizlenir, sunucu da aynı kuralı uygular.
+    const [permissions, setPermissions] = useState<CashierPermissions>(ALL_CASHIER_PERMISSIONS);
+
+    useEffect(() => {
+        userService.getCurrentUser()
+            .then(user => setPermissions(cashierPermissionsOf(user)))
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 30000);
@@ -90,18 +110,22 @@ export default function CashierDashboardPage() {
         });
     }, [shiftTransactions]);
 
+    // Effect Event: hub bağlantısı bir kez kurulur ama handler her çağrıda güncel vardiyayı (shift) görür.
+    // Düz closure'da mount anındaki shift (çoğunlukla henüz null) kalıyor, işlemler yenilenmiyordu.
+    const handleOrdersChanged = useEffectEvent(() => {
+        orderService.getAllOrdersToCashier()
+            .then(setServedOrders)
+            .catch(() => {});
+        tableService.getTables()
+            .then(setTables)
+            .catch(() => {});
+        refreshTransactions();
+    });
+
     useEffect(() => {
         const { connection: conn, stop } = createHubConnection('/cashier-hub');
 
-        conn.on('OrdersChanged', () => {
-            orderService.getAllOrdersToCashier()
-                .then(setServedOrders)
-                .catch(() => {});
-            tableService.getTables()
-                .then(setTables)
-                .catch(() => {});
-            refreshTransactions();
-        });
+        conn.on('OrdersChanged', () => handleOrdersChanged());
 
         let cancelled = false;
         conn.start().catch(err => { if (!cancelled) console.error('SignalR:', err); });
@@ -157,7 +181,30 @@ export default function CashierDashboardPage() {
                 </div>
             </div>
 
+            {/* Sekmeler: masalar / online paket siparişler */}
+            <div className="flex shrink-0 gap-1 border-b border-border px-4 pt-2 sm:px-6" role="tablist" aria-label="Kasa ekranı">
+                {([[false, 'Masalar'], [true, 'Paket siparişler']] as const).map(([isDelivery, label]) => (
+                    <button
+                        key={label}
+                        type="button"
+                        role="tab"
+                        aria-selected={deliveryTab === isDelivery}
+                        onClick={() => setParams(isDelivery ? { sekme: DELIVERY_TAB } : {})}
+                        className={cn(
+                            '-mb-px flex min-h-11 items-center gap-1.5 border-b-2 px-3 text-sm font-semibold transition-colors',
+                            deliveryTab === isDelivery ? 'border-rb-gold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+                        )}
+                    >
+                        {label}
+                        {isDelivery && newDeliveryCount > 0 && (
+                            <span className="rounded-full bg-rb-accent px-1.5 text-xs font-bold tabular-nums text-rb-accent-foreground">{newDeliveryCount}</span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
             {/* İçerik */}
+            {deliveryTab ? <OnlineOrdersBoard canBlockPhone={false} /> : (
             <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
                 {/* Sol: Ödeme bekleyen masalar */}
                 <div className="lg:flex-1 lg:overflow-y-auto p-4 sm:p-6">
@@ -224,14 +271,16 @@ export default function CashierDashboardPage() {
                                     </div>
 
                                     {/* Masayı Taşı · Ödeme Al — admin masa paneliyle aynı sıra.
-                                        "Siparişi İptal Et" kasiyer rolüne kapalı (/order/cancel). */}
+                                        "Siparişi İptal Et" kasiyer rolüne kapalı (/order/cancel); "Masayı Taşı" yetkiye bağlı. */}
                                     <div className="flex gap-2 mt-auto">
-                                        <button
-                                            onClick={() => setTransferSourceOrder(order)}
-                                            className="flex-1 basis-0 min-w-0 min-h-12 px-2 border border-border hover:bg-muted text-foreground text-sm font-semibold leading-tight rounded-xl transition-colors"
-                                        >
-                                            Masayı Taşı
-                                        </button>
+                                        {permissions.canTransferTables && (
+                                            <button
+                                                onClick={() => setTransferSourceOrder(order)}
+                                                className="flex-1 basis-0 min-w-0 min-h-12 px-2 border border-border hover:bg-muted text-foreground text-sm font-semibold leading-tight rounded-xl transition-colors"
+                                            >
+                                                Masayı Taşı
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => setSelectedOrder(order)}
                                             className="flex-1 basis-0 min-w-0 min-h-12 px-2 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-semibold leading-tight rounded-xl transition-colors"
@@ -293,6 +342,7 @@ export default function CashierDashboardPage() {
                     )}
                 </div>
             </div>
+            )}
 
             {/* Ödeme paneli overlay */}
             {selectedOrder && (
@@ -306,6 +356,8 @@ export default function CashierDashboardPage() {
                             order={selectedOrder}
                             onClose={() => setSelectedOrder(null)}
                             onComplete={handlePaymentComplete}
+                            canDiscount={permissions.canApplyDiscount}
+                            maxDiscountPercent={permissions.maxDiscountPercent}
                         />
                     </div>
                 </>

@@ -1,6 +1,13 @@
 import type { Order } from '../types';
 import { api } from '@/lib/axiosInstance';
 
+/** Siparişe eklenecek bir satır (POST /order/add-product gövdesindeki orderItems öğesi). */
+export interface NewOrderItem {
+    productId: string;
+    quantity: number;
+    note: string;
+}
+
 export const orderService = {
     getAllOrdersToKitchen: async () => {
         const response = await api.get<Order[]>(`/order/kitchen`);
@@ -20,6 +27,11 @@ export const orderService = {
             note: activeOrder.note,
             orderItems: activeOrder.orderItems
         });
+        return response.data;
+    },
+    /** Var olan siparişe satırları tek istekte ekler; sunucu yalnızca orderId, note ve orderItems bekler. */
+    addItems: async (orderId: number, note: string, items: NewOrderItem[]) => {
+        const response = await api.post<{ message: string }>(`/order/add-product`, { orderId, note, orderItems: items });
         return response.data;
     },
     createOrder: async (tableId: string) => {
@@ -47,12 +59,27 @@ export const orderService = {
         });
         return response.data;
     },
+    /** Satırı Id ile çıkarır; menü satırı içindeki ürünlerle birlikte gider. Menü satırları yalnızca böyle çıkarılır. */
+    removeOrderLine: async (orderId: number | string, orderItemId: number | string) => {
+        const response = await api.post(`/order/item/remove`, { orderId, orderItemId });
+        return response.data;
+    },
+    /** Satırın adedini Id ile değiştirir; menü satırında içindeki ürünlerin adedi de değişir (hepsi beklemedeyse). */
+    updateOrderLineQuantity: async (orderId: number | string, orderItemId: number | string, quantity: number) => {
+        const response = await api.post(`/order/item/quantity`, { orderId, orderItemId, quantity });
+        return response.data;
+    },
     updateOrderStatus: async (orderId: number, status: number) => {
         const response = await api.post(`/order/${orderId}/status`, { status });
         return response.data;
     },
     updateOrderItemStatus: async (orderId: number, itemId: number, status: number) => {
         const response = await api.post(`/order/${orderId}/item/${itemId}/status`, { status });
+        return response.data;
+    },
+    /** Siparişin birden çok kalemini tek istekte aynı duruma taşır (mutfak pasası); garsona tek "hazır" bildirimi gider. */
+    updateOrderItemsStatus: async (orderId: number, orderItemIds: number[], status: number) => {
+        const response = await api.post(`/order/${orderId}/items/status`, { orderItemIds, status });
         return response.data;
     },
     updateOrderItemNote: async (orderId: number, itemId: number, note: string) => {

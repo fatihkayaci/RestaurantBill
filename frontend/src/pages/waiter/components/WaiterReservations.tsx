@@ -3,6 +3,8 @@ import { CalendarCheck, Phone, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import { RESERVATION_PENDING, type StaffReservation } from '@/features/customerSite/types';
+import { PreOrderBadge, PreOrderPanel, ReservationArrivalActions } from '@/features/customerSite/components/ReservationArrival';
+import { ReservationCodeBadge, ReservationShareActions } from '@/features/customerSite/components/ReservationShare';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
 
@@ -70,15 +72,24 @@ export default function WaiterReservations({ reservations, loading, canDecide, o
                                             <p className="font-serif text-[22px] font-bold leading-tight text-foreground">{r.time} · {r.guestName}</p>
                                             <p className="text-sm text-rb-text-sub">{r.tableName} · {r.regionName} · {r.time}–{r.endTime}</p>
                                         </div>
-                                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-xs font-bold', pending ? 'bg-rb-gold-bg text-foreground' : 'bg-rb-green-bg text-rb-green')}>
-                                            {pending ? 'Onay bekliyor' : 'Onaylı'}
-                                        </span>
+                                        <div className="flex shrink-0 flex-col items-end gap-1">
+                                            <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', pending ? 'bg-rb-gold-bg text-foreground' : 'bg-rb-green-bg text-rb-green')}>
+                                                {pending ? 'Onay bekliyor' : 'Onaylı'}
+                                            </span>
+                                            <PreOrderBadge reservation={r} />
+                                        </div>
                                     </div>
                                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground">
                                         <span className="inline-flex items-center gap-1.5"><Users className="size-4 text-rb-text-sub" aria-hidden="true" />{r.partySize} kişi</span>
                                         {r.contact && <a href={`tel:${r.contact}`} className="inline-flex items-center gap-1.5 underline-offset-2 hover:underline"><Phone className="size-4 text-rb-text-sub" aria-hidden="true" />{r.contact}</a>}
+                                        <ReservationCodeBadge code={r.code} />
                                     </div>
                                     {r.note && <p className="rounded-xl bg-muted px-3 py-2 text-sm text-foreground">{r.note}</p>}
+                                    <PreOrderPanel reservation={r} />
+                                    <ReservationShareActions reservation={r} />
+                                    {canDecide && !pending && (
+                                        <ReservationArrivalActions reservation={r} onChanged={onChanged} disabled={busyId !== null} className="mt-1" />
+                                    )}
                                     {canDecide && (
                                         <div className="mt-1 grid grid-cols-2 gap-2">
                                             {pending ? (

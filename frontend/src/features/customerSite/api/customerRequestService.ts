@@ -26,4 +26,16 @@ export const customerRequestService = {
     cancelReservation: async (id: string) => {
         await api.post(`/reservation/${id}/cancel`);
     },
+    /** "Geldi": masa açılır, bekleyen ön sipariş mutfağa gider. */
+    seatReservation: async (id: string) => {
+        await api.post(`/reservation/${id}/seat`);
+    },
+    /** "Gelmedi": bekleyen ön sipariş iptal edilir. */
+    markReservationNoShow: async (id: string) => {
+        await api.post(`/reservation/${id}/no-show`);
+    },
+    /** "Mutfağa şimdi gönder": ön sipariş misafir gelmeden mutfağa gider. */
+    firePreOrder: async (id: string) => {
+        await api.post(`/reservation/${id}/fire-pre-order`);
+    },
 };

@@ -26,7 +26,7 @@ export const MOTION_CSS = `
 @media (prefers-reduced-motion: reduce){.rb-kay,.rb-kay-yavas,.rb-don{animation:none}}
 `;
 
-export type SitePageKey = 'home' | 'menu' | 'hakkimizda' | 'mekan' | 'iletisim' | 'rezervasyon';
+export type SitePageKey = 'home' | 'menu' | 'hakkimizda' | 'mekan' | 'iletisim' | 'rezervasyon' | 'rezervasyon-sorgula';
 
 export function hasAboutPage(site: PublicSite): boolean {
     return Boolean(site.site.storyTitle || site.site.about);

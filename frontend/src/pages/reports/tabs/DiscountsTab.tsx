@@ -53,13 +53,13 @@ export default function DiscountsTab({ data, loading }: Props) {
             <div className="grid lg:grid-cols-2 gap-4">
                 <div className="rounded-xl border border-border bg-card overflow-hidden">
                     <div className="px-5 py-3.5 border-b border-border">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Kullanıcı Bazlı İndirim</p>
+                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Çalışan Bazlı İndirim</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border">
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kullanıcı</th>
+                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Çalışan</th>
                                     <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Adet</th>
                                     <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Toplam</th>
                                 </tr>

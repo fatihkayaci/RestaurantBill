@@ -1,14 +1,15 @@
 import axios from 'axios';
 import { getTenantSlug } from '@/lib/tenant';
 import type {
-    Availability, DaySlot, OrderRequestStatus, PublicSite, PublicTableInfo, ReservationStatusInfo,
+    Availability, DaySlot, OrderRequestStatus, PublicSite, PublicTableInfo, ReservationDetail, ReservationStatusInfo,
+    TableActionResult,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5077';
 
 // Müşteri sitesi girişsizdir: personel token'ı, 401'de girişe yönlendirme ve "veri değişti" olayı
 // bu isteklerde yok. Bu yüzden ortak `api` yerine ayrı, sade bir istemci kullanılır.
-const publicApi = axios.create({
+export const publicApi = axios.create({
     baseURL: `${API_BASE_URL}/api/public`,
     timeout: 8000,
     headers: { 'Content-Type': 'application/json' },
@@ -57,6 +58,16 @@ export const publicService = {
         const response = await publicApi.post<OrderRequestStatus>('/order-requests', { tableId, items, note });
         return response.data;
     },
+    /** Masaya bakan garsonlara canlı uyarı; aynı masadan 60 sn içinde tekrar bildirilmez. */
+    callWaiter: async (tableId: string) => {
+        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/call-waiter`);
+        return response.data;
+    },
+    /** Masanın açık hesabı için hesap isteği; açık hesap yoksa hata döner. */
+    requestBill: async (tableId: string) => {
+        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/request-bill`);
+        return response.data;
+    },
     getOrderRequestStatus: async (id: string) => {
         const response = await publicApi.get<OrderRequestStatus>(`/order-requests/${id}`);
         return response.data;
@@ -65,8 +76,23 @@ export const publicService = {
         const response = await publicApi.post<ReservationStatusInfo>('/reservations', input);
         return response.data;
     },
-    getReservationStatus: async (id: string) => {
-        const response = await publicApi.get<ReservationStatusInfo>(`/reservations/${id}`);
+    /** Rezervasyon sayfası: özet, ön sipariş penceresi ve mevcut ön sipariş. */
+    /** "Rezervasyon sorgula": kod + telefon eşleşirse rezervasyon bağlantısının anahtarı; yoksa 400 (tek, genel mesaj). */
+    lookupReservation: async (code: string, phone: string) => {
+        const response = await publicApi.post<{ accessToken: string }>('/reservations/lookup', { code, phone });
+        return response.data;
+    },
+    getReservationByToken: async (token: string) => {
+        const response = await publicApi.get<ReservationDetail>(`/reservations/by-token/${encodeURIComponent(token)}`);
+        return response.data;
+    },
+    /** Ön siparişi ver ya da değiştir; fiyatlar sunucuda hesaplanır. Güncel sayfa verisini döner. */
+    savePreOrder: async (token: string, items: OrderRequestItemInput[], note: string) => {
+        const response = await publicApi.put<ReservationDetail>(`/reservations/${encodeURIComponent(token)}/pre-order`, { items, note });
+        return response.data;
+    },
+    cancelPreOrder: async (token: string) => {
+        const response = await publicApi.delete<ReservationDetail>(`/reservations/${encodeURIComponent(token)}/pre-order`);
         return response.data;
     },
 };

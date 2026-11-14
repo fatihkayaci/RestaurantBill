@@ -16,6 +16,9 @@ import KitchenDashboardPage from './pages/kitchen/DashboardPage';
 import CashierLayout from './pages/cashier/Layout';
 import CashierDashboardPage from './pages/cashier/DashboardPage';
 
+import CourierLayout from './pages/courier/Layout';
+import CourierDashboardPage from './pages/courier/DashboardPage';
+
 import OwnerLayout from './pages/owner/Layout';
 import OwnerDashboardPage from './pages/owner/DashboardPage';
 import OwnerBrandingPage from './pages/owner/SettingsPage';
@@ -25,10 +28,10 @@ import OwnerAuditLogPage from './pages/owner/AuditLogPage';
 import SlugSetupPage from './pages/owner/SlugSetupPage';
 
 import AdminLayout from './pages/admin/Layout';
-import AdminRestaurantPage from './pages/admin/RestaurantPage';
 import StaffPage from './pages/admin/StaffPage';
 import TablesPage from './pages/admin/TablesPage';
 import MenuPage from './pages/admin/MenuPage';
+import SetMenusPage from './pages/admin/SetMenusPage';
 import CashRegistersPage from './pages/admin/CashRegistersPage';
 import ShiftsPage from './pages/admin/ShiftsPage';
 import ProfilePage from './pages/admin/ProfilePage';
@@ -48,9 +51,15 @@ import RestaurantAboutPage from './pages/public/RestaurantAboutPage';
 import RestaurantVenuePage from './pages/public/RestaurantVenuePage';
 import RestaurantContactPage from './pages/public/RestaurantContactPage';
 import RestaurantReservationPage from './pages/public/RestaurantReservationPage';
+import ReservationDetailPage from './pages/public/ReservationDetailPage';
+import ReservationLookupPage from './pages/public/ReservationLookupPage';
 import SiteSettingsPage from './pages/admin/SiteSettingsPage';
 import TableOrderPage from './pages/public/TableOrderPage';
 import ReservationsPage from './pages/admin/ReservationsPage';
+import SettingsPage, { LegacySettingsRedirect } from './pages/admin/SettingsPage';
+import OnlineOrdersPage from './pages/admin/OnlineOrdersPage';
+import DeliveryOrderPage from './pages/public/DeliveryOrderPage';
+import DeliveryTrackingPage from './pages/public/DeliveryTrackingPage';
 
 function App() {
     return (
@@ -70,6 +79,11 @@ function App() {
                 {/* Cashier */}
                 <Route element={<PrivateRoute allowedRoles={["Cashier"]}><CashierLayout /></PrivateRoute>}>
                     <Route path="/cashier" element={<CashierDashboardPage />} />
+                </Route>
+
+                {/* Courier */}
+                <Route element={<PrivateRoute allowedRoles={["Courier"]}><CourierLayout /></PrivateRoute>}>
+                    <Route path="/courier" element={<CourierDashboardPage />} />
                 </Route>
 
                 {/* Owner */}
@@ -93,14 +107,18 @@ function App() {
                     <Route path="audit-log" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerAuditLogPage /></PrivateRoute>} />
                     <Route path="overview" element={<OverViewPage />} />
                     <Route path="menu" element={<MenuPage />} />
+                    <Route path="set-menus" element={<SetMenusPage />} />
                     <Route path="staff" element={<StaffPage />} />
                     <Route path="tables" element={<TablesPage />} />
                     <Route path="cash-registers" element={<CashRegistersPage />} />
                     <Route path="reservations" element={<ReservationsPage />} />
+                    <Route path="online-orders" element={<OnlineOrdersPage />} />
+                    <Route path="online-ordering" element={<LegacySettingsRedirect sekme="online" />} />
                     <Route path="shifts" element={<ShiftsPage />} />
                     <Route path="day-end" element={<Navigate to="/admin/shifts" replace />} />
                     <Route path="reports" element={<ReportsPage role="admin" />} />
-                    <Route path="restaurant" element={<AdminRestaurantPage />} />
+                    <Route path="restaurant" element={<LegacySettingsRedirect sekme="restoran" />} />
+                    <Route path="settings" element={<SettingsPage />} />
                     <Route path="site" element={<SiteSettingsPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                 </Route>
@@ -124,7 +142,11 @@ function App() {
                 <Route path="/hakkimizda" element={<RestaurantAboutPage />} />
                 <Route path="/mekan" element={<RestaurantVenuePage />} />
                 <Route path="/rezervasyon" element={<RestaurantReservationPage />} />
+                <Route path="/rezervasyon/:token" element={<ReservationDetailPage />} />
+                <Route path="/rezervasyon-sorgula" element={<ReservationLookupPage />} />
                 <Route path="/masa/:tableId" element={<TableOrderPage />} />
+                <Route path="/siparis" element={<DeliveryOrderPage />} />
+                <Route path="/siparis/takip/:token" element={<DeliveryTrackingPage />} />
             </Routes>
             <Toaster position="top-right" richColors />
         </>

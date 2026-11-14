@@ -1,5 +1,6 @@
 import { api } from '@/lib/axiosInstance';
-import type { Table, Reservation } from '../types';
+import type { Table, Reservation, BulkCreateTablesResult } from '../types';
+import type { Order } from '@/features/orders/types';
 
 export const tableService = {
     getTables: async () => {
@@ -20,6 +21,15 @@ export const tableService = {
         });
         return response.data;
     },
+    bulkCreateTables: async (regionId: string, prefix: string, startNumber: number, count: number) => {
+        const response = await api.post<BulkCreateTablesResult>(`/table/bulk`, {
+            RegionId: regionId,
+            Prefix: prefix,
+            StartNumber: startNumber,
+            Count: count
+        });
+        return response.data;
+    },
     updateTable: async (id: string, name: string, regionId: string, status?: number) => {
         const response = await api.post(`/table/update`, {
             Id: id,
@@ -29,8 +39,9 @@ export const tableService = {
         });
         return response.data;
     },
+    /** Masayı açar ve masanın aktif siparişinin kimliğini döner (masa zaten açıksa mevcut sipariş). */
     openTable: async (tableId: string) => {
-        const response = await api.post(`/table/open`, {
+        const response = await api.post<Order['id']>(`/table/open`, {
             TableId: tableId
         });
         return response.data;

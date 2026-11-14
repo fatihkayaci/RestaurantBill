@@ -510,7 +510,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                             })}
                         </div>
                         {!hasIban && iban !== null && (
-                            <p className="-mt-1 text-[13px] text-rb-text-sub">IBAN tanımlı değil; yönetici Restoran ayarlarından ekleyebilir.</p>
+                            <p className="-mt-1 text-[13px] text-rb-text-sub">IBAN tanımlı değil; yönetici Ayarlar → Ödeme sekmesinden ekleyebilir.</p>
                         )}
 
                         {method === 'cash' && (

@@ -1,7 +1,9 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { canReserveOnline, type PublicCategory, type PublicProduct } from '@/features/customerSite/types';
+import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { cn } from '@/lib/utils';
+import { useOnlineOrderingAvailable } from '@/features/delivery/useOnlineOrderingAvailable';
 import DergiReserve from './site/DergiReserve';
 import { MyReservations, SiteShell, SiteStatus } from './site/SiteChrome';
 import { HeaderSpacer, SitePage } from './site/SiteFrame';
@@ -43,6 +45,7 @@ export default function RestaurantSitePage() {
     const [params] = useSearchParams();
     const navigate = useNavigate();
     const [hovered, setHovered] = useState(0);
+    const canOrder = useOnlineOrderingAvailable();
 
     if (params.get(LEGACY_VIEW_PARAM) === 'rezervasyon') {
         const next = new URLSearchParams(params);
@@ -119,9 +122,16 @@ export default function RestaurantSitePage() {
                                 {site.isOpenNow === null ? 'Her gün' : site.isOpenNow ? 'Bugün açık' : 'Şu an kapalı'} · {hours}
                             </span>
                         ) : <span className="hidden sm:block" />}
-                        <Link to="/menu" className="flex h-14 items-center justify-self-start rounded-full bg-[var(--site-accent)] px-[30px] font-semibold tracking-[0.02em] text-[var(--site-on-accent)] sm:justify-self-end md:justify-self-center">
-                            Menüyü gör
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-2.5 justify-self-start sm:justify-self-end md:justify-self-center">
+                            <Link to="/menu" className="flex h-14 items-center rounded-full bg-[var(--site-accent)] px-[30px] font-semibold tracking-[0.02em] text-[var(--site-on-accent)]">
+                                Menüyü gör
+                            </Link>
+                            {canOrder && (
+                                <Link to="/siparis" className="flex h-14 items-center rounded-full border border-white/50 bg-white/15 px-[26px] font-semibold tracking-[0.02em] text-white backdrop-blur-[12px] hover:bg-white/25">
+                                    Paket sipariş
+                                </Link>
+                            )}
+                        </div>
                         <span className="hidden md:block" />
                     </div>
                     {/* Dönen rozet: restoranın adı ve semti çevrede, baş harfi ortada (süs) */}
@@ -272,7 +282,12 @@ export default function RestaurantSitePage() {
                                         <span className="pt-2">Kalabalık gruplar için: <a href={telHref(site.phone)} className="whitespace-nowrap font-semibold text-[#141414]">{site.phone}</a></span>
                                     )}
                                 </div>
-                                {mine.length > 0 && <MyReservations items={mine} className="w-full pt-2" />}
+                                {mine.length > 0 ? <MyReservations items={mine} className="w-full pt-2" /> : (
+                                    <p className="m-0 text-sm text-[#4A4640]">
+                                        Rezervasyonunuz var mı?{' '}
+                                        <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[#141414] underline underline-offset-4">Kodla sorgulayın</Link>
+                                    </p>
+                                )}
                             </div>
                             <div className="min-w-0 flex-[1.4_1_600px]">
                                 <DergiReserve branchId={site.branchId} rules={site.reservation} onContinue={choice => navigate(reservationHref(choice))} />

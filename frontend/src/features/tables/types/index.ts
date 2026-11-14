@@ -20,8 +20,17 @@ export interface Table {
 export interface Reservation {
     id: string;
     tableId: string;
+    /** Kısa kod, "K7M-2QP". */
+    code: string;
+    accessToken: string;
     guestName: string;
     contact: string;
     reservationTime: string;
     note: string;
+}
+
+export interface BulkCreateTablesResult {
+    createdNames: string[];
+    /** Bölgede zaten olduğu için atlanan adlar. */
+    skippedNames: string[];
 }

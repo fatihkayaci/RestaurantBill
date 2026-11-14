@@ -1,4 +1,4 @@
-import { AlertCircle, Clock, QrCode } from 'lucide-react';
+import { AlertCircle, BellRing, Clock, NotebookPen, QrCode } from 'lucide-react';
 import type { Table } from '@/features/tables/types';
 import { formatMinutes, formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -14,10 +14,14 @@ interface Props {
     reservationLabel?: string;
     /** Tablette kart biraz daha büyük. */
     large?: boolean;
+    /** Mutfaktan az önce "ürün hazır" geldi: kart rozet ve çerçeveyle vurgulanır. */
+    ready?: boolean;
+    /** Bu masada mutfağa gönderilmemiş taslak sepet var. */
+    draft?: boolean;
     onClick: () => void;
 }
 
-export default function WaiterTableCard({ table, now, selected, qrCount, reservationLabel, large, onClick }: Props) {
+export default function WaiterTableCard({ table, now, selected, qrCount, reservationLabel, large, ready, draft, onClick }: Props) {
     const state = tableState(table);
     const style = STATE_STYLE[state];
     const overdue = (table.overdueItemCount ?? 0) > 0;
@@ -33,11 +37,12 @@ export default function WaiterTableCard({ table, now, selected, qrCount, reserva
             type="button"
             onClick={onClick}
             aria-pressed={selected}
-            aria-label={`${table.name}, ${style.label}${amount ? `, ${amount}` : ''}${overdue ? ', gecikme var' : ''}${qrCount ? `, ${qrCount} QR sipariş` : ''}`}
+            aria-label={`${table.name}, ${style.label}${amount ? `, ${amount}` : ''}${overdue ? ', gecikme var' : ''}${qrCount ? `, ${qrCount} QR sipariş` : ''}${ready ? ', ürün hazır' : ''}${draft ? ', gönderilmemiş taslak var' : ''}`}
             className={cn(
                 'flex flex-col gap-2 rounded-[18px] p-3 pl-3.5 text-left text-foreground transition-transform active:scale-[0.98]',
                 large ? 'min-h-37 gap-2.5 px-4 py-3.5' : 'min-h-32',
                 style.card,
+                ready && 'ring-[3px] ring-rb-green',
                 selected && 'outline-[3px] outline-offset-2 outline-foreground',
             )}
         >
@@ -47,9 +52,19 @@ export default function WaiterTableCard({ table, now, selected, qrCount, reserva
                     <span className={cn('truncate font-serif font-bold leading-none', large ? 'text-[28px]' : 'text-[26px]')}>{table.name}</span>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
+                    {ready && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rb-green px-1.5 py-0.5 text-[11px] font-bold text-rb-green-foreground">
+                            <BellRing className="size-3" strokeWidth={2.6} aria-hidden="true" />Hazır
+                        </span>
+                    )}
                     {overdue && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-rb-red px-1.5 py-0.5 text-[11px] font-bold text-rb-red-foreground">
                             <AlertCircle className="size-3" strokeWidth={2.6} aria-hidden="true" />Gecikme
+                        </span>
+                    )}
+                    {draft && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rb-gold-bg px-1.5 py-0.5 text-[11px] font-bold text-rb-gold">
+                            <NotebookPen className="size-3" strokeWidth={2.6} aria-hidden="true" />Taslak
                         </span>
                     )}
                     {qrCount > 0 && (

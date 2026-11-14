@@ -59,7 +59,8 @@ export interface OwnerDashboardStats {
 }
 
 // Şube Genel Bakış (GET /stats/dashboard). "Bugün" şubenin yerel günüdür.
-export type DashboardCardId = 'revenue' | 'live' | 'pending' | 'overdue' | 'tables' | 'hourly' | 'reservations' | 'top';
+// Kimlikler backend'deki DashboardCards.All ile aynı. Kayıtlı düzen eski/bilinmeyen kimlik içerebilir; dashboardCards.ts süzer.
+export type DashboardCardId = 'revenue' | 'pending' | 'tables' | 'hourly' | 'reservations' | 'top';
 
 export interface DashboardStats {
     generatedAt: string;
@@ -67,7 +68,12 @@ export interface DashboardStats {
         today: number;
         cash: number;
         card: number;
+        /** QR + IBAN toplamı (eski alan; qr/iban gelmezse "Diğer" olarak gösterilir). */
         other: number;
+        /** QR ile ödenen; backend eklenene kadar gelmeyebilir. */
+        qr?: number;
+        /** IBAN / havale ile ödenen; backend eklenene kadar gelmeyebilir. */
+        iban?: number;
         sameTimeYesterday: number;
         changePercent: number | null;
         closedBills: number;
@@ -84,7 +90,10 @@ export interface DashboardStats {
     pending: {
         orderRequests: number;
         oldestOrderRequestAt: string | null;
+        /** En eski üç isteğin masa adı (kart metni). */
         orderRequestTables: string[];
+        /** Bekleyen QR isteği olan masaların hepsi; masa haritası bununla eşler. */
+        orderRequestTableIds: string[];
         reservationRequests: number;
         reservationRequestTimes: string[];
         uncountedShifts: number;
@@ -100,6 +109,14 @@ export interface DashboardStats {
             status: number;
             occupiedSince: string | null;
             activeOrderTotal: number;
+            /** Açık siparişten hesaba alınmış ödeme. */
+            paidAmount: number;
+            remainingAmount: number;
+            billRequestedAt: string | null;
+            /** Kalemler adet bazında; menü yerine içindeki ürünler sayılır. */
+            kitchenItems: number;
+            readyItems: number;
+            servedItems: number;
             nextReservationTime: string | null;
             nextReservationGuest: string | null;
         }[];
@@ -124,7 +141,8 @@ export interface DashboardStats {
 export interface OverdueOrderItem {
     orderItemId: string;
     orderId: string;
-    tableId: string;
+    /** Paket siparişte null. */
+    tableId: string | null;
     tableName: string;
     productName: string;
     quantity: number;

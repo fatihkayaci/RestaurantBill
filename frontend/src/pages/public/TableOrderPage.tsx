@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
-import { Check, Clock, Minus, Plus, ShoppingBag, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ClipboardList, Minus, Plus, ShoppingBag, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { publicService } from '@/features/customerSite/api/publicService';
 import {
-    ORDER_REQUEST_APPROVED, ORDER_REQUEST_PENDING, ORDER_REQUEST_REJECTED,
-    type PublicProduct, type PublicSite, type PublicTableInfo,
+    ORDER_REQUEST_PENDING, canReserveOnline, type PublicProduct, type PublicSite, type PublicTableInfo,
 } from '@/features/customerSite/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import MenuBrowser from './components/MenuBrowser';
+import MyOrdersSheet from './components/MyOrdersSheet';
+import TableLanding from './components/TableLanding';
 import { SITE_FONTS_HREF, headingFont, siteRootStyle } from './site/siteTheme';
+import { useTableOrderRequests } from './useTableOrderRequests';
+import { useTableAction } from './useTableAction';
 
 interface CartLine {
     product: PublicProduct;
@@ -19,24 +23,15 @@ interface CartLine {
 }
 
 const MAX_QUANTITY = 50;
-const POLL_MS = 5000;
 
-const requestKey = (tableId: string) => `rb:order-request:${tableId}`;
-
-function readSavedRequest(tableId: string): string | null {
-    try { return localStorage.getItem(requestKey(tableId)); } catch { return null; }
-}
-
-function saveRequest(tableId: string, id: string | null) {
-    try {
-        if (id) localStorage.setItem(requestKey(tableId), id);
-        else localStorage.removeItem(requestKey(tableId));
-    } catch { /* özel pencere: durum yalnızca bu oturumda tutulur */ }
-}
-
-// Masadaki QR kodun açtığı sayfa: menüden seç, sepeti gönder. Talep garson onaylayınca mutfağa gider.
+// Masadaki QR kodun açtığı sayfa. İlk ekran karşılama: masa adı ve büyük düğmeler (menü/sipariş, garson çağır,
+// hesap iste, paket servis, rezervasyon; admin'in kapattıkları görünmez). Menüde (?ekran=menu) sepeti gönderir;
+// talep garson onaylayınca mutfağa gider. Gönderimden sonra müşteri menüde kalır; gönderdikleri "Siparişlerim"de
+// durumlarıyla görünür. Telefonun geri tuşu ve menüdeki geri düğmesi karşılamaya döner; sepet korunur.
 export default function TableOrderPage() {
     const { tableId = '' } = useParams();
+    const [params, setParams] = useSearchParams();
+    const inMenu = params.get('ekran') === 'menu';
     const [table, setTable] = useState<PublicTableInfo | null>(null);
     const [site, setSite] = useState<PublicSite | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
@@ -45,8 +40,18 @@ export default function TableOrderPage() {
     const [cartOpen, setCartOpen] = useState(false);
     const [sending, setSending] = useState(false);
     const [sendError, setSendError] = useState<string | null>(null);
-    const [requestId, setRequestId] = useState<string | null>(() => readSavedRequest(tableId));
-    const [requestStatus, setRequestStatus] = useState<number>(ORDER_REQUEST_PENDING);
+    const [myOrdersOpen, setMyOrdersOpen] = useState(false);
+    const { requests, addRequest } = useTableOrderRequests(tableId);
+
+    const callWaiterRun = useCallback(() => publicService.callWaiter(tableId), [tableId]);
+    const billRequestRun = useCallback(() => publicService.requestBill(tableId), [tableId]);
+    const callWaiter = useTableAction(callWaiterRun, 'Garson çağrılamadı. Lütfen tekrar deneyin.');
+    const billRequest = useTableAction(billRequestRun, 'Hesap istenemedi. Lütfen tekrar deneyin ya da garsona haber verin.');
+
+    const showView = (menu: boolean) => {
+        setParams(menu ? { ekran: 'menu' } : {});
+        window.scrollTo(0, 0);
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -63,26 +68,7 @@ export default function TableOrderPage() {
         return () => { cancelled = true; };
     }, [tableId]);
 
-    // Gönderilen talep bekledikçe durumunu sorgula; onay ya da red gelince dur.
-    useEffect(() => {
-        if (!requestId) return;
-        let cancelled = false;
-        let timer: ReturnType<typeof setTimeout> | undefined;
-
-        const check = async () => {
-            try {
-                const result = await publicService.getOrderRequestStatus(requestId);
-                if (cancelled) return;
-                setRequestStatus(result.status);
-                if (result.status !== ORDER_REQUEST_PENDING) return;
-            } catch { /* geçici bağlantı hatası: bir sonraki turda tekrar dene */ }
-            if (!cancelled) timer = setTimeout(check, POLL_MS);
-        };
-        void check();
-
-        return () => { cancelled = true; if (timer) clearTimeout(timer); };
-    }, [requestId]);
-
+    const pendingCount = requests.filter(r => r.status === ORDER_REQUEST_PENDING).length;
     const lines = useMemo(() => Object.values(cart), [cart]);
     const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
     const total = lines.reduce((sum, line) => sum + line.quantity * line.product.price, 0);
@@ -126,9 +112,15 @@ export default function TableOrderPage() {
                 lines.map(line => ({ productId: line.product.id, quantity: line.quantity, note: line.note.trim() })),
                 orderNote.trim()
             );
-            saveRequest(tableId, result.id);
-            setRequestStatus(result.status);
-            setRequestId(result.id);
+            addRequest({
+                id: result.id,
+                status: result.status,
+                total,
+                items: lines.map(line => ({ name: line.product.name, quantity: line.quantity })),
+            });
+            toast.success('Siparişiniz garsona iletildi', {
+                description: 'Garson onaylayınca mutfağa gidecek. Durumunu "Siparişlerim"den izleyebilirsiniz.',
+            });
             setCart({});
             setOrderNote('');
             setCartOpen(false);
@@ -137,12 +129,6 @@ export default function TableOrderPage() {
         } finally {
             setSending(false);
         }
-    };
-
-    const startNewOrder = () => {
-        saveRequest(tableId, null);
-        setRequestId(null);
-        setRequestStatus(ORDER_REQUEST_PENDING);
     };
 
     const root = (children: ReactNode) => (
@@ -172,70 +158,79 @@ export default function TableOrderPage() {
         );
     }
 
-    const header = (
-        <header className="flex items-center justify-between gap-3 border-b border-[var(--site-border)] px-4 py-4">
-            <div className="min-w-0">
-                <p className={cn(headingFont, 'truncate text-lg font-bold')}>{site.companyName}</p>
-                {table.regionName && <p className="text-sm text-[var(--site-sub)]">{table.regionName}</p>}
-            </div>
-            <h1 className="shrink-0 rounded-full bg-[var(--site-paper)] px-3.5 py-1.5 text-sm font-semibold text-[var(--site-on-paper)]">
-                <span className="sr-only">Masa: </span>{table.name}
-            </h1>
-        </header>
-    );
+    const features = table.qrFeatures;
+    const myOrdersButton = requests.length > 0;
 
-    // Talep gönderildi: durum ekranı.
-    if (requestId) {
-        const approved = requestStatus === ORDER_REQUEST_APPROVED;
-        const rejected = requestStatus === ORDER_REQUEST_REJECTED;
+    if (!inMenu) {
         return root(
-            <main className="min-h-screen">
-                {header}
-                <div className="flex flex-col items-center px-6 py-12 text-center" role="status" aria-live="polite">
-                    <span className={cn(
-                        'flex h-16 w-16 items-center justify-center rounded-full border',
-                        approved ? 'border-[var(--site-ok-line)] bg-[var(--site-ok-bg)]'
-                            : rejected ? 'border-[var(--site-error-line)] bg-[var(--site-error-bg)]'
-                                : 'border-[var(--site-border-strong)] bg-[var(--site-raised)]',
-                    )}>
-                        {approved
-                            ? <Check className="h-7 w-7 text-[var(--site-ok)]" strokeWidth={2.5} aria-hidden="true" />
-                            : rejected
-                                ? <X className="h-7 w-7 text-[var(--site-error)]" strokeWidth={2.5} aria-hidden="true" />
-                                : <Clock className="h-7 w-7 text-[var(--site-accent)]" aria-hidden="true" />}
-                    </span>
-                    <h2 className={cn(headingFont, 'mt-5 text-[28px] font-bold leading-tight')}>
-                        {approved ? 'Siparişiniz onaylandı' : rejected ? 'Siparişiniz onaylanmadı' : 'Siparişiniz garsona iletildi'}
-                    </h2>
-                    <p className="mt-2 max-w-sm text-base leading-relaxed text-[var(--site-sub)]">
-                        {approved
-                            ? 'Siparişiniz mutfağa gönderildi, hazırlanıyor.'
-                            : rejected
-                                ? 'Garson bu siparişi onaylamadı. Lütfen garsona danışın ya da yeniden sipariş verin.'
-                                : 'Garson onayladığında siparişiniz mutfağa gidecek. Bu sayfa kendiliğinden güncellenir.'}
-                    </p>
-                    {(approved || rejected) && (
-                        <button
-                            type="button"
-                            onClick={startNewOrder}
-                            className="mt-7 h-12 rounded-full bg-[var(--site-accent)] px-6 text-base font-semibold text-[var(--site-on-accent)] transition-opacity hover:opacity-90"
-                        >
-                            {approved ? 'Yeni sipariş ver' : 'Tekrar sipariş ver'}
-                        </button>
-                    )}
-                </div>
-            </main>
+            <>
+                <TableLanding
+                    restaurantName={site.companyName || site.branchName}
+                    tableName={table.name}
+                    regionName={table.regionName}
+                    orderingEnabled={features.orderingEnabled}
+                    onOpenMenu={() => showView(true)}
+                    callWaiter={features.callWaiterEnabled ? callWaiter : null}
+                    billRequest={features.billRequestEnabled ? billRequest : null}
+                    showDelivery={features.deliveryLinkEnabled && table.acceptsOnlineOrders}
+                    deliveryHref={`/siparis?sube=${encodeURIComponent(table.branchId)}`}
+                    showReservation={features.reservationLinkEnabled && canReserveOnline(site)}
+                    myOrders={myOrdersButton ? { count: requests.length, pendingCount, open: () => setMyOrdersOpen(true) } : null}
+                />
+                {myOrdersOpen && <MyOrdersSheet requests={requests} onClose={() => setMyOrdersOpen(false)} />}
+            </>
         );
     }
+
+    const header = (
+        <header className="flex items-center justify-between gap-3 border-b border-[var(--site-border)] px-4 py-4">
+            <div className="flex min-w-0 items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => showView(false)}
+                    aria-label="Karşılama ekranına dön"
+                    className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-[var(--site-raised)]"
+                >
+                    <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <div className="min-w-0">
+                    <p className={cn(headingFont, 'truncate text-lg font-bold')}>{site.companyName}</p>
+                    {table.regionName && <p className="text-sm text-[var(--site-sub)]">{table.regionName}</p>}
+                </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+                {myOrdersButton && (
+                    <button
+                        type="button"
+                        onClick={() => setMyOrdersOpen(true)}
+                        className="flex h-11 items-center gap-1.5 rounded-full border border-[var(--site-border-strong)] px-3.5 text-sm font-semibold hover:bg-[var(--site-raised)]"
+                    >
+                        <ClipboardList className="h-4 w-4" aria-hidden="true" />
+                        Siparişlerim
+                        {pendingCount > 0 && (
+                            <span className="rounded-full bg-[var(--site-accent)] px-1.5 text-xs text-[var(--site-on-accent)]">
+                                <span className="sr-only">, onay bekleyen: </span>{pendingCount}
+                            </span>
+                        )}
+                    </button>
+                )}
+                <h1 className="rounded-full bg-[var(--site-paper)] px-3.5 py-1.5 text-sm font-semibold text-[var(--site-on-paper)]">
+                    <span className="sr-only">Masa: </span>{table.name}
+                </h1>
+            </div>
+        </header>
+    );
 
     const fieldClass = 'w-full rounded-xl border border-[var(--site-border-strong)] bg-[var(--site-bg)] px-3 text-[15px] text-[var(--site-text)] placeholder:text-[var(--site-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]';
 
     return root(
         <main className="min-h-screen pb-36">
             {header}
-            <MenuBrowser categories={site.categories} quantities={quantities} onAdd={add} onRemove={remove} stickyBgClass="bg-[var(--site-bg)]/95" />
+            {features.orderingEnabled
+                ? <MenuBrowser categories={site.categories} quantities={quantities} onAdd={add} onRemove={remove} stickyBgClass="bg-[var(--site-bg)]/95" />
+                : <MenuBrowser categories={site.categories} stickyBgClass="bg-[var(--site-bg)]/95" />}
 
-            {itemCount > 0 && (
+            {features.orderingEnabled && itemCount > 0 && (
                 <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--site-border)] bg-[var(--site-bg)] px-4 pb-5 pt-3">
                     <p className="mb-2.5 text-center text-[13px] text-[var(--site-muted)]">Siparişiniz garson onaylayınca mutfağa iletilir.</p>
                     <button
@@ -252,7 +247,7 @@ export default function TableOrderPage() {
                 </div>
             )}
 
-            {cartOpen && (
+            {features.orderingEnabled && cartOpen && (
                 <div className="fixed inset-0 z-30 flex flex-col justify-end bg-black/60" onClick={() => setCartOpen(false)}>
                     <div
                         role="dialog"
@@ -337,6 +332,8 @@ export default function TableOrderPage() {
                     </div>
                 </div>
             )}
+
+            {myOrdersOpen && <MyOrdersSheet requests={requests} onClose={() => setMyOrdersOpen(false)} />}
         </main>
     );
 }

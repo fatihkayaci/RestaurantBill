@@ -14,15 +14,19 @@ import { regionService } from '@/features/regions/api/regionService';
 import type { Region } from '@/features/regions/types';
 import { categoryService } from '@/features/categories/api/categoryService';
 import type { Category } from '@/features/categories/types';
+import { tableService } from '@/features/tables/api/tableService';
+import type { Table } from '@/features/tables/types';
 
-const roleMap: Record<number, string> = { 1: "Admin", 2: "Garson", 3: "Kasiyer", 4: "Mutfak" };
+const roleMap: Record<number, string> = { 1: "Admin", 2: "Garson", 3: "Kasiyer", 4: "Mutfak", 6: "Kurye" };
 
-// Bölge ve yetkiler yalnızca garsonda, menü kategorileri yalnızca mutfakta.
+// Bölge ve garson yetkileri yalnızca garsonda, kasiyer yetkileri yalnızca kasiyerde, menü kategorileri yalnızca mutfakta.
 const WAITER = 2;
+const CASHIER = 3;
 const KITCHEN = 4;
 const usesRegions = (role: number) => role === WAITER;
 const usesCategories = (role: number) => role === KITCHEN;
-const hasAccessTab = (role: number) => usesRegions(role) || usesCategories(role);
+const hasAccessTab = (role: number) => usesRegions(role) || usesCategories(role) || role === CASHIER;
+const accessTabLabel: Record<number, string> = { [WAITER]: 'Bölge ve Yetkiler', [CASHIER]: 'Kasiyer Yetkileri', [KITCHEN]: 'Kategoriler' };
 
 type PermissionKey = 'canTakeOrders' | 'canTakePayment' | 'canCancelAndDiscount' | 'canTransferAndReserve';
 
@@ -38,11 +42,53 @@ const DEFAULT_WAITER_PERMISSIONS: Record<PermissionKey, boolean> = {
     canTakeOrders: true, canTakePayment: false, canCancelAndDiscount: false, canTransferAndReserve: false,
 };
 
+type CashierPermissionKey = 'canApplyDiscount' | 'canTransferTables';
+
+const CASHIER_PERMISSIONS: { key: CashierPermissionKey; label: string; short: string; hint: string }[] = [
+    { key: 'canApplyDiscount', label: 'İndirim ve ikram', short: 'İndirim', hint: 'Ödeme alırken yüzde ya da tutar olarak indirim, tamamı ikram uygular.' },
+    { key: 'canTransferTables', label: 'Masa taşı / birleştir', short: 'Taşıma', hint: 'Açık hesabı başka masaya taşır ya da iki masayı birleştirir.' },
+];
+
+// Kasiyer bugüne kadar hepsini yapabiliyordu; yeni kasiyer de aynı yetkilerle başlar, indirim sınırı yoktur (%100).
+const DEFAULT_CASHIER_PERMISSIONS = { canApplyDiscount: true, maxDiscountPercent: 100, canTransferTables: true };
+
+const byTableName = (a: Table, b: Table) => a.name.localeCompare(b.name, 'tr', { numeric: true });
+
+// "Masa 1", "Masa 2", "Masa 5" → "Masa 1, 2, 5". Adlar aynı ön ek + numara biçiminde değilse olduğu gibi yazılır.
+function compactTableNames(names: string[]): string {
+    const parts = names.map(name => /^(.*?)(\d+)$/.exec(name));
+    const prefix = parts[0]?.[1];
+    if (parts.every(p => p && p[1] === prefix)) {
+        return `${prefix}${parts.map(p => p![2]).join(', ')}`;
+    }
+    return names.join(', ');
+}
+
+// Garsonun bölge başına kapsamı. restricted = "Seçili masalar" (yalnızca tables), değilse bölgenin tamamı.
+// Silinmiş ya da artık o bölgede olmayan masalar sayılmaz; sunucu da onları yok sayar.
+type RegionCoverage = { regionId: string; restricted: boolean; tables: Table[] };
+
+function waiterCoverage(regionIds: string[], restrictedRegionIds: string[], tableIds: string[], tables: Table[]): RegionCoverage[] {
+    const picked = new Set(tableIds);
+    return regionIds.map(regionId => ({
+        regionId,
+        restricted: restrictedRegionIds.includes(regionId),
+        tables: tables.filter(t => t.regionId === regionId && picked.has(t.id)).sort(byTableName),
+    }));
+}
+
+function coverageLabel(c: RegionCoverage): string {
+    if (!c.restricted) return 'tümü';
+    if (c.tables.length === 0) return 'masa yok';
+    return compactTableNames(c.tables.map(t => t.name));
+}
+
 const roleStyle: Record<number, { avatar: string; badge: string }> = {
     1: { avatar: 'bg-rb-purple-bg text-rb-purple', badge: 'bg-rb-purple-bg text-rb-purple' },
     2: { avatar: 'bg-rb-accent-bg text-rb-accent', badge: 'bg-rb-accent-bg text-rb-accent' },
     3: { avatar: 'bg-rb-green-bg text-rb-green', badge: 'bg-rb-green-bg text-rb-green' },
     4: { avatar: 'bg-rb-amber-bg text-rb-amber', badge: 'bg-rb-amber-bg text-rb-amber' },
+    6: { avatar: 'bg-rb-orange-bg text-rb-orange', badge: 'bg-rb-orange-bg text-rb-orange' },
 };
 
 
@@ -62,6 +108,7 @@ export default function StaffPage() {
     const [activeTab, setActiveTab] = useState<'personal' | 'login' | 'access'>('personal');
     const [regions, setRegions] = useState<Region[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [tables, setTables] = useState<Table[]>([]);
 
     useEffect(() => {
         userService.getUsersByRestaurantId()
@@ -74,17 +121,45 @@ export default function StaffPage() {
         categoryService.getCategories()
             .then(setCategories)
             .catch(console.error);
+        tableService.getTables()
+            .then(setTables)
+            .catch(console.error);
     }, []);
 
     const regionNameById = new Map(regions.map(r => [r.id, r.name]));
     const categoryNameById = new Map(categories.map(c => [c.id, c.name]));
 
+    // Bölgeyi "Tüm masalar"a döndürür: masa masa işareti kalkar, bölgeden seçilmiş masalar bırakılır.
+    // Listede bulunmayan (silinmiş) masaları sunucu atar.
+    const withoutRegionRestriction = (prev: CreateUser, regionId: string): CreateUser => ({
+        ...prev,
+        restrictedRegionIds: (prev.restrictedRegionIds ?? []).filter(id => id !== regionId),
+        tableIds: (prev.tableIds ?? []).filter(id => tables.find(t => t.id === id)?.regionId !== regionId),
+    });
+
     const toggleRegion = (regionId: string) => {
         setForm(prev => {
             const current = prev.regionIds ?? [];
+            if (current.includes(regionId)) {
+                return { ...withoutRegionRestriction(prev, regionId), regionIds: current.filter(id => id !== regionId) };
+            }
+            return { ...prev, regionIds: [...current, regionId] };
+        });
+    };
+
+    // Bölge satırındaki "Tüm masalar" / "Seçili masalar" seçimi.
+    const setRegionRestricted = (regionId: string, restricted: boolean) => {
+        setForm(prev => restricted
+            ? { ...prev, restrictedRegionIds: [...(prev.restrictedRegionIds ?? []).filter(id => id !== regionId), regionId] }
+            : withoutRegionRestriction(prev, regionId));
+    };
+
+    const toggleTable = (tableId: string) => {
+        setForm(prev => {
+            const current = prev.tableIds ?? [];
             return {
                 ...prev,
-                regionIds: current.includes(regionId) ? current.filter(id => id !== regionId) : [...current, regionId],
+                tableIds: current.includes(tableId) ? current.filter(id => id !== tableId) : [...current, tableId],
             };
         });
     };
@@ -108,7 +183,7 @@ export default function StaffPage() {
         setEditUser(null);
         setForm({
             fullName: '', userName: '', email: '', phoneNumber: '', passwordHash: generatePassword(), role: 2,
-            regionIds: [], categoryIds: [], ...DEFAULT_WAITER_PERMISSIONS,
+            regionIds: [], restrictedRegionIds: [], tableIds: [], categoryIds: [], ...DEFAULT_WAITER_PERMISSIONS, ...DEFAULT_CASHIER_PERMISSIONS,
         });
         setFieldErrors({});
         setActiveTab('personal');
@@ -126,11 +201,21 @@ export default function StaffPage() {
                 canTransferAndReserve: user.canTransferAndReserve ?? false,
             }
             : DEFAULT_WAITER_PERMISSIONS;
+        const cashierPermissions = user.role === CASHIER
+            ? {
+                canApplyDiscount: user.canApplyDiscount ?? true,
+                maxDiscountPercent: user.maxDiscountPercent ?? 100,
+                canTransferTables: user.canTransferTables ?? true,
+            }
+            : DEFAULT_CASHIER_PERMISSIONS;
         setForm({
             fullName: user.fullName, userName: user.userName, email: user.email, phoneNumber: user.phoneNumber, passwordHash: '', role: user.role,
             regionIds: usesRegions(user.role) ? (user.regionIds ?? []) : [],
+            restrictedRegionIds: usesRegions(user.role) ? (user.restrictedRegionIds ?? []) : [],
+            tableIds: usesRegions(user.role) ? (user.tableIds ?? []) : [],
             categoryIds: usesCategories(user.role) ? (user.categoryIds ?? []) : [],
             ...permissions,
+            ...cashierPermissions,
         });
         setFieldErrors({});
         setActiveTab('personal');
@@ -145,10 +230,10 @@ export default function StaffPage() {
         try {
             await userService.deleteUser(deleteTargetId);
             setUsers(prev => prev.filter(u => u.id !== deleteTargetId));
-            toast.success('Kullanıcı silindi.');
+            toast.success('Çalışan silindi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Kullanıcı silinemedi.');
+                toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Çalışan silinemedi.');
             }
         } finally {
             setDeleteTargetId(null);
@@ -162,7 +247,7 @@ export default function StaffPage() {
                 phoneNumber: user.phoneNumber, role: user.role, isActive: !user.isActive
             });
             setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
-            toast.success(user.isActive ? 'Kullanıcı pasif yapıldı.' : 'Kullanıcı aktif yapıldı.');
+            toast.success(user.isActive ? 'Çalışan pasif yapıldı.' : 'Çalışan aktif yapıldı.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Durum güncellenemedi.');
@@ -184,23 +269,37 @@ export default function StaffPage() {
         } else if (form.passwordHash && form.passwordHash.length < 6) {
             errors.passwordHash = 'En az 6 karakter.';
         }
+        const isCashier = form.role === CASHIER;
+        // İndirim kapalıyken sınır gönderilmez, kayıtlı değer korunur.
+        const limitsDiscount = isCashier && (form.canApplyDiscount ?? true);
+        const maxDiscountPercent = form.maxDiscountPercent ?? 100;
+        if (limitsDiscount && (!Number.isInteger(maxDiscountPercent) || maxDiscountPercent < 1 || maxDiscountPercent > 100)) {
+            errors.maxDiscountPercent = 'İndirim sınırı %1 ile %100 arasında olmalı.';
+        }
         if (Object.keys(errors).length > 0) {
             setFieldErrors(errors);
             if (personalFields.some(f => errors[f]) && !loginFields.some(f => errors[f])) setActiveTab('personal');
             else if (loginFields.some(f => errors[f])) setActiveTab('login');
+            else if (errors.maxDiscountPercent) setActiveTab('access');
             return;
         }
         setFieldErrors({});
-        // Bölge ve yetkiler yalnızca garsonda, kategoriler yalnızca mutfakta gönderilir.
+        // Bölge ve garson yetkileri yalnızca garsonda, kasiyer yetkileri yalnızca kasiyerde, kategoriler yalnızca mutfakta gönderilir.
         const isWaiter = form.role === WAITER;
         const payload: CreateUser = {
             ...form,
             regionIds: usesRegions(form.role) ? (form.regionIds ?? []) : [],
+            // Tüm bölgelere bakan garsonda masa seçimi anlamsız; sunucu da aynı kuralı uygular.
+            restrictedRegionIds: usesRegions(form.role) && (form.regionIds?.length ?? 0) > 0 ? (form.restrictedRegionIds ?? []) : [],
+            tableIds: usesRegions(form.role) && (form.regionIds?.length ?? 0) > 0 ? (form.tableIds ?? []) : [],
             categoryIds: usesCategories(form.role) ? (form.categoryIds ?? []) : [],
             canTakeOrders: isWaiter ? form.canTakeOrders : undefined,
             canTakePayment: isWaiter ? form.canTakePayment : undefined,
             canCancelAndDiscount: isWaiter ? form.canCancelAndDiscount : undefined,
             canTransferAndReserve: isWaiter ? form.canTransferAndReserve : undefined,
+            canApplyDiscount: isCashier ? form.canApplyDiscount : undefined,
+            maxDiscountPercent: limitsDiscount ? maxDiscountPercent : undefined,
+            canTransferTables: isCashier ? form.canTransferTables : undefined,
         };
         try {
             if (editUser) {
@@ -211,7 +310,7 @@ export default function StaffPage() {
             const updated = await userService.getUsersByRestaurantId();
             setUsers(updated);
             setIsModalOpen(false);
-            toast.success(editUser ? 'Kullanıcı güncellendi.' : 'Kullanıcı eklendi.');
+            toast.success(editUser ? 'Çalışan güncellendi.' : 'Çalışan eklendi.');
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
                 const data = err.response?.data;
@@ -249,14 +348,14 @@ export default function StaffPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Kullanıcılar</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">{users.length} kullanıcı</p>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Çalışanlar</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">{users.length} çalışan</p>
                 </div>
                 <button
                     onClick={openCreateModal}
                     className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
-                    + Kullanıcı Ekle
+                    + Çalışan Ekle
                 </button>
             </div>
 
@@ -265,7 +364,7 @@ export default function StaffPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                     className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    placeholder="Kullanıcı ara..."
+                    placeholder="Çalışan ara..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
@@ -275,13 +374,13 @@ export default function StaffPage() {
             {!loaded ? null : users.length === 0 ? (
                 <EmptyState
                     icon={Users}
-                    title="Henüz kullanıcı yok"
+                    title="Henüz çalışan yok"
                     description="Garson, mutfak ve kasiyer hesapları oluştur. Her biri kullanıcı adıyla giriş yapar."
-                    action={{ label: 'İlk kullanıcıyı ekle', onClick: openCreateModal }}
+                    action={{ label: 'İlk çalışanı ekle', onClick: openCreateModal }}
                     hint="Kurulum listesinde 6. adım · son adım"
                 />
             ) : filtered.length === 0 ? (
-                <SearchEmptyState query={search} noun="kullanıcı" onClear={() => setSearch('')} />
+                <SearchEmptyState query={search} noun="çalışan" onClear={() => setSearch('')} />
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filtered.map(user => {
@@ -322,17 +421,30 @@ export default function StaffPage() {
                                     <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase", style.badge)}>
                                         {roleMap[user.role] ?? 'Bilinmiyor'}
                                     </span>
-                                    {usesRegions(user.role) && (
-                                        <span className="truncate text-right" title="Bölgeler">
-                                            {(user.regionIds?.length ?? 0) === 0
-                                                ? 'Tüm bölgeler'
-                                                : (user.regionIds ?? []).map(id => regionNameById.get(id) ?? '—').join(', ')}
-                                        </span>
+                                    {usesRegions(user.role) && (user.regionIds?.length ?? 0) === 0 && (
+                                        <span className="truncate text-right" title="Bölgeler">Tüm bölgeler</span>
                                     )}
                                     {usesCategories(user.role) && (user.categoryIds?.length ?? 0) === 0 && (
                                         <span className="truncate text-right" title="Kategoriler">Tüm kategoriler</span>
                                     )}
                                 </div>
+
+                                {usesRegions(user.role) && (user.regionIds?.length ?? 0) > 0 && (
+                                    // Bölge başına bir rozet: "Bahçe: Masa 1, 2, 5", "Salon: tümü", "Teras: masa yok".
+                                    <div className="flex flex-wrap gap-1" aria-label="Bölgeler ve masalar">
+                                        {waiterCoverage(user.regionIds ?? [], user.restrictedRegionIds ?? [], user.tableIds ?? [], tables).map(c => (
+                                            <span
+                                                key={c.regionId}
+                                                className={cn(
+                                                    "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                                                    c.restricted && c.tables.length === 0 ? "bg-rb-amber-bg text-rb-amber" : "bg-rb-accent-bg text-rb-accent"
+                                                )}
+                                            >
+                                                {regionNameById.get(c.regionId) ?? '—'}: {coverageLabel(c)}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {usesCategories(user.role) && (user.categoryIds?.length ?? 0) > 0 && (
                                     <div className="flex flex-wrap gap-1" aria-label="Mutfak kategorileri">
@@ -364,6 +476,31 @@ export default function StaffPage() {
                                     </div>
                                 )}
 
+                                {user.role === CASHIER && (
+                                    <div className="flex flex-wrap gap-1" aria-label="Kasiyer yetkileri">
+                                        {CASHIER_PERMISSIONS.map(p => {
+                                            const on = user[p.key] ?? true;
+                                            return (
+                                                <span
+                                                    key={p.key}
+                                                    title={`${p.label}: ${on ? 'açık' : 'kapalı'}`}
+                                                    className={cn(
+                                                        "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                                                        on ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground line-through"
+                                                    )}
+                                                >
+                                                    {p.short}
+                                                </span>
+                                            );
+                                        })}
+                                        {(user.canApplyDiscount ?? true) && (user.maxDiscountPercent ?? 100) < 100 && (
+                                            <span title="Bir ödemede uygulanabilecek en yüksek indirim" className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-rb-amber-bg text-rb-amber">
+                                                En fazla %{user.maxDiscountPercent}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+
                                 <div className="mt-auto border-t border-border pt-3 flex items-center justify-between gap-2">
                                     <Switch
                                         checked={isActive}
@@ -389,7 +526,7 @@ export default function StaffPage() {
                     <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
                             <ModalTitle className="text-xl font-bold text-foreground">
-                                {editUser ? 'Kullanıcıyı Düzenle' : 'Kullanıcı Ekle'}
+                                {editUser ? 'Çalışanı Düzenle' : 'Çalışan Ekle'}
                             </ModalTitle>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -435,7 +572,7 @@ export default function StaffPage() {
                                             : "border-transparent text-muted-foreground hover:text-foreground"
                                     )}
                                 >
-                                    {form.role === WAITER ? 'Bölge ve Yetkiler' : 'Kategoriler'}
+                                    {accessTabLabel[form.role]}
                                 </button>
                             )}
                         </div>
@@ -501,6 +638,7 @@ export default function StaffPage() {
                                             <option value={2}>Garson</option>
                                             <option value={3}>Kasiyer</option>
                                             <option value={4}>Mutfak</option>
+                                            <option value={6}>Kurye</option>
                                         </select>
                                     </div>
 
@@ -554,6 +692,43 @@ export default function StaffPage() {
                                 </div>
                             )}
 
+                            {activeTab === 'access' && form.role === CASHIER && (
+                                <div>
+                                    <label className={labelClass}>Kasiyer yetkileri</label>
+                                    <div className="space-y-3">
+                                        {CASHIER_PERMISSIONS.map(p => (
+                                            <div key={p.key}>
+                                                <Switch
+                                                    checked={form[p.key] ?? true}
+                                                    onCheckedChange={checked => setForm(prev => ({ ...prev, [p.key]: checked }))}
+                                                    label={<span className="text-sm text-foreground">{p.label}</span>}
+                                                />
+                                                <p className="text-xs text-muted-foreground mt-0.5 pl-11">{p.hint}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {(form.canApplyDiscount ?? true) && (
+                                        <div className="mt-4">
+                                            <label className={labelClass}>En yüksek indirim (%)</label>
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                min={1}
+                                                max={100}
+                                                step={1}
+                                                className={cn(inputClass, fieldErrors.maxDiscountPercent && "border-destructive")}
+                                                value={Number.isNaN(form.maxDiscountPercent) ? '' : (form.maxDiscountPercent ?? 100)}
+                                                onChange={e => setForm({ ...form, maxDiscountPercent: e.target.valueAsNumber })}
+                                            />
+                                            {fieldErrors.maxDiscountPercent
+                                                ? <p className="text-xs text-destructive mt-1">{fieldErrors.maxDiscountPercent}</p>
+                                                : <p className="text-xs text-muted-foreground mt-1.5">Bir ödemede uygulanabilecek en yüksek indirim. 100 = sınırsız (tamamı ikram dahil).</p>}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {activeTab === 'access' && usesRegions(form.role) && (
                                 <>
                                     <div>
@@ -586,6 +761,81 @@ export default function StaffPage() {
                                         )}
                                         <p className="text-xs text-muted-foreground mt-1.5">
                                             Boş bırakılırsa tüm bölgeler. Garson yalnızca seçili bölgelerin masalarını görür.
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className={labelClass}>Masalar</label>
+                                        {(form.regionIds?.length ?? 0) === 0 ? (
+                                            <p className="text-xs text-muted-foreground">Masa seçmek için önce bölge seçin.</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {waiterCoverage(form.regionIds ?? [], form.restrictedRegionIds ?? [], form.tableIds ?? [], tables).map(({ regionId, restricted, tables: picked }) => {
+                                                    const regionTables = tables.filter(t => t.regionId === regionId).sort(byTableName);
+                                                    return (
+                                                        <div key={regionId} className="rounded-lg border border-border p-3 space-y-2">
+                                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                <span className="text-sm font-medium text-foreground">{regionNameById.get(regionId) ?? '—'}</span>
+                                                                <div role="radiogroup" aria-label="Masa kapsamı" className="flex gap-1">
+                                                                    {[{ value: false, label: 'Tüm masalar' }, { value: true, label: 'Seçili masalar' }].map(option => (
+                                                                        <button
+                                                                            key={option.label}
+                                                                            type="button"
+                                                                            role="radio"
+                                                                            aria-checked={restricted === option.value}
+                                                                            onClick={() => setRegionRestricted(regionId, option.value)}
+                                                                            className={cn(
+                                                                                "min-h-11 px-3 rounded-lg border text-sm transition-colors",
+                                                                                restricted === option.value
+                                                                                    ? "border-rb-accent bg-rb-accent-bg text-rb-accent font-medium"
+                                                                                    : "border-border text-muted-foreground hover:text-foreground"
+                                                                            )}
+                                                                        >
+                                                                            {option.label}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                            {restricted && (
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {regionTables.map(table => {
+                                                                        const selected = picked.some(t => t.id === table.id);
+                                                                        return (
+                                                                            <button
+                                                                                key={table.id}
+                                                                                type="button"
+                                                                                role="checkbox"
+                                                                                aria-checked={selected}
+                                                                                onClick={() => toggleTable(table.id)}
+                                                                                className={cn(
+                                                                                    "min-h-11 min-w-11 px-3 rounded-lg border text-sm transition-colors",
+                                                                                    selected
+                                                                                        ? "border-rb-accent bg-rb-accent-bg text-rb-accent font-medium"
+                                                                                        : "border-border text-muted-foreground hover:text-foreground"
+                                                                                )}
+                                                                            >
+                                                                                {table.name}
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                    {regionTables.length === 0 && (
+                                                                        <p className="text-xs text-muted-foreground self-center">Bu bölgede masa yok.</p>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            {restricted && picked.length === 0 && (
+                                                                <p className="text-xs text-rb-amber">
+                                                                    Bu bölgede hiç masa seçilmedi. Garson bu bölgede hiçbir masaya bakamaz.
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        <p className="text-xs text-muted-foreground mt-1.5">
+                                            "Seçili masalar" denen bölgede garson yalnızca işaretli masalara bakar; seçili masa silinir ya da
+                                            taşınırsa o bölgede yetkisi daralır, genişlemez.
                                         </p>
                                     </div>
 
@@ -634,9 +884,9 @@ export default function StaffPage() {
             <AlertDialog open={deleteTargetId !== null} onOpenChange={open => !open && setDeleteTargetId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Kullanıcıyı sil</AlertDialogTitle>
+                        <AlertDialogTitle>Çalışanı sil</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Bu kullanıcıyı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                            Bu çalışanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

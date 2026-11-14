@@ -43,6 +43,7 @@ export function getRoleHomePath(role: string | null, companyScope = false): stri
         case "Kitchen": return "/kitchen";
         case "Cashier": return "/cashier";
         case "Waiter": return "/waiter";
+        case "Courier": return "/courier";
         default: return "/login";
     }
 }

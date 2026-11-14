@@ -1,3 +1,6 @@
+/** Backend UserRole değerleri; personel sayfası ve rol etiketleri bu sayıları kullanır. Kurye = 6. */
+export const USER_ROLES = { Admin: 1, Waiter: 2, Cashier: 3, Kitchen: 4, Owner: 5, Courier: 6 } as const;
+
 export interface User {
     id: string;
     fullName: string;
@@ -17,6 +20,10 @@ export interface User {
     isEmailVerified: boolean;
     /** Garson bölgeleri; boş = tüm bölgeler. */
     regionIds?: string[];
+    /** Masa masa bakılan bölgeler ("Seçili masalar"); diğer bölgelerin tamamına bakılır. */
+    restrictedRegionIds?: string[];
+    /** Masa masa bakılan bölgelerde seçili masalar. */
+    tableIds?: string[];
     /** Mutfak kullanıcısının menü kategorileri; boş = tüm kategoriler. */
     categoryIds?: string[];
     /** Garson yetkileri. Garson dışındaki rollerde hep true döner. */
@@ -24,16 +31,25 @@ export interface User {
     canTakePayment?: boolean;
     canCancelAndDiscount?: boolean;
     canTransferAndReserve?: boolean;
+    /** Kasiyer yetkileri ve indirim sınırı (100 = sınırsız). Kasiyer dışındaki rollerde hep true / 100 döner. */
+    canApplyDiscount?: boolean;
+    maxDiscountPercent?: number;
+    canTransferTables?: boolean;
 }
 
-/** Garson yetkileri ve bölgeler, mutfak kategorileri (Kullanıcılar formu). */
+/** Garson ve kasiyer yetkileri, bölgeler, mutfak kategorileri (Kullanıcılar formu). */
 export interface StaffAssignment {
     regionIds?: string[];
+    restrictedRegionIds?: string[];
+    tableIds?: string[];
     categoryIds?: string[];
     canTakeOrders?: boolean;
     canTakePayment?: boolean;
     canCancelAndDiscount?: boolean;
     canTransferAndReserve?: boolean;
+    canApplyDiscount?: boolean;
+    maxDiscountPercent?: number;
+    canTransferTables?: boolean;
 }
 
 export interface CreateUser extends StaffAssignment {
@@ -83,5 +99,25 @@ export function waiterPermissionsOf(user: User): WaiterPermissions {
         canTakePayment: user.canTakePayment ?? true,
         canCancelAndDiscount: user.canCancelAndDiscount ?? true,
         canTransferAndReserve: user.canTransferAndReserve ?? true,
+    };
+}
+
+/** Kasiyer ekranında hangi işlemlerin gösterileceği. Sunucu da aynı kuralları uygular. */
+export interface CashierPermissions {
+    canApplyDiscount: boolean;
+    /** Bir ödemede uygulanabilecek en yüksek indirim yüzdesi; 100 = sınırsız. */
+    maxDiscountPercent: number;
+    canTransferTables: boolean;
+}
+
+export const ALL_CASHIER_PERMISSIONS: CashierPermissions = {
+    canApplyDiscount: true, maxDiscountPercent: 100, canTransferTables: true,
+};
+
+export function cashierPermissionsOf(user: User): CashierPermissions {
+    return {
+        canApplyDiscount: user.canApplyDiscount ?? true,
+        maxDiscountPercent: user.maxDiscountPercent ?? 100,
+        canTransferTables: user.canTransferTables ?? true,
     };
 }

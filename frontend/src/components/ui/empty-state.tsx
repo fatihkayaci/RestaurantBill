@@ -19,6 +19,44 @@ interface QuickAdds {
     onPick: (name: string) => Promise<void> | void;
 }
 
+interface QuickAddChipsProps extends QuickAdds {
+    className?: string;
+}
+
+// Tek tıkla ekleyen hazır isim çipleri. Boş durum kartında ve sayfalardaki "Önerilenler" satırında kullanılır.
+export function QuickAddChips({ options, onPick, className }: QuickAddChipsProps) {
+    const [busy, setBusy] = useState<string | null>(null);
+
+    const pick = async (name: string) => {
+        if (busy) return;
+        setBusy(name);
+        try {
+            await onPick(name);
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    if (options.length === 0) return null;
+
+    return (
+        <div className={cn('flex flex-wrap gap-2', className)}>
+            {options.map(name => (
+                <button
+                    key={name}
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => pick(name)}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-dashed border-rb-gold bg-rb-gold-bg px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-rb-gold/20 disabled:opacity-60"
+                >
+                    <Plus className="h-3 w-3 text-rb-amber" strokeWidth={2.5} aria-hidden="true" />
+                    {busy === name ? 'Ekleniyor…' : name}
+                </button>
+            ))}
+        </div>
+    );
+}
+
 interface EmptyStateProps {
     icon: LucideIcon;
     title: string;
@@ -37,18 +75,6 @@ interface EmptyStateProps {
 
 // Boş liste yerine ne yapılacağını söyleyen kart. Tasarım: canvas "Boş Durum Tasarımları".
 export function EmptyState({ icon: Icon, title, description, action, link, hint, quickAdds, bare, className }: EmptyStateProps) {
-    const [busy, setBusy] = useState<string | null>(null);
-
-    const pick = async (name: string) => {
-        if (!quickAdds || busy) return;
-        setBusy(name);
-        try {
-            await quickAdds.onPick(name);
-        } finally {
-            setBusy(null);
-        }
-    };
-
     return (
         <section
             className={cn(
@@ -71,21 +97,8 @@ export function EmptyState({ icon: Icon, title, description, action, link, hint,
                 <p className="mt-2 max-w-[420px] text-sm leading-relaxed text-muted-foreground">{description}</p>
             )}
 
-            {quickAdds && quickAdds.options.length > 0 && (
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                    {quickAdds.options.map(name => (
-                        <button
-                            key={name}
-                            type="button"
-                            disabled={busy !== null}
-                            onClick={() => pick(name)}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-dashed border-rb-gold bg-rb-gold-bg px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-rb-gold/20 disabled:opacity-60"
-                        >
-                            <Plus className="h-3 w-3 text-rb-amber" strokeWidth={2.5} aria-hidden="true" />
-                            {busy === name ? 'Ekleniyor…' : name}
-                        </button>
-                    ))}
-                </div>
+            {quickAdds && (
+                <QuickAddChips options={quickAdds.options} onPick={quickAdds.onPick} className="mt-4 justify-center" />
             )}
 
             {(action || link) && (

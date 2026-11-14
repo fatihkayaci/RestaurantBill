@@ -62,8 +62,10 @@ export function shortName(fullName: string): string {
 // Kategori adına göre hızlı not önerileri. Menüde bu notlar için ayrı bir ayar yok; tanınmayan
 // kategoride yalnızca "Not yaz" görünür.
 const QUICK_NOTE_RULES: { match: RegExp; notes: string[] }[] = [
-    { match: /soğuk|buzlu|frozen|smoothie|limonata|milkshake|frappe/, notes: ['Buzsuz', 'Az buzlu', 'Şekersiz'] },
-    { match: /sıcak|kahve|çay|latte|espresso|içecek/, notes: ['Şekersiz', 'Az şekerli', 'Laktozsuz'] },
+    { match: /soğuk|buzlu|frozen|smoothie|limonata|milkshake|frappe/, notes: ['Buzsuz', 'Az buzlu', 'Bol buzlu', 'Şekersiz'] },
+    { match: /sıcak|kahve|çay|latte|espresso/, notes: ['Şekersiz', 'Az şekerli', 'Laktozsuz'] },
+    // Genel "İçecekler" kategorisinde ayran, kola gibi soğuklar da olur.
+    { match: /içecek|meşrubat/, notes: ['Buzsuz', 'Bol buzlu', 'Şekersiz', 'Laktozsuz'] },
     { match: /tatlı|dessert|pasta|dondurma/, notes: ['Dondurmalı', 'Paylaşımlık'] },
     { match: /kahvaltı/, notes: ['Az pişmiş yumurta', 'Domatessiz'] },
     { match: /(^|\s)et|ızgara|kebap|köfte|burger|steak|mangal/, notes: ['Az pişmiş', 'Orta', 'İyi pişmiş', 'Acısız'] },

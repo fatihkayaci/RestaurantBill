@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-    AlertCircle, ArrowRightLeft, CalendarDays, ChevronLeft, Clock, CreditCard, Gift, MoreHorizontal, Percent, Plus,
+    AlertCircle, ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, Clock, CreditCard, Gift, MoreHorizontal, Percent, Plus,
     ReceiptText, Undo2, X, XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -53,6 +53,11 @@ function formatTimeDigits(raw: string): string {
     return digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits;
 }
 
+/** Ekranda servis edildi say; menü satırının içindeki ürünler de. */
+function served(item: OrderItem): OrderItem {
+    return { ...item, status: 4, components: item.components?.map(c => ({ ...c, status: 4 })) };
+}
+
 function itemSubline(item: OrderItem, now: number): { text: string; late: boolean } {
     const note = item.note ? ` · "${item.note}"` : '';
     if (item.status === 3) return { text: `Hazır${note}`, late: false };
@@ -72,8 +77,8 @@ export default function TableWorkspace({
 }: Props) {
     const { canTakeOrders, canTakePayment, canCancelAndDiscount, canTransferAndReserve } = permissions;
     const [view, setView] = useState<WorkspaceView>(initialView);
-    // Boş masa doğrudan ürün eklemeyle açıldıysa "geri" masa listesine döner (telefonda ızgara,
-    // tablette panel kapanır); sipariş gönderilince normal detay akışına geçilir.
+    // Masa doğrudan ürün eklemeyle açıldıysa "geri" geldiği yere, masa listesine döner (telefonda
+    // ızgara, tablette panel kapanır). Detaya bir kez geçilince "geri" artık detaya döner.
     const [openedOnAdd, setOpenedOnAdd] = useState(initialView === 'add');
     const [payMode, setPayMode] = useState<PaymentMode>('normal');
     const [order, setOrder] = useState<Order | null>(null);
@@ -151,14 +156,15 @@ export default function TableWorkspace({
 
     const serveItem = (item: OrderItem) => run(`serve-${item.id}`, async () => {
         if (!order) return;
+        // Menü satırında üst satırın id'si gider; sunucu içindeki ürünleri de servis edildi yapar.
         await orderService.updateOrderItemStatus(order.id, item.id, 4);
-        setOrder(prev => prev ? { ...prev, orderItems: prev.orderItems.map(i => i.id === item.id ? { ...i, status: 4 } : i) } : prev);
+        setOrder(prev => prev ? { ...prev, orderItems: prev.orderItems.map(i => i.id === item.id ? served(i) : i) } : prev);
     }, 'Servis edildi olarak işaretlenemedi.');
 
     const serveAll = () => run('serve-all', async () => {
         if (!order) return;
         await orderService.updateOrderStatus(order.id, 5);
-        setOrder(prev => prev ? { ...prev, orderItems: prev.orderItems.map(i => i.status === 3 ? { ...i, status: 4 } : i) } : prev);
+        setOrder(prev => prev ? { ...prev, orderItems: prev.orderItems.map(i => i.status === 3 ? served(i) : i) } : prev);
     }, 'Servis edilemedi.');
 
     const commitNote = async (item: OrderItem) => {
@@ -211,21 +217,46 @@ export default function TableWorkspace({
 
     const openPay = (mode: PaymentMode) => { setPayMode(mode); setSheetOpen(false); setView('pay'); };
 
+    const showDetail = () => { setOpenedOnAdd(false); setView('detail'); };
+
+    // Gönderim sonrası: telefonda masa listesine dönülür (sıradaki masa); tablette panel açık kalır
+    // ve detaya geçer. Liste OrderUpdated ile zaten güncellenir, onRefreshTables gecikme sayısı gibi
+    // alanlar için. Tablette sipariş bir kez açıkça yenilenir: panelin hub bağlantısı o an kurulmamış
+    // veya yeniden bağlanıyor olabilir, detayın "Masa boş" kalmasındansa tek GET daha iyi.
+    const handleSent = () => {
+        onRefreshTables();
+        if (variant === 'screen') {
+            onClose();
+            return;
+        }
+        showDetail();
+        void loadOrder();
+    };
+
     // ── Alt ekranlar ──
     if (view === 'add' && canTakeOrders) {
-        const backToList = openedOnAdd && !order;
+        const backToList = openedOnAdd;
         return (
-            <AddItemsView
-                table={table}
-                order={order}
-                backLabel={backToList ? 'Masalara dön' : undefined}
-                onBack={() => (backToList ? onClose() : setView('detail'))}
-                onReserve={backToList && canTransferAndReserve && table.status === 1
-                    ? () => { setOpenedOnAdd(false); setView('reserve'); }
-                    : undefined}
-                onTableOpened={() => onTablePatch(table.id, { status: 2, occupiedSince: new Date().toISOString() })}
-                onSent={() => { setOpenedOnAdd(false); void loadOrder(); onRefreshTables(); setView('detail'); }}
-            />
+            <div className="flex h-full min-h-0 flex-col">
+                {/* Dolu masada üstte: masa detayı ve hesap tek dokunuş uzakta. Sipariş yüklenirken de
+                    yeri ayrılır ki şerit sonradan çıkıp listeyi kaydırmasın. */}
+                {(order || (loading && table.status === 2)) && (
+                    <OrderStrip order={order} onOpen={showDetail} />
+                )}
+                <div className="min-h-0 flex-1">
+                    <AddItemsView
+                        table={table}
+                        order={order}
+                        backLabel={backToList ? 'Masalara dön' : undefined}
+                        onBack={() => (backToList ? onClose() : setView('detail'))}
+                        onReserve={backToList && canTransferAndReserve && table.status === 1 && !order
+                            ? () => { setOpenedOnAdd(false); setView('reserve'); }
+                            : undefined}
+                        onTableOpened={() => onTablePatch(table.id, { status: 2, occupiedSince: new Date().toISOString() })}
+                        onSent={handleSent}
+                    />
+                </div>
+            </div>
         );
     }
     if (view === 'pay' && order && hasItems && canTakePayment) {
@@ -353,6 +384,11 @@ export default function TableWorkspace({
                                         {new Date(reservation.reservationTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} · {reservation.guestName || '—'}
                                     </p>
                                     {reservation.contact && <p className="text-sm text-rb-text-sub">{reservation.contact}</p>}
+                                    {reservation.code && (
+                                        <p className="mt-1 text-sm text-rb-text-sub">
+                                            Kod <span className="font-mono font-bold tracking-[0.08em] text-foreground">{reservation.code}</span>
+                                        </p>
+                                    )}
                                     {reservation.note && <p className="mt-1 text-sm text-foreground">Not: {reservation.note}</p>}
                                 </>
                             ) : <p className="mt-1 text-sm text-rb-text-sub">Bu rezervasyon için detay girilmemiş.</p>}
@@ -431,6 +467,7 @@ export default function TableWorkspace({
                                                         ) : (
                                                             <span className={cn('truncate text-[13px]', sub.late ? 'font-semibold text-rb-red' : 'text-rb-text-sub')}>{sub.text}</span>
                                                         )}
+                                                        {item.components && item.components.length > 0 && <SetComponents item={item} />}
                                                     </div>
                                                     {group.status === 3 ? (
                                                         <button
@@ -565,5 +602,51 @@ export default function TableWorkspace({
                 </AlertDialogContent>
             </AlertDialog>
         </div>
+    );
+}
+
+const COMPONENT_STATUS: Record<number, string> = { 1: 'bekliyor', 2: 'hazırlanıyor', 3: 'hazır', 4: 'servis edildi' };
+
+// Menü satırının içindeki ürünler ("Adana Kebap · Kola · Patates"). Menünün durumu ürünlerinden gelir; durumu
+// menüden farklı olan ürünün yanına kendi durumu yazılır (ör. içecek hazır, kebap hâlâ hazırlanıyor).
+function SetComponents({ item }: { item: OrderItem }) {
+    return (
+        <ul className="mt-0.5 flex flex-col text-[13px] text-rb-text-sub">
+            {item.components!.map(component => (
+                <li key={component.id} className="truncate">
+                    · {component.productName}
+                    {component.status !== item.status && COMPONENT_STATUS[component.status] && (
+                        <span className={cn('font-semibold', component.status === 3 && 'text-rb-green')}> · {COMPONENT_STATUS[component.status]}</span>
+                    )}
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+// Ürün ekleme ekranının üstündeki şerit: masadaki siparişin özeti ve detaya geçiş.
+// Hazır ürün ve hesap isteği burada da görünür; garson eklerken servis edilecek bir şeyi kaçırmaz.
+function OrderStrip({ order, onOpen }: { order: Order | null; onOpen: () => void }) {
+    const itemCount = order?.orderItems.reduce((sum, i) => sum + i.quantity, 0) ?? 0;
+    const readyCount = order?.orderItems.filter(i => i.status === 3).length ?? 0;
+    return (
+        <button
+            type="button"
+            onClick={onOpen}
+            className="flex min-h-12 shrink-0 items-center gap-2.5 border-b border-border bg-card px-4 text-left"
+        >
+            <ReceiptText className="size-5 shrink-0 text-rb-text-sub" aria-hidden="true" />
+            <span className="shrink-0 whitespace-nowrap text-[15px] font-bold text-foreground">Masa detayı · Hesap</span>
+            <span className="ml-auto flex min-w-0 items-center gap-2 text-sm text-rb-text-sub">
+                {readyCount > 0 && (
+                    <span className="shrink-0 rounded-full bg-rb-green px-2 py-0.5 text-xs font-bold text-rb-green-foreground">{readyCount} hazır</span>
+                )}
+                {order?.billRequestedAt && <span className="truncate font-semibold text-rb-accent">Hesap istendi</span>}
+                {order ? (
+                    <span className="truncate tabular-nums">{itemCount} ürün · <strong className="text-foreground">₺{formatPrice(order.totalPrice)}</strong></span>
+                ) : <span>…</span>}
+            </span>
+            <ChevronRight className="size-5 shrink-0 text-rb-text-sub" aria-hidden="true" />
+        </button>
     );
 }

@@ -3,10 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, LayoutGrid, QrCode, UserRound } from 'lucide-react';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Table } from '@/features/tables/types';
+import type { ItemsReadyEvent } from '@/features/orders/types';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import { RESERVATION_CONFIRMED, RESERVATION_PENDING, type OrderRequest, type StaffReservation } from '@/features/customerSite/types';
 import { userService } from '@/features/users/api/userService';
 import { ALL_WAITER_PERMISSIONS, waiterPermissionsOf, type User, type WaiterPermissions } from '@/features/users/types';
+import { prefetchWaiterMenu } from '@/features/products/api/waiterMenuCache';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -16,10 +18,15 @@ import WaiterTableCard from './components/WaiterTableCard';
 import WaiterReservations from './components/WaiterReservations';
 import WaiterAccount from './components/WaiterAccount';
 import { STATE_STYLE, tableState, useSplitLayout, type TableState } from './waiterUi';
+import { ITEMS_READY_EVENT, OPEN_TABLE_EVENT } from './waiterEvents';
+import { hasDraft } from './orderDraft';
 
 type Tab = 'tables' | 'qr' | 'reservations' | 'account';
 const TABS: Tab[] = ['tables', 'qr', 'reservations', 'account'];
 type Filter = 'all' | TableState;
+
+// Mutfaktan "ürün hazır" gelen masanın kartı bu süre boyunca (ya da masa açılana kadar) vurgulanır.
+const READY_HIGHLIGHT_MS = 3 * 60 * 1000;
 
 const FILTERS: { key: Filter; label: string }[] = [
     { key: 'all', label: 'Hepsi' },
@@ -55,6 +62,8 @@ export default function WaiterTablesPage() {
     const [filter, setFilter] = useState<Filter>('all');
     const [selected, setSelected] = useState<{ id: string; view: WorkspaceView } | null>(null);
     const [now, setNow] = useState(() => Date.now());
+    // Hazır ürünü olan masalar: tableId → bildirimin geldiği an.
+    const [readyAt, setReadyAt] = useState<Map<string, number>>(() => new Map());
 
     const loadTables = useCallback(() => {
         tableService.getTables()
@@ -82,6 +91,16 @@ export default function WaiterTablesPage() {
             .then(u => { setUser(u); setPermissions(waiterPermissionsOf(u)); })
             .catch(console.error);
     }, [loadTables, loadRequests, loadReservations]);
+
+    // Menü masalar ekranındayken önceden çekilir; "Ürün ekle" açılınca beklemeden gelir.
+    // Uygulamaya geri dönülünce (odak) menü ve masalar tazelenir. Masaların yeniden çizilmesi
+    // kartlardaki "Taslak" rozetlerini de sessionStorage'dan yeniden okutur.
+    useEffect(() => {
+        prefetchWaiterMenu();
+        const onFocus = () => { prefetchWaiterMenu(); loadTables(); };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+    }, [loadTables]);
 
     // Süreler ve gecikme rozetleri için: saat her 30 sn, masalar her dakika tazelenir.
     useEffect(() => {
@@ -125,6 +144,34 @@ export default function WaiterTablesPage() {
         };
     }, [patchTable, scheduleReload, loadRequests, loadReservations]);
 
+    const clearReady = useCallback((tableId: string) => {
+        setReadyAt(prev => {
+            if (!prev.has(tableId)) return prev;
+            const next = new Map(prev);
+            next.delete(tableId);
+            return next;
+        });
+    }, []);
+
+    // Başlıktaki ItemReadyAlerts: bildirim gelince kartı vurgula, toast'taki "Masaya git" ile masayı aç.
+    useEffect(() => {
+        const onItemsReady = (e: Event) => {
+            const { tableId } = (e as CustomEvent<ItemsReadyEvent>).detail;
+            setReadyAt(prev => new Map(prev).set(tableId, Date.now()));
+        };
+        const onOpenTable = (e: Event) => {
+            const tableId = (e as CustomEvent<string>).detail;
+            setSelected({ id: tableId, view: 'detail' });
+            clearReady(tableId);
+        };
+        window.addEventListener(ITEMS_READY_EVENT, onItemsReady);
+        window.addEventListener(OPEN_TABLE_EVENT, onOpenTable);
+        return () => {
+            window.removeEventListener(ITEMS_READY_EVENT, onItemsReady);
+            window.removeEventListener(OPEN_TABLE_EVENT, onOpenTable);
+        };
+    }, [clearReady]);
+
     // ── Türetilmiş veriler ──
     const regions = useMemo(() => {
         const list: { id: string; name: string; count: number }[] = [];
@@ -162,10 +209,28 @@ export default function WaiterTablesPage() {
     const pendingReservations = reservations.filter(r => r.status === RESERVATION_PENDING).length;
     const selectedTable = selected ? tables.find(t => t.id === selected.id) ?? null : null;
 
+    const hasReadyItems = (tableId: string) => {
+        const at = readyAt.get(tableId);
+        return at !== undefined && now - at < READY_HIGHLIGHT_MS;
+    };
+
+    // Masaya dokununca hangi ekran açılır? En sık iş "ürün eklemek" olduğu için boş ve dolu masa
+    // doğrudan ürün eklemeyi açar (oradan "Masa detayı · Hesap" tek dokunuş). Detay açılan durumlar:
+    //   - mutfaktan hazır ürün gelmiş: garson önce neyi götüreceğini görsün,
+    //   - hesap istenmiş: sıradaki iş ödeme,
+    //   - rezerve masa (status 3): "Müşteri geldi" / rezervasyon iptali detayda,
+    //   - sipariş alma yetkisi yok.
+    const initialViewFor = (table: Table): WorkspaceView => {
+        if (!permissions.canTakeOrders || hasReadyItems(table.id)) return 'detail';
+        if (table.status === 1) return 'add';
+        if (table.status === 2 && !table.billRequestedAt) return 'add';
+        return 'detail';
+    };
+
     const openTable = (table: Table) => {
-        // Boş masaya dokunmak (sipariş yetkisi varsa) doğrudan ürün eklemeyi açar; telefonda tam ekran,
-        // tablette sağ panelde. Tablette seçili masaya tekrar dokunmak paneli kapatır.
-        const view: WorkspaceView = table.status === 1 && permissions.canTakeOrders ? 'add' : 'detail';
+        const view = initialViewFor(table);
+        clearReady(table.id);
+        // Telefonda tam ekran, tablette sağ panelde açılır. Tablette seçili masaya tekrar dokunmak paneli kapatır.
         if (split) {
             setSelected(prev => (prev?.id === table.id ? null : { id: table.id, view }));
             return;
@@ -256,6 +321,8 @@ export default function WaiterTablesPage() {
             selected={split && selected?.id === t.id}
             qrCount={qrByTable.get(t.id) ?? 0}
             reservationLabel={reservationLabel.get(t.id)}
+            ready={hasReadyItems(t.id)}
+            draft={hasDraft(t.id)}
             onClick={() => openTable(t)}
         />
     );

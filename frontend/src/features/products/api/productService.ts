@@ -1,15 +1,21 @@
 import { api } from '@/lib/axiosInstance';
-import type { CreateProduct, UpdateProduct, Product } from '../types';
+import type { CreateProduct, UpdateProduct, Product, ProductWithCost } from '../types';
 
 export const productService = {
     getProducts: async () => {
         const response = await api.get<Product[]>('/product');
         return response.data;
     },
+    /** Maliyet dahil liste; yalnızca Admin/Owner çağırabilir. */
+    getProductsWithCost: async () => {
+        const response = await api.get<ProductWithCost[]>('/product/with-cost');
+        return response.data;
+    },
     createProduct: async (form: CreateProduct) => {
         const response = await api.post(`/product`, {
             Name: form.name,
             Price: form.price,
+            Cost: form.cost,
             IsActive: form.isActive,
             CategoryId: form.categoryId,
             Description: form.description,
@@ -25,6 +31,7 @@ export const productService = {
             Id: form.id,
             Name: form.name,
             Price: form.price,
+            Cost: form.cost,
             IsActive: form.isActive,
             CategoryId: form.categoryId,
             // undefined alanlar JSON'a yazılmaz; sunucu onları olduğu gibi bırakır.
@@ -34,6 +41,10 @@ export const productService = {
             PrepMinutes: form.prepMinutes,
             TaxRate: form.taxRate
         });
+    },
+    /** "Tükendi" anahtarı: ürün masada satılmaya devam eder, online siparişte seçilemez. */
+    setStock: async (id: string, isOutOfStock: boolean) => {
+        await api.patch(`/product/${id}/stock`, { isOutOfStock });
     },
     deleteProduct: async (id: string) => {
         await api.delete(`/product/${id}`);

@@ -193,7 +193,7 @@ export default function QuickAccessPanel() {
                 { key: 'region', label: 'Bölge ekle', hint: 'Salon, Bahçe gibi masa grupları; her masa bir bölgeye bağlıdır', to: '/admin/tables', done: regions > 0, summary: plural(regions, 'bölge') },
                 { key: 'table', label: 'Masaları tanımla', hint: 'Garsonlar bu masalara sipariş açar', to: '/admin/tables', done: tables > 0, summary: plural(tables, 'masa') },
                 { key: 'register', label: 'Kasa aç', hint: 'Ödemelerin ve vardiyaların bağlanacağı kasa', to: '/admin/cash-registers', done: registers > 0, summary: plural(registers, 'kasa') },
-                { key: 'staff', label: 'Kullanıcı ekle', hint: 'Garson, mutfak ve kasiyer hesapları', to: '/admin/staff', done: staff > 0, summary: plural(staff, 'kullanıcı') },
+                { key: 'staff', label: 'Çalışan ekle', hint: 'Garson, mutfak ve kasiyer hesapları', to: '/admin/staff', done: staff > 0, summary: plural(staff, 'çalışan') },
             ]);
         });
 

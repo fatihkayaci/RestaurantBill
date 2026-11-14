@@ -6,6 +6,7 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { formatIban, isValidTrIban, normalizeIban } from '@/lib/iban';
 import { inputClass, labelClass } from '@/lib/formStyles';
 import { cn } from '@/lib/utils';
+import { useSettingsDirty } from '../settings/settingsTabs';
 
 // Kasada "IBAN" ile ödeme alınırken QR koda yazılan hesap. Boşsa kasiyer IBAN seçeneğini kullanamaz.
 export default function IbanSettingsCard() {
@@ -28,6 +29,7 @@ export default function IbanSettingsCard() {
     }, []);
 
     const dirty = normalizeIban(iban) !== saved.iban || holder.trim() !== saved.holder;
+    useSettingsDirty('odeme', loaded && dirty);
 
     const save = async (nextIban: string, nextHolder: string) => {
         setSaving(true);

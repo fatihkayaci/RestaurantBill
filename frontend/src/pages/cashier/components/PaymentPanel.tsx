@@ -37,9 +37,12 @@ interface Props {
     cashRegisterMode?: 'shift' | 'manual';
     /** Kısmi ödeme sonrası (masa açık kalır) üst ekrandaki listeyi tazelemek için. */
     onPartialPayment?: () => void;
+    /** Kasiyerin indirim/ikram yetkisi ve indirim sınırı (100 = sınırsız). Admin ekranında verilmez, kısıt yoktur. */
+    canDiscount?: boolean;
+    maxDiscountPercent?: number;
 }
 
-export default function PaymentPanel({ order, onClose, onComplete, cashRegisterMode = 'shift', onPartialPayment }: Props) {
+export default function PaymentPanel({ order, onClose, onComplete, cashRegisterMode = 'shift', onPartialPayment, canDiscount = true, maxDiscountPercent = 100 }: Props) {
     const [displayOrder, setDisplayOrder] = useState<Order>(order);
     const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent');
     const [discountValueInput, setDiscountValueInput] = useState('');
@@ -103,7 +106,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
 
     const chargeBase = split === 'items' ? selectedTotal : split === 'amount' ? Math.min(amountValue, due) : due;
     // İndirim yalnızca ürünlerle kapanan ödemede; tutar girilen ödeme olduğu gibi tahsil edilir.
-    const discountAllowed = split !== 'amount';
+    const discountAllowed = canDiscount && split !== 'amount';
     const discountValue = discountAllowed ? Math.min(
         discountType === 'percent'
             ? chargeBase * (parseFloat(discountValueInput) || 0) / 100
@@ -111,6 +114,11 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         chargeBase
     ) : 0;
     const netAmount = Math.max(chargeBase - discountValue, 0);
+    // Sunucu da aynı sınırı uygular; tutarla girilen indirim tahsil edilecek tutara oranlanır.
+    const discountPercent = discountType === 'percent'
+        ? parseFloat(discountValueInput) || 0
+        : chargeBase > 0 ? round2(discountValue * 100 / chargeBase) : 0;
+    const discountOverLimit = discountAllowed && discountPercent > maxDiscountPercent;
 
     const chooseSplit = (next: Split) => {
         setSplit(next);
@@ -173,7 +181,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
 
     const cashRegisterId = activeShift?.cashRegisterId;
     const splitReady = split === 'items' ? hasSelection : split === 'amount' ? amountValue > 0 && !amountTooHigh : true;
-    const canComplete = !submitting && !ensuringShift && !!cashRegisterId && splitReady && (paymentMethod !== 'iban' || hasIban);
+    const canComplete = !submitting && !ensuringShift && !!cashRegisterId && splitReady && !discountOverLimit && (paymentMethod !== 'iban' || hasIban);
 
     const handleComplete = async () => {
         if (!cashRegisterId) {
@@ -212,7 +220,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                 toast.success(split === 'amount'
                     ? `₺${formatPrice(netAmount)} alındı, kalan ₺${formatPrice(remainingAfter)} için masa açık kalıyor.`
                     : 'Kısmi ödeme alındı, kalan tutar için masa açık kalıyor.');
-                const refreshed = await orderService.getOrderByTableId(displayOrder.tableId);
+                // Paket siparişin masası yok; tahsilatı bu panelden alınmaz (kurye teslim akışı).
+                const refreshed = displayOrder.tableId ? await orderService.getOrderByTableId(displayOrder.tableId) : null;
                 if (refreshed) setDisplayOrder(refreshed);
                 onPartialPayment?.();
             }
@@ -288,6 +297,9 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                     <span className="text-sm text-muted-foreground mt-0.5 w-7 shrink-0">×{item.quantity}</span>
                                     <div>
                                         <p className="text-sm font-medium text-foreground">{item.productName}</p>
+                                        {item.components && item.components.length > 0 && (
+                                            <p className="text-xs text-muted-foreground">{item.components.map(c => c.productName).join(' · ')}</p>
+                                        )}
                                         <p className="text-xs text-muted-foreground">₺{formatPrice(item.unitPrice)} / adet</p>
                                         {item.note && <p className="text-xs text-rb-amber mt-0.5">Not: {item.note}</p>}
                                     </div>
@@ -506,12 +518,17 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 type="number"
                                 inputMode="decimal"
                                 min={0}
-                                max={discountType === 'percent' ? 100 : undefined}
+                                max={discountType === 'percent' ? maxDiscountPercent : undefined}
                                 value={discountValueInput}
                                 onChange={e => setDiscountValueInput(e.target.value)}
                                 placeholder={discountType === 'percent' ? 'Yüzde girin (%)' : 'Tutar girin (₺)'}
                                 className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
                             />
+                            {maxDiscountPercent < 100 && (
+                                <p className={`mt-1 text-xs ${discountOverLimit ? 'font-semibold text-rb-red' : 'text-muted-foreground'}`}>
+                                    En fazla %{maxDiscountPercent} indirim uygulayabilirsiniz.
+                                </p>
+                            )}
                             {discountValue > 0 && (
                                 <input
                                     type="text"
@@ -593,7 +610,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         </div>
                         {!hasIban && ibanSettings !== null && (
                             <p className="text-xs text-muted-foreground">
-                                IBAN ile ödeme kapalı: şubede IBAN tanımlı değil. {isAdmin ? 'Restoran sayfasından ekleyebilirsin.' : 'Yöneticiniz Restoran ayarlarından ekleyebilir.'}
+                                IBAN ile ödeme kapalı: şubede IBAN tanımlı değil. {isAdmin ? 'Ayarlar → Ödeme sekmesinden ekleyebilirsin.' : 'Yöneticiniz Ayarlar → Ödeme sekmesinden ekleyebilir.'}
                             </p>
                         )}
 

@@ -35,6 +35,8 @@ export interface SalesReport {
     totalTax: number;
     transactionCount: number;
     avgBasket: number;
+    /** Ciroya dahil paket servis teslimat ücretleri. */
+    deliveryFeeRevenue: number;
     trend: SalesTrendPoint[];
     paymentMethods: PaymentMethodBreakdown[];
     heatmap: SalesHeatmapPoint[];

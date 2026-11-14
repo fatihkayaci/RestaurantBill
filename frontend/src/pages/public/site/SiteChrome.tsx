@@ -1,9 +1,10 @@
 import { useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
-    RESERVATION_CANCELLED, RESERVATION_CONFIRMED, RESERVATION_PENDING, RESERVATION_REJECTED,
+    RESERVATION_CANCELLED, RESERVATION_CONFIRMED, RESERVATION_NO_SHOW, RESERVATION_PENDING, RESERVATION_REJECTED, RESERVATION_SEATED,
     type PublicProduct, type ReservationStatusInfo,
 } from '@/features/customerSite/types';
+import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { cn } from '@/lib/utils';
 import {
     SITE_FONTS_HREF, container, formatDay, formatSitePrice, headingFont, siteRootStyle, wordmarkParts,
@@ -119,6 +120,8 @@ function statusBadge(status: number): { text: string; className: string } {
     if (status === RESERVATION_REJECTED) return { text: 'Onaylanmadı', className: 'bg-[#FBE1DC] text-[#7F1D1D]' };
     if (status === RESERVATION_CANCELLED) return { text: 'İptal edildi', className: 'bg-[var(--site-raised)] text-[var(--site-sub)]' };
     if (status === RESERVATION_PENDING) return { text: 'Onay bekliyor', className: 'bg-[#FCEBC7] text-[#713F12]' };
+    if (status === RESERVATION_SEATED) return { text: 'Geldiniz', className: 'bg-[#DCF2E3] text-[#14532D]' };
+    if (status === RESERVATION_NO_SHOW) return { text: 'Gelinmedi', className: 'bg-[var(--site-raised)] text-[var(--site-sub)]' };
     return { text: 'Kayıtlı', className: 'bg-[var(--site-raised)] text-[var(--site-sub)]' };
 }
 
@@ -131,18 +134,31 @@ export function MyReservations({ items, className }: { items: ReservationStatusI
                 {items.map(reservation => {
                     const badge = statusBadge(reservation.status);
                     return (
-                        <li key={reservation.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--site-border)] bg-[var(--site-card)] p-4">
-                            <div className="min-w-0">
-                                <p className="text-[15px] font-semibold">
-                                    {formatDay(reservation.date)} · <span className="tabular-nums">{reservation.time}–{reservation.endTime}</span>
-                                </p>
-                                <p className="text-sm text-[var(--site-sub)]">{reservation.tableName} · {reservation.partySize} kişi</p>
-                            </div>
-                            <span className={cn('shrink-0 rounded-full px-3 py-1.5 text-xs font-bold', badge.className)}>{badge.text}</span>
+                        <li key={reservation.accessToken}>
+                            <Link
+                                to={`/rezervasyon/${reservation.accessToken}`}
+                                className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--site-border)] bg-[var(--site-card)] p-4 text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-border-strong)]"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-[15px] font-semibold">
+                                        {formatDay(reservation.date)} · <span className="tabular-nums">{reservation.time}–{reservation.endTime}</span>
+                                    </p>
+                                    <p className="text-sm text-[var(--site-sub)]">
+                                        {reservation.tableName} · {reservation.partySize} kişi
+                                        {reservation.code && <> · Kod <span className="font-mono font-semibold tracking-[0.06em] text-[var(--site-text)]">{reservation.code}</span></>}
+                                    </p>
+                                    <p className="mt-1 text-sm font-semibold text-[var(--site-accent)]">Rezervasyon ve ön sipariş →</p>
+                                </div>
+                                <span className={cn('shrink-0 rounded-full px-3 py-1.5 text-xs font-bold', badge.className)}>{badge.text}</span>
+                            </Link>
                         </li>
                     );
                 })}
             </ul>
+            <p className="text-sm text-[var(--site-sub)]">
+                Burada görmüyor musunuz?{' '}
+                <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[var(--site-accent)] underline-offset-4 hover:underline">Kodla sorgulayın</Link>
+            </p>
         </section>
     );
 }
