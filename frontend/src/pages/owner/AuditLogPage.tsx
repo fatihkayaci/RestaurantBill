@@ -23,7 +23,6 @@ function detailWithoutActor(message: string, actorName?: string | null) {
 
 export default function AuditLogPage() {
     const [logs, setLogs] = useState<AuditLog[]>([]);
-    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -55,8 +54,15 @@ export default function AuditLogPage() {
         auditLogService.getActors().then(setActors).catch(console.error);
     }, []);
 
+    // Request-key kalıbı: yüklenme durumu state'te tutulmaz, "son tamamlanan istek şu anki filtrelerle mi?"
+    // sorusundan türetilir. Sayfa/filtre değişince requestKey değişir ve loading kendiliğinden true olur.
+    const requestKey = JSON.stringify([page, pageSize, debouncedSearch, categoryFilter, severityFilter, branchFilter, userFilter, dateFrom, dateTo]);
+    const [loadedKey, setLoadedKey] = useState<string | null>(null);
+    const loading = loadedKey !== requestKey;
+
     useEffect(() => {
-        setLoading(true);
+        // Filtre hızlı değişirse geç dönen eski yanıt yeni listenin üstüne yazılmasın (ve loading'i bozmasın).
+        let ignore = false;
         auditLogService.getAll({
             pageNumber: page,
             pageSize,
@@ -69,12 +75,14 @@ export default function AuditLogPage() {
             dateTo: dateTo || undefined,
         })
             .then(result => {
+                if (ignore) return;
                 setLogs(result.items);
                 setTotalCount(result.totalCount);
             })
             .catch(console.error)
-            .finally(() => setLoading(false));
-    }, [page, pageSize, debouncedSearch, categoryFilter, severityFilter, branchFilter, userFilter, dateFrom, dateTo]);
+            .finally(() => { if (!ignore) setLoadedKey(requestKey); });
+        return () => { ignore = true; };
+    }, [requestKey, page, pageSize, debouncedSearch, categoryFilter, severityFilter, branchFilter, userFilter, dateFrom, dateTo]);
 
     const activeFilterCount = [
         categoryFilter !== 'all',

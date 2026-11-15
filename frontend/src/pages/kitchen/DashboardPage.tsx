@@ -188,17 +188,19 @@ export default function KitchenDashboardPage() {
             ...o,
             orderItems: o.orderItems.map(i => ids.has(i.id) ? { ...i, status } : i),
         }));
-        // Ürün ürün gönderilir: sunucu her birinde kategori yetkisini ayrıca denetler, sonradan eklenen ürünlere dokunulmaz.
-        const results = await Promise.allSettled(items.map(i => orderService.updateOrderItemStatus(ticket.order.id, i.id, status)));
-        setBusyKeys(prev => {
-            const copy = new Set(prev);
-            copy.delete(ticket.key);
-            return copy;
-        });
-        const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
-        if (failed) {
-            toast.error(getApiErrorMessage(failed.reason, failMessage));
+        // Ekrandaki ürünlerin id'leri tek istekte gider: sonradan eklenen ürünlere dokunulmaz, sunucu kategori yetkisini
+        // her ürün için denetler (biri bile yetki dışıysa hiçbiri değişmez) ve garsona tek "ürün hazır" bildirimi gider.
+        try {
+            await orderService.updateOrderItemsStatus(ticket.order.id, items.map(i => i.id), status);
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, failMessage));
             load().catch(() => {});
+        } finally {
+            setBusyKeys(prev => {
+                const copy = new Set(prev);
+                copy.delete(ticket.key);
+                return copy;
+            });
         }
     };
 

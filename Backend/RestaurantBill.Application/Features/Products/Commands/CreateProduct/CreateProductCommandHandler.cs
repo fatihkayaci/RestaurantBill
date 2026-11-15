@@ -33,6 +33,7 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
                 return Result.Failure("Bu kategoride bu isimde bir ürün zaten mevcut.");
 
             Product product = Product.Create(request.Name, request.Price, request.ImageUrl, request.CategoryId);
+            product.SetCost(request.Cost);
             product.UpdateSiteDetails(request.Description, request.IsFeatured);
             product.SetPrepMinutes(request.PrepMinutes);
             product.SetTaxRate(request.TaxRate);

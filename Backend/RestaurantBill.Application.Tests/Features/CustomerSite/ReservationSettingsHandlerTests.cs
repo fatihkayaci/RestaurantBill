@@ -49,7 +49,7 @@ public class ReservationSettingsHandlerTests : ApplicationTestBase
     private static DateOnly DayFromNow(int days) => DateOnly.FromDateTime(DateTime.UtcNow.AddDays(days));
     private static string Iso(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    private Task<Domain.Shared.Result<ReservationStatusDto>> CreateAsync(Table table, string time, int daysAhead = 2, int partySize = 4)
+    private Task<Domain.Shared.Result<ReservationCreatedDto>> CreateAsync(Table table, string time, int daysAhead = 2, int partySize = 4)
         => new CreateReservationRequestCommandHandler(Db, _tenant, _tableNotifications).Handle(new CreateReservationRequestCommand
         {
             TableId = table.Id,

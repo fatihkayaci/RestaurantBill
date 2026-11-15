@@ -29,6 +29,9 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.PrepaidAmount)
             .HasPrecision(18, 2);
 
+        builder.Property(p => p.IsDeliveryFee)
+            .HasDefaultValue(false);
+
         builder.HasIndex(p => p.ShiftId);
         builder.HasIndex(p => new { p.CashRegisterId, p.CreatedAt });
     }

@@ -7,6 +7,7 @@ import ShiftStartGate from './components/ShiftStartGate';
 import EndShiftModal from './components/EndShiftModal';
 import RoleShell from '@/components/layout/RoleShell';
 import BillRequestAlerts from '@/components/layout/BillRequestAlerts';
+import OnlineOrderAlerts from '@/components/layout/OnlineOrderAlerts';
 import { ActiveShiftProvider } from '@/features/cashier/context/ActiveShiftContext';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 
@@ -61,7 +62,13 @@ function CashierLayoutContent() {
             roleLabel="Kasiyer"
             statsSlotId="cashier-stats-slot"
             statsSlotClassName="hidden lg:flex"
-            actions={endShiftButton}
+            actions={shiftGateResolved && (
+                <>
+                    {/* Yeni online paket siparişi: kalıcı uyarı, tekrar eden ses ve rozet; pano kasiyer ekranının "Paket" sekmesi. */}
+                    <OnlineOrderAlerts boardPath="/cashier?sekme=paket" />
+                    {endShiftButton}
+                </>
+            )}
             bodyClassName="overflow-auto flex flex-col"
         >
             {shiftGateResolved && <BillRequestAlerts />}

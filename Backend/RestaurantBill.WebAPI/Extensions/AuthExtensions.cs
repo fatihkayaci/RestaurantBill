@@ -45,7 +45,8 @@ public static class AuthExtensions
                     if (!string.IsNullOrEmpty(accessToken) &&
                         (path.StartsWithSegments("/table-hub") ||
                          path.StartsWithSegments("/kitchen-hub") ||
-                         path.StartsWithSegments("/cashier-hub")))
+                         path.StartsWithSegments("/cashier-hub") ||
+                         path.StartsWithSegments("/courier-hub")))
                     {
                         context.Token = accessToken;
                     }

@@ -103,6 +103,11 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                         <span className="text-muted-foreground">Matrah <span className="text-foreground font-medium">{formatCurrency(data?.totalMatrah ?? 0, 2)}</span></span>
                         <span className="text-muted-foreground">KDV <span className="text-foreground font-medium">{formatCurrency(data?.totalTax ?? 0, 2)}</span></span>
                     </div>
+                    {(data?.deliveryFeeRevenue ?? 0) > 0 && (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            Teslimat ücreti dahil <span className="text-foreground font-medium">{formatCurrency(data?.deliveryFeeRevenue ?? 0, 2)}</span>
+                        </p>
+                    )}
                 </div>
                 <div className="rounded-xl border border-border bg-card p-5">
                     <div className="flex items-center gap-3">

@@ -78,6 +78,49 @@ namespace RestaurantBill.Persistence.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.BlockedPhone", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BlockedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId", "Phone")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("BlockedPhones");
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Branch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -148,12 +191,23 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("OnlineOrderSettings")
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("OnlineOrdersPaused")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("OpenAddress")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<TimeOnly?>("OpensAt")
                         .HasColumnType("time without time zone");
+
+                    b.Property<string>("QrFeatures")
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("ReservationSettings")
                         .HasColumnType("jsonb");
@@ -360,6 +414,352 @@ namespace RestaurantBill.Persistence.Migrations
                     b.ToTable("Companies");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.CustomerPhoneVerification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("TokenUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VerificationTokenHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VerificationTokenHash");
+
+                    b.HasIndex("BranchId", "Phone", "CreatedAt");
+
+                    b.ToTable("CustomerPhoneVerifications");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.DeliveryOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AcceptedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("AddressDirections")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CancelReason")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CancelledByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClientIp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ClientRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("CollectedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("CollectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CollectedMethod")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("CourierUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("CustomerPhone")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DeliveryFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("DeliveryZoneId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DispatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("EstimatedMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PaymentPreference")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RejectReason")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RejectedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("SettledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SettledByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ZoneName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessToken")
+                        .IsUnique();
+
+                    b.HasIndex("DeliveryZoneId");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("BranchId", "ClientRequestId")
+                        .IsUnique();
+
+                    b.HasIndex("BranchId", "Number")
+                        .IsUnique();
+
+                    b.HasIndex("BranchId", "Status");
+
+                    b.HasIndex("CourierUserId", "Status");
+
+                    b.HasIndex("BranchId", "CustomerPhone", "CreatedAt");
+
+                    b.ToTable("DeliveryOrders");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.DeliveryOrderLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DeliveryOrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SelectionsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("SetMenuId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryOrderId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SetMenuId");
+
+                    b.ToTable("DeliveryOrderLines");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.DeliveryZone", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("EstimatedMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Fee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("MinOrderAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId", "SortOrder");
+
+                    b.ToTable("DeliveryZones");
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Membership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -409,11 +809,21 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime?>("BillRequestedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CreatedUser")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("DeliveryFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<bool>("DeliveryFeeSettled")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -422,6 +832,11 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("OrderType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<decimal>("PaidOnAccount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -429,7 +844,7 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("TableId")
+                    b.Property<Guid?>("TableId")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("TotalPrice")
@@ -447,6 +862,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TableId");
+
+                    b.HasIndex("BranchId", "Status");
 
                     b.ToTable("Orders");
                 });
@@ -479,14 +896,20 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<DateTime?>("OverdueNotifiedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("ParentOrderItemId")
+                        .HasColumnType("uuid");
+
                     b.Property<int?>("PrepMinutes")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("ProductId")
+                    b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
+
+                    b.Property<Guid?>("SetMenuId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -507,9 +930,16 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasIndex("OrderId");
 
+                    b.HasIndex("ParentOrderItemId");
+
                     b.HasIndex("ProductId");
 
-                    b.ToTable("OrderItems");
+                    b.HasIndex("SetMenuId");
+
+                    b.ToTable("OrderItems", t =>
+                        {
+                            t.HasCheckConstraint("CK_OrderItems_ProductOrSetMenu", "(\"ProductId\" IS NULL) <> (\"SetMenuId\" IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderRequest", b =>
@@ -527,12 +957,27 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("Kind")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<string>("Note")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasDefaultValue("");
+
+                    b.Property<string>("RejectReason")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasDefaultValue("");
+
+                    b.Property<Guid?>("ReservationId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -544,6 +989,8 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReservationId", "Status");
 
                     b.HasIndex("TableId", "Status");
 
@@ -580,6 +1027,10 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -622,6 +1073,11 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeliveryFee")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsOnAccount")
                         .HasColumnType("boolean");
@@ -701,7 +1157,7 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid>("PaymentId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ProductId")
+                    b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("ProductName")
@@ -711,6 +1167,9 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
+
+                    b.Property<Guid?>("SetMenuId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("TaxRate")
                         .HasPrecision(5, 2)
@@ -729,6 +1188,8 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasIndex("ProductId");
 
+                    b.HasIndex("SetMenuId");
+
                     b.ToTable("PaymentLineItems");
                 });
 
@@ -740,6 +1201,10 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("Cost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -763,6 +1228,11 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<bool>("IsFeatured")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsOutOfStock")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -893,6 +1363,16 @@ namespace RestaurantBill.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
                     b.Property<string>("Contact")
                         .IsRequired()
                         .HasColumnType("text");
@@ -913,6 +1393,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTime?>("NoShowAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Note")
                         .IsRequired()
                         .HasColumnType("text");
@@ -923,6 +1406,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasDefaultValue(0);
 
                     b.Property<DateTime>("ReservationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("SeatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
@@ -936,11 +1422,154 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AccessToken")
+                        .IsUnique();
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
                     b.HasIndex("TableId");
 
                     b.HasIndex("Status", "ReservationTime");
 
                     b.ToTable("Reservations");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.SetMenu", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("SetMenus");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.SetMenuSlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid>("SetMenuId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SetMenuId");
+
+                    b.ToTable("SetMenuSlots");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.SetMenuSlotOption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedUser")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SetMenuSlotId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Surcharge")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SetMenuSlotId");
+
+                    b.ToTable("SetMenuSlotOptions");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Shift", b =>
@@ -1156,6 +1785,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("CanApplyDiscount")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("CanCancelAndDiscount")
                         .HasColumnType("boolean");
 
@@ -1166,6 +1798,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("CanTransferAndReserve")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanTransferTables")
                         .HasColumnType("boolean");
 
                     b.PrimitiveCollection<List<Guid>>("CategoryIds")
@@ -1187,12 +1822,23 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("MaxDiscountPercent")
+                        .HasColumnType("integer");
+
                     b.PrimitiveCollection<List<Guid>>("RegionIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
+
+                    b.PrimitiveCollection<List<Guid>>("RestrictedRegionIds")
                         .IsRequired()
                         .HasColumnType("uuid[]");
 
                     b.Property<int>("Role")
                         .HasColumnType("integer");
+
+                    b.PrimitiveCollection<List<Guid>>("TableIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1274,6 +1920,15 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Navigation("Branch");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.BlockedPhone", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Branch", b =>
                 {
                     b.HasOne("RestaurantBill.Domain.Entities.Company", "Company")
@@ -1329,6 +1984,70 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Navigation("OwnerUser");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.CustomerPhoneVerification", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.DeliveryOrder", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RestaurantBill.Domain.Entities.DeliveryZone", null)
+                        .WithMany()
+                        .HasForeignKey("DeliveryZoneId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RestaurantBill.Domain.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.DeliveryOrderLine", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.DeliveryOrder", "DeliveryOrder")
+                        .WithMany("Lines")
+                        .HasForeignKey("DeliveryOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RestaurantBill.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RestaurantBill.Domain.Entities.SetMenu", "SetMenu")
+                        .WithMany()
+                        .HasForeignKey("SetMenuId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("DeliveryOrder");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SetMenu");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.DeliveryZone", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Membership", b =>
                 {
                     b.HasOne("RestaurantBill.Domain.Entities.Branch", "Branch")
@@ -1342,11 +2061,16 @@ namespace RestaurantBill.Persistence.Migrations
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Order", b =>
                 {
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("RestaurantBill.Domain.Entities.Table", "Table")
                         .WithMany()
                         .HasForeignKey("TableId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Table");
                 });
@@ -1359,24 +2083,44 @@ namespace RestaurantBill.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("RestaurantBill.Domain.Entities.OrderItem", "ParentOrderItem")
+                        .WithMany()
+                        .HasForeignKey("ParentOrderItemId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("RestaurantBill.Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("RestaurantBill.Domain.Entities.SetMenu", "SetMenu")
+                        .WithMany()
+                        .HasForeignKey("SetMenuId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Order");
 
+                    b.Navigation("ParentOrderItem");
+
                     b.Navigation("Product");
+
+                    b.Navigation("SetMenu");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderRequest", b =>
                 {
+                    b.HasOne("RestaurantBill.Domain.Entities.Reservation", "Reservation")
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("RestaurantBill.Domain.Entities.Table", "Table")
                         .WithMany()
                         .HasForeignKey("TableId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Reservation");
 
                     b.Navigation("Table");
                 });
@@ -1474,6 +2218,54 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Navigation("Table");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.SetMenu", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RestaurantBill.Domain.Entities.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.SetMenuSlot", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.SetMenu", "SetMenu")
+                        .WithMany("Slots")
+                        .HasForeignKey("SetMenuId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SetMenu");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.SetMenuSlotOption", b =>
+                {
+                    b.HasOne("RestaurantBill.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RestaurantBill.Domain.Entities.SetMenuSlot", "SetMenuSlot")
+                        .WithMany("Options")
+                        .HasForeignKey("SetMenuSlotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SetMenuSlot");
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Shift", b =>
                 {
                     b.HasOne("RestaurantBill.Domain.Entities.Branch", "Branch")
@@ -1534,6 +2326,11 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.DeliveryOrder", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Order", b =>
                 {
                     b.Navigation("OrderItems");
@@ -1542,6 +2339,16 @@ namespace RestaurantBill.Persistence.Migrations
             modelBuilder.Entity("RestaurantBill.Domain.Entities.OrderRequest", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.SetMenu", b =>
+                {
+                    b.Navigation("Slots");
+                });
+
+            modelBuilder.Entity("RestaurantBill.Domain.Entities.SetMenuSlot", b =>
+                {
+                    b.Navigation("Options");
                 });
 #pragma warning restore 612, 618
         }

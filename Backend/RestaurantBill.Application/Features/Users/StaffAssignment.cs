@@ -5,15 +5,20 @@ using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.Features.Users;
 
-// Kullanıcı formundan gelen bölge, kategori ve garson yetkisi alanları. null alan = değiştirme (yeni kullanıcıda varsayılan).
+// Kullanıcı formundan gelen bölge, kategori, garson ve kasiyer yetkisi alanları. null alan = değiştirme (yeni kullanıcıda varsayılan).
 public interface IStaffAssignmentRequest
 {
     List<Guid>? RegionIds { get; }
+    List<Guid>? RestrictedRegionIds { get; }
+    List<Guid>? TableIds { get; }
     List<Guid>? CategoryIds { get; }
     bool? CanTakeOrders { get; }
     bool? CanTakePayment { get; }
     bool? CanCancelAndDiscount { get; }
     bool? CanTransferAndReserve { get; }
+    bool? CanApplyDiscount { get; }
+    int? MaxDiscountPercent { get; }
+    bool? CanTransferTables { get; }
 }
 
 public static class StaffAssignment
@@ -29,6 +34,7 @@ public static class StaffAssignment
         if (!UsesRegions(role))
         {
             membership.SetRegions([]);
+            membership.SetTableRestriction([], []);
         }
         else if (request.RegionIds is not null)
         {
@@ -42,6 +48,10 @@ public static class StaffAssignment
             }
             membership.SetRegions(regionIds);
         }
+
+        if (UsesRegions(role))
+            await ApplyTableRestrictionAsync(
+                db, membership, request.RestrictedRegionIds ?? membership.RestrictedRegionIds, request.TableIds ?? membership.TableIds, cancellationToken);
 
         if (!UsesCategories(role))
         {
@@ -69,6 +79,44 @@ public static class StaffAssignment
                 request.CanTransferAndReserve ?? membership.CanTransferAndReserve);
         }
 
+        if (role == UserRole.Cashier)
+        {
+            int maxDiscountPercent = request.MaxDiscountPercent ?? membership.MaxDiscountPercent;
+            if (maxDiscountPercent is < 1 or > 100)
+                return "İndirim sınırı %1 ile %100 arasında olmalıdır.";
+
+            membership.SetCashierPermissions(
+                request.CanApplyDiscount ?? membership.CanApplyDiscount,
+                maxDiscountPercent,
+                request.CanTransferTables ?? membership.CanTransferTables);
+        }
+
         return null;
+    }
+
+    // Masa seçimi bölgelerden sonra uygulanır; uymayan değerler hata vermeden atılır:
+    //   - masa masa bakılan bölge, garsonun bölgelerinden biri değilse (bölge kaldırıldıysa) listeden çıkar;
+    //   - masa, şubenin ve masa masa bakılan bir bölgenin masası değilse atılır. Böylece bölgesi kaldırılan ya da
+    //     "Tüm masalar"a döndürülen bölgenin masaları kendiliğinden temizlenir.
+    // Seçili masası olmayan masa masa bölge kabul edilir (garson orada hiçbir masaya bakmaz). Bölge seçilmemişse
+    // (tüm bölgeler) masa seçimi anlamsızdır, temizlenir. Alanlar gönderilmese de mevcut seçim yeniden süzülür.
+    private static async Task ApplyTableRestrictionAsync(
+        IAppDbContext db, UserBranch membership, List<Guid> requestedRestrictedRegionIds, List<Guid> requestedTableIds,
+        CancellationToken cancellationToken)
+    {
+        List<Guid> restrictedRegionIds = requestedRestrictedRegionIds.Where(membership.RegionIds.Contains).Distinct().ToList();
+        List<Guid> tableIds = requestedTableIds.Where(id => id != Guid.Empty).Distinct().ToList();
+        if (restrictedRegionIds.Count == 0 || tableIds.Count == 0)
+        {
+            membership.SetTableRestriction(restrictedRegionIds, []);
+            return;
+        }
+
+        List<Guid> validTableIds = await db.Tables
+            .Where(t => tableIds.Contains(t.Id) && restrictedRegionIds.Contains(t.RegionId) && t.Region.BranchId == membership.BranchId)
+            .Select(t => t.Id)
+            .ToListAsync(cancellationToken);
+        // İstekteki sırayı koru.
+        membership.SetTableRestriction(restrictedRegionIds, tableIds.Where(validTableIds.Contains));
     }
 }

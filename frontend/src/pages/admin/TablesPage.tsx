@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import type { Table, Reservation } from "@/features/tables/types";
@@ -12,7 +12,7 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, QrCode, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid, Trash2 } from 'lucide-react';
+import { Check, X, Pencil, QrCode, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid, Trash2, Layers } from 'lucide-react';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
@@ -22,6 +22,10 @@ import PaymentPanel from '../cashier/components/PaymentPanel';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
 import TableQrModal from '@/features/tables/components/TableQrModal';
 import BulkTableQrModal from '@/features/tables/components/BulkTableQrModal';
+import BulkTableCreateModal from '@/features/tables/components/BulkTableCreateModal';
+import { incrementTableName } from '@/features/tables/tableNames';
+import { REGION_SUGGESTIONS } from '@/features/regions/constants';
+import { SuggestedChips } from '@/components/ui/suggested-chips';
 import CustomerOrderRequests from '../waiter/components/CustomerOrderRequests';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import type { OrderRequest } from '@/features/customerSite/types';
@@ -94,11 +98,13 @@ export default function Tables() {
     // Müşteri QR'ı gösterilen masa.
     const [qrTable, setQrTable] = useState<Table | null>(null);
     const [bulkQrOpen, setBulkQrOpen] = useState(false);
+    const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
     // Masa QR'ından gelen, onay bekleyen müşteri siparişleri (garsonu olmayan işletmede sahibi onaylar).
     const [orderRequests, setOrderRequests] = useState<OrderRequest[]>([]);
     const [newTableName, setNewTableName] = useState('');
     const [newTableRegionId, setNewTableRegionId] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const tableNameInputRef = useRef<HTMLInputElement>(null);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [tableDeleteError, setTableDeleteError] = useState<string | null>(null);
 
@@ -239,7 +245,8 @@ export default function Tables() {
         setIsModalOpen(true);
     };
 
-    const handleSubmit = async () => {
+    // keepOpen: "Kaydet ve yeni ekle" — pencere açık kalır, ad bir sonraki numarayla dolar (Masa 5 → Masa 6).
+    const handleSubmit = async (keepOpen = false) => {
         const errors: Record<string, string> = {};
         if (!newTableName.trim()) errors.name = 'Masa adı boş olamaz.';
         else if (newTableName.length > 50) errors.name = 'En fazla 50 karakter.';
@@ -254,6 +261,12 @@ export default function Tables() {
                 await tableService.createTable(newTableName.trim(), newTableRegionId!);
             }
             await refreshTables();
+            if (keepOpen) {
+                toast.success(`${newTableName.trim()} eklendi.`);
+                setNewTableName(incrementTableName(newTableName.trim()));
+                tableNameInputRef.current?.focus();
+                return;
+            }
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
@@ -287,7 +300,7 @@ export default function Tables() {
         setIsRegionModalOpen(true);
     };
 
-    // Boş durumdaki hazır bölge çipleri (Salon, Bahçe...): tek tıkla bölge oluşturur.
+    // Hazır bölge çipleri (boş durum ve "Önerilenler" satırı): tek tıkla bölge oluşturur.
     const quickAddRegion = async (regionName: string) => {
         try {
             await regionService.createRegion(regionName);
@@ -362,20 +375,33 @@ export default function Tables() {
     // Panel açıldığında (veya farklı bir masa seçildiğinde) menü/sipariş/rezervasyon verisini yükler.
     // Waiter panelindeki mantığın aynısı: sadece masa id'sine bağlı, durum geçişleri ilgili
     // handler'lar tarafından (ör. handleSendOrder) sekme değişimiyle birlikte yönetilir.
-    useEffect(() => {
-        if (!selectedTable) return;
-        // Reset panel state immediately when switching tables, before the new table's data loads.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setNewItems([]);
-        setOrderNote('');
-        setTableOrder(null);
-        setActiveTab(selectedTable.status === 3 ? 'reservation' : 'new-order');
-        setReservationName('');
-        setReservationContact('');
-        setReservationTime('');
-        setReservationNote('');
-        setActiveReservation(null);
-        setPanelLoading(true);
+    // selectedTable?.id: Genel Bakış'tan ?table= ile gelince masa listesi seçimden sonra yüklenir; liste gelince de çalışsın.
+    const loadedSelectedTableId = selectedTable?.id;
+
+    // Masa değişince panel state'i render sırasında sıfırlanır (effect'te değil), böylece yeni masa
+    // bir kare bile eski masanın sepetiyle çizilmez. React dokümanındaki "prop değişince state'i ayarlama" kalıbı.
+    const [panelTableId, setPanelTableId] = useState<string | undefined>(undefined);
+    if (panelTableId !== loadedSelectedTableId) {
+        setPanelTableId(loadedSelectedTableId);
+        if (selectedTable) {
+            setNewItems([]);
+            setOrderNote('');
+            setTableOrder(null);
+            setActiveTab(selectedTable.status === 3 ? 'reservation' : 'new-order');
+            setReservationName('');
+            setReservationContact('');
+            setReservationTime('');
+            setReservationNote('');
+            setActiveReservation(null);
+            setPanelLoading(true);
+        }
+    }
+
+    // Effect Event: masanın o anki status'unu okur ama status değişimi (ör. sipariş gönderilince 1→2)
+    // paneli yeniden yüklemesin diye effect'in bağımlılığı değildir.
+    const loadPanelData = useEffectEvent(() => {
+        const table = selectedTable;
+        if (!table) return;
 
         (async () => {
             try {
@@ -388,7 +414,7 @@ export default function Tables() {
                 if (cats.length > 0) setSelectedCategoryId(cats[0].id);
 
                 try {
-                    const order = await orderService.getOrderByTableId(selectedTable.id.toString());
+                    const order = await orderService.getOrderByTableId(table.id.toString());
                     if (order) {
                         setTableOrder(order);
                         setOrderNote(order.note ?? '');
@@ -398,8 +424,8 @@ export default function Tables() {
                     // Aktif sipariş yok, "Yeni Sipariş" sekmesi açık kalır
                 }
 
-                if (selectedTable.status === 3) {
-                    const reservation = await tableService.getActiveReservation(selectedTable.id.toString());
+                if (table.status === 3) {
+                    const reservation = await tableService.getActiveReservation(table.id.toString());
                     setActiveReservation(reservation);
                 }
             } catch (err) {
@@ -408,8 +434,12 @@ export default function Tables() {
                 setPanelLoading(false);
             }
         })();
-        // selectedTable?.id: Genel Bakış'tan ?table= ile gelince masa listesi seçimden sonra yüklenir; liste gelince de çalışsın.
-    }, [selectedTable?.id]);
+    });
+
+    useEffect(() => {
+        if (loadedSelectedTableId === undefined) return;
+        loadPanelData();
+    }, [loadedSelectedTableId]);
 
     const closePanel = () => {
         setSelectedTableId(null);
@@ -610,6 +640,15 @@ export default function Tables() {
                             Toplu QR
                         </button>
                     )}
+                    {regions.length > 0 && (
+                        <button
+                            onClick={() => setBulkCreateOpen(true)}
+                            className="flex items-center gap-1.5 border border-border bg-card hover:bg-muted text-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                        >
+                            <Layers className="w-4 h-4" aria-hidden="true" />
+                            Toplu Masa Ekle
+                        </button>
+                    )}
                     <button
                         onClick={openCreateModal}
                         className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
@@ -706,6 +745,15 @@ export default function Tables() {
                 )}
             </div>
 
+            {regions.length > 0 && (
+                <SuggestedChips
+                    options={REGION_SUGGESTIONS}
+                    existingNames={regions.map(r => r.name)}
+                    onPick={quickAddRegion}
+                    storageKey="tables.regionSuggestionsOpen"
+                />
+            )}
+
             {loaded && tables.length === 0 && (
                 <EmptyState
                     icon={LayoutGrid}
@@ -713,7 +761,7 @@ export default function Tables() {
                     description={regions.length === 0
                         ? 'Salon, Bahçe gibi masa grupları. Her masa bir bölgeye bağlıdır; sık kullanılanlardan tek tıkla başla ya da kendi bölgeni yaz.'
                         : 'Masaları ekle; garsonlar bu masalara sipariş açar.'}
-                    quickAdds={regions.length === 0 ? { options: ['Salon', 'Bahçe', 'Teras', 'Üst Kat'], onPick: quickAddRegion } : undefined}
+                    quickAdds={regions.length === 0 ? { options: REGION_SUGGESTIONS, onPick: quickAddRegion } : undefined}
                     action={regions.length === 0
                         ? { label: 'Kendi bölgeni ekle', onClick: startAddRegion }
                         : { label: 'İlk masayı ekle', onClick: openCreateModal }}
@@ -876,9 +924,11 @@ export default function Tables() {
                             <div>
                                 <label className={labelClass}>Masa Adı</label>
                                 <input
+                                    ref={tableNameInputRef}
                                     className={cn(inputClass, fieldErrors.name && "border-destructive")}
                                     value={newTableName}
                                     onChange={e => setNewTableName(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleSubmit(!editTable)}
                                     placeholder="Masa 1"
                                     autoFocus
                                 />
@@ -906,8 +956,16 @@ export default function Tables() {
                             >
                                 İptal
                             </button>
+                            {!editTable && (
+                                <button
+                                    onClick={() => handleSubmit(true)}
+                                    className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                                >
+                                    Kaydet ve yeni ekle
+                                </button>
+                            )}
                             <button
-                                onClick={handleSubmit}
+                                onClick={() => handleSubmit()}
                                 className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors"
                             >
                                 Kaydet
@@ -965,6 +1023,15 @@ export default function Tables() {
 
             {qrTable && <TableQrModal table={qrTable} onClose={() => setQrTable(null)} />}
             {bulkQrOpen && <BulkTableQrModal tables={tables} regions={regions} onClose={() => setBulkQrOpen(false)} />}
+            {bulkCreateOpen && (
+                <BulkTableCreateModal
+                    tables={tables}
+                    regions={regions}
+                    defaultRegionId={selectedRegionId === 'all' ? null : selectedRegionId}
+                    onClose={() => setBulkCreateOpen(false)}
+                    onCreated={refreshTables}
+                />
+            )}
 
             {/* Bölge Silme Onay */}
             <AlertDialog open={regionDeleteTargetId !== null} onOpenChange={open => !open && closeRegionDeleteDialog()}>
@@ -1192,6 +1259,12 @@ export default function Tables() {
                                                 <span className="text-xs text-muted-foreground font-medium">Ad Soyad</span>
                                                 <span className="text-sm font-bold text-foreground">{activeReservation.guestName || '—'}</span>
                                             </div>
+                                            {activeReservation.code && (
+                                                <div className="flex justify-between items-center px-4 py-3">
+                                                    <span className="text-xs text-muted-foreground font-medium">Rezervasyon kodu</span>
+                                                    <span className="font-mono text-sm font-bold tracking-[0.08em] text-foreground">{activeReservation.code}</span>
+                                                </div>
+                                            )}
                                             <div className="flex justify-between items-center px-4 py-3">
                                                 <span className="text-xs text-muted-foreground font-medium">Saat</span>
                                                 <span className="text-sm font-bold text-rb-amber">

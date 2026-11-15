@@ -22,7 +22,7 @@ public class GetOverviewStatsQueryTests : IntegrationTestBase
         await DbContext.CashRegisters.AddAsync(register);
         await DbContext.SaveChangesAsync();
 
-        var order = Order.Create(table.Id);
+        var order = CreateOrder(table);
         await DbContext.Orders.AddAsync(order);
         await DbContext.SaveChangesAsync();
 

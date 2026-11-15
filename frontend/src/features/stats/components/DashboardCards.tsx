@@ -4,14 +4,13 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { ChevronRight } from 'lucide-react';
 import type { DashboardCardId, DashboardStats } from '../types';
 import { CARD_META } from '../dashboardCards';
-import { formatCurrency, formatElapsed, formatMinutes, formatPercentChange } from '@/lib/format';
+import { revenueParts } from '../revenueBreakdown';
+import DashboardTables from './tables/DashboardTables';
+import { formatCurrency, formatElapsed, formatPercentChange } from '@/lib/format';
 import { chartTooltipProps } from '@/lib/chartTheme';
 import { cn } from '@/lib/utils';
 
 type Stats = DashboardStats;
-
-/** Bir masa bu süreden uzun açıksa haritada kırmızı görünür. */
-const LONG_OPEN_MINUTES = 60;
 
 const sectionTitle = 'text-[11px] font-bold uppercase tracking-[0.08em] text-rb-text-sub';
 
@@ -33,8 +32,7 @@ function Empty({ children }: { children: ReactNode }) {
 
 function RevenueCard({ stats }: { stats: Stats }) {
     const r = stats.revenue;
-    const cashPct = r.today > 0 ? (r.cash / r.today) * 100 : 0;
-    const cardPct = r.today > 0 ? (r.card / r.today) * 100 : 0;
+    const parts = revenueParts(r);
     const change = r.changePercent;
     return (
         <Card title={CARD_META.revenue.title}>
@@ -50,49 +48,20 @@ function RevenueCard({ stats }: { stats: Stats }) {
                 </p>
             </div>
             <div className="flex h-2 overflow-hidden rounded bg-muted" aria-hidden="true">
-                <span className="bg-rb-amber" style={{ width: `${cashPct}%` }} />
-                <span className="bg-rb-accent" style={{ width: `${cardPct}%` }} />
+                {parts.map(p => p.amount > 0 && (
+                    <span key={p.key} className={p.bar} style={{ width: `${(p.amount / r.today) * 100}%` }} />
+                ))}
             </div>
-            <div className="flex flex-wrap justify-between gap-2 text-[13px] text-foreground">
-                <span><span className="text-rb-amber">●</span> Nakit {formatCurrency(r.cash)}</span>
-                <span><span className="text-rb-accent">●</span> Kart {formatCurrency(r.card)}</span>
-                {r.other > 0 && <span className="text-rb-text-sub">QR / IBAN {formatCurrency(r.other)}</span>}
-            </div>
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]" aria-label="Ödeme yöntemine göre">
+                {parts.map(p => (
+                    <li key={p.key} className={p.amount > 0 ? 'text-foreground' : 'text-rb-text-muted'}>
+                        <span className={p.amount > 0 ? p.dot : 'text-rb-text-muted'} aria-hidden="true">●</span> {p.label}{' '}
+                        <span className="font-semibold">{formatCurrency(p.amount)}</span>
+                    </li>
+                ))}
+            </ul>
             <p className="text-xs text-rb-text-sub">
                 {r.closedBills > 0 ? `${r.closedBills} hesap kapandı · ort. ${formatCurrency(r.avgBill)}` : 'Bugün henüz hesap kapanmadı.'}
-            </p>
-        </Card>
-    );
-}
-
-function LiveCard({ stats, now }: { stats: Stats; now: number }) {
-    const l = stats.live;
-    const pct = l.totalTables > 0 ? Math.round((l.occupiedTables / l.totalTables) * 100) : 0;
-    const tile = 'rounded-xl bg-background p-3 transition-colors hover:bg-muted';
-    return (
-        <Card title={CARD_META.live.title} aside={<span className="text-xs font-semibold text-rb-green">● Canlı</span>}>
-            <div className="grid grid-cols-3 gap-2.5">
-                <Link to="/admin/tables" className={tile}>
-                    <p className="font-serif text-[30px] font-bold leading-none text-foreground">
-                        {l.occupiedTables}<span className="text-lg text-rb-text-sub">/{l.totalTables}</span>
-                    </p>
-                    <p className="mt-1 text-xs text-rb-text-sub">Dolu masa</p>
-                </Link>
-                <Link to="/admin/tables" className={tile}>
-                    <p className="font-serif text-[30px] font-bold leading-none text-foreground">{l.openOrders}</p>
-                    <p className="mt-1 text-xs text-rb-text-sub">Açık sipariş</p>
-                </Link>
-                <div className={cn('rounded-xl p-3', l.kitchenPending > 0 ? 'bg-rb-orange-bg' : 'bg-background')}>
-                    <p className={cn('font-serif text-[30px] font-bold leading-none', l.kitchenPending > 0 ? 'text-rb-orange' : 'text-foreground')}>{l.kitchenPending}</p>
-                    <p className={cn('mt-1 text-xs', l.kitchenPending > 0 ? 'text-rb-orange' : 'text-rb-text-sub')}>Mutfakta</p>
-                </div>
-            </div>
-            <div className="h-2 overflow-hidden rounded bg-muted" aria-hidden="true">
-                <div className="h-full bg-rb-gold" style={{ width: `${pct}%` }} />
-            </div>
-            <p className="text-xs text-rb-text-sub">
-                %{pct} doluluk
-                {l.longestOpenTableName && l.longestOpenSince && ` · en uzun açık masa: ${l.longestOpenTableName} (${formatElapsed(l.longestOpenSince, now)})`}
             </p>
         </Card>
     );
@@ -140,67 +109,6 @@ function PendingCard({ stats, now }: { stats: Stats; now: number }) {
                             </span>
                             <ChevronRight className="h-4 w-4 shrink-0 text-rb-text-sub" aria-hidden="true" />
                         </Link>
-                    ))}
-                </div>
-            )}
-        </Card>
-    );
-}
-
-function TablesCard({ stats, now }: { stats: Stats; now: number }) {
-    const legend = (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-rb-text-sub">
-            <span><span className="text-rb-text-muted">■</span> Boş</span>
-            <span><span className="text-rb-amber">■</span> Dolu</span>
-            <span><span className="text-rb-red">■</span> 1 saati geçti</span>
-            <span><span className="text-rb-accent">■</span> Rezerve</span>
-            <Link to="/admin/tables" className="font-semibold text-rb-amber hover:underline">Masalara git</Link>
-        </div>
-    );
-    const regions = stats.regions.filter(r => r.tables.length > 0);
-
-    return (
-        <Card title={CARD_META.tables.title} aside={legend} className="[&>div:first-child]:flex-wrap">
-            {regions.length === 0 ? (
-                <Empty>Henüz masa yok. <Link to="/admin/tables" className="ml-1 font-semibold text-rb-amber hover:underline">Masa ekle</Link></Empty>
-            ) : (
-                <div className="flex flex-col gap-3.5">
-                    {regions.map(region => (
-                        <div key={region.id} className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
-                            <span className="text-[13px] font-semibold text-foreground sm:w-20 sm:shrink-0 sm:pt-4">{region.name}</span>
-                            <div className="grid flex-1 grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2">
-                                {region.tables.map(table => {
-                                    const minutes = table.occupiedSince ? (now - new Date(table.occupiedSince).getTime()) / 60000 : 0;
-                                    const kind = table.status === 2
-                                        ? (minutes >= LONG_OPEN_MINUTES ? 'long' : 'busy')
-                                        : table.status === 3 ? 'reserved' : table.status === 4 ? 'off' : 'empty';
-                                    const line = table.status === 2
-                                        ? `${table.occupiedSince ? formatElapsed(table.occupiedSince, now) : 'Açık'} · ${formatCurrency(table.activeOrderTotal)}`
-                                        : table.status === 3
-                                            ? (table.nextReservationTime ? `${table.nextReservationTime} ${table.nextReservationGuest ?? ''}`.trim() : 'Rezerve')
-                                            : table.status === 4
-                                                ? 'Hizmet dışı'
-                                                : (table.nextReservationTime ? `Boş · ${table.nextReservationTime} rez.` : 'Boş');
-                                    return (
-                                        <Link
-                                            key={table.id}
-                                            to={`/admin/tables?table=${table.id}`}
-                                            className={cn(
-                                                'flex min-h-14 flex-col justify-center gap-0.5 rounded-[10px] border px-2.5 py-2 transition-opacity hover:opacity-85',
-                                                kind === 'empty' && 'border-border bg-background text-rb-text-sub',
-                                                kind === 'busy' && 'border-rb-amber/45 bg-rb-amber-bg text-foreground',
-                                                kind === 'long' && 'border-rb-red/50 bg-rb-red-bg text-rb-red',
-                                                kind === 'reserved' && 'border-rb-accent/45 bg-rb-accent-bg text-rb-accent',
-                                                kind === 'off' && 'border-dashed border-border text-rb-text-muted'
-                                            )}
-                                        >
-                                            <span className="truncate text-sm font-bold">{table.name}</span>
-                                            <span className="truncate text-xs">{line}</span>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                        </div>
                     ))}
                 </div>
             )}
@@ -335,51 +243,11 @@ function TopCard({ stats }: { stats: Stats }) {
     );
 }
 
-function OverdueCard({ stats, now }: { stats: Stats; now: number }) {
-    const items = stats.overdue ?? [];
-    return (
-        <Card
-            title={CARD_META.overdue.title}
-            className={items.length > 0 ? 'border-rb-red/50' : undefined}
-            aside={items.length > 0 && (
-                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-rb-red px-1.5 text-xs font-bold text-rb-red-foreground">{items.length}</span>
-            )}
-        >
-            {items.length === 0 ? (
-                <Empty>Geciken sipariş yok. Süre yalnızca hazırlanma süresi girilmiş ürünler için izlenir.</Empty>
-            ) : (
-                <ul className="flex flex-col gap-2">
-                    {items.slice(0, 6).map(item => {
-                        const lateMinutes = Math.max(0, Math.floor((now - new Date(item.dueAt).getTime()) / 60000));
-                        return (
-                            <li key={item.orderItemId}>
-                                <Link to="/admin/tables" className="flex min-h-13 items-center gap-3 rounded-[10px] bg-background px-2.5 py-2 transition-colors hover:bg-muted">
-                                    <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-rb-red-bg px-1.5 text-sm font-bold text-rb-red">{item.quantity}×</span>
-                                    <span className="flex min-w-0 flex-1 flex-col">
-                                        <span className="truncate text-sm font-semibold text-foreground">{item.productName}</span>
-                                        <span className="truncate text-xs text-rb-text-sub">{item.tableName} · süre {item.prepMinutes} dk</span>
-                                    </span>
-                                    <span className="shrink-0 text-xs font-semibold text-rb-red">
-                                        {lateMinutes > 0 ? `${formatMinutes(lateMinutes)} gecikti` : 'süre doldu'}
-                                    </span>
-                                </Link>
-                            </li>
-                        );
-                    })}
-                    {items.length > 6 && <li className="text-xs text-rb-text-sub">+{items.length - 6} ürün daha</li>}
-                </ul>
-            )}
-        </Card>
-    );
-}
-
-export function DashboardCard({ id, stats, now }: { id: DashboardCardId; stats: Stats; now: number }) {
+export function DashboardCard({ id, stats, now, onRefresh }: { id: DashboardCardId; stats: Stats; now: number; onRefresh: () => void }) {
     switch (id) {
         case 'revenue': return <RevenueCard stats={stats} />;
-        case 'live': return <LiveCard stats={stats} now={now} />;
         case 'pending': return <PendingCard stats={stats} now={now} />;
-        case 'overdue': return <OverdueCard stats={stats} now={now} />;
-        case 'tables': return <TablesCard stats={stats} now={now} />;
+        case 'tables': return <DashboardTables stats={stats} onRefresh={onRefresh} />;
         case 'hourly': return <HourlyCard stats={stats} />;
         case 'reservations': return <ReservationsCard stats={stats} />;
         case 'top': return <TopCard stats={stats} />;

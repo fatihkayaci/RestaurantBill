@@ -1,7 +1,7 @@
 import { AlarmClock, Check } from 'lucide-react';
 import type { OrderItem } from '@/features/orders/types';
 import { cn } from '@/lib/utils';
-import { formatClock, isWaiting, itemCountText, NEW_BAND_MS, ticketTimer, type Ticket } from '../kitchenTickets';
+import { formatClock, groupTicketItems, isWaiting, itemCountText, NEW_BAND_MS, ticketTimer, type Ticket } from '../kitchenTickets';
 
 interface TicketCardProps {
     ticket: Ticket;
@@ -54,6 +54,10 @@ export default function TicketCard({ ticket, now, busy, onToggleItem, onPass }: 
                         </span>
                     </div>
                     <p className={cn('mt-1 truncate text-sm font-semibold', 'text-muted-foreground')}>
+                        {/* Online paket sipariş: masaya değil kuryeye çıkar (paketlenir). */}
+                        {order.orderType === 2 && (
+                            <span className="mr-1.5 rounded bg-rb-accent px-1.5 py-0.5 align-middle text-xs font-bold tracking-widest text-rb-accent-foreground">PAKET</span>
+                        )}
                         {[order.createdByUserName, itemCountText(items)].filter(Boolean).join(' · ')}
                     </p>
                 </header>
@@ -84,42 +88,19 @@ export default function TicketCard({ ticket, now, busy, onToggleItem, onPass }: 
                         </p>
                     )}
                     <ul>
-                        {items.map(item => {
-                            const ready = !isWaiting(item);
-                            return (
-                                <li key={item.id} className="flex items-start gap-3 border-b-2 border-dashed border-border py-2.5 last:border-b-0">
-                                    <div className="min-w-0 flex-1">
-                                        <p className={cn(
-                                            'text-2xl font-bold leading-tight',
-                                            ready && 'text-muted-foreground line-through decoration-2'
-                                        )}>
-                                            <span className="tabular-nums">{item.quantity}×</span> {item.productName}
-                                        </p>
-                                        {item.note && (
-                                            <span className="mt-1.5 inline-block rounded-md bg-foreground px-2 py-0.5 text-base font-bold text-rb-gold">
-                                                {item.note}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        disabled={busy}
-                                        onClick={() => onToggleItem(ticket, item)}
-                                        aria-pressed={ready}
-                                        aria-label={ready ? `${item.productName}: hazır işaretini geri al` : `${item.productName} hazır`}
-                                        title={ready ? 'Geri al' : 'Bu ürün hazır'}
-                                        className={cn(
-                                            'flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 transition-colors disabled:opacity-50',
-                                            ready
-                                                ? 'border-(--kitchen-ok) bg-(--kitchen-ok) text-white'
-                                                : 'border-(--kitchen-ok)/50 text-(--kitchen-ok) hover:bg-(--kitchen-ok-soft)'
-                                        )}
-                                    >
-                                        <Check className="h-6 w-6" strokeWidth={3} aria-hidden="true" />
-                                    </button>
-                                </li>
-                            );
-                        })}
+                        {groupTicketItems(items).map(group => group.setMenuName === null ? renderItem(group.items[0]) : (
+                            <li key={group.key} className="border-b-2 border-dashed border-border py-2 last:border-b-0">
+                                <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                                    {group.setMenuName}
+                                    {group.setMenuNote && (
+                                        <span className="ml-2 rounded bg-foreground px-1.5 py-0.5 normal-case tracking-normal text-rb-gold">{group.setMenuNote}</span>
+                                    )}
+                                </p>
+                                <ul className="border-l-2 border-border pl-3">
+                                    {group.items.map(renderItem)}
+                                </ul>
+                            </li>
+                        ))}
                     </ul>
                 </div>
 
@@ -140,4 +121,42 @@ export default function TicketCard({ ticket, now, busy, onToggleItem, onPass }: 
             </div>
         </article>
     );
+
+    // Bilet satırı: dokununca tek tek hazır (ya da geri alınır). Menü içeriği de aynı satırla, menü başlığının altında çizilir.
+    function renderItem(item: OrderItem) {
+        const ready = !isWaiting(item);
+        return (
+            <li key={item.id} className="flex items-start gap-3 border-b-2 border-dashed border-border py-2.5 last:border-b-0">
+                <div className="min-w-0 flex-1">
+                    <p className={cn(
+                        'text-2xl font-bold leading-tight',
+                        ready && 'text-muted-foreground line-through decoration-2'
+                    )}>
+                        <span className="tabular-nums">{item.quantity}×</span> {item.productName}
+                    </p>
+                    {item.note && (
+                        <span className="mt-1.5 inline-block rounded-md bg-foreground px-2 py-0.5 text-base font-bold text-rb-gold">
+                            {item.note}
+                        </span>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onToggleItem(ticket, item)}
+                    aria-pressed={ready}
+                    aria-label={ready ? `${item.productName}: hazır işaretini geri al` : `${item.productName} hazır`}
+                    title={ready ? 'Geri al' : 'Bu ürün hazır'}
+                    className={cn(
+                        'flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 transition-colors disabled:opacity-50',
+                        ready
+                            ? 'border-(--kitchen-ok) bg-(--kitchen-ok) text-white'
+                            : 'border-(--kitchen-ok)/50 text-(--kitchen-ok) hover:bg-(--kitchen-ok-soft)'
+                    )}
+                >
+                    <Check className="h-6 w-6" strokeWidth={3} aria-hidden="true" />
+                </button>
+            </li>
+        );
+    }
 }

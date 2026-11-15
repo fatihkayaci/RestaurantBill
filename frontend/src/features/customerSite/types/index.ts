@@ -107,6 +107,25 @@ export interface PublicTableInfo {
     name: string;
     regionName: string;
     branchId: string;
+    /** Karşılama ekranında hangi düğmelerin görüneceği (admin anahtarları). */
+    qrFeatures: QrFeatures;
+    /** Şube şu an online paket sipariş alıyor mu (ayarda açık ve durdurulmamış). */
+    acceptsOnlineOrders: boolean;
+}
+
+/** Masa QR karşılama ekranının anahtarları; admin "QR menü özellikleri" de aynı şekli kullanır. */
+export interface QrFeatures {
+    orderingEnabled: boolean;
+    callWaiterEnabled: boolean;
+    billRequestEnabled: boolean;
+    deliveryLinkEnabled: boolean;
+    reservationLinkEnabled: boolean;
+}
+
+/** "Garson çağır" / "Hesap iste" sonucu. sent=false: bu masadan az önce yapılmış, yeniden bildirilmedi. */
+export interface TableActionResult {
+    sent: boolean;
+    retryAfterSeconds: number;
 }
 
 export interface Availability {
@@ -119,24 +138,31 @@ export interface DaySlot {
     full: boolean;
 }
 
-// Backend OrderRequestStatus: 1 bekliyor, 2 onaylandı, 3 reddedildi.
+// Backend OrderRequestStatus: 1 bekliyor, 2 onaylandı, 3 reddedildi, 4 iptal (ön sipariş), 5 süresi doldu (ön sipariş).
 export const ORDER_REQUEST_PENDING = 1;
 export const ORDER_REQUEST_APPROVED = 2;
 export const ORDER_REQUEST_REJECTED = 3;
+export const ORDER_REQUEST_CANCELLED = 4;
+export const ORDER_REQUEST_EXPIRED = 5;
 
 export interface OrderRequestStatus {
     id: string;
     status: number;
 }
 
-// Backend ReservationStatus: 2 iptal, 3 bekliyor, 4 onaylandı, 5 reddedildi (1: personelin açtığı eski tip).
+// Backend ReservationStatus: 2 iptal, 3 bekliyor, 4 onaylandı, 5 reddedildi, 6 geldi, 7 gelmedi (1: personelin açtığı eski tip).
 export const RESERVATION_CANCELLED = 2;
 export const RESERVATION_PENDING = 3;
 export const RESERVATION_CONFIRMED = 4;
 export const RESERVATION_REJECTED = 5;
+export const RESERVATION_SEATED = 6;
+export const RESERVATION_NO_SHOW = 7;
 
+/** Bu cihazdan gönderilmiş rezervasyon; accessToken /rezervasyon/:token bağlantısının gizli anahtarıdır. */
 export interface ReservationStatusInfo {
-    id: string;
+    accessToken: string;
+    /** Kısa kod, "K7M-2QP": kod + telefonla /rezervasyon-sorgula'dan rezervasyon yeniden bulunur. */
+    code: string;
     status: number;
     tableName: string;
     guestName: string;
@@ -144,6 +170,52 @@ export interface ReservationStatusInfo {
     time: string;
     endTime: string;
     partySize: number;
+}
+
+// ── Rezervasyon bağlantısı ve ön sipariş (/rezervasyon/:token) ───────────────
+
+export interface PreOrderWindow {
+    /** Şubede ön sipariş açık mı. */
+    enabled: boolean;
+    opensAt: string;
+    closesAt: string;
+    /** Şubenin yerel saatiyle "HH:mm". */
+    opensAtTime: string;
+    closesAtTime: string;
+    canPreOrder: boolean;
+    /** Verilemiyorsa müşteriye gösterilecek neden. */
+    reason: string | null;
+}
+
+export interface PublicPreOrder {
+    /** ORDER_REQUEST_*: 1 alındı, 2 mutfağa gönderildi, 4 iptal, 5 süresi doldu. */
+    status: number;
+    note: string;
+    total: number;
+    items: OrderRequestItem[];
+    canEdit: boolean;
+    canCancel: boolean;
+}
+
+export interface ReservationDetail {
+    /** "K7M-2QP". */
+    code: string;
+    status: number;
+    /** "Ahmet Y." */
+    guestName: string;
+    tableName: string;
+    partySize: number;
+    date: string;
+    time: string;
+    endTime: string;
+    startsAtUtc: string;
+    branchName: string;
+    restaurantPhone: string;
+    /** Menü: publicService.getSite(branchId). */
+    branchId: string;
+    preOrderWindow: PreOrderWindow;
+    preOrder: PublicPreOrder | null;
+    outOfStockProductIds: string[];
 }
 
 // ── Personel tarafı ──────────────────────────────────────────────────────────
@@ -169,6 +241,12 @@ export interface OrderRequest {
 
 export interface StaffReservation {
     id: string;
+    /** Kısa kod, "K7M-2QP": telefonda müşteriye okunur. */
+    code: string;
+    /** Müşterinin rezervasyon bağlantısının anahtarı (/rezervasyon/:token). */
+    accessToken: string;
+    /** Restoranın alt alan adı; bağlantı https://{siteSlug}.sophram.com/rezervasyon/{accessToken}. */
+    siteSlug: string;
     status: number;
     tableId: string;
     tableName: string;
@@ -182,4 +260,16 @@ export interface StaffReservation {
     endTime: string;
     startsAtUtc: string;
     createdAt: string;
+    /** Son ön sipariş (bekleyen, gönderilmiş, iptal ya da süresi dolmuş); yoksa null. */
+    preOrder: StaffPreOrder | null;
+    /** Masada ödenmemiş hesap var: "Geldi" ön siparişi o hesaba ekler. */
+    tableHasOpenOrder: boolean;
+}
+
+export interface StaffPreOrder {
+    status: number;
+    note: string;
+    total: number;
+    updatedAt: string;
+    items: OrderRequestItem[];
 }

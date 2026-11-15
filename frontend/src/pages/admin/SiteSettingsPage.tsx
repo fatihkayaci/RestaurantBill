@@ -11,6 +11,7 @@ import { inputClass, labelClass } from '@/lib/formStyles';
 import { ROOT_DOMAIN } from '@/lib/tenant';
 import { cn } from '@/lib/utils';
 import { DEFAULT_ACCENT } from '@/pages/public/site/siteTheme';
+import { settingsPath } from './settings/settingsTabs';
 
 const ACCENT_OPTIONS = ['#E2531F', '#2F55D4', '#1F7A4D', '#7A3FD1', '#B8860B', '#111111'];
 
@@ -185,7 +186,7 @@ export default function SiteSettingsPage() {
                         value={form.instagramUrl} onChange={e => set('instagramUrl', e.target.value)} />
                 </Field>
                 <p className="text-xs text-muted-foreground">
-                    Adres ve telefon şube bilgilerinden gelir. Değiştirmek için <Link to="/admin/restaurant" className="font-semibold underline">Restoran</Link> sayfasına gidin.
+                    Adres ve telefon şube bilgilerinden gelir. Şube bilgilerini <Link to={settingsPath('restoran')} className="font-semibold underline">Ayarlar → Restoran</Link> sekmesinde görebilirsiniz.
                 </p>
             </Panel>
 

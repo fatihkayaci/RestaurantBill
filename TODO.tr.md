@@ -74,7 +74,7 @@
 - [ ] **Doğrulama:** Backend doğrulama kuralları gözden geçirilecek; eksik iş kuralları tamamlanacak.
 - [ ] **Refactor:** Anemic modelden daha zengin (rich) domain modeline geçilecek.
 - [ ] **Refactor:** Daha fazla domain exception tipi eklenip kapsam genişletilecek.
-- [ ] **Refactor:** Gelen DTO'lar ve AutoMapper konfigürasyonları gözden geçirilip optimize edilecek.
+- [ ] **Refactor:** Gelen DTO'lar ve elle yazılan eşlemeler (`MappingExtensions`) gözden geçirilip optimize edilecek.
 - [ ] **Refactor:** Yalnızca isim gereken durumlar için hafif bir `RestaurantDto` oluşturulacak (şu an sadece header'a yazmak için tüm bilgiler gönderiliyor).
 - [ ] **Refactor:** Masa işlemlerindeki generic `Update` metodu, isim tutarlılığı için `UpdateTable` olarak yeniden adlandırılacak.
 - [ ] **Refactor [Kategori]:** `DeleteCategoryCommandHandler` içindeki iş mantığı gözden geçirilip optimize edilecek.

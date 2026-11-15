@@ -137,9 +137,17 @@ public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant
             .Select(t => new PublicTableInfoDto { Id = t.Id, Name = t.Name, RegionName = t.Region.Name, BranchId = t.Region.BranchId })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return table is null
-            ? Result<PublicTableInfoDto>.Failure("Bu masa bulunamadı. Lütfen garsona haber verin.")
-            : Result<PublicTableInfoDto>.Success(table);
+        if (table is null)
+            return Result<PublicTableInfoDto>.Failure("Bu masa bulunamadı. Lütfen garsona haber verin.");
+
+        Branch? branch = await db.Branches.AsNoTracking()
+            .FirstOrDefaultAsync(b => b.Id == table.BranchId && !b.IsDeleted, cancellationToken);
+        if (branch is null)
+            return Result<PublicTableInfoDto>.Failure("Bu masa bulunamadı. Lütfen garsona haber verin.");
+
+        table.QrFeatures = QrFeaturesDto.From(branch.GetQrFeatures());
+        table.AcceptsOnlineOrders = branch.AcceptsOnlineOrders;
+        return Result<PublicTableInfoDto>.Success(table);
     }
 }
 
@@ -288,7 +296,7 @@ public class GetReservationStatusQueryHandler(IAppDbContext db, ITenantResolver 
             .Where(r => r.Id == request.Id && r.Table.Region.Branch.CompanyId == company.Id)
             .Select(r => new
             {
-                r.Id, r.Status, r.GuestName, r.PartySize, r.ReservationTime, r.EndTime,
+                r.Status, r.GuestName, r.PartySize, r.ReservationTime, r.EndTime,
                 TableName = r.Table.Name,
                 r.Table.Region.Branch.TimeZoneId
             })
@@ -302,7 +310,6 @@ public class GetReservationStatusQueryHandler(IAppDbContext db, ITenantResolver 
 
         return Result<ReservationStatusDto>.Success(new ReservationStatusDto
         {
-            Id = row.Id,
             Status = (int)row.Status,
             TableName = row.TableName,
             GuestName = row.GuestName,

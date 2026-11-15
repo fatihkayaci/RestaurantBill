@@ -26,6 +26,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
     private readonly ITableNotificationService _tableNotificationService;
     private readonly ICashierNotificationService _cashierNotificationService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly PaymentRecorder _recorder;
 
     public CreatePaymentCommandHandler(IAppDbContext db, ITableNotificationService tableNotificationService, ICashierNotificationService cashierNotificationService, ICurrentUserService currentUserService)
     {
@@ -33,6 +34,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         _tableNotificationService = tableNotificationService;
         _cashierNotificationService = cashierNotificationService;
         _currentUserService = currentUserService;
+        _recorder = new PaymentRecorder(db);
     }
 
     public async Task<Result<bool>> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
@@ -40,7 +42,8 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUserService, cancellationToken);
 
         Order? order = await _db.Orders
-            .Include(o => o.OrderItems).ThenInclude(i => i.Product).ThenInclude(p => p.Category)
+            .Include(o => o.OrderItems).ThenInclude(i => i.Product).ThenInclude(p => p!.Category)
+            .Include(o => o.OrderItems).ThenInclude(i => i.SetMenu).ThenInclude(s => s!.Category)
             .InBranches(branchIds).FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
         if (order is null)
             return Result<bool>.Failure("Böyle bir sipariş bulunamadı.");
@@ -48,16 +51,20 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         if (order.IsClosed())
             return Result<bool>.Failure("Bu sipariş kapanmış, ödeme alınamaz.");
 
+        // Paket siparişin tahsilatı kuryeden teslim alınırken kaydedilir (online siparişler), bu ekrandan değil.
+        if (!order.HasTable)
+            return Result<bool>.Failure(Order.TableOnlyMessage);
+
         Table? table = await _db.Tables
             .FirstOrDefaultAsync(t => t.Id == order.TableId, cancellationToken);
         if (table is null)
             return Result<bool>.Failure("Böyle bir masa bulunamadı.");
 
-        // Garson ödeme alabiliyorsa bile indirim/ikram ayrı yetkidir.
+        // Garson ödeme alabiliyorsa bile indirim/ikram ayrı yetkidir; kasiyerde de indirim/ikram ayrı yetkidir.
         StaffAccess access = await _db.GetStaffAccessAsync(_currentUserService, cancellationToken);
         bool hasDiscount = (request.DiscountPercent ?? 0m) > 0m || (request.DiscountAmount ?? 0m) > 0m;
         string? accessError = await _db.CheckTableAccessAsync(access, table.Id, WaiterPermission.TakePayment, cancellationToken)
-            ?? (hasDiscount ? access.Check(WaiterPermission.CancelAndDiscount) : null);
+            ?? (hasDiscount ? access.Check(WaiterPermission.CancelAndDiscount) ?? access.Check(CashierPermission.ApplyDiscount) : null);
         if (accessError is not null)
             return Result<bool>.Failure(accessError);
 
@@ -66,11 +73,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         if (register is null)
             return Result<bool>.Failure("Böyle bir kasa bulunamadı.");
 
-        Guid orderBranchId = await _db.Regions
-            .Where(r => r.Id == table.RegionId)
-            .Select(r => r.BranchId)
-            .FirstAsync(cancellationToken);
-        if (register.BranchId != orderBranchId)
+        if (register.BranchId != order.BranchId)
             return Result<bool>.Failure("Böyle bir kasa bulunamadı.");
 
         Shift? shift = await _db.Shifts
@@ -106,7 +109,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
             if (amount < remaining)
                 onAccount = true;
             else
-                paidItems.AddRange(order.OrderItems.Select(i => (i, i.Quantity)));
+                paidItems.AddRange(BillLines(order).Select(i => (i, i.Quantity)));
         }
         else
         {
@@ -116,13 +119,16 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
                 if (item is null)
                     return Result<bool>.Failure("Ödenmek istenen bir ürün bu siparişte bulunamadı.");
 
+                if (item.IsSetMenuComponent)
+                    return Result<bool>.Failure("Menüdeki bir ürün ayrı ödenemez; menü satırını seçin.");
+
                 if (requested.Quantity > item.Quantity)
-                    return Result<bool>.Failure($"{item.Product?.Name} için ödenmek istenen miktar siparişteki miktardan fazla.");
+                    return Result<bool>.Failure($"{LineName(item)} için ödenmek istenen miktar siparişteki miktardan fazla.");
 
                 paidItems.Add((item, requested.Quantity));
             }
 
-            bool coversAllItems = order.OrderItems.All(i => paidItems.Any(p => p.Item.Id == i.Id && p.Quantity == i.Quantity));
+            bool coversAllItems = BillLines(order).All(i => paidItems.Any(p => p.Item.Id == i.Id && p.Quantity == i.Quantity));
             if (order.PaidOnAccount > 0m && !coversAllItems)
                 return Result<bool>.Failure("Bu hesaptan tutar girilerek ödeme alınmış; artık ürün seçerek ödeme alınamaz. Kalanı \"Tamamı\" ya da \"Tutar gir\" ile alın.");
         }
@@ -138,75 +144,27 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
         // Daha önce hesaba alınmış ödemelerin KDV oranı başına toplamı (kapanışta düşülür, yeni hesaba ödemede
         // kalan payın oranlara dağılımını belirler).
-        Dictionary<decimal, decimal> paidOnAccountByRate = order.PaidOnAccount > 0m
-            ? (await _db.Payments
-                .Where(p => p.OrderId == order.Id && p.IsOnAccount)
-                .Select(p => new { p.TaxRate, p.TotalAmount })
-                .ToListAsync(cancellationToken))
-                .GroupBy(p => p.TaxRate)
-                .ToDictionary(g => g.Key, g => g.Sum(p => p.TotalAmount))
-            : [];
+        Dictionary<decimal, decimal> paidOnAccountByRate = await _recorder.PaidOnAccountByRateAsync(order, cancellationToken);
+        var target = new PaymentTarget(register, shift, request.PaymentMethod, _currentUserService.UserId);
 
         decimal netTotal;
         decimal discountAmount = 0m;
         if (onAccount)
         {
             netTotal = request.Amount!.Value;
-            RecordOnAccountPayment(order, register, shift, request.PaymentMethod, netTotal, paidOnAccountByRate);
+            _recorder.RecordOnAccount(order, target, netTotal, paidOnAccountByRate);
         }
         else
         {
-            Dictionary<decimal, decimal> grossByRate = paidItems
-                .GroupBy(p => p.Item.TaxRate)
-                .ToDictionary(g => g.Key, g => g.Sum(p => p.Item.UnitPrice * p.Quantity));
-            Dictionary<decimal, decimal> creditByRate = PaymentAllocation.CreditByRate(grossByRate, paidOnAccountByRate);
-            Dictionary<decimal, decimal> chargeByRate = grossByRate.ToDictionary(kv => kv.Key, kv => kv.Value - creditByRate[kv.Key]);
-            decimal chargeTotal = chargeByRate.Values.Sum();
-
-            // İndirim bu ödemede tahsil edilecek tutara (hesaba ödemeler düşüldükten sonra kalan) uygulanır.
-            discountAmount = request.DiscountPercent.HasValue
-                ? Math.Round(chargeTotal * request.DiscountPercent.Value / 100m, 2, MidpointRounding.AwayFromZero)
-                : request.DiscountAmount ?? 0m;
-
-            if (discountAmount > chargeTotal)
-                return Result<bool>.Failure("İskonto tutarı ödenecek toplam tutardan fazla olamaz.");
-
-            netTotal = chargeTotal - discountAmount;
-            Dictionary<decimal, decimal> discountByRate = PaymentAllocation.Split(discountAmount, chargeByRate);
-
-            foreach (var group in paidItems.GroupBy(p => p.Item.TaxRate).OrderBy(g => g.Key))
-            {
-                decimal rate = group.Key;
-                decimal groupDiscount = discountByRate[rate];
-                decimal groupNetTotal = chargeByRate[rate] - groupDiscount;
-                (decimal groupMatrah, decimal groupTaxAmount) = PaymentAllocation.SplitTax(groupNetTotal, rate);
-
-                int groupItemCount = group.Sum(p => p.Quantity);
-                Payment payment = Payment.Create(order.Id, register.Id, groupNetTotal, groupMatrah, groupTaxAmount, request.PaymentMethod, groupItemCount,
-                    groupDiscount, request.DiscountPercent, request.DiscountNote, _currentUserService.UserId, shift.Id,
-                    taxRate: rate, prepaidAmount: creditByRate[rate]);
-                _db.Payments.Add(payment);
-
-                foreach (var (item, quantity) in group)
-                {
-                    PaymentLineItem lineItem = PaymentLineItem.Create(
-                        payment, item.ProductId, item.Product?.Name ?? string.Empty,
-                        item.Product?.CategoryId ?? Guid.Empty, item.Product?.Category?.Name ?? string.Empty,
-                        item.UnitPrice, quantity, item.TaxRate);
-                    _db.PaymentLineItems.Add(lineItem);
-                }
-            }
-
-            foreach (var (item, quantity) in paidItems)
-                order.SettleItem(item.Id, quantity);
+            var recorded = _recorder.RecordItems(order, paidItems, target, paidOnAccountByRate,
+                new PaymentDiscount(request.DiscountPercent, request.DiscountAmount, request.DiscountNote, access.MaxDiscountPercent));
+            if (recorded.IsFailure)
+                return Result<bool>.Failure(recorded.Error!);
+            (netTotal, discountAmount) = recorded.Value;
         }
 
         // Tamamı ikram (net 0) kasaya nakit hareketi yazmaz.
-        if (request.PaymentMethod == PaymentMethod.Nakit && netTotal > 0)
-        {
-            CashTransaction transaction = register.AddTransaction(CashTransactionType.In, netTotal, _currentUserService.UserId);
-            _db.CashTransactions.Add(transaction);
-        }
+        _recorder.RecordCashIn(register, request.PaymentMethod, netTotal, _currentUserService.UserId);
 
         bool fullyPaid = !onAccount && order.OrderItems.Count == 0;
         if (fullyPaid)
@@ -249,29 +207,9 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         return Result<bool>.Success(fullyPaid);
     }
 
-    // Hesaba ödeme: ürün düşmez; tutar kalan hesabın KDV oranlarına orantılı dağıtılır, oran başına bir satır.
-    private void RecordOnAccountPayment(Order order, CashRegister register, Shift shift, PaymentMethod method, decimal amount,
-        IReadOnlyDictionary<decimal, decimal> paidOnAccountByRate)
-    {
-        Dictionary<decimal, decimal> grossByRate = order.OrderItems
-            .GroupBy(i => i.TaxRate)
-            .ToDictionary(g => g.Key, g => g.Sum(i => i.UnitPrice * i.Quantity));
-        Dictionary<decimal, decimal> creditByRate = PaymentAllocation.CreditByRate(grossByRate, paidOnAccountByRate);
-        Dictionary<decimal, decimal> remainingByRate = grossByRate.ToDictionary(kv => kv.Key, kv => kv.Value - creditByRate[kv.Key]);
+    private static IEnumerable<OrderItem> BillLines(Order order) => PaymentRecorder.BillLines(order);
 
-        foreach ((decimal rate, decimal share) in PaymentAllocation.Split(amount, remainingByRate).OrderBy(kv => kv.Key))
-        {
-            if (share <= 0m)
-                continue;
-
-            (decimal matrah, decimal tax) = PaymentAllocation.SplitTax(share, rate);
-            Payment payment = Payment.Create(order.Id, register.Id, share, matrah, tax, method, 0,
-                userId: _currentUserService.UserId, shiftId: shift.Id, taxRate: rate, isOnAccount: true);
-            _db.Payments.Add(payment);
-        }
-
-        order.PayOnAccount(amount);
-    }
+    private static string LineName(OrderItem item) => PaymentRecorder.LineName(item);
 
     private static string MethodLabel(PaymentMethod method) => method switch
     {

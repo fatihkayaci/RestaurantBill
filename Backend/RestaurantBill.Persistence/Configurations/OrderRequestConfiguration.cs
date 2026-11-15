@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Persistence.Configurations;
 
@@ -9,7 +10,16 @@ public class OrderRequestConfiguration : IEntityTypeConfiguration<OrderRequest>
     public void Configure(EntityTypeBuilder<OrderRequest> builder)
     {
         builder.Property(r => r.Note).HasMaxLength(500).HasDefaultValue(string.Empty);
+        builder.Property(r => r.RejectReason).HasMaxLength(OrderRequest.RejectReasonMaxLength).HasDefaultValue(string.Empty);
+        builder.Property(r => r.Kind).HasDefaultValue(OrderRequestKind.TableQr);
         builder.HasIndex(r => new { r.TableId, r.Status });
+        builder.HasIndex(r => new { r.ReservationId, r.Status });
+
+        // Rezervasyon silinirse ön siparişi de gider.
+        builder.HasOne(r => r.Reservation)
+            .WithMany()
+            .HasForeignKey(r => r.ReservationId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(r => r.Table)
             .WithMany()
@@ -30,6 +40,7 @@ public class OrderRequestItemConfiguration : IEntityTypeConfiguration<OrderReque
     public void Configure(EntityTypeBuilder<OrderRequestItem> builder)
     {
         builder.Property(i => i.Note).HasMaxLength(300).HasDefaultValue(string.Empty);
+        builder.Property(i => i.UnitPrice).HasPrecision(18, 2);
 
         // Ürün silinirse talep kalemi de gider; aksi halde ürün silme FK hatasına düşerdi.
         builder.HasOne(i => i.Product)

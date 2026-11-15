@@ -4,6 +4,7 @@ namespace RestaurantBill.Application.Tests.Fakes;
 
 public class FakeSmsSender : ISmsSender
 {
+    public bool IsConfigured { get; set; } = true;
     public List<(string PhoneNumber, string Message)> SentMessages { get; } = [];
 
     public Task SendAsync(string phoneNumber, string message)

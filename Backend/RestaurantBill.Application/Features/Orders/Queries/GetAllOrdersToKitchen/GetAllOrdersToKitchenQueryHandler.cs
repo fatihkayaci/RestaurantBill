@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Enums;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
@@ -37,11 +38,12 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitch
                 .AsNoTracking()
                 .Include(o => o.Table)
                 .Include(o => o.OrderItems).ThenInclude(i => i.Product).ThenInclude(p => p!.Category)
-                .Where(o => !excludedStatuses.Contains(o.Status) && o.Table.Region.BranchId == restaurantId);
+                .Include(o => o.OrderItems).ThenInclude(i => i.SetMenu)
+                .Where(o => !excludedStatuses.Contains(o.Status) && o.BranchId == restaurantId);
             if (categoryIds is not null)
             {
                 List<Guid> ids = categoryIds.ToList();
-                query = query.Where(o => o.OrderItems.Any(i => ids.Contains(i.Product.CategoryId)));
+                query = query.Where(o => o.OrderItems.Any(i => i.Product != null && ids.Contains(i.Product.CategoryId)));
             }
             List<Order> orders = await query.ToListAsync(cancellationToken);
 
@@ -50,18 +52,25 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitch
                 .AsNoTracking()
                 .Where(u => creatorIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+            // Paket siparişin bileti "PAKET #123 · Moda" olarak görünür.
+            Dictionary<Guid, DeliveryScope.DeliveryLabel> deliveryLabels = await _db.LoadDeliveryLabelsAsync(orders, cancellationToken);
 
             return Result<List<OrderDto>>.Success(orders.Select(o =>
             {
-                var dto = o.ToDto();
+                // Menü satırları yerine içindeki ürünler gelir; kategori süzgeci de bu ürünlere uygulanır.
+                var dto = o.ToKitchenDto();
                 if (categoryIds is not null)
                 {
-                    HashSet<Guid> visibleItemIds = o.OrderItems.Where(i => categoryIds.Contains(i.Product.CategoryId)).Select(i => i.Id).ToHashSet();
+                    HashSet<Guid> visibleItemIds = o.OrderItems
+                        .Where(i => i.Product is not null && categoryIds.Contains(i.Product.CategoryId))
+                        .Select(i => i.Id)
+                        .ToHashSet();
                     dto.OrderItems = dto.OrderItems.Where(i => visibleItemIds.Contains(i.Id)).ToList();
                     // Mutfak ekranında tutar gösterilmez; yine de görünen ürünlerle tutarlı olsun.
                     dto.TotalPrice = dto.OrderItems.Sum(i => i.UnitPrice * i.Quantity);
                 }
                 dto.CreatedByUserName = creatorNameById.GetValueOrDefault(o.CreatedUser, string.Empty);
+                dto.ApplyDeliveryLabel(deliveryLabels);
                 return dto;
             }).ToList());
         }

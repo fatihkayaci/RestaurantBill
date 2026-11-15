@@ -2,36 +2,50 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
-import type { Product } from "@/features/products/types";
+import type { ProductWithCost } from "@/features/products/types";
 import type { Category } from "@/features/categories/types";
 import ImageCropModal from "@/features/products/components/ImageCropModal";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { X, Check, Pencil, Image as ImageIcon, Upload, Crop, UtensilsCrossed, Trash2 } from 'lucide-react';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
+import { SuggestedChips } from '@/components/ui/suggested-chips';
+import { CATEGORY_SUGGESTIONS } from '@/features/categories/constants';
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import { formatPrice } from '@/lib/format';
 import { Switch } from '@/components/ui/switch';
 import { Modal, ModalTitle } from '@/components/ui/modal';
 import { inputClass, labelClass } from '@/lib/formStyles';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 
 // Hazırlanma süresi ve KDV metin olarak tutulur: boş alan "yok / kategori varsayılanı" demektir.
 const EMPTY_FORM = {
-    name: '', price: 0, categoryId: '', isActive: true, id: '', description: '', isFeatured: false,
+    name: '', price: 0, cost: 0, categoryId: '', isActive: true, id: '', description: '', isFeatured: false,
     prepMinutes: '', useCategoryTax: true, taxRate: '',
 };
 const PREP_MINUTES_MAX = 240;
 
+// Satış fiyatı üzerinden kâr ve marj: "Kâr: ₺25 (%62)". Maliyet girilmemişse (0) gösterilmez.
+function profitHint(price: number, cost: number): { text: string; isLoss: boolean } | null {
+    if (price <= 0 || cost <= 0) return null;
+    const profit = price - cost;
+    const margin = Math.round((Math.abs(profit) / price) * 100);
+    return {
+        text: `${profit < 0 ? 'Zarar' : 'Kâr'}: ₺${formatPrice(Math.abs(profit))} (%${margin})`,
+        isLoss: profit < 0,
+    };
+}
+
 export default function Menu() {
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<ProductWithCost[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loaded, setLoaded] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editProduct, setEditProduct] = useState<Product | null>(null);
+    const [editProduct, setEditProduct] = useState<ProductWithCost | null>(null);
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [isSaving, setIsSaving] = useState(false);
@@ -63,7 +77,7 @@ export default function Menu() {
 
     useEffect(() => {
         Promise.all([
-            productService.getProducts().then(setProducts),
+            productService.getProductsWithCost().then(setProducts),
             categoryService.getCategories().then(setCategories),
         ]).catch(console.error).finally(() => setLoaded(true));
     }, []);
@@ -125,10 +139,10 @@ export default function Menu() {
         setIsModalOpen(true);
     };
 
-    const openEditModal = (product: Product) => {
+    const openEditModal = (product: ProductWithCost) => {
         setEditProduct(product);
         setForm({
-            name: product.name, price: product.price, categoryId: product.categoryId, isActive: product.isActive, id: product.id,
+            name: product.name, price: product.price, cost: product.cost, categoryId: product.categoryId, isActive: product.isActive, id: product.id,
             description: product.description ?? '', isFeatured: product.isFeatured ?? false,
             prepMinutes: product.prepMinutes != null ? String(product.prepMinutes) : '',
             useCategoryTax: product.taxRate == null,
@@ -172,12 +186,24 @@ export default function Menu() {
         closeCropModal();
     };
 
-    const handleToggleActive = async (product: Product) => {
+    const handleToggleActive = async (product: ProductWithCost) => {
         try {
             await productService.updateProduct({ ...product, isActive: !product.isActive });
             setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isActive: !p.isActive } : p));
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    // "Tükendi": ürün masada satılmaya devam eder; online siparişte görünür ama sepete eklenemez.
+    const handleToggleStock = async (product: ProductWithCost) => {
+        const next = !product.isOutOfStock;
+        try {
+            await productService.setStock(product.id, next);
+            setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isOutOfStock: next } : p));
+            toast.success(next ? `${product.name} tükendi olarak işaretlendi.` : `${product.name} yeniden satışta.`);
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Stok durumu kaydedilemedi.'));
         }
     };
 
@@ -213,7 +239,7 @@ export default function Menu() {
         setIsAddingCategory(true);
     };
 
-    // Boş menüde hazır çipler: tek tıkla kategori oluşturur, ürün eklemeye geçilir.
+    // Hazır kategori çipleri (boş durum ve "Önerilenler" satırı): tek tıkla kategori oluşturur.
     const quickAddCategory = async (name: string) => {
         try {
             await categoryService.createCategory(name, null);
@@ -281,6 +307,7 @@ export default function Menu() {
         const errors: Record<string, string> = {};
         if (!form.name.trim()) errors.name = 'Ürün ismi boş bırakılamaz.';
         if (form.price <= 0) errors.price = "Fiyat 0'dan büyük olmalıdır.";
+        if (form.cost < 0) errors.cost = "Maliyet 0'dan küçük olamaz.";
         if (!form.categoryId) errors.categoryId = 'Kategori seçiniz.';
         let prepMinutes: number | null = null;
         if (form.prepMinutes.trim() !== '') {
@@ -304,17 +331,17 @@ export default function Menu() {
             if (editProduct) {
                 const currentIsActive = products.find(p => p.id === editProduct.id)?.isActive ?? form.isActive;
                 await productService.updateProduct({
-                    id: form.id, name: form.name, price: form.price, categoryId: form.categoryId, isActive: currentIsActive,
+                    id: form.id, name: form.name, price: form.price, cost: form.cost, categoryId: form.categoryId, isActive: currentIsActive,
                     description: form.description, isFeatured: form.isFeatured,
                     prepMinutes, taxRate,
                 });
             } else {
                 await productService.createProduct({
-                    name: form.name, price: form.price, categoryId: form.categoryId, isActive: true,
+                    name: form.name, price: form.price, cost: form.cost, categoryId: form.categoryId, isActive: true,
                     description: form.description, isFeatured: form.isFeatured,
                     prepMinutes, taxRate,
                 });
-                const created = await productService.getProducts();
+                const created = await productService.getProductsWithCost();
                 setProducts(created);
                 productId = created.find(p => p.name === form.name && p.categoryId === form.categoryId)?.id;
             }
@@ -329,7 +356,7 @@ export default function Menu() {
                 }
             }
 
-            const updated = await productService.getProducts();
+            const updated = await productService.getProductsWithCost();
             setProducts(updated);
             closeModal();
         } catch (err: unknown) {
@@ -346,7 +373,7 @@ export default function Menu() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Menü Yönetimi</h1>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Yemeklerimiz</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">{activeCount} aktif ürün</p>
                 </div>
                 <button
@@ -541,16 +568,25 @@ export default function Menu() {
                 )}
             </div>
 
+            {categories.length > 0 && (
+                <SuggestedChips
+                    options={CATEGORY_SUGGESTIONS}
+                    existingNames={categories.map(c => c.name)}
+                    onPick={quickAddCategory}
+                    storageKey="menu.categorySuggestionsOpen"
+                />
+            )}
+
             {/* Kartlar */}
             {!loaded ? null : products.length === 0 ? (
                 <EmptyState
                     icon={UtensilsCrossed}
-                    title={categories.length === 0 ? 'Önce bir kategori oluştur' : 'Menü henüz boş'}
+                    title={categories.length === 0 ? 'Önce bir kategori oluştur' : 'Henüz yemek yok'}
                     description={categories.length === 0
                         ? 'Ana yemekler, içecekler gibi başlıklar. Ürünler bu başlıkların altında listelenir; sık kullanılanlardan tek tıkla başla ya da kendi başlığını yaz.'
                         : 'Fiyatlarıyla birlikte ürünleri ekle. Garson ekranında sipariş alırken bu liste görünür.'}
                     quickAdds={categories.length === 0
-                        ? { options: ['Ana Yemek', 'Başlangıç', 'İçecek', 'Tatlı', 'Salata', 'Kahvaltı'], onPick: quickAddCategory }
+                        ? { options: CATEGORY_SUGGESTIONS, onPick: quickAddCategory }
                         : undefined}
                     action={categories.length === 0
                         ? { label: 'Kendi kategorini ekle', onClick: startAddCategory }
@@ -598,6 +634,11 @@ export default function Menu() {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
+                                    {product.isOutOfStock && (
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-rb-red-bg text-rb-red">
+                                            Tükendi
+                                        </span>
+                                    )}
                                     <span className={cn(
                                         "px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase",
                                         product.isActive ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground"
@@ -617,13 +658,30 @@ export default function Menu() {
                             {/* Alt blok (fiyat + çizgi + anahtarlar) karta en alta itilir; isteğe bağlı satırlar
                                 olsa da olmasa da aynı satırdaki kartlarda fiyat ve çizgi hizalı kalır. */}
                             <div className="mt-auto space-y-3">
-                                <p className="text-lg font-bold text-foreground">₺{formatPrice(product.price)}</p>
+                                <div className="flex items-baseline justify-between gap-2">
+                                    <p className="text-lg font-bold text-foreground">₺{formatPrice(product.price)}</p>
+                                    {(() => {
+                                        const hint = profitHint(product.price, product.cost);
+                                        return hint && (
+                                            <p className={cn("text-xs truncate", hint.isLoss ? "text-destructive" : "text-muted-foreground")}>
+                                                {hint.text}
+                                            </p>
+                                        );
+                                    })()}
+                                </div>
 
                                 <div className="border-t border-border pt-3 flex items-center justify-between gap-2">
                                     <Switch
                                         checked={product.isActive}
                                         onCheckedChange={() => handleToggleActive(product)}
                                         label={<span className="text-xs text-muted-foreground">{product.isActive ? 'Satışta' : 'Satış dışı'}</span>}
+                                    />
+                                    <Switch
+                                        checked={!!product.isOutOfStock}
+                                        onCheckedChange={() => handleToggleStock(product)}
+                                        onClassName="bg-rb-red"
+                                        aria-label={`${product.name}: tükendi`}
+                                        label={<span className="text-xs text-muted-foreground">Tükendi</span>}
                                     />
                                     <button
                                         onClick={() => setDeleteTargetId(product.id)}
@@ -699,18 +757,19 @@ export default function Menu() {
                                 />
                             </div>
 
+                            <div>
+                                <label className={labelClass}>Ad (Türkçe)</label>
+                                <input
+                                    className={cn(inputClass, fieldErrors.name && "border-destructive")}
+                                    placeholder="Izgara Köfte"
+                                    value={form.name}
+                                    onChange={e => setForm({ ...form, name: e.target.value })}
+                                    autoFocus
+                                />
+                                {fieldErrors.name && <p className="text-xs text-destructive mt-1">{fieldErrors.name}</p>}
+                            </div>
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className={labelClass}>Ad (Türkçe)</label>
-                                    <input
-                                        className={cn(inputClass, fieldErrors.name && "border-destructive")}
-                                        placeholder="Izgara Köfte"
-                                        value={form.name}
-                                        onChange={e => setForm({ ...form, name: e.target.value })}
-                                        autoFocus
-                                    />
-                                    {fieldErrors.name && <p className="text-xs text-destructive mt-1">{fieldErrors.name}</p>}
-                                </div>
                                 <div>
                                     <label className={labelClass}>Fiyat (₺)</label>
                                     <input
@@ -722,6 +781,28 @@ export default function Menu() {
                                         onChange={e => setForm({ ...form, price: Number(e.target.value) })}
                                     />
                                     {fieldErrors.price && <p className="text-xs text-destructive mt-1">{fieldErrors.price}</p>}
+                                </div>
+                                <div>
+                                    <label htmlFor="product-cost" className={labelClass}>
+                                        Maliyet (₺) <span className="font-normal text-muted-foreground">(isteğe bağlı)</span>
+                                    </label>
+                                    <input
+                                        id="product-cost"
+                                        type="number"
+                                        min={0}
+                                        step="0.01"
+                                        className={cn(inputClass, fieldErrors.cost && "border-destructive")}
+                                        placeholder="₺"
+                                        value={form.cost || ''}
+                                        onChange={e => setForm({ ...form, cost: Number(e.target.value) })}
+                                    />
+                                    {(() => {
+                                        if (fieldErrors.cost) return <p className="text-xs text-destructive mt-1">{fieldErrors.cost}</p>;
+                                        const hint = profitHint(form.price, form.cost);
+                                        return hint
+                                            ? <p className={cn("text-xs mt-1", hint.isLoss ? "text-destructive" : "text-muted-foreground")}>{hint.text}</p>
+                                            : <p className="text-xs text-muted-foreground mt-1">Yalnızca yöneticiler görür.</p>;
+                                    })()}
                                 </div>
                             </div>
 

@@ -25,6 +25,9 @@ public class DashboardRevenueDto
     public decimal Today { get; set; }
     public decimal Cash { get; set; }
     public decimal Card { get; set; }
+    public decimal Qr { get; set; }
+    public decimal Iban { get; set; }
+    /// <summary>Nakit ve kart dışındaki her şey (bugün Qr + Iban); eski istemciler için korunur.</summary>
     public decimal Other { get; set; }
     /// <summary>Dün gün başından şu anki saate kadar.</summary>
     public decimal SameTimeYesterday { get; set; }
@@ -49,7 +52,10 @@ public class DashboardPendingDto
 {
     public int OrderRequests { get; set; }
     public DateTime? OldestOrderRequestAt { get; set; }
+    /// <summary>En eski üç isteğin masa adı (kart metni için).</summary>
     public List<string> OrderRequestTables { get; set; } = [];
+    /// <summary>Bekleyen QR isteği olan masaların hepsi; masa haritası adla değil kimlikle eşler.</summary>
+    public List<Guid> OrderRequestTableIds { get; set; } = [];
     public int ReservationRequests { get; set; }
     /// <summary>"14 Kas 19:00" biçiminde, en yakın üç istek.</summary>
     public List<string> ReservationRequestTimes { get; set; } = [];
@@ -71,6 +77,15 @@ public class DashboardTableDto
     public TableStatus Status { get; set; }
     public DateTime? OccupiedSince { get; set; }
     public decimal ActiveOrderTotal { get; set; }
+    /// <summary>Açık siparişten hesaba alınmış ödeme (PaidOnAccount).</summary>
+    public decimal PaidAmount { get; set; }
+    public decimal RemainingAmount { get; set; }
+    /// <summary>Garsondan/müşteriden hesap istendiği an; istenmediyse null.</summary>
+    public DateTime? BillRequestedAt { get; set; }
+    /// <summary>Açık siparişin kalemleri, adet bazında. Menü satırı yerine içindeki ürünler sayılır (mutfak ekranı gibi).</summary>
+    public int KitchenItems { get; set; }
+    public int ReadyItems { get; set; }
+    public int ServedItems { get; set; }
     /// <summary>Bugünkü en yakın rezervasyon, yerel "HH:mm".</summary>
     public string? NextReservationTime { get; set; }
     public string? NextReservationGuest { get; set; }

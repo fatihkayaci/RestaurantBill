@@ -12,39 +12,55 @@ public enum WaiterPermission
     TransferAndReserve
 }
 
-// Garsonun bölge kapsamı ve yetkileri, mutfak kullanıcısının menü kategorileri. Her istekte veritabanından okunur ki
-// yöneticinin yaptığı değişiklik token yenilenmesini beklemeden geçerli olsun.
-// Owner/Admin/Cashier için kısıt yoktur.
+public enum CashierPermission
+{
+    ApplyDiscount,
+    TransferTables
+}
+
+// Garsonun bölge/masa kapsamı ve yetkileri, mutfak kullanıcısının menü kategorileri, kasiyerin yetkileri. Her istekte
+// veritabanından okunur ki yöneticinin yaptığı değişiklik token yenilenmesini beklemeden geçerli olsun.
+// Owner/Admin için kısıt yoktur.
 public sealed class StaffAccess
 {
-    public const string RegionDeniedMessage = "Bu masa size atanan bölgelerin dışında.";
+    public const string RegionDeniedMessage = "Bu masa size atanan bölge ve masaların dışında.";
     public const string CategoryDeniedMessage = "Bu ürün size atanan kategorilerin dışında.";
+    public const string DeliveryDeniedMessage = "Paket siparişler garson ekranından yönetilemez.";
 
-    public static readonly StaffAccess Unrestricted = new(null, null, isWaiter: false, true, true, true, true);
+    public static readonly StaffAccess Unrestricted = new(null, null, isWaiter: false, true, true, true, true, cashier: null);
 
-    private readonly HashSet<Guid>? _regionIds;
+    // Kasiyer yetkileri; kasiyer olmayan rollerde null.
+    private sealed record CashierRights(bool CanApplyDiscount, int MaxDiscountPercent, bool CanTransferTables);
+
+    private readonly WaiterScope? _waiterScope;
     private readonly HashSet<Guid>? _categoryIds;
     private readonly bool _isWaiter;
     private readonly bool _canTakeOrders;
     private readonly bool _canTakePayment;
     private readonly bool _canCancelAndDiscount;
     private readonly bool _canTransferAndReserve;
+    private readonly CashierRights? _cashier;
 
-    private StaffAccess(HashSet<Guid>? regionIds, HashSet<Guid>? categoryIds, bool isWaiter, bool canTakeOrders, bool canTakePayment, bool canCancelAndDiscount, bool canTransferAndReserve)
+    private StaffAccess(WaiterScope? waiterScope, HashSet<Guid>? categoryIds, bool isWaiter, bool canTakeOrders, bool canTakePayment, bool canCancelAndDiscount, bool canTransferAndReserve,
+        CashierRights? cashier)
     {
-        _regionIds = regionIds;
+        _waiterScope = waiterScope;
         _categoryIds = categoryIds;
         _isWaiter = isWaiter;
         _canTakeOrders = canTakeOrders;
         _canTakePayment = canTakePayment;
         _canCancelAndDiscount = canCancelAndDiscount;
         _canTransferAndReserve = canTransferAndReserve;
+        _cashier = cashier;
     }
 
-    // null = tüm bölgeler.
-    public IReadOnlyCollection<Guid>? RegionIds => _regionIds;
+    // Garsonun baktığı bölgeler ve masalar; null = tüm masalar (bölgesi boş garson ve garson dışındaki roller).
+    public WaiterScope? WaiterScope => _waiterScope;
 
-    public bool CanAccessRegion(Guid regionId) => _regionIds is null || _regionIds.Contains(regionId);
+    // Garson yalnızca masa siparişleriyle çalışır; paket siparişler kapsamı ne olursa olsun dışındadır.
+    public bool IsWaiter => _isWaiter;
+
+    public bool CanAccessTable(Guid tableId, Guid regionId) => _waiterScope is null || _waiterScope.Covers(tableId, regionId);
 
     // Mutfak kullanıcısının kategorileri; null = tüm kategoriler (mutfak dışındaki rollerde her zaman null).
     public IReadOnlyCollection<Guid>? CategoryIds => _categoryIds;
@@ -72,24 +88,51 @@ public sealed class StaffAccess
         _ => "Bu işlem için yetkiniz yok."
     };
 
-    // Bölgeler yalnızca garsonda, kategoriler yalnızca mutfakta geçerlidir.
-    public static StaffAccess From(UserBranch membership, bool isWaiter, bool isKitchen) => new(
-        !isWaiter || membership.RegionIds.Count == 0 ? null : membership.RegionIds.ToHashSet(),
+    public bool Has(CashierPermission permission) => _cashier is null || permission switch
+    {
+        CashierPermission.ApplyDiscount => _cashier.CanApplyDiscount,
+        CashierPermission.TransferTables => _cashier.CanTransferTables,
+        _ => false
+    };
+
+    // Yetki yoksa kullanıcıya gösterilecek mesaj, varsa null.
+    public string? Check(CashierPermission permission) => Has(permission) ? null : DeniedMessage(permission);
+
+    public static string DeniedMessage(CashierPermission permission) => permission switch
+    {
+        CashierPermission.ApplyDiscount => "İndirim ve ikram yetkiniz yok. Yöneticinizden yetki isteyin.",
+        CashierPermission.TransferTables => "Masa taşıma ve birleştirme yetkiniz yok. Yöneticinizden yetki isteyin.",
+        _ => "Bu işlem için yetkiniz yok."
+    };
+
+    // Kasiyerin bir ödemede uygulayabileceği en yüksek indirim yüzdesi; diğer rollerde sınır yok (%100).
+    public int MaxDiscountPercent => _cashier?.MaxDiscountPercent ?? 100;
+
+    public static string DiscountLimitMessage(int maxDiscountPercent) =>
+        $"En fazla %{maxDiscountPercent} indirim uygulayabilirsiniz. Daha yüksek indirim için yöneticinizden yetki isteyin.";
+
+    // Bölge/masa kapsamı yalnızca garsonda, kategoriler yalnızca mutfakta, kasiyer yetkileri yalnızca kasiyerde geçerlidir.
+    // waiterScope garson için GetWaiterScopeAsync ile üyelikten kurulur; diğer rollerde null verilir.
+    public static StaffAccess From(UserBranch membership, WaiterScope? waiterScope, bool isWaiter, bool isKitchen, bool isCashier) => new(
+        isWaiter ? waiterScope : null,
         !isKitchen || membership.CategoryIds.Count == 0 ? null : membership.CategoryIds.ToHashSet(),
         isWaiter,
         membership.CanTakeOrders,
         membership.CanTakePayment,
         membership.CanCancelAndDiscount,
-        membership.CanTransferAndReserve);
+        membership.CanTransferAndReserve,
+        isCashier ? new CashierRights(membership.CanApplyDiscount, membership.MaxDiscountPercent, membership.CanTransferTables) : null);
 
     // Üyelik bulunamazsa (silinmiş/taşınmış kullanıcı) hiçbir masaya ve ürüne erişemez.
-    public static StaffAccess Denied(bool isWaiter) => new([], [], isWaiter, false, false, false, false);
+    public static StaffAccess Denied(bool isWaiter, bool isCashier) =>
+        new(WaiterScope.Empty, [], isWaiter, false, false, false, false, isCashier ? new CashierRights(false, 100, false) : null);
 }
 
 public static class StaffAccessExtensions
 {
-    // Kısıtı veritabanından okunan roller: garson (bölge + yetki) ve mutfak (kategori).
-    public static bool IsScopedRole(string role) => role is "Waiter" or "Kitchen";
+    // Kısıtı veritabanından okunan roller: garson (bölge/masa + yetki), mutfak (kategori) ve kasiyer (yetki).
+    // Kurye kısıtlı rol değildir: sipariş/masa uçlarına rolü yetmez, kendi uçlarında yalnızca kendi siparişlerini görür.
+    public static bool IsScopedRole(string role) => role is "Waiter" or "Kitchen" or "Cashier";
 
     public static async Task<StaffAccess> GetStaffAccessAsync(
         this IAppDbContext db, ICurrentUserService currentUser, CancellationToken cancellationToken)
@@ -99,14 +142,21 @@ public static class StaffAccessExtensions
 
         bool isWaiter = currentUser.Role == "Waiter";
         bool isKitchen = currentUser.Role == "Kitchen";
+        bool isCashier = currentUser.Role == "Cashier";
         UserBranch? membership = await db.UserBranches
             .AsNoTracking()
             .FirstOrDefaultAsync(ub => ub.UserId == currentUser.UserId && ub.BranchId == currentUser.BranchId && !ub.IsDeleted, cancellationToken);
 
-        return membership is null ? StaffAccess.Denied(isWaiter) : StaffAccess.From(membership, isWaiter, isKitchen);
+        if (membership is null)
+            return StaffAccess.Denied(isWaiter, isCashier);
+
+        WaiterScope? waiterScope = isWaiter
+            ? await db.GetWaiterScopeAsync(membership.RegionIds, membership.RestrictedRegionIds, membership.TableIds, cancellationToken)
+            : null;
+        return StaffAccess.From(membership, waiterScope, isWaiter, isKitchen, isCashier);
     }
 
-    // Masaya dokunan garson işlemlerinin ortak kontrolü: önce yetki (verildiyse), sonra masanın bölgesi.
+    // Masaya dokunan garson işlemlerinin ortak kontrolü: önce yetki (verildiyse), sonra masanın garsonun kapsamında olması.
     // Sorun yoksa null, varsa kullanıcıya gösterilecek mesaj döner.
     public static async Task<string?> CheckTableAccessAsync(
         this IAppDbContext db, ICurrentUserService currentUser, Guid tableId, WaiterPermission? permission, CancellationToken cancellationToken)
@@ -121,7 +171,7 @@ public static class StaffAccessExtensions
         if (permission.HasValue && access.Check(permission.Value) is { } denied)
             return denied;
 
-        if (access.RegionIds is null)
+        if (access.WaiterScope is null)
             return null;
 
         Guid? regionId = await db.Tables.AsNoTracking()
@@ -129,35 +179,65 @@ public static class StaffAccessExtensions
             .Select(t => (Guid?)t.RegionId)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return regionId.HasValue && access.CanAccessRegion(regionId.Value) ? null : StaffAccess.RegionDeniedMessage;
+        return regionId.HasValue && access.CanAccessTable(tableId, regionId.Value) ? null : StaffAccess.RegionDeniedMessage;
     }
+
+    // Siparişe dokunan işlemlerin ortak kontrolü. Masa siparişinde CheckTableAccessAsync; masasız (paket) siparişte
+    // yetki kontrolü yapılır, garson ise hiç erişemez.
+    public static async Task<string?> CheckOrderAccessAsync(
+        this IAppDbContext db, ICurrentUserService currentUser, Order order, WaiterPermission? permission, CancellationToken cancellationToken)
+    {
+        StaffAccess access = await db.GetStaffAccessAsync(currentUser, cancellationToken);
+        return await db.CheckOrderAccessAsync(access, order, permission, cancellationToken);
+    }
+
+    public static async Task<string?> CheckOrderAccessAsync(
+        this IAppDbContext db, StaffAccess access, Order order, WaiterPermission? permission, CancellationToken cancellationToken)
+    {
+        if (order.TableId is Guid tableId)
+            return await db.CheckTableAccessAsync(access, tableId, permission, cancellationToken);
+
+        if (permission.HasValue && access.Check(permission.Value) is { } denied)
+            return denied;
+
+        return access.IsWaiter ? StaffAccess.DeliveryDeniedMessage : null;
+    }
+
+    // Aşağıdaki süzgeçler garsonun kapsamını uygular: tamamına bakılan bölgelerin masaları + seçili masalar.
 
     public static IQueryable<Table> InStaffRegions(this IQueryable<Table> query, StaffAccess access)
     {
-        if (access.RegionIds is null) return query;
-        List<Guid> ids = access.RegionIds.ToList();
-        return query.Where(t => ids.Contains(t.RegionId));
+        if (access.WaiterScope is not { } scope) return query;
+        List<Guid> regionIds = scope.WholeRegionIds.ToList();
+        List<Guid> tableIds = scope.TableIds.ToList();
+        return query.Where(t => regionIds.Contains(t.RegionId) || tableIds.Contains(t.Id));
     }
 
+    // Garsona paket (masasız) sipariş hiç gelmez; kapsamı boş (tüm masalar) olan garsona da.
     public static IQueryable<Order> InStaffRegions(this IQueryable<Order> query, StaffAccess access)
     {
-        if (access.RegionIds is null) return query;
-        List<Guid> ids = access.RegionIds.ToList();
-        return query.Where(o => ids.Contains(o.Table.RegionId));
+        if (access.IsWaiter)
+            query = query.Where(o => o.TableId != null);
+        if (access.WaiterScope is not { } scope) return query;
+        List<Guid> regionIds = scope.WholeRegionIds.ToList();
+        List<Guid> tableIds = scope.TableIds.ToList();
+        return query.Where(o => regionIds.Contains(o.Table!.RegionId) || tableIds.Contains(o.TableId!.Value));
     }
 
     public static IQueryable<OrderRequest> InStaffRegions(this IQueryable<OrderRequest> query, StaffAccess access)
     {
-        if (access.RegionIds is null) return query;
-        List<Guid> ids = access.RegionIds.ToList();
-        return query.Where(r => ids.Contains(r.Table.RegionId));
+        if (access.WaiterScope is not { } scope) return query;
+        List<Guid> regionIds = scope.WholeRegionIds.ToList();
+        List<Guid> tableIds = scope.TableIds.ToList();
+        return query.Where(r => regionIds.Contains(r.Table.RegionId) || tableIds.Contains(r.TableId));
     }
 
     public static IQueryable<Reservation> InStaffRegions(this IQueryable<Reservation> query, StaffAccess access)
     {
-        if (access.RegionIds is null) return query;
-        List<Guid> ids = access.RegionIds.ToList();
-        return query.Where(r => ids.Contains(r.Table.RegionId));
+        if (access.WaiterScope is not { } scope) return query;
+        List<Guid> regionIds = scope.WholeRegionIds.ToList();
+        List<Guid> tableIds = scope.TableIds.ToList();
+        return query.Where(r => regionIds.Contains(r.Table.RegionId) || tableIds.Contains(r.TableId));
     }
 
     // Mutfak kullanıcısının kategorileri dışındaki ürünü değiştirmesini engeller. Sorun yoksa null döner.
@@ -169,7 +249,7 @@ public static class StaffAccessExtensions
 
         Guid? categoryId = await db.OrderItems.AsNoTracking()
             .Where(i => i.Id == orderItemId)
-            .Select(i => (Guid?)i.Product.CategoryId)
+            .Select(i => (Guid?)i.Product!.CategoryId)
             .FirstOrDefaultAsync(cancellationToken);
 
         return categoryId.HasValue && access.CanAccessCategory(categoryId.Value) ? null : StaffAccess.CategoryDeniedMessage;

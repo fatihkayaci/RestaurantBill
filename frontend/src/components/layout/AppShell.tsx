@@ -2,8 +2,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-    LayoutDashboard, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, UserCircle, Store,
-    UserCog, Palette, History, CalendarCheck, Globe, Menu, X, PanelLeftClose, PanelLeftOpen,
+    LayoutDashboard, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, UserCircle, Settings,
+    UserCog, Palette, History, CalendarCheck, Globe, Menu, X, PanelLeftClose, PanelLeftOpen, Layers, Bike,
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { userService } from '@/features/users/api/userService';
@@ -17,6 +17,8 @@ import BranchSwitcher from './BranchSwitcher';
 import QuickAccessPanel from './QuickAccessPanel';
 import OverdueAlerts from './OverdueAlerts';
 import BillRequestAlerts from './BillRequestAlerts';
+import WaiterCallAlerts from './WaiterCallAlerts';
+import OnlineOrderAlerts from './OnlineOrderAlerts';
 import HeaderThemeToggle from './HeaderThemeToggle';
 import HeaderLogoutButton from './HeaderLogoutButton';
 
@@ -26,15 +28,17 @@ interface NavGroup { label?: string; items: NavItem[]; }
 // Şube modu: Admin ve (bir şube seçmiş) Owner aynı menüyü görür.
 const branchNav: NavItem[] = [
     { to: '/admin/overview', icon: LayoutDashboard, label: 'Genel Bakış' },
-    { to: '/admin/staff', icon: Users, label: 'Kullanıcılar' },
+    { to: '/admin/staff', icon: Users, label: 'Çalışanlar' },
     { to: '/admin/tables', icon: LayoutGrid, label: 'Masalar' },
-    { to: '/admin/menu', icon: UtensilsCrossed, label: 'Menü' },
+    { to: '/admin/menu', icon: UtensilsCrossed, label: 'Yemeklerimiz' },
+    { to: '/admin/set-menus', icon: Layers, label: 'Menüler' },
     { to: '/admin/reservations', icon: CalendarCheck, label: 'Rezervasyonlar' },
+    { to: '/admin/online-orders', icon: Bike, label: 'Online siparişler' },
     { to: '/admin/cash-registers', icon: Wallet, label: 'Kasalar' },
     { to: '/admin/shifts', icon: Clock, label: 'Vardiyalar' },
     { to: '/admin/reports', icon: BarChart3, label: 'Raporlar' },
-    { to: '/admin/restaurant', icon: Store, label: 'Restoran' },
     { to: '/admin/site', icon: Globe, label: 'Restoran sitesi' },
+    { to: '/admin/settings', icon: Settings, label: 'Ayarlar' },
     { to: '/admin/profile', icon: UserCircle, label: 'Profil' },
 ];
 
@@ -226,6 +230,7 @@ export default function AppShell() {
                     </div>
 
                     <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+                        {!companyMode && <OnlineOrderAlerts boardPath="/admin/online-orders" />}
                         <HeaderThemeToggle />
 
                         <div className="hidden sm:block w-px h-6.5 bg-white/10 shrink-0" />
@@ -262,6 +267,7 @@ export default function AppShell() {
             {!companyMode && <QuickAccessPanel />}
             {!companyMode && <OverdueAlerts />}
             {!companyMode && <BillRequestAlerts actionPath="/admin/tables" />}
+            {!companyMode && <WaiterCallAlerts variant="manager" />}
         </div>
     );
 }

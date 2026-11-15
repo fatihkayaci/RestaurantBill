@@ -55,9 +55,9 @@ public class GetShiftSummaryQueryHandler : IRequestHandler<GetShiftSummaryQuery,
 
         List<Order> openOrders = await _db.Orders
             .AsNoTracking()
-            .Where(o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.Table.Region.BranchId == shift.BranchId)
+            .Where(o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.BranchId == shift.BranchId)
             .ToListAsync(cancellationToken);
-        int openTablesCount = openOrders.Select(o => o.TableId).Distinct().Count();
+        int openTablesCount = openOrders.Where(o => o.TableId != null).Select(o => o.TableId).Distinct().Count();
 
         // Bir masayı kapatmak, KDV oranına göre birden fazla Payment satırı oluşturabiliyor;
         // "tamamlanan" sayısı masa/sipariş kapatma olayını saymalı, ham Payment satırını değil.

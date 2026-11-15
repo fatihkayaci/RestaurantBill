@@ -30,13 +30,15 @@ public class RequestBillCommandHandler : IRequestHandler<RequestBillCommand, Res
         List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
 
         Order? order = await _db.Orders
-            .Include(o => o.Table).ThenInclude(t => t.Region)
+            .Include(o => o.Table)
             .InBranches(branchIds)
             .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
         if (order is null || order.IsClosed())
             return Result.Failure("Bu masada açık bir sipariş yok.");
+        if (order.Table is not { } table)
+            return Result.Failure(Order.TableOnlyMessage);
 
-        string? accessError = await _db.CheckTableAccessAsync(_currentUser, order.TableId, null, cancellationToken);
+        string? accessError = await _db.CheckTableAccessAsync(_currentUser, table.Id, null, cancellationToken);
         if (accessError is not null)
             return Result.Failure(accessError);
 
@@ -47,7 +49,7 @@ public class RequestBillCommandHandler : IRequestHandler<RequestBillCommand, Res
 
         User? actor = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
         string actorName = actor?.FullName ?? string.Empty;
-        Guid branchId = order.Table.Region.BranchId;
+        Guid branchId = order.BranchId;
 
         _db.AuditLogs.Add(AuditLog.Create(
             branchId,
@@ -56,17 +58,17 @@ public class RequestBillCommandHandler : IRequestHandler<RequestBillCommand, Res
             AuditLogSeverity.Info,
             request.Cancel ? "BillRequestCancelled" : "BillRequested",
             request.Cancel
-                ? $"{actorName} {order.Table.Name} için hesap isteğini geri aldı."
-                : $"{actorName} {order.Table.Name} için hesap istedi.",
+                ? $"{actorName} {table.Name} için hesap isteğini geri aldı."
+                : $"{actorName} {table.Name} için hesap istedi.",
             nameof(Order),
             order.Id));
 
         await _db.SaveChangesAsync(cancellationToken);
 
-        await _tableNotifications.SendBillRequestChangedAsync(branchId, order.TableId, order.BillRequestedAt);
+        await _tableNotifications.SendBillRequestChangedAsync(branchId, table.Id, order.BillRequestedAt);
         await _cashierNotifications.SendOrdersChangedAsync(branchId);
         if (!request.Cancel)
-            await _cashierNotifications.SendBillRequestedAsync(branchId, order.TableId, order.Table.Name, actorName);
+            await _cashierNotifications.SendBillRequestedAsync(branchId, table.Id, table.Name, actorName);
 
         return Result.Success();
     }

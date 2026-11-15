@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
 using RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
+using RestaurantBill.Application.Features.Products.Commands.SetProductStock;
 using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
 using RestaurantBill.Application.Features.Products.Commands.UploadProductImage;
 using RestaurantBill.Application.Features.Products.Queries.GetAllProduct;
+using RestaurantBill.Application.Features.Products.Queries.GetAllProductWithCost;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
@@ -30,6 +32,19 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             var query = new GetAllProductQuery();
             var result = await _mediator.Send(query);
+            return HandleResult(result);
+        }
+
+        /// <summary>
+        /// Returns all products together with their unit cost. Cost is only visible to Owner and Admin;
+        /// waiter, kitchen and cashier screens use <see cref="GetAll"/>, which never includes it.
+        /// </summary>
+        /// <returns>200 OK with product list (including cost) on success.</returns>
+        [Authorize(Roles = "Owner,Admin")]
+        [HttpGet("with-cost")]
+        public async Task<IActionResult> GetAllWithCost(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetAllProductWithCostQuery(), cancellationToken);
             return HandleResult(result);
         }
             
@@ -93,6 +108,19 @@ namespace RestaurantBill.WebAPI.Controllers
         }
 
         #endregion
+
+        /// <summary>
+        /// "Tükendi" anahtarı: ürün masada satılmaya devam eder, online siparişte seçilemez.
+        /// </summary>
+        [Authorize(Roles = "Owner,Admin,Cashier,Kitchen")]
+        [HttpPatch("{id:guid}/stock")]
+        public async Task<IActionResult> SetStock([FromRoute] Guid id, [FromBody] StockBody body, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new SetProductStockCommand { Id = id, IsOutOfStock = body.IsOutOfStock }, cancellationToken);
+            return HandleResult(result);
+        }
+
+        public sealed record StockBody(bool IsOutOfStock);
 
         #region delete methods
         /// <summary>

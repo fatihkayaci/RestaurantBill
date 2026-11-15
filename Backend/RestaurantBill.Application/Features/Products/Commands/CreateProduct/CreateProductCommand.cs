@@ -8,6 +8,8 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
     {
         public string Name { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        /// <summary>Birim maliyet (₺). Gönderilmezse 0.</summary>
+        public decimal Cost { get; set; }
         public bool IsActive { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
         public Guid CategoryId { get; set; }

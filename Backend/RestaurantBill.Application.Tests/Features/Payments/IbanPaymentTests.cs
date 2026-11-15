@@ -24,7 +24,7 @@ public class IbanPaymentTests : ApplicationTestBase
         Product product = Product.Create("Köfte", 200m, "", category.Id);
         DbContext.Products.Add(product);
         Table table = await SeedTableAsync();
-        Order order = Order.Create(table.Id);
+        Order order = Order.Create(table.Id, CurrentUser.BranchId);
         order.AddItem(product, 1, 10m);
         DbContext.Orders.Add(order);
 

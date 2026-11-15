@@ -24,11 +24,16 @@ export const userService = {
             BranchIds: data.branchIds,
             HireDate: data.hireDate,
             RegionIds: data.regionIds,
+            RestrictedRegionIds: data.restrictedRegionIds,
+            TableIds: data.tableIds,
             CategoryIds: data.categoryIds,
             CanTakeOrders: data.canTakeOrders,
             CanTakePayment: data.canTakePayment,
             CanCancelAndDiscount: data.canCancelAndDiscount,
-            CanTransferAndReserve: data.canTransferAndReserve
+            CanTransferAndReserve: data.canTransferAndReserve,
+            CanApplyDiscount: data.canApplyDiscount,
+            MaxDiscountPercent: data.maxDiscountPercent,
+            CanTransferTables: data.canTransferTables
         });
     },
     updateUser: async (data: UpdateUser) => {
@@ -46,11 +51,16 @@ export const userService = {
             BranchIds: data.branchIds,
             HireDate: data.hireDate,
             RegionIds: data.regionIds,
+            RestrictedRegionIds: data.restrictedRegionIds,
+            TableIds: data.tableIds,
             CategoryIds: data.categoryIds,
             CanTakeOrders: data.canTakeOrders,
             CanTakePayment: data.canTakePayment,
             CanCancelAndDiscount: data.canCancelAndDiscount,
-            CanTransferAndReserve: data.canTransferAndReserve
+            CanTransferAndReserve: data.canTransferAndReserve,
+            CanApplyDiscount: data.canApplyDiscount,
+            MaxDiscountPercent: data.maxDiscountPercent,
+            CanTransferTables: data.canTransferTables
         });
     },
     deleteUser: async (id: string) => {

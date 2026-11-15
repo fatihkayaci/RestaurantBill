@@ -37,8 +37,8 @@ public class GetAllOrdersToKitchenQueryTests : IntegrationTestBase
     {
         var table = await SeedTableAsync(RestaurantId);
 
-        var activeOrder = Order.Create(table.Id);
-        var paidOrder = Order.Create(table.Id);
+        var activeOrder = CreateOrder(table);
+        var paidOrder = CreateOrder(table);
         paidOrder.Close();
 
         await DbContext.Orders.AddRangeAsync(activeOrder, paidOrder);
@@ -56,8 +56,8 @@ public class GetAllOrdersToKitchenQueryTests : IntegrationTestBase
     {
         var table = await SeedTableAsync(RestaurantId);
 
-        var activeOrder = Order.Create(table.Id);
-        var cancelledOrder = Order.Create(table.Id);
+        var activeOrder = CreateOrder(table);
+        var cancelledOrder = CreateOrder(table);
         cancelledOrder.Cancel();
 
         await DbContext.Orders.AddRangeAsync(activeOrder, cancelledOrder);
@@ -77,8 +77,8 @@ public class GetAllOrdersToKitchenQueryTests : IntegrationTestBase
         var otherTable = await SeedTableAsync(OtherRestaurantId);
 
         await DbContext.Orders.AddRangeAsync(
-            Order.Create(myTable.Id),
-            Order.Create(otherTable.Id)
+            CreateOrder(myTable),
+            CreateOrder(otherTable)
         );
         await DbContext.SaveChangesAsync();
 

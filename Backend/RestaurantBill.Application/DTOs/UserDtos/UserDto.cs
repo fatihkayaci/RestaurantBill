@@ -22,9 +22,16 @@ public class UserDto
     // Garson bölgeleri (boş = tüm bölgeler) ve garson yetkileri; mutfak kategorileri (boş = tüm kategoriler).
     // Diğer rollerde anlamsızdır.
     public List<Guid> RegionIds { get; set; } = [];
+    // Garsonun masa masa baktığı bölgeler ("Seçili masalar") ve bu bölgelerde seçtiği masalar. Diğer bölgelerinin tamamına bakar.
+    public List<Guid> RestrictedRegionIds { get; set; } = [];
+    public List<Guid> TableIds { get; set; } = [];
     public List<Guid> CategoryIds { get; set; } = [];
     public bool CanTakeOrders { get; set; }
     public bool CanTakePayment { get; set; }
     public bool CanCancelAndDiscount { get; set; }
     public bool CanTransferAndReserve { get; set; }
+    // Kasiyer yetkileri ve indirim sınırı (100 = sınırsız); diğer rollerde hep açık / 100.
+    public bool CanApplyDiscount { get; set; }
+    public int MaxDiscountPercent { get; set; }
+    public bool CanTransferTables { get; set; }
 }

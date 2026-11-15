@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
 
@@ -21,7 +22,8 @@ public static class OverdueOrderItems
         DateTime earliest = utcNow - LookBack - TimeSpan.FromMinutes(Product.PrepMinutesMax);
         return db.OrderItems
             .Include(i => i.Product)
-            .Include(i => i.Order).ThenInclude(o => o.Table).ThenInclude(t => t.Region)
+            .Include(i => i.ParentOrderItem).ThenInclude(p => p!.SetMenu)
+            .Include(i => i.Order).ThenInclude(o => o.Table)
             .Where(i => i.PrepMinutes != null
                 && (i.Status == OrderItemStatus.Pending || i.Status == OrderItemStatus.Preparing)
                 && i.CreatedAt >= earliest
@@ -35,8 +37,11 @@ public static class OverdueOrderItems
         OrderItemId = item.Id,
         OrderId = item.OrderId,
         TableId = item.Order.TableId,
-        TableName = item.Order.Table?.Name ?? string.Empty,
-        ProductName = item.Product?.Name ?? string.Empty,
+        TableName = item.Order.TableId is null ? MappingExtensions.DeliveryTableName : item.Order.Table?.Name ?? string.Empty,
+        // Menü içeriği menünün adıyla gösterilir: "Adana Kebap (Adana Menü)". Menü satırının süresi yoktur, buraya düşmez.
+        ProductName = item.ParentOrderItem?.SetMenu is SetMenu setMenu
+            ? $"{item.Product?.Name} ({setMenu.Name})"
+            : item.Product?.Name ?? string.Empty,
         Quantity = item.Quantity,
         PrepMinutes = item.PrepMinutes ?? 0,
         CreatedAt = item.CreatedAt,
@@ -62,7 +67,7 @@ public class OverdueOrderItemNotifier : IOverdueOrderItemNotifier
             .ToListAsync(cancellationToken);
 
         List<OrderItem> newlyOverdue = candidates
-            .Where(i => i.Order.Table?.Region is not null && i.TryMarkOverdueNotified(utcNow))
+            .Where(i => i.TryMarkOverdueNotified(utcNow))
             .ToList();
         if (newlyOverdue.Count == 0)
             return 0;
@@ -71,7 +76,7 @@ public class OverdueOrderItemNotifier : IOverdueOrderItemNotifier
         // Böylece bir kalem için iki kez uyarı gitmez.
         await _db.SaveChangesAsync(cancellationToken);
 
-        foreach (IGrouping<Guid, OrderItem> branch in newlyOverdue.GroupBy(i => i.Order.Table.Region.BranchId))
+        foreach (IGrouping<Guid, OrderItem> branch in newlyOverdue.GroupBy(i => i.Order.BranchId))
         {
             List<OverdueOrderItemDto> items = branch
                 .OrderBy(i => i.GetDueAt())

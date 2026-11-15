@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -31,12 +31,18 @@ const profileSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 
 const roleLabel: Record<number, string> = {
-    1: "Yönetici", 2: "Garson", 3: "Kasiyer", 4: "Mutfak", 5: "Sahibi",
+    1: "Yönetici", 2: "Garson", 3: "Kasiyer", 4: "Mutfak", 5: "Sahibi", 6: "Kurye",
 };
 
 
 export default function Profile() {
-    const [userId, setUserId] = useState<string | null>(null);
+    // Kullanıcı id'si token'dan bir kez okunur; sayfa açıkken değişmez, effect'te setState'e gerek yok.
+    const [userId] = useState<string | null>(() => {
+        const token = localStorage.getItem("token");
+        if (!token) return null;
+        const decoded: Record<string, string> = jwtDecode(token);
+        return decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
+    });
     const [userCode, setUserCode] = useState("");
     const [role, setRole] = useState(1);
     const [userName, setUserName] = useState("");
@@ -58,23 +64,21 @@ export default function Profile() {
         resolver: zodResolver(profileSchema),
         defaultValues: { fullName: "", email: "", phoneNumber: "" },
     });
+    // reset, useForm'un sabit referanslı metodu; effect bağımlılığına girmesi tekrar çalıştırmaz.
+    const { reset: resetProfileForm } = profileForm;
+    // watch() yerine useWatch: React Compiler ile uyumlu, sadece fullName değişince yeniden render eder.
+    const watchedFullName = useWatch({ control: profileForm.control, name: "fullName" });
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (token) {
-            const decoded: Record<string, string> = jwtDecode(token);
-            setUserId(decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]);
-        }
-
         userService.getCurrentUser().then(u => {
             setUserCode(u.userCode);
             setRole(u.role);
             setUserName(u.userName);
             setInitials(u.fullName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase());
             setIsEmailVerified(u.isEmailVerified);
-            profileForm.reset({ fullName: u.fullName, email: u.email ?? "", phoneNumber: u.phoneNumber ?? "" });
+            resetProfileForm({ fullName: u.fullName, email: u.email ?? "", phoneNumber: u.phoneNumber ?? "" });
         }).catch(console.error);
-    }, []);
+    }, [resetProfileForm]);
 
     const handleSendEmailVerification = async () => {
         if (!userId) return;
@@ -179,7 +183,7 @@ export default function Profile() {
                     </div>
                     <div>
                         <p className="text-sidebar-foreground font-bold text-lg leading-tight">
-                            {profileForm.watch("fullName") || "—"}
+                            {watchedFullName || "—"}
                         </p>
                         <p className="text-rb-purple text-[10px] font-semibold tracking-widest uppercase mt-0.5">
                             {roleLabel[role] ?? "Yönetici"}

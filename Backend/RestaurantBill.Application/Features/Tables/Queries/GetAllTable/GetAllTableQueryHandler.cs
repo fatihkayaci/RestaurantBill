@@ -46,8 +46,8 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
             List<Guid> tableIds = tables.Select(t => t.Id).ToList();
             var activeOrders = await _db.Orders
                 .AsNoTracking()
-                .Where(o => tableIds.Contains(o.TableId) && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled)
-                .Select(o => new { o.Id, o.TableId, o.TotalPrice, o.PaidOnAccount, o.CreatedAt, o.CreatedUser, o.BillRequestedAt })
+                .Where(o => o.TableId != null && tableIds.Contains(o.TableId.Value) && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled)
+                .Select(o => new { o.Id, TableId = o.TableId!.Value, o.TotalPrice, o.PaidOnAccount, o.CreatedAt, o.CreatedUser, o.BillRequestedAt })
                 .ToListAsync(cancellationToken);
 
             var totalsByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.TotalPrice);
@@ -69,7 +69,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
                 .AsNoTracking()
                 .Where(i => activeOrderIds.Contains(i.OrderId) && i.PrepMinutes != null
                     && (i.Status == OrderItemStatus.Pending || i.Status == OrderItemStatus.Preparing))
-                .Select(i => new { i.Order.TableId, i.CreatedAt, i.PrepMinutes })
+                .Select(i => new { TableId = i.Order.TableId!.Value, i.CreatedAt, i.PrepMinutes })
                 .ToListAsync(cancellationToken);
             DateTime utcNow = DateTime.UtcNow;
             Dictionary<Guid, int> overdueByTableId = timedItems

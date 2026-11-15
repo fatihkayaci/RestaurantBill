@@ -1,0 +1,364 @@
+using RestaurantBill.Domain.Enums;
+
+namespace RestaurantBill.Application.DTOs
+{
+    /// <summary>SignalR "DeliveryOrdersChanged": online sipariş geldi (IsNew) ya da durumu değişti. Ekran listeyi yeniler.</summary>
+    public class DeliveryOrdersChangedDto
+    {
+        public Guid Id { get; set; }
+        public DeliveryOrderStatus Status { get; set; }
+        public bool IsNew { get; set; }
+    }
+}
+
+namespace RestaurantBill.Application.DTOs.Delivery
+{
+    // ── Sepet (müşteri gönderir, fiyatı sunucu hesaplar) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Sepet satırı. Kind "product": ProductId; Kind "setMenu": SetMenuId + bölüm seçimleri (seçilmeyen bölümde
+    /// varsayılan seçenek). Fiyat istemciden alınmaz.
+    /// </summary>
+    public class CartLineInput
+    {
+        public const string ProductKind = "product";
+        public const string SetMenuKind = "setMenu";
+
+        public string Kind { get; set; } = ProductKind;
+        public Guid? ProductId { get; set; }
+        public Guid? SetMenuId { get; set; }
+        public int Quantity { get; set; }
+        public string? Note { get; set; }
+        public List<CartSelectionInput> Selections { get; set; } = [];
+
+        public bool IsSetMenu => string.Equals(Kind, SetMenuKind, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public class CartSelectionInput
+    {
+        public Guid SlotId { get; set; }
+        public Guid ProductId { get; set; }
+    }
+
+    /// <summary>Sunucunun hesapladığı sepet: müşteriye gösterilen tutarlar.</summary>
+    public class DeliveryQuoteDto
+    {
+        public List<DeliveryQuoteLineDto> Lines { get; set; } = [];
+        public decimal Subtotal { get; set; }
+        public decimal DeliveryFee { get; set; }
+        public decimal Total { get; set; }
+        public Guid? ZoneId { get; set; }
+        public string ZoneName { get; set; } = string.Empty;
+        public decimal MinOrderAmount { get; set; }
+        /// <summary>Ara toplam bölgenin en az sipariş tutarına ulaştı mı.</summary>
+        public bool MeetsMinimum { get; set; }
+        /// <summary>En az tutara kalan (0: ulaşıldı).</summary>
+        public decimal AmountToMinimum { get; set; }
+        public int EstimatedMinutes { get; set; }
+    }
+
+    public class DeliveryQuoteLineDto
+    {
+        public string Kind { get; set; } = CartLineInput.ProductKind;
+        public Guid? ProductId { get; set; }
+        public Guid? SetMenuId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        /// <summary>Menüde: seçilen ürünler ("Kola +10 ₺" dahil fiyat UnitPrice'tadır).</summary>
+        public List<string> Selections { get; set; } = [];
+        public decimal UnitPrice { get; set; }
+        public int Quantity { get; set; }
+        public decimal LineTotal { get; set; }
+        public string Note { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Gönderimin sonucu. PriceChanged: istemcinin gördüğü toplam güncel fiyatla tutmadı; sipariş açılmadı, Quote
+    /// güncel fiyatlardır (uç 409 döner).
+    /// </summary>
+    public class SubmitDeliveryOrderResultDto
+    {
+        public string Token { get; set; } = string.Empty;
+        public int Number { get; set; }
+        public bool PriceChanged { get; set; }
+        public DeliveryQuoteDto? Quote { get; set; }
+    }
+
+    // ── Müşteri sitesi: online sipariş sayfası ──────────────────────────────────────────────────────
+
+    public static class OnlineOrderingState
+    {
+        public const string Open = "open";
+        public const string Paused = "paused";
+        public const string Closed = "closed";
+        public const string Disabled = "disabled";
+    }
+
+    public class OnlineOrderingDto
+    {
+        public Guid BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public string RestaurantPhone { get; set; } = string.Empty;
+        /// <summary>open | paused | closed | disabled.</summary>
+        public string State { get; set; } = OnlineOrderingState.Disabled;
+        public bool IsOpen { get; set; }
+        /// <summary>Kapalıyken müşteriye gösterilecek açıklama; açıkken boş.</summary>
+        public string Message { get; set; } = string.Empty;
+        /// <summary>Bir sonraki sipariş alma başlangıcı (UTC); bilinmiyorsa null.</summary>
+        public DateTime? NextOpensAt { get; set; }
+        /// <summary>Bugünkü son sipariş saati (UTC); kapalıyken null.</summary>
+        public DateTime? LastOrderAt { get; set; }
+        public List<DeliveryZoneDto> Zones { get; set; } = [];
+        public List<PaymentMethod> PaymentMethods { get; set; } = [];
+        public bool RequiresPhoneVerification { get; set; }
+        public List<OnlineMenuCategoryDto> Categories { get; set; } = [];
+        public List<OnlineSetMenuDto> SetMenus { get; set; } = [];
+        /// <summary>Şirketin online siparişi açık şubeleri; birden fazlaysa şube seçici gösterilir.</summary>
+        public List<OnlineBranchDto> Branches { get; set; } = [];
+    }
+
+    public class OnlineBranchDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string District { get; set; } = string.Empty;
+    }
+
+    public class OnlineMenuCategoryDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public List<OnlineMenuProductDto> Products { get; set; } = [];
+    }
+
+    public class OnlineMenuProductDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public bool IsFeatured { get; set; }
+        /// <summary>"Tükendi": listede görünür ama sepete eklenemez.</summary>
+        public bool IsOutOfStock { get; set; }
+    }
+
+    public class OnlineSetMenuDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
+        public Guid? CategoryId { get; set; }
+        /// <summary>Her bölümde seçilebilir en az bir seçenek var mı (yoksa "Tükendi").</summary>
+        public bool IsAvailable { get; set; }
+        public List<OnlineSetMenuSlotDto> Slots { get; set; } = [];
+    }
+
+    public class OnlineSetMenuSlotDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public bool IsFixed { get; set; }
+        public List<OnlineSetMenuOptionDto> Options { get; set; } = [];
+    }
+
+    public class OnlineSetMenuOptionDto
+    {
+        public Guid ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public decimal Surcharge { get; set; }
+        public bool IsDefault { get; set; }
+        /// <summary>Ürün pasif ya da tükendi ise seçilemez.</summary>
+        public bool IsAvailable { get; set; }
+    }
+
+    // ── Müşteri: takip sayfası ──────────────────────────────────────────────────────────────────────
+
+    public class DeliveryTrackingDto
+    {
+        public int Number { get; set; }
+        public DeliveryOrderStatus Status { get; set; }
+        public string StatusLabel { get; set; } = string.Empty;
+        public string StatusDescription { get; set; } = string.Empty;
+        /// <summary>"Ahmet Y."</summary>
+        public string CustomerName { get; set; } = string.Empty;
+        /// <summary>"0532 *** ** 67"</summary>
+        public string CustomerPhone { get; set; } = string.Empty;
+        public string ZoneName { get; set; } = string.Empty;
+        public PaymentMethod PaymentPreference { get; set; }
+        public List<DeliveryLineDto> Lines { get; set; } = [];
+        public decimal Subtotal { get; set; }
+        public decimal DeliveryFee { get; set; }
+        public decimal Total { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int? EstimatedMinutes { get; set; }
+        /// <summary>Kabul anı + tahmini süre (UTC).</summary>
+        public DateTime? EstimatedDeliveryAt { get; set; }
+        public DateTime? DeliveredAt { get; set; }
+        public string RejectReason { get; set; } = string.Empty;
+        public string CancelReason { get; set; } = string.Empty;
+        /// <summary>Müşteri iptal edebilir mi (yalnızca restoran onaylamadan önce).</summary>
+        public bool CanCancel { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public string RestaurantPhone { get; set; } = string.Empty;
+    }
+
+    public class DeliveryLineDto
+    {
+        public DeliveryOrderLineKind Kind { get; set; }
+        public Guid? ProductId { get; set; }
+        public Guid? SetMenuId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal UnitPrice { get; set; }
+        public int Quantity { get; set; }
+        public decimal LineTotal { get; set; }
+        public string Note { get; set; } = string.Empty;
+        /// <summary>Menü satırında seçilen ürünlerin adları.</summary>
+        public List<string> Selections { get; set; } = [];
+    }
+
+    // ── Müşteri: telefon doğrulama ──────────────────────────────────────────────────────────────────
+
+    public class PhoneVerificationSentDto
+    {
+        /// <summary>Kodun geçerlilik süresi (saniye).</summary>
+        public int ExpiresInSeconds { get; set; }
+        /// <summary>Yeni kod istenebilmesi için beklenecek süre (saniye).</summary>
+        public int ResendAfterSeconds { get; set; }
+    }
+
+    public class PhoneVerifiedDto
+    {
+        /// <summary>Sipariş gönderilirken verilecek tek kullanımlık anahtar.</summary>
+        public string VerificationToken { get; set; } = string.Empty;
+        public int ExpiresInSeconds { get; set; }
+    }
+
+    // ── Personel ────────────────────────────────────────────────────────────────────────────────────
+
+    public class DeliveryOrderDto
+    {
+        public Guid Id { get; set; }
+        public Guid BranchId { get; set; }
+        public int Number { get; set; }
+        public DeliveryOrderStatus Status { get; set; }
+        public string StatusLabel { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string CustomerPhone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string AddressDirections { get; set; } = string.Empty;
+        public string Note { get; set; } = string.Empty;
+        public Guid? DeliveryZoneId { get; set; }
+        public string ZoneName { get; set; } = string.Empty;
+        public PaymentMethod PaymentPreference { get; set; }
+        public List<DeliveryLineDto> Lines { get; set; } = [];
+        public decimal Subtotal { get; set; }
+        public decimal DeliveryFee { get; set; }
+        public decimal Total { get; set; }
+        public Guid? OrderId { get; set; }
+        public int? EstimatedMinutes { get; set; }
+        /// <summary>Kabulde önerilecek süre: bölgenin süresi, yoksa şube varsayılanı.</summary>
+        public int SuggestedEtaMinutes { get; set; }
+        public DateTime CreatedAt { get; set; }
+        /// <summary>Yanıtlanmazsa otomatik reddedileceği an (yalnızca Received).</summary>
+        public DateTime? AutoRejectAt { get; set; }
+        public DateTime? AcceptedAt { get; set; }
+        public DateTime? RejectedAt { get; set; }
+        public string RejectReason { get; set; } = string.Empty;
+        public bool IsAutoRejected { get; set; }
+        public DateTime? CancelledAt { get; set; }
+        public string CancelReason { get; set; } = string.Empty;
+        /// <summary>Müşteri iptali mi (personel iptalinde false).</summary>
+        public bool CancelledByCustomer { get; set; }
+        public Guid? CourierUserId { get; set; }
+        public string? CourierName { get; set; }
+        public DateTime? DispatchedAt { get; set; }
+        public DateTime? DeliveredAt { get; set; }
+        public PaymentMethod? CollectedMethod { get; set; }
+        public decimal? CollectedAmount { get; set; }
+        public DateTime? SettledAt { get; set; }
+        public bool IsPhoneBlocked { get; set; }
+    }
+
+    public class CourierSummaryDto
+    {
+        public Guid UserId { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        /// <summary>Kuryeye atanmış, teslim edilmemiş siparişler (Accepted…OnTheWay).</summary>
+        public int OpenOrderCount { get; set; }
+        /// <summary>Yoldaki siparişler.</summary>
+        public int OnTheWayCount { get; set; }
+        /// <summary>Teslim edilmiş, kasiyerin "Teslim al"ıyla kasaya geçmemiş nakit.</summary>
+        public decimal OutstandingCash { get; set; }
+        public int OutstandingCashOrderCount { get; set; }
+        /// <summary>Teslim edilmiş, kasaya teslim alınmamış kart tahsilatı.</summary>
+        public decimal OutstandingCard { get; set; }
+        public int OutstandingCardOrderCount { get; set; }
+        /// <summary>Teslim alınmayı bekleyen siparişler, teslim sırasıyla (kasiyerin "Teslim al" seçimi).</summary>
+        public List<CourierOutstandingOrderDto> OutstandingOrders { get; set; } = [];
+    }
+
+    public class OnlineOrderingPauseDto
+    {
+        public Guid BranchId { get; set; }
+        public bool Paused { get; set; }
+        /// <summary>Şubenin ayarlarında online sipariş açık mı (kapalıysa durdurma anahtarının etkisi yok).</summary>
+        public bool Enabled { get; set; }
+    }
+
+    // ── Ayarlar (Owner/Admin) ───────────────────────────────────────────────────────────────────────
+
+    public class OnlineOrderSettingsDto
+    {
+        public bool Enabled { get; set; }
+        public bool Paused { get; set; }
+        public List<OnlineOrderDayDto> Days { get; set; } = [];
+        public int LastOrderMinutesBeforeClose { get; set; }
+        public int DefaultEtaMinutes { get; set; }
+        public int AutoRejectAfterMinutes { get; set; }
+        public int MaxOpenOrdersPerPhone { get; set; }
+        public int MaxOrdersPerPhonePerDay { get; set; }
+        public bool AcceptCash { get; set; }
+        public bool AcceptCard { get; set; }
+        public bool RequirePhoneVerification { get; set; }
+        /// <summary>SMS sağlayıcısı yapılandırılmış mı; değilse telefon doğrulaması açık olsa da istenmez.</summary>
+        public bool SmsConfigured { get; set; }
+        public bool PreOrderEnabled { get; set; }
+        public int PreOrderLeadMinutes { get; set; }
+        /// <summary>Şube hiç kaydetmediyse false (varsayılanlar geçerli).</summary>
+        public bool IsCustomized { get; set; }
+    }
+
+    public class OnlineOrderDayDto
+    {
+        /// <summary>DayOfWeek: 0 = Pazar … 6 = Cumartesi.</summary>
+        public int Day { get; set; }
+        public bool IsOpen { get; set; }
+        /// <summary>"HH:mm"</summary>
+        public string Opens { get; set; } = string.Empty;
+        /// <summary>"HH:mm"; açılıştan küçükse gece yarısını aşar.</summary>
+        public string Closes { get; set; } = string.Empty;
+    }
+
+    public class DeliveryZoneDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Fee { get; set; }
+        public decimal MinOrderAmount { get; set; }
+        public int EstimatedMinutes { get; set; }
+        public bool IsActive { get; set; }
+        public int SortOrder { get; set; }
+    }
+
+    public class BlockedPhoneDto
+    {
+        public Guid Id { get; set; }
+        public string Phone { get; set; } = string.Empty;
+        public string Reason { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public string BlockedByName { get; set; } = string.Empty;
+    }
+}

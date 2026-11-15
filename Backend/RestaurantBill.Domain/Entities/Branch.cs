@@ -54,6 +54,31 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>null: varsayılanlara döner.</summary>
         public void SetReservationSettings(ReservationSettings? settings) => ReservationSettings = settings;
 
+        /// <summary>Admin'in kaydettiği online sipariş kuralları; null ise hiç ayarlanmamış (varsayılan: kapalı).</summary>
+        public OnlineOrderSettings? OnlineOrderSettings { get; private set; }
+
+        /// <summary>Kasanın "Online siparişi durdur" anahtarı; ayarlardan ayrıdır, ayarlar açıkken de sipariş almayı keser.</summary>
+        public bool OnlineOrdersPaused { get; private set; }
+
+        public OnlineOrderSettings GetOnlineOrderSettings()
+            => OnlineOrderSettings ?? Entities.OnlineOrderSettings.Default(OpensAt, ClosesAt);
+
+        /// <summary>null: varsayılanlara döner.</summary>
+        public void SetOnlineOrderSettings(OnlineOrderSettings? settings) => OnlineOrderSettings = settings;
+
+        public void SetOnlineOrdersPaused(bool paused) => OnlineOrdersPaused = paused;
+
+        /// <summary>Şu an online sipariş alınıyor mu (saat kontrolü hariç): ayarda açık ve durdurulmamış.</summary>
+        public bool AcceptsOnlineOrders => GetOnlineOrderSettings().Enabled && !OnlineOrdersPaused;
+
+        /// <summary>Admin'in kaydettiği masa QR özellikleri; null ise hiç ayarlanmamış (varsayılan: hepsi açık).</summary>
+        public QrFeatures? QrFeatures { get; private set; }
+
+        public QrFeatures GetQrFeatures() => QrFeatures ?? Entities.QrFeatures.Default;
+
+        /// <summary>null: varsayılanlara döner.</summary>
+        public void SetQrFeatures(QrFeatures? features) => QrFeatures = features;
+
         public bool HasIban => Iban.Length > 0;
 
         /// <summary>İkisi de boş: IBAN'ı kaldırır. Aksi halde geçerli bir TR IBAN ve hesap sahibi adı zorunludur.</summary>

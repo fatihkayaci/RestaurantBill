@@ -143,6 +143,37 @@ public class PublicTableInfoDto
     public string Name { get; set; } = string.Empty;
     public string RegionName { get; set; } = string.Empty;
     public Guid BranchId { get; set; }
+    /// <summary>Karşılama ekranında hangi düğmelerin görüneceği (admin anahtarları).</summary>
+    public QrFeaturesDto QrFeatures { get; set; } = new();
+    /// <summary>Şube şu an online paket sipariş alıyor mu (ayarda açık ve durdurulmamış; saat kontrolü hariç).</summary>
+    public bool AcceptsOnlineOrders { get; set; }
+}
+
+// Masa QR karşılama ekranının anahtarları. Admin "QR menü özellikleri" ve müşteri sayfası aynı şekli kullanır.
+public class QrFeaturesDto
+{
+    public bool OrderingEnabled { get; set; } = true;
+    public bool CallWaiterEnabled { get; set; } = true;
+    public bool BillRequestEnabled { get; set; } = true;
+    public bool DeliveryLinkEnabled { get; set; } = true;
+    public bool ReservationLinkEnabled { get; set; } = true;
+
+    public static QrFeaturesDto From(QrFeatures features) => new()
+    {
+        OrderingEnabled = features.OrderingEnabled,
+        CallWaiterEnabled = features.CallWaiterEnabled,
+        BillRequestEnabled = features.BillRequestEnabled,
+        DeliveryLinkEnabled = features.DeliveryLinkEnabled,
+        ReservationLinkEnabled = features.ReservationLinkEnabled,
+    };
+}
+
+/// <summary>"Garson çağır" / "Hesap iste" sonucu. Sent=false: aynı istek az önce yapılmış, yeniden bildirilmedi.</summary>
+public class TableActionResultDto
+{
+    public bool Sent { get; set; }
+    /// <summary>Bu masadan aynı istek kaç saniye sonra tekrar yapılabilir.</summary>
+    public int RetryAfterSeconds { get; set; }
 }
 
 public class AvailabilityDto
@@ -156,9 +187,9 @@ public class OrderRequestStatusDto
     public int Status { get; set; }
 }
 
+// Eski GET reservations/{id} ucu için; kimlik artık döndürülmez (rezervasyon bağlantısı token'la açılır).
 public class ReservationStatusDto
 {
-    public Guid Id { get; set; }
     public int Status { get; set; }
     public string TableName { get; set; } = string.Empty;
     public string GuestName { get; set; } = string.Empty;
@@ -192,6 +223,12 @@ public class OrderRequestItemDto
 public class StaffReservationDto
 {
     public Guid Id { get; set; }
+    /// <summary>Kısa kod, "K7M-2QP": personel telefonda müşteriye okur.</summary>
+    public string Code { get; set; } = string.Empty;
+    /// <summary>Müşterinin rezervasyon bağlantısının (/rezervasyon/:token) anahtarı: "Bağlantıyı kopyala" / WhatsApp.</summary>
+    public string AccessToken { get; set; } = string.Empty;
+    /// <summary>Restoranın alt alan adı: bağlantı https://{siteSlug}.sophram.com/rezervasyon/{accessToken} olur.</summary>
+    public string SiteSlug { get; set; } = string.Empty;
     public int Status { get; set; }
     public Guid TableId { get; set; }
     public string TableName { get; set; } = string.Empty;
@@ -206,6 +243,85 @@ public class StaffReservationDto
     public string EndTime { get; set; } = string.Empty;
     public DateTime StartsAtUtc { get; set; }
     public DateTime CreatedAt { get; set; }
+    /// <summary>Rezervasyonun son ön siparişi (bekleyen, iptal ya da süresi dolmuş); hiç yoksa null.</summary>
+    public StaffPreOrderDto? PreOrder { get; set; }
+    /// <summary>Masada ödenmemiş bir hesap var: "Geldi" ön siparişi bu hesaba ekler.</summary>
+    public bool TableHasOpenOrder { get; set; }
+}
+
+public class StaffPreOrderDto
+{
+    /// <summary>OrderRequestStatus: 1 bekliyor (mutfağa gitmedi), 2 mutfağa gönderildi, 4 iptal, 5 süresi doldu.</summary>
+    public int Status { get; set; }
+    public string Note { get; set; } = string.Empty;
+    public decimal Total { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public List<OrderRequestItemDto> Items { get; set; } = [];
+}
+
+// ── Rezervasyon bağlantısı (/rezervasyon/:token) ────────────────────────────────────────────────
+
+/// <summary>Rezervasyon talebi gönderildi: müşteriye verilen bağlantının gizli anahtarıyla.</summary>
+public class ReservationCreatedDto : ReservationStatusDto
+{
+    public string AccessToken { get; set; } = string.Empty;
+    /// <summary>"K7M-2QP": müşteri bu kod ve telefonuyla rezervasyonunu sorgulayabilir.</summary>
+    public string Code { get; set; } = string.Empty;
+}
+
+/// <summary>"Rezervasyon sorgula" başarılı: istemci /rezervasyon/{accessToken} sayfasına gider.</summary>
+public class ReservationLookupResultDto
+{
+    public string AccessToken { get; set; } = string.Empty;
+}
+
+public class ReservationDetailDto
+{
+    /// <summary>"K7M-2QP".</summary>
+    public string Code { get; set; } = string.Empty;
+    public int Status { get; set; }
+    /// <summary>"Ahmet Y." — ad ve soyadın baş harfi.</summary>
+    public string GuestName { get; set; } = string.Empty;
+    public string TableName { get; set; } = string.Empty;
+    public int PartySize { get; set; }
+    // Şubenin yerel saatiyle.
+    public string Date { get; set; } = string.Empty;
+    public string Time { get; set; } = string.Empty;
+    public string EndTime { get; set; } = string.Empty;
+    public DateTime StartsAtUtc { get; set; }
+    public string BranchName { get; set; } = string.Empty;
+    public string RestaurantPhone { get; set; } = string.Empty;
+    /// <summary>Menü için: GET api/public/site?branchId=…</summary>
+    public Guid BranchId { get; set; }
+    public PreOrderWindowDto PreOrderWindow { get; set; } = new();
+    public PublicPreOrderDto? PreOrder { get; set; }
+    /// <summary>Şu an tükenmiş ürünler; menüde eklenemez.</summary>
+    public List<Guid> OutOfStockProductIds { get; set; } = [];
+}
+
+public class PreOrderWindowDto
+{
+    /// <summary>Şubede ön sipariş açık mı.</summary>
+    public bool Enabled { get; set; }
+    public DateTime OpensAt { get; set; }
+    public DateTime ClosesAt { get; set; }
+    /// <summary>Şubenin yerel saatiyle "HH:mm".</summary>
+    public string OpensAtTime { get; set; } = string.Empty;
+    public string ClosesAtTime { get; set; } = string.Empty;
+    public bool CanPreOrder { get; set; }
+    /// <summary>Verilemiyorsa müşteriye gösterilecek neden.</summary>
+    public string? Reason { get; set; }
+}
+
+public class PublicPreOrderDto
+{
+    /// <summary>OrderRequestStatus: 1 alındı (masaya oturunca mutfağa gider), 2 mutfağa gönderildi, 4 iptal, 5 süresi doldu.</summary>
+    public int Status { get; set; }
+    public string Note { get; set; } = string.Empty;
+    public decimal Total { get; set; }
+    public List<OrderRequestItemDto> Items { get; set; } = [];
+    public bool CanEdit { get; set; }
+    public bool CanCancel { get; set; }
 }
 
 public class DaySlotDto

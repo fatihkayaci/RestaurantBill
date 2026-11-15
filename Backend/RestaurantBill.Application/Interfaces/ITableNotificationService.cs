@@ -1,3 +1,5 @@
+using RestaurantBill.Application.DTOs;
+
 namespace RestaurantBill.Application.Interfaces;
 public interface ITableNotificationService
 {
@@ -8,4 +10,10 @@ public interface ITableNotificationService
     Task SendCustomerRequestsChangedAsync(Guid restaurantId);
     // Masanın "hesap istendi" durumu değişti (billRequestedAt null = istek kalktı); masa ekranları rozeti günceller.
     Task SendBillRequestChangedAsync(Guid restaurantId, Guid tableId, DateTime? billRequestedAt);
+    // Mutfak ürünleri hazır (pasada) işaretledi; yalnızca masanın bölgesine bakan garsonlara gider.
+    Task SendItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload);
+    // Paket siparişin ürünleri hazır: garsona değil, şubenin online sipariş ekranlarına (OnlineOrders) gider.
+    Task SendDeliveryItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload);
+    // Müşteri QR'dan garson çağırdı; "ürün hazır" ile aynı garsonlara, ayrıca şube yöneticilerine gider.
+    Task SendWaiterCalledAsync(Guid restaurantId, WaiterCalledDto payload);
 }

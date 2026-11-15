@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Application.Mappings;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Shared;
 
@@ -80,7 +81,7 @@ public class GetShiftTransactionsQueryHandler : IRequestHandler<GetShiftTransact
                     Amount = g.Sum(p => p.TotalAmount),
                     TaxAmount = g.Sum(p => p.TaxAmount),
                     ItemCount = g.Sum(p => p.ItemCount),
-                    TableName = latest.Order?.Table?.Name ?? string.Empty,
+                    TableName = latest.Order is { TableId: null } ? MappingExtensions.DeliveryTableName : latest.Order?.Table?.Name ?? string.Empty,
                     CreatedByUserName = creatorNameById.GetValueOrDefault(latest.Order?.CreatedUser ?? Guid.Empty, string.Empty),
                     PaidByUserName = latest.UserId.HasValue ? payerNameById.GetValueOrDefault(latest.UserId.Value, string.Empty) : string.Empty,
                     Details = details

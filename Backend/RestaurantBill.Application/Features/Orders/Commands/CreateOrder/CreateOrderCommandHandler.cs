@@ -25,7 +25,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
         {
             List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUser, cancellationToken);
 
-            Table? table = await _db.Tables.InBranches(branchIds).FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
+            Table? table = await _db.Tables.Include(t => t.Region).InBranches(branchIds).FirstOrDefaultAsync(t => t.Id == request.TableId, cancellationToken);
             if (table is null)
                 return Result<OrderDto>.Failure("Böyle bir Masa bulunamadı.");
 
@@ -35,7 +35,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CreateOrder
 
             table.Occupy();
 
-            Order order = Order.Create(request.TableId);
+            Order order = Order.Create(table.Id, table.Region.BranchId);
             _db.Orders.Add(order);
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);

@@ -32,9 +32,13 @@ namespace RestaurantBill.Application.Features.Orders.Commands.CloseOrder
             if (order is null)
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
-            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, order.TableId, WaiterPermission.TakePayment, cancellationToken);
+            string? accessError = await _db.CheckOrderAccessAsync(_currentUserService, order, WaiterPermission.TakePayment, cancellationToken);
             if (accessError is not null)
                 return Result.Failure(accessError);
+
+            // Paket siparişin iptali/kapanışı masa boşaltmaz; kendi akışından (online siparişler) yapılır.
+            if (!order.HasTable)
+                return Result.Failure(Order.TableOnlyMessage);
 
             Table? table = await _db.Tables.FirstOrDefaultAsync(t => t.Id == order.TableId, cancellationToken);
 

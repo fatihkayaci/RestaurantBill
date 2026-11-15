@@ -135,6 +135,11 @@ public class SetBranchSiteImageCommandHandler(
                 int maxSize = request.Slot == SiteImageSlot.Cover ? CoverMaxSize : AboutMaxSize;
                 newKey = await imageStorage.UploadAsync(request.Content, branch.Id, "site", maxSize, cancellationToken);
             }
+            catch (ImageUploadException ex)
+            {
+                // Bu uçta Content-Type kontrolü yok; biçim, depolama servisinde dosyanın kendisinden doğrulanır.
+                return Result<BranchSiteDto>.Failure(ex.Message);
+            }
             catch
             {
                 return Result<BranchSiteDto>.Failure("Görsel dosyası işlenemedi. Lütfen geçerli bir resim yükleyin.");

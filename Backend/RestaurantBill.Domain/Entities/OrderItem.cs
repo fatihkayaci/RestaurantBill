@@ -5,8 +5,15 @@ namespace RestaurantBill.Domain.Entities
 {
     public class OrderItem : BaseEntity
     {
-        public Guid ProductId { get; private set; }
-        public Product Product { get; internal set; } = default!;
+        // Ürün satırında dolu; menü satırında (SetMenuId dolu) null.
+        public Guid? ProductId { get; private set; }
+        public Product? Product { get; internal set; }
+        // Menü satırı: tek satır, tek fiyat (menü fiyatı + ek ücretler). İçindeki ürünler ayrı kalemlerdir.
+        public Guid? SetMenuId { get; private set; }
+        public SetMenu? SetMenu { get; private set; }
+        // Menü içeriği: menü satırına bağlı, fiyatı 0 olan ürün kalemi. Mutfakta görünür, hesapta görünmez.
+        public Guid? ParentOrderItemId { get; private set; }
+        public OrderItem? ParentOrderItem { get; private set; }
         public Guid OrderId { get; private set; }
         public Order Order { get; private set; } = default!;
 
@@ -21,6 +28,9 @@ namespace RestaurantBill.Domain.Entities
         // Gecikme uyarısının gönderildiği an; her kalem için yalnızca bir kez uyarı gider.
         public DateTime? OverdueNotifiedAt { get; private set; }
 
+
+        public bool IsSetMenu => SetMenuId is not null;
+        public bool IsSetMenuComponent => ParentOrderItemId is not null || ParentOrderItem is not null;
 
         protected OrderItem() { }
 
@@ -43,6 +53,45 @@ namespace RestaurantBill.Domain.Entities
                 Quantity = quantity,
                 TaxRate = taxRate,
                 Note = note ?? string.Empty,
+                Status = OrderItemStatus.Pending,
+                PrepMinutes = product.PrepMinutes
+            };
+        }
+
+        internal static OrderItem CreateSetMenu(SetMenu setMenu, decimal unitPrice, int quantity, decimal taxRate, string note)
+        {
+            if (setMenu == null)
+                throw new DomainException("Geçersiz menü.");
+
+            if (unitPrice < 0)
+                throw new DomainException("Birim fiyat negatif olamaz.");
+
+            return new OrderItem
+            {
+                SetMenu = setMenu,
+                SetMenuId = setMenu.Id,
+                UnitPrice = unitPrice,
+                Quantity = quantity,
+                TaxRate = taxRate,
+                Note = note ?? string.Empty,
+                Status = OrderItemStatus.Pending
+            };
+        }
+
+        // Fiyat menü satırındadır; içerik 0 ₺ ile yazılır ki toplam ve ödemeler iki kez saymasın.
+        internal static OrderItem CreateSetMenuComponent(OrderItem parent, Product product)
+        {
+            if (product == null)
+                throw new DomainException("Geçersiz ürün ID'si.");
+
+            return new OrderItem
+            {
+                ParentOrderItem = parent,
+                Product = product,
+                ProductId = product.Id,
+                UnitPrice = 0m,
+                Quantity = parent.Quantity,
+                TaxRate = parent.TaxRate,
                 Status = OrderItemStatus.Pending,
                 PrepMinutes = product.PrepMinutes
             };

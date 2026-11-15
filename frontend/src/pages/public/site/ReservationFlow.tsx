@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Check, ChevronLeft, Minus, Plus } from 'lucide-react';
+import { Check, ChevronLeft, Copy, Minus, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { publicService } from '@/features/customerSite/api/publicService';
 import {
     formatDuration, isReservationDayOpen, type DaySlot, type PublicSite, type PublicTable, type ReservationStatusInfo,
 } from '@/features/customerSite/types';
+import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
 import { MyReservations } from './SiteChrome';
@@ -90,6 +93,8 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     const [contact, setContact] = useState('');
     const [note, setNote] = useState('');
     const [sending, setSending] = useState(false);
+    // Son gönderilen talep: onay ekranında kısa kod ve rezervasyon sayfasının bağlantısı gösterilir.
+    const [created, setCreated] = useState<{ token: string; code: string } | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     // Gönderimden sonra artar: seçilen aralığın doluluğu yeniden çekilir.
     const [refreshTick, setRefreshTick] = useState(0);
@@ -171,7 +176,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
         setSending(true);
         setFormError(null);
         try {
-            const created = await publicService.createReservation({
+            const reservation = await publicService.createReservation({
                 tableId: selected.id,
                 guestName: guestName.trim(),
                 contact: contact.trim(),
@@ -180,7 +185,8 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                 partySize,
                 note: note.trim(),
             });
-            onSent(created);
+            onSent(reservation);
+            setCreated({ token: reservation.accessToken, code: reservation.code });
             setSelected(null);
             setNote('');
             setRefreshTick(t => t + 1);
@@ -231,6 +237,8 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             </p>
                         </div>
                     </div>
+                    {created?.code && <ReservationCodeBox code={created.code} />}
+                    {created && <ReservationLinkBox token={created.token} />}
                     <MyReservations items={mine} />
                     <div className="flex flex-col gap-2.5">
                         <button type="button" onClick={onClose} className={primaryButton}>Restoran sayfasına dön</button>
@@ -249,6 +257,12 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                 <>
                     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-[26px] px-5 pb-8 pt-5">
                         <MyReservations items={mine} />
+                        {mine.length === 0 && (
+                            <p className="text-sm text-[var(--site-sub)]">
+                                Rezervasyonunuz var mı?{' '}
+                                <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[var(--site-accent)] underline-offset-4 hover:underline">Sorgulayın</Link>
+                            </p>
+                        )}
 
                         <fieldset className="m-0 min-w-0 border-0 p-0">
                             <legend className={legendClass}>Tarih</legend>
@@ -470,6 +484,71 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                     </div>
                 </form>
             )}
+        </div>
+    );
+}
+
+// Onay ekranındaki kısa kod: bağlantı kaybolursa müşteri bu kod ve telefonuyla /rezervasyon-sorgula'dan bulur.
+function ReservationCodeBox({ code }: { code: string }) {
+    const copy = async () => {
+        try {
+            await navigator.clipboard.writeText(code);
+            toast.success('Kod kopyalandı');
+        } catch {
+            toast.error('Kopyalanamadı; kodu not alın.');
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-center gap-2 rounded-2xl border-[1.5px] border-[var(--site-accent)] bg-[var(--site-card)] p-5 text-center">
+            <p className="text-sm font-semibold text-[var(--site-sub)]">Rezervasyon kodunuz</p>
+            <p aria-label={`Rezervasyon kodunuz: ${code.split('').join(' ')}`} className="font-mono text-[40px] font-bold leading-none tracking-[0.12em] tabular-nums">{code}</p>
+            <button
+                type="button"
+                onClick={copy}
+                className="mt-1 flex h-11 items-center justify-center gap-2 rounded-full border border-[var(--site-border-strong)] px-5 text-[15px] font-semibold hover:border-[var(--site-text)]"
+            >
+                <Copy className="h-4 w-4" aria-hidden="true" />
+                Kodu kopyala
+            </button>
+            <p className="max-w-xs text-[13px] leading-relaxed text-[var(--site-muted)]">
+                Bu kod ve telefon numaranızla rezervasyonunuzu <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[var(--site-text)] underline">sorgulayabilirsiniz</Link>.
+            </p>
+        </div>
+    );
+}
+
+// Onay ekranındaki bağlantı: rezervasyonun durumu ve (onaylanınca) ön sipariş bu sayfadan. Bağlantı bu cihazda da saklanır.
+function ReservationLinkBox({ token }: { token: string }) {
+    const path = `/rezervasyon/${token}`;
+    const url = `${window.location.origin}${path}`;
+
+    const copy = async () => {
+        try {
+            await navigator.clipboard.writeText(url);
+            toast.success('Bağlantı kopyalandı');
+        } catch {
+            toast.error('Kopyalanamadı; bağlantıyı basılı tutup kopyalayın.');
+        }
+    };
+
+    return (
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--site-border)] bg-[var(--site-card)] p-4">
+            <p className="text-[15px] font-semibold">Rezervasyonunuzu ve ön siparişinizi buradan takip edin</p>
+            <p className="break-all text-sm text-[var(--site-sub)]">{url}</p>
+            <div className="grid grid-cols-2 gap-2">
+                <Link to={path} className="flex h-12 items-center justify-center rounded-full bg-[var(--site-accent)] text-[15px] font-semibold text-[var(--site-on-accent)] no-underline hover:opacity-90">
+                    Sayfayı aç
+                </Link>
+                <button
+                    type="button"
+                    onClick={copy}
+                    className="flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--site-border-strong)] text-[15px] font-semibold hover:border-[var(--site-text)]"
+                >
+                    <Copy className="h-4 w-4" aria-hidden="true" />
+                    Kopyala
+                </button>
+            </div>
         </div>
     );
 }

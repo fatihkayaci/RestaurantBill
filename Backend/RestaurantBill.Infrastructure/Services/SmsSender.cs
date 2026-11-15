@@ -12,6 +12,9 @@ namespace RestaurantBill.Infrastructure.Services
             _logger = logger;
         }
 
+        // Yalnızca loglar; gerçek sağlayıcı bağlanana kadar müşteri telefon doğrulaması istenmez.
+        public bool IsConfigured => false;
+
         public Task SendAsync(string phoneNumber, string message)
         {
             _logger.LogInformation("SMS sent to {PhoneNumber}: {Message}", phoneNumber, message);

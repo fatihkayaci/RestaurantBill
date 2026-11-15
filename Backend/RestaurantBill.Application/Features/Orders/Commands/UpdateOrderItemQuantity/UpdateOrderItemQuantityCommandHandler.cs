@@ -32,18 +32,24 @@ namespace RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQua
                 return Result.Failure("Böyle bir sipariş bulunamadı.");
 
             // Adet artırmak sipariş almaktır, azaltmak gönderilmiş ürünü iptal etmektir.
-            int currentQuantity = order.OrderItems.FirstOrDefault(i => i.ProductId == request.ProductId)?.Quantity ?? 0;
+            OrderItem? line = request.OrderItemId is Guid id
+                ? order.OrderItems.FirstOrDefault(i => i.Id == id)
+                : order.OrderItems.FirstOrDefault(i => i.ProductId == request.ProductId && !i.IsSetMenuComponent);
+            int currentQuantity = line?.Quantity ?? 0;
             WaiterPermission permission = request.Quantity > currentQuantity ? WaiterPermission.TakeOrders : WaiterPermission.CancelAndDiscount;
-            string? accessError = await _db.CheckTableAccessAsync(_currentUserService, order.TableId, permission, cancellationToken);
+            string? accessError = await _db.CheckOrderAccessAsync(_currentUserService, order, permission, cancellationToken);
             if (accessError is not null)
                 return Result.Failure(accessError);
 
-            order.UpdateItemQuantity(request.ProductId, request.Quantity);
+            if (request.OrderItemId is Guid orderItemId)
+                order.UpdateOrderItemQuantity(orderItemId, request.Quantity);
+            else
+                order.UpdateItemQuantity(request.ProductId, request.Quantity);
 
             await _db.SaveChangesAsync(cancellationToken);
 
             User? creator = await _db.Users.FirstOrDefaultAsync(u => u.Id == order.CreatedUser, cancellationToken);
-            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, order.TableId, order.TotalPrice, creator?.FullName ?? string.Empty);
+            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, order, creator?.FullName ?? string.Empty);
             return Result.Success();
         }
     }

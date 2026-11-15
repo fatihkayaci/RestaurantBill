@@ -38,4 +38,10 @@ public class CashierNotificationService : ICashierNotificationService
     {
         await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("BillRequested", tableId, tableName, requestedByName);
     }
+
+    // Garson, mutfak ve kurye ekranları OnlineOrders grubunda değildir.
+    public async Task SendDeliveryOrdersChangedAsync(Guid restaurantId, DeliveryOrdersChangedDto payload)
+    {
+        await _hubContext.Clients.Group(HubGroups.OnlineOrders(restaurantId)).SendAsync("DeliveryOrdersChanged", payload);
+    }
 }

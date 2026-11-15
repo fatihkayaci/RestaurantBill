@@ -1,11 +1,16 @@
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Mappings;
 
 public static class MappingExtensions
 {
+    // Masası olmayan (paket) siparişin, etiketi (DeliveryScope.ApplyDeliveryLabel → "PAKET #123 · Moda") yüklenmediğinde
+    // ekranlarda masa adı yerine görünen adı.
+    public const string DeliveryTableName = "Paket";
+
     public static AuditLogDto ToDto(this AuditLog log) => new()
     {
         Id = log.Id,
@@ -85,11 +90,14 @@ public static class MappingExtensions
         Name = r.Name
     };
 
+    // Hesap şekli: üst düzeyde tek ürünler ve menü satırları; menünün içindeki ürünler satırın Components'ında.
+    // Kasa, garson, fiş ve ödeme ekranları bu şekli kullanır: menü tek satır, tek fiyat.
     public static OrderDto ToDto(this Order o) => new()
     {
         Id = o.Id,
         TableId = o.TableId,
-        TableName = o.Table?.Name ?? string.Empty,
+        TableName = o.TableId is null ? DeliveryTableName : o.Table?.Name ?? string.Empty,
+        OrderType = o.OrderType,
         Note = o.Note,
         TotalPrice = o.TotalPrice,
         PaidAmount = o.PaidOnAccount,
@@ -97,22 +105,50 @@ public static class MappingExtensions
         Status = o.Status,
         CreatedAt = o.CreatedAt,
         BillRequestedAt = o.BillRequestedAt,
-        OrderItems = o.OrderItems.Select(i => i.ToDto()).ToList()
+        OrderItems = o.OrderItems.Where(i => !i.IsSetMenuComponent).Select(i => i.ToLineDto(o)).ToList()
     };
 
-    public static OrderItemDto ToDto(this OrderItem i) => new()
+    // Mutfak şekli: menü satırının yerinde içindeki ürünler durur (menü adı ve notuyla); her ürün kendi
+    // istasyonuna düşer ve ayrı ayrı hazır işaretlenir. Menü satırının kendisi mutfağa gitmez.
+    public static OrderDto ToKitchenDto(this Order o)
+    {
+        OrderDto dto = o.ToDto();
+        dto.OrderItems = dto.OrderItems
+            .SelectMany(i => i.SetMenuId is null ? [i] : i.Components)
+            .ToList();
+        return dto;
+    }
+
+    private static OrderItemDto ToLineDto(this OrderItem i, Order order)
+    {
+        OrderItemDto dto = i.ToItemDto();
+        dto.Components = order.GetSetMenuComponents(i)
+            .Select(component =>
+            {
+                OrderItemDto componentDto = component.ToItemDto();
+                componentDto.ParentOrderItemId = i.Id;
+                componentDto.SetMenuName = dto.ProductName;
+                componentDto.SetMenuNote = string.IsNullOrEmpty(i.Note) ? null : i.Note;
+                return componentDto;
+            })
+            .ToList();
+        return dto;
+    }
+
+    private static OrderItemDto ToItemDto(this OrderItem i) => new()
     {
         Id = i.Id,
-        ProductId = i.ProductId,
-        ProductName = i.Product?.Name ?? string.Empty,
+        ProductId = i.ProductId ?? Guid.Empty,
+        ProductName = i.SetMenu?.Name ?? i.Product?.Name ?? string.Empty,
         UnitPrice = i.UnitPrice,
         Quantity = i.Quantity,
         Status = i.Status,
-        CategoryName = i.Product?.Category?.Name ?? string.Empty,
+        CategoryName = i.Product?.Category?.Name ?? i.SetMenu?.Category?.Name ?? string.Empty,
         TaxRate = i.TaxRate,
         Note = i.Note,
         CreatedAt = i.CreatedAt,
-        PrepMinutes = i.PrepMinutes
+        PrepMinutes = i.PrepMinutes,
+        SetMenuId = i.SetMenuId
     };
 
     public static ProductDto ToDto(this Product p) => new()
@@ -127,7 +163,8 @@ public static class MappingExtensions
         Description = p.Description,
         IsFeatured = p.IsFeatured,
         PrepMinutes = p.PrepMinutes,
-        TaxRate = p.TaxRate
+        TaxRate = p.TaxRate,
+        IsOutOfStock = p.IsOutOfStock
     };
 
     public static MembershipDto ToDto(this Membership m) => new()
@@ -191,6 +228,8 @@ public static class MappingExtensions
     {
         Id = r.Id,
         TableId = r.TableId,
+        Code = ReservationCode.Format(r.Code),
+        AccessToken = r.AccessToken,
         GuestName = r.GuestName,
         Contact = r.Contact,
         ReservationTime = r.ReservationTime,
@@ -215,11 +254,16 @@ public static class MappingExtensions
         IsPhoneVerified = u.IsPhoneVerified,
         IsEmailVerified = u.IsEmailVerified,
         RegionIds = ub.RegionIds.ToList(),
+        RestrictedRegionIds = ub.RestrictedRegionIds.ToList(),
+        TableIds = ub.TableIds.ToList(),
         CategoryIds = ub.CategoryIds.ToList(),
-        // Garson dışındaki roller kendi ekranlarında kısıtsızdır.
+        // Garson ve kasiyer yetkileri yalnızca kendi rollerinde geçerlidir; diğer roller bu işlemlerde kısıtsızdır.
         CanTakeOrders = ub.Role != UserRole.Waiter || ub.CanTakeOrders,
         CanTakePayment = ub.Role != UserRole.Waiter || ub.CanTakePayment,
         CanCancelAndDiscount = ub.Role != UserRole.Waiter || ub.CanCancelAndDiscount,
-        CanTransferAndReserve = ub.Role != UserRole.Waiter || ub.CanTransferAndReserve
+        CanTransferAndReserve = ub.Role != UserRole.Waiter || ub.CanTransferAndReserve,
+        CanApplyDiscount = ub.Role != UserRole.Cashier || ub.CanApplyDiscount,
+        MaxDiscountPercent = ub.Role == UserRole.Cashier ? ub.MaxDiscountPercent : 100,
+        CanTransferTables = ub.Role != UserRole.Cashier || ub.CanTransferTables
     };
 }

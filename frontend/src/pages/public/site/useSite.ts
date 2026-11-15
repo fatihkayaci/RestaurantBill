@@ -20,19 +20,28 @@ export function useSite() {
     return { site, error };
 }
 
-// ── Bu cihazdan gönderilen rezervasyon talepleri (yalnız kimlikler, tarayıcıda) ────────────────────
+// ── Bu cihazdan gönderilen rezervasyon talepleri (yalnız bağlantı anahtarları, tarayıcıda) ─────────
+// Anahtar rezervasyon sayfasının (/rezervasyon/:token) gizli parçasıdır; kimlik değildir. Eski sürümün kimlik listesi
+// (rb:reservations:*) artık okunmaz ve silinir: kimlikle sorgu güvenli değildi.
 const MAX_SAVED = 5;
-const savedKey = () => `rb:reservations:${getTenantSlug() ?? 'dev'}`;
+const savedKey = () => `rb:reservation-links:${getTenantSlug() ?? 'dev'}`;
+const legacyKey = () => `rb:reservations:${getTenantSlug() ?? 'dev'}`;
 
-function readSavedIds(): string[] {
+function readSavedTokens(): string[] {
     try {
+        localStorage.removeItem(legacyKey());
         const parsed: unknown = JSON.parse(localStorage.getItem(savedKey()) ?? '[]');
-        return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+        return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
     } catch { return []; }
 }
 
-function saveIds(ids: string[]) {
-    try { localStorage.setItem(savedKey(), JSON.stringify(ids.slice(0, MAX_SAVED))); } catch { /* özel pencere */ }
+function saveTokens(tokens: string[]) {
+    try { localStorage.setItem(savedKey(), JSON.stringify(tokens.slice(0, MAX_SAVED))); } catch { /* özel pencere */ }
+}
+
+/** Rezervasyon sayfası açıldığında bağlantı bu cihazın listesine eklenir (başka cihazdan gelen bağlantı da). */
+export function rememberReservationToken(token: string) {
+    saveTokens([token, ...readSavedTokens().filter(t => t !== token)]);
 }
 
 export function useMyReservations() {
@@ -40,22 +49,27 @@ export function useMyReservations() {
 
     useEffect(() => {
         let cancelled = false;
-        const ids = readSavedIds();
-        if (ids.length === 0) return;
-        Promise.all(ids.map(id => publicService.getReservationStatus(id).catch(() => null)))
+        const tokens = readSavedTokens();
+        if (tokens.length === 0) return;
+        Promise.all(tokens.map(token => publicService.getReservationByToken(token)
+            .then((r): ReservationStatusInfo => ({
+                accessToken: token, code: r.code, status: r.status, tableName: r.tableName, guestName: r.guestName,
+                date: r.date, time: r.time, endTime: r.endTime, partySize: r.partySize,
+            }))
+            .catch(() => null)))
             .then(results => {
                 if (cancelled) return;
                 const found = results.filter((r): r is ReservationStatusInfo => r !== null);
                 setMine(found);
-                saveIds(found.map(r => r.id));
+                saveTokens(found.map(r => r.accessToken));
             });
         return () => { cancelled = true; };
     }, []);
 
     const add = (created: ReservationStatusInfo) => {
         setMine(prev => {
-            const next = [created, ...prev.filter(r => r.id !== created.id)];
-            saveIds(next.map(r => r.id));
+            const next = [created, ...prev.filter(r => r.accessToken !== created.accessToken)];
+            saveTokens(next.map(r => r.accessToken));
             return next;
         });
     };

@@ -47,6 +47,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.ReservationTable
 
             Reservation reservation = Reservation.Create(table, request.GuestName, request.Contact, reservationTime, request.Note,
                 reservationTime.AddMinutes(settings.DurationMinutes));
+            await ReservationCodes.EnsureUniqueAsync(_db, reservation, cancellationToken);
             _db.Reservations.Add(reservation);
 
             await _db.SaveChangesAsync(cancellationToken);

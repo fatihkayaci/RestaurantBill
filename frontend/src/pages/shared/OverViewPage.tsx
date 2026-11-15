@@ -3,14 +3,14 @@ import { Plus, SlidersHorizontal } from 'lucide-react';
 import { statsService } from '@/features/stats/api/statsService';
 import type { DashboardCardId, DashboardStats } from '@/features/stats/types';
 import { DashboardCard } from '@/features/stats/components/DashboardCards';
-import { ALL_CARDS, CARD_META } from '@/features/stats/dashboardCards';
+import { ALL_CARDS, CARD_META, knownCards } from '@/features/stats/dashboardCards';
 import DashboardCustomizeDrawer from '@/features/stats/components/DashboardCustomizeDrawer';
 import { PageError, PageLoading } from '@/components/ui/page-state';
 import { DATA_CHANGED_EVENT } from '@/lib/axiosInstance';
 import { OVERDUE_EVENT } from '@/components/layout/OverdueAlerts';
 import { cn } from '@/lib/utils';
 
-/** Canlı kartlar (masa, mutfak, bekleyenler) bu aralıkla yenilenir. */
+/** Canlı kartlar (masa, mutfak, bekleyenler) bu aralıkla yenilenir; masa alanı ayrıca SignalR olaylarıyla yenilenir. */
 const REFRESH_MS = 30_000;
 
 // Şube Genel Bakış'ı: kullanıcının seçtiği kartlar, seçtiği sırayla. Tasarım: canvas "Genel Bakış Dashboard".
@@ -30,7 +30,7 @@ export default function OverViewPage() {
     useEffect(() => {
         load();
         statsService.getDashboardLayout()
-            .then(setCards)
+            .then(list => setCards(knownCards(list)))
             .catch(() => setCards([...ALL_CARDS]));
 
         const timer = window.setInterval(load, REFRESH_MS);
@@ -85,7 +85,7 @@ export default function OverViewPage() {
                     <div className="grid grid-flow-row-dense grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
                         {cards.map(id => (
                             <div key={id} className={cn('min-w-0 [&>section]:h-full', CARD_META[id].span)}>
-                                <DashboardCard id={id} stats={stats} now={now} />
+                                <DashboardCard id={id} stats={stats} now={now} onRefresh={load} />
                             </div>
                         ))}
                         <button
@@ -104,7 +104,7 @@ export default function OverViewPage() {
             )}
 
             {customizeOpen && cards && (
-                <DashboardCustomizeDrawer cards={cards} onSaved={setCards} onClose={() => setCustomizeOpen(false)} />
+                <DashboardCustomizeDrawer cards={cards} onSaved={list => setCards(knownCards(list))} onClose={() => setCustomizeOpen(false)} />
             )}
         </div>
     );

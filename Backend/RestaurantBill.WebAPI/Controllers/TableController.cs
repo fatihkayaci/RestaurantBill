@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantBill.Application.Features.Tables.Commands.BulkCreateTables;
 using RestaurantBill.Application.Features.Tables.Commands.CancelReservationToTable;
 using RestaurantBill.Application.Features.Tables.Commands.CreateTable;
 using RestaurantBill.Application.Features.Tables.Commands.DeleteTable;
@@ -28,7 +29,7 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <summary>
         /// Returns all tables.
         /// </summary>
-        [Authorize(Roles = "Owner,Admin,Waiter,Kitchen")]
+        [Authorize(Roles = "Owner,Admin,Waiter,Kitchen,Cashier")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -75,6 +76,20 @@ namespace RestaurantBill.WebAPI.Controllers
         [Authorize(Roles = "Owner,Admin")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateTable([FromBody]CreateTableCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+        /// <summary>
+        /// Creates up to 100 tables in one region in a single transaction ("Masa 1" … "Masa 20").
+        /// Names that already exist in the region are skipped and listed in the response.
+        /// </summary>
+        /// <param name="command">Region, name prefix, start number and count.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        /// <returns>200 OK with created and skipped table names.</returns>
+        [Authorize(Roles = "Owner,Admin")]
+        [HttpPost("bulk")]
+        public async Task<IActionResult> BulkCreateTables([FromBody]BulkCreateTablesCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);

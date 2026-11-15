@@ -1,0 +1,43 @@
+namespace RestaurantBill.Application.DTOs;
+
+/// <summary>
+/// Set menü ("Adana Menü"). Garson ekranı ve yönetici ekranı aynı şekli kullanır; maliyet alanları yalnızca
+/// Admin/Owner'a giden yanıtta doludur, diğer rollerde null.
+/// </summary>
+public class SetMenuDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+    public int SortOrder { get; set; }
+    public Guid? CategoryId { get; set; }
+    public string? CategoryName { get; set; }
+    public List<SetMenuSlotDto> Slots { get; set; } = [];
+    /// <summary>Varsayılan seçeneklerle ürün maliyetlerinin toplamı (yalnızca Admin/Owner).</summary>
+    public decimal? EstimatedCost { get; set; }
+}
+
+public class SetMenuSlotDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+    /// <summary>Tek seçenekli bölüm: sabit ürün, garson seçim yapmaz.</summary>
+    public bool IsFixed { get; set; }
+    public List<SetMenuSlotOptionDto> Options { get; set; } = [];
+}
+
+public class SetMenuSlotOptionDto
+{
+    public Guid ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public decimal Surcharge { get; set; }
+    public bool IsDefault { get; set; }
+    /// <summary>Ürün pasifse bu seçenek siparişte seçilemez.</summary>
+    public bool IsProductActive { get; set; }
+    /// <summary>Ürünün birim maliyeti (yalnızca Admin/Owner).</summary>
+    public decimal? Cost { get; set; }
+}

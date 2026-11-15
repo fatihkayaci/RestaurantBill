@@ -189,7 +189,7 @@ public class ShiftFlowTests : IntegrationTestBase
         Table table = Table.Create("Masa 1", "", DefaultRegionId);
         await DbContext.Tables.AddAsync(table);
         await DbContext.SaveChangesAsync();
-        Order order = Order.Create(table.Id);
+        Order order = CreateOrder(table);
         await DbContext.Orders.AddAsync(order);
         await DbContext.SaveChangesAsync();
 

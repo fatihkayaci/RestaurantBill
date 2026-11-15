@@ -6,5 +6,7 @@ public enum UserRole
     Waiter = 2,
     Cashier = 3,
     Kitchen = 4,
-    Owner = 5
+    Owner = 5,
+    // Paket siparişleri teslim eden personel; diğer personel gibi UserBranch ile şubeye bağlıdır.
+    Courier = 6
 }

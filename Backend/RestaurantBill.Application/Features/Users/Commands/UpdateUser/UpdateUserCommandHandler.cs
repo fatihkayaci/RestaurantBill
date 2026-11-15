@@ -50,7 +50,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
             }
             else
             {
-                if (!branchIds.Contains(userBranch.BranchId)) return Result.Failure("Kullanıcı bulunamadı.");
+                if (!branchIds.Contains(userBranch.BranchId)) return Result.Failure("Çalışan bulunamadı.");
                 if (request.Role == UserRole.Owner) return Result.Failure("Personele Owner rolü atanamaz.");
                 if (userBranch.Role == UserRole.Admin && request.UserId != _currentUser.UserId && _currentUser.Role != nameof(UserRole.Owner))
                     return Result.Failure("Admin kullanıcıları yalnızca Owner düzenleyebilir.");
@@ -78,7 +78,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.UpdateUser
             else if (userBranch is not null && request.BranchId.HasValue && request.BranchId.Value != userBranch.BranchId)
             {
                 if (_currentUser.Role != nameof(UserRole.Owner))
-                    return Result.Failure("Bu şubeye kullanıcı taşıma yetkiniz yok.");
+                    return Result.Failure("Bu şubeye çalışan taşıma yetkiniz yok.");
 
                 Branch? targetBranch = await _db.Branches
                     .FirstOrDefaultAsync(b => b.Id == request.BranchId.Value && b.Company.OwnerUserId == _currentUser.UserId && !b.IsDeleted, cancellationToken);

@@ -65,8 +65,12 @@ public class CreateOrderRequestCommandHandler(IAppDbContext db, ITenantResolver 
 
         Guid branchId = table.Region.BranchId;
 
+        QrFeatures features = await CustomerSiteScope.QrFeaturesOfAsync(db, branchId, cancellationToken);
+        if (!features.OrderingEnabled)
+            return Result<OrderRequestStatusDto>.Failure(CustomerSiteScope.OrderingDisabledMessage);
+
         int pendingCount = await db.OrderRequests
-            .CountAsync(r => r.TableId == table.Id && r.Status == OrderRequestStatus.Pending, cancellationToken);
+            .CountAsync(r => r.TableId == table.Id && r.Status == OrderRequestStatus.Pending && r.Kind == OrderRequestKind.TableQr, cancellationToken);
         if (pendingCount >= CustomerSiteScope.MaxPendingOrderRequestsPerTable)
             return Result<OrderRequestStatusDto>.Failure("Bu masadan gönderilen siparişler onay bekliyor. Lütfen garsonun onaylamasını bekleyin.");
 

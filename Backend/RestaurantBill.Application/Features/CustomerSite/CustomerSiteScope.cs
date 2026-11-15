@@ -38,6 +38,35 @@ public static class CustomerSiteScope
         return await query.OrderBy(b => b.CreatedAt).FirstOrDefaultAsync(cancellationToken);
     }
 
+    public const string OrderingDisabledMessage = "Bu restoranda QR ile sipariş verilemiyor. Siparişiniz için lütfen garsona haber verin.";
+    public const string CallWaiterDisabledMessage = "Bu restoranda QR ile garson çağrılamıyor.";
+    public const string BillRequestDisabledMessage = "Bu restoranda QR ile hesap istenemiyor. Lütfen garsona haber verin.";
+    public const string TableNotFoundMessage = "Bu masa bulunamadı. Lütfen garsona haber verin.";
+
+    // Şubenin masa QR anahtarları; şube bulunamazsa ya da hiç kaydedilmemişse varsayılanlar (hepsi açık).
+    public static async Task<QrFeatures> QrFeaturesOfAsync(IAppDbContext db, Guid branchId, CancellationToken cancellationToken)
+    {
+        QrFeatures? features = await db.Branches.AsNoTracking()
+            .Where(b => b.Id == branchId)
+            .Select(b => b.QrFeatures)
+            .FirstOrDefaultAsync(cancellationToken);
+        return features ?? QrFeatures.Default;
+    }
+
+    // Slug'ın şirketine ait, hizmet dışı olmayan masa (bölgesiyle). Yoksa null.
+    public static async Task<Table?> ResolveTableAsync(IAppDbContext db, ITenantResolver tenant, Guid tableId, CancellationToken cancellationToken)
+    {
+        Company? company = await ResolveCompanyAsync(db, tenant, cancellationToken);
+        if (company is null)
+            return null;
+
+        Table? table = await db.Tables
+            .Include(t => t.Region)
+            .FirstOrDefaultAsync(t => t.Id == tableId && t.Region.Branch.CompanyId == company.Id, cancellationToken);
+
+        return table is null || table.Status == TableStatus.OutOfService ? null : table;
+    }
+
     public static TimeZoneInfo ZoneOf(string timeZoneId)
     {
         try

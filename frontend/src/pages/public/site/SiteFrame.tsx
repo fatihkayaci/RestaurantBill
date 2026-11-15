@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
 import { cn } from '@/lib/utils';
+import { useOnlineOrderingAvailable } from '@/features/delivery/useOnlineOrderingAvailable';
+import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { SiteShell } from './SiteChrome';
 import {
     FONTS_HREF, MOTION_CSS, RESERVATION_PATH, eyebrow, footLabel, instagramHandle, line, moreArrow, moreLink, sans, serif,
@@ -55,6 +57,7 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
     const name = restaurantName(site);
     const nav = siteNav(site);
     const canReserve = canReserveOnline(site);
+    const canOrder = useOnlineOrderingAvailable();
 
     useEffect(() => {
         if (!open) return;
@@ -82,6 +85,12 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
                             {item.label}
                         </Link>
                     ))}
+                    {canReserve && (
+                        <Link to={RESERVATION_LOOKUP_PATH} aria-current={current === 'rezervasyon-sorgula' ? 'page' : undefined}
+                            className={cn(underlineLink, 'text-white', current === 'rezervasyon-sorgula' && 'bg-[length:100%_1px]')}>
+                            Rezervasyon sorgula
+                        </Link>
+                    )}
                 </nav>
                 <Link to="/" onClick={toTop}
                     className={cn(serif, 'min-w-0 truncate normal-case italic leading-none tracking-normal text-white transition-[font-size] lg:justify-self-center', ease,
@@ -96,6 +105,15 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
                             {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 8h16M4 16h16" />}
                         </svg>
                     </button>
+                    {canOrder && (
+                        <Link to="/siparis"
+                            className={cn('hidden items-center whitespace-nowrap rounded-full border px-4 transition-all sm:flex sm:px-5', ease,
+                                compact
+                                    ? 'h-10 border-white/40 text-white hover:bg-white/10'
+                                    : 'h-11 border-white/40 bg-white/15 text-white backdrop-blur-[12px] hover:bg-white/25')}>
+                            Paket sipariş
+                        </Link>
+                    )}
                     {canReserve && (
                         <Link to={RESERVATION_PATH} aria-current={current === 'rezervasyon' ? 'page' : undefined}
                             className={cn('flex items-center whitespace-nowrap rounded-full border px-4 transition-all sm:px-5', ease,
@@ -118,6 +136,18 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
                             {item.label}
                         </Link>
                     ))}
+                    {canOrder && (
+                        <Link to="/siparis" onClick={() => setOpen(false)}
+                            className={cn(serif, 'rounded-2xl px-4 py-2.5 text-[30px] leading-tight text-white hover:bg-white/10')}>
+                            Paket sipariş
+                        </Link>
+                    )}
+                    {canReserve && (
+                        <Link to={RESERVATION_LOOKUP_PATH} onClick={() => setOpen(false)} aria-current={current === 'rezervasyon-sorgula' ? 'page' : undefined}
+                            className={cn(serif, 'rounded-2xl px-4 py-2.5 text-[30px] leading-tight text-white hover:bg-white/10', current === 'rezervasyon-sorgula' && 'italic')}>
+                            Rezervasyon sorgula
+                        </Link>
+                    )}
                 </nav>
             )}
         </div>
@@ -272,6 +302,7 @@ export function SiteFooter({ site }: { site: PublicSite }) {
                         <nav aria-label="Alt menü" className="flex flex-wrap gap-x-6 gap-y-2">
                             {nav.map(item => <Link key={item.key} to={item.to} className={cn(underlineLink, 'text-[#6F6A63]')}>{item.label}</Link>)}
                             {canReserve && <Link to={RESERVATION_PATH} className={cn(underlineLink, 'text-[#6F6A63]')}>Rezervasyon</Link>}
+                            {canReserve && <Link to={RESERVATION_LOOKUP_PATH} className={cn(underlineLink, 'text-[#6F6A63]')}>Rezervasyon sorgula</Link>}
                             <Link to="/gizlilik-politikasi" className={cn(underlineLink, 'text-[#6F6A63]')}>KVKK</Link>
                             <Link to="/login" className={cn(underlineLink, 'text-[#6F6A63]')}>Personel girişi</Link>
                         </nav>

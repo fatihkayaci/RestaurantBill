@@ -10,6 +10,7 @@ using RestaurantBill.Application.Features.Restaurants.Queries.GetMyBranches;
 using RestaurantBill.Application.Features.Branches.Payment;
 using RestaurantBill.Application.Features.Branches.Site;
 using RestaurantBill.Application.Features.Branches.ReservationRules;
+using RestaurantBill.Application.Features.Branches.QrMenu;
 using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.WebAPI.Controllers;
@@ -130,6 +131,26 @@ public class BranchController : BaseController
     }
     #endregion
 
+    #region qr menu features
+    /// <summary>Oturumdaki şubenin masa QR karşılama ekranı anahtarları (kaydedilmemişse hepsi açık).</summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpGet("qr-features")]
+    public async Task<IActionResult> GetQrFeatures(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetBranchQrFeaturesQuery(), cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>Sipariş, garson çağır, hesap iste, paket servis ve rezervasyon bağlantısı anahtarları.</summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPut("qr-features")]
+    public async Task<IActionResult> UpdateQrFeatures([FromBody] UpdateBranchQrFeaturesCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+    #endregion
+
     #region restaurant site
     /// <summary>Oturumdaki şubenin müşteri sitesi içeriği (başlık, hikâye, saatler, fotoğraflar).</summary>
     [Authorize(Roles = "Owner,Admin")]
@@ -157,6 +178,8 @@ public class BranchController : BaseController
         if (!TryParseSlot(slot, out SiteImageSlot imageSlot)) return BadRequest(new { Error = "Geçersiz görsel alanı." });
         if (file is null || file.Length == 0) return BadRequest(new { Error = "Dosya seçilmedi." });
         if (file.Length > 10_000_000) return BadRequest(new { Error = "Görsel en fazla 10 MB olabilir." });
+        // Biçim burada Content-Type'tan değil, depolama servisinde dosyanın baytlarından doğrulanır (yalnızca JPEG/PNG/WebP);
+        // desteklenmeyen biçim handler'dan "Desteklenmeyen görsel biçimi..." hatasıyla döner.
 
         await using Stream stream = file.OpenReadStream();
         var result = await _mediator.Send(new SetBranchSiteImageCommand { Slot = imageSlot, Content = stream }, cancellationToken);

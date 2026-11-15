@@ -20,6 +20,7 @@ public class PaymentLineItemConfiguration : IEntityTypeConfiguration<PaymentLine
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(l => l.ProductId);
+        builder.HasIndex(l => l.SetMenuId);
         builder.HasIndex(l => l.PaymentId);
     }
 }

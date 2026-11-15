@@ -22,6 +22,16 @@ public static class RateLimitingExtensions
             // Müşteri sitesi (girişsiz uçlar): okuma bol, yazma (sipariş/rezervasyon talebi) sıkı.
             options.AddPolicy("public-read", context => PerClientWindow(context, "public-read", 120));
             options.AddPolicy("public-write", context => PerClientWindow(context, "public-write", 20));
+            // Masa QR'ı "Garson çağır" / "Hesap iste": masa başına 60 sn bekleme sunucuda ayrıca uygulanır; bu sınır
+            // tek bir cihazın masa masa dolaşıp garsonları meşgul etmesini keser.
+            options.AddPolicy("public-table-action", context => PerClientWindow(context, "public-table-action", 6));
+            // Online paket sipariş gönderimi: IP başına 10 dakikada 5. Sunucu ayrıca numara ve IP başına sınır uygular.
+            options.AddPolicy("delivery-write", context => PerClientWindow(context, "delivery-write", 5, TimeSpan.FromMinutes(10)));
+            // SMS doğrulama kodu gönder/doğrula: IP başına 10 dakikada 10 (numara başına bekleme ve saatlik sınır sunucuda).
+            options.AddPolicy("otp", context => PerClientWindow(context, "otp", 10, TimeSpan.FromMinutes(10)));
+            // "Rezervasyon sorgula" (kod + telefon): IP başına 10 dakikada 10. Kod başına 5 hatalı denemede 15 dakikalık
+            // kilit sunucuda ayrıca uygulanır (ReservationLookupGuard).
+            options.AddPolicy("reservation-lookup", context => PerClientWindow(context, "reservation-lookup", 10, TimeSpan.FromMinutes(10)));
 
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
@@ -32,6 +42,9 @@ public static class RateLimitingExtensions
     // Sunucuda API nginx arkasında çalışır; bağlantı adresi hep 127.0.0.1 olur ve tüm müşteriler tek
     // kovaya düşer. Bu yüzden önce proxy'nin yazdığı X-Forwarded-For'un ilk adresine bakılır.
     private static RateLimitPartition<string> PerClientWindow(HttpContext context, string policy, int permitLimit)
+        => PerClientWindow(context, policy, permitLimit, TimeSpan.FromMinutes(1));
+
+    private static RateLimitPartition<string> PerClientWindow(HttpContext context, string policy, int permitLimit, TimeSpan window)
     {
         string? forwarded = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim();
         string client = !string.IsNullOrWhiteSpace(forwarded)
@@ -43,7 +56,7 @@ public static class RateLimitingExtensions
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = permitLimit,
-                Window = TimeSpan.FromMinutes(1),
+                Window = window,
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             });

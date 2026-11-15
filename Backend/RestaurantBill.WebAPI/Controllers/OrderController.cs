@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
+using RestaurantBill.Application.Features.Orders.Commands.AddSetMenuToOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
@@ -11,6 +12,7 @@ using RestaurantBill.Application.Features.Orders.Commands.TransferOrder;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemQuantity;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderStatus;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemStatus;
+using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemsStatus;
 using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemNote;
 using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashierQuery;
@@ -67,6 +69,17 @@ namespace RestaurantBill.WebAPI.Controllers
         [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost("add-product")]
         public async Task<IActionResult> AddProducts([FromBody] AddProductToOrderCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+        /// <summary>
+        /// Adds a set menu to an order as one line. Body: { orderId, setMenuId, quantity, note, selections: [{ slotId, productId }] }.
+        /// Slots without a selection use their default option. The price is computed on the server. Returns the new line's id.
+        /// </summary>
+        [Authorize(Roles = "Owner,Admin,Waiter")]
+        [HttpPost("add-set-menu")]
+        public async Task<IActionResult> AddSetMenu([FromBody] AddSetMenuToOrderCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);
@@ -154,6 +167,19 @@ namespace RestaurantBill.WebAPI.Controllers
         {
             command.OrderId = orderId;
             command.OrderItemId = itemId;
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
+        /// <summary>
+        /// Updates the status of several items of one order in a single request (Kitchen pass actions).
+        /// Body: { "orderItemIds": [...], "status": 3 }. Items that become Ready produce one ItemsReady event.
+        /// </summary>
+        [Authorize(Roles = "Owner,Admin,Kitchen,Waiter")]
+        [HttpPost("{orderId}/items/status")]
+        public async Task<IActionResult> UpdateItemsStatus([FromRoute] Guid orderId, [FromBody] UpdateOrderItemsStatusCommand command, CancellationToken cancellationToken)
+        {
+            command.OrderId = orderId;
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);
         }

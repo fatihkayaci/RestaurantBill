@@ -21,12 +21,19 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         public DateTime? HireDate { get; set; }
         // Garson bölgeleri (boş = tüm bölgeler) ve garson yetkileri; null = varsayılan / değiştirme.
         public List<Guid>? RegionIds { get; set; }
+        // Garsonun masa masa baktığı bölgeler ("Seçili masalar") ve bu bölgelerde seçtiği masalar; null = değiştirme.
+        public List<Guid>? RestrictedRegionIds { get; set; }
+        public List<Guid>? TableIds { get; set; }
         // Mutfak kategorileri (boş = tüm kategoriler); null = varsayılan / değiştirme.
         public List<Guid>? CategoryIds { get; set; }
         public bool? CanTakeOrders { get; set; }
         public bool? CanTakePayment { get; set; }
         public bool? CanCancelAndDiscount { get; set; }
         public bool? CanTransferAndReserve { get; set; }
+        // Kasiyer yetkileri ve indirim sınırı (%1–100, 100 = sınırsız); null = varsayılan / değiştirme.
+        public bool? CanApplyDiscount { get; set; }
+        public int? MaxDiscountPercent { get; set; }
+        public bool? CanTransferTables { get; set; }
 
         public string[] CacheKeysToInvalidate => ["stuff:all"];
         public string IdempotencyKey => $"create-user:{UserName}";

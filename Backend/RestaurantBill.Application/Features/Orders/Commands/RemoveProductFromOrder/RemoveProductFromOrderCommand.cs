@@ -7,5 +7,7 @@ namespace RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromO
     {
         public Guid OrderId { get; set; }
         public Guid ProductId { get; set; }
+        /// <summary>Doluysa satır Id ile çıkarılır (menü satırları için zorunlu; ProductId yok sayılır).</summary>
+        public Guid? OrderItemId { get; set; }
     }
 }

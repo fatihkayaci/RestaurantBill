@@ -60,7 +60,7 @@ public abstract class WaiterTestBase : ApplicationTestBase
         Table table = Table.Create(tableName, "", region.Id);
         table.Occupy();
         DbContext.Tables.Add(table);
-        Order order = Order.Create(table.Id);
+        Order order = Order.Create(table.Id, region.BranchId);
         order.AddItem(Product, 2, 10m);
         DbContext.Orders.Add(order);
         await DbContext.SaveChangesAsync();

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarCheck, Phone, Settings2, Users } from 'lucide-react';
+import { CalendarCheck, Phone, Search, Settings2, Users } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import { reservationSettingsService } from '@/features/customerSite/api/reservationSettingsService';
@@ -9,7 +10,10 @@ import {
 } from '@/features/customerSite/types';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { getApiErrorMessage } from '@/lib/apiError';
-import ReservationSettingsModal from './components/ReservationSettingsModal';
+import { PreOrderBadge, PreOrderPanel, ReservationArrivalActions } from '@/features/customerSite/components/ReservationArrival';
+import { ReservationCodeBadge, ReservationShareActions } from '@/features/customerSite/components/ReservationShare';
+import { normalizeReservationCodeQuery } from '@/features/customerSite/reservationCode';
+import { settingsPath } from './settings/settingsTabs';
 
 type Decision = 'confirm' | 'reject' | 'cancel';
 
@@ -17,6 +21,17 @@ type Decision = 'confirm' | 'reject' | 'cancel';
 function formatDay(date: string): string {
     const [year, month, day] = date.split('-').map(Number);
     return new Date(year, month - 1, day).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
+}
+
+// Arama: kod (büyük/küçük harf, boşluk ve tire fark etmez), misafir adı ya da telefonun rakamları.
+function matches(reservation: StaffReservation, query: string): boolean {
+    const text = query.trim();
+    if (!text) return true;
+    const code = normalizeReservationCodeQuery(text);
+    if (code && normalizeReservationCodeQuery(reservation.code).includes(code)) return true;
+    if (reservation.guestName.toLocaleLowerCase('tr-TR').includes(text.toLocaleLowerCase('tr-TR'))) return true;
+    const digits = text.replace(/\D/g, '');
+    return digits.length >= 3 && reservation.contact.replace(/\D/g, '').includes(digits);
 }
 
 const DECISION_DONE: Record<Decision, string> = {
@@ -32,7 +47,7 @@ export default function ReservationsPage() {
     const [loading, setLoading] = useState(true);
     const [busyId, setBusyId] = useState<string | null>(null);
     const [rules, setRules] = useState<ReservationRules | null>(null);
-    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [query, setQuery] = useState('');
 
     useEffect(() => {
         reservationSettingsService.get()
@@ -74,8 +89,9 @@ export default function ReservationsPage() {
         }
     };
 
-    const pending = reservations.filter(r => r.status === RESERVATION_PENDING);
-    const confirmed = reservations.filter(r => r.status === RESERVATION_CONFIRMED);
+    const visible = reservations.filter(r => matches(r, query));
+    const pending = visible.filter(r => r.status === RESERVATION_PENDING);
+    const confirmed = visible.filter(r => r.status === RESERVATION_CONFIRMED);
 
     const card = (reservation: StaffReservation) => {
         const isPending = reservation.status === RESERVATION_PENDING;
@@ -89,13 +105,19 @@ export default function ReservationsPage() {
                         </p>
                         <p className="text-sm text-rb-text-sub">{formatDay(reservation.date)}</p>
                     </div>
-                    <span className="shrink-0 rounded-lg bg-rb-gold-bg px-2.5 py-1 text-sm font-semibold text-foreground">
-                        {reservation.tableName}
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <span className="rounded-lg bg-rb-gold-bg px-2.5 py-1 text-sm font-semibold text-foreground">
+                            {reservation.tableName}
+                        </span>
+                        <ReservationCodeBadge code={reservation.code} />
+                    </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5 text-sm text-foreground">
-                    <p className="text-base font-semibold">{reservation.guestName}</p>
+                    <p className="flex flex-wrap items-center gap-2 text-base font-semibold">
+                        {reservation.guestName}
+                        <PreOrderBadge reservation={reservation} />
+                    </p>
                     <a href={`tel:${reservation.contact.replace(/\s/g, '')}`} className="flex items-center gap-2 self-start text-foreground underline-offset-4 hover:underline">
                         <Phone className="h-4 w-4 shrink-0 text-rb-text-sub" aria-hidden="true" />
                         {reservation.contact}
@@ -110,6 +132,8 @@ export default function ReservationsPage() {
                         </p>
                     )}
                 </div>
+
+                <ReservationShareActions reservation={reservation} />
 
                 {isPending ? (
                     <div className="mt-auto grid grid-cols-2 gap-2">
@@ -131,14 +155,18 @@ export default function ReservationsPage() {
                         </button>
                     </div>
                 ) : (
-                    <button
-                        type="button"
-                        onClick={() => decide(reservation, 'cancel')}
-                        disabled={busy}
-                        className="mt-auto h-11 rounded-[10px] border border-border bg-card text-sm font-semibold text-foreground transition-colors hover:border-rb-red hover:text-rb-red disabled:opacity-50"
-                    >
-                        Rezervasyonu iptal et
-                    </button>
+                    <div className="mt-auto flex flex-col gap-2">
+                        <PreOrderPanel reservation={reservation} />
+                        <ReservationArrivalActions reservation={reservation} onChanged={load} disabled={busy} />
+                        <button
+                            type="button"
+                            onClick={() => decide(reservation, 'cancel')}
+                            disabled={busy}
+                            className="h-10 rounded-[10px] text-sm font-semibold text-rb-text-sub transition-colors hover:text-rb-red disabled:opacity-50"
+                        >
+                            Rezervasyonu iptal et
+                        </button>
+                    </div>
                 )}
             </article>
         );
@@ -161,24 +189,14 @@ export default function ReservationsPage() {
                         </p>
                     )}
                 </div>
-                <button
-                    type="button"
-                    onClick={() => setSettingsOpen(true)}
-                    disabled={!rules}
-                    className="flex h-10 items-center gap-2 rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground transition-colors hover:border-rb-gold disabled:opacity-50"
+                <Link
+                    to={settingsPath('rezervasyon')}
+                    className="flex h-10 items-center gap-2 rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground transition-colors hover:border-rb-gold"
                 >
                     <Settings2 className="h-4 w-4" aria-hidden="true" />
-                    Rezervasyon ayarları
-                </button>
+                    Rezervasyon ve ön sipariş ayarları
+                </Link>
             </div>
-
-            {settingsOpen && rules && (
-                <ReservationSettingsModal
-                    rules={rules}
-                    onClose={() => setSettingsOpen(false)}
-                    onSaved={saved => { setRules(saved); setSettingsOpen(false); }}
-                />
-            )}
 
             {loading ? (
                 <div className={grid} aria-busy="true">
@@ -192,6 +210,23 @@ export default function ReservationsPage() {
                 />
             ) : (
                 <>
+                    <div className="relative max-w-sm">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-rb-text-sub" aria-hidden="true" />
+                        <label htmlFor="rez-ara" className="sr-only">Rezervasyon ara</label>
+                        <input
+                            id="rez-ara"
+                            type="search"
+                            value={query}
+                            onChange={e => setQuery(e.target.value)}
+                            placeholder="Kod (K7M-2QP), ad ya da telefon"
+                            autoComplete="off"
+                            className="h-10 w-full rounded-[10px] border border-border bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-rb-text-sub focus:outline-none focus:ring-2 focus:ring-rb-gold"
+                        />
+                    </div>
+                    {query.trim() && visible.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Aramanızla eşleşen rezervasyon yok. Liste yalnızca bekleyen ve yaklaşan onaylı rezervasyonları içerir.</p>
+                    )}
+
                     <section className="space-y-3">
                         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
                             Onay bekleyenler

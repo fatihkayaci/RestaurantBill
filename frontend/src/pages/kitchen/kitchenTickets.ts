@@ -100,4 +100,34 @@ export function buildTickets(orders: Order[], seen: Record<string, number>): { r
     return { rail: rail.sort((a, b) => oldestFirst(b, a)), pass: pass.sort(oldestFirst) };
 }
 
-export const itemCountText = (items: OrderItem[]) => `${items.reduce((s, i) => s + i.quantity, 0)} ürün`;
+export interface TicketLineGroup {
+    key: string;
+    /** Menü içeriği grubunda menünün adı ("Adana Menü"); tek ürünlerde null. */
+    setMenuName: string | null;
+    setMenuNote: string | null;
+    items: OrderItem[];
+}
+
+// Menünün içindeki ürünler aynı menü satırına bağlıdır (parentOrderItemId); bilette menü adının altında toplanır.
+// Her ürün yine kendi satırıdır: ayrı hazır işaretlenir, istasyonu da kendi kategorisidir.
+export function groupTicketItems(items: OrderItem[]): TicketLineGroup[] {
+    const groups: TicketLineGroup[] = [];
+    const setGroups = new Map<string, TicketLineGroup>();
+    for (const item of items) {
+        if (item.parentOrderItemId == null) {
+            groups.push({ key: String(item.id), setMenuName: null, setMenuNote: null, items: [item] });
+            continue;
+        }
+        const parentKey = String(item.parentOrderItemId);
+        let group = setGroups.get(parentKey);
+        if (!group) {
+            group = { key: `set:${parentKey}`, setMenuName: item.setMenuName ?? 'Menü', setMenuNote: item.setMenuNote ?? null, items: [] };
+            setGroups.set(parentKey, group);
+            groups.push(group);
+        }
+        group.items.push(item);
+    }
+    return groups;
+}
+
+export const itemCountText =(items: OrderItem[]) => `${items.reduce((s, i) => s + i.quantity, 0)} ürün`;

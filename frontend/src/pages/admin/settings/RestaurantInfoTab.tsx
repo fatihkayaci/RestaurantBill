@@ -8,7 +8,6 @@ import { branchService } from "@/features/branches/api/branchService";
 import type { Branch } from "@/features/branches/types";
 import { downloadCanvasPng, staffLoginHost, staffLoginUrl } from "@/lib/loginAddress";
 import { formatTL } from '@/lib/format';
-import IbanSettingsCard from './components/IbanSettingsCard';
 
 const infoRowClass = "flex items-center justify-between text-sm py-2 border-b border-border last:border-0";
 const labelClass = "text-muted-foreground";
@@ -38,7 +37,8 @@ function InfoCard({ icon: Icon, title, rows }: { icon: typeof User; title: strin
     );
 }
 
-export default function RestaurantPage() {
+// Ayarlar → Restoran: şube bilgileri (salt okunur; Owner Şubeler sayfasından düzenler) ve personel giriş QR'ı.
+export default function RestaurantInfoTab() {
     const [branch, setBranch] = useState<Branch | null>(null);
     const [loading, setLoading] = useState(true);
     const isOwner = getSession()?.role === 'Owner';
@@ -67,11 +67,6 @@ export default function RestaurantPage() {
 
     return (
         <div className="space-y-4">
-            <div className="mb-2">
-                <h1 className="text-2xl font-serif font-bold text-foreground">Restoran</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Şube bilgileri (salt okunur)</p>
-            </div>
-
             {/* Restaurant Header Card */}
             <div className="rounded-2xl bg-sidebar p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
@@ -100,7 +95,7 @@ export default function RestaurantPage() {
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch?.staffCount ?? "—"}</p>
-                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Kullanıcı</p>
+                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Çalışan</p>
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch ? formatTL(branch.revenue) : "—"}</p>
@@ -111,7 +106,7 @@ export default function RestaurantPage() {
 
             {isOwner ? (
                 <div className="rounded-xl bg-rb-gold-bg border border-rb-gold/30 px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm text-foreground">
-                    <span>Bu sayfa özet; şube bilgilerini ve gün sonu ayarlarını Şubeler sayfasından düzenlersin.</span>
+                    <span>Bu sekme özet; şube bilgilerini ve gün sonu ayarlarını Şubeler sayfasından düzenlersin.</span>
                     <Link to="/admin/branches" className="inline-flex items-center gap-1 font-semibold text-rb-amber hover:underline">
                         Şubeyi düzenle <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
@@ -148,7 +143,7 @@ export default function RestaurantPage() {
                 {/* Restoran QR Kodu */}
                 <div className="rounded-xl border border-border bg-card p-5 h-full flex flex-col">
                     <h2 className="text-base font-semibold text-foreground">Restoran QR Kodu</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">Kullanıcılarınız bu adresten restoranınıza giriş yapar</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-4">Çalışanlarınız bu adresten restoranınıza giriş yapar</p>
                     <div className="flex flex-col items-center gap-3 py-2 flex-1 justify-center">
                         {restaurantUrl ? (
                             <div className="p-3 rounded-lg bg-white">
@@ -181,8 +176,6 @@ export default function RestaurantPage() {
                     </div>
                 </div>
             </div>
-
-            <IbanSettingsCard />
         </div>
     );
 }
