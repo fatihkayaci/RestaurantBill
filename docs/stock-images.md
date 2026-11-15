@@ -74,7 +74,10 @@ restaurant page that selects it.
 Both commands are branch-scoped like the upload commands and write an audit log (`ProductStockImageSelected`,
 `SetMenuStockImageSelected`). Nothing is uploaded or copied.
 
-## Not done yet
+## Catalog status
 
-- Filling the catalog (choosing, licensing and uploading the photos).
-- Pexels search as an extra source.
+89 photos from Pixabay (free for commercial use, no attribution required) are on the CDN and in the seed file.
+Candidates come from `scripts/stock-images/`: `candidates.json` lists 148 items (Turkish title, keywords, group, English
+search query); `fetch_candidates.py` (needs `PIXABAY_API_KEY`) writes 5 candidates per item to
+`candidates-results.json` (not committed). The 59 items with no usable photo (mostly Turkish dishes such as mantı,
+İskender, künefe, pide) still need own photos or generated images.
