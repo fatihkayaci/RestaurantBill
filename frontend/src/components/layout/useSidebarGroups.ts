@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
 // Kenar çubuğu bölümlerinin açık/kapalı durumu: kullanıcı başına localStorage'da, bölüm anahtarıyla saklanır.
-// Varsayılan: hepsi açık. Yalnızca kapatılanlar yazılır.
-const storageKey = (userId: string | null) => `rb.sidebarGroups.${userId ?? 'anon'}`;
+// Varsayılan: hepsi kapalı (yalnızca aktif rotanın bölümü açılır). Yalnızca açılanlar yazılır.
+// Anahtar "v2": eski sürüm kapatılanları tutuyordu, karışmasın diye yeni anahtar.
+const storageKey = (userId: string | null) => `rb.sidebarGroups.v2.${userId ?? 'anon'}`;
 
-function readClosed(userId: string | null): string[] {
+function readOpen(userId: string | null): string[] {
     try {
         const raw = localStorage.getItem(storageKey(userId));
         const parsed: unknown = raw ? JSON.parse(raw) : [];
@@ -16,26 +17,26 @@ function readClosed(userId: string | null): string[] {
 
 // activeKey: aktif rotayı içeren bölümün anahtarı. Kullanıcı kapalı bir bölüme girerse o bölüm açılır.
 export function useSidebarGroups(userId: string | null, activeKey: string | undefined) {
-    const [closed, setClosed] = useState<string[]>(() => readClosed(userId));
+    const [open, setOpen] = useState<string[]>(() => readOpen(userId));
     const [seenActive, setSeenActive] = useState<string | undefined>(undefined);
 
     // Render sırasında ayarlama (effect içinde setState yerine): aktif bölüm değişince açılır.
     if (seenActive !== activeKey) {
         setSeenActive(activeKey);
-        if (activeKey && closed.includes(activeKey)) setClosed(closed.filter(k => k !== activeKey));
+        if (activeKey && !open.includes(activeKey)) setOpen([...open, activeKey]);
     }
 
     useEffect(() => {
         try {
-            localStorage.setItem(storageKey(userId), JSON.stringify(closed));
+            localStorage.setItem(storageKey(userId), JSON.stringify(open));
         } catch {
             // Depolama kapalıysa durum yalnızca bu oturumda kalır.
         }
-    }, [userId, closed]);
+    }, [userId, open]);
 
-    const isOpen = useCallback((key: string) => !closed.includes(key), [closed]);
+    const isOpen = useCallback((key: string) => open.includes(key), [open]);
     const toggle = useCallback((key: string) => {
-        setClosed(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
+        setOpen(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
     }, []);
 
     return { isOpen, toggle };
