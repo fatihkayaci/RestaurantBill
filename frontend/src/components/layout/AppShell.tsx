@@ -1,9 +1,9 @@
-import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type FocusEvent, type MouseEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-    House, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, UserCircle, Settings, Briefcase,
-    UserCog, Palette, History, CalendarCheck, Globe, Menu, X, Layers, Bike, MessageSquareText, Building2,
+    House, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, Settings, Briefcase, Building2,
+    UserCog, Palette, History, CalendarCheck, Globe, Menu, X, PanelLeftClose, PanelLeftOpen, Layers, Bike, MessageSquareText, ChevronDown,
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { userService } from '@/features/users/api/userService';
@@ -22,34 +22,36 @@ import OnlineOrderAlerts from './OnlineOrderAlerts';
 import HeaderThemeToggle from './HeaderThemeToggle';
 import HeaderLogoutButton from './HeaderLogoutButton';
 import { useUnreadContactMessages } from './useUnreadContactMessages';
+import { useIsDesktop, useSidebarGroups } from './useSidebarGroups';
 
 // badge: menü öğesinin yanında sayaç gösterilecekse hangi sayaç.
 interface NavItem { to: string; icon: LucideIcon; label: string; badge?: 'unreadContactMessages'; }
-// Şeritteki bir bölüm. Tek sayfalı bölüm doğrudan bağlantıdır; çok sayfalı bölüm açılır panel açar.
-interface NavSection { key: string; label: string; short: string; icon: LucideIcon; items: NavItem[]; }
+// Başlığı açılır/kapanır bir düğme olan bölüm (akordeon).
+interface NavSection { key: string; label: string; icon: LucideIcon; items: NavItem[]; }
 
 // Şube modu: Admin ve (bir şube seçmiş) Owner aynı menüyü görür.
-// Profil listede yok: şeridin altındaki avatar ve üst bardaki kullanıcı düğmesinde duruyor.
+// Profil listede yok: kenar çubuğunun altındaki kullanıcı satırında ve üst bardaki kullanıcı düğmesinde duruyor.
+const branchTop: NavItem[] = [
+    { to: '/admin/overview', icon: House, label: 'Genel Bakış' },
+];
+
 const branchSections: NavSection[] = [
-    { key: 'genel', label: 'Genel Bakış', short: 'Genel', icon: House, items: [
-        { to: '/admin/overview', icon: House, label: 'Genel Bakış' },
-    ] },
-    { key: 'operasyon', label: 'Operasyon', short: 'Operasyon', icon: LayoutGrid, items: [
+    { key: 'operasyon', label: 'Operasyon', icon: LayoutGrid, items: [
         { to: '/admin/tables', icon: LayoutGrid, label: 'Masalar' },
         { to: '/admin/reservations', icon: CalendarCheck, label: 'Rezervasyonlar' },
         { to: '/admin/online-orders', icon: Bike, label: 'Online siparişler' },
         { to: '/admin/cash-registers', icon: Wallet, label: 'Kasalar' },
         { to: '/admin/shifts', icon: Clock, label: 'Vardiyalar' },
     ] },
-    { key: 'menu', label: 'Menü', short: 'Menü', icon: UtensilsCrossed, items: [
+    { key: 'menu', label: 'Menü', icon: UtensilsCrossed, items: [
         { to: '/admin/menu', icon: UtensilsCrossed, label: 'Yemeklerimiz' },
         { to: '/admin/set-menus', icon: Layers, label: 'Set menüler' },
     ] },
-    { key: 'musteri', label: 'Müşteri', short: 'Müşteri', icon: MessageSquareText, items: [
+    { key: 'musteri', label: 'Müşteri', icon: MessageSquareText, items: [
         { to: '/admin/contact-messages', icon: MessageSquareText, label: 'Şikayet ve Öneriler', badge: 'unreadContactMessages' },
         { to: '/admin/site', icon: Globe, label: 'Restoran sitesi' },
     ] },
-    { key: 'yonetim', label: 'Yönetim', short: 'Yönetim', icon: Briefcase, items: [
+    { key: 'yonetim', label: 'Yönetim', icon: Briefcase, items: [
         { to: '/admin/staff', icon: Users, label: 'Çalışanlar' },
         { to: '/admin/reports', icon: BarChart3, label: 'Raporlar' },
         { to: '/admin/settings', icon: Settings, label: 'Ayarlar' },
@@ -57,30 +59,22 @@ const branchSections: NavSection[] = [
 ];
 
 // Owner'a şube modunda ek olarak açılan şirket sayfaları.
-const ownerSectionInBranch: NavSection = { key: 'sirket', label: 'Şirket', short: 'Şirket', icon: Building2, items: [
+const ownerSectionInBranch: NavSection = { key: 'sirket', label: 'Şirket', icon: Building2, items: [
     { to: '/admin/admins', icon: UserCog, label: 'Yöneticiler' },
     { to: '/admin/branding', icon: Palette, label: 'Marka Ayarları' },
     { to: '/admin/audit-log', icon: History, label: 'Denetim Kaydı' },
 ] };
 
-// "Tümü" modu: yalnızca şirket geneli sayfalar; şubeye ait ekranlar (menü, masa, kasa, personel) saklanır.
-// Az sayfa olduğu için her biri şeritte doğrudan bağlantı (tek öğeli bölüm).
-const companySections: NavSection[] = [
-    { key: 'c-genel', label: 'Şirket Genel Bakış', short: 'Genel', icon: House, items: [{ to: '/owner/overview', icon: House, label: 'Şirket Genel Bakış' }] },
-    { key: 'c-admins', label: 'Yöneticiler', short: 'Yöneticiler', icon: UserCog, items: [{ to: '/owner/admins', icon: UserCog, label: 'Yöneticiler' }] },
-    { key: 'c-branding', label: 'Marka Ayarları', short: 'Marka', icon: Palette, items: [{ to: '/owner/branding', icon: Palette, label: 'Marka Ayarları' }] },
-    { key: 'c-reports', label: 'Finansal Rapor', short: 'Rapor', icon: BarChart3, items: [{ to: '/owner/reports', icon: BarChart3, label: 'Finansal Rapor' }] },
-    { key: 'c-audit', label: 'Denetim Kaydı', short: 'Denetim', icon: History, items: [{ to: '/owner/audit-log', icon: History, label: 'Denetim Kaydı' }] },
+// "Tümü" modu: yalnızca şirket geneli sayfalar, bölümsüz düz liste; şubeye ait ekranlar saklanır.
+const companyTop: NavItem[] = [
+    { to: '/owner/overview', icon: House, label: 'Şirket Genel Bakış' },
+    { to: '/owner/admins', icon: UserCog, label: 'Yöneticiler' },
+    { to: '/owner/branding', icon: Palette, label: 'Marka Ayarları' },
+    { to: '/owner/reports', icon: BarChart3, label: 'Finansal Rapor' },
+    { to: '/owner/audit-log', icon: History, label: 'Denetim Kaydı' },
 ];
 
 const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-rb-gold/70';
-const railItemBase = cn(
-    'relative flex h-[58px] w-[60px] shrink-0 flex-col items-center justify-center gap-[5px] rounded-xl text-[10px] font-semibold leading-none transition-colors',
-    focusRing,
-);
-const railItemState = (highlighted: boolean) => highlighted
-    ? 'bg-[#2C251F] text-rb-gold'
-    : 'text-[#9A8F80] hover:bg-white/5 hover:text-sidebar-foreground';
 
 export default function AppShell() {
     const navigate = useNavigate();
@@ -92,80 +86,47 @@ export default function AppShell() {
 
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
+    const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
-    // Açık panel: hangi bölüm ve şeritteki düğmesine göre dikey konumu. Aynı anda yalnızca bir panel açık.
-    const [panel, setPanel] = useState<{ key: string; top: number } | null>(null);
-    const [seenPath, setSeenPath] = useState(pathname);
-    const panelRef = useRef<HTMLElement>(null);
-    const railButtons = useRef<Record<string, HTMLButtonElement | null>>({});
+    const [hoverTip, setHoverTip] = useState<{ label: string; top: number } | null>(null);
+    const asideRef = useRef<HTMLElement>(null);
     // "Tümü" modunda şube menüsü yok; sayaç yalnızca şube modunda çekilir.
     const unreadContactMessages = useUnreadContactMessages(!companyMode);
     const badgeCount = (badge: NavItem['badge']) => (badge === 'unreadContactMessages' ? unreadContactMessages : 0);
-
-    // Rota değişince panel ve mobil çekmece kapanır (effect içinde setState yerine render sırasında ayarlama).
-    if (seenPath !== pathname) {
-        setSeenPath(pathname);
-        setPanel(null);
-        setMobileOpen(false);
-    }
 
     useEffect(() => {
         userService.getCurrentUser().then(setCurrentUser).catch(() => {});
         branchService.getMyBranches().then(setBranches).catch(() => {});
     }, []);
 
-    // Panel açıkken: dışarı tıklama kapatır; Esc kapatır ve odağı paneli açan şerit düğmesine geri verir.
-    const openKey = panel?.key ?? null;
-    useEffect(() => {
-        if (!openKey) return;
-        const onPointerDown = (e: PointerEvent) => {
-            const target = e.target as Element | null;
-            if (!target || panelRef.current?.contains(target)) return;
-            // Şerit düğmeleri kendi tıklamasıyla açar/kapatır/değiştirir.
-            if (target.closest('[data-rail-section]')) return;
-            setPanel(null);
-        };
-        const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key !== 'Escape') return;
-            setPanel(null);
-            railButtons.current[openKey]?.focus();
-        };
-        document.addEventListener('pointerdown', onPointerDown);
-        document.addEventListener('keydown', onKeyDown);
-        return () => {
-            document.removeEventListener('pointerdown', onPointerDown);
-            document.removeEventListener('keydown', onKeyDown);
-        };
-    }, [openKey]);
-
-    // Mobil çekmece Esc ile de kapanır.
-    useEffect(() => {
-        if (!mobileOpen) return;
-        const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileOpen(false); };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [mobileOpen]);
-
     const handleLogout = () => {
         authService.logout();
         navigate('/login');
     };
 
-    const sections: NavSection[] = companyMode
-        ? companySections
-        : isOwner ? [...branchSections, ownerSectionInBranch] : branchSections;
+    const topItems = companyMode ? companyTop : branchTop;
+    const sections: NavSection[] = companyMode ? [] : isOwner ? [...branchSections, ownerSectionInBranch] : branchSections;
 
+    // Aktif rotayı içeren bölüm: kullanıcı kapalı bir bölüme girince açılır.
     const isActivePath = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
-    const sectionIsActive = (s: NavSection) => s.items.some(i => isActivePath(i.to));
-    const sectionBadge = (s: NavSection) => s.items.reduce((sum, i) => sum + badgeCount(i.badge), 0);
+    const activeSectionKey = sections.find(s => s.items.some(i => isActivePath(i.to)))?.key;
+    const { isOpen: isSectionOpen, toggle: toggleSection } = useSidebarGroups(session?.userId ?? null, activeSectionKey);
+    const isDesktop = useIsDesktop();
+    // Daraltılmış ikon modu yalnızca masaüstünde; mobil çekmece her zaman tam düzen.
+    const iconOnly = collapsed && isDesktop;
 
-    const togglePanel = (section: NavSection) => (e: MouseEvent<HTMLButtonElement>) => {
+    const showTip = (label: string) => (e: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>) => {
+        if (!iconOnly || !asideRef.current) return;
+        const asideTop = asideRef.current.getBoundingClientRect().top;
         const rect = e.currentTarget.getBoundingClientRect();
-        // Panelin tahmini yüksekliği (başlık + satırlar); alt kenardan taşmasın diye yukarı itilir.
-        const estimated = 60 + section.items.length * 42;
-        const top = Math.max(8, Math.min(rect.top - 8, window.innerHeight - estimated - 8));
-        setPanel(prev => (prev?.key === section.key ? null : { key: section.key, top }));
+        setHoverTip({ label, top: rect.top - asideTop + rect.height / 2 });
     };
+    const tipHandlers = (label: string) => ({
+        onMouseEnter: showTip(label),
+        onMouseLeave: () => setHoverTip(null),
+        onFocus: showTip(label),
+        onBlur: () => setHoverTip(null),
+    });
 
     const roleLabel = isOwner ? 'Sahip' : 'Yönetici';
     const initials = currentUser?.fullName
@@ -173,208 +134,239 @@ export default function AppShell() {
     const displayName = currentUser?.fullName ?? roleLabel;
     const avatarColors = isOwner ? 'bg-rb-gold text-rb-gold-foreground' : 'bg-rb-amber text-rb-amber-foreground';
 
-    const countBadge = (count: number, className?: string) => (
+    const countBadge = (count: number, onGold = false) => (
         <span
             aria-label={`${count} okunmamış`}
-            className={cn('ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E2531F] px-1.5 text-[11px] font-bold tabular-nums text-white', className)}
+            className={cn(
+                'ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums',
+                onGold ? 'bg-rb-gold-foreground text-rb-gold' : 'bg-rb-gold text-rb-gold-foreground'
+            )}
         >
             {count > 99 ? '99+' : count}
         </span>
     );
+    const unreadDot = <span aria-hidden="true" className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-rb-gold" />;
+
+    // Daraltılmış modda tek öğe: ortalı ikon, tooltip, okunmamışsa nokta.
+    const renderIconItem = ({ to, icon: Icon, label, badge }: NavItem) => {
+        const count = badgeCount(badge);
+        return (
+            <NavLink
+                key={to}
+                to={to}
+                aria-label={count > 0 ? `${label}, ${count} okunmamış` : label}
+                {...tipHandlers(label)}
+                className={({ isActive }) => cn(
+                    'group relative flex h-10 items-center justify-center rounded-lg transition-colors',
+                    focusRing,
+                    isActive ? 'bg-white/10 text-rb-gold' : 'text-sidebar-foreground/60 hover:bg-white/5 hover:text-sidebar-foreground'
+                )}
+            >
+                <Icon aria-hidden="true" className="h-[18px] w-[18px] transition-transform duration-200 group-hover:scale-110 motion-reduce:transition-none" />
+                {count > 0 && unreadDot}
+            </NavLink>
+        );
+    };
+
+    // Üst düzey bağlantı (Genel Bakış, şirket modundaki sayfalar): ikon + etiket.
+    const renderTopItem = (item: NavItem) => {
+        if (iconOnly) return renderIconItem(item);
+        const { to, icon: Icon, label } = item;
+        return (
+            <NavLink
+                key={to}
+                to={to}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) => cn(
+                    'flex h-[42px] items-center gap-3 rounded-[10px] px-3 text-sm font-medium transition-colors',
+                    focusRing,
+                    isActive ? 'bg-rb-gold font-semibold text-rb-gold-foreground' : 'text-[#E8E1D6] hover:bg-white/5 hover:text-white'
+                )}
+            >
+                <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">{label}</span>
+            </NavLink>
+        );
+    };
 
     return (
         <div className="flex h-screen bg-background">
-            {/* Masaüstü: dar ikon şeridi. Çok sayfalı bölümler içeriğin üstüne binen panel açar; içerik itilmez. */}
-            <aside className="hidden md:flex w-[76px] shrink-0 flex-col items-center bg-[#17130F] py-[18px] z-40">
-                <img src={sophramLogo} alt="Sophram" className="mb-3.5 h-10 w-auto shrink-0" />
-
-                <nav aria-label="Bölümler" className="sidebar-nav-scroll flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto overflow-x-hidden px-2 py-0.5">
-                    {sections.map(section => {
-                        const Icon = section.icon;
-                        const active = sectionIsActive(section);
-                        const hasUnread = sectionBadge(section) > 0;
-                        const dot = hasUnread && (
-                            <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-[9px] w-[9px] rounded-full border-2 border-[#17130F] bg-[#E2531F]" />
-                        );
-
-                        if (section.items.length === 1) {
-                            const item = section.items[0];
-                            return (
-                                <Link
-                                    key={section.key}
-                                    to={item.to}
-                                    aria-current={active ? 'page' : undefined}
-                                    aria-label={section.short === item.label ? undefined : item.label}
-                                    className={cn(railItemBase, railItemState(active))}
-                                >
-                                    <span className="relative flex"><Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />{dot}</span>
-                                    <span>{section.short}</span>
-                                </Link>
-                            );
-                        }
-
-                        const open = panel?.key === section.key;
-                        const panelId = `rail-panel-${section.key}`;
-                        return (
-                            <div key={section.key} className="contents">
-                                <button
-                                    type="button"
-                                    ref={el => { railButtons.current[section.key] = el; }}
-                                    data-rail-section={section.key}
-                                    onClick={togglePanel(section)}
-                                    aria-expanded={open}
-                                    aria-controls={panelId}
-                                    aria-label={hasUnread ? `${section.label}, okunmamış mesaj var` : undefined}
-                                    className={cn(railItemBase, railItemState(open || active))}
-                                >
-                                    <span className="relative flex"><Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />{dot}</span>
-                                    <span>{section.short}</span>
-                                </button>
-
-                                {/* DOM'da düğmenin hemen ardından: Tab ile düğmeden panele geçilir. Konum fixed, şeridin sağında. */}
-                                {open && panel && (
-                                    <nav
-                                        ref={panelRef}
-                                        id={panelId}
-                                        aria-label={section.label}
-                                        style={{ top: panel.top, maxHeight: 'calc(100vh - 16px)' }}
-                                        className="fixed left-[84px] z-50 flex w-60 flex-col gap-0.5 overflow-y-auto rounded-2xl border border-white/5 bg-[#1F1A16] px-2.5 py-3.5 text-[#E8E1D6] shadow-[0_24px_60px_rgba(20,16,12,0.35)] animate-in fade-in slide-in-from-left-1 duration-150"
-                                    >
-                                        <span className="px-2.5 pb-2.5 pt-1 text-xs font-semibold uppercase tracking-[0.16em] text-rb-gold">{section.label}</span>
-                                        {section.items.map(item => {
-                                            const count = badgeCount(item.badge);
-                                            const itemActive = isActivePath(item.to);
-                                            return (
-                                                <Link
-                                                    key={item.to}
-                                                    to={item.to}
-                                                    onClick={() => setPanel(null)}
-                                                    aria-current={itemActive ? 'page' : undefined}
-                                                    className={cn(
-                                                        'flex h-10 shrink-0 items-center gap-2 rounded-[10px] px-3 text-sm transition-colors',
-                                                        focusRing,
-                                                        itemActive
-                                                            ? 'bg-rb-gold font-semibold text-rb-gold-foreground'
-                                                            : 'text-[#E8E1D6] hover:bg-white/5 hover:text-white'
-                                                    )}
-                                                >
-                                                    <span className="flex-1">{item.label}</span>
-                                                    {count > 0 && countBadge(count)}
-                                                </Link>
-                                            );
-                                        })}
-                                    </nav>
-                                )}
-                            </div>
-                        );
-                    })}
-                </nav>
-
-                {!companyMode && (
-                    <Link
-                        to="/admin/profile"
-                        aria-label="Profil"
-                        aria-current={isActivePath('/admin/profile') ? 'page' : undefined}
-                        className={cn(
-                            'mt-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                            avatarColors,
-                            isActivePath('/admin/profile') && 'ring-2 ring-rb-gold/60 ring-offset-2 ring-offset-[#17130F]',
-                            'outline-none focus-visible:ring-2 focus-visible:ring-rb-gold focus-visible:ring-offset-2 focus-visible:ring-offset-[#17130F]'
-                        )}
-                    >
-                        {initials}
-                    </Link>
-                )}
-            </aside>
-
-            {/* Mobil: hamburger ile açılan çekmece, tüm bölümler başlıklarıyla açık liste */}
+            {/* Mobil arkaplan */}
             {mobileOpen && (
                 <div
                     className="md:hidden fixed inset-0 z-40 bg-black/50 animate-in fade-in duration-200"
                     onClick={() => setMobileOpen(false)}
                 />
             )}
+
             <aside
-                aria-label="Menü"
-                inert={!mobileOpen}
+                ref={asideRef}
                 className={cn(
-                    'md:hidden fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar transition-transform duration-300 ease-in-out',
-                    mobileOpen ? 'translate-x-0' : '-translate-x-full'
+                    'fixed md:relative inset-y-0 left-0 z-50 flex flex-col bg-sidebar transition-all duration-300 ease-in-out motion-reduce:transition-none',
+                    'w-68',
+                    collapsed ? 'md:w-20' : 'md:w-68',
+                    mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
                 )}
             >
+                {/* Logo */}
                 <div className="relative flex h-20 shrink-0 items-center justify-center px-5">
-                    <img src={sophramLogo} alt="Sophram" className="h-14 w-auto shrink-0" />
+                    <img src={sophramLogo} alt="Sophram" className={cn('h-14 w-auto shrink-0 transition-all duration-300', collapsed && 'md:h-10')} />
                     <button
                         onClick={() => setMobileOpen(false)}
                         aria-label="Menüyü kapat"
-                        className={cn('absolute right-4 top-1/2 -translate-y-1/2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground', focusRing)}
+                        className={cn('md:hidden absolute right-4 top-1/2 -translate-y-1/2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground', focusRing)}
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <nav aria-label="Sayfalar" className="sidebar-nav-scroll flex-1 overflow-y-auto overflow-x-hidden px-3 py-2">
-                    {sections.map(section => (
-                        <div key={section.key} className="space-y-0.5">
-                            {section.items.length > 1 && (
-                                <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-rb-gold">{section.label}</span>
-                                    <span className="flex-1 h-px bg-white/10" />
-                                </div>
-                            )}
-                            {section.items.map(({ to, icon: Icon, label, badge }) => {
-                                const count = badgeCount(badge);
+                <nav aria-label="Yönetim menüsü" className="sidebar-nav-scroll flex-1 overflow-y-auto overflow-x-hidden px-3 pb-2">
+                    <div className="space-y-0.5">{topItems.map(renderTopItem)}</div>
+
+                    {sections.length > 0 && (
+                        <div className={cn('mt-2.5 flex flex-col', iconOnly ? 'gap-0.5' : 'gap-1')}>
+                            {sections.map(section => {
+                                // Daraltılmış ikon modu: akordeon yok; bölümler arasında ince ayraç ve tüm sayfa ikonları.
+                                if (iconOnly) {
+                                    return (
+                                        <div key={section.key} role="group" aria-label={section.label} className="space-y-0.5">
+                                            <div aria-hidden="true" className="mx-3 my-2 h-px bg-white/10" />
+                                            {section.items.map(renderIconItem)}
+                                        </div>
+                                    );
+                                }
+
+                                const open = isSectionOpen(section.key);
+                                const active = section.key === activeSectionKey;
+                                const sectionBadge = section.items.reduce((sum, item) => sum + badgeCount(item.badge), 0);
+                                const panelId = `sidebar-section-${section.key}`;
+                                const SectionIcon = section.icon;
                                 return (
-                                    <NavLink
-                                        key={to}
-                                        to={to}
-                                        onClick={() => setMobileOpen(false)}
-                                        className={({ isActive }) => cn(
-                                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
-                                            focusRing,
-                                            isActive ? 'bg-white/10 text-sidebar-foreground' : 'text-sidebar-foreground/65 hover:text-sidebar-foreground/90'
-                                        )}
-                                    >
-                                        {({ isActive }) => (
-                                            <>
-                                                <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-rb-gold' : 'text-sidebar-foreground/55')} />
-                                                <span>{label}</span>
-                                                {count > 0 && countBadge(count)}
-                                            </>
-                                        )}
-                                    </NavLink>
+                                    <div key={section.key} className="flex flex-col">
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleSection(section.key)}
+                                            aria-expanded={open}
+                                            aria-controls={panelId}
+                                            className={cn(
+                                                'flex h-11 w-full items-center gap-3 rounded-[10px] px-2.5 text-left text-sm font-semibold transition-colors',
+                                                focusRing,
+                                                active ? 'bg-white/[0.07] text-white' : 'text-[#E8E1D6] hover:bg-white/5'
+                                            )}
+                                        >
+                                            <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#2C251F] text-rb-gold">
+                                                <SectionIcon className="h-4 w-4" />
+                                            </span>
+                                            <span className="flex-1 truncate">{section.label}</span>
+                                            {!open && sectionBadge > 0 && countBadge(sectionBadge)}
+                                            <ChevronDown aria-hidden="true" className={cn(
+                                                'h-4 w-4 shrink-0 text-[#9A8F80] transition-transform duration-200 motion-reduce:transition-none',
+                                                open && 'rotate-180'
+                                            )} />
+                                        </button>
+                                        {/* Kapalı bölümün öğeleri inert: Tab ile odaklanmaz. */}
+                                        <div
+                                            id={panelId}
+                                            inert={!open}
+                                            className={cn(
+                                                'grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none',
+                                                open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                                            )}
+                                        >
+                                            <div className="min-h-0 overflow-hidden">
+                                                <div className="mb-2 ml-[25px] mt-0.5 flex flex-col border-l border-[#3A322B] pl-3">
+                                                    {section.items.map(({ to, label, badge }) => {
+                                                        const count = badgeCount(badge);
+                                                        return (
+                                                            <NavLink
+                                                                key={to}
+                                                                to={to}
+                                                                onClick={() => setMobileOpen(false)}
+                                                                className={({ isActive }) => cn(
+                                                                    'flex h-9 shrink-0 items-center gap-2 rounded-lg px-2.5 text-[13.5px] transition-colors',
+                                                                    focusRing,
+                                                                    isActive
+                                                                        ? 'bg-rb-gold font-semibold text-rb-gold-foreground'
+                                                                        : 'text-[#CFC6B8] hover:bg-white/5 hover:text-white'
+                                                                )}
+                                                            >
+                                                                {({ isActive }) => (
+                                                                    <>
+                                                                        <span className="flex-1 truncate">{label}</span>
+                                                                        {count > 0 && countBadge(count, isActive)}
+                                                                    </>
+                                                                )}
+                                                            </NavLink>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 );
                             })}
                         </div>
-                    ))}
+                    )}
 
                     {companyMode && (
-                        <p className="mx-3 mt-4 rounded-lg bg-white/5 px-2.5 py-2 text-[11px] leading-relaxed text-sidebar-foreground/50">
+                        <p className={cn('mx-3 mt-4 rounded-lg bg-white/5 px-2.5 py-2 text-[11px] leading-relaxed text-sidebar-foreground/50', collapsed && 'md:hidden')}>
                             Menü, masa, kasa ve personel için bir şube seçin.
                         </p>
                     )}
                 </nav>
 
-                {!companyMode && (
-                    <div className="border-t border-white/10 px-3 py-3">
+                {/* Daraltılmışken tooltip — nav'ın scroll clip'inden kaçması için aside seviyesinde, JS ile konumlanıyor */}
+                {iconOnly && hoverTip && (
+                    <div
+                        role="tooltip"
+                        className="pointer-events-none absolute z-50 -translate-y-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c1712] px-2.5 py-1.5 text-xs font-medium text-sidebar-foreground shadow-lg"
+                        style={{ top: hoverTip.top, left: 84 }}
+                    >
+                        {hoverTip.label}
+                    </div>
+                )}
+
+                {/* Alt: kullanıcı satırı (profil) ve daraltma. Şube, tema ve çıkış üst barda. */}
+                <div className={cn('flex flex-col gap-0.5 border-t border-[#3A322B] px-3 py-2.5', companyMode && 'hidden md:flex')}>
+                    {!companyMode && (
                         <NavLink
                             to="/admin/profile"
                             onClick={() => setMobileOpen(false)}
+                            aria-label={iconOnly ? 'Profil' : undefined}
+                            {...tipHandlers('Profil')}
                             className={({ isActive }) => cn(
-                                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
+                                'flex h-[42px] items-center gap-3 rounded-[10px] px-3 text-sm transition-colors',
                                 focusRing,
-                                isActive ? 'bg-white/10 text-sidebar-foreground' : 'text-sidebar-foreground/65 hover:text-sidebar-foreground/90'
+                                iconOnly && 'justify-center px-0',
+                                isActive ? 'bg-white/10' : 'hover:bg-white/5'
                             )}
                         >
-                            {({ isActive }) => (
-                                <>
-                                    <UserCircle className={cn('w-4 h-4 shrink-0', isActive ? 'text-rb-gold' : 'text-sidebar-foreground/55')} />
-                                    <span>Profil</span>
-                                </>
+                            <span aria-hidden="true" className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold', avatarColors)}>
+                                {initials}
+                            </span>
+                            {!iconOnly && (
+                                <span className="flex min-w-0 flex-col leading-tight">
+                                    <span className="truncate font-semibold text-[#E8E1D6]">{displayName}</span>
+                                    <span className="text-xs text-[#9A8F80]">Profil</span>
+                                </span>
                             )}
                         </NavLink>
-                    </div>
-                )}
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => { setCollapsed(v => !v); setHoverTip(null); }}
+                        aria-label={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
+                        {...tipHandlers('Menüyü genişlet')}
+                        className={cn(
+                            'hidden md:flex h-10 w-full items-center gap-3 rounded-[10px] px-3 text-[13px] text-[#9A8F80] transition-colors hover:bg-white/5 hover:text-sidebar-foreground',
+                            focusRing,
+                            iconOnly && 'justify-center px-0'
+                        )}
+                    >
+                        {collapsed ? <PanelLeftOpen aria-hidden="true" className="h-4 w-4 shrink-0" /> : <PanelLeftClose aria-hidden="true" className="h-4 w-4 shrink-0" />}
+                        {!iconOnly && <span>Menüyü daralt</span>}
+                    </button>
+                </div>
             </aside>
 
             <div className="flex flex-1 min-w-0 flex-col">
@@ -383,7 +375,6 @@ export default function AppShell() {
                     <button
                         onClick={() => setMobileOpen(true)}
                         aria-label="Menüyü aç"
-                        aria-expanded={mobileOpen}
                         className="md:hidden flex h-11 w-11 -ml-2 shrink-0 items-center justify-center text-sidebar-foreground/70 hover:text-sidebar-foreground"
                     >
                         <Menu className="w-5 h-5" />
