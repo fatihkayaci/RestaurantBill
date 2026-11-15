@@ -97,8 +97,8 @@ public class OrderDeliveryTests
     public void AddSetMenuAtPrice_UsesTheSnapshotPrice()
     {
         Product adana = CreateProduct();
-        SetMenu menu = SetMenu.Create(Guid.NewGuid(), "Adana Menü", 150m);
-        menu.SetSlots([new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(adana, 0m, false)])]);
+        SetMenu menu = SetMenu.Create(Guid.NewGuid(), "Adana Menü");
+        menu.SetContents([new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(adana, false)])], DiscountType.None, 0m);
         Order order = Order.CreateDelivery(BranchId, 0m);
 
         OrderItem line = order.AddSetMenuAtPrice(menu, new Dictionary<Guid, Guid>(), 140m, 2, 10m);

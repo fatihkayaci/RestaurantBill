@@ -6,9 +6,10 @@ import { useOnlineOrderingAvailable } from '@/features/delivery/useOnlineOrderin
 import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { SiteShell } from './SiteChrome';
 import {
-    FONTS_HREF, MOTION_CSS, RESERVATION_PATH, eyebrow, footLabel, instagramHandle, line, moreArrow, moreLink, sans, serif,
+    FONTS_HREF, MOTION_CSS, RESERVATION_PATH, cardButton, cardLink, eyebrow, instagramHandle, line, sans, serif, siteCard,
     siteNav, underlineLink, type SitePageKey,
 } from './siteParts';
+import { InfoCard, OpenBadge } from './SiteCards';
 import { directionsUrl, telHref } from './siteTheme';
 import { fullAddress, hoursText, restaurantName } from './useSite';
 
@@ -72,13 +73,16 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
     return (
         <div className={cn(sticky ? 'fixed' : 'absolute', 'inset-x-0 top-0 z-50 transition-[padding]', ease, compact ? 'px-3 pt-3 md:px-6 md:pt-4' : 'px-0 pt-0')}>
             <header className={cn(sans,
-                'mx-auto grid grid-cols-[minmax(0,1fr)_auto] items-center border text-[13px] font-medium uppercase text-white transition-all lg:grid-cols-[1fr_auto_1fr]',
+                'mx-auto grid grid-cols-[minmax(0,1fr)_auto] items-center border text-[13px] font-medium uppercase text-white transition-all xl:grid-cols-[1fr_auto_1fr]',
                 ease,
                 compact
-                    ? 'max-w-[1120px] gap-3 rounded-[36px] border-white/15 bg-[rgba(26,22,19,0.82)] py-2 pl-5 pr-2 tracking-[0.12em] shadow-[0_12px_32px_rgba(0,0,0,0.22)] backdrop-blur-[14px] md:pl-7'
+                    ? 'max-w-[1440px] gap-3 rounded-[36px] border-white/15 bg-[rgba(26,22,19,0.82)] py-2 pl-5 pr-2 tracking-[0.12em] shadow-[0_12px_32px_rgba(0,0,0,0.22)] backdrop-blur-[14px] md:pl-7'
                     : 'max-w-[2560px] gap-4 rounded-[0px] border-transparent bg-transparent px-5 py-5 tracking-[0.14em] md:px-12 md:py-7')}
             >
-                <nav aria-label="Ana menü" className={cn('hidden flex-wrap items-center transition-[gap] lg:flex', ease, compact ? 'gap-5' : 'gap-7')}>
+                {/* Masaüstü bağlantıları hiç alt satıra inmez (whitespace-nowrap). Ad ortada kalsın diye iki yan sütun eşit;
+                    beş bağlantının sığması için xl'den itibaren gösterilir, 2xl'e kadar biraz küçük yazı ve dar aralıkla. */}
+                <nav aria-label="Ana menü" className={cn('hidden items-center whitespace-nowrap text-[12px] transition-[gap] xl:flex 2xl:text-[13px]', ease,
+                    compact ? 'gap-4 tracking-[0.08em] 2xl:gap-5 2xl:tracking-[0.12em]' : 'gap-5 tracking-[0.1em] 2xl:gap-7 2xl:tracking-[0.14em]')}>
                     {nav.map(item => (
                         <Link key={item.key} to={item.to} aria-current={current === item.key ? 'page' : undefined}
                             className={cn(underlineLink, 'text-white', current === item.key && 'bg-[length:100%_1px]')}>
@@ -93,14 +97,14 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
                     )}
                 </nav>
                 <Link to="/" onClick={toTop}
-                    className={cn(serif, 'min-w-0 truncate normal-case italic leading-none tracking-normal text-white transition-[font-size] lg:justify-self-center', ease,
+                    className={cn(serif, 'min-w-0 truncate normal-case italic leading-none tracking-normal text-white transition-[font-size] xl:max-w-full xl:justify-self-center', ease,
                         compact ? 'text-[22px] md:text-[24px]' : 'text-[22px] sm:text-[26px] md:text-[30px]')}>
                     {name}
                 </Link>
                 <div className="flex items-center gap-2 justify-self-end">
                     <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={panelId}
                         aria-label={open ? 'Menüyü kapat' : 'Menüyü aç'}
-                        className={cn('flex items-center justify-center rounded-full border border-white/35 text-white transition-all lg:hidden', ease, compact ? 'h-10 w-10' : 'h-11 w-11')}>
+                        className={cn('flex items-center justify-center rounded-full border border-white/35 text-white transition-all xl:hidden', ease, compact ? 'h-10 w-10' : 'h-11 w-11')}>
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                             {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 8h16M4 16h16" />}
                         </svg>
@@ -127,7 +131,7 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
             </header>
             {open && (
                 <nav id={panelId} aria-label="Sayfalar"
-                    className="mx-auto mt-2 flex max-w-[1120px] flex-col rounded-[28px] border border-white/15 bg-[rgba(26,22,19,0.94)] p-3 text-white shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur-[14px] lg:hidden">
+                    className="mx-auto mt-2 flex max-w-[1440px] flex-col rounded-[28px] border border-white/15 bg-[rgba(26,22,19,0.94)] p-3 text-white shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur-[14px] xl:hidden">
                     <Link to="/" onClick={() => setOpen(false)} aria-current={current === 'home' ? 'page' : undefined}
                         className={cn(serif, 'rounded-2xl px-4 py-2.5 text-[30px] italic leading-tight text-white hover:bg-white/10')}>Ana sayfa</Link>
                     {nav.map(item => (
@@ -154,21 +158,28 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
     );
 }
 
-// Görünür olunca bir kez açılır (alt bilgi sütunlarının belirmesi). IntersectionObserver yoksa hemen görünür.
+// Görünür olunca bir kez açılır (alt bilgi kartlarının belirmesi). Öğe ekrana girmeden biraz önce açılır; IntersectionObserver
+// yoksa, öğe ilk çizimde zaten ekrandaysa ya da sayfa yazdırılırsa hemen görünür (içerik hiçbir durumda gizli kalmaz).
 function useReveal<T extends Element>() {
     const ref = useRef<T>(null);
     const [shown, setShown] = useState(() => typeof IntersectionObserver === 'undefined');
     useEffect(() => {
         const el = ref.current;
         if (!el || shown) return;
+        const show = () => setShown(true);
+        if (el.getBoundingClientRect().top < window.innerHeight) {
+            show();
+            return;
+        }
         const observer = new IntersectionObserver(entries => {
-            if (entries.some(e => e.isIntersecting)) {
-                setShown(true);
-                observer.disconnect();
-            }
-        }, { threshold: 0.12 });
+            if (entries.some(e => e.isIntersecting)) show();
+        }, { rootMargin: '0px 0px 15% 0px' });
         observer.observe(el);
-        return () => observer.disconnect();
+        window.addEventListener('beforeprint', show);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('beforeprint', show);
+        };
     }, [shown]);
     return { ref, shown };
 }
@@ -199,22 +210,23 @@ export function HoursTable({ site, className }: { site: PublicSite; className?: 
     );
 }
 
-const MARQUEE_MIN_CHARS = 60; // 120px italik serifte bir kopyanın geniş ekranı doldurması için
+const MARQUEE_MIN_CHARS = 160; // 44px serifte bir kopyanın geniş ekranı doldurması için
 
 /**
- * Beyaz alt bilgi: yavaşça kayan restoran adı, görününce sırayla beliren dört sütun (ad, ziyaret/iletişim,
- * çalışma saatleri), alt satırda sayfalar. Bağlantıların alt çizgisi üstüne gelince çizilir. Hareket azaltma
- * tercihinde kayma ve belirme olmaz.
+ * Açık alt bilgi: ince çizgiler arasında yavaşça kayan restoran adı, görününce sırayla beliren üç beyaz kart
+ * (ad + menü, ziyaret ve iletişim, çalışma saatleri; dar ekranda alt alta), alt satırda telif ve sayfalar.
+ * Verisi girilmemiş kart ya da satır çizilmez. Hareket azaltma tercihinde kayma ve belirme olmaz.
  */
 export function SiteFooter({ site }: { site: PublicSite }) {
     const { ref, shown } = useReveal<HTMLDivElement>();
+    const contactId = useId();
+    const hoursId = useId();
     const name = restaurantName(site);
     const content = site.site;
     const address = fullAddress(site);
     const hours = hoursText(site);
     const nav = siteNav(site);
     const canReserve = canReserveOnline(site);
-    const hasContactPage = nav.some(item => item.key === 'iletisim');
 
     const unit = `${name} ✦ `;
     const repeat = Math.max(2, Math.ceil(MARQUEE_MIN_CHARS / unit.length));
@@ -223,24 +235,27 @@ export function SiteFooter({ site }: { site: PublicSite }) {
             shown ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100'),
         style: { transitionDelay: shown ? `${step * 110}ms` : '0ms' },
     });
-    const link = cn(underlineLink, 'text-[#141414]');
-    const hasContactColumn = Boolean(address || site.phone || content.instagramUrl);
-    const contactLink = (
-        <Link to="/iletisim" className={cn(moreLink, 'mt-3')}>
-            İletişim sayfası <span aria-hidden="true" className={moreArrow}>→</span>
-        </Link>
-    );
+    // Arkada kapak fotoğrafı (kapaklarla aynı görsel), üstünde krem perde: yazılar ve kartlar okunur kalır. Fotoğraf yoksa düz bej.
+    const photo = content.coverImageUrl;
+    const photoStyle = photo ? {
+        backgroundImage: `linear-gradient(180deg, rgba(245,242,237,0.92), rgba(245,242,237,0.78)), url(${JSON.stringify(photo)})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+    } : undefined;
+    const textLink = 'self-start text-[15px] text-[#141414] transition-colors hover:text-[var(--site-accent)]';
+    const bottomLink = cn(underlineLink, photo ? 'text-[#3F3A34]' : 'text-[#5E5850]');
+    const cardPad = cn('md:p-[26px]', photo && 'shadow-[0_6px_24px_rgba(20,16,12,0.08)]');
 
     return (
-        <footer id="iletisim" className={cn(sans, 'mt-auto border-t bg-white text-base leading-[1.55] text-[#141414]', line)}>
+        <footer id="iletisim" style={photoStyle} className={cn(sans, 'mt-auto border-t bg-[#F5F2ED] text-base leading-[1.55] text-[#141414]', line)}>
             {/* Kayan ad: süs; ekran okuyucu atlar */}
-            <div aria-hidden="true" className={cn('overflow-hidden whitespace-nowrap border-b py-5 md:py-7', line)}>
-                <div className={cn(serif, 'rb-kay-yavas inline-flex text-[64px] italic leading-none tracking-[-0.03em] md:text-[120px]')}>
+            <div aria-hidden="true" className={cn('overflow-hidden whitespace-nowrap border-b py-4 md:py-[22px]', line)}>
+                <div className={cn(serif, 'rb-kay-yavas inline-flex text-[34px] leading-none md:text-[44px]')}>
                     {[0, 1].map(copy => (
-                        <span key={copy} className="pr-8">
+                        <span key={copy} className="pr-4">
                             {Array.from({ length: repeat }, (_, i) => (
                                 <span key={i}>
-                                    {i % 2 === 1 ? <span className="not-italic">{name}</span> : name}{' '}
+                                    {i % 2 === 1 ? <span className="italic">{name}</span> : name}{' '}
                                     <span className="text-[var(--site-accent)]">✦</span>{' '}
                                 </span>
                             ))}
@@ -249,62 +264,62 @@ export function SiteFooter({ site }: { site: PublicSite }) {
                 </div>
             </div>
 
-            <div ref={ref} className="mx-auto flex max-w-[1344px] flex-col gap-16 px-5 pb-8 pt-16 md:px-12 md:pt-20">
-                <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4">
+            <div ref={ref} className="mx-auto flex max-w-[1344px] flex-col gap-6 px-5 pb-7 pt-8 md:px-12 md:pt-10">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-4">
                     <div {...reveal(0)}>
-                        <div className="flex min-w-0 flex-col gap-4">
-                            <span className={cn(serif, 'break-words text-[52px] italic leading-[0.85] lg:text-[64px]')}>
+                        <div className={cn(siteCard, 'flex h-full min-w-0 flex-col gap-3.5 p-5', cardPad)}>
+                            <span className={cn(serif, 'break-words text-[40px] italic leading-[0.95] md:text-[44px]')}>
                                 {name}<span className="text-[var(--site-accent)]">.</span>
                             </span>
-                            {content.tagline && <p className="m-0 max-w-[26ch] text-[#4A4640]">{content.tagline}</p>}
-                            <Link to="/menu" className="flex h-[50px] items-center self-start rounded-full bg-[var(--site-accent)] px-6 font-semibold text-[var(--site-on-accent)] transition-transform duration-300 hover:-translate-y-0.5 motion-reduce:transition-none">Menüyü gör</Link>
+                            {content.tagline && <p className="m-0 text-[15px] leading-normal text-[#5E5850]">{content.tagline}</p>}
+                            <Link to="/menu" className={cardButton.accent}>Menüyü gör</Link>
                         </div>
                     </div>
-                    {hasContactColumn && (
+                    {(address || site.phone || content.instagramUrl) && (
                         <div {...reveal(1)}>
-                            <div className="flex min-w-0 flex-col items-start gap-2.5">
+                            <InfoCard label="Ziyaret ve iletişim" labelId={contactId} className={cn('h-full', cardPad)}>
                                 {address && (
-                                    <>
-                                        <span className={footLabel}>Ziyaret</span>
-                                        <span className={cn(serif, 'text-[26px] leading-[1.15]')}>{address}</span>
-                                        <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cn(link, 'text-sm font-semibold')}>Yol tarifi al →</a>
-                                    </>
+                                    <div className="flex flex-col items-start gap-1">
+                                        <span className={cn(serif, 'text-[28px] leading-[1.05]')}>{address}</span>
+                                        <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cardLink}>Yol tarifi al →</a>
+                                    </div>
                                 )}
                                 {(site.phone || content.instagramUrl) && (
-                                    <>
-                                        <span className={cn(footLabel, address && 'pt-2.5')}>İletişim</span>
-                                        {site.phone && <a href={telHref(site.phone)} className={link}>{site.phone}</a>}
+                                    <div className="flex flex-col items-start gap-1">
+                                        {site.phone && <a href={telHref(site.phone)} className={textLink}>{site.phone}</a>}
                                         {content.instagramUrl && (
-                                            <a href={content.instagramUrl} target="_blank" rel="noopener noreferrer" className={cn(link, 'text-sm font-semibold')}>
-                                                {instagramHandle(content.instagramUrl)} →
+                                            <a href={content.instagramUrl} target="_blank" rel="noopener noreferrer" className={textLink}>
+                                                {instagramHandle(content.instagramUrl)}
                                             </a>
                                         )}
-                                    </>
+                                    </div>
                                 )}
-                                {hasContactPage && contactLink}
-                            </div>
+                            </InfoCard>
                         </div>
                     )}
                     {hours && (
-                        <div className={cn(reveal(2).className, 'md:col-span-2')} style={reveal(2).style}>
-                            <div className="flex min-w-0 flex-col gap-2.5">
-                                <span className={footLabel}>Çalışma saatleri</span>
-                                <HoursTable site={site} />
-                                {hasContactPage && !hasContactColumn && contactLink}
-                            </div>
+                        <div {...reveal(2)}>
+                            <InfoCard label="Çalışma saatleri" labelId={hoursId} className={cn('h-full', cardPad)}
+                                action={site.isOpenNow !== null && <OpenBadge open={site.isOpenNow} />}>
+                                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                                    <span className="text-[15px] font-semibold">Her gün</span>
+                                    <span className={cn(serif, 'text-[28px] leading-none tabular-nums')}>{hours}</span>
+                                </div>
+                                {content.hoursNote && <p className="m-0 text-sm text-[#5E5850]">{content.hoursNote}</p>}
+                            </InfoCard>
                         </div>
                     )}
                 </div>
 
                 <div {...reveal(3)}>
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#E6E1D9] pt-[22px] text-sm text-[#6F6A63]">
+                    <div className={cn('flex flex-wrap items-center justify-between gap-3 border-t pt-5 text-[13px]', line, photo ? 'text-[#45403A]' : 'text-[#6F6A63]')}>
                         <span>© {new Date().getFullYear()} {name} · Sophram ile hazırlandı</span>
-                        <nav aria-label="Alt menü" className="flex flex-wrap gap-x-6 gap-y-2">
-                            {nav.map(item => <Link key={item.key} to={item.to} className={cn(underlineLink, 'text-[#6F6A63]')}>{item.label}</Link>)}
-                            {canReserve && <Link to={RESERVATION_PATH} className={cn(underlineLink, 'text-[#6F6A63]')}>Rezervasyon</Link>}
-                            {canReserve && <Link to={RESERVATION_LOOKUP_PATH} className={cn(underlineLink, 'text-[#6F6A63]')}>Rezervasyon sorgula</Link>}
-                            <Link to="/gizlilik-politikasi" className={cn(underlineLink, 'text-[#6F6A63]')}>KVKK</Link>
-                            <Link to="/login" className={cn(underlineLink, 'text-[#6F6A63]')}>Personel girişi</Link>
+                        <nav aria-label="Alt menü" className="flex flex-wrap gap-x-[18px] gap-y-2">
+                            {nav.map(item => <Link key={item.key} to={item.to} className={bottomLink}>{item.label}</Link>)}
+                            {canReserve && <Link to={RESERVATION_PATH} className={bottomLink}>Rezervasyon</Link>}
+                            {canReserve && <Link to={RESERVATION_LOOKUP_PATH} className={bottomLink}>Rezervasyon sorgula</Link>}
+                            <Link to="/gizlilik-politikasi" className={bottomLink}>KVKK</Link>
+                            <Link to="/login" className={bottomLink}>Personel girişi</Link>
                         </nav>
                     </div>
                 </div>
@@ -346,25 +361,45 @@ export function SitePage({ site, current, className, stickyHeader = true, childr
     );
 }
 
-/** Alt sayfaların koyu girişi: kapak (ya da verilen) fotoğrafı karartılmış, üstte başlık boşluğu, altta dev başlık. */
-export function PageHero({ site, label, title, image, children }: {
-    site: PublicSite; label: string; title: ReactNode; image?: string; children?: ReactNode;
+/**
+ * Alt sayfaların koyu girişi: kapak (ya da verilen) fotoğrafı karartılmış, üstte başlık boşluğu, altta dev başlık.
+ * `compact` kısa kapak verir (96px başlık, dar ekranda etiket gizli); `aside` geniş ekranda başlığın sağına,
+ * dar ekranda altına gelir (ör. `HeroStatusPill`, menüde arama kutusu). `children` başlığın hemen altındadır
+ * (kısa kapakta başlıkla aynı sütunda). `titleClassName` başlığın boyutunu değiştirir (Mekân'ın uzun başlığı).
+ */
+export function PageHero({ site, label, title, image, compact = false, aside, titleClassName, children }: {
+    site: PublicSite; label: string; title: ReactNode; image?: string; compact?: boolean; aside?: ReactNode; titleClassName?: string; children?: ReactNode;
 }) {
     const src = image ?? site.site.coverImageUrl;
     return (
-        <section className="relative flex min-h-[380px] flex-col overflow-hidden bg-[#2A2622] text-white md:min-h-[520px]">
+        <section className={cn('relative flex flex-col overflow-hidden bg-[#2A2622] text-white', !compact && 'min-h-[380px] md:min-h-[520px]')}>
             {src && (
                 <>
                     <img src={src} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
-                    <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,16,12,0.55),rgba(20,16,12,0.35)_45%,rgba(20,16,12,0.7))]" />
+                    <div aria-hidden="true" className={cn('absolute inset-0',
+                        compact
+                            ? 'bg-[linear-gradient(180deg,rgba(20,16,12,0.55),rgba(20,16,12,0.72))]'
+                            : 'bg-[linear-gradient(180deg,rgba(20,16,12,0.55),rgba(20,16,12,0.35)_45%,rgba(20,16,12,0.7))]')} />
                 </>
             )}
             <HeaderSpacer />
-            <div className="relative mx-auto flex w-full max-w-[1344px] flex-1 flex-col justify-end gap-4 px-5 pb-12 pt-10 md:px-12 md:pb-16">
-                <span className="text-xs font-medium uppercase tracking-[0.28em] text-white/80">{label}</span>
-                <h1 className={cn(serif, 'm-0 break-words text-[64px] italic leading-[0.9] tracking-[-0.03em] md:text-[120px] lg:text-[150px]')}>{title}</h1>
-                {children}
-            </div>
+            {compact ? (
+                <div className="relative mx-auto flex w-full max-w-[1344px] flex-col gap-3 px-5 pb-7 pt-6 md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-6 md:px-12 md:pb-12 md:pt-14">
+                    <div className="flex min-w-0 max-w-[820px] flex-col gap-2.5">
+                        <span className="hidden text-xs font-medium uppercase tracking-[0.28em] text-white md:block">{label}</span>
+                        <h1 className={cn(serif, 'm-0 break-words text-[64px] italic leading-[0.95] md:text-[96px]', titleClassName)}>{title}</h1>
+                        {children}
+                    </div>
+                    {aside}
+                </div>
+            ) : (
+                <div className="relative mx-auto flex w-full max-w-[1344px] flex-1 flex-col justify-end gap-4 px-5 pb-12 pt-10 md:px-12 md:pb-16">
+                    <span className="text-xs font-medium uppercase tracking-[0.28em] text-white/80">{label}</span>
+                    <h1 className={cn(serif, 'm-0 break-words text-[64px] italic leading-[0.9] tracking-[-0.03em] md:text-[120px] lg:text-[150px]', titleClassName)}>{title}</h1>
+                    {aside}
+                    {children}
+                </div>
+            )}
         </section>
     );
 }

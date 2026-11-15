@@ -150,6 +150,10 @@ namespace RestaurantBill.Domain.Entities
             if (!setMenu.IsActive)
                 throw new DomainException($"{setMenu.Name} şu an satışta değil.");
 
+            // Ürün fiyatları düşünce menü indirimi fiyatı sıfırlamış olabilir; menü yeniden düzenlenmeli.
+            if (setMenu.Price <= 0)
+                throw new DomainException($"{setMenu.Name} menüsünün fiyatı geçersiz; menüyü düzenleyin.");
+
             IReadOnlyList<SetMenuSlotOption> chosen = setMenu.ResolveSelections(selections);
             SetMenuSlotOption? inactive = chosen.FirstOrDefault(o => !o.Product.IsActive);
             if (inactive is not null)

@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.SetMenus;
@@ -14,7 +15,9 @@ public abstract class SetMenuInput
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public decimal Price { get; set; }
+    /// <summary>Menünün tamamına uygulanan indirim. Fiyat gönderilmez; ürün fiyatlarından sunucuda hesaplanır.</summary>
+    public DiscountType DiscountType { get; set; }
+    public decimal DiscountValue { get; set; }
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
     /// <summary>İsteğe bağlı gösterim kategorisi (raporda menü bu kategori altında görünür; KDV oranı da ondan gelir).</summary>
@@ -27,14 +30,18 @@ public class SetMenuSlotInput
     /// <summary>Mevcut bölümün Id'si (bölüm yerinde güncellenir, Id'si değişmez); yeni bölümde boş.</summary>
     public Guid? Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    /// <summary>Bölümün kategorisi; verilirse seçenekler yalnızca bu kategorinin ürünleri olabilir.</summary>
+    public Guid? CategoryId { get; set; }
     public List<SetMenuOptionInput> Options { get; set; } = [];
 }
 
 public class SetMenuOptionInput
 {
     public Guid ProductId { get; set; }
-    public decimal Surcharge { get; set; }
     public bool IsDefault { get; set; }
+    /// <summary>Bu ürüne menü içinde uygulanan indirim. Ek ücret gönderilmez; fiyat farkından hesaplanır.</summary>
+    public DiscountType DiscountType { get; set; }
+    public decimal DiscountValue { get; set; }
 }
 
 public abstract class SetMenuInputValidator<T> : AbstractValidator<T> where T : SetMenuInput
@@ -51,8 +58,8 @@ public abstract class SetMenuInputValidator<T> : AbstractValidator<T> where T : 
         RuleFor(x => x.Description)
             .MaximumLength(SetMenu.DescriptionMaxLength).WithMessage($"Menü açıklaması en fazla {SetMenu.DescriptionMaxLength} karakter olabilir.");
 
-        RuleFor(x => x.Price)
-            .GreaterThan(0).WithMessage("Menü fiyatı 0'dan büyük olmalıdır.");
+        RuleFor(x => x.DiscountType).IsInEnum().WithMessage("Geçersiz indirim türü.");
+        RuleFor(x => x.DiscountValue).GreaterThanOrEqualTo(0).WithMessage("İndirim 0'dan küçük olamaz.");
 
         RuleFor(x => x.Slots)
             .NotEmpty().WithMessage("Menüde en az bir bölüm olmalı.")
@@ -71,7 +78,8 @@ public abstract class SetMenuInputValidator<T> : AbstractValidator<T> where T : 
             slot.RuleForEach(s => s.Options).ChildRules(option =>
             {
                 option.RuleFor(o => o.ProductId).NotEqual(Guid.Empty).WithMessage("Geçerli bir ürün seçilmelidir.");
-                option.RuleFor(o => o.Surcharge).GreaterThanOrEqualTo(0).WithMessage("Ek ücret 0'dan küçük olamaz.");
+                option.RuleFor(o => o.DiscountType).IsInEnum().WithMessage("Geçersiz indirim türü.");
+                option.RuleFor(o => o.DiscountValue).GreaterThanOrEqualTo(0).WithMessage("İndirim 0'dan küçük olamaz.");
             });
         });
     }
@@ -86,12 +94,18 @@ public static class SetMenuInputMapper
     public static async Task<Result<List<SetMenuSlotDraft>>> ToSlotDraftsAsync(
         this SetMenuInput input, IAppDbContext db, Guid branchId, CancellationToken cancellationToken)
     {
-        if (input.CategoryId is Guid categoryId && categoryId != Guid.Empty)
-        {
-            bool categoryInBranch = await db.Categories.AnyAsync(c => c.Id == categoryId && c.BranchId == branchId, cancellationToken);
-            if (!categoryInBranch)
-                return Result<List<SetMenuSlotDraft>>.Failure("Böyle bir kategori bulunamadı.");
-        }
+        // Menünün ve bölümlerin kategorileri aynı şubede olmalı. Bölüm adı, kategorisi seçilmişse kategorinin adıdır.
+        List<Guid> categoryIds = input.Slots.Select(s => s.CategoryId)
+            .Append(input.CategoryId)
+            .Where(id => id is Guid g && g != Guid.Empty)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+        Dictionary<Guid, string> categoryNames = await db.Categories
+            .Where(c => categoryIds.Contains(c.Id) && c.BranchId == branchId)
+            .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
+        if (categoryNames.Count != categoryIds.Count)
+            return Result<List<SetMenuSlotDraft>>.Failure("Böyle bir kategori bulunamadı.");
 
         List<Guid> productIds = input.Slots.SelectMany(s => s.Options).Select(o => o.ProductId).Distinct().ToList();
         Dictionary<Guid, Product> products = await db.Products
@@ -101,10 +115,15 @@ public static class SetMenuInputMapper
             return Result<List<SetMenuSlotDraft>>.Failure("Menüye eklenen ürünlerden biri bulunamadı.");
 
         List<SetMenuSlotDraft> drafts = input.Slots
-            .Select(slot => new SetMenuSlotDraft(
-                slot.Name,
-                slot.Options.Select(o => new SetMenuOptionDraft(products[o.ProductId], o.Surcharge, o.IsDefault)).ToList(),
-                slot.Id))
+            .Select(slot =>
+            {
+                Guid? slotCategoryId = slot.CategoryId is Guid g && g != Guid.Empty ? g : null;
+                return new SetMenuSlotDraft(
+                    slotCategoryId is Guid id ? categoryNames[id] : slot.Name,
+                    slot.Options.Select(o => new SetMenuOptionDraft(products[o.ProductId], o.IsDefault, o.DiscountType, o.DiscountValue)).ToList(),
+                    slot.Id,
+                    slotCategoryId);
+            })
             .ToList();
         return Result<List<SetMenuSlotDraft>>.Success(drafts);
     }

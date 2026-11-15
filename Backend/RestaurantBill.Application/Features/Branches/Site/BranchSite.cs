@@ -149,11 +149,8 @@ public class SetBranchSiteImageCommandHandler(
         string previousKey = branch.ReplaceSiteImage(request.Slot, newKey);
         await db.SaveChangesAsync(cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(previousKey))
-        {
-            try { await imageStorage.DeleteAsync(previousKey, cancellationToken); }
-            catch { /* Yeni durum kaydedildi; eski dosyanın kalması isteği bozmamalı. */ }
-        }
+        // Eski dosya en iyi çabayla silinir; paylaşılan anahtar silinmez.
+        await imageStorage.DeleteReplacedImageAsync(previousKey, cancellationToken);
 
         return Result<BranchSiteDto>.Success(BranchSiteDto.From(branch, storageOptions.Value.CdnBaseUrl.TrimEnd('/')));
     }

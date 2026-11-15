@@ -8,10 +8,12 @@ import {
     RESERVATION_CANCELLED, RESERVATION_CONFIRMED, RESERVATION_NO_SHOW, RESERVATION_PENDING, RESERVATION_REJECTED,
     RESERVATION_SEATED, type PublicCategory, type PublicProduct, type PublicSite, type ReservationDetail,
 } from '@/features/customerSite/types';
+import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import MenuBrowser from './components/MenuBrowser';
+import { FONTS_HREF, serif } from './site/siteParts';
 import { SITE_FONTS_HREF, formatDay, headingFont, siteRootStyle, telHref } from './site/siteTheme';
 import { rememberReservationToken } from './site/useSite';
 
@@ -176,8 +178,9 @@ export default function ReservationDetailPage() {
     };
 
     const root = (children: ReactNode) => (
-        <div style={siteRootStyle(site?.site.accentColor)} className="min-h-screen">
+        <div style={{ ...siteRootStyle(site?.site.accentColor), backgroundColor: '#F5F2ED' }} className="min-h-screen text-[#141414]">
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
+            <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
             {children}
         </div>
     );
@@ -185,19 +188,32 @@ export default function ReservationDetailPage() {
     if (loadError) {
         return root(
             <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-                <h1 className={cn(headingFont, 'text-3xl font-bold')}>Rezervasyon açılamadı</h1>
-                <p className="mt-2 max-w-sm text-base text-[var(--site-sub)]">{loadError}</p>
-                <Link to="/" className="mt-6 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--site-sub)] underline">Restoran sayfası</Link>
+                <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full border border-[#DDD7CE] bg-white text-[#6F6A63]">
+                    <CalendarCheck className="h-6 w-6" />
+                </span>
+                <h1 className={cn(serif, 'm-0 mt-5 text-[40px] leading-none tracking-[-0.02em]')}>Rezervasyon <span className="italic">açılamadı.</span></h1>
+                <p className="mt-3 max-w-sm text-base text-[#4A4640]">{loadError}</p>
+                <div className="mt-7 flex flex-wrap justify-center gap-3">
+                    <Link to={RESERVATION_LOOKUP_PATH} className="flex h-12 items-center rounded-full bg-[var(--site-accent)] px-6 text-[15px] font-semibold text-[var(--site-on-accent)] no-underline hover:opacity-90">Kodla sorgula</Link>
+                    <Link to="/" className="flex h-12 items-center rounded-full border border-[#DDD7CE] bg-white px-6 text-[15px] font-semibold text-[#141414] no-underline hover:border-[#141414]">Restoran sayfası</Link>
+                </div>
             </main>
         );
     }
 
     if (!detail || !site) {
         return root(
-            <main className="mx-auto min-h-screen max-w-2xl px-4 py-6" aria-busy="true">
-                <div className="h-8 w-48 animate-pulse rounded-lg bg-[var(--site-raised)]" />
-                <div className="mt-6 h-40 animate-pulse rounded-2xl bg-[var(--site-raised)]" />
-                <div className="mt-4 h-24 animate-pulse rounded-2xl bg-[var(--site-raised)]" />
+            <main className="min-h-screen" aria-busy="true" aria-label="Rezervasyon yükleniyor">
+                <div className="h-[68px] border-b border-[#DDD7CE] bg-white" />
+                <div className="mx-auto max-w-2xl px-4 pt-6">
+                    <div className="overflow-hidden rounded-[22px] border border-[#DDD7CE] bg-white">
+                        <div className="h-36 animate-pulse bg-[#2A2622]" />
+                        <div className="grid grid-cols-2 gap-4 p-5">
+                            {[...Array(4)].map((_, i) => <div key={i} className="h-12 animate-pulse rounded-lg bg-[#F1EDE6]" />)}
+                        </div>
+                    </div>
+                    <div className="mt-4 h-24 animate-pulse rounded-[20px] bg-[#ECE7DF]" />
+                </div>
             </main>
         );
     }
@@ -213,11 +229,11 @@ export default function ReservationDetailPage() {
 
     return root(
         <main className={cn('min-h-screen', showMenu && itemCount > 0 ? 'pb-36' : 'pb-10')}>
-            <header className="border-b border-[var(--site-border)] px-4 py-4">
+            <header className="border-b border-[#DDD7CE] bg-white px-4 py-3">
                 <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
-                    <Link to="/" className={cn(headingFont, 'truncate text-lg font-bold text-[var(--site-text)] no-underline')}>{restaurant}</Link>
+                    <Link to="/" className={cn(serif, 'truncate text-[26px] italic leading-tight text-[#141414] no-underline')}>{restaurant}</Link>
                     {detail.restaurantPhone && (
-                        <a href={telHref(detail.restaurantPhone)} className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-[var(--site-border-strong)] px-3.5 text-sm font-semibold text-[var(--site-text)] no-underline">
+                        <a href={telHref(detail.restaurantPhone)} className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-[#DDD7CE] px-4 text-sm font-semibold text-[#141414] no-underline transition-colors hover:border-[#141414]">
                             <Phone className="h-4 w-4" aria-hidden="true" />
                             Ara
                         </a>
@@ -226,40 +242,56 @@ export default function ReservationDetailPage() {
             </header>
 
             <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 pt-5">
-                <section aria-labelledby="rez-baslik" className="flex flex-col gap-3 rounded-2xl border border-[var(--site-border)] bg-[var(--site-card)] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <h1 id="rez-baslik" className={cn(headingFont, 'text-2xl font-bold leading-tight')}>Rezervasyonunuz</h1>
-                            <p className="mt-0.5 text-sm text-[var(--site-sub)]">{detail.guestName}</p>
+                <section aria-labelledby="rez-baslik" className="overflow-hidden rounded-[22px] border border-[#DDD7CE] bg-white shadow-[0_18px_40px_-28px_rgba(20,16,12,0.35)]">
+                    <div className="relative overflow-hidden bg-[#2A2622] px-5 pb-5 pt-6 text-white sm:px-6">
+                        {site.site.coverImageUrl && (
+                            <>
+                                <img src={site.site.coverImageUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+                                <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,16,12,0.45),rgba(20,16,12,0.82))]" />
+                            </>
+                        )}
+                        <div className="relative flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <span className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/70">Rezervasyon</span>
+                                <h1 id="rez-baslik" className={cn(serif, 'm-0 mt-1 text-[36px] leading-none tracking-[-0.01em]')}>Rezervasyonunuz</h1>
+                                <p className="m-0 mt-1.5 text-sm text-white/80">{detail.guestName}</p>
+                            </div>
+                            <span className={cn('shrink-0 rounded-full px-3 py-1.5 text-xs font-bold', badge.className)}>{badge.text}</span>
                         </div>
-                        <span className={cn('shrink-0 rounded-full px-3 py-1.5 text-xs font-bold', badge.className)}>{badge.text}</span>
                     </div>
-                    <ul className="flex flex-col gap-1.5 text-[15px]">
-                        <li className="flex items-center gap-2">
-                            <CalendarCheck className="h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
-                            {formatDay(detail.date)} · <span className="tabular-nums">{detail.time}–{detail.endTime}</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                            <Users className="h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
-                            {detail.partySize} kişi · {detail.tableName}
-                        </li>
-                    </ul>
+                    <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-4 px-5 py-5 sm:px-6">
+                        <div className="col-span-2 min-w-0">
+                            <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-[#6F6A63]"><CalendarCheck className="h-3.5 w-3.5" aria-hidden="true" />Tarih</dt>
+                            <dd className={cn(serif, 'm-0 mt-1 text-[24px] leading-tight')}>{formatDay(detail.date)}</dd>
+                        </div>
+                        <div className="min-w-0">
+                            <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-[#6F6A63]"><Clock className="h-3.5 w-3.5" aria-hidden="true" />Saat</dt>
+                            <dd className={cn(serif, 'm-0 mt-1 text-[24px] leading-tight tabular-nums')}>{detail.time}–{detail.endTime}</dd>
+                        </div>
+                        <div className="min-w-0">
+                            <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-[#6F6A63]"><Users className="h-3.5 w-3.5" aria-hidden="true" />Kişi · masa</dt>
+                            <dd className={cn(serif, 'm-0 mt-1 break-words text-[24px] leading-tight')}>{detail.partySize} kişi · {detail.tableName}</dd>
+                        </div>
+                    </dl>
                     {detail.code && (
-                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl bg-[var(--site-raised)] px-3.5 py-2.5">
-                            <span className="text-sm text-[var(--site-sub)]">Rezervasyon kodunuz</span>
-                            <span className="font-mono text-xl font-bold tracking-[0.12em]">{detail.code}</span>
-                            <p className="w-full text-xs text-[var(--site-muted)]">Bu kod ve telefon numaranızla rezervasyonunuzu sorgulayabilirsiniz.</p>
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-dashed border-[#DDD7CE] px-5 py-4 sm:px-6">
+                            <span className="text-sm text-[#6F6A63]">Rezervasyon kodunuz</span>
+                            <span className="font-mono text-2xl font-bold tracking-[0.14em]">{detail.code}</span>
+                            <p className="m-0 w-full text-xs text-[#6F6A63]">Bu kod ve telefon numaranızla rezervasyonunuzu sorgulayabilirsiniz.</p>
                         </div>
                     )}
                     {detail.status === RESERVATION_PENDING && (
-                        <p className="text-sm text-[var(--site-sub)]">Restoran onayladığında rezervasyonunuz kesinleşir. Bu sayfayı yenileyerek durumu görebilirsiniz.</p>
+                        <p className="m-0 flex items-start gap-2 border-t border-[#ECE7DF] bg-[#FDF6E7] px-5 py-3.5 text-sm text-[#713F12] sm:px-6">
+                            <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                            Restoran onayladığında rezervasyonunuz kesinleşir. Bu sayfayı yenileyerek durumu görebilirsiniz.
+                        </p>
                     )}
                 </section>
 
                 {preOrder && !editing && <PreOrderSummary detail={detail} onEdit={startEditing} onCancel={cancelPreOrder} cancelling={cancelling} />}
 
                 {!showMenu && window_.enabled && !pending && preOrder?.status !== ORDER_REQUEST_APPROVED && window_.reason && (
-                    <p className="flex items-start gap-2 rounded-2xl border border-[var(--site-border)] bg-[var(--site-raised)] p-4 text-[15px]">
+                    <p className="flex items-start gap-2 rounded-[20px] border border-[#DDD7CE] bg-white p-4 text-[15px]">
                         <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
                         {window_.reason}
                     </p>
@@ -267,7 +299,7 @@ export default function ReservationDetailPage() {
 
                 {showMenu && (
                     <div className="flex flex-col gap-1">
-                        <h2 className={cn(headingFont, 'text-xl font-bold')}>{editing ? 'Ön siparişinizi değiştirin' : 'Ön sipariş verin'}</h2>
+                        <h2 className={cn(serif, 'm-0 text-[30px] leading-tight')}>{editing ? 'Ön siparişinizi değiştirin' : 'Ön sipariş verin'}</h2>
                         <p className="text-sm text-[var(--site-sub)]">
                             İsterseniz gelmeden siparişinizi verin; masanıza oturduğunuzda mutfağa iletilir. Masanıza oturana kadar değiştirebilir ya da iptal edebilirsiniz. Ödeme restoranda alınır.
                         </p>
@@ -282,7 +314,7 @@ export default function ReservationDetailPage() {
 
             {showMenu && (
                 <div className="mx-auto max-w-2xl">
-                    <MenuBrowser categories={categories} quantities={quantities} onAdd={add} onRemove={remove} stickyBgClass="bg-[var(--site-bg)]/95" />
+                    <MenuBrowser categories={categories} quantities={quantities} onAdd={add} onRemove={remove} stickyBgClass="bg-[#F5F2ED]/95" />
                 </div>
             )}
 

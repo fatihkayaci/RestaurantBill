@@ -51,12 +51,15 @@ export default function RestaurantReservationPage() {
                     </>
                 )}
                 <HeaderSpacer />
-                <div className="relative mx-auto flex max-w-[1344px] flex-col gap-3 px-5 pb-10 pt-6 md:px-12 md:pb-14">
-                    <span className="text-xs font-medium uppercase tracking-[0.28em] text-white/80">{name}</span>
-                    <h1 className={cn(serif, 'm-0 text-[52px] leading-[0.92] tracking-[-0.025em] md:text-[88px]')}>Masanızı <span className="italic">ayırtın.</span></h1>
+                <div className="relative mx-auto flex w-full max-w-[1180px] flex-col gap-3 px-5 pb-10 pt-8 md:px-12 md:pb-16 md:pt-14">
+                    <span className="text-xs font-medium uppercase tracking-[0.28em] text-white/80">{name} · Rezervasyon</span>
+                    <h1 className={cn(serif, 'm-0 text-[52px] leading-[0.92] tracking-[-0.025em] md:text-[96px]')}>Masanızı <span className="italic">ayırtın.</span></h1>
+                    <p className="m-0 mt-1 max-w-[46ch] text-[15px] leading-relaxed text-white/85 md:text-[17px]">
+                        Gününüzü, saatinizi ve masanızı seçin; talebiniz restorana iletilir, onaylanınca masanız sizi bekler.
+                    </p>
                 </div>
             </section>
-            <div className="flex-1 bg-[var(--site-bg)] font-[family-name:'Inter_Tight',system-ui,sans-serif] leading-normal text-[var(--site-text)]">
+            <div className="flex flex-1 flex-col bg-[#F5F2ED] leading-normal text-[#141414]">
                 <ReservationFlow
                     // Hızlı seçiciden yeni bir seçimle gelinirse akış o seçimle baştan kurulur.
                     key={params.toString()}

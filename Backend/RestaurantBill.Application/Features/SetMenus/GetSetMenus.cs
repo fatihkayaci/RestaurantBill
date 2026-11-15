@@ -45,6 +45,9 @@ public class GetSetMenusQueryHandler(IAppDbContext db, ICurrentUserService curre
         Name = s.Name,
         Description = s.Description,
         Price = s.Price,
+        ListPrice = s.GetListPrice(),
+        DiscountType = s.DiscountType,
+        DiscountValue = s.DiscountValue,
         ImageUrl = string.IsNullOrWhiteSpace(s.ImageUrl) ? string.Empty : $"{cdnBaseUrl}/{s.ImageUrl}",
         IsActive = s.IsActive,
         SortOrder = s.SortOrder,
@@ -57,6 +60,7 @@ public class GetSetMenusQueryHandler(IAppDbContext db, ICurrentUserService curre
             {
                 Id = slot.Id,
                 Name = slot.Name,
+                CategoryId = slot.CategoryId,
                 SortOrder = slot.SortOrder,
                 IsFixed = slot.IsFixed,
                 Options = slot.Options
@@ -64,6 +68,10 @@ public class GetSetMenusQueryHandler(IAppDbContext db, ICurrentUserService curre
                     {
                         ProductId = o.ProductId,
                         ProductName = o.Product.Name,
+                        ProductPrice = o.Product.Price,
+                        DiscountType = o.DiscountType,
+                        DiscountValue = o.DiscountValue,
+                        Price = o.GetPrice(),
                         Surcharge = o.Surcharge,
                         IsDefault = o.IsDefault,
                         IsProductActive = o.Product.IsActive,

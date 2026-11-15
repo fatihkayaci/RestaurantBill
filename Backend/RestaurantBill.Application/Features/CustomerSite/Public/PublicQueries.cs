@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.CustomerSite;
+using RestaurantBill.Application.DTOs.Delivery;
+using RestaurantBill.Application.Features.SetMenus;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -53,6 +55,7 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
                     Name = p.Name,
                     Price = p.Price,
                     ImageUrl = string.IsNullOrWhiteSpace(p.ImageUrl) ? string.Empty : $"{cdnBaseUrl}/{p.ImageUrl}",
+                    IsStockImage = StorageKeys.IsShared(p.ImageUrl),
                     Description = p.Description,
                     IsFeatured = p.IsFeatured,
                     PrepMinutes = p.PrepMinutes
@@ -80,6 +83,8 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
                 .ToList();
         }
 
+        List<OnlineSetMenuDto> setMenus = await PublicSetMenus.LoadAsync(db, branch.Id, cdnBaseUrl, listedOnly: true, cancellationToken);
+
         var branches = await db.Branches.AsNoTracking()
             .Where(b => b.CompanyId == company.Id && !b.IsDeleted)
             .OrderBy(b => b.CreatedAt)
@@ -97,6 +102,7 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
             Phone = branch.Number,
             Branches = branches,
             Categories = categories.Where(c => c.Products.Count > 0).ToList(),
+            SetMenus = setMenus,
             Regions = regions.Where(r => r.Tables.Count > 0).ToList(),
             Site = BranchSiteDto.From(branch, cdnBaseUrl),
             IsOpenNow = IsOpenNow(branch),

@@ -13,7 +13,7 @@ using RestaurantBill.Integration.Tests.Infrastructure;
 namespace RestaurantBill.Integration.Tests.Features.Payments;
 
 // Menü hesapta tek satırdır: ödeme menü satırıyla alınır, raporda menü bir kez sayılır, içindeki ürünler sayılmaz.
-// Hesap: 2× Adana Menü (Kola seçili: 150 + 10 = ₺160) + 1× Köfte (₺300) = ₺620.
+// Hesap: 2× Adana Menü (₺160) + 1× Köfte (₺300) = ₺620.
 public class SetMenuPaymentTests : IntegrationTestBase
 {
     private const decimal Rate = 10m;
@@ -40,11 +40,12 @@ public class SetMenuPaymentTests : IntegrationTestBase
         DbContext.Products.AddRange(_adana, _kola, _kofte);
         DbContext.SaveChanges();
 
-        _menu = SetMenu.Create(RestaurantId, "Adana Menü", 150m);
-        _menu.SetSlots([
-            new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(_adana, 0m, false)]),
-            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_kola, 10m, true)]),
-        ]);
+        // Adana 250 + Kola 40 = 290, menü indirimi 130 → 160.
+        _menu = SetMenu.Create(RestaurantId, "Adana Menü");
+        _menu.SetContents([
+            new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(_adana, false)]),
+            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_kola, true)]),
+        ], DiscountType.Amount, 130m);
         DbContext.SetMenus.Add(_menu);
 
         _register = CashRegister.Create("Ana Kasa", 1000m, RestaurantId);

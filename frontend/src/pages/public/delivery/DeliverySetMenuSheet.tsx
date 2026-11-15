@@ -4,18 +4,23 @@ import { defaultSelections, setMenuUnitPrice } from '@/features/delivery/deliver
 import type { OnlineSetMenu } from '@/features/delivery/types';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { StockImageLabel } from '../components/StockImageLabel';
+import { ImageSlot } from '../site/SiteChrome';
 import { headingFont } from '../site/siteTheme';
+import { SetMenuPrice } from './DeliveryMenu';
 import Sheet from './Sheet';
 
 interface Props {
     menu: OnlineSetMenu;
+    /** Görseli olmayan menünün yer tutucusunda restoranın yazı logosu. */
+    restaurant: string;
     onClose: () => void;
     onAdd: (selections: Record<string, string>, quantity: number, note: string) => void;
 }
 
 // Menü (set) seçimi: her bölümde bir seçenek (varsayılan seçili), seçim farkı fiyata eklenir. Tek seçenekli bölümler
 // "menüde" olarak yazılır. Tükenen seçenek seçilemez. Garson ekranındaki SetMenuSheet'in müşteri sitesi karşılığı.
-export default function DeliverySetMenuSheet({ menu, onClose, onAdd }: Props) {
+export default function DeliverySetMenuSheet({ menu, restaurant, onClose, onAdd }: Props) {
     const [selections, setSelections] = useState<Record<string, string>>(() => defaultSelections(menu));
     const [quantity, setQuantity] = useState(1);
     const [note, setNote] = useState('');
@@ -46,22 +51,40 @@ export default function DeliverySetMenuSheet({ menu, onClose, onAdd }: Props) {
 
     return (
         <Sheet title={menu.name} onClose={onClose} footer={footer}>
-            {menu.description?.trim() && <p className="mb-3 text-sm text-[var(--site-sub)]">{menu.description}</p>}
-            <div className="flex flex-col gap-5">
+            {menu.imageUrl && (
+                <div className="relative mb-4">
+                    <ImageSlot src={menu.imageUrl} alt={menu.name} restaurant={restaurant} className="aspect-[16/9] rounded-2xl" />
+                    {menu.isStockImage && <StockImageLabel className="bottom-2.5 right-2.5" />}
+                </div>
+            )}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <SetMenuPrice menu={menu} />
+                <span className="text-sm font-medium text-[var(--site-sub)]">· {menu.slots.length} parça</span>
+            </div>
+            {menu.description?.trim() && <p className="mt-1 text-sm text-[var(--site-sub)]">{menu.description}</p>}
+            <div className="mt-5 flex flex-col gap-5">
                 {menu.slots.map(slot => {
                     const single = slot.isFixed || slot.options.length === 1;
                     if (single) {
                         const option = slot.options[0];
                         return (
-                            <div key={slot.id}>
-                                <p className="text-xs font-bold uppercase tracking-widest text-[var(--site-sub)]">{slot.name}</p>
-                                <p className="mt-1 text-[15px] font-semibold">{option?.productName ?? '—'} <span className="font-normal text-[var(--site-sub)]">· menüde</span></p>
+                            <div key={slot.id} className="flex items-center justify-between gap-3 rounded-2xl bg-[var(--site-raised)] px-4 py-3">
+                                <div className="min-w-0">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--site-sub)]">{slot.name}</p>
+                                    <p className="mt-0.5 text-[15px] font-semibold">{option?.productName ?? '—'}</p>
+                                </div>
+                                <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-[var(--site-sub)]">
+                                    <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />Menüde
+                                </span>
                             </div>
                         );
                     }
                     return (
                         <fieldset key={slot.id}>
-                            <legend className="text-xs font-bold uppercase tracking-widest text-[var(--site-sub)]">{slot.name}</legend>
+                            <legend className="flex w-full items-center justify-between gap-3">
+                                <span className="text-xs font-bold uppercase tracking-widest text-[var(--site-sub)]">{slot.name}</span>
+                                <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Birini seçin</span>
+                            </legend>
                             <div className="mt-2 flex flex-col gap-2">
                                 {slot.options.map(option => {
                                     const checked = selections[slot.id] === option.productId;
@@ -83,7 +106,7 @@ export default function DeliverySetMenuSheet({ menu, onClose, onAdd }: Props) {
                                                 {checked && <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />}
                                             </span>
                                             <span className="min-w-0 flex-1 text-[15px] font-semibold">{option.productName}</span>
-                                            <span className="shrink-0 text-sm text-[var(--site-sub)]">
+                                            <span className={cn('shrink-0 text-sm', option.surcharge > 0 && option.isAvailable ? 'font-semibold text-[var(--site-text)]' : 'text-[var(--site-sub)]')}>
                                                 {!option.isAvailable ? 'Tükendi' : option.surcharge > 0 ? `+${formatPrice(option.surcharge)} ₺` : ''}
                                             </span>
                                         </button>

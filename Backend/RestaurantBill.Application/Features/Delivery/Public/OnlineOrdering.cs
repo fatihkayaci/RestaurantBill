@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.Delivery;
 using RestaurantBill.Application.Features.CustomerSite;
+using RestaurantBill.Application.Features.SetMenus;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Shared;
@@ -105,6 +106,7 @@ public class GetOnlineOrderingQueryHandler(
                     Name = p.Name,
                     Price = p.Price,
                     ImageUrl = ImageUrl(cdnBaseUrl, p.ImageUrl),
+                    IsStockImage = StorageKeys.IsShared(p.ImageUrl),
                     Description = p.Description,
                     IsFeatured = p.IsFeatured,
                     IsOutOfStock = p.IsOutOfStock
@@ -113,44 +115,7 @@ public class GetOnlineOrderingQueryHandler(
         }
         dto.Categories = categories.Where(c => c.Products.Count > 0).ToList();
 
-        List<SetMenu> setMenus = await db.SetMenus.AsNoTracking()
-            .Include(s => s.Slots).ThenInclude(slot => slot.Options).ThenInclude(o => o.Product)
-            .Where(s => s.BranchId == branch.Id && s.IsActive && !s.IsDeleted)
-            .OrderBy(s => s.SortOrder).ThenBy(s => s.Name)
-            .ToListAsync(cancellationToken);
-
-        dto.SetMenus = setMenus.Select(s =>
-        {
-            List<OnlineSetMenuSlotDto> slots = s.Slots
-                .OrderBy(slot => slot.SortOrder)
-                .Select(slot => new OnlineSetMenuSlotDto
-                {
-                    Id = slot.Id,
-                    Name = slot.Name,
-                    IsFixed = slot.IsFixed,
-                    Options = slot.Options.Select(o => new OnlineSetMenuOptionDto
-                    {
-                        ProductId = o.ProductId,
-                        ProductName = o.Product.Name,
-                        Surcharge = o.Surcharge,
-                        IsDefault = o.IsDefault,
-                        IsAvailable = o.Product.IsActive && !o.Product.IsOutOfStock && !o.Product.IsDeleted
-                    }).ToList()
-                })
-                .ToList();
-
-            return new OnlineSetMenuDto
-            {
-                Id = s.Id,
-                Name = s.Name,
-                Description = s.Description,
-                Price = s.Price,
-                ImageUrl = ImageUrl(cdnBaseUrl, s.ImageUrl),
-                CategoryId = s.CategoryId,
-                IsAvailable = slots.Count > 0 && slots.All(slot => slot.Options.Any(o => o.IsAvailable)),
-                Slots = slots
-            };
-        }).ToList();
+        dto.SetMenus = await PublicSetMenus.LoadAsync(db, branch.Id, cdnBaseUrl, listedOnly: false, cancellationToken);
 
         return Result<OnlineOrderingDto>.Success(dto);
     }

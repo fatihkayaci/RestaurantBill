@@ -35,6 +35,8 @@ public interface IAppDbContext
     DbSet<DeliveryZone> DeliveryZones { get; }
     DbSet<BlockedPhone> BlockedPhones { get; }
     DbSet<CustomerPhoneVerification> CustomerPhoneVerifications { get; }
+    DbSet<ContactMessage> ContactMessages { get; }
+    DbSet<StockImage> StockImages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

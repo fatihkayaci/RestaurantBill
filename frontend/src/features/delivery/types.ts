@@ -35,6 +35,8 @@ export interface OnlineMenuProduct {
     name: string;
     price: number;
     imageUrl: string;
+    /** Görsel hazır görsel kütüphanesinden: "Temsili görsel" etiketi gösterilir. */
+    isStockImage: boolean;
     description: string;
     isFeatured: boolean;
     /** "Tükendi": listede görünür, sepete eklenemez. */
@@ -68,7 +70,11 @@ export interface OnlineSetMenu {
     name: string;
     description: string;
     price: number;
+    /** İndirimsiz fiyat (taban ürünlerin normal fiyatları); price'tan büyükse menü indirimlidir. */
+    regularPrice: number;
     imageUrl: string;
+    /** Görsel hazır görsel kütüphanesinden: "Temsili görsel" etiketi gösterilir. */
+    isStockImage: boolean;
     categoryId?: string | null;
     /** Her bölümde seçilebilir en az bir seçenek var mı (yoksa "Tükendi"). */
     isAvailable: boolean;

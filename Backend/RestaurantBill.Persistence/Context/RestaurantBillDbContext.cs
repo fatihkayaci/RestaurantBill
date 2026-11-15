@@ -44,6 +44,8 @@ public class RestaurantBillDbContext : DbContext, IAppDbContext
     public DbSet<DeliveryZone> DeliveryZones { get; set; }
     public DbSet<BlockedPhone> BlockedPhones { get; set; }
     public DbSet<CustomerPhoneVerification> CustomerPhoneVerifications { get; set; }
+    public DbSet<ContactMessage> ContactMessages { get; set; }
+    public DbSet<StockImage> StockImages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

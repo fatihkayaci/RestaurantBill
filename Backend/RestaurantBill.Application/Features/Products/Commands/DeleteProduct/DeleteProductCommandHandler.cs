@@ -59,17 +59,8 @@ namespace RestaurantBill.Application.Features.Products.Commands.DeleteProduct
 
             await _db.SaveChangesAsync(cancellationToken);
 
-            if (!string.IsNullOrWhiteSpace(product.ImageUrl))
-            {
-                try
-                {
-                    await _imageStorage.DeleteAsync(product.ImageUrl, cancellationToken);
-                }
-                catch
-                {
-                    // Best-effort cleanup: product deletion has already succeeded, don't fail the request over a stale CDN file.
-                }
-            }
+            // Best-effort cleanup of the product's own file; shared (stock) keys are never deleted.
+            await _imageStorage.DeleteReplacedImageAsync(product.ImageUrl, cancellationToken);
 
             return Result.Success();
         }

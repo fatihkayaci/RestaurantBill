@@ -1,4 +1,5 @@
 import type { PublicSite } from '@/features/customerSite/types';
+import { cn } from '@/lib/utils';
 import { fullAddress, hoursText } from './useSite';
 
 // Restoran sitesinin "Birleşik" görünümünün ortak parçaları: yazı tipleri, sınıf dizileri, hareket CSS'i ve
@@ -15,6 +16,29 @@ export const underlineLink = 'bg-[linear-gradient(currentColor,currentColor)] bg
 /** "Devamı →" bağlantıları: alt çizgili, ok üstüne gelince kayar. */
 export const moreLink = 'group inline-flex items-center gap-2 self-start border-b border-[#141414] pb-1 text-[13px] font-medium uppercase tracking-[0.16em] text-[#141414]';
 export const moreArrow = 'inline-block transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none';
+
+// ── Kart dili (SiteCards.tsx bileşenleriyle birlikte; İletişim'de başladı, diğer alt sayfalar da kullanacak) ──
+/** Beyaz, yuvarlak köşeli kart yüzeyi (bilgi kartları). Büyük kartlarda `siteCardLg`. */
+export const siteCard = 'rounded-[20px] border border-[#E6E0D6] bg-white text-[#141414]';
+/** Büyük kart yüzeyi (form, uzun içerik): daha geniş köşe. */
+export const siteCardLg = 'rounded-[20px] border border-[#E6E0D6] bg-white text-[#141414] md:rounded-[24px]';
+/** Koyu kart yüzeyi (rezervasyon gibi çağrılar). */
+export const siteCardDark = 'rounded-[20px] bg-[#141414] text-white';
+
+/** Kart etiketi: küçük, aralıklı büyük harf. */
+export const cardLabel = 'text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6F6A63] md:text-xs md:tracking-[0.2em]';
+/** Kartın büyük değeri (telefon, saat, kullanıcı adı): serif. */
+export const cardValue = cn(serif, 'text-[26px] leading-none md:text-[32px]');
+/** Kart içindeki metin bağlantısı ("Yol tarifi al →", "Menüyü gör →"). */
+export const cardLink = 'self-start text-sm font-semibold text-[#141414] underline underline-offset-4 transition-colors hover:text-[var(--site-accent)]';
+
+const buttonBase = 'inline-flex h-11 items-center justify-center gap-2 self-start whitespace-nowrap rounded-full px-[18px] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-accent)] focus-visible:ring-offset-2';
+/** Kart düğmeleri: `outline` açık kartta ikincil, `dark` haritadaki koyu hap, `accent` vurgu renginde ana eylem. */
+export const cardButton = {
+    outline: cn(buttonBase, 'border border-[#141414] text-[#141414] hover:bg-[#141414] hover:text-white'),
+    dark: cn(buttonBase, 'bg-[#141414] text-white hover:bg-[#2A2622]'),
+    accent: cn(buttonBase, 'bg-[var(--site-accent)] px-5 font-bold text-[var(--site-on-accent)] hover:opacity-90'),
+} as const;
 
 // Kayan şeritler ve dönen rozet; hareket azaltma tercihinde durur.
 export const MOTION_CSS = `
