@@ -14,6 +14,11 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Hazır görsel kataloğu: açılışta StockImageSeed okur (docs/stock-images.md). -->
+    <EmbeddedResource Include="Seeds\stock-images.json" LogicalName="RestaurantBill.Persistence.Seeds.stock-images.json" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

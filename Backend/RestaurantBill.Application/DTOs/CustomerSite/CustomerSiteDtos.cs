@@ -1,3 +1,4 @@
+using RestaurantBill.Application.DTOs.Delivery;
 using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Application.DTOs.CustomerSite;
@@ -13,6 +14,8 @@ public class PublicSiteDto
     public string Phone { get; set; } = string.Empty;
     public List<PublicBranchDto> Branches { get; set; } = [];
     public List<PublicCategoryDto> Categories { get; set; } = [];
+    /// <summary>Şubenin aktif paket menüleri ("Adana Menü"); online sipariş sayfasıyla aynı biçim.</summary>
+    public List<OnlineSetMenuDto> SetMenus { get; set; } = [];
     public List<PublicRegionDto> Regions { get; set; } = [];
     public BranchSiteDto Site { get; set; } = new();
     /// <summary>Şubenin yerel saatiyle şu an açık mı; saat girilmemişse null.</summary>
@@ -86,6 +89,8 @@ public class PublicProductDto
     public string Name { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
+    /// <summary>Görsel hazır görsel kütüphanesinden (paylaşılan anahtar): sitede "Temsili görsel" etiketi çıkar.</summary>
+    public bool IsStockImage { get; set; }
     public string Description { get; set; } = string.Empty;
     public bool IsFeatured { get; set; }
     /// <summary>Tahmini hazırlanma süresi (dk); null ise gösterilmez.</summary>

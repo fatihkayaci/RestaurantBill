@@ -1,0 +1,4 @@
+// Hazır görsel kataloğu. Açılışta storageKey ile eşlenerek yüklenir (StockImageSeed). Nasıl eklenir: docs/stock-images.md
+// Dosyası CDN'de olmayan satır eklemeyin: seçicide ve sitede kırık görsel olarak görünür.
+[
+]

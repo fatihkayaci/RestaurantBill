@@ -33,17 +33,8 @@ public class DeleteSetMenuCommandHandler(IAppDbContext db, ICurrentUserService c
         await db.AddSetMenuAuditLogAsync(currentUser, setMenu, "SetMenuDeleted", $"{setMenu.Name} menüsünü sildi.", AuditLogSeverity.Warning, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(setMenu.ImageUrl))
-        {
-            try
-            {
-                await imageStorage.DeleteAsync(setMenu.ImageUrl, cancellationToken);
-            }
-            catch
-            {
-                // Menü silindi; CDN'de kalan eski dosya yüzünden isteği başarısız saymayız.
-            }
-        }
+        // Menünün kendi dosyası silinir (en iyi çaba); paylaşılan hazır görsel silinmez.
+        await imageStorage.DeleteReplacedImageAsync(setMenu.ImageUrl, cancellationToken);
 
         return Result.Success();
     }

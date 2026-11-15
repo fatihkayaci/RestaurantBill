@@ -37,7 +37,19 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
             if (!categoryInSameBranch)
                 return Result.Failure("Böyle bir kategori bulunamadı.");
 
+            bool priceChanged = product.Price != request.Price;
             product.Update(request.Name, request.Price, request.IsActive, request.CategoryId);
+
+            // Menü fiyatları ürün fiyatlarından hesaplanır: bu ürünü içeren menüler yeni fiyatla yeniden hesaplanır.
+            if (priceChanged)
+            {
+                List<SetMenu> setMenus = await _db.SetMenus
+                    .Include(s => s.Slots).ThenInclude(slot => slot.Options).ThenInclude(o => o.Product)
+                    .Where(s => s.Slots.Any(slot => slot.Options.Any(o => o.ProductId == product.Id)))
+                    .ToListAsync(cancellationToken);
+                foreach (SetMenu setMenu in setMenus)
+                    setMenu.RecalculatePrice();
+            }
             if (request.Cost is not null)
                 product.SetCost(request.Cost.Value);
             product.UpdateSiteDetails(request.Description, request.IsFeatured);

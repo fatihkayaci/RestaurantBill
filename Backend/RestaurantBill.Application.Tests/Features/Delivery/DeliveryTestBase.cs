@@ -87,12 +87,13 @@ public abstract class DeliveryTestBase : ApplicationTestBase
         DbContext.Products.AddRange(Lahmacun, Ayran, Kola, Adana);
         await DbContext.SaveChangesAsync();
 
-        AdanaMenu = SetMenu.Create(Branch.Id, "Adana Menü", 250m);
-        AdanaMenu.SetSlots(
+        // Adana 300 + Ayran 30 = 330, menü indirimi 80 → 250; Kola 40 olduğu için +10.
+        AdanaMenu = SetMenu.Create(Branch.Id, "Adana Menü");
+        AdanaMenu.SetContents(
         [
-            new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(Adana, 0m, true)]),
-            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(Ayran, 0m, true), new SetMenuOptionDraft(Kola, 10m, false)])
-        ]);
+            new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(Adana, true)]),
+            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(Ayran, true), new SetMenuOptionDraft(Kola, false)])
+        ], DiscountType.Amount, 80m);
         DbContext.SetMenus.Add(AdanaMenu);
         await DbContext.SaveChangesAsync();
 

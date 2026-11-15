@@ -70,17 +70,8 @@ public class UploadSetMenuImageCommandHandler(
         await db.AddSetMenuAuditLogAsync(currentUser, setMenu, "SetMenuImageUpdated", $"{setMenu.Name} menüsünün görselini güncelledi.", AuditLogSeverity.Info, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(previousKey))
-        {
-            try
-            {
-                await imageStorage.DeleteAsync(previousKey, cancellationToken);
-            }
-            catch
-            {
-                // Yeni görsel kaydedildi; eski dosya silinemezse isteği başarısız saymayız.
-            }
-        }
+        // Menünün kendi eski dosyası silinir (en iyi çaba); paylaşılan hazır görsel silinmez.
+        await imageStorage.DeleteReplacedImageAsync(previousKey, cancellationToken);
 
         return Result<string>.Success($"{storageOptions.Value.CdnBaseUrl.TrimEnd('/')}/{newKey}");
     }

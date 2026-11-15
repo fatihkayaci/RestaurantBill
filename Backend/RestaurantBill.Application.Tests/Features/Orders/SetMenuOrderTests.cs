@@ -7,6 +7,7 @@ using RestaurantBill.Application.Features.Orders.Commands.UpdateOrderItemsStatus
 using RestaurantBill.Application.Features.Orders.Queries;
 using RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTableId;
 using RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToKitchen;
+using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
 using RestaurantBill.Application.Features.SetMenus;
 using RestaurantBill.Application.Tests.Fakes;
 using RestaurantBill.Application.Tests.Infrastructure;
@@ -15,7 +16,7 @@ using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.Tests.Features.Orders;
 
-// "Adana Menü" (150 ₺) = Adana Kebap (Izgara, sabit) + İçecek (Ayran varsayılan / Kola +10 ₺) + Patates (Izgara, sabit).
+// "Adana Menü" = Adana Kebap (100, Izgara, sabit) + İçecek (Ayran 30 varsayılan / Kola 40 → +10 ₺) + Patates (20, Izgara, sabit) = 150 ₺.
 public class SetMenuOrderTests : ApplicationTestBase
 {
     private Category _izgara = default!;
@@ -38,15 +39,14 @@ public class SetMenuOrderTests : ApplicationTestBase
         DbContext.Categories.AddRange(_izgara, _icecek);
         await DbContext.SaveChangesAsync();
 
-        _adana = await SeedProductAsync("Adana Kebap", _izgara, cost: 60m);
-        _patates = await SeedProductAsync("Patates", _izgara, cost: 8m);
-        _ayran = await SeedProductAsync("Ayran", _icecek, cost: 5m);
-        _kola = await SeedProductAsync("Kola", _icecek, cost: 12m);
+        _adana = await SeedProductAsync("Adana Kebap", _izgara, 100m, cost: 60m);
+        _patates = await SeedProductAsync("Patates", _izgara, 20m, cost: 8m);
+        _ayran = await SeedProductAsync("Ayran", _icecek, 30m, cost: 5m);
+        _kola = await SeedProductAsync("Kola", _icecek, 40m, cost: 12m);
 
         var created = await new CreateSetMenuCommandHandler(Db, CurrentUser).Handle(new CreateSetMenuCommand
         {
             Name = "Adana Menü",
-            Price = 150m,
             Slots =
             [
                 new SetMenuSlotInput { Name = "Ana yemek", Options = [new SetMenuOptionInput { ProductId = _adana.Id }] },
@@ -56,7 +56,7 @@ public class SetMenuOrderTests : ApplicationTestBase
                     Options =
                     [
                         new SetMenuOptionInput { ProductId = _ayran.Id, IsDefault = true },
-                        new SetMenuOptionInput { ProductId = _kola.Id, Surcharge = 10m },
+                        new SetMenuOptionInput { ProductId = _kola.Id },
                     ]
                 },
                 new SetMenuSlotInput { Name = "Yan ürün", Options = [new SetMenuOptionInput { ProductId = _patates.Id }] },
@@ -73,9 +73,9 @@ public class SetMenuOrderTests : ApplicationTestBase
         return (order, table, menu);
     }
 
-    private async Task<Product> SeedProductAsync(string name, Category category, decimal cost)
+    private async Task<Product> SeedProductAsync(string name, Category category, decimal price, decimal cost)
     {
-        Product product = Product.Create(name, 50m, "", category.Id);
+        Product product = Product.Create(name, price, "", category.Id);
         product.SetCost(cost);
         DbContext.Products.Add(product);
         await DbContext.SaveChangesAsync();
@@ -139,8 +139,8 @@ public class SetMenuOrderTests : ApplicationTestBase
     public async Task AddSetMenu_FromAnotherBranch_IsNotFound()
     {
         var (order, _, _) = await SeedAsync();
-        SetMenu foreign = SetMenu.Create(Guid.NewGuid(), "Yabancı Menü", 100m);
-        foreign.SetSlots([new SetMenuSlotDraft("Ana", [new SetMenuOptionDraft(_adana, 0m, false)])]);
+        SetMenu foreign = SetMenu.Create(Guid.NewGuid(), "Yabancı Menü");
+        foreign.SetContents([new SetMenuSlotDraft("Ana", [new SetMenuOptionDraft(_adana, false)])], DiscountType.None, 0m);
         DbContext.SetMenus.Add(foreign);
         await DbContext.SaveChangesAsync();
 
@@ -236,14 +236,16 @@ public class SetMenuOrderTests : ApplicationTestBase
         {
             Id = menu.Id,
             Name = menu.Name,
-            Price = menu.Price,
+            DiscountType = menu.DiscountType,
+            DiscountValue = menu.DiscountValue,
             IsActive = menu.IsActive,
             Slots = menu.Slots.OrderBy(s => s.SortOrder).Select(slot => new SetMenuSlotInput
             {
                 Id = slot.Id,
                 Name = slot.Name,
+                CategoryId = slot.CategoryId,
                 Options = slot.Options
-                    .Select(o => new SetMenuOptionInput { ProductId = o.ProductId, Surcharge = o.Surcharge, IsDefault = o.IsDefault })
+                    .Select(o => new SetMenuOptionInput { ProductId = o.ProductId, IsDefault = o.IsDefault, DiscountType = o.DiscountType, DiscountValue = o.DiscountValue })
                     .ToList()
             }).ToList()
         };
@@ -267,27 +269,32 @@ public class SetMenuOrderTests : ApplicationTestBase
         var (order, _, menu) = await SeedAsync();
         List<Guid> slotIdsBefore = menu.Slots.OrderBy(s => s.SortOrder).Select(s => s.Id).ToList();
 
-        // Önce yalnızca "Satış dışı", sonra yeniden "Satışta" + fiyat ve ek ücret değişikliği.
+        // Önce yalnızca "Satış dışı", sonra yeniden "Satışta" + indirim değişikliği.
         UpdateSetMenuCommand deactivate = await UpdateCommandFromAsync(menu.Id);
         deactivate.IsActive = false;
         Assert.True((await UpdateAsync(deactivate)).IsSuccess);
         Assert.Equal(slotIdsBefore, (await SlotsOfAsync(menu.Id)).Select(s => s.Id));
 
+        // Menüye 20 ₺ indirim (150 → 130), Kola'ya 5 ₺ indirim (40 → 35, ek ücret 10 → 5).
         UpdateSetMenuCommand edit = await UpdateCommandFromAsync(menu.Id);
         edit.IsActive = true;
-        edit.Price = 170m;
-        edit.Slots[1].Options.Single(o => o.ProductId == _kola.Id).Surcharge = 15m;
+        edit.DiscountType = DiscountType.Amount;
+        edit.DiscountValue = 20m;
+        SetMenuOptionInput kola = edit.Slots[1].Options.Single(o => o.ProductId == _kola.Id);
+        kola.DiscountType = DiscountType.Amount;
+        kola.DiscountValue = 5m;
         var result = await UpdateAsync(edit);
 
         Assert.True(result.IsSuccess, result.Error);
         List<SetMenuSlot> slots = await SlotsOfAsync(menu.Id);
         Assert.Equal(slotIdsBefore, slots.Select(s => s.Id));
-        Assert.Equal(15m, slots[1].Options.Single(o => o.ProductId == _kola.Id).Surcharge);
+        Assert.Equal(5m, slots[1].Options.Single(o => o.ProductId == _kola.Id).Surcharge);
+        Assert.Equal(130m, (await DbContext.SetMenus.SingleAsync(s => s.Id == menu.Id)).Price);
 
         // Düzenlemeden önce açılmış seçim ekranı, elindeki (eski) menünün bölüm Id'siyle gönderir; hâlâ geçerlidir.
         var added = await AddKolaMenuAsync(order, menu);
         Assert.True(added.IsSuccess, added.Error);
-        Assert.Equal(185m, (await DbContext.OrderItems.SingleAsync(i => i.Id == added.Value)).UnitPrice);
+        Assert.Equal(135m, (await DbContext.OrderItems.SingleAsync(i => i.Id == added.Value)).UnitPrice);
     }
 
     [Fact]
@@ -313,7 +320,7 @@ public class SetMenuOrderTests : ApplicationTestBase
         UpdateSetMenuCommand command = await UpdateCommandFromAsync(menu.Id);
         List<Guid?> existingIds = command.Slots.Select(s => s.Id).ToList();
 
-        command.Slots[0].Options.Add(new SetMenuOptionInput { ProductId = _patates.Id, Surcharge = 5m });
+        command.Slots[0].Options.Add(new SetMenuOptionInput { ProductId = _patates.Id });
         command.Slots.Add(new SetMenuSlotInput { Name = "Tatlı içecek", Options = [new SetMenuOptionInput { ProductId = _kola.Id }] });
         var result = await UpdateAsync(command);
 
@@ -324,6 +331,45 @@ public class SetMenuOrderTests : ApplicationTestBase
         Assert.Equal("Tatlı içecek", slots[3].Name);
         Assert.Equal(2, slots[0].Options.Count);
         Assert.False(slots[0].IsFixed);
+    }
+
+    [Fact]
+    public async Task UpdatingProductPrice_RecalculatesMenuPriceAndSurcharge()
+    {
+        var (_, _, menu) = await SeedAsync();
+
+        var result = await new UpdateProductCommandHandler(Db, CurrentUser).Handle(new UpdateProductCommand
+        {
+            Id = _kola.Id,
+            Name = _kola.Name,
+            Price = 55m,
+            IsActive = true,
+            CategoryId = _icecek.Id
+        }, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        DbContext.ChangeTracker.Clear();
+        SetMenu reloaded = await DbContext.SetMenus.Include(s => s.Slots).ThenInclude(slot => slot.Options).SingleAsync(s => s.Id == menu.Id);
+        Assert.Equal(150m, reloaded.Price); // Kola varsayılan değil, taban fiyat değişmez
+        Assert.Equal(25m, reloaded.Slots.Single(s => s.Name == "İçecek").Options.Single(o => o.ProductId == _kola.Id).Surcharge);
+    }
+
+    [Fact]
+    public async Task SlotWithCategory_TakesTheCategoryName_AndRejectsProductsOfOtherCategories()
+    {
+        var (_, _, menu) = await SeedAsync();
+        UpdateSetMenuCommand command = await UpdateCommandFromAsync(menu.Id);
+        command.Slots[1].CategoryId = _icecek.Id;
+        command.Slots[1].Name = "eski ad";
+
+        Assert.True((await UpdateAsync(command)).IsSuccess);
+        SetMenuSlot drinks = (await SlotsOfAsync(menu.Id))[1];
+        Assert.Equal("İçecek", drinks.Name);
+        Assert.Equal(_icecek.Id, drinks.CategoryId);
+
+        UpdateSetMenuCommand wrong = await UpdateCommandFromAsync(menu.Id);
+        wrong.Slots[1].Options.Add(new SetMenuOptionInput { ProductId = _patates.Id });
+        Assert.True((await UpdateAsync(wrong)).IsFailure);
     }
 
     [Fact]

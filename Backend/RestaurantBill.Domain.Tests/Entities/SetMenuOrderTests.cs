@@ -5,25 +5,25 @@ using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Domain.Tests.Entities;
 
-// "Adana Menü" (150 ₺) = Adana Kebap (sabit) + İçecek (Ayran varsayılan / Kola +10 ₺) + Patates (sabit).
+// "Adana Menü" = Adana Kebap (100, sabit) + İçecek (Ayran 30 varsayılan / Kola 40 → +10 ₺) + Patates (20, sabit) = 150 ₺.
 public class SetMenuOrderTests
 {
-    private readonly Product _adana = CreateProduct("Adana Kebap", cost: 60m);
-    private readonly Product _ayran = CreateProduct("Ayran", cost: 5m);
-    private readonly Product _kola = CreateProduct("Kola", cost: 12m);
-    private readonly Product _patates = CreateProduct("Patates", cost: 8m);
+    private readonly Product _adana = CreateProduct("Adana Kebap", 100m, cost: 60m);
+    private readonly Product _ayran = CreateProduct("Ayran", 30m, cost: 5m);
+    private readonly Product _kola = CreateProduct("Kola", 40m, cost: 12m);
+    private readonly Product _patates = CreateProduct("Patates", 20m, cost: 8m);
     private readonly SetMenu _menu;
     private readonly SetMenuSlot _drinkSlot;
 
     public SetMenuOrderTests()
     {
-        _menu = SetMenu.Create(Guid.NewGuid(), "Adana Menü", 150m);
+        _menu = SetMenu.Create(Guid.NewGuid(), "Adana Menü");
         SetId(_menu, Guid.NewGuid());
-        _menu.SetSlots([
-            new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(_adana, 0m, false)]),
-            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_ayran, 0m, true), new SetMenuOptionDraft(_kola, 10m, false)]),
-            new SetMenuSlotDraft("Yan ürün", [new SetMenuOptionDraft(_patates, 0m, false)]),
-        ]);
+        _menu.SetContents([
+            new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(_adana, false)]),
+            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_ayran, true), new SetMenuOptionDraft(_kola, false)]),
+            new SetMenuSlotDraft("Yan ürün", [new SetMenuOptionDraft(_patates, false)]),
+        ], DiscountType.None, 0m);
         foreach (SetMenuSlot slot in _menu.Slots)
             SetId(slot, Guid.NewGuid());
         _drinkSlot = _menu.Slots.Single(s => s.Name == "İçecek");
@@ -107,8 +107,8 @@ public class SetMenuOrderTests
     [Fact]
     public void AddSetMenu_ChoiceSlotWithoutDefault_RequiresSelection()
     {
-        SetMenu menu = SetMenu.Create(Guid.NewGuid(), "İçecek Menü", 40m);
-        menu.SetSlots([new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_ayran, 0m, false), new SetMenuOptionDraft(_kola, 0m, false)])]);
+        SetMenu menu = SetMenu.Create(Guid.NewGuid(), "İçecek Menü");
+        menu.SetContents([new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_ayran, false), new SetMenuOptionDraft(_kola, false)])], DiscountType.None, 0m);
         SetId(menu.Slots.Single(), Guid.NewGuid());
 
         Assert.Throws<DomainException>(() => Order.Create(Guid.NewGuid(), Guid.NewGuid()).AddSetMenu(menu, NoSelection, 1, 10m));
@@ -121,7 +121,7 @@ public class SetMenuOrderTests
         Assert.Throws<DomainException>(() =>
             Order.Create(Guid.NewGuid(), Guid.NewGuid()).AddSetMenu(_menu, new Dictionary<Guid, Guid> { [_drinkSlot.Id] = _kola.Id }, 1, 10m));
 
-        _menu.Update(_menu.Name, null, _menu.Price, isActive: false, sortOrder: 0, categoryId: null);
+        _menu.Update(_menu.Name, null, isActive: false, sortOrder: 0, categoryId: null);
         Assert.Throws<DomainException>(() => Order.Create(Guid.NewGuid(), Guid.NewGuid()).AddSetMenu(_menu, NoSelection, 1, 10m));
     }
 
@@ -255,13 +255,151 @@ public class SetMenuOrderTests
     }
 
     [Fact]
-    public void SetSlots_RejectsEmptySlotsDuplicatesAndTwoDefaults()
+    public void RegularPrice_WithoutDiscounts_EqualsPrice()
     {
-        Assert.Throws<DomainException>(() => _menu.SetSlots([]));
-        Assert.Throws<DomainException>(() => _menu.SetSlots([new SetMenuSlotDraft("İçecek", [])]));
-        Assert.Throws<DomainException>(() => _menu.SetSlots([
-            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_kola, 0m, false), new SetMenuOptionDraft(_kola, 5m, false)])]));
-        Assert.Throws<DomainException>(() => _menu.SetSlots([
-            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_ayran, 0m, true), new SetMenuOptionDraft(_kola, 0m, true)])]));
+        Assert.Equal(100m + 30m + 20m, _menu.GetRegularPrice());
+        Assert.Equal(_menu.Price, _menu.GetRegularPrice());
     }
+
+    [Fact]
+    public void RegularPrice_WithProductAndMenuDiscounts_IsUndiscountedBaseProducts()
+    {
+        // Adana %10 → 90, Ayran 30, Patates 20 = 140; menü indirimi 20 ₺ → 120. İndirimsiz: 100 + 30 + 20 = 150.
+        _menu.SetContents([
+            new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(_adana, false, DiscountType.Percent, 10m)]),
+            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_ayran, true), new SetMenuOptionDraft(_kola, false)]),
+            new SetMenuSlotDraft("Yan ürün", [new SetMenuOptionDraft(_patates, false)]),
+        ], DiscountType.Amount, 20m);
+
+        Assert.Equal(120m, _menu.Price);
+        Assert.Equal(150m, _menu.GetRegularPrice());
+        Assert.True(_menu.GetRegularPrice() > _menu.Price);
+    }
+
+    [Fact]
+    public void RegularPrice_ChoiceSlotWithoutDefault_UsesCheapestAfterDiscount()
+    {
+        // Kola 40 → %50 ile 20, Ayran 30'dan ucuz: taban seçenek Kola, normal fiyatı 40.
+        SetMenu menu = SetMenu.Create(Guid.NewGuid(), "İçecek Menü");
+        menu.SetContents([new SetMenuSlotDraft("İçecek",
+            [new SetMenuOptionDraft(_ayran, false), new SetMenuOptionDraft(_kola, false, DiscountType.Percent, 50m)])], DiscountType.None, 0m);
+
+        Assert.Equal(20m, menu.Price);
+        Assert.Equal(40m, menu.GetRegularPrice());
+    }
+
+    [Fact]
+    public void SetContents_RejectsEmptySlotsDuplicatesAndTwoDefaults()
+    {
+        Assert.Throws<DomainException>(() => _menu.SetContents([], DiscountType.None, 0m));
+        Assert.Throws<DomainException>(() => _menu.SetContents([new SetMenuSlotDraft("İçecek", [])], DiscountType.None, 0m));
+        Assert.Throws<DomainException>(() => _menu.SetContents([
+            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_kola, false), new SetMenuOptionDraft(_kola, false)])], DiscountType.None, 0m));
+        Assert.Throws<DomainException>(() => _menu.SetContents([
+            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_ayran, true), new SetMenuOptionDraft(_kola, true)])], DiscountType.None, 0m));
+    }
+
+    /* ── Fiyat: ürünlerden hesaplanır ── */
+
+    [Fact]
+    public void Price_IsSumOfDefaultOptions_AndSurchargeIsThePriceDifference()
+    {
+        Assert.Equal(150m, _menu.Price);
+        Assert.Equal(150m, _menu.GetListPrice());
+        Assert.Equal(10m, _drinkSlot.Options.Single(o => o.ProductId == _kola.Id).Surcharge);
+        Assert.Equal(0m, _drinkSlot.Options.Single(o => o.ProductId == _ayran.Id).Surcharge);
+    }
+
+    [Fact]
+    public void ChoiceSlotWithoutDefault_UsesTheCheapestOptionAsBase()
+    {
+        SetMenu menu = SetMenu.Create(Guid.NewGuid(), "İçecek Menü");
+        menu.SetContents([new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_kola, false), new SetMenuOptionDraft(_ayran, false)])], DiscountType.None, 0m);
+
+        Assert.Equal(30m, menu.Price);
+        Assert.Equal(10m, menu.Slots.Single().Options.Single(o => o.ProductId == _kola.Id).Surcharge);
+    }
+
+    [Fact]
+    public void ProductDiscounts_PercentAndAmount_LowerPriceAndSurcharge()
+    {
+        // Adana %10 (100 → 90), Kola 5 ₺ (40 → 35, ek ücret 5).
+        _menu.SetContents([
+            new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(_adana, false, DiscountType.Percent, 10m)], SlotId("Ana yemek")),
+            new SetMenuSlotDraft("İçecek", [new SetMenuOptionDraft(_ayran, true), new SetMenuOptionDraft(_kola, false, DiscountType.Amount, 5m)], _drinkSlot.Id),
+            new SetMenuSlotDraft("Yan ürün", [new SetMenuOptionDraft(_patates, false)], SlotId("Yan ürün")),
+        ], DiscountType.None, 0m);
+
+        Assert.Equal(90m + 30m + 20m, _menu.Price);
+        Assert.Equal(5m, _drinkSlot.Options.Single(o => o.ProductId == _kola.Id).Surcharge);
+    }
+
+    [Theory]
+    [InlineData(DiscountType.Percent, 10, 135)]
+    [InlineData(DiscountType.Amount, 25, 125)]
+    public void MenuDiscount_IsAppliedToTheListPrice(DiscountType type, decimal value, decimal expected)
+    {
+        _menu.SetContents(SameSlots(), type, value);
+
+        Assert.Equal(150m, _menu.GetListPrice());
+        Assert.Equal(expected, _menu.Price);
+        // Ek ücret menü indiriminden etkilenmez.
+        Assert.Equal(expected + 10m, SetLine(OrderWithMenu(new Dictionary<Guid, Guid> { [_drinkSlot.Id] = _kola.Id })).UnitPrice);
+    }
+
+    [Fact]
+    public void RecalculatePrice_FollowsProductPriceChanges()
+    {
+        _kola.Update(_kola.Name, 50m, _kola.IsActive, _kola.CategoryId);
+        _adana.Update(_adana.Name, 120m, _adana.IsActive, _adana.CategoryId);
+
+        _menu.RecalculatePrice();
+
+        Assert.Equal(120m + 30m + 20m, _menu.Price);
+        Assert.Equal(20m, _drinkSlot.Options.Single(o => o.ProductId == _kola.Id).Surcharge);
+    }
+
+    [Fact]
+    public void FreeMenu_OrInvalidDiscounts_Throw()
+    {
+        Assert.Throws<DomainException>(() => _menu.SetContents(SameSlots(), DiscountType.Amount, 150m));
+        Assert.Throws<DomainException>(() => _menu.SetContents(SameSlots(), DiscountType.Percent, 101m));
+        Assert.Throws<DomainException>(() => _menu.SetContents(SameSlots(), DiscountType.Amount, -1m));
+        Assert.Throws<DomainException>(() => _menu.SetContents(SameSlots(), DiscountType.None, 5m));
+        Assert.Throws<DomainException>(() => _menu.SetContents([
+            new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(_adana, false, DiscountType.Percent, 150m)])], DiscountType.None, 0m));
+    }
+
+    [Fact]
+    public void MenuWhosePriceDroppedToZero_CannotBeOrdered()
+    {
+        _menu.SetContents(SameSlots(), DiscountType.Amount, 100m);
+        _adana.Update(_adana.Name, 10m, _adana.IsActive, _adana.CategoryId);
+        _menu.RecalculatePrice();
+
+        Assert.Equal(0m, _menu.Price);
+        Assert.Throws<DomainException>(() => OrderWithMenu());
+    }
+
+    [Fact]
+    public void SlotCategory_OnlyAcceptsProductsOfThatCategory()
+    {
+        Guid drinks = Guid.NewGuid();
+        Product su = Product.Create("Su", 10m, "", drinks);
+
+        Assert.Throws<DomainException>(() => _menu.SetContents([
+            new SetMenuSlotDraft("İçecekler", [new SetMenuOptionDraft(su, true), new SetMenuOptionDraft(_kola, false)], CategoryId: drinks)], DiscountType.None, 0m));
+
+        _menu.SetContents([new SetMenuSlotDraft("İçecekler", [new SetMenuOptionDraft(su, true)], CategoryId: drinks)], DiscountType.None, 0m);
+        Assert.Equal(drinks, _menu.Slots.Single().CategoryId);
+    }
+
+    private Guid SlotId(string name) => _menu.Slots.Single(s => s.Name == name).Id;
+
+    // Menünün mevcut bölümleri, indirimsiz ve Id'leriyle (yerinde güncellensin).
+    private List<SetMenuSlotDraft> SameSlots() =>
+        _menu.Slots.Select(slot => new SetMenuSlotDraft(
+            slot.Name,
+            slot.Options.Select(o => new SetMenuOptionDraft(o.Product, o.IsDefault)).ToList(),
+            slot.Id)).ToList();
 }

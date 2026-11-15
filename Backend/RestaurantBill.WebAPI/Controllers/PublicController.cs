@@ -2,13 +2,14 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RestaurantBill.Application.Features.ContactMessages.Public;
 using RestaurantBill.Application.Features.CustomerSite.Public;
 using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Features.Delivery.Public;
 
 namespace RestaurantBill.WebAPI.Controllers;
 
-// Restoranın müşteriye açık sitesi: menü, masa QR'ından sipariş talebi, rezervasyon talebi, online paket sipariş.
+// Restoranın müşteriye açık sitesi: menü, masa QR'ından sipariş talebi, rezervasyon talebi, online paket sipariş, iletişim formu.
 // Giriş gerekmez; restoran X-Restaurant-Slug başlığından çözülür. Yazma uçları sıkı rate-limit altındadır.
 [AllowAnonymous]
 [Route("api/public")]
@@ -142,6 +143,15 @@ public class PublicController : BaseController
     public async Task<IActionResult> CancelPreOrder([FromRoute] string token, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new CancelPreOrderCommand { Token = token }, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>İletişim formu: { branchId, name, contact, type, message, website }. "website" bal küpüdür, boş gelmeli.</summary>
+    [EnableRateLimiting("public-write")]
+    [HttpPost("contact-messages")]
+    public async Task<IActionResult> SubmitContactMessage([FromBody] SubmitContactMessageCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }
 

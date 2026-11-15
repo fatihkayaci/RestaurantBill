@@ -80,6 +80,17 @@ namespace RestaurantBill.WebAPI.Controllers
             return HandleResult(result);
         }
 
+        /// <summary> Sets the set menu's image to a stock (shared library) image; nothing is uploaded or copied. Returns the CDN url. </summary>
+        [Authorize(Roles = "Owner,Admin")]
+        [HttpPost("{id:guid}/stock-image")]
+        public async Task<IActionResult> SetStockImage([FromRoute] Guid id, [FromBody] StockImageBody body, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new SetSetMenuStockImageCommand { SetMenuId = id, StockImageId = body.StockImageId }, cancellationToken);
+            return HandleResult(result);
+        }
+
+        public sealed record StockImageBody(Guid StockImageId);
+
         /// <summary> Deletes a set menu that has never been ordered. </summary>
         [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id:guid}")]

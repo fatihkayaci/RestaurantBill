@@ -36,9 +36,9 @@ public class CreateSetMenuCommandHandler(IAppDbContext db, ICurrentUserService c
         SetMenu setMenu;
         try
         {
-            setMenu = SetMenu.Create(branchId, name, request.Price);
-            setMenu.Update(name, request.Description, request.Price, request.IsActive, request.SortOrder, request.CategoryId);
-            setMenu.SetSlots(slots.Value!);
+            setMenu = SetMenu.Create(branchId, name);
+            setMenu.Update(name, request.Description, request.IsActive, request.SortOrder, request.CategoryId);
+            setMenu.SetContents(slots.Value!, request.DiscountType, request.DiscountValue);
         }
         catch (DomainException ex)
         {

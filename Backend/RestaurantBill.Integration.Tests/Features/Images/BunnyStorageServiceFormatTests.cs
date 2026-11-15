@@ -35,6 +35,18 @@ public class BunnyStorageServiceFormatTests
         return (new BunnyStorageService(new HttpClient(handler), options), handler);
     }
 
+    [Theory]
+    [InlineData("shared/stock/adana.webp", 0)]
+    [InlineData("products/branch/own.webp", 1)]
+    public async Task Delete_NeverSendsARequest_ForSharedKeys(string key, int expectedCalls)
+    {
+        var (service, handler) = CreateService();
+
+        await service.DeleteAsync(key, CancellationToken.None);
+
+        Assert.Equal(expectedCalls, handler.Calls);
+    }
+
     private static byte[] Encode(int width, int height, SKEncodedImageFormat format, Action<SKCanvas>? draw = null)
     {
         using var bitmap = new SKBitmap(width, height);

@@ -1,10 +1,18 @@
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Exceptions;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Domain.Entities;
 
 /// <summary>
-/// Sabit fiyatlı paket ("Adana Menü" = Adana Kebap + İçecek seçimi + Patates). Menü bölümlerden (slot) oluşur;
-/// tek seçenekli bölüm sabit üründür, çok seçenekli bölümde müşteri birini seçer. Seçeneğin ek ücreti olabilir.
+/// Paket menü ("Adana Menü" = Adana Kebap + İçecek seçimi + Patates). Menü bölümlerden (slot) oluşur;
+/// tek seçenekli bölüm sabit üründür, çok seçenekli bölümde müşteri birini seçer.
+/// Fiyat elle girilmez, ürünlerden hesaplanır:
+///   seçeneğin fiyatı = ürün fiyatı − seçeneğin indirimi,
+///   bölümün taban fiyatı = varsayılan seçeneğin fiyatı (varsayılan yoksa en ucuz seçenek),
+///   seçeneğin ek ücreti = seçeneğin fiyatı − taban fiyat (0'ın altına inmez),
+///   menü fiyatı = taban fiyatların toplamı − menü indirimi.
+/// Hesaplanan fiyat ve ek ücretler kaydedilir; ürünün fiyatı değişince <see cref="RecalculatePrice"/> çağrılır.
 /// Siparişte menü tek satırdır (fiyat + ek ücretler); içindeki ürünler mutfağa ayrı satır olarak düşer.
 /// </summary>
 public class SetMenu : BaseEntity
@@ -19,7 +27,11 @@ public class SetMenu : BaseEntity
     public Category? Category { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
+    /// <summary>Hesaplanmış satış fiyatı (menü indirimi düşülmüş).</summary>
     public decimal Price { get; private set; }
+    /// <summary>Menünün tamamına uygulanan indirim.</summary>
+    public DiscountType DiscountType { get; private set; }
+    public decimal DiscountValue { get; private set; }
     public string ImageUrl { get; private set; } = string.Empty;
     public bool IsActive { get; private set; }
     public int SortOrder { get; private set; }
@@ -29,17 +41,17 @@ public class SetMenu : BaseEntity
 
     protected SetMenu() { }
 
-    public static SetMenu Create(Guid branchId, string name, decimal price)
+    public static SetMenu Create(Guid branchId, string name)
     {
         if (branchId == Guid.Empty)
             throw new DomainException("Geçersiz şube.");
 
         SetMenu setMenu = new() { BranchId = branchId, IsActive = true };
-        setMenu.Update(name, string.Empty, price, isActive: true, sortOrder: 0, categoryId: null);
+        setMenu.Update(name, string.Empty, isActive: true, sortOrder: 0, categoryId: null);
         return setMenu;
     }
 
-    public void Update(string name, string? description, decimal price, bool isActive, int sortOrder, Guid? categoryId)
+    public void Update(string name, string? description, bool isActive, int sortOrder, Guid? categoryId)
     {
         string trimmedName = name?.Trim() ?? string.Empty;
         if (trimmedName.Length == 0)
@@ -51,15 +63,11 @@ public class SetMenu : BaseEntity
         if (trimmedDescription.Length > DescriptionMaxLength)
             throw new DomainException($"Menü açıklaması en fazla {DescriptionMaxLength} karakter olabilir.");
 
-        if (price <= 0)
-            throw new DomainException("Menü fiyatı 0'dan büyük olmalıdır.");
-
         if (categoryId == Guid.Empty)
             categoryId = null;
 
         Name = trimmedName;
         Description = trimmedDescription;
-        Price = price;
         IsActive = isActive;
         SortOrder = sortOrder;
         CategoryId = categoryId;
@@ -74,11 +82,27 @@ public class SetMenu : BaseEntity
     }
 
     /// <summary>
+    /// Bölümleri ve menü indirimini birlikte ayarlar, ardından fiyatı hesaplar. İndirimler sonrası fiyat 0 ya da
+    /// altına düşerse hata atar (menü bedava satılamaz).
+    /// </summary>
+    public void SetContents(IReadOnlyList<SetMenuSlotDraft> slots, DiscountType discountType, decimal discountValue)
+    {
+        Discount.Validate(discountType, discountValue, "Menü indirimi");
+        SetSlots(slots);
+        DiscountType = discountType;
+        DiscountValue = discountValue;
+        RecalculatePrice();
+
+        if (Price <= 0)
+            throw new DomainException("İndirimlerden sonra menü fiyatı 0'dan büyük olmalı.");
+    }
+
+    /// <summary>
     /// Bölümleri düzenleyicinin gönderdiği listeyle eşitler. Id'si olan taslak mevcut bölümü yerinde günceller (Id'si
     /// değişmez, böylece açık garson ekranındaki seçimler geçerli kalır); Id'siz taslak yeni bölümdür; listede olmayan
     /// bölüm silinir. Siparişler bölüme değil ürüne bağlı olduğu için açık siparişler etkilenmez.
     /// </summary>
-    public void SetSlots(IReadOnlyList<SetMenuSlotDraft> slots)
+    private void SetSlots(IReadOnlyList<SetMenuSlotDraft> slots)
     {
         if (slots is null || slots.Count == 0)
             throw new DomainException("Menüde en az bir bölüm olmalı.");
@@ -105,6 +129,28 @@ public class SetMenu : BaseEntity
                 existing.Update(draft, index);
         }
     }
+
+    /// <summary>
+    /// Fiyatı ve ek ücretleri güncel ürün fiyatlarından yeniden hesaplar. Seçeneklerin ürünleri yüklü olmalıdır.
+    /// Hata atmaz: ürün ucuzlayıp fiyat 0'a inerse menü siparişe eklenemez (<see cref="Order.AddSetMenu"/>), menü düzenlenmelidir.
+    /// </summary>
+    public void RecalculatePrice()
+    {
+        decimal listPrice = 0m;
+        foreach (SetMenuSlot slot in _slots)
+            listPrice += slot.RecalculateSurcharges();
+
+        Price = Discount.Apply(listPrice, DiscountType, DiscountValue);
+    }
+
+    /// <summary>Menü indirimi öncesi fiyat: bölümlerin taban fiyatlarının toplamı. Ürünler yüklü olmalıdır.</summary>
+    public decimal GetListPrice() => _slots.Sum(slot => slot.GetBasePrice());
+
+    /// <summary>
+    /// İndirimsiz fiyat: bölümlerin taban seçeneklerinin normal ürün fiyatları toplamı (seçenek ve menü indirimi yok).
+    /// Müşteriye "avantaj" göstermek için; Price'tan büyükse menü indirimlidir. Ürünler yüklü olmalıdır.
+    /// </summary>
+    public decimal GetRegularPrice() => _slots.Sum(slot => slot.GetBaseOption()?.Product.Price ?? 0m);
 
     /// <summary>
     /// Siparişte her bölüm için seçilen seçeneği bulur. Seçim yapılmamış bölümde varsayılan seçenek kullanılır;
@@ -147,6 +193,12 @@ public class SetMenuSlot : BaseEntity
     public Guid SetMenuId { get; private set; }
     public SetMenu SetMenu { get; private set; } = default!;
     public string Name { get; private set; } = string.Empty;
+    /// <summary>
+    /// Bölümün kategorisi ("İçecekler"); seçenekler yalnızca bu kategorinin ürünlerinden olabilir. Eski menülerde ve
+    /// kategori silinince null.
+    /// </summary>
+    public Guid? CategoryId { get; private set; }
+    public Category? Category { get; private set; }
     public int SortOrder { get; private set; }
 
     private readonly List<SetMenuSlotOption> _options = new();
@@ -164,12 +216,13 @@ public class SetMenuSlot : BaseEntity
     }
 
     /// <summary>
-    /// Adı, sırayı ve seçenekleri günceller. Seçenekler ürüne göre eşlenir: aynı ürün yerinde güncellenir,
+    /// Adı, kategoriyi, sırayı ve seçenekleri günceller. Seçenekler ürüne göre eşlenir: aynı ürün yerinde güncellenir,
     /// yeni ürün eklenir, listede olmayan çıkarılır.
     /// </summary>
     internal void Update(SetMenuSlotDraft draft, int sortOrder)
     {
         Name = Validate(draft);
+        CategoryId = draft.CategoryId;
         SortOrder = sortOrder;
 
         HashSet<Guid> productIds = draft.Options.Select(o => o.Product.Id).ToHashSet();
@@ -182,9 +235,9 @@ public class SetMenuSlot : BaseEntity
             bool isDefault = single || optionDraft.IsDefault;
             SetMenuSlotOption? existing = _options.FirstOrDefault(o => o.ProductId == optionDraft.Product.Id);
             if (existing is null)
-                _options.Add(SetMenuSlotOption.Create(optionDraft.Product, optionDraft.Surcharge, isDefault));
+                _options.Add(SetMenuSlotOption.Create(optionDraft.Product, isDefault, optionDraft.DiscountType, optionDraft.DiscountValue));
             else
-                existing.Update(optionDraft.Surcharge, isDefault);
+                existing.Update(isDefault, optionDraft.DiscountType, optionDraft.DiscountValue);
         }
     }
 
@@ -206,46 +259,76 @@ public class SetMenuSlot : BaseEntity
         if (draft.Options.Count(o => o.IsDefault) > 1)
             throw new DomainException($"\"{name}\" bölümünde yalnızca bir varsayılan seçenek olabilir.");
 
+        if (draft.CategoryId is Guid categoryId && draft.Options.Any(o => o.Product.CategoryId != categoryId))
+            throw new DomainException($"\"{name}\" bölümüne yalnızca o kategorinin ürünleri eklenebilir.");
+
+        foreach (SetMenuOptionDraft option in draft.Options)
+            Discount.Validate(option.DiscountType, option.DiscountValue, option.Product.Name);
+
         return name;
     }
 
     public SetMenuSlotOption? GetDefaultOption() =>
         _options.FirstOrDefault(o => o.IsDefault) ?? (IsFixed ? _options[0] : null);
+
+    /// <summary>Menü fiyatına giren seçenek: varsayılan seçenek, varsayılan yoksa (indirimli fiyatıyla) en ucuz seçenek.</summary>
+    public SetMenuSlotOption? GetBaseOption() =>
+        GetDefaultOption() ?? _options.MinBy(o => o.GetPrice());
+
+    /// <summary>Menü fiyatına giren tutar: taban seçeneğin (indirimli) fiyatı.</summary>
+    public decimal GetBasePrice() => GetBaseOption()?.GetPrice() ?? 0m;
+
+    /// <summary>Her seçeneğin ek ücretini taban fiyata göre yazar ve taban fiyatı döner.</summary>
+    internal decimal RecalculateSurcharges()
+    {
+        decimal basePrice = GetBasePrice();
+        foreach (SetMenuSlotOption option in _options)
+            option.SetSurcharge(Math.Max(0m, option.GetPrice() - basePrice));
+        return basePrice;
+    }
 }
 
-/// <summary>Bölümdeki bir seçenek: ürün + isteğe bağlı ek ücret ("Kola +10 ₺").</summary>
+/// <summary>Bölümdeki bir seçenek: ürün + isteğe bağlı indirim. Ek ücret ("Kola +10 ₺") fiyattan hesaplanır.</summary>
 public class SetMenuSlotOption : BaseEntity
 {
     public Guid SetMenuSlotId { get; private set; }
     public SetMenuSlot SetMenuSlot { get; private set; } = default!;
     public Guid ProductId { get; private set; }
     public Product Product { get; private set; } = default!;
+    /// <summary>Hesaplanmış ek ücret: bu seçeneğin fiyatı − bölümün taban fiyatı.</summary>
     public decimal Surcharge { get; private set; }
     public bool IsDefault { get; private set; }
+    /// <summary>Bu ürüne menü içinde uygulanan indirim.</summary>
+    public DiscountType DiscountType { get; private set; }
+    public decimal DiscountValue { get; private set; }
 
     protected SetMenuSlotOption() { }
 
-    internal static SetMenuSlotOption Create(Product product, decimal surcharge, bool isDefault)
+    internal static SetMenuSlotOption Create(Product product, bool isDefault, DiscountType discountType, decimal discountValue)
     {
         if (product is null)
             throw new DomainException("Geçersiz ürün.");
 
         SetMenuSlotOption option = new() { Product = product, ProductId = product.Id };
-        option.Update(surcharge, isDefault);
+        option.Update(isDefault, discountType, discountValue);
         return option;
     }
 
-    internal void Update(decimal surcharge, bool isDefault)
+    internal void Update(bool isDefault, DiscountType discountType, decimal discountValue)
     {
-        if (surcharge < 0)
-            throw new DomainException("Ek ücret 0'dan küçük olamaz.");
-
-        Surcharge = surcharge;
         IsDefault = isDefault;
+        DiscountType = discountType;
+        DiscountValue = discountValue;
     }
+
+    internal void SetSurcharge(decimal surcharge) => Surcharge = surcharge;
+
+    /// <summary>Menü içindeki fiyatı: ürün fiyatı − indirim. Ürün yüklü olmalıdır.</summary>
+    public decimal GetPrice() => Discount.Apply(Product.Price, DiscountType, DiscountValue);
 }
 
 /// <param name="Id">Mevcut bölümün Id'si; yeni bölümde null.</param>
-public sealed record SetMenuSlotDraft(string Name, IReadOnlyList<SetMenuOptionDraft> Options, Guid? Id = null);
+/// <param name="CategoryId">Bölümün kategorisi; verilirse tüm seçenekler bu kategoriden olmalıdır.</param>
+public sealed record SetMenuSlotDraft(string Name, IReadOnlyList<SetMenuOptionDraft> Options, Guid? Id = null, Guid? CategoryId = null);
 
-public sealed record SetMenuOptionDraft(Product Product, decimal Surcharge, bool IsDefault);
+public sealed record SetMenuOptionDraft(Product Product, bool IsDefault, DiscountType DiscountType = DiscountType.None, decimal DiscountValue = 0m);

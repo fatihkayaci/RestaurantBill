@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Interfaces;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Infrastructure.Services
 {
@@ -43,6 +44,10 @@ namespace RestaurantBill.Infrastructure.Services
 
         public async Task DeleteAsync(string key, CancellationToken cancellationToken)
         {
+            // Savunma derinliği: paylaşılan (hazır görsel) dosyalar birçok ürünün ortak dosyasıdır, hiç silinmez.
+            if (StorageKeys.IsShared(key))
+                return;
+
             string url = $"https://storage.bunnycdn.com/{_options.StorageZoneName}/{key}";
             using var request = new HttpRequestMessage(HttpMethod.Delete, url);
             request.Headers.Add("AccessKey", _options.AccessKey);

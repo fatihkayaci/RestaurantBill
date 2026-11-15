@@ -1,5 +1,6 @@
 using RestaurantBill.Application.Features.Orders.Commands.AddSetMenuToOrder;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Tests.Features.Delivery;
@@ -38,8 +39,8 @@ public class AddSetMenuToDeliveryOrderTests : DeliveryTestBase
         await AcceptOkAsync(delivery);
         Order order = DbContext.Orders.Single(o => o.Id == delivery.OrderId);
 
-        SetMenu foreign = SetMenu.Create(Guid.NewGuid(), "Uzak Menü", 100m);
-        foreign.SetSlots([new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(Adana, 0m, true)])]);
+        SetMenu foreign = SetMenu.Create(Guid.NewGuid(), "Uzak Menü");
+        foreign.SetContents([new SetMenuSlotDraft("Ana yemek", [new SetMenuOptionDraft(Adana, true)])], DiscountType.None, 0m);
         DbContext.SetMenus.Add(foreign);
         await DbContext.SaveChangesAsync();
 

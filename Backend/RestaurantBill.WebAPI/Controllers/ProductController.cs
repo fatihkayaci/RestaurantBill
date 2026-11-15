@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
 using RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
 using RestaurantBill.Application.Features.Products.Commands.SetProductStock;
+using RestaurantBill.Application.Features.Products.Commands.SetProductStockImage;
 using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
 using RestaurantBill.Application.Features.Products.Commands.UploadProductImage;
 using RestaurantBill.Application.Features.Products.Queries.GetAllProduct;
@@ -106,6 +107,20 @@ namespace RestaurantBill.WebAPI.Controllers
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);
         }
+
+        /// <summary>
+        /// Sets the product's image to a stock (shared library) image. Nothing is uploaded or copied; the product stores the
+        /// shared key. Returns the full CDN URL.
+        /// </summary>
+        [Authorize(Roles = "Owner,Admin")]
+        [HttpPost("{id:guid}/stock-image")]
+        public async Task<IActionResult> SetStockImage([FromRoute] Guid id, [FromBody] StockImageBody body, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new SetProductStockImageCommand { ProductId = id, StockImageId = body.StockImageId }, cancellationToken);
+            return HandleResult(result);
+        }
+
+        public sealed record StockImageBody(Guid StockImageId);
 
         #endregion
 

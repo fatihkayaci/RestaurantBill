@@ -35,7 +35,7 @@ public class UpdateSetMenuCommandHandler(IAppDbContext db, ICurrentUserService c
     {
         List<Guid> branchIds = await db.GetAccessibleBranchIdsAsync(currentUser, cancellationToken);
         SetMenu? setMenu = await db.SetMenus
-            .Include(s => s.Slots).ThenInclude(slot => slot.Options)
+            .Include(s => s.Slots).ThenInclude(slot => slot.Options).ThenInclude(o => o.Product)
             .FirstOrDefaultAsync(s => s.Id == request.Id && branchIds.Contains(s.BranchId), cancellationToken);
         if (setMenu is null)
             return Result.Failure("Böyle bir menü bulunamadı.");
@@ -50,8 +50,8 @@ public class UpdateSetMenuCommandHandler(IAppDbContext db, ICurrentUserService c
 
         try
         {
-            setMenu.Update(name, request.Description, request.Price, request.IsActive, request.SortOrder, request.CategoryId);
-            setMenu.SetSlots(slots.Value!);
+            setMenu.Update(name, request.Description, request.IsActive, request.SortOrder, request.CategoryId);
+            setMenu.SetContents(slots.Value!, request.DiscountType, request.DiscountValue);
         }
         catch (DomainException ex)
         {

@@ -12,6 +12,7 @@ public class SetMenuConfiguration : IEntityTypeConfiguration<SetMenu>
         builder.Property(s => s.Description).HasMaxLength(SetMenu.DescriptionMaxLength).HasDefaultValue(string.Empty);
         builder.Property(s => s.ImageUrl).HasDefaultValue(string.Empty);
         builder.Property(s => s.Price).HasPrecision(18, 2);
+        builder.Property(s => s.DiscountValue).HasPrecision(18, 2);
 
         builder.HasOne(s => s.Branch)
             .WithMany()
@@ -40,6 +41,12 @@ public class SetMenuSlotConfiguration : IEntityTypeConfiguration<SetMenuSlot>
         builder.Property(s => s.Name).IsRequired().HasMaxLength(SetMenuSlot.NameMaxLength);
         builder.Ignore(s => s.IsFixed);
 
+        // Bölümün kategorisi silinirse bölüm kalır, yalnızca kategori bağı kopar.
+        builder.HasOne(s => s.Category)
+            .WithMany()
+            .HasForeignKey(s => s.CategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasMany(s => s.Options)
             .WithOne(o => o.SetMenuSlot)
             .HasForeignKey(o => o.SetMenuSlotId)
@@ -52,6 +59,7 @@ public class SetMenuSlotOptionConfiguration : IEntityTypeConfiguration<SetMenuSl
     public void Configure(EntityTypeBuilder<SetMenuSlotOption> builder)
     {
         builder.Property(o => o.Surcharge).HasPrecision(18, 2);
+        builder.Property(o => o.DiscountValue).HasPrecision(18, 2);
 
         // Menüde kullanılan ürün silinemez; önce menüden çıkarılır (DeleteProduct bunu kullanıcıya söyler).
         builder.HasOne(o => o.Product)

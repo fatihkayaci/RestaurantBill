@@ -72,17 +72,8 @@ namespace RestaurantBill.Application.Features.Products.Commands.UploadProductIma
 
             await _db.SaveChangesAsync(cancellationToken);
 
-            if (!string.IsNullOrWhiteSpace(previousKey))
-            {
-                try
-                {
-                    await _imageStorage.DeleteAsync(previousKey, cancellationToken);
-                }
-                catch
-                {
-                    // Best-effort cleanup: the new image is already saved, don't fail the request over an orphaned old file.
-                }
-            }
+            // Best-effort cleanup of the restaurant's own old file; shared (stock) keys are never deleted.
+            await _imageStorage.DeleteReplacedImageAsync(previousKey, cancellationToken);
 
             return Result<string>.Success($"{_storageOptions.CdnBaseUrl.TrimEnd('/')}/{newKey}");
         }
