@@ -32,6 +32,11 @@ export const setMenuService = {
         });
         return response.data;
     },
+    /** Hazır görsel kütüphanesinden seçer: dosya yüklenmez, menü paylaşılan görseli gösterir. Tam CDN adresini döner. */
+    setStockImage: async (id: string, stockImageId: string) => {
+        const response = await api.post<string>(`/set-menu/${id}/stock-image`, { stockImageId });
+        return response.data;
+    },
     /** Siparişe menü ekler; fiyat sunucuda hesaplanır. Yeni menü satırının Id'sini döner. */
     addSetMenuToOrder: async (body: AddSetMenuToOrder) => {
         const response = await api.post<string>('/order/add-set-menu', body);

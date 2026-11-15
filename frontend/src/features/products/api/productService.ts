@@ -58,4 +58,9 @@ export const productService = {
         });
         return response.data;
     },
+    /** Hazır görsel kütüphanesinden seçer: dosya yüklenmez, ürün paylaşılan görseli gösterir. Tam CDN adresini döner. */
+    setStockImage: async (id: string, stockImageId: string) => {
+        const response = await api.post<string>(`/product/${id}/stock-image`, { stockImageId });
+        return response.data;
+    },
 };

@@ -1,8 +1,12 @@
+import type { OnlineSetMenu } from '@/features/delivery/types';
+
 export interface PublicProduct {
     id: string;
     name: string;
     price: number;
     imageUrl: string;
+    /** Görsel hazır görsel kütüphanesinden: "Temsili görsel" etiketi gösterilir. */
+    isStockImage: boolean;
     description: string;
     isFeatured: boolean;
     /** Tahmini hazırlanma süresi (dk); null ise gösterilmez. */
@@ -54,6 +58,8 @@ export interface PublicSite {
     phone: string;
     branches: { id: string; name: string }[];
     categories: PublicCategory[];
+    /** Aktif paket menüler; online sipariş sayfasıyla aynı biçim (pasif ürünün seçeneği listelenmez). */
+    setMenus: OnlineSetMenu[];
     regions: PublicRegion[];
     site: BranchSite;
     /** Şubenin yerel saatine göre; saat girilmemişse null. */

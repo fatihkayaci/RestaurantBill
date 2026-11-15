@@ -5,6 +5,7 @@ import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode
 import { cn } from '@/lib/utils';
 import { useOnlineOrderingAvailable } from '@/features/delivery/useOnlineOrderingAvailable';
 import DergiReserve from './site/DergiReserve';
+import SiteSetMenus from './site/SiteSetMenus';
 import { MyReservations, SiteShell, SiteStatus } from './site/SiteChrome';
 import { HeaderSpacer, SitePage } from './site/SiteFrame';
 import { RESERVATION_PATH, eyebrow, instagramHandle, line, moreArrow, moreLink, reservationHref, serif } from './site/siteParts';
@@ -180,11 +181,12 @@ export default function RestaurantSitePage() {
                                         to={`/menu#kat-${r.category.id}`}
                                         onMouseEnter={() => setHovered(i)}
                                         onFocus={() => setHovered(i)}
-                                        className={cn('flex items-center gap-4 border-t pb-2.5 pt-4 transition-[color,padding] duration-200 md:gap-6', line,
-                                            on ? 'pl-3.5 text-[#141414]' : 'text-[#9E968A]')}
+                                        className={cn('flex items-center gap-4 border-t pb-2.5 pt-4 transition-colors duration-200 md:gap-6', line,
+                                            on ? 'text-[#141414]' : 'text-[#9E968A]')}
                                     >
-                                        <span className="w-9 shrink-0 text-[13px] text-[#6F6A63]">{r.no}</span>
-                                        <span className={cn(serif, 'min-w-0 flex-1 break-words text-[40px] leading-[0.95] tracking-[-0.02em] sm:text-[64px] md:text-[80px] lg:text-[104px]')}>{r.category.name}</span>
+                                        {/* Kayma transform ile: padding genişliği değiştirip uzun adı alt satıra atıyordu */}
+                                        <span className={cn('w-9 shrink-0 text-[13px] text-[#6F6A63] transition-transform duration-200', on && 'translate-x-3.5')}>{r.no}</span>
+                                        <span className={cn(serif, 'min-w-0 flex-1 break-words text-[40px] leading-[0.95] tracking-[-0.02em] transition-transform duration-200 sm:text-[64px] md:text-[80px] lg:text-[104px]', on && 'translate-x-3.5')}>{r.category.name}</span>
                                         <span className="flex shrink-0 flex-col items-end gap-0.5 text-right">
                                             {r.price && <span className="text-base font-medium md:text-lg">{r.price}</span>}
                                             {r.sub && <span className="hidden max-w-[22ch] truncate text-sm text-[#6F6A63] sm:block">{r.sub}</span>}
@@ -212,6 +214,9 @@ export default function RestaurantSitePage() {
                         )}
                     </section>
                 )}
+
+                {/* MENÜLER: aktif paket menüler (yoksa çizilmez) */}
+                <SiteSetMenus menus={site.setMenus ?? []} products={categories.flatMap(c => c.products)} canOrder={canOrder} />
 
                 {/* HAKKIMIZDA */}
                 {hasStory && (

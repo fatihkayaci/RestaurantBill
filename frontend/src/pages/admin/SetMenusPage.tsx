@@ -84,7 +84,7 @@ export default function SetMenusPage() {
         <div className="space-y-5">
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Menüler</h1>
+                    <h1 className="text-2xl font-serif font-bold text-foreground">Set menüler</h1>
                     <p className="mt-0.5 text-sm text-muted-foreground">{activeCount} aktif menü</p>
                 </div>
                 <button
@@ -102,7 +102,7 @@ export default function SetMenusPage() {
                     icon={Layers}
                     title={products.length === 0 ? 'Önce yemek ekleyin' : 'Henüz menü yok'}
                     description={products.length === 0
-                        ? 'Menüler Yemeklerimiz\'deki ürünlerden oluşur. Önce ürünleri ekleyin.'
+                        ? 'Set menüler Yemeklerimiz\'deki ürünlerden oluşur. Önce ürünleri ekleyin.'
                         : 'Birkaç ürünü tek fiyatla satın: "Adana Menü" = Adana Kebap + içecek seçimi + patates. Hesapta tek satır, mutfakta her ürün kendi istasyonunda.'}
                     action={products.length === 0 ? undefined : { label: 'İlk menüyü ekle', onClick: () => setEditing(null) }}
                     link={products.length === 0 ? { label: 'Yemeklerimiz\'e git', to: '/admin/menu' } : undefined}

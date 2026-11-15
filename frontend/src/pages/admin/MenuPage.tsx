@@ -5,9 +5,11 @@ import { categoryService } from "@/features/categories/api/categoryService";
 import type { ProductWithCost } from "@/features/products/types";
 import type { Category } from "@/features/categories/types";
 import ImageCropModal from "@/features/products/components/ImageCropModal";
+import StockImagePickerModal from "@/features/stockImages/components/StockImagePickerModal";
+import type { StockImage } from "@/features/stockImages/api/stockImageService";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Check, Pencil, Image as ImageIcon, Upload, Crop, UtensilsCrossed, Trash2 } from 'lucide-react';
+import { X, Check, Pencil, Image as ImageIcon, Images, Upload, Crop, UtensilsCrossed, Trash2 } from 'lucide-react';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { SuggestedChips } from '@/components/ui/suggested-chips';
 import { CATEGORY_SUGGESTIONS } from '@/features/categories/constants';
@@ -51,6 +53,9 @@ export default function Menu() {
     const [isSaving, setIsSaving] = useState(false);
     const [cropSource, setCropSource] = useState<{ src: string; revokeOnClose: boolean } | null>(null);
     const [pendingImage, setPendingImage] = useState<{ blob: Blob; previewUrl: string } | null>(null);
+    // Hazır görsel seçimi: yüklenen görsel gibi kaydedince uygulanır (yeni üründe oluşturduktan sonra).
+    const [pendingStock, setPendingStock] = useState<StockImage | null>(null);
+    const [isStockPickerOpen, setIsStockPickerOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [productDeleteError, setProductDeleteError] = useState<string | null>(null);
 
@@ -129,6 +134,13 @@ export default function Menu() {
             if (prev) URL.revokeObjectURL(prev.previewUrl);
             return null;
         });
+        setPendingStock(null);
+    };
+
+    const handleStockSelected = (image: StockImage) => {
+        clearPendingImage();
+        setPendingStock(image);
+        setIsStockPickerOpen(false);
     };
 
     const openCreateModal = () => {
@@ -173,7 +185,7 @@ export default function Menu() {
     };
 
     const handleRecropExisting = () => {
-        const src = pendingImage?.previewUrl ?? editProduct?.imageUrl;
+        const src = pendingImage?.previewUrl ?? pendingStock?.url ?? editProduct?.imageUrl;
         if (!src) return;
         setCropSource({ src, revokeOnClose: false });
     };
@@ -183,6 +195,7 @@ export default function Menu() {
             if (prev) URL.revokeObjectURL(prev.previewUrl);
             return { blob, previewUrl: URL.createObjectURL(blob) };
         });
+        setPendingStock(null);
         closeCropModal();
     };
 
@@ -353,6 +366,12 @@ export default function Menu() {
                     if (axios.isAxiosError(imgErr)) {
                         toast.error(imgErr.response?.data?.error ?? imgErr.response?.data?.message ?? 'Görsel yüklenemedi. Ürünü daha sonra düzenleyerek tekrar deneyebilirsiniz.');
                     }
+                }
+            } else if (productId && pendingStock) {
+                try {
+                    await productService.setStockImage(productId, pendingStock.id);
+                } catch (stockErr: unknown) {
+                    toast.error(getApiErrorMessage(stockErr, 'Hazır görsel kaydedilemedi. Ürünü daha sonra düzenleyerek tekrar deneyebilirsiniz.'));
                 }
             }
 
@@ -713,7 +732,7 @@ export default function Menu() {
                             <div>
                                 <label className={labelClass}>Ürün Görseli</label>
                                 {(() => {
-                                    const currentImageSrc = pendingImage?.previewUrl ?? editProduct?.imageUrl;
+                                    const currentImageSrc = pendingImage?.previewUrl ?? pendingStock?.url ?? editProduct?.imageUrl;
                                     return currentImageSrc ? (
                                         <div className="w-full aspect-video rounded-lg overflow-hidden border border-border bg-muted/50">
                                             <img
@@ -735,9 +754,17 @@ export default function Menu() {
                                         className="inline-flex items-center gap-1.5 text-xs font-medium text-rb-accent hover:opacity-80 cursor-pointer transition-opacity"
                                     >
                                         <Upload className="h-3.5 w-3.5" />
-                                        {(pendingImage ?? editProduct?.imageUrl) ? 'Farklı görsel yükle' : 'Görsel seç'}
+                                        {(pendingImage ?? pendingStock ?? editProduct?.imageUrl) ? 'Farklı görsel yükle' : 'Görsel seç'}
                                     </label>
-                                    {(pendingImage ?? editProduct?.imageUrl) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsStockPickerOpen(true)}
+                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-rb-accent hover:opacity-80 transition-opacity"
+                                    >
+                                        <Images className="h-3.5 w-3.5" />
+                                        Hazır görsellerden seç
+                                    </button>
+                                    {(pendingImage ?? pendingStock ?? editProduct?.imageUrl) && (
                                         <button
                                             type="button"
                                             onClick={handleRecropExisting}
@@ -748,6 +775,9 @@ export default function Menu() {
                                         </button>
                                     )}
                                 </div>
+                                {pendingStock && (
+                                    <p className="mt-1.5 text-xs text-muted-foreground">Hazır görsel: {pendingStock.title} (kaydedince uygulanır)</p>
+                                )}
                                 <input
                                     id="product-image-input"
                                     type="file"
@@ -926,6 +956,14 @@ export default function Menu() {
                         </div>
                     </div>
                 </Modal>
+            )}
+
+            {isStockPickerOpen && (
+                <StockImagePickerModal
+                    initialQuery={form.name}
+                    onClose={() => setIsStockPickerOpen(false)}
+                    onSelect={handleStockSelected}
+                />
             )}
 
             {/* Görsel Kırpma */}

@@ -58,6 +58,7 @@ import TableOrderPage from './pages/public/TableOrderPage';
 import ReservationsPage from './pages/admin/ReservationsPage';
 import SettingsPage, { LegacySettingsRedirect } from './pages/admin/SettingsPage';
 import OnlineOrdersPage from './pages/admin/OnlineOrdersPage';
+import ContactMessagesPage from './pages/admin/ContactMessagesPage';
 import DeliveryOrderPage from './pages/public/DeliveryOrderPage';
 import DeliveryTrackingPage from './pages/public/DeliveryTrackingPage';
 
@@ -113,6 +114,7 @@ function App() {
                     <Route path="cash-registers" element={<CashRegistersPage />} />
                     <Route path="reservations" element={<ReservationsPage />} />
                     <Route path="online-orders" element={<OnlineOrdersPage />} />
+                    <Route path="contact-messages" element={<ContactMessagesPage />} />
                     <Route path="online-ordering" element={<LegacySettingsRedirect sekme="online" />} />
                     <Route path="shifts" element={<ShiftsPage />} />
                     <Route path="day-end" element={<Navigate to="/admin/shifts" replace />} />
