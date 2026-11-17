@@ -152,7 +152,12 @@ function Areas({ site }: { site: PublicSite }) {
                                 i > 0 && 'border-t',
                                 inRow ? 'md:border-t-0 md:px-8 md:py-0 md:first:pl-0 md:last:pr-0' : 'md:border-t md:pt-6 md:[&:nth-child(-n+2)]:border-t-0 md:[&:nth-child(-n+2)]:pt-0 lg:[&:nth-child(3)]:border-t-0 lg:[&:nth-child(3)]:pt-0',
                                 inRow && i > 0 && 'md:border-l', t.className)}>
-                            {region.photoUrl && <img src={region.photoUrl} alt={region.name} loading="lazy" className="mb-1.5 block h-[200px] w-full rounded-[20px] object-cover md:h-[220px]" />}
+                            {region.photoUrl && (
+                                <div className="relative mb-1.5">
+                                    <img src={region.photoUrl} alt={region.name} loading="lazy" className="block h-[200px] w-full rounded-[20px] object-cover md:h-[220px]" />
+                                    {region.photoUrl.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+                                </div>
+                            )}
                             {!region.photoUrl && showEmpty && (
                                 <div className="mb-1.5 flex h-[200px] items-center justify-center rounded-[20px] border border-dashed border-[#CFC5B4] font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[#8A7D6E] md:h-[220px]">
                                     + Fotoğraf ekle

@@ -5,6 +5,7 @@ import { VisitSection } from './SiteFrame';
 import { instagramHandle } from './siteParts';
 import { EmptySlot } from './siteEdit';
 import { editTarget, useSiteEdit } from './siteEditContext';
+import { StockImageLabel } from '../components/StockImageLabel';
 
 // Ana sayfanın yalnız düzenleyicide görünen kutuları (her tasarımda aynı): mekân fotoğrafları + Instagram ve
 // saatler + iletişim. Müşteri sitesinde çizilmez.
@@ -30,7 +31,12 @@ export function EditorGallery({ site }: { site: PublicSite }) {
                 <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
                     {photos.map((url, i) => {
                         const x = editTarget(edit, `gallery:${i}`, `Mekân fotoğrafı ${i + 1}`);
-                        return <img key={i} src={url} alt="" {...x} className={cn('block aspect-square w-full rounded-[14px] object-cover', x.className)} />;
+                        return (
+                            <div key={i} className="relative">
+                                <img src={url} alt="" {...x} className={cn('block aspect-square w-full rounded-[14px] object-cover', x.className)} />
+                                {url.includes('/shared/stock/') && <StockImageLabel />}
+                            </div>
+                        );
                     })}
                 </div>
             ) : <EmptySlot target="gallery:add" title="+ Fotoğraf ekle" />}

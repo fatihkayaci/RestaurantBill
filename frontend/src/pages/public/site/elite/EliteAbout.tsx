@@ -11,6 +11,7 @@ import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard
 import { SITE_LIMITS, editTarget, useSiteEdit } from '../siteEditContext';
 import { EliteEmpty, EliteHero, EliteKicker } from './EliteBits';
 import { elButton, elItalic, elSection, elSerif, elTitle, elWrap, heroLead, onDark, roman } from './eliteParts';
+import { StockImageLabel } from '../../components/StockImageLabel';
 
 // /hakkimizda, Elit (tasarım: EliteHakkimizda). (1) Tam genişlik kapak: "Hikâyemiz", slogan (yoksa ad + kuruluş yılı),
 // kısa giriş. (2) "Nasıl başladı": altın çerçeveli hikâye fotoğrafı, ad, büyük ilk harfli hikâye ve gerçek rakamlar.
@@ -85,6 +86,7 @@ function Story({ site }: { site: PublicSite }) {
                                     {photo
                                         ? <img src={photo} alt="" loading="lazy" className="h-full w-full object-cover" />
                                         : <span className="flex h-full items-center justify-center font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[var(--site-muted)]">+ Hikâye fotoğrafı ekle</span>}
+                                    {photo?.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                                 </div>
                             </EditableBlock>
                         </div>
@@ -144,8 +146,11 @@ function Founder({ site }: { site: PublicSite }) {
         <section aria-labelledby="hk-usta" className={cn('relative overflow-hidden', onDark)}>
             <div className={cn(elWrap, elSection, 'flex max-w-[1040px] flex-col items-center gap-[30px] text-center md:py-[140px]')}>
                 {c.founderPhotoUrl ? (
-                    <img src={c.founderPhotoUrl} alt={c.founderName} {...photoT} loading="lazy"
-                        className={cn('h-[120px] w-[120px] rounded-full border border-[var(--site-accent-on-dark)] object-cover p-1', photoT.className)} />
+                    <div className="relative">
+                        <img src={c.founderPhotoUrl} alt={c.founderName} {...photoT} loading="lazy"
+                            className={cn('h-[120px] w-[120px] rounded-full border border-[var(--site-accent-on-dark)] object-cover p-1', photoT.className)} />
+                        {c.founderPhotoUrl.includes('/shared/stock/') && <StockImageLabel className="-bottom-1 right-1/2 translate-x-1/2 whitespace-nowrap" />}
+                    </div>
                 ) : edit ? (
                     <div className="w-[200px]"><EmptySlot target="photo:founder" title="+ Portre ekle" className="bg-[var(--site-card)]" /></div>
                 ) : c.founderName && !c.founderQuote && (

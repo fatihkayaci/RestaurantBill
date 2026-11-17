@@ -220,6 +220,7 @@ function FounderAndValues({ site }: { site: PublicSite }) {
                         <>
                             <img src={c.founderPhotoUrl} alt={c.founderName} {...photoT} className={cn('absolute inset-0 h-full w-full object-cover', photoT.className)} />
                             <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(36,24,15,0)_30%,color-mix(in_srgb,var(--site-menu-box)_94%,transparent)_85%)]" />
+                            {c.founderPhotoUrl.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                         </>
                     ) : edit ? (
                         <div className="absolute left-6 top-6 w-[180px] sm:left-10 sm:top-10"><EmptySlot target="photo:founder" title="+ Portre ekle" className="bg-[var(--site-card)]" /></div>

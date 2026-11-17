@@ -20,6 +20,7 @@ import { SITE_LIMITS, editExternal, editTarget, useSiteEdit, useSitePreview, use
 import { EliteAddButton, EliteDishLine, EliteHero, EliteKicker, EliteRoundButton } from './EliteBits';
 import EliteReserve from './EliteReserve';
 import { elButton, elItalic, elLabel, elPattern, elSection, elSerif, elTextLink, elTitle, elWrap, heroLead, onDark, roman } from './eliteParts';
+import { StockImageLabel } from '../../components/StockImageLabel';
 
 // Ana sayfa, Elit (tasarım: EliteAnaSayfa). (1) Ekran yüksekliğinde fotoğraf kapağı: üst satır (semt · kuruluş yılı),
 // iki satır ad, italik alt başlık, altın ve çizgili düğme; altta durum · Keşfet · konum. (2) Hikâye özeti: altın
@@ -179,6 +180,7 @@ function StorySummary({ site }: { site: PublicSite }) {
                                 {photo
                                     ? <img src={photo} alt="" loading="lazy" className="h-full w-full object-cover" />
                                     : <span className="flex h-full items-center justify-center font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[var(--site-muted)]">+ Hikâye fotoğrafı ekle</span>}
+                                {photo?.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                             </div>
                         </EditableBlock>
                         {c.foundedYear && (
@@ -419,6 +421,7 @@ function Occasions({ site }: { site: PublicSite }) {
                 <EditableBlock target={photoT.target} label={photoT.label} chip="Fotoğrafı değiştir" className="absolute inset-0">
                     <img src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover grayscale-[0.35]" />
                     <span aria-hidden="true" className="absolute inset-0 bg-[color-mix(in_srgb,var(--site-paper)_70%,transparent)]" />
+                    {photo.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                 </EditableBlock>
             ) : <span aria-hidden="true" className={cn('absolute inset-0', elPattern)} />}
             <div className={cn(elWrap, 'pointer-events-none relative flex max-w-[1240px] flex-wrap items-end justify-between gap-10 py-20 [&_a]:pointer-events-auto')}>
@@ -548,6 +551,7 @@ function ReserveSection({ site }: { site: PublicSite }) {
                     ? <img src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                     : <span aria-hidden="true" className={cn('absolute inset-0', elPattern)} />}
                 <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--site-paper)_15%,transparent)_30%,color-mix(in_srgb,var(--site-paper)_85%,transparent)_100%)]" />
+                {photo?.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                 <div className="absolute inset-x-5 bottom-10 flex flex-col gap-[18px] sm:inset-x-10 md:inset-x-14 md:bottom-14">
                     <EliteKicker dark>Rezervasyon</EliteKicker>
                     <h2 id="ev-rez" className={cn(elTitle, 'md:text-[clamp(44px,4.4vw,72px)] md:leading-none')}>Masanız<br /><em className="italic">sizi bekliyor.</em></h2>

@@ -581,6 +581,7 @@ function StoryBox({ site }: { site: PublicSite }) {
                     <>
                         <img src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                         <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--site-story)_60%,transparent)_0%,color-mix(in_srgb,var(--site-story)_40%,transparent)_30%,color-mix(in_srgb,var(--site-story)_94%,transparent)_80%)]" />
+                        {photo.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                     </>
                 ) : (
                     <span aria-hidden="true" className="absolute inset-0 bg-[repeating-conic-gradient(from_45deg,color-mix(in_srgb,var(--site-on-paper)_7%,transparent)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />

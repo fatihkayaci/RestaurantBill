@@ -11,6 +11,7 @@ import { SITE_LIMITS, editTarget, useSiteEdit } from '../siteEditContext';
 import { heroPhoto, photoTarget, regionPhrase, seatCount, venuePhotos } from '../venueData';
 import { EliteEmpty, EliteHero, EliteKicker } from './EliteBits';
 import { elButton, elItalic, elLabel, elSection, elSerif, elTitle, elWrap, heroLead, onDark } from './eliteParts';
+import { StockImageLabel } from '../../components/StockImageLabel';
 
 // /mekan, Elit (tasarım: EliteMekan). (1) Tam genişlik kapak (Mekân kapağı → galeri → hikâye → site kapağı). (2) "Nerede
 // oturmak istersiniz?": Masalar'daki bölümler (fotoğraf, kişi ya da masa sayısı, açıklama). (3) Koyu "Olanaklar": yalnız
@@ -96,7 +97,10 @@ function Areas({ site }: { site: PublicSite }) {
                         return (
                             <article key={region.id} {...t} className={cn('rb-el-zoom flex min-w-0 flex-col gap-[22px]', t.className)}>
                                 {region.photoUrl ? (
-                                    <div className="h-[300px] overflow-hidden md:h-[440px]"><img src={region.photoUrl} alt={region.name} loading="lazy" className="h-full w-full object-cover" /></div>
+                                    <div className="relative h-[300px] overflow-hidden md:h-[440px]">
+                                        <img src={region.photoUrl} alt={region.name} loading="lazy" className="h-full w-full object-cover" />
+                                        {region.photoUrl.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+                                    </div>
                                 ) : showEmpty && (
                                     <div className="flex h-[300px] items-center justify-center border border-dashed border-[#CFC5B4] font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[#8A7D6E] md:h-[440px]">+ Fotoğraf ekle</div>
                                 )}
@@ -184,7 +188,12 @@ function GalleryAndEvents({ site }: { site: PublicSite }) {
     const shot = (src: string, i: number) => {
         const { target, label } = photoTarget(site, src);
         const t = editTarget(edit, target, label);
-        return <img src={src} alt={`${restaurantName(site)}, mekân fotoğrafı ${i + 1}`} loading="lazy" {...t} className={cn('absolute inset-0 h-full w-full object-cover', t.className)} />;
+        return (
+            <>
+                <img src={src} alt={`${restaurantName(site)}, mekân fotoğrafı ${i + 1}`} loading="lazy" {...t} className={cn('absolute inset-0 h-full w-full object-cover', t.className)} />
+                {src.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+            </>
+        );
     };
     const tile = 'rb-el-zoom relative min-w-0 overflow-hidden';
     const ig = c.instagramUrl;

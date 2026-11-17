@@ -5,6 +5,7 @@ import { InstagramIcon } from './SiteCards';
 import { instagramHandle, serif } from './siteParts';
 import { SITE_LIMITS, editTarget, useSiteEdit } from './siteEditContext';
 import { photoTarget } from './venueData';
+import { StockImageLabel } from '../components/StockImageLabel';
 
 // Mekân sayfasının (tasarım: "Tema 2 · Açık — Mekân") kendi parçaları: fotoğrafsız kapağın masa planı süsü, galeri
 // mozaiği, süs harita paneli ve olanak / yol ikonları. Yalnız RestaurantVenuePage kullanır.
@@ -49,7 +50,12 @@ export function VenueGallery({ site, photos, title }: { site: PublicSite; photos
     const shot = (src: string, i: number, className: string, lazy = true) => {
         const { target, label } = photoTarget(site, src);
         const t = editTarget(edit, target, label);
-        return <img src={src} alt={`${title}, mekân fotoğrafı ${i + 1}`} loading={lazy ? 'lazy' : undefined} {...t} className={cn('block h-full w-full object-cover', className, t.className)} />;
+        return (
+            <>
+                <img src={src} alt={`${title}, mekân fotoğrafı ${i + 1}`} loading={lazy ? 'lazy' : undefined} {...t} className={cn('block h-full w-full object-cover', className, t.className)} />
+                {src.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+            </>
+        );
     };
     // Telefonda tek kalan son kare tam genişlik (yatay); geniş ekranda tek küçük kare iki satır, üç küçük karenin sonuncusu iki sütun.
     const span = (i: number) => {

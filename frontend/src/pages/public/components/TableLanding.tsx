@@ -13,6 +13,7 @@ import {
     accentItalic, creamBox, displayTitle, eyebrowAccent, heroBox, heroEyebrow, heroPattern, pillDark, pillOutline, sheetBackdrop, sheetPanel,
 } from '../table/tableUi';
 import { formatClock, type TableActionState } from '../useTableAction';
+import { StockImageLabel } from './StockImageLabel';
 
 export interface TableAction {
     state: TableActionState;
@@ -88,7 +89,12 @@ export default function TableLanding({
                 <div className="relative flex min-h-[340px] flex-col px-5 pb-5 pt-5 sm:px-8 sm:pb-8 sm:pt-7">
                     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                         <span className={cn(serif, 'min-w-0 truncate text-[24px] italic leading-none')}>{restaurantName}</span>
-                        {statusText && <GlassStatusPill open={site.isOpenNow}>{statusText}</GlassStatusPill>}
+                        {(statusText || coverImageUrl?.includes('/shared/stock/')) && (
+                            <span className="flex items-center gap-2">
+                                {coverImageUrl?.includes('/shared/stock/') && <StockImageLabel className="static" />}
+                                {statusText && <GlassStatusPill open={site.isOpenNow}>{statusText}</GlassStatusPill>}
+                            </span>
+                        )}
                     </div>
                     <div className="mt-auto flex flex-col gap-3 pt-12">
                         <p className={cn(heroEyebrow, 'm-0')}>
