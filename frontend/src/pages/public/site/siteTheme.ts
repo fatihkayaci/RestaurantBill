@@ -48,6 +48,8 @@ export const SITE_PALETTE = {
 } as const;
 
 const P = SITE_PALETTE;
+/** Alt bilginin (Footer B, kum tonu) zemini. */
+export const SAND = '#E6DBC9';
 const INK = P.fg;
 const base = { bg: P.bg, card: P.card, border: `rgba(${P.rgb},0.12)`, text: P.fg, muted: P.muted };
 
@@ -164,6 +166,8 @@ export function siteRootStyle(accentColor?: string | null, theme?: string | null
         '--site-accent-text': accentText,
         '--site-accent-bright': onDark,
         '--site-accent-on-dark': onDark,
+        // Alt bilginin kum zemininde (#E6DBC9) vurgu yazısı; gerekirse koyulaşır (altının #8A5D0B'si 4.2:1 kalıyordu).
+        '--site-accent-on-sand': ensureContrast(accentText, SAND),
         '--site-accent-line': `${pair.accent}AA`,
         '--site-accent-soft': `color-mix(in srgb, ${pair.accent} 22%, ${P.card})`,
         '--site-ink': P.paper,

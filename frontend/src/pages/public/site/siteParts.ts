@@ -167,17 +167,23 @@ export function foldText(text: string): string {
     return text.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 }
 
+/** Sayının okunuşuna göre yönelme eki: 38 → "e" (otuz sekiz → sekize), 30 → "a", 22 → "ye", 0 → "a". */
+export function dativeSuffix(n: number): string {
+    const ones = ['', 'e', 'ye', 'e', 'e', 'e', 'ya', 'ye', 'e', 'a'];
+    const tens = ['a', 'a', 'ye', 'a', 'a', 'ye', 'a', 'e', 'e', 'a'];
+    const v = Math.abs(Math.trunc(n)) % 100;
+    if (v % 10 !== 0) return ones[v % 10];
+    if (v === 0 && n !== 0) return 'e'; // yüz, bin → yüze, bine
+    return tens[v / 10];
+}
+
 /**
  * "21:30'a kadar", "22:00'ye kadar", "23:15'e kadar": Türkçe yönelme eki saatin okunuşunun son sözcüğüne göre
  * (otuz → 'a, yirmi iki → 'ye, on beş → 'e).
  */
 export function untilTime(hhmm: string): string {
     const [h, m] = hhmm.split(':').map(Number);
-    const ones = ['', 'e', 'ye', 'e', 'e', 'e', 'ya', 'ye', 'e', 'a'];
-    const tens = ['a', 'a', 'ye', 'a', 'a', 'ye'];
-    const n = m !== 0 ? m : h;
-    const suffix = n % 10 !== 0 ? ones[n % 10] : tens[Math.floor(n / 10)] ?? 'a';
-    return `${hhmm}'${suffix} kadar`;
+    return `${hhmm}'${dativeSuffix(m !== 0 ? m : h)} kadar`;
 }
 
 /** Ürünlerin girilmiş hazırlık sürelerinin ortalaması (dk, yuvarlanmış); hiç süre yoksa null. */
