@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, BellRing, Check, ClipboardList, Minus, Moon, Plus, Receipt, UtensilsCrossed, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BellRing, Check, ClipboardList, Minus, Moon, Plus, Receipt, UtensilsCrossed, X } from 'lucide-react';
 import { publicService } from '@/features/customerSite/api/publicService';
 import {
     ORDER_REQUEST_APPROVED, ORDER_REQUEST_PENDING, ORDER_REQUEST_REJECTED, canReserveOnline, type PublicProduct, type PublicSite,
@@ -16,6 +16,10 @@ import DeliveryMenu from './delivery/DeliveryMenu';
 import { ImageSlot } from './site/SiteChrome';
 import { FONTS_HREF, serif } from './site/siteParts';
 import { SITE_FONTS_HREF } from './site/siteTheme';
+import {
+    accentItalic, closeCircle, creamBox, displayTitle, eyebrowAccent, fieldClass, heroBox, heroEyebrow, heroPattern, pillAccent, pillDark,
+    pillOutline, sheetBackdrop, sheetPanel, stepperMinus, stepperPlus, stepperWrap,
+} from './table/tableUi';
 import { useTableOrderRequests, type SentOrderRequest } from './useTableOrderRequests';
 import { useTableAction } from './useTableAction';
 
@@ -27,7 +31,7 @@ interface CartLine {
 
 const MAX_QUANTITY = 50;
 
-// Masadaki QR kodun açtığı sayfa (tasarım A). İlk ekran karşılama: sitenin kapağı, tek ana eylem (menü), garson + hesap.
+// Masadaki QR kodun açtığı sayfa (görünüm: "Renkli ve sıcak", sınıflar table/tableUi.ts). İlk ekran karşılama: sitenin kapağı, tek ana eylem (menü), garson + hesap.
 // Menüde (?ekran=menu) paket sipariş menüsünün kartları (DeliveryMenu) kullanılır; sepet garsona gönderilir, garson
 // onaylayınca mutfağa gider. Gönderimden sonra tam ekran "Siparişiniz garsonda" onayı açılır ve talebin durumunu
 // (useTableOrderRequests yoklaması) canlı gösterir. Restoran kapalıyken (isOpenNow=false) menü yalnız göz atmalıktır.
@@ -156,7 +160,7 @@ export default function TableOrderPage() {
     };
 
     const root = (children: ReactNode) => (
-        <div style={customerRootStyle(site?.site)} className="min-h-screen bg-[var(--site-bg)] text-[var(--site-text)]">
+        <div style={customerRootStyle(site?.site)} className="min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]">
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
             <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
             {children}
@@ -165,34 +169,33 @@ export default function TableOrderPage() {
 
     if (loadError) {
         return root(
-            <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
-                <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-sub)]">
-                    <UtensilsCrossed className="h-6 w-6" />
-                </span>
-                <h1 className={cn(serif, 'm-0 mt-6 text-[44px] leading-[1] tracking-[-0.02em]')}>Menü <span className="italic">açılamadı.</span></h1>
-                <p className="m-0 mt-3 text-base leading-relaxed text-[var(--site-sub)]">{loadError}</p>
-                <button type="button" onClick={retryLoad}
-                    className="mt-8 flex h-14 items-center justify-center rounded-full bg-[var(--site-paper)] text-base font-semibold text-[var(--site-on-paper)]">
-                    Tekrar dene
-                </button>
-                <Link to="/menu" className="mt-3 flex min-h-11 items-center justify-center text-sm font-semibold text-[var(--site-sub)] underline underline-offset-4">
-                    QR eski olabilir: restoranın menüsünü açın
-                </Link>
+            <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-2 py-6 sm:px-4">
+                <div className={cn(creamBox, 'flex flex-col px-6 py-9 sm:px-9')}>
+                    <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-mustard)] text-[var(--site-text)]">
+                        <UtensilsCrossed className="h-6 w-6" />
+                    </span>
+                    <h1 className={cn(displayTitle, 'mt-6 text-[48px]')}>Menü <em className={accentItalic}>açılamadı.</em></h1>
+                    <p className="m-0 mt-3 text-base leading-relaxed text-[var(--site-sub)]">{loadError}</p>
+                    <button type="button" onClick={retryLoad} className={cn(pillDark, 'mt-8 w-full')}>
+                        Tekrar dene
+                    </button>
+                    <Link to="/menu" className="mt-3 flex min-h-11 items-center justify-center text-center text-sm font-bold text-[var(--site-sub)] underline underline-offset-4">
+                        QR eski olabilir: restoranın menüsünü açın
+                    </Link>
+                </div>
             </main>
         );
     }
 
     if (!table || !site) {
         return root(
-            <main className="mx-auto min-h-screen max-w-md" aria-busy="true" aria-label="Menü yükleniyor">
-                <div className="h-[300px] animate-pulse bg-[var(--site-hero)]" />
-                <div className="-mt-10 space-y-3 px-4">
-                    <div className="h-[84px] animate-pulse rounded-[20px] bg-[var(--site-raised)]" />
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="h-[104px] animate-pulse rounded-[20px] bg-[var(--site-raised)]" />
-                        <div className="h-[104px] animate-pulse rounded-[20px] bg-[var(--site-raised)]" />
-                    </div>
+            <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-2 px-2 pt-2 sm:gap-3 sm:px-4 sm:pt-4" aria-busy="true" aria-label="Menü yükleniyor">
+                <div className="h-[340px] animate-pulse rounded-[24px] bg-[var(--site-hero-bg)] opacity-80 motion-reduce:animate-none" />
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div className="h-[120px] animate-pulse rounded-[24px] bg-[var(--site-card)] motion-reduce:animate-none" />
+                    <div className="h-[120px] animate-pulse rounded-[24px] bg-[var(--site-card)] motion-reduce:animate-none" />
                 </div>
+                <div className="h-[220px] animate-pulse rounded-[24px] bg-[var(--site-card)] motion-reduce:animate-none" />
             </main>
         );
     }
@@ -276,82 +279,95 @@ export default function TableOrderPage() {
     const showActionBar = !!(waiterAction || billAction);
 
     return root(
-        <main className={cn('min-h-screen', (canOrder && itemCount > 0) || showActionBar ? 'pb-32' : 'pb-12')}>
-            <header className="border-b border-[var(--site-border)] bg-[var(--site-card)]">
-                <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-3 py-3">
-                    <div className="flex min-w-0 items-center gap-1">
-                        <button
-                            type="button"
-                            onClick={() => showView(false)}
-                            aria-label="Karşılama ekranına dön"
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-[var(--site-raised)]"
-                        >
-                            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-                        </button>
-                        <p className={cn(serif, 'm-0 truncate text-[24px] italic leading-none')}>{restaurant}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                        {myOrdersButton && (
-                            <button
-                                type="button"
-                                onClick={() => setMyOrdersOpen(true)}
-                                aria-label={`Siparişlerim${pendingCount > 0 ? `, ${pendingCount} onay bekliyor` : ''}`}
-                                className="relative flex h-11 items-center gap-1.5 rounded-full border border-[var(--site-border-strong)] px-3 text-sm font-semibold hover:bg-[var(--site-raised)]"
-                            >
-                                <ClipboardList className="h-4 w-4" aria-hidden="true" />
-                                <span className="hidden sm:inline">Siparişlerim</span>
-                                {pendingCount > 0 && (
-                                    <span aria-hidden="true" className="rounded-full bg-[var(--site-accent)] px-1.5 text-xs text-[var(--site-on-accent)]">{pendingCount}</span>
-                                )}
-                            </button>
-                        )}
-                        <h1 className="m-0 rounded-full bg-[var(--site-paper)] px-3.5 py-2 text-sm font-semibold text-[var(--site-on-paper)]">
-                            <span className="sr-only">Masa: </span>{table.name}
-                        </h1>
-                    </div>
+        <main className={cn('min-h-screen', (canOrder && itemCount > 0) || showActionBar ? 'pb-36' : 'pb-12')}>
+            <header className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2 px-3 pb-2 pt-3 sm:px-4 sm:pt-4">
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <button
+                        type="button"
+                        onClick={() => showView(false)}
+                        aria-label="Karşılama ekranına dön"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--site-border-mid)] bg-[var(--site-card)] text-[var(--site-text)] transition-colors hover:border-[var(--site-text)]"
+                    >
+                        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <p className={cn(serif, 'm-0 min-w-0 truncate text-[22px] italic leading-none')}>{restaurant}</p>
                 </div>
+                {myOrdersButton && (
+                    <button
+                        type="button"
+                        onClick={() => setMyOrdersOpen(true)}
+                        aria-label={`Siparişlerim${pendingCount > 0 ? `, ${pendingCount} onay bekliyor` : ''}`}
+                        className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-[var(--site-paper)] pl-3.5 pr-2 text-sm font-bold text-[var(--site-on-paper)] transition-opacity hover:opacity-90"
+                    >
+                        <ClipboardList className="h-4 w-4" aria-hidden="true" />
+                        <span className="hidden sm:inline">Siparişlerim</span>
+                        <span aria-hidden="true" className={cn('flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[13px] font-extrabold tabular-nums',
+                            pendingCount > 0 ? 'bg-[var(--site-mustard)] text-[var(--site-text)]' : 'bg-[rgba(251,244,232,0.15)]')}>
+                            {pendingCount > 0 ? pendingCount : requests.length}
+                        </span>
+                    </button>
+                )}
             </header>
 
-            <div className="mx-auto max-w-3xl px-4">
-                {closed && (
-                    <p role="status" className="m-0 mt-4 flex items-start gap-3 rounded-[20px] bg-[var(--site-paper)] p-4 text-sm leading-relaxed text-[var(--site-on-paper-sub)]">
-                        <Moon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                        <span><b className="font-semibold text-[var(--site-on-paper)]">Mutfak kapandı.</b> {reopen ? `${reopen} açılıyoruz. ` : ''}Menüye göz atabilirsiniz, sipariş şu an gönderilemez.</span>
-                    </p>
-                )}
-                {!features.orderingEnabled && !closed && (
-                    <p className="m-0 mt-4 rounded-2xl bg-[var(--site-raised)] px-4 py-3 text-sm">Siparişinizi garsonumuza verebilirsiniz.</p>
-                )}
+            <div className="mx-auto w-full max-w-4xl px-2 sm:px-4">
+                {/* Krem kutu (sticky kategori şeridi için overflow yok); üstünde kapak renginde "Menü" başlığı. */}
+                <section aria-labelledby="masa-menu-baslik" className={creamBox}>
+                    <div className="relative flex flex-col items-center gap-3 overflow-hidden rounded-t-[24px] bg-[var(--site-hero-bg)] px-5 pb-9 pt-9 text-center text-[var(--site-on-paper)] md:rounded-t-[32px] md:pb-12 md:pt-12">
+                        <span aria-hidden="true" className={heroPattern} />
+                        <p className={cn(heroEyebrow, 'relative m-0 justify-center')}>
+                            <span aria-hidden="true" className="h-0.5 w-6 shrink-0 bg-[var(--site-mustard)]" />
+                            <span className="min-w-0 break-words"><span className="sr-only">Masa: </span>{table.name}{table.regionName && <> · {table.regionName}</>}</span>
+                            <span aria-hidden="true" className="h-0.5 w-6 shrink-0 bg-[var(--site-mustard)]" />
+                        </p>
+                        <h1 id="masa-menu-baslik" className={cn(displayTitle, 'relative text-[80px] leading-[0.85] tracking-[-0.03em] md:text-[112px]')}>Menü</h1>
+                        {canOrder && (
+                            <p className="relative m-0 max-w-[340px] text-[15px] font-semibold leading-snug text-[rgba(251,244,232,0.92)]">
+                                Seçin, sepete ekleyin; garson onaylayınca mutfağa gider.
+                            </p>
+                        )}
+                    </div>
 
-                <DeliveryMenu
-                    categories={site.categories}
-                    restaurant={restaurant}
-                    productQuantity={quantityOf}
-                    onAddProduct={add}
-                    onRemoveProduct={remove}
-                    featuredSection
-                    readOnly={!canOrder}
-                    empty={(
-                        <div className="flex flex-col items-start py-14">
-                            <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-raised)] text-[var(--site-sub)]">
-                                <UtensilsCrossed className="h-6 w-6" />
-                            </span>
-                            <h2 className={cn(serif, 'm-0 mt-5 text-[40px] leading-none')}>Menü <span className="italic">hazırlanıyor.</span></h2>
-                            <p className="m-0 mt-2 max-w-xs text-[15px] leading-relaxed text-[var(--site-sub)]">Online menümüz henüz hazır değil. Garsonumuz basılı menüyü getirsin.</p>
-                            {waiterAction && (
-                                <button type="button" onClick={() => void runAction('waiter')}
-                                    className="mt-6 flex h-12 items-center gap-2 rounded-full bg-[var(--site-accent)] px-6 text-[15px] font-semibold text-[var(--site-on-accent)]">
-                                    <BellRing className="h-4 w-4" aria-hidden="true" />Garson çağır
-                                </button>
+                    <div className="px-4 pb-4 md:px-6 md:pb-8 lg:px-8">
+                        {closed && (
+                            <p role="status" className="m-0 mt-4 flex items-start gap-3 rounded-[20px] bg-[var(--site-paper)] p-4 text-sm leading-relaxed text-[var(--site-on-paper-sub)]">
+                                <Moon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--site-mustard)]" aria-hidden="true" />
+                                <span><b className="font-extrabold text-[var(--site-on-paper)]">Mutfak kapandı.</b> {reopen ? `${reopen} açılıyoruz. ` : ''}Menüye göz atabilirsiniz, sipariş şu an gönderilemez.</span>
+                            </p>
+                        )}
+                        {!features.orderingEnabled && !closed && (
+                            <p className="m-0 mt-4 rounded-[20px] bg-[var(--site-bg)] px-4 py-3 text-sm font-semibold">Siparişinizi garsonumuza verebilirsiniz.</p>
+                        )}
+
+                        <DeliveryMenu
+                            categories={site.categories}
+                            restaurant={restaurant}
+                            productQuantity={quantityOf}
+                            onAddProduct={add}
+                            onRemoveProduct={remove}
+                            featuredSection
+                            readOnly={!canOrder}
+                            empty={(
+                                <div className="flex flex-col items-center py-14 text-center">
+                                    <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-mustard)] text-[var(--site-text)]">
+                                        <UtensilsCrossed className="h-6 w-6" />
+                                    </span>
+                                    <h2 className={cn(displayTitle, 'mt-5 text-[40px] leading-none')}>Menü <em className={accentItalic}>hazırlanıyor.</em></h2>
+                                    <p className="m-0 mt-2 max-w-xs text-[15px] leading-relaxed text-[var(--site-sub)]">Online menümüz henüz hazır değil. Garsonumuz basılı menüyü getirsin.</p>
+                                    {waiterAction && (
+                                        <button type="button" onClick={() => void runAction('waiter')} className={cn(pillDark, 'mt-6 h-12 text-[15px]')}>
+                                            <BellRing className="h-4 w-4" aria-hidden="true" />Garson çağır
+                                        </button>
+                                    )}
+                                </div>
                             )}
-                        </div>
-                    )}
-                />
+                        />
+                    </div>
+                </section>
             </div>
 
             {((canOrder && itemCount > 0) || showActionBar) && (
-                <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--site-border)] bg-[color-mix(in_srgb,var(--site-bg)_95%,transparent)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-[14px]">
-                    <div className="mx-auto flex max-w-3xl items-center gap-2">
+                <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--site-border)] bg-[color-mix(in_srgb,var(--site-bg)_95%,transparent)] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-[14px] sm:px-4">
+                    <div className="mx-auto flex max-w-4xl items-center gap-2">
                         {canOrder && itemCount > 0 ? (
                             <>
                                 {waiterAction && (
@@ -361,20 +377,20 @@ export default function TableOrderPage() {
                                 <button
                                     type="button"
                                     onClick={() => setCartOpen(true)}
-                                    className="flex h-14 min-w-0 flex-1 items-center justify-between gap-3 rounded-full bg-[var(--site-accent)] pl-2 pr-6 text-[var(--site-on-accent)] shadow-[0_10px_24px_-10px_rgba(0,0,0,0.45)] transition-opacity hover:opacity-90"
+                                    className="flex h-[60px] min-w-0 flex-1 items-center justify-between gap-3 rounded-full bg-[var(--site-paper)] pl-2 pr-6 text-[var(--site-on-paper)] shadow-[0_16px_40px_-12px_rgba(36,24,15,0.45)] transition-opacity hover:opacity-90"
                                 >
-                                    <span className="flex items-center gap-3 text-base font-semibold">
-                                        <span className="flex h-10 min-w-10 items-center justify-center rounded-full bg-white/20 px-2 font-bold tabular-nums">{itemCount}</span>
-                                        Sepete git
+                                    <span className="flex min-w-0 items-center gap-3 text-base font-bold">
+                                        <span className="flex h-11 min-w-11 items-center justify-center rounded-full bg-[var(--site-mustard)] px-2 font-extrabold tabular-nums text-[var(--site-text)]">{itemCount}</span>
+                                        <span className="truncate">Sepete git</span>
                                     </span>
-                                    <span className="text-lg font-bold tabular-nums">{formatPrice(total)} ₺</span>
+                                    <span className={cn(serif, 'shrink-0 text-[22px] leading-none tabular-nums')}>{formatPrice(total)} ₺</span>
                                 </button>
                             </>
                         ) : (
                             <>
                                 {waiterAction && (
                                     <MenuActionButton label="Garson çağır" icon={<BellRing className="h-4 w-4" />} action={waiterAction}
-                                        onClick={() => void runAction('waiter')} onReopen={() => setConfirm('waiter')} />
+                                        onClick={() => void runAction('waiter')} onReopen={() => setConfirm('waiter')} primary />
                                 )}
                                 {billAction && (
                                     <MenuActionButton label="Hesap iste" icon={<Receipt className="h-4 w-4" />} action={billAction}
@@ -384,7 +400,7 @@ export default function TableOrderPage() {
                         )}
                     </div>
                     {(waiterAction?.state.status === 'error' || billAction?.state.status === 'error') && (
-                        <p role="alert" className="mx-auto mt-2 max-w-3xl text-center text-sm font-medium text-[var(--site-error)]">
+                        <p role="alert" className="mx-auto mt-2 max-w-4xl text-center text-sm font-semibold text-[var(--site-error)]">
                             {waiterAction?.state.status === 'error' ? waiterAction.state.message : billAction?.state.status === 'error' ? billAction.state.message : ''}
                         </p>
                     )}
@@ -415,8 +431,10 @@ export default function TableOrderPage() {
 }
 
 /** Menü ekranının alt çubuğundaki garson / hesap düğmesi; bekleme süresinde onayı yeniden açar. */
-function MenuActionButton({ label, icon, action, onClick, onReopen, iconOnly = false }: {
+function MenuActionButton({ label, icon, action, onClick, onReopen, iconOnly = false, primary = false }: {
     label: string; icon: ReactNode; action: ReturnType<typeof useTableAction>; onClick: () => void; onReopen: () => void; iconOnly?: boolean;
+    /** Koyu hap (garson çağır); yoksa krem. */
+    primary?: boolean;
 }) {
     const waiting = action.state.status === 'done' && action.remainingSeconds > 0;
     return (
@@ -425,17 +443,17 @@ function MenuActionButton({ label, icon, action, onClick, onReopen, iconOnly = f
             onClick={waiting ? onReopen : onClick}
             disabled={action.state.status === 'sending'}
             aria-label={iconOnly ? label : undefined}
-            className={cn('flex h-14 shrink-0 items-center justify-center gap-2 rounded-full border text-[15px] font-semibold transition-colors disabled:opacity-60',
-                iconOnly ? 'w-14' : 'flex-1 px-4',
-                waiting ? 'border-[var(--site-ok-line)] bg-[var(--site-ok-bg)] text-[var(--site-ok)]' : 'border-[var(--site-border-strong)] bg-[var(--site-card)] text-[var(--site-text)]')}
+            className={cn('flex shrink-0 items-center justify-center gap-2 rounded-full border-2 text-[15px] font-extrabold transition-colors disabled:opacity-60',
+                iconOnly ? 'h-[60px] w-[60px]' : 'h-14 min-w-0 flex-1 px-4',
+                waiting ? 'border-[var(--site-ok-line)] bg-[var(--site-ok-bg)] text-[var(--site-ok)]'
+                    : primary ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)] hover:opacity-90'
+                        : 'border-[var(--site-border-mid)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-text)]')}
         >
             <span aria-hidden="true">{waiting ? <Check className="h-4 w-4" strokeWidth={2.5} /> : icon}</span>
             {!iconOnly && (waiting ? `${label.split(' ')[0]} ${label.endsWith('çağır') ? 'çağrıldı' : 'istendi'}` : label)}
         </button>
     );
 }
-
-const fieldClass = 'w-full rounded-xl border border-[var(--site-border-strong)] bg-[var(--site-bg)] px-3 text-[15px] text-[var(--site-text)] placeholder:text-[var(--site-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]';
 
 function CartSheet({ lines, total, restaurant, tableName, orderNote, onOrderNote, onAdd, onRemove, onLineNote, onSend, sending, sendError, onClose }: {
     lines: CartLine[]; total: number; restaurant: string; tableName: string;
@@ -449,53 +467,52 @@ function CartSheet({ lines, total, restaurant, tableName, orderNote, onOrderNote
     const [orderNoteOpen, setOrderNoteOpen] = useState(!!orderNote);
 
     return (
-        <div className="fixed inset-0 z-30 flex flex-col justify-end bg-black/60" onClick={onClose}>
+        <div className={sheetBackdrop} onClick={onClose}>
             <div
                 role="dialog"
                 aria-modal="true"
                 aria-label="Sepet"
-                className="mx-auto flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border-t border-[var(--site-border)] bg-[var(--site-card)] animate-in slide-in-from-bottom duration-200"
+                className={sheetPanel}
                 onClick={e => e.stopPropagation()}
             >
-                <div className="flex shrink-0 items-center justify-between border-b border-[var(--site-border)] px-5 py-4">
-                    <div>
-                        <p className="m-0 text-xs font-medium uppercase tracking-[0.2em] text-[var(--site-sub)]">{tableName}</p>
-                        <h2 className={cn(serif, 'm-0 text-[30px] leading-none')}>Sepetiniz</h2>
+                <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-3 pt-6">
+                    <div className="min-w-0">
+                        <p className={cn(eyebrowAccent, 'm-0 truncate')}>{tableName}</p>
+                        <h2 className={cn(serif, 'm-0 mt-1 text-[34px] leading-none')}>Sepetiniz</h2>
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Sepeti kapat"
-                        className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--site-sub)] hover:bg-[var(--site-raised)]">
+                    <button type="button" onClick={onClose} aria-label="Sepeti kapat" className={closeCircle}>
                         <X className="h-5 w-5" aria-hidden="true" />
                     </button>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-3">
                     {lines.length === 0 ? (
                         <p className="py-8 text-center text-base text-[var(--site-sub)]">Sepetiniz boş.</p>
                     ) : (
-                        <ul className="divide-y divide-[var(--site-border)]">
+                        <ul className="m-0 list-none divide-y divide-[var(--site-border)] p-0">
                             {lines.map(line => {
                                 const noteOpen = openNotes.has(line.product.id);
                                 return (
-                                    <li key={line.product.id} className="py-3">
+                                    <li key={line.product.id} className="py-3.5">
                                         <div className="flex items-center gap-3">
                                             <ImageSlot src={line.product.imageUrl} alt="" restaurant={restaurant}
-                                                logoTextClassName="text-[min(10px,12cqw)]" className="h-14 w-14 shrink-0 rounded-xl" />
+                                                logoTextClassName="text-[min(10px,12cqw)]" className="h-14 w-14 shrink-0 rounded-full border-2 border-[var(--site-mustard)]" />
                                             <div className="min-w-0 flex-1">
-                                                <p className="m-0 text-[15px] font-semibold leading-snug">{line.product.name}</p>
-                                                <p className="m-0 text-sm tabular-nums text-[var(--site-sub)]">{formatPrice(line.product.price * line.quantity)} ₺</p>
+                                                <p className={cn(serif, 'm-0 break-words text-[18px] leading-tight')}>{line.product.name}</p>
+                                                <p className="m-0 mt-0.5 text-sm font-extrabold tabular-nums text-[var(--site-accent-text)]">{formatPrice(line.product.price * line.quantity)} ₺</p>
                                                 {!noteOpen && (
                                                     <button type="button" onClick={() => setOpenNotes(prev => new Set(prev).add(line.product.id))}
-                                                        className="mt-0.5 min-h-8 text-sm font-semibold text-[var(--site-sub)] underline underline-offset-4">
+                                                        className="min-h-11 text-sm font-bold text-[var(--site-sub)] underline underline-offset-4">
                                                         Not ekle
                                                     </button>
                                                 )}
                                             </div>
-                                            <div className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--site-raised)] p-0.5">
-                                                <button type="button" onClick={() => onRemove(line.product)} aria-label={`${line.product.name} bir azalt`} className="flex h-11 w-11 items-center justify-center rounded-full">
+                                            <div className={stepperWrap}>
+                                                <button type="button" onClick={() => onRemove(line.product)} aria-label={`${line.product.name} bir azalt`} className={stepperMinus}>
                                                     <Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
                                                 </button>
-                                                <span className="min-w-5 text-center text-base font-bold tabular-nums">{line.quantity}</span>
-                                                <button type="button" onClick={() => onAdd(line.product)} aria-label={`${line.product.name} bir artır`} className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--site-accent)] text-[var(--site-on-accent)]">
+                                                <span className="min-w-5 text-center text-base font-extrabold tabular-nums">{line.quantity}</span>
+                                                <button type="button" onClick={() => onAdd(line.product)} aria-label={`${line.product.name} bir artır`} className={stepperPlus}>
                                                     <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
                                                 </button>
                                             </div>
@@ -522,7 +539,7 @@ function CartSheet({ lines, total, restaurant, tableName, orderNote, onOrderNote
 
                     {orderNoteOpen ? (
                         <>
-                            <label htmlFor="siparis-notu" className="mt-3 block text-sm font-semibold">Garsona not</label>
+                            <label htmlFor="siparis-notu" className="mt-3 block text-sm font-bold">Garsona not</label>
                             <textarea
                                 id="siparis-notu"
                                 value={orderNote}
@@ -535,24 +552,30 @@ function CartSheet({ lines, total, restaurant, tableName, orderNote, onOrderNote
                         </>
                     ) : (
                         <button type="button" onClick={() => setOrderNoteOpen(true)}
-                            className="mt-2 flex min-h-11 w-full items-center rounded-xl border border-dashed border-[var(--site-border-strong)] px-3 text-left text-[15px] text-[var(--site-sub)]">
+                            className="mt-2 flex min-h-12 w-full items-center rounded-2xl border-2 border-dashed border-[var(--site-border-mid)] px-3.5 text-left text-[15px] font-semibold text-[var(--site-sub)] transition-colors hover:border-[var(--site-text)]">
                             Garsona not: ör. biri az acılı olsun
                         </button>
                     )}
                 </div>
 
-                <div className="shrink-0 border-t border-[var(--site-border)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                    {sendError && <p role="alert" className="mb-3 rounded-xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3 text-sm font-medium text-[var(--site-error)]">{sendError}</p>}
+                <div className="shrink-0 border-t border-dashed border-[var(--site-border-strong)] bg-[var(--site-alt)] px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+                    {sendError && <p role="alert" className="m-0 mb-3 rounded-2xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3 text-sm font-semibold text-[var(--site-error)]">{sendError}</p>}
+                    <p className="m-0 mb-3 flex items-baseline justify-between gap-3">
+                        <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--site-muted)]">Toplam</span>
+                        <span className={cn(serif, 'text-[30px] leading-none tabular-nums')}>{formatPrice(total)} ₺</span>
+                    </p>
                     <button
                         type="button"
                         onClick={onSend}
                         disabled={sending || lines.length === 0}
-                        className="flex h-14 w-full items-center justify-between rounded-full bg-[var(--site-accent)] px-6 text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:opacity-50"
+                        className={cn(pillAccent, 'h-[60px] w-full justify-between pl-6 pr-2 text-[17px]')}
                     >
-                        <span className="text-base font-semibold">{sending ? 'Gönderiliyor…' : 'Garsona gönder'}</span>
-                        <span className="text-lg font-bold tabular-nums">{formatPrice(total)} ₺</span>
+                        <span>{sending ? 'Gönderiliyor…' : 'Garsona gönder'}</span>
+                        <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--site-paper)] text-[var(--site-on-paper)]">
+                            <ArrowRight className="h-5 w-5" />
+                        </span>
                     </button>
-                    <p className="m-0 mt-2 text-center text-xs text-[var(--site-muted)]">Garson onayladıktan sonra hazırlanır. Ödeme kasada.</p>
+                    <p className="m-0 mt-2 text-center text-[13px] text-[var(--site-muted)]">Garson onayladıktan sonra hazırlanır. Ödeme kasada.</p>
                 </div>
             </div>
         </div>
@@ -573,46 +596,52 @@ function SentConfirmation({ request, site, restaurant, tableName, onBackToMenu, 
     const images = new Map(site.categories.flatMap(c => c.products).map(p => [p.id, p.imageUrl]));
 
     return (
-        <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-8">
-            <p className="m-0 text-xs font-medium uppercase tracking-[0.22em] text-[var(--site-sub)]">{tableName} · {sentAt}</p>
-            <div role="status" aria-live="polite" className="mt-6">
-                <span aria-hidden="true" className={cn('flex h-14 w-14 items-center justify-center rounded-full ring-8',
-                    rejected ? 'bg-[var(--site-error-bg)] text-[var(--site-error)] ring-[var(--site-error-bg)]/50' : 'bg-[var(--site-ok-bg)] text-[var(--site-ok)] ring-[var(--site-ok-bg)]/50')}>
-                    {rejected ? <X className="h-7 w-7" strokeWidth={2.5} /> : <Check className="h-7 w-7" strokeWidth={2.5} />}
+        <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-2 px-2 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 sm:gap-3 sm:px-4 sm:pt-4">
+            {/* Kapak renginde durum kutusu: işaret, başlık, açıklama; reddedildiyse garsonun nedeni. */}
+            <div role="status" aria-live="polite" className={cn(heroBox, 'px-5 pb-8 pt-6 sm:px-8 sm:pb-10')}>
+                <span aria-hidden="true" className={heroPattern} />
+                <p className={cn(heroEyebrow, 'relative m-0')}>
+                    <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-mustard)]" />
+                    <span className="min-w-0 break-words">{tableName} · {sentAt}</span>
+                </p>
+                <span aria-hidden="true" className={cn('relative mt-8 flex h-16 w-16 items-center justify-center rounded-full',
+                    rejected ? 'bg-[var(--site-card)] text-[var(--site-error)]' : 'bg-[var(--site-mustard)] text-[var(--site-text)]')}>
+                    {rejected ? <X className="h-8 w-8" strokeWidth={2.75} /> : <Check className="h-8 w-8" strokeWidth={2.75} />}
                 </span>
-                <h1 className={cn(serif, 'm-0 mt-6 text-[48px] leading-[0.98] tracking-[-0.02em]')}>
-                    {rejected ? <>Siparişiniz <span className="italic">onaylanmadı.</span></>
-                        : approved ? <>Siparişiniz <span className="italic">mutfakta.</span></>
-                            : <>Siparişiniz <span className="italic">garsonda.</span></>}
+                <h1 className={cn(displayTitle, 'relative mt-6 text-[52px] sm:text-[64px]')}>
+                    {rejected ? <>Siparişiniz <em className="font-semibold italic">onaylanmadı.</em></>
+                        : approved ? <>Siparişiniz <em className="font-semibold italic">mutfakta.</em></>
+                            : <>Siparişiniz <em className="font-semibold italic">garsonda.</em></>}
                 </h1>
-                <p className="m-0 mt-3 text-[15px] leading-relaxed text-[var(--site-sub)]">
+                <p className="relative m-0 mt-3 max-w-[420px] text-[15px] leading-relaxed text-[rgba(251,244,232,0.92)]">
                     {rejected ? 'Garsonumuz bu siparişi onaylayamadı. Menüden başka bir şey seçebilir ya da garsonu çağırabilirsiniz.'
                         : approved ? 'Garson onayladı, hazırlanıyor. Afiyet olsun.'
                             : 'Garson onaylayınca mutfağa gidecek. Bu ekran kendiliğinden güncellenir.'}
                 </p>
                 {rejected && request.rejectReason && (
-                    <blockquote className={cn(serif, 'm-0 mt-4 border-l-2 border-[var(--site-error-line)] pl-3 text-[22px] italic leading-snug')}>
+                    <blockquote className={cn(serif, 'relative m-0 mt-5 rounded-[20px] bg-[var(--site-card)] px-4 py-3 text-[20px] font-semibold italic leading-snug text-[var(--site-text)]')}>
                         "{request.rejectReason}"
                     </blockquote>
                 )}
             </div>
 
             {!rejected && (
-                <ol aria-label="Sipariş adımları" className="m-0 mt-8 flex list-none flex-col gap-0 p-0">
+                <ol aria-label="Sipariş adımları" className={cn(creamBox, 'm-0 flex list-none flex-col gap-0 px-5 py-4 sm:px-7')}>
                     {SENT_STEPS.map((label, i) => {
                         const step = i + 1;
                         // Bekliyor: gönderildi ✓, garson onayı sürüyor. Onaylandı: üçü de tamam.
                         const done = approved || step === 1;
                         const active = !approved && step === 2;
                         return (
-                            <li key={label} className="flex items-center gap-3 py-2" aria-current={active ? 'step' : undefined}>
-                                <span aria-hidden="true" className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold',
-                                    done ? 'border-[var(--site-ok)] bg-[var(--site-ok)] text-white'
-                                        : active ? 'border-[var(--site-accent)] text-[var(--site-accent)]'
-                                            : 'border-[var(--site-border-strong)] text-[var(--site-disabled)]')}>
+                            <li key={label} className="relative flex items-center gap-3 py-2.5" aria-current={active ? 'step' : undefined}>
+                                {i < SENT_STEPS.length - 1 && <span aria-hidden="true" className="absolute left-[17px] top-[calc(50%+18px)] h-[calc(100%-36px)] w-0.5 bg-[var(--site-border-mid)]" />}
+                                <span aria-hidden="true" className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-extrabold',
+                                    done ? 'border-[var(--site-ok)] bg-[var(--site-ok)] text-[var(--site-ok-bg)]'
+                                        : active ? 'border-[var(--site-mustard)] bg-[var(--site-mustard)] text-[var(--site-text)]'
+                                            : 'border-[var(--site-border-strong)] text-[var(--site-muted)]')}>
                                     {done ? <Check className="h-4 w-4" strokeWidth={3} /> : step}
                                 </span>
-                                <span className={cn('text-[15px]', active ? 'font-bold' : done ? 'font-semibold' : 'text-[var(--site-sub)]')}>
+                                <span className={cn('text-base', active ? 'font-extrabold' : done ? 'font-bold' : 'font-semibold text-[var(--site-sub)]')}>
                                     {active && label === 'Garson onayı' ? 'Garson onayı bekleniyor' : label}
                                     {active && <span aria-hidden="true" className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--site-accent)] motion-reduce:animate-none" />}
                                 </span>
@@ -622,34 +651,34 @@ function SentConfirmation({ request, site, restaurant, tableName, onBackToMenu, 
                 </ol>
             )}
 
-            <section aria-label="Gönderilen sipariş" className="mt-6 rounded-[20px] border border-[var(--site-border)] bg-[var(--site-card)] p-4">
-                <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+            <section aria-label="Gönderilen sipariş" className={cn(creamBox, 'px-5 py-5 sm:px-7')}>
+                <ul className="m-0 flex list-none flex-col gap-3 p-0">
                     {request.items.map((item, i) => (
-                        <li key={`${item.productId ?? item.name}-${i}`} className="flex items-center gap-3 text-[15px]">
+                        <li key={`${item.productId ?? item.name}-${i}`} className="flex items-center gap-3">
                             <ImageSlot src={item.productId ? images.get(item.productId) : null} alt="" restaurant={restaurant}
-                                logoTextClassName="text-[min(9px,12cqw)]" className="h-10 w-10 shrink-0 rounded-lg" />
-                            <span className="min-w-0 flex-1"><span className="font-semibold tabular-nums">{item.quantity}×</span> {item.name}</span>
+                                logoTextClassName="text-[min(9px,12cqw)]" className="h-11 w-11 shrink-0 rounded-full border-2 border-[var(--site-mustard)]" />
+                            <span className={cn(serif, 'min-w-0 flex-1 break-words text-[18px] leading-tight')}>
+                                <span className="font-[family-name:Manrope,system-ui,sans-serif] text-[15px] font-extrabold tabular-nums tracking-normal text-[var(--site-accent-text)]">{item.quantity}×</span> {item.name}
+                            </span>
                         </li>
                     ))}
                 </ul>
-                <p className="m-0 mt-3 flex justify-between border-t border-[var(--site-border)] pt-3 font-bold">
-                    <span>Toplam</span><span className="tabular-nums">{formatPrice(request.total)} ₺</span>
+                <p className="m-0 mt-4 flex items-baseline justify-between gap-3 border-t border-dashed border-[var(--site-border-strong)] pt-4">
+                    <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--site-muted)]">Toplam</span>
+                    <span className={cn(serif, 'text-[28px] leading-none tabular-nums')}>{formatPrice(request.total)} ₺</span>
                 </p>
             </section>
 
-            <div className="mt-auto flex flex-col gap-2.5 pt-8">
-                <button type="button" onClick={onBackToMenu}
-                    className="flex h-14 items-center justify-center rounded-full bg-[var(--site-paper)] text-base font-semibold text-[var(--site-on-paper)]">
+            <div className="mt-auto flex flex-col gap-2.5 pt-6">
+                <button type="button" onClick={onBackToMenu} className={cn(pillDark, 'w-full')}>
                     Menüye dön
                 </button>
                 {rejected && onCallWaiter ? (
-                    <button type="button" onClick={onCallWaiter}
-                        className="flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--site-border-strong)] text-[15px] font-semibold">
+                    <button type="button" onClick={onCallWaiter} className={cn(pillOutline, 'w-full')}>
                         <BellRing className="h-4 w-4" aria-hidden="true" />Garson çağır
                     </button>
                 ) : (
-                    <button type="button" onClick={onMyOrders}
-                        className="flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--site-border-strong)] text-[15px] font-semibold">
+                    <button type="button" onClick={onMyOrders} className={cn(pillOutline, 'w-full')}>
                         <ClipboardList className="h-4 w-4" aria-hidden="true" />Siparişlerim
                     </button>
                 )}
