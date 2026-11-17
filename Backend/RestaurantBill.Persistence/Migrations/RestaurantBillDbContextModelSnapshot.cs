@@ -181,8 +181,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<string>("IbanHolderName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(70)
-                        .HasColumnType("character varying(70)")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("InstagramUrl")
@@ -215,11 +215,23 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<TimeOnly?>("OpensAt")
                         .HasColumnType("time without time zone");
 
+                    b.Property<string>("PaymentBankName")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasDefaultValue("");
+
                     b.Property<string>("QrFeatures")
                         .HasColumnType("jsonb");
 
                     b.Property<string>("ReservationSettings")
                         .HasColumnType("jsonb");
+
+                    b.Property<bool>("ShowIbanOnTable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("SiteAbout")
                         .IsRequired()
@@ -1114,11 +1126,20 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid>("OrderRequestId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ProductId")
+                    b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
+
+                    b.Property<string>("SelectionsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("{}");
+
+                    b.Property<Guid?>("SetMenuId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal?>("UnitPrice")
                         .HasPrecision(18, 2)
@@ -1132,6 +1153,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.HasIndex("OrderRequestId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("SetMenuId");
 
                     b.ToTable("OrderRequestItems");
                 });
@@ -2312,12 +2335,18 @@ namespace RestaurantBill.Persistence.Migrations
                     b.HasOne("RestaurantBill.Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("RestaurantBill.Domain.Entities.SetMenu", "SetMenu")
+                        .WithMany()
+                        .HasForeignKey("SetMenuId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("OrderRequest");
 
                     b.Navigation("Product");
+
+                    b.Navigation("SetMenu");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Payment", b =>

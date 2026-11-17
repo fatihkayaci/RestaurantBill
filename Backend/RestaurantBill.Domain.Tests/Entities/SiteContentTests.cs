@@ -54,6 +54,41 @@ public class SiteContentTests
     public void UnknownTheme_Throws(string theme)
         => Assert.Throws<DomainException>(() => NewBranch().UpdateSiteContent(new SiteContentTexts { Theme = theme }, Year));
 
+    [Theory]
+    [InlineData("pembe")]
+    [InlineData("tema2")]
+    public void UnknownDesign_Throws(string design)
+        => Assert.Throws<DomainException>(() => NewBranch().UpdateSiteContent(new SiteContentTexts { Design = design }, Year));
+
+    [Theory]
+    [InlineData("renkli", "renkli")]
+    [InlineData("sade", "sade")]
+    [InlineData(" Elit ", "elit")]
+    public void KnownDesign_IsNormalized(string design, string expected)
+    {
+        Branch branch = NewBranch();
+        branch.UpdateSiteContent(new SiteContentTexts { Design = design }, Year);
+        Assert.Equal(expected, branch.GetSiteContent().Design);
+    }
+
+    [Theory]
+    [InlineData("comic-sans")]
+    [InlineData("playfair")]
+    public void UnknownFont_Throws(string font)
+        => Assert.Throws<DomainException>(() => NewBranch().UpdateSiteContent(new SiteContentTexts { Font = font }, Year));
+
+    [Fact]
+    public void Font_IsNormalized_AndNullKeepsIt()
+    {
+        Branch branch = NewBranch();
+        branch.UpdateSiteContent(new SiteContentTexts { Font = " Playfair-Inter " }, Year);
+        Assert.Equal("playfair-inter", branch.GetSiteContent().Font);
+        branch.UpdateSiteContent(new SiteContentTexts { Font = null }, Year);
+        Assert.Equal("playfair-inter", branch.GetSiteContent().Font);
+        branch.UpdateSiteContent(new SiteContentTexts { Font = "" }, Year);
+        Assert.Equal(string.Empty, branch.GetSiteContent().Font);
+    }
+
     [Fact]
     public void UnknownAmenity_Throws()
         => Assert.Throws<DomainException>(() => NewBranch().UpdateSiteContent(new SiteContentTexts { Amenities = ["havuz"] }, Year));

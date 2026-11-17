@@ -45,6 +45,12 @@ namespace RestaurantBill.Domain.Entities
         public string? SeoTitle { get; init; }
         /// <summary>Google/paylaşım açıklaması; boş = otomatik. null: değiştirme.</summary>
         public string? SeoDescription { get; init; }
+        /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları; null: değiştirme (eski form bu alanı göndermez).</summary>
+        public IReadOnlyList<string>? HiddenFaqs { get; init; }
+        /// <summary>Sitenin tasarımı ("renkli", "sade", "elit"); boş = varsayılan (renkli). null: değiştirme (eski form göndermez).</summary>
+        public string? Design { get; init; }
+        /// <summary>Yazı tipi çifti (<see cref="SiteContent.FontKeys"/>); boş = tasarımın kendi yazı tipi. null: değiştirme.</summary>
+        public string? Font { get; init; }
     }
 
     /// <summary>
@@ -76,17 +82,35 @@ namespace RestaurantBill.Domain.Entities
         public const int ReviewCountMax = 10_000_000;
         public const int SeoTitleMaxLength = 100;
         public const int SeoDescriptionMaxLength = 320;
+        public const int HiddenFaqsMax = 30;
+        public const int FaqKeyMaxLength = 40;
+
+        /// <summary>Gizlenen soru anahtarı: küçük harf, rakam ve tire (en çok 40). Soruların listesi ön yüzdedir.</summary>
+        public static readonly Regex FaqKeyPattern = new("^[a-z0-9-]{1,40}$", RegexOptions.Compiled);
 
         /// <summary>Sitenin hazır renk temaları; boş = varsayılan (terracotta). Ön yüzdeki SITE_THEMES ile aynı anahtarlar.</summary>
         public static readonly IReadOnlyList<string> ThemeKeys = ["terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"];
 
+        /// <summary>Sitenin tasarımları; boş = varsayılan ("renkli"). Ön yüzdeki SITE_DESIGNS ile aynı anahtarlar.
+        /// Tasarım ve renk teması ayrıdır: her tasarım bütün temaları (ve özel vurgu rengini) kendi paletiyle çizer.</summary>
+        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade", "elit"];
+
+        /// <summary>Başlık + gövde yazı tipi çiftleri; boş = tasarımın kendi çifti. Ön yüzdeki SITE_FONTS ile aynı anahtarlar.</summary>
+        public static readonly IReadOnlyList<string> FontKeys =
+            ["fraunces-manrope", "instrument-manrope", "bodoni-montserrat", "playfair-inter", "dmserif-dmsans", "cormorant-lato", "grotesk-inter"];
+
         /// <summary>Mekânın olanakları: yalnız bu hazır listeden seçilir (uydurma beyan olmasın). Sırası sitedeki sıradır.</summary>
         public static readonly IReadOnlyList<string> AmenityKeys =
-            ["avlu", "teras", "otopark", "vale", "cocuk", "wifi", "engelli", "evcil", "canli-muzik", "vejetaryen", "kartla-odeme"];
+            ["avlu", "teras", "otopark", "vale", "cocuk", "wifi", "engelli", "evcil", "canli-muzik", "vejetaryen", "kartla-odeme",
+             "bebek-sandalyesi", "aile-salonu", "sigara-alani", "ozel-gun"];
 
         public static SiteContent Empty { get; } = new();
 
         public string Theme { get; init; } = string.Empty;
+        /// <summary>Sitenin tasarımı (<see cref="DesignKeys"/>); boş = varsayılan (renkli).</summary>
+        public string Design { get; init; } = string.Empty;
+        /// <summary>Yazı tipi çifti (<see cref="FontKeys"/>); boş = tasarımın kendi yazı tipi.</summary>
+        public string Font { get; init; } = string.Empty;
         /// <summary>Mekân fotoğraflarının depo anahtarları, sitedeki sırayla.</summary>
         public IReadOnlyList<string> GalleryImages { get; init; } = [];
         /// <summary>Boş ya da Pazartesi → Pazar 7 gün.</summary>
@@ -112,6 +136,8 @@ namespace RestaurantBill.Domain.Entities
         public string SeoDescription { get; init; } = string.Empty;
         /// <summary>Paylaşım görselinin depo anahtarı; boş = kapak fotoğrafı.</summary>
         public string ShareImage { get; init; } = string.Empty;
+        /// <summary>Sitede gösterilmeyen hazır "Sık sorulanlar" anahtarları (ön yüzün listesi; varsayılan: hepsi görünür).</summary>
+        public IReadOnlyList<string> HiddenFaqs { get; init; } = [];
 
         // Alt sayfaların kendi kapak fotoğrafları; boş = sitenin kapağı (Mekân'da galeri → hikâye → kapak).
         public string MenuHero { get; init; } = string.Empty;
@@ -157,6 +183,14 @@ namespace RestaurantBill.Domain.Entities
             string theme = texts.Theme.Trim().ToLowerInvariant();
             if (theme.Length > 0 && !ThemeKeys.Contains(theme))
                 throw new DomainException("Geçersiz site teması.");
+
+            string design = texts.Design is null ? Design : texts.Design.Trim().ToLowerInvariant();
+            if (design.Length > 0 && !DesignKeys.Contains(design))
+                throw new DomainException("Geçersiz site tasarımı.");
+
+            string font = texts.Font is null ? Font : texts.Font.Trim().ToLowerInvariant();
+            if (font.Length > 0 && !FontKeys.Contains(font))
+                throw new DomainException("Geçersiz yazı tipi.");
 
             string directions = Limit(texts.DirectionsNote, DirectionsNoteMaxLength, "Nasıl gelinir notu");
             string whatsapp = NormalizePhone(texts.WhatsappPhone);
@@ -210,6 +244,8 @@ namespace RestaurantBill.Domain.Entities
             if (milestones.Any(m => m.Text.Length == 0)) throw new DomainException("Her kilometre taşına bir cümle yazın.");
             milestones = milestones.OrderBy(m => m.Year).ToList();
 
+            IReadOnlyList<string> hiddenFaqs = texts.HiddenFaqs is null ? HiddenFaqs : NormalizeFaqKeys(texts.HiddenFaqs);
+
             List<SiteRegionDetail> regions = [];
             foreach ((Guid regionId, string rawDescription) in texts.RegionDescriptions)
             {
@@ -225,6 +261,8 @@ namespace RestaurantBill.Domain.Entities
             return this with
             {
                 Theme = theme,
+                Design = design,
+                Font = font,
                 WeeklyHours = NormalizeWeek(texts.WeeklyHours),
                 DirectionsNote = directions,
                 WhatsappPhone = whatsapp,
@@ -242,7 +280,22 @@ namespace RestaurantBill.Domain.Entities
                 RegionDetails = regions,
                 SeoTitle = texts.SeoTitle is null ? SeoTitle : Limit(texts.SeoTitle, SeoTitleMaxLength, "Sayfa başlığı"),
                 SeoDescription = texts.SeoDescription is null ? SeoDescription : Limit(texts.SeoDescription, SeoDescriptionMaxLength, "Açıklama"),
+                HiddenFaqs = hiddenFaqs,
             };
+        }
+
+        /// <summary>Gizlenen soru anahtarları: kırpılır, küçük harfe çevrilir, tekrarlar atılır (sıra korunur); en çok 30.</summary>
+        private static List<string> NormalizeFaqKeys(IReadOnlyList<string> keys)
+        {
+            List<string> result = [];
+            foreach (string raw in keys)
+            {
+                string key = (raw ?? string.Empty).Trim().ToLowerInvariant();
+                if (!FaqKeyPattern.IsMatch(key)) throw new DomainException("Geçersiz soru anahtarı.");
+                if (!result.Contains(key)) result.Add(key);
+            }
+            if (result.Count > HiddenFaqsMax) throw new DomainException($"En fazla {HiddenFaqsMax} soru gizlenebilir.");
+            return result;
         }
 
         public SiteContent WithShareImage(string key, out string previousKey)

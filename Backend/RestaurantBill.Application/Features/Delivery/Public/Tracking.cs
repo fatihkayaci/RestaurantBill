@@ -81,6 +81,8 @@ public class GetDeliveryTrackingQueryHandler(IAppDbContext db, ITenantResolver t
             CompanyName = companyName,
             AccentColor = branch.SiteAccentColor,
             Theme = branch.GetSiteContent().Theme,
+            Design = branch.GetSiteContent().Design,
+            Font = branch.GetSiteContent().Font,
             CoverImageUrl = string.IsNullOrWhiteSpace(branch.SiteCoverImage) || cdnBaseUrl.Length == 0 ? string.Empty : $"{cdnBaseUrl}/{branch.SiteCoverImage}",
             AcceptedAt = order.AcceptedAt,
             Number = order.Number,

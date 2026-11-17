@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.CustomerSite.Staff;
@@ -66,22 +68,55 @@ public static class ApplyRequestToTableOrder
 
         Order order = target.Value!.Order;
 
-        List<Guid> productIds = orderRequest.Items.Select(i => i.ProductId).Distinct().ToList();
-        List<Product> products = await db.Products
+        List<Guid> productIds = orderRequest.Items.Where(i => i.ProductId is not null).Select(i => i.ProductId!.Value).Distinct().ToList();
+        List<Product> products = productIds.Count == 0 ? [] : await db.Products
             .Include(p => p.Category).ThenInclude(c => c.Branch)
             .Where(p => productIds.Contains(p.Id))
             .ToListAsync(cancellationToken);
 
-        foreach (OrderRequestItem item in orderRequest.Items)
-        {
-            Product? product = products.FirstOrDefault(p => p.Id == item.ProductId);
-            if (product is null)
-                return Result<TableOrderTarget>.Failure(ProductMissingMessage);
+        // Menü kalemleri garsonun menü eklemesiyle (AddSetMenuToOrder) aynı: menünün güncel fiyatı + seçim farkları,
+        // menünün kategorisinin KDV'si (yoksa şubenin), her seçim mutfağa giden ayrı bir bileşen kalemi.
+        List<Guid> setMenuIds = orderRequest.Items.Where(i => i.SetMenuId is not null).Select(i => i.SetMenuId!.Value).Distinct().ToList();
+        List<SetMenu> setMenus = setMenuIds.Count == 0 ? [] : await db.SetMenus
+            .Include(s => s.Branch)
+            .Include(s => s.Category)
+            .Include(s => s.Slots).ThenInclude(slot => slot.Options).ThenInclude(o => o.Product)
+            .Where(s => setMenuIds.Contains(s.Id))
+            .ToListAsync(cancellationToken);
 
-            if (item.UnitPrice is decimal unitPrice)
-                order.AddItemAtPrice(product, unitPrice, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
-            else
-                order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
+        try
+        {
+            foreach (OrderRequestItem item in orderRequest.Items)
+            {
+                if (item.IsSetMenu)
+                {
+                    SetMenu? setMenu = setMenus.FirstOrDefault(s => s.Id == item.SetMenuId);
+                    if (setMenu is null || setMenu.IsDeleted || setMenu.BranchId != target.Value.BranchId)
+                        return Result<TableOrderTarget>.Failure(ProductMissingMessage);
+
+                    decimal taxRate = setMenu.Category?.TaxRate ?? setMenu.Branch.TaxRate;
+                    Dictionary<Guid, Guid> selections = DeliveryScope.ParseSelections(item.SelectionsJson);
+                    if (item.UnitPrice is decimal menuPrice)
+                        order.AddSetMenuAtPrice(setMenu, selections, menuPrice, item.Quantity, taxRate, item.Note);
+                    else
+                        order.AddSetMenu(setMenu, selections, item.Quantity, taxRate, item.Note);
+                    continue;
+                }
+
+                Product? product = products.FirstOrDefault(p => p.Id == item.ProductId);
+                if (product is null)
+                    return Result<TableOrderTarget>.Failure(ProductMissingMessage);
+
+                if (item.UnitPrice is decimal unitPrice)
+                    order.AddItemAtPrice(product, unitPrice, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
+                else
+                    order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
+            }
+        }
+        catch (DomainException ex)
+        {
+            // Menü onaya kadar satıştan kalktıysa ya da seçilen ürün pasifleştiyse; sipariş kaydedilmez (çağıran SaveChanges yapmaz).
+            return Result<TableOrderTarget>.Failure(ex.Message);
         }
 
         string requestNote = string.IsNullOrWhiteSpace(noteLabel)

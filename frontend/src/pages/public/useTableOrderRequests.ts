@@ -9,7 +9,7 @@ export interface SentOrderRequest {
     status: number;
     sentAt: number;
     total: number;
-    items: { name: string; quantity: number; productId?: string }[];
+    items: { name: string; quantity: number; productId?: string; setMenuId?: string }[];
     /** Garson reddettiyse yazdığı neden (boş olabilir). */
     rejectReason?: string;
 }

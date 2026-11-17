@@ -22,6 +22,14 @@ public class BranchConfiguration : IEntityTypeConfiguration<Branch>
             .HasMaxLength(Branch.IbanHolderNameMaxLength)
             .HasDefaultValue(string.Empty);
 
+        builder.Property(b => b.PaymentBankName)
+            .HasMaxLength(Branch.PaymentBankNameMaxLength)
+            .HasDefaultValue(string.Empty);
+
+        // Masa QR'ında "IBAN ile öde": restoran açmadıkça kapalı.
+        builder.Property(b => b.ShowIbanOnTable)
+            .HasDefaultValue(false);
+
         // Rezervasyon ayarları tek bir jsonb sütununda; null = hiç ayarlanmamış (varsayılanlar).
         builder.Property(b => b.ReservationSettings)
             .HasColumnType("jsonb")
@@ -103,7 +111,8 @@ internal static class SiteContentJson
         string? FounderPhoto, string? FounderName, string? FounderTitle, string? FounderQuote, int? Founded,
         List<StoredValue>? Values, List<StoredMilestone>? Milestones, List<StoredRegion>? Regions,
         string? SeoTitle = null, string? SeoDescription = null, string? ShareImage = null,
-        string? MenuHero = null, string? AboutHero = null, string? VenueHero = null, string? ContactHero = null, string? ReservationHero = null);
+        string? MenuHero = null, string? AboutHero = null, string? VenueHero = null, string? ContactHero = null, string? ReservationHero = null,
+        List<string>? HiddenFaqs = null, string? Design = null, string? Font = null);
 
     private const string TimeFormat = "HH:mm";
 
@@ -126,7 +135,8 @@ internal static class SiteContentJson
             c.Milestones.Select(m => new StoredMilestone(m.Year, m.Text)).ToList(),
             c.RegionDetails.Select(r => new StoredRegion(r.RegionId, r.PhotoKey, r.Description)).ToList(),
             c.SeoTitle, c.SeoDescription, c.ShareImage,
-            c.MenuHero, c.AboutHero, c.VenueHero, c.ContactHero, c.ReservationHero);
+            c.MenuHero, c.AboutHero, c.VenueHero, c.ContactHero, c.ReservationHero,
+            [.. c.HiddenFaqs], c.Design, c.Font);
 
     public static SiteContent Deserialize(string json) => FromStored(JsonSerializer.Deserialize<Stored>(json)!);
 
@@ -135,6 +145,8 @@ internal static class SiteContentJson
         return new SiteContent
         {
             Theme = s.Theme ?? string.Empty,
+            Design = s.Design ?? string.Empty,
+            Font = s.Font ?? string.Empty,
             GalleryImages = s.Gallery ?? [],
             WeeklyHours = (s.Week ?? []).Select(d => new SiteDayHours((DayOfWeek)d.Day, d.Open,
                 TimeOnly.ParseExact(d.Opens, TimeFormat, CultureInfo.InvariantCulture),
@@ -142,6 +154,7 @@ internal static class SiteContentJson
             DirectionsNote = s.Directions ?? string.Empty,
             WhatsappPhone = s.Whatsapp ?? string.Empty,
             Amenities = s.Amenities ?? [],
+            HiddenFaqs = s.HiddenFaqs ?? [],
             Rating = s.Rating,
             ReviewCount = s.ReviewCount,
             ReviewsUrl = s.ReviewsUrl ?? string.Empty,

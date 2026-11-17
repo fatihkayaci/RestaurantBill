@@ -1,63 +1,37 @@
-import { useState, type FormEvent } from 'react';
-import { isAxiosError } from 'axios';
-import { CheckCircle2 } from 'lucide-react';
-import { publicContactService } from '@/features/contactMessages/api/contactMessageService';
+import { Link } from 'react-router-dom';
 import {
-    CONTACT_CONTACT_MAX, CONTACT_MESSAGE_MAX, CONTACT_MESSAGE_MIN, CONTACT_MESSAGE_TYPES, CONTACT_NAME_MAX, ContactMessageType,
+    CONTACT_CONTACT_MAX, CONTACT_MESSAGE_MAX, CONTACT_MESSAGE_MIN, CONTACT_MESSAGE_TYPES, CONTACT_NAME_MAX,
 } from '@/features/contactMessages/types';
-import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
 import { serif } from './siteParts';
+import { telHref } from './siteTheme';
+import { terracottaBg } from './renkliTones';
+import { useContactForm } from './useContactForm';
 
-// İletişim sayfasındaki "Bize yazın" formu: öneri, şikâyet ya da başka bir mesaj. Admin panelinde "Şikayet ve Öneriler"e düşer.
-// Gizli "website" alanı bot tuzağıdır. Renkler sabit (site hep açık zeminde), uygulama koyu temadayken de aynı görünür.
-const inputClass = 'h-12 w-full rounded-xl border border-[var(--site-line)] bg-[var(--site-bg)] px-3.5 text-base text-[var(--site-text)] transition-colors placeholder:text-[var(--site-muted)] hover:border-[var(--site-border-strong)] focus:bg-[var(--site-card)] focus:border-[var(--site-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]/25';
-const labelClass = 'mb-1.5 block text-sm font-semibold text-[var(--site-text)]';
-const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-white';
-const alertClass = 'm-0 rounded-xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3.5 text-sm font-medium text-[var(--site-error)]';
-const primaryButton = 'flex h-[52px] w-full items-center justify-center rounded-full bg-[var(--site-accent)] px-[30px] text-base font-bold text-[var(--site-on-accent)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto';
+// İletişim sayfasındaki "Mesaj bırakın" formu (Renkli ve sıcak: krem kutuda kum alanlar, kiremit seçili konu, vurgu
+// renginde gönder düğmesi): konu (mesaj türü: öneri, şikâyet, diğer), ad, telefon ya da
+// e-posta (isteğe bağlı), mesaj ve KVKK onayı. Admin panelinde "Şikayet ve Öneriler"e düşer. Gizli "website" alanı bot
+// tuzağıdır; sunucu da sık denemeyi sınırlar (429). Gönderilince "Mesajınız ulaştı." ve "Yeni mesaj yaz".
 
-export default function ContactForm({ branchId }: { branchId: string }) {
-    const [name, setName] = useState('');
-    const [contact, setContact] = useState('');
-    const [type, setType] = useState<ContactMessageType>(ContactMessageType.Oneri);
-    const [message, setMessage] = useState('');
-    const [website, setWebsite] = useState('');
-    const [sending, setSending] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [sent, setSent] = useState(false);
+const field = 'w-full rounded-2xl border border-[rgba(36,24,15,0.15)] bg-[var(--site-bg)] px-[18px] text-base font-medium text-[var(--site-text)] transition-colors placeholder:font-normal placeholder:text-[var(--site-muted)] hover:border-[var(--site-border-strong)] focus:border-[var(--site-text)] focus:bg-[var(--site-card)] focus:outline-none focus:ring-2 focus:ring-[var(--site-text)]/15';
+const labelClass = 'flex flex-col gap-2 text-[13px] font-extrabold';
+const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-text)] focus-visible:ring-offset-2';
 
-    const submit = async (e: FormEvent) => {
-        e.preventDefault();
-        if (sending) return;
-        if (!name.trim()) { setError('Adınızı girin.'); return; }
-        if (message.trim().length < CONTACT_MESSAGE_MIN) { setError(`Mesajınız en az ${CONTACT_MESSAGE_MIN} karakter olmalı.`); return; }
-
-        setSending(true);
-        setError(null);
-        try {
-            await publicContactService.submit({ branchId, name: name.trim(), contact: contact.trim(), type, message: message.trim(), website });
-            setSent(true);
-            setName('');
-            setContact('');
-            setMessage('');
-            setType(ContactMessageType.Oneri);
-        } catch (err) {
-            if (isAxiosError(err) && err.response?.status === 429) setError('Çok sık deneme yapıldı. Birkaç dakika sonra tekrar deneyin.');
-            else if (isAxiosError(err) && !err.response) setError('Bağlantı kurulamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.');
-            else setError(getApiErrorMessage(err, 'Mesajınız gönderilemedi. Lütfen tekrar deneyin.'));
-        } finally {
-            setSending(false);
-        }
-    };
+export default function ContactForm({ branchId, phone }: { branchId: string; phone?: string }) {
+    const {
+        name, setName, contact, setContact, type, setType, message, setMessage, consent, setConsent, website, setWebsite,
+        sending, error, sent, submit, reset,
+    } = useContactForm(branchId);
 
     if (sent) {
         return (
-            <div role="status" className="flex flex-col items-start gap-4 rounded-[20px] border border-[var(--site-ok-line)] bg-[var(--site-ok-bg)] p-6 text-[var(--site-ok)] md:p-8">
-                <CheckCircle2 className="h-8 w-8" aria-hidden="true" />
-                <p className={cn(serif, 'm-0 text-[30px] leading-[1.1] text-[var(--site-text)] md:text-[36px]')}>Mesajınız bize ulaştı.</p>
-                <p className="m-0 text-[15px] leading-relaxed text-[var(--site-sub)]">Teşekkür ederiz. Restoran ekibi mesajınızı okuyacak; iletişim bilgisi bıraktıysanız size dönüş yapılabilir.</p>
-                <button type="button" onClick={() => setSent(false)} className={cn('h-11 rounded-full border border-[var(--site-text)] px-5 text-sm font-semibold text-[var(--site-text)] hover:bg-[var(--site-raised)]', focusRing)}>
+            <div role="status" className="flex min-h-[420px] flex-col items-center justify-center gap-[18px] text-center md:min-h-[520px]">
+                <span aria-hidden="true" className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-[var(--site-accent-soft)] text-[var(--site-accent-text)]">
+                    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                </span>
+                <h2 className={cn(serif, 'm-0 text-[44px] leading-none md:text-[52px]')}>Mesajınız <em className="rb-accent italic">ulaştı.</em></h2>
+                <p className="m-0 max-w-[420px] text-base leading-relaxed text-[var(--site-sub)]">Teşekkür ederiz. Restoran ekibi mesajınızı okuyacak; iletişim bilgisi bıraktıysanız size dönüş yapılabilir.</p>
+                <button type="button" onClick={reset} className={cn('h-[50px] rounded-full border border-[var(--site-border-strong)] px-6 font-bold text-[var(--site-text)] hover:border-[var(--site-text)]', focusRing)}>
                     Yeni mesaj yaz
                 </button>
             </div>
@@ -65,20 +39,20 @@ export default function ContactForm({ branchId }: { branchId: string }) {
     }
 
     return (
-        <form onSubmit={submit} noValidate className="relative flex min-w-0 flex-col gap-3.5 md:gap-[18px]" aria-describedby={error ? 'ilt-form-hata' : undefined}>
+        <form onSubmit={submit} noValidate className="relative flex min-w-0 flex-col gap-[22px]" aria-labelledby="ilt-form-baslik" aria-describedby={error ? 'ilt-form-hata' : undefined}>
+            <div className="flex flex-col gap-1.5">
+                <h2 id="ilt-form-baslik" className={cn(serif, 'm-0 text-[40px] leading-none md:text-[46px]')}>Mesaj bırakın</h2>
+                <p className="m-0 text-sm text-[var(--site-muted)]">Mesajınızı doğrudan restoran ekibi okur. İletişim bilgisi bırakırsanız size dönüş yapılır.</p>
+            </div>
             <fieldset className="m-0 min-w-0 border-0 p-0">
-                <legend className={cn(labelClass, 'p-0')}>Mesaj türü</legend>
+                <legend className="mb-2.5 p-0 text-[13px] font-extrabold">Konu</legend>
                 <div className="flex flex-wrap gap-2">
                     {CONTACT_MESSAGE_TYPES.map(option => {
                         const on = type === option.value;
                         return (
-                            <label
-                                key={option.value}
-                                className={cn(
-                                    'flex h-11 cursor-pointer items-center rounded-full border px-[18px] text-sm font-semibold transition-colors md:px-5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--site-accent)] has-[:focus-visible]:ring-offset-2',
-                                    on ? 'border-[var(--site-text)] bg-[var(--site-text)] text-[var(--site-bg)]' : 'border-[var(--site-line)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-text)]',
-                                )}
-                            >
+                            <label key={option.value}
+                                className={cn('flex h-11 cursor-pointer items-center rounded-full border px-[18px] text-sm font-bold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--site-text)] has-[:focus-visible]:ring-offset-2',
+                                    on ? cn('border-[var(--site-terracotta)] text-[var(--site-on-terracotta)]', terracottaBg) : 'border-[rgba(36,24,15,0.18)] text-[var(--site-text)] hover:border-[var(--site-text)]')}>
                                 <input type="radio" name="ilt-tur" value={option.value} checked={on} onChange={() => setType(option.value)} className="sr-only" />
                                 {option.label}
                             </label>
@@ -86,31 +60,20 @@ export default function ContactForm({ branchId }: { branchId: string }) {
                     })}
                 </div>
             </fieldset>
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-                <div className="min-w-0">
-                    <label htmlFor="ilt-ad" className={labelClass}>Adınız</label>
-                    <input id="ilt-ad" value={name} onChange={e => setName(e.target.value)} required maxLength={CONTACT_NAME_MAX} autoComplete="name" placeholder="Adınız ve soyadınız" className={inputClass} />
-                </div>
-                <div className="min-w-0">
-                    <label htmlFor="ilt-iletisim" className={labelClass}>Telefon ya da e-posta <span className="font-normal text-[var(--site-muted)]">(isteğe bağlı)</span></label>
-                    <input id="ilt-iletisim" value={contact} onChange={e => setContact(e.target.value)} maxLength={CONTACT_CONTACT_MAX} autoComplete="email" placeholder="Size dönüş için" className={inputClass} />
-                </div>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-3.5">
+                <label className={labelClass}>Adınız
+                    <input value={name} onChange={e => setName(e.target.value)} required maxLength={CONTACT_NAME_MAX} autoComplete="name" placeholder="Ad Soyad" className={cn(field, 'h-14')} />
+                </label>
+                <label className={labelClass}>
+                    <span>Telefon ya da e-posta <span className="font-medium text-[var(--site-muted)]">(isteğe bağlı)</span></span>
+                    <input value={contact} onChange={e => setContact(e.target.value)} maxLength={CONTACT_CONTACT_MAX} autoComplete="tel" placeholder="Size dönüş için" className={cn(field, 'h-14')} />
+                </label>
             </div>
-            <div>
-                <label htmlFor="ilt-mesaj" className={labelClass}>Mesajınız</label>
-                <textarea
-                    id="ilt-mesaj"
-                    value={message}
-                    onChange={e => setMessage(e.target.value)}
-                    required
-                    minLength={CONTACT_MESSAGE_MIN}
-                    maxLength={CONTACT_MESSAGE_MAX}
-                    rows={5}
-                    placeholder="Önerinizi, şikâyetinizi ya da sorunuzu yazın"
-                    className={cn(inputClass, 'h-auto resize-y py-3 leading-relaxed')}
-                />
-                <p className="m-0 mt-1 text-right text-xs tabular-nums text-[var(--site-muted)]">{message.length} / {CONTACT_MESSAGE_MAX}</p>
-            </div>
+            <label className={labelClass}>Mesajınız
+                <textarea value={message} onChange={e => setMessage(e.target.value)} required minLength={CONTACT_MESSAGE_MIN} maxLength={CONTACT_MESSAGE_MAX} rows={5}
+                    placeholder="Önerinizi, şikâyetinizi ya da sorunuzu yazın" className={cn(field, 'resize-y py-4 leading-relaxed')} />
+                <span className="text-right text-xs font-medium tabular-nums text-[var(--site-muted)]">{message.length} / {CONTACT_MESSAGE_MAX}</span>
+            </label>
             {/* Bal küpü: ekranda ve okuyucuda görünmez, insan doldurmaz. */}
             <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
                 <label>
@@ -118,12 +81,23 @@ export default function ContactForm({ branchId }: { branchId: string }) {
                     <input type="text" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={e => setWebsite(e.target.value)} />
                 </label>
             </div>
-            {error && <p id="ilt-form-hata" role="alert" className={alertClass}>{error}</p>}
-            <div className="flex flex-wrap items-center gap-4">
-                <button type="submit" disabled={sending} className={cn(primaryButton, focusRing)}>
-                    {sending ? 'Gönderiliyor…' : 'Gönder'}
+            <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[13px] leading-normal text-[var(--site-sub)]">
+                <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} required
+                    className="m-0 mt-0.5 h-5 w-5 shrink-0 accent-[var(--site-paper)]" />
+                <span>
+                    <Link to="/gizlilik-politikasi" target="_blank" className="font-bold text-[var(--site-text)] underline underline-offset-2">KVKK aydınlatma metnini</Link> okudum;
+                    bana bu konu hakkında dönüş yapılmasını kabul ediyorum.
+                </span>
+            </label>
+            {error && <p id="ilt-form-hata" role="alert" className="m-0 rounded-2xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3.5 text-sm font-semibold text-[var(--site-error)]">{error}</p>}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <button type="submit" disabled={sending}
+                    className={cn('h-[58px] w-full rounded-full bg-[var(--site-accent)] px-8 text-base font-extrabold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto', focusRing)}>
+                    {sending ? 'Gönderiliyor…' : 'Mesajı gönder'}
                 </button>
-                <span className="hidden text-[13px] text-[var(--site-muted)] sm:inline">Mesajınızı yalnızca restoran görür.</span>
+                {phone && (
+                    <span className="text-[13px] text-[var(--site-muted)]">Acil mi? <a href={telHref(phone)} className="inline-flex min-h-11 items-center font-extrabold text-[var(--site-text)] underline-offset-2 hover:underline">Hemen arayın</a></span>
+                )}
             </div>
         </form>
     );

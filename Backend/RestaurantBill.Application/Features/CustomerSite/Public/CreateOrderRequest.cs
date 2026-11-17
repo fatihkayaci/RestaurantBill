@@ -1,10 +1,14 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.CustomerSite;
+using RestaurantBill.Application.DTOs.Delivery;
+using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.CustomerSite.Public;
@@ -17,11 +21,31 @@ public class CreateOrderRequestCommand : IRequest<Result<OrderRequestStatusDto>>
     public string? Note { get; set; }
 }
 
+/// <summary>
+/// Talep kalemi: ürün (Kind "product", ProductId) ya da menü (Kind "setMenu", SetMenuId + Selections). Paket siparişin
+/// sepet satırıyla (CartLineInput) aynı biçim; Kind verilmezse ürün sayılır (eski istemciler).
+/// </summary>
 public class OrderRequestItemInput
 {
-    public Guid ProductId { get; set; }
+    public string Kind { get; set; } = CartLineInput.ProductKind;
+    public Guid? ProductId { get; set; }
+    public Guid? SetMenuId { get; set; }
     public int Quantity { get; set; }
     public string? Note { get; set; }
+    /// <summary>Menü: bölüm → ürün; gönderilmeyen bölümde varsayılan seçenek alınır.</summary>
+    public List<CartSelectionInput> Selections { get; set; } = [];
+
+    public bool IsSetMenu => string.Equals(Kind, CartLineInput.SetMenuKind, StringComparison.OrdinalIgnoreCase);
+
+    public CartLineInput ToCartLine() => new()
+    {
+        Kind = IsSetMenu ? CartLineInput.SetMenuKind : CartLineInput.ProductKind,
+        ProductId = IsSetMenu ? null : ProductId,
+        SetMenuId = IsSetMenu ? SetMenuId : null,
+        Quantity = Quantity,
+        Note = Note,
+        Selections = IsSetMenu ? Selections ?? [] : []
+    };
 }
 
 public class CreateOrderRequestCommandValidator : AbstractValidator<CreateOrderRequestCommand>
@@ -38,7 +62,11 @@ public class CreateOrderRequestCommandValidator : AbstractValidator<CreateOrderR
         RuleForEach(x => x.Items).ChildRules(item =>
         {
             item.RuleFor(i => i.ProductId)
-                .NotEqual(Guid.Empty).WithMessage("Geçerli bir ürün seçilmelidir.");
+                .Must(id => id is Guid g && g != Guid.Empty).When(i => !i.IsSetMenu).WithMessage("Geçerli bir ürün seçilmelidir.");
+            item.RuleFor(i => i.SetMenuId)
+                .Must(id => id is Guid g && g != Guid.Empty).When(i => i.IsSetMenu).WithMessage("Geçerli bir menü seçilmelidir.");
+            item.RuleFor(i => i.Selections)
+                .Must(s => s is null || s.Count <= 20).WithMessage("Menü seçimi geçersiz.");
             item.RuleFor(i => i.Quantity)
                 .InclusiveBetween(1, OrderRequest.MaxQuantity).WithMessage($"Adet 1 ile {OrderRequest.MaxQuantity} arasında olmalı.");
             item.RuleFor(i => i.Note)
@@ -47,7 +75,8 @@ public class CreateOrderRequestCommandValidator : AbstractValidator<CreateOrderR
     }
 }
 
-public class CreateOrderRequestCommandHandler(IAppDbContext db, ITenantResolver tenant, ITableNotificationService tableNotifications)
+public class CreateOrderRequestCommandHandler(
+    IAppDbContext db, ITenantResolver tenant, IOrderPricingService pricing, ITableNotificationService tableNotifications)
     : IRequestHandler<CreateOrderRequestCommand, Result<OrderRequestStatusDto>>
 {
     public static string OutOfStockMessage(string productName)
@@ -77,8 +106,14 @@ public class CreateOrderRequestCommandHandler(IAppDbContext db, ITenantResolver 
         if (pendingCount >= CustomerSiteScope.MaxPendingOrderRequestsPerTable)
             return Result<OrderRequestStatusDto>.Failure("Bu masadan gönderilen siparişler onay bekliyor. Lütfen garsonun onaylamasını bekleyin.");
 
-        List<Guid> productIds = request.Items.Select(i => i.ProductId).Distinct().ToList();
-        List<Product> products = await db.Products
+        List<OrderRequestItemInput> productItems = request.Items.Where(i => !i.IsSetMenu).ToList();
+        List<OrderRequestItemInput> setMenuItems = request.Items.Where(i => i.IsSetMenu).ToList();
+
+        if (productItems.Any(i => i.ProductId is null))
+            return Result<OrderRequestStatusDto>.Failure("Geçerli bir ürün seçilmelidir.");
+
+        List<Guid> productIds = productItems.Select(i => i.ProductId!.Value).Distinct().ToList();
+        List<Product> products = productIds.Count == 0 ? [] : await db.Products
             .Where(p => productIds.Contains(p.Id) && p.IsActive && p.Category.BranchId == branchId)
             .ToListAsync(cancellationToken);
 
@@ -90,9 +125,39 @@ public class CreateOrderRequestCommandHandler(IAppDbContext db, ITenantResolver 
         if (soldOut is not null)
             return Result<OrderRequestStatusDto>.Failure(OutOfStockMessage(soldOut.Name));
 
+        // Menü kalemleri paket sipariş ve garsonun menü eklemesiyle aynı yoldan doğrulanır: şube, aktiflik, zorunlu bölüm
+        // seçimi, seçeneğin satışta/tükenmemiş olması. Fiyat saklanmaz; ürünlerde olduğu gibi onayda güncel fiyat yazılır.
+        IReadOnlyList<PricedLine> pricedMenus = [];
+        if (setMenuItems.Count > 0)
+        {
+            Result<PricedCart> priced = await pricing.PriceCartAsync(branchId, setMenuItems.Select(i => i.ToCartLine()).ToList(), zone: null, cancellationToken);
+            if (priced.IsFailure)
+                return Result<OrderRequestStatusDto>.Failure(priced.Error!);
+            pricedMenus = priced.Value!.Lines;
+        }
+
         OrderRequest orderRequest = OrderRequest.Create(table.Id, request.Note);
-        foreach (OrderRequestItemInput item in request.Items)
-            orderRequest.AddItem(products.First(p => p.Id == item.ProductId), item.Quantity, item.Note);
+        int menuIndex = 0;
+        try
+        {
+            // Sepetteki sıra korunur.
+            foreach (OrderRequestItemInput item in request.Items)
+            {
+                if (item.IsSetMenu)
+                {
+                    PricedLine line = pricedMenus[menuIndex++];
+                    orderRequest.AddSetMenuItem(line.SetMenu!, line.Quantity, DeliveryScope.SerializeSelections(line.Selections), line.Note);
+                }
+                else
+                {
+                    orderRequest.AddItem(products.First(p => p.Id == item.ProductId), item.Quantity, item.Note);
+                }
+            }
+        }
+        catch (DomainException ex)
+        {
+            return Result<OrderRequestStatusDto>.Failure(ex.Message);
+        }
 
         db.OrderRequests.Add(orderRequest);
         await db.SaveChangesAsync(cancellationToken);

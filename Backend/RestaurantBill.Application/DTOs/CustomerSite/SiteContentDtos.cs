@@ -22,6 +22,10 @@ public class BranchSiteDto
 
     /// <summary>Hazır renk teması ("terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"); boş = terracotta.</summary>
     public string Theme { get; set; } = string.Empty;
+    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit"); boş = renkli. Renk teması her tasarımda ayrı çizilir.</summary>
+    public string Design { get; set; } = string.Empty;
+    /// <summary>Yazı tipi çifti (SiteContent.FontKeys, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi.</summary>
+    public string Font { get; set; } = string.Empty;
     /// <summary>Mekân fotoğrafları (tam adres), sitedeki sırayla; en çok 12.</summary>
     public List<string> GalleryImageUrls { get; set; } = [];
     /// <summary>Boş: "her gün aynı" (OpensAt/ClosesAt). Doluysa Pazartesi → Pazar 7 gün.</summary>
@@ -31,6 +35,8 @@ public class BranchSiteDto
     public string WhatsappPhone { get; set; } = string.Empty;
     /// <summary>Hazır listeden olanak anahtarları ("avlu", "otopark", "vale"...).</summary>
     public List<string> Amenities { get; set; } = [];
+    /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları ("rezervasyon", "otopark"...); boş = hepsi görünür.</summary>
+    public List<string> HiddenFaqs { get; set; } = [];
     public decimal? Rating { get; set; }
     public int? ReviewCount { get; set; }
     /// <summary>Google Haritalar (ya da başka) yorum sayfası.</summary>
@@ -80,11 +86,14 @@ public class BranchSiteDto
             InstagramUrl = site.InstagramUrl,
             AccentColor = site.AccentColor,
             Theme = content.Theme,
+            Design = content.Design,
+            Font = content.Font,
             GalleryImageUrls = content.GalleryImages.Select(k => ImageUrl(cdnBaseUrl, k)).ToList(),
             WeeklyHours = content.WeeklyHours.Select(SiteDayHoursDto.From).ToList(),
             DirectionsNote = content.DirectionsNote,
             WhatsappPhone = content.WhatsappPhone,
             Amenities = [.. content.Amenities],
+            HiddenFaqs = [.. content.HiddenFaqs],
             Rating = content.Rating,
             ReviewCount = content.ReviewCount,
             ReviewsUrl = content.ReviewsUrl,

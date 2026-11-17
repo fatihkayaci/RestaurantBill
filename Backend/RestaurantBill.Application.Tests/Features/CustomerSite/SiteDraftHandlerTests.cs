@@ -89,10 +89,13 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         InstagramUrl = site.InstagramUrl,
         AccentColor = site.AccentColor,
         Theme = site.Theme,
+        Design = site.Design,
+        Font = site.Font,
         WeeklyHours = site.WeeklyHours,
         DirectionsNote = site.DirectionsNote,
         WhatsappPhone = site.WhatsappPhone,
         Amenities = site.Amenities,
+        HiddenFaqs = site.HiddenFaqs,
         Rating = site.Rating,
         ReviewCount = site.ReviewCount,
         ReviewsUrl = site.ReviewsUrl,
@@ -127,6 +130,143 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.True(editor.Seo.TitleIsAuto);
         Assert.Equal("https://cdn.test/site/eski-kapak.webp", editor.Seo.ShareImageUrl);
         Assert.Equal("Menü · Ocak", editor.Seo.PageTitles["/menu"]);
+    }
+
+    [Fact]
+    public async Task Design_DraftThenPublish_AndRevert_IndependentOfTheme()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Equal(string.Empty, editor.Draft.Design); // boş = renkli (ön yüz)
+
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Design = " Sade ";
+        command.Theme = "bordo";
+        var saved = await SaveAsync(command);
+
+        Assert.True(saved.IsSuccess, saved.Error);
+        SiteEditorDto after = saved.Value!.Editor;
+        Assert.Equal(["design", "theme"], after.Changes.Select(c => c.Field));
+        SiteChangeDto change = after.Changes[0];
+        Assert.Equal("Tasarım", change.Label);
+        Assert.Equal("Tema", change.Page);
+        Assert.Equal("sade", after.Draft.Design);
+        Assert.Equal("bordo", after.Draft.Theme);
+        Assert.Equal(string.Empty, after.Published.Design);
+        Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.Design);
+
+        // Yalnız tasarım geri alınır; renk teması taslakta kalır.
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new RevertSiteDraftFieldsCommand { Version = after.Version, Fields = ["design"] }, CancellationToken.None);
+        Assert.True(reverted.IsSuccess, reverted.Error);
+        Assert.Equal(string.Empty, reverted.Value!.Editor.Draft.Design);
+        Assert.Equal("bordo", reverted.Value.Editor.Draft.Theme);
+        Assert.Equal("theme", Assert.Single(reverted.Value.Editor.Changes).Field);
+
+        // Yeniden seç ve yayınla: müşteri sitesi görür.
+        command = TextsFrom(reverted.Value.Editor.Draft, reverted.Value.Editor.Version);
+        command.Design = "sade";
+        var again = await SaveAsync(command);
+        Assert.True(again.IsSuccess, again.Error);
+        var published = await PublishAsync(again.Value!.Editor.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.False(published.Value!.Editor.HasChanges);
+        Assert.Equal("sade", published.Value.Editor.Published.Design);
+        Assert.Equal("sade", (await PublicSiteAsync()).Site.Design);
+        Assert.Equal("bordo", (await PublicSiteAsync()).Site.Theme);
+
+        // Tasarımı göndermeyen kayıt (null) tasarımı değiştirmez.
+        command = TextsFrom(published.Value.Editor.Draft, published.Value.Editor.Version);
+        command.Design = null;
+        command.Headline = "Yeni başlık";
+        var keep = await SaveAsync(command);
+        Assert.True(keep.IsSuccess, keep.Error);
+        Assert.Equal("sade", keep.Value!.Editor.Draft.Design);
+        Assert.DoesNotContain(keep.Value.Editor.Changes, c => c.Field == "design");
+    }
+
+    [Fact]
+    public async Task Font_DraftThenPublish_AndNullKeepsIt()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Equal(string.Empty, editor.Draft.Font); // boş = tasarımın kendi yazı tipi
+
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Font = " Playfair-Inter ";
+        var saved = await SaveAsync(command);
+        Assert.True(saved.IsSuccess, saved.Error);
+        SiteEditorDto after = saved.Value!.Editor;
+        SiteChangeDto change = Assert.Single(after.Changes);
+        Assert.Equal("font", change.Field);
+        Assert.Equal("Yazı tipi", change.Label);
+        Assert.Equal("Tema", change.Page);
+        Assert.Equal("playfair-inter", after.Draft.Font);
+        Assert.Equal(string.Empty, after.Published.Font);
+        Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.Font);
+
+        // Geri al: yayındaki (boş) değere döner.
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new RevertSiteDraftFieldsCommand { Version = after.Version, Fields = ["font"] }, CancellationToken.None);
+        Assert.True(reverted.IsSuccess, reverted.Error);
+        Assert.Equal(string.Empty, reverted.Value!.Editor.Draft.Font);
+        Assert.False(reverted.Value.Editor.HasChanges);
+
+        command = TextsFrom(reverted.Value.Editor.Draft, reverted.Value.Editor.Version);
+        command.Font = "playfair-inter";
+        var again = await SaveAsync(command);
+        Assert.True(again.IsSuccess, again.Error);
+        var published = await PublishAsync(again.Value!.Editor.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.Equal("playfair-inter", published.Value!.Editor.Published.Font);
+        Assert.Equal("playfair-inter", (await PublicSiteAsync()).Site.Font);
+
+        // Yazı tipini göndermeyen kayıt (null) değiştirmez.
+        command = TextsFrom(published.Value.Editor.Draft, published.Value.Editor.Version);
+        command.Font = null;
+        command.Headline = "Yeni başlık";
+        var keep = await SaveAsync(command);
+        Assert.True(keep.IsSuccess, keep.Error);
+        Assert.Equal("playfair-inter", keep.Value!.Editor.Draft.Font);
+        Assert.DoesNotContain(keep.Value.Editor.Changes, c => c.Field == "font");
+    }
+
+    [Fact]
+    public async Task HiddenFaqs_DraftThenPublish_AndRevert()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Empty(editor.Draft.HiddenFaqs);
+
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.HiddenFaqs = ["odeme", "otopark"];
+        var saved = await SaveAsync(command);
+
+        Assert.True(saved.IsSuccess, saved.Error);
+        SiteEditorDto after = saved.Value!.Editor;
+        SiteChangeDto change = Assert.Single(after.Changes);
+        Assert.Equal("hiddenFaqs", change.Field);
+        Assert.Equal("Sık sorulanlar", change.Label);
+        Assert.Equal("İletişim", change.Page);
+        Assert.Equal(["odeme", "otopark"], after.Draft.HiddenFaqs);
+        Assert.Empty(after.Published.HiddenFaqs);
+        Assert.Empty((await PublicSiteAsync()).Site.HiddenFaqs);
+
+        // Alan bazında geri alınır.
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new RevertSiteDraftFieldsCommand { Version = after.Version, Fields = ["hiddenFaqs"] }, CancellationToken.None);
+        Assert.True(reverted.IsSuccess, reverted.Error);
+        Assert.False(reverted.Value!.Editor.HasChanges);
+        Assert.Empty(reverted.Value.Editor.Draft.HiddenFaqs);
+
+        // Yeniden gizle ve yayınla: müşteri sitesi görür.
+        command = TextsFrom(reverted.Value.Editor.Draft, reverted.Value.Editor.Version);
+        command.HiddenFaqs = ["rezervasyon"];
+        var again = await SaveAsync(command);
+        Assert.True(again.IsSuccess, again.Error);
+        var published = await PublishAsync(again.Value!.Editor.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.Equal(["rezervasyon"], (await PublicSiteAsync()).Site.HiddenFaqs);
     }
 
     [Fact]

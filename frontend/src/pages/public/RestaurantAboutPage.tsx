@@ -3,286 +3,330 @@ import { canReserveOnline, type PublicSite } from '@/features/customerSite/types
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from './components/StockImageLabel';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
-import { PageEmpty, PageHero, SitePage } from './site/SiteFrame';
-import { collagePhotos, pickFeatured } from './site/siteMedia';
-import { HeroStatusPill, InfoCard, MapPinIcon } from './site/SiteCards';
-import { MenuProductCard } from './site/SiteProductCards';
-import {
-    RESERVATION_PATH, cardButton, cardLink, eyebrow, hasAboutPage, hasVenuePage, productCount, serif, siteCard, siteCardDark, siteCardLg, sinceYear,
-} from './site/siteParts';
-import { directionsUrl } from './site/siteTheme';
-import { averageOpenHours, fullAddress, hoursLine, isUniformWeek, restaurantName, useSite } from './site/useSite';
+import { PageEmpty, SitePage } from './site/SiteFrame';
+import { RESERVATION_PATH, hasAboutPage, serif, sinceYear } from './site/siteParts';
+import { initials, resolveDesign, splitAccent } from './site/siteTheme';
+import { aboutStats as stats } from './site/aboutStats';
+import EliteAbout from './site/elite/EliteAbout';
+import { hoursLine, restaurantName, useSite } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
 import { SITE_LIMITS, editTarget, useSiteEdit } from './site/siteEditContext';
 
-// /hakkimizda (Öneri A, usta bilgisi girildiyse B). Hikâye kartının sağ yarısı asla boş kalmaz: hikâye fotoğrafı
-// yoksa menüdeki fotoğraflardan 2×2 kolaj. Usta/kurucu girildiyse fotoğrafı ve sözüyle kart; değerler (en çok 3) kart
-// olarak; "rakamlarla" satırı mevcut veriden hesaplanır (3'ün altındaki değerler gizli); kilometre taşları zaman
-// çizelgesi; "İmza tabaklarımız"; ziyaret ve rezervasyon kartları. Yazı hiç yoksa: "Bizi menümüzden tanıyın."
+// /hakkimizda (tasarım: "Renkli · Hakkımızda", Dergi düzeni). Kapak kapak renginde (krem yazı, hardal italik), hikâye
+// kâğıdı krem (hardal alıntı kutusu), usta kutusu zeytin, davet koyu kiremit. Krem sayfada beyaz yuvarlak kutular: (1) kapak: "Hikâyemiz", dev
+// serif başlık (slogan; yoksa ad ve kuruluş yılı), kısa giriş; fotoğraf varsa soldan beyaz geçiş, yoksa dev soluk tırnak
+// ve halkalar. (2) Hikâye "kâğıdı": solda etiket ve ad, sağda büyük ilk harfle başlayan hikâye; altında ustanın sözü ve
+// yalnız gerçek verili rakamlar (yıl, ürün sayısı, salon kapasitesi, Google puanı). (3) Koyu "Mutfağın başında" kutusu
+// (usta) + "Değişmeyenlerimiz" (değerler). (4) "Yolculuğumuz" (kilometre taşları). (5) Vurgu renginde davet kutusu.
+// Verisi olmayan kutu çizilmez; restoranın girmediği bilgi uydurulmaz.
 
-const MIN_STAT = 3;
-
-interface Stat { value: string; unit?: string; text: string }
-
-function stats(site: PublicSite): Stat[] {
-    const out: Stat[] = [];
-    const products = site.categories.flatMap(c => c.products);
-    if (products.length >= MIN_STAT) {
-        out.push({ value: String(products.length), text: `ürün, ${site.categories.length} kategoride` });
-    }
-    const tables = site.regions.reduce((sum, r) => sum + r.tables.length, 0);
-    if (tables >= MIN_STAT) out.push({ value: String(tables), text: `masa · ${site.regions.map(r => r.name).join(', ')}` });
-    const hours = averageOpenHours(site);
-    if (hours !== null && hours >= MIN_STAT) {
-        out.push({ value: hours.toLocaleString('tr-TR'), text: isUniformWeek(site) ? 'saat açık, her gün' : 'saat açık, günde ortalama' });
-    }
-    const preps = products.map(p => p.prepMinutes).filter((m): m is number => !!m);
-    if (preps.length >= MIN_STAT) {
-        out.push({ value: `~${Math.round(preps.reduce((a, b) => a + b, 0) / preps.length)}`, unit: 'dk', text: 'ortalama hazırlık' });
-    }
-    return out;
-}
-
-/** Hikâye kartının görsel yarısı: hikâye fotoğrafı ya da menüden 2×2 kolaj (en az 2 fotoğraf); yoksa hiç. */
-function StoryVisual({ site }: { site: PublicSite }) {
-    const edit = useSiteEdit();
-    const target = editTarget(edit, 'photo:about', 'Hikâye fotoğrafı');
-    const image = site.site.aboutImageUrl;
-    if (image) {
-        return (
-            <div {...target} className={cn('relative order-1 min-w-0 overflow-hidden lg:order-2 lg:min-h-[480px]', target.className)}>
-                <img src={image} alt="" className="block aspect-[4/3] w-full object-cover md:aspect-[16/9] lg:absolute lg:inset-0 lg:aspect-auto lg:h-full" />
-            </div>
-        );
-    }
-    const photos = collagePhotos(site, 4);
-    if (photos.length < 2) {
-        if (!edit?.showEmpty) return null;
-        return (
-            <div className="order-1 flex min-h-[220px] min-w-0 p-3 lg:order-2 lg:min-h-[480px]">
-                <EmptySlot target="photo:about" title="+ Fotoğraf ekle" className="flex-1" />
-            </div>
-        );
-    }
-    const four = photos.length >= 4 ? photos.slice(0, 4) : photos.slice(0, 2);
-    return (
-        <div aria-hidden="true" {...target} className={cn('order-1 grid min-w-0 gap-1.5 p-1.5 lg:order-2 lg:min-h-[480px]', four.length === 4 ? 'grid-cols-2 grid-rows-2' : 'grid-cols-2', target.className)}>
-            {four.map((p, i) => (
-                <div key={i} className="relative min-h-[130px] overflow-hidden rounded-[14px]">
-                    <img src={p.url} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-                    {p.isStock && <StockImageLabel />}
-                </div>
-            ))}
-        </div>
-    );
-}
+const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[32px]';
+/** Koyu zeminlerde üst satır: açık hardal (koyu kiremit ve zeytin üstünde 4.5:1). */
+/** Kapak ve usta kutusundaki üst satır (Renkli: açık hardal; Sade: vurgu yazısı). */
+const darkLabel = 'text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-cover-accent)]';
+const label = 'text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-accent-text)]';
 
 export default function RestaurantAboutPage() {
     const { site, error } = useSite();
     const edit = useSiteEdit();
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
+    if (resolveDesign(site.site.design) === 'elit') return <EliteAbout site={site} />;
 
-    const content = site.site;
-    const name = restaurantName(site);
     const showEmpty = Boolean(edit?.showEmpty);
 
     if (!hasAboutPage(site) && !showEmpty) {
         return (
             <SitePage site={site} current="hakkimizda">
-                <PageHero site={site} label={name} title="Hakkımızda" image={content.aboutHeroUrl} imageTarget="photo:hero-hakkimizda" imageLabel="Hakkımızda kapağı" />
-                <PageEmpty text="Hakkımızda yazısı henüz eklenmedi." />
+                <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
+                    <AboutHero site={site} />
+                    <div className={box}><PageEmpty text="Hakkımızda yazısı henüz eklenmedi." /></div>
+                </main>
             </SitePage>
         );
     }
 
-    const address = fullAddress(site);
-    const hasStory = Boolean(content.storyTitle || content.about) || showEmpty;
-    const hasVenue = hasVenuePage(site);
-    const canReserve = canReserveOnline(site);
-    const since = content.foundedYear ? sinceYear(content.foundedYear) : null;
-    const facts = stats(site);
-    const signature = productCount(site) >= 2 ? pickFeatured(site.categories.flatMap(c => c.products), 3, true) : [];
-    const milestones = content.milestones;
-    const valueCells = content.values.length + (edit && content.values.length < SITE_LIMITS.value.max ? 1 : 0);
-    const milestoneCells = milestones.length + (edit && milestones.length < SITE_LIMITS.milestone.max ? 1 : 0);
-
     return (
         <SitePage site={site} current="hakkimizda">
-            <PageHero site={site} label={[name, since].filter(Boolean).join(' · ')} title="Hakkımızda" compact aside={<HeroStatusPill site={site} />}
-                image={content.aboutHeroUrl} imageTarget="photo:hero-hakkimizda" imageLabel="Hakkımızda kapağı" />
-            <main className="mx-auto flex w-full max-w-[1344px] flex-1 flex-col gap-4 px-5 pb-10 pt-5 md:gap-6 md:px-12 md:pb-16 md:pt-14">
-                {/* Hikâye (ya da yazı yoksa menüden tanıtım) ve görsel yarısı */}
-                <section aria-labelledby="hk-hikaye" className={cn(siteCardLg, 'grid grid-cols-1 overflow-hidden md:rounded-[28px] lg:grid-cols-2')}>
-                    <div className="order-2 flex min-w-0 flex-col justify-center gap-4 p-6 md:gap-[22px] md:p-14 lg:order-1">
-                        {hasStory ? (
-                            <>
-                                <EditableBlock target="year" label="Kuruluş yılı" className="self-start">
-                                    <span className={eyebrow}>{since ? `Hikâyemiz · ${since}` : 'Hikâyemiz'}</span>
-                                </EditableBlock>
-                                {(content.storyTitle || showEmpty) && (
-                                    <EditableText as="h2" id="hk-hikaye" field="storyTitle" value={content.storyTitle}
-                                        placeholder="Slogan yazın"
-                                        className={cn(serif, 'm-0 break-words text-[40px] leading-[1.02] md:text-[60px]')} />
-                                )}
-                                {!content.storyTitle && !showEmpty && <h2 id="hk-hikaye" className="sr-only">Hikâyemiz</h2>}
-                                {(content.about || showEmpty) && (
-                                    <EditableText as="p" field="about" value={content.about} multiline
-                                        placeholder="Kısa hikâyenizi yazın"
-                                        className="m-0 max-w-[60ch] whitespace-pre-line text-base leading-[1.6] text-[var(--site-sub)] md:text-[17px]" />
-                                )}
-                            </>
-                        ) : (
-                            <>
-                                <span className={eyebrow}>{name}</span>
-                                <h2 id="hk-hikaye" className={cn(serif, 'm-0 text-[40px] leading-[1.02] md:text-[60px]')}>Bizi <span className="italic">menümüzden</span> tanıyın.</h2>
-                                {(site.district || site.openAddress || hoursLine(site)) && (
-                                    <p className="m-0 text-base leading-[1.6] text-[var(--site-sub)] md:text-[17px]">
-                                        {[[site.district, site.openAddress].filter(Boolean).join(', '), hoursLine(site)].filter(Boolean).join('. ')}.
-                                    </p>
-                                )}
-                            </>
-                        )}
-                        {!edit && <div className="flex flex-wrap gap-2.5 pt-1">
-                            <Link to="/menu" className={cn(cardButton.accent, 'h-12 px-[22px] text-[15px]')}>{hasStory ? 'Menüye göz atın' : 'Menüyü gör'}</Link>
-                            {hasVenue && <Link to="/mekan" className={cn(cardButton.outline, 'h-12 px-[22px] text-[15px]')}>Mekânı görün</Link>}
-                        </div>}
-                    </div>
-                    <StoryVisual site={site} />
-                </section>
-
-                {/* Usta / kurucu (Öneri B) */}
-                {(content.founderName || showEmpty) && (
-                    <section aria-labelledby="hk-usta" className={cn(siteCardLg, 'grid grid-cols-1 overflow-hidden md:rounded-[28px]', (content.founderPhotoUrl || showEmpty) && 'md:grid-cols-[minmax(0,360px)_1fr]')}>
-                        {content.founderPhotoUrl ? (
-                            <img src={content.founderPhotoUrl} alt={content.founderName} loading="lazy" {...editTarget(edit, 'photo:founder', 'Usta portresi')}
-                                className={cn('block aspect-[4/5] max-h-[420px] w-full object-cover md:max-h-none md:h-full', editTarget(edit, 'photo:founder', 'Usta portresi').className)} />
-                        ) : showEmpty && (
-                            <div className="flex min-h-[260px] p-3"><EmptySlot target="photo:founder" title="+ Portre ekle" className="flex-1" /></div>
-                        )}
-                        <figure className="m-0 flex min-w-0 flex-col justify-center gap-5 p-6 md:p-12">
-                            {since && <span className={eyebrow}>{[since, site.district].filter(Boolean).join(' · ')}</span>}
-                            {(content.founderQuote || showEmpty) && (
-                                <blockquote className={cn(serif, 'm-0 text-[30px] leading-[1.12] md:text-[44px]')}>
-                                    {edit ? (
-                                        <EditableText field="founderQuote" value={content.founderQuote} multiline placeholder="Ustanın tek cümlelik sözü" />
-                                    ) : <>“{content.founderQuote}”</>}
-                                </blockquote>
-                            )}
-                            <figcaption className="flex flex-col gap-0.5">
-                                <EditableText id="hk-usta" field="founderName" value={content.founderName} placeholder="Ustanın adı" className="text-lg font-bold" />
-                                {(content.founderTitle || showEmpty) && (
-                                    <EditableText field="founderTitle" value={content.founderTitle} placeholder="Unvanı" className="text-[15px] text-[var(--site-sub)]" />
-                                )}
-                            </figcaption>
-                        </figure>
-                    </section>
-                )}
-
-                {/* Değerler (Öneri B) */}
-                {(content.values.length > 0 || showEmpty) && (
-                    <section aria-label="Değerlerimiz" className={cn('grid grid-cols-1 gap-4', valueCells === 2 && 'md:grid-cols-2', valueCells >= 3 && 'md:grid-cols-3')}>
-                        {content.values.map((v, i) => (
-                            <ListCard key={i} list="values" index={i} count={content.values.length} label="Değer" className="flex">
-                                <div className={cn(siteCard, 'flex flex-1 flex-col gap-2 p-6')}>
-                                    <span aria-hidden="true" className="text-[var(--site-accent-text)]">✦</span>
-                                    <EditableText as="h2" field={`value:${i}:title`} value={v.title} placeholder="Başlık"
-                                        className={cn(serif, 'm-0 text-[28px] leading-[1.05] md:text-[32px]')} />
-                                    {(v.text || edit) && (
-                                        <EditableText as="p" field={`value:${i}:text`} value={v.text} placeholder="Tek cümle"
-                                            className="m-0 text-[15px] text-[var(--site-sub)]" />
-                                    )}
-                                </div>
-                            </ListCard>
-                        ))}
-                        <AddCard list="values" label="Değer ekle" count={content.values.length} max={SITE_LIMITS.value.max} />
-                    </section>
-                )}
-
-                {/* Rakamlarla (mevcut veriden) */}
-                {facts.length >= 2 && (
-                    <ExternalHint source="auto" className="rounded-[20px]">
-                    <section aria-labelledby="hk-rakam" className={cn(siteCard, 'flex flex-col gap-5 p-6 md:p-8')}>
-                        <h2 id="hk-rakam" className={cn(eyebrow, 'm-0')}>Menümüzden rakamlarla</h2>
-                        <dl className={cn('m-0 grid grid-cols-2 gap-x-6 gap-y-5', facts.length >= 3 && 'md:grid-cols-3', facts.length >= 4 && 'lg:grid-cols-4')}>
-                            {facts.map(f => (
-                                <div key={f.text} className="flex min-w-0 flex-col gap-1 border-t border-[var(--site-border)] pt-3">
-                                    <dt className="order-2 text-sm text-[var(--site-sub)]">{f.text}</dt>
-                                    <dd className={cn(serif, 'order-1 m-0 text-[44px] leading-none md:text-[56px]')}>
-                                        {f.value}{f.unit && <span className="ml-1 text-[0.45em]">{f.unit}</span>}
-                                    </dd>
-                                </div>
-                            ))}
-                        </dl>
-                    </section>
-                    </ExternalHint>
-                )}
-
-                {/* Zaman çizelgesi (Öneri C; en az 2 satır) */}
-                {(milestones.length >= 2 || (edit && (milestones.length > 0 || showEmpty))) && (
-                    <section aria-labelledby="hk-yillar" className={cn(siteCard, 'flex flex-col gap-6 p-6 md:p-9')}>
-                        <div className="flex flex-wrap items-baseline justify-between gap-3">
-                            <h2 id="hk-yillar" className={cn(serif, 'm-0 text-[36px] leading-none md:text-[44px]')}>Yıllar <span className="italic">içinde.</span></h2>
-                            {milestones.length > 0 && <span className="text-sm tabular-nums text-[var(--site-muted)]">{milestones[0].year} — {new Date().getFullYear()}</span>}
-                        </div>
-                        {edit && milestones.length < 2 && (
-                            <p className="m-0 font-[family-name:'DM_Sans',system-ui,sans-serif] text-sm text-[#7A4E0E]">En az 2 olunca görünür.</p>
-                        )}
-                        <ol className={cn('m-0 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2', milestoneCells >= 4 ? 'lg:grid-cols-4' : milestoneCells === 3 && 'lg:grid-cols-3')}>
-                            {milestones.map((m, i) => (
-                                <li key={i}>
-                                    <ListCard list="milestones" index={i} count={milestones.length} label="Kilometre taşı" className="h-full rounded-none">
-                                        <div className="flex h-full flex-col gap-1.5 border-t-2 border-[var(--site-accent)] pt-3">
-                                            <EditableText field={`milestone:${i}:year`} value={m.year ? String(m.year) : ''} placeholder="Yıl"
-                                                className={cn(serif, 'text-[32px] leading-none tabular-nums')} />
-                                            <EditableText field={`milestone:${i}:text`} value={m.text} placeholder="Ne oldu?" className="text-[15px] text-[var(--site-sub)]" />
-                                        </div>
-                                    </ListCard>
-                                </li>
-                            ))}
-                            {edit && milestones.length < SITE_LIMITS.milestone.max && (
-                                <li><AddCard list="milestones" label="Kilometre taşı ekle" count={milestones.length} max={SITE_LIMITS.milestone.max} /></li>
-                            )}
-                        </ol>
-                    </section>
-                )}
-
-                {/* İmza tabaklar */}
-                {signature.length >= 2 && (
-                    <ExternalHint source="menu">
-                    <section aria-labelledby="hk-imza" className="flex flex-col gap-4 pt-2">
-                        <div className="flex flex-wrap items-end justify-between gap-3">
-                            <h2 id="hk-imza" className={cn(serif, 'm-0 text-[36px] leading-none md:text-[48px]')}>İmza <span className="italic">tabaklarımız.</span></h2>
-                            <Link to="/menu" className={cardLink}>Tüm menü →</Link>
-                        </div>
-                        <div className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5', signature.length >= 3 && 'lg:grid-cols-3')}>
-                            {signature.map(p => <MenuProductCard key={p.id} product={p} />)}
-                        </div>
-                    </section>
-                    </ExternalHint>
-                )}
-
-                {(address || canReserve) && !edit && (
-                    <div className={cn('grid grid-cols-1 gap-4', address && canReserve && 'md:grid-cols-2')}>
-                        {address && (
-                            <ExternalHint source="restaurant" className="h-full">
-                                <InfoCard icon={<MapPinIcon />} label="Bizi ziyaret edin" labelId="hk-konum" className="h-full"
-                                    action={<a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cardButton.dark}>Yol tarifi al</a>}>
-                                    <span className={cn(serif, 'break-words text-[26px] leading-[1.05] md:text-[30px]')}>{address}</span>
-                                </InfoCard>
-                            </ExternalHint>
-                        )}
-                        {canReserve && (
-                            <section aria-labelledby="hk-rez" className={cn(siteCardDark, 'flex flex-wrap items-center justify-between gap-5 p-6 md:rounded-[24px] md:px-9 md:py-8')}>
-                                <div className="flex min-w-0 flex-col gap-2">
-                                    <h2 id="hk-rez" className={cn(serif, 'm-0 text-[34px] leading-none md:text-[44px]')}>Masanızı <span className="italic">ayırtın.</span></h2>
-                                    <p className="m-0 text-[15px] text-[var(--site-on-paper-sub)]">Birkaç adımda masanızı seçin, onay bize kalsın.</p>
-                                </div>
-                                <Link to={RESERVATION_PATH} className={cn(cardButton.accent, 'h-[52px] w-full px-[30px] text-base sm:w-auto')}>Masa ayırt</Link>
-                            </section>
-                        )}
-                    </div>
-                )}
+            <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
+                <AboutHero site={site} />
+                <StoryPaper site={site} />
+                <FounderAndValues site={site} />
+                <Journey site={site} />
+                <Invitation site={site} />
             </main>
         </SitePage>
+    );
+}
+
+// ── 1. Kapak ─────────────────────────────────────────────────────────────────────────────────────
+
+function AboutHero({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const c = site.site;
+    const name = restaurantName(site);
+    // Sayfanın kendi kapağı; yoksa sitenin kapağı (alt sayfa kapaklarıyla aynı kural).
+    const photo = c.aboutHeroUrl || c.coverImageUrl;
+    // Başlık: slogan (hikâye başlığı); yoksa "Ad," + "1987'den beri." ya da ad.
+    const fallback: [string, string] = c.foundedYear ? [`${name},`, `${sinceYear(c.foundedYear)}.`] : splitAccent(name);
+    const [main, accent] = c.storyTitle ? splitAccent(c.storyTitle) : fallback;
+    return (
+        <section aria-labelledby="hk-baslik"
+            className="relative flex min-h-[440px] overflow-hidden rounded-[24px] bg-[var(--site-cover-bg)] text-[var(--site-on-cover)] md:min-h-[560px] md:rounded-[32px]">
+            <EditableBlock target="photo:hero-hakkimizda" label="Hakkımızda kapağı" chip="Fotoğrafı değiştir" className="absolute inset-0">
+                {photo ? (
+                    <>
+                        <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_45%]" />
+                        <span aria-hidden="true" className="absolute inset-0 bg-[color-mix(in_srgb,var(--site-cover-bg)_86%,transparent)] md:bg-transparent md:bg-[linear-gradient(90deg,color-mix(in_srgb,var(--site-cover-bg)_97%,transparent)_0%,color-mix(in_srgb,var(--site-cover-bg)_90%,transparent)_32%,color-mix(in_srgb,var(--site-cover-bg)_50%,transparent)_50%,transparent_68%)]" />
+                        {photo.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+                    </>
+                ) : (
+                    <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+                        <span className={cn(serif, 'absolute right-[8%] top-1/2 -translate-y-1/2 text-[260px] font-semibold italic leading-[0.7] text-[color-mix(in_srgb,var(--site-mustard)_22%,transparent)] md:text-[520px]')}>“</span>
+                        <span className="absolute -right-40 top-1/2 h-[700px] w-[700px] -translate-y-1/2 rounded-full border border-[color-mix(in_srgb,var(--site-on-cover)_12%,transparent)]" />
+                        <span className="absolute -right-10 top-1/2 h-[460px] w-[460px] -translate-y-1/2 rounded-full border border-[var(--site-accent-line)]" />
+                    </span>
+                )}
+                {edit && !c.aboutHeroUrl && (
+                    <span className="absolute right-6 top-6 whitespace-nowrap rounded-full border border-dashed border-[var(--site-border-strong)] bg-[var(--site-card)] px-4 py-2 font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold">
+                        + Hakkımızda kapağı seç
+                    </span>
+                )}
+            </EditableBlock>
+            <div className="pointer-events-none relative z-[1] flex max-w-[760px] flex-col justify-end gap-[22px] px-5 py-10 sm:px-10 md:px-14 md:py-16 [--site-accent-text:var(--site-cover-accent)] [&_[data-edit-text]]:pointer-events-auto">
+                <span className={cn('inline-flex items-center gap-2.5', darkLabel)}>
+                    <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-cover-accent)]" />Hikâyemiz
+                </span>
+                {edit ? (
+                    <EditableText as="h1" id="hk-baslik" field="storyTitle" value={c.storyTitle} fallback={[main, accent].filter(Boolean).join(' ')} placeholder="Slogan yazın"
+                        className={cn(serif, 'm-0 break-words text-[52px] leading-[0.92] tracking-[-0.015em] md:text-[clamp(60px,7vw,112px)]')} />
+                ) : (
+                    <h1 id="hk-baslik" className={cn(serif, 'm-0 break-words text-[52px] leading-[0.92] tracking-[-0.015em] md:text-[clamp(60px,7vw,112px)]')}>
+                        {main && <>{main}<br /></>}<em className="rb-accent italic">{accent}</em>
+                    </h1>
+                )}
+                {(c.tagline || showEmpty) && (
+                    <EditableText as="p" field="tagline" value={c.tagline} placeholder="Kısa giriş yazın"
+                        className="m-0 max-w-[520px] text-base leading-[1.65] text-[color-mix(in_srgb,var(--site-on-cover)_90%,transparent)] md:text-lg" />
+                )}
+            </div>
+        </section>
+    );
+}
+
+// ── 2. Hikâye kâğıdı ─────────────────────────────────────────────────────────────────────────────
+
+function StoryPaper({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const c = site.site;
+    const name = restaurantName(site);
+    const since = c.foundedYear ? sinceYear(c.foundedYear) : null;
+    const hasStory = Boolean(c.about) || showEmpty;
+    const hasQuote = Boolean(c.founderQuote) || showEmpty;
+    const facts = stats(site);
+    const place = [[site.district, site.openAddress].filter(Boolean).join(', '), hoursLine(site)].filter(Boolean).join('. ');
+    const statCols = ({ 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4' } as Record<number, string>)[facts.length];
+
+    return (
+        <section aria-labelledby="hk-hikaye" className={cn(box, 'px-5 py-12 sm:px-10 md:px-[72px] md:py-20')}>
+            <div className="mx-auto flex max-w-[1120px] flex-wrap gap-x-20 gap-y-8 md:gap-y-12">
+                <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-3.5 md:max-w-[320px]">
+                    <EditableBlock target="year" label="Kuruluş yılı" className="self-start rounded-full">
+                        <span className={label}>{since ? `Hikâyemiz · ${since}` : 'Hikâyemiz'}</span>
+                    </EditableBlock>
+                    <h2 id="hk-hikaye" className={cn(serif, 'm-0 break-words text-[40px] italic leading-[1.02] md:text-[44px]')}>
+                        {hasStory ? name : <>Bizi <span className="italic">menümüzden</span> tanıyın.</>}
+                    </h2>
+                </div>
+                <div className="flex min-w-0 flex-[999_1_480px] flex-col gap-5 text-base leading-[1.8] text-[#4A3A2C] md:text-lg">
+                    {hasStory ? (
+                        <EditableText as="p" field="about" value={c.about} multiline placeholder="Hikâyenizi yazın: nasıl başladınız, neyi farklı yapıyorsunuz."
+                            className={cn('m-0 whitespace-pre-line',
+                                c.about && "first-letter:float-left first-letter:pr-3 first-letter:pt-1.5 first-letter:font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] first-letter:font-bold first-letter:text-[80px] first-letter:leading-[0.78] first-letter:text-[var(--site-accent-text)] md:first-letter:text-[96px]")} />
+                    ) : (
+                        <>
+                            {place && <p className="m-0">{place}.</p>}
+                            <Link to="/menu" className="inline-flex h-12 items-center self-start rounded-full bg-[var(--site-paper)] px-6 text-[15px] font-extrabold text-[var(--site-on-paper)] no-underline">Menüyü gör</Link>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {hasQuote && (
+                <figure className="mx-auto mb-0 mt-12 flex max-w-[1120px] flex-col gap-[18px] rounded-[24px] bg-[var(--site-mustard)] px-6 py-10 text-center text-[var(--site-text)] [--site-accent-text:var(--site-story)] md:mt-[72px] md:rounded-[28px] md:px-12 md:py-14">
+                    <blockquote className={cn(serif, 'm-0 break-words text-[32px] leading-[1.1] md:text-[clamp(36px,4vw,58px)]')}>
+                        {edit ? (
+                            <EditableText field="founderQuote" value={c.founderQuote} multiline placeholder="Ustanın tek cümlelik sözü" />
+                        ) : <QuoteText text={c.founderQuote} />}
+                    </blockquote>
+                    {(c.founderName || c.founderTitle || edit) && (
+                        <figcaption className="flex flex-wrap justify-center gap-x-1.5 text-[15px] font-bold">
+                            —{' '}
+                            {edit ? (
+                                <>
+                                    <EditableText field="founderName" value={c.founderName} placeholder="Ustanın adı" />,
+                                    <EditableText field="founderTitle" value={c.founderTitle} placeholder="Unvanı" />
+                                </>
+                            ) : [c.founderName, c.founderTitle].filter(Boolean).join(', ')}
+                        </figcaption>
+                    )}
+                </figure>
+            )}
+
+            {facts.length > 0 && (
+                <dl className={cn('mx-auto mb-0 grid max-w-[1120px]', facts.length === 1 ? 'grid-cols-1' : 'grid-cols-2', statCols, !hasQuote && 'mt-12 border-t border-[var(--site-border)]')}>
+                    {facts.map(f => {
+                        const cell = (
+                            <div className="flex h-full flex-col items-center gap-2 px-3 pb-2 pt-8 text-center md:px-7 md:pt-10">
+                                <dt className="order-2 text-sm text-[var(--site-muted)]">{f.label}</dt>
+                                <dd className={cn(serif, 'order-1 m-0 text-[52px] font-semibold leading-none md:text-[64px]')}>{f.value}</dd>
+                            </div>
+                        );
+                        return (
+                            <div key={f.key} className="min-w-0 border-[var(--site-border)] even:border-l odd:last:col-span-2 md:border-l md:odd:last:col-span-1 md:first:border-l-0">
+                                {f.wrap ? f.wrap(cell) : cell}
+                            </div>
+                        );
+                    })}
+                </dl>
+            )}
+        </section>
+    );
+}
+
+/** Alıntı: tırnak içinde, virgülden sonrası italik vurgu (virgül yoksa son kelime). */
+function QuoteText({ text }: { text: string }) {
+    const [main, accent] = splitAccent(text);
+    return <>“{main && <>{main} </>}<em className="rb-accent italic">{accent}</em>”</>;
+}
+
+// ── 3. Usta + değerler ───────────────────────────────────────────────────────────────────────────
+
+function FounderAndValues({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const c = site.site;
+    const showFounder = Boolean(c.founderName) || showEmpty;
+    const showValues = c.values.length > 0 || showEmpty;
+    if (!showFounder && !showValues) return null;
+    const photoT = editTarget(edit, 'photo:founder', 'Usta portresi');
+    return (
+        <div className="flex flex-wrap gap-4">
+            {showFounder && (
+                <section aria-labelledby="hk-usta"
+                    className="relative flex min-h-[420px] min-w-0 flex-[1_1_460px] flex-col justify-end gap-4 overflow-hidden rounded-[24px] bg-[var(--site-menu-box)] p-6 text-[var(--site-on-menu-box)] sm:p-10 md:min-h-[520px] md:rounded-[32px] [--site-accent-text:var(--site-cover-accent)]">
+                    {c.founderPhotoUrl ? (
+                        <>
+                            <img src={c.founderPhotoUrl} alt={c.founderName} {...photoT} className={cn('absolute inset-0 h-full w-full object-cover', photoT.className)} />
+                            <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(36,24,15,0)_30%,color-mix(in_srgb,var(--site-menu-box)_94%,transparent)_85%)]" />
+                            {c.founderPhotoUrl.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+                        </>
+                    ) : edit ? (
+                        <div className="absolute left-6 top-6 w-[180px] sm:left-10 sm:top-10"><EmptySlot target="photo:founder" title="+ Portre ekle" className="bg-[var(--site-card)]" /></div>
+                    ) : c.founderName && (
+                        <span aria-hidden="true" className={cn(serif, 'absolute left-6 top-6 flex h-[120px] w-[120px] items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--site-on-menu-box)_25%,transparent)] text-[56px] font-semibold text-[var(--site-cover-accent)] sm:left-10 sm:top-10 sm:h-[150px] sm:w-[150px] sm:text-[64px]')}>
+                            {initials(c.founderName)}
+                        </span>
+                    )}
+                    <span className={cn(darkLabel, 'relative')}>Mutfağın başında</span>
+                    <EditableText as="h2" id="hk-usta" field="founderName" value={c.founderName} placeholder="Ustanın adı"
+                        className={cn(serif, 'relative m-0 break-words text-[44px] leading-none md:text-[52px]')} />
+                    {(c.founderTitle || showEmpty) && (
+                        <EditableText as="p" field="founderTitle" value={c.founderTitle} placeholder="Unvanı"
+                            className="relative m-0 max-w-[440px] text-base leading-[1.7] text-[var(--site-on-menu-box-sub)]" />
+                    )}
+                </section>
+            )}
+            {showValues && (
+                <section aria-labelledby="hk-degerler" className={cn(box, 'flex min-w-0 flex-[1_1_560px] flex-col gap-2 p-6 sm:p-10')}>
+                    <h2 id="hk-degerler" className={cn(label, 'm-0')}>Değişmeyenlerimiz</h2>
+                    <ol className="m-0 flex list-none flex-col p-0">
+                        {c.values.map((v, i) => (
+                            <li key={i}>
+                                <ListCard list="values" index={i} count={c.values.length} label="Değer" className="rounded-none">
+                                    <div className="flex items-start gap-4 border-b border-[var(--site-line)] py-[22px] sm:gap-[22px]">
+                                        <span aria-hidden="true" className={cn(serif, 'w-11 shrink-0 text-[36px] italic leading-none text-[var(--site-accent-text)] sm:w-[52px] sm:text-[40px]')}>{String(i + 1).padStart(2, '0')}</span>
+                                        <div className="flex min-w-0 flex-col gap-1.5">
+                                            <EditableText as="h3" field={`value:${i}:title`} value={v.title} placeholder="Başlık"
+                                                className={cn(serif, 'm-0 break-words text-[28px] font-semibold leading-[1.05] md:text-[32px]')} />
+                                            {(v.text || edit) && (
+                                                <EditableText as="p" field={`value:${i}:text`} value={v.text} placeholder="Tek cümle"
+                                                    className="m-0 text-[15px] leading-[1.65] text-[var(--site-sub)]" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </ListCard>
+                            </li>
+                        ))}
+                    </ol>
+                    <AddCard list="values" label="Değer ekle" count={c.values.length} max={SITE_LIMITS.value.max} className="mt-3" />
+                </section>
+            )}
+        </div>
+    );
+}
+
+// ── 4. Yolculuk ──────────────────────────────────────────────────────────────────────────────────
+
+function Journey({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const milestones = site.site.milestones;
+    // Sitede en az 2 durak olunca görünür; düzenleyicide eklenebilsin diye boşken de.
+    if (!(milestones.length >= 2 || (edit && (milestones.length > 0 || showEmpty)))) return null;
+    return (
+        <section aria-labelledby="hk-yol" className={cn(box, 'px-5 py-10 sm:px-10 md:px-[72px] md:py-14')}>
+            <div className="mb-8 flex flex-wrap items-baseline justify-between gap-3 md:mb-10">
+                <h2 id="hk-yol" className={cn(serif, 'm-0 text-[44px] leading-none md:text-[52px]')}>Yolculuğumuz</h2>
+                {edit && milestones.length < 2 && (
+                    <span className="font-[family-name:'DM_Sans',system-ui,sans-serif] text-sm text-[#7A4E0E]">En az 2 olunca görünür.</span>
+                )}
+            </div>
+            <ol className="m-0 grid list-none grid-cols-1 gap-8 p-0 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] lg:gap-0">
+                {milestones.map((m, i) => (
+                    <li key={i} className="min-w-0">
+                        <ListCard list="milestones" index={i} count={milestones.length} label="Kilometre taşı" className="h-full rounded-none">
+                            <div className="flex h-full flex-col gap-3.5 lg:pr-7">
+                                <div aria-hidden="true" className="flex items-center">
+                                    <span className={cn('h-3.5 w-3.5 shrink-0 rounded-full shadow-[0_0_0_5px_var(--site-accent-soft)]',
+                                        i === milestones.length - 1 ? 'bg-[var(--site-accent)]' : 'bg-[var(--site-paper)]')} />
+                                    <span className="h-px flex-1 bg-[rgba(36,24,15,0.18)]" />
+                                </div>
+                                <EditableText field={`milestone:${i}:year`} value={m.year ? String(m.year) : ''} placeholder="Yıl"
+                                    className={cn(serif, 'text-[40px] leading-none tabular-nums')} />
+                                <EditableText as="p" field={`milestone:${i}:text`} value={m.text} placeholder="Ne oldu?"
+                                    className="m-0 text-[15px] leading-relaxed text-[var(--site-sub)]" />
+                            </div>
+                        </ListCard>
+                    </li>
+                ))}
+                {edit && milestones.length < SITE_LIMITS.milestone.max && (
+                    <li><AddCard list="milestones" label="Kilometre taşı ekle" count={milestones.length} max={SITE_LIMITS.milestone.max} /></li>
+                )}
+            </ol>
+        </section>
+    );
+}
+
+// ── 5. Davet ─────────────────────────────────────────────────────────────────────────────────────
+
+function Invitation({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    if (edit) return null;
+    const canReserve = canReserveOnline(site);
+    return (
+        <ExternalHint source="reservation">
+            <section aria-labelledby="hk-davet"
+                className="flex flex-wrap items-center justify-between gap-6 rounded-[24px] bg-[var(--site-story)] p-6 text-[var(--site-on-paper)] sm:p-10 md:rounded-[32px] md:p-14 [--site-accent-text:var(--site-mustard-text)]">
+                <h2 id="hk-davet" className={cn(serif, 'm-0 text-[40px] leading-[0.95] md:text-[clamp(42px,4.6vw,68px)]')}>
+                    Hikâyemizin bir parçası olun,<br /><em className="italic">bir akşam bekleriz.</em>
+                </h2>
+                <div className="flex flex-wrap gap-2.5">
+                    {canReserve && <Link to={RESERVATION_PATH} className="inline-flex h-14 items-center rounded-full bg-[var(--site-mustard)] px-7 font-extrabold text-[var(--site-text)] no-underline transition-opacity hover:opacity-90">Masa ayırt</Link>}
+                    <Link to="/menu" className="inline-flex h-14 items-center rounded-full bg-[var(--site-card)] px-7 font-extrabold text-[var(--site-text)] no-underline transition-opacity hover:opacity-90">Menüyü gör</Link>
+                </div>
+            </section>
+        </ExternalHint>
     );
 }

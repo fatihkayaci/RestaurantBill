@@ -1,40 +1,53 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { canReserveOnline } from '@/features/customerSite/types';
+import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { cn } from '@/lib/utils';
 import ReservationFlow from './site/ReservationFlow';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
-import { HeaderSpacer, PageEmpty, PageHero, SitePage } from './site/SiteFrame';
-import { serif } from './site/siteParts';
-import { telHref } from './site/siteTheme';
+import { PageEmpty, SitePage } from './site/SiteFrame';
+import { ReservationHero } from './site/ReservationHero';
+import { heroOutlineLink } from './site/renkliTones';
+import { resolveDesign, telHref } from './site/siteTheme';
+import { EliteReservationHero } from './site/elite/EliteFlowParts';
 import { restaurantName, useMyReservations, useSite } from './site/useSite';
-import { EditableBlock, ExternalHint } from './site/siteEdit';
+import { ExternalHint } from './site/siteEdit';
 import { editExternal, useSiteEdit } from './site/siteEditContext';
 
-// /rezervasyon: tam rezervasyon akışı (ortak başlık ve alt bilgiyle). Ana sayfadaki hızlı seçici seçimi
-// ?tarih=2026-11-14&saat=19:00&kisi=2 ile gelir. Rezervasyon kapalıysa kısa bir bilgi sayfası.
+// /rezervasyon (tasarım: "Renkli · Masa ayırt"): koyu kapak ("Masanızı ayırtın.", sorgulama bağlantısı) ve altında tam
+// rezervasyon akışı (ortak başlık ve alt bilgiyle). Ana sayfadaki hızlı seçici seçimi ?tarih=2026-11-14&saat=19:00&kisi=2
+// ile gelir. Rezervasyon kapalıysa kısa bir bilgi sayfası.
+
+const main = 'mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4';
 export default function RestaurantReservationPage() {
     const { site, error } = useSite();
     const { mine, add } = useMyReservations();
     const [params] = useSearchParams();
     const navigate = useNavigate();
-    const textX = editExternal(useSiteEdit(), 'reservationText');
+    const edit = useSiteEdit();
+    const textX = editExternal(edit, 'reservationText');
 
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
 
     const name = restaurantName(site);
-    const heroImage = site.site.reservationHeroUrl || site.site.coverImageUrl;
+    // Elit: tam genişlik fotoğraf kapağı (üst menü üstünde saydam); akış altında krem zeminde.
+    const elit = resolveDesign(site.site.design) === 'elit';
 
     if (!canReserveOnline(site)) {
         return (
-            <SitePage site={site} current="rezervasyon">
-                <PageHero site={site} label={name} title="Rezervasyon" image={site.site.reservationHeroUrl} imageTarget="photo:hero-rezervasyon" imageLabel="Rezervasyon kapağı" />
-                <PageEmpty label="Rezervasyon" text="Online rezervasyon şu an alınmıyor.">
-                    {site.phone && (
-                        <p className="m-0 text-[#4A4640]">
-                            Masa ayırtmak için bizi arayın: <a href={telHref(site.phone)} className="whitespace-nowrap font-semibold text-[#141414]">{site.phone}</a>
-                        </p>
-                    )}
-                </PageEmpty>
+            <SitePage site={site} current="rezervasyon" overlayHeader={elit}>
+                <main className={elit ? 'flex flex-1 flex-col' : main}>
+                    {elit ? <EliteReservationHero site={site} />
+                        : <ReservationHero site={site} kicker={`${name} · Rezervasyon`} title="Masanızı" accent="ayırtın." />}
+                    <div className={elit ? '' : 'rounded-[24px] bg-[var(--site-card)] md:rounded-[36px]'}>
+                        <PageEmpty label="Rezervasyon" text="Online rezervasyon şu an alınmıyor.">
+                            {site.phone && (
+                                <p className="m-0 text-[var(--site-sub)]">
+                                    Masa ayırtmak için bizi arayın: <a href={telHref(site.phone)} className="inline-flex min-h-11 items-center whitespace-nowrap font-bold text-[var(--site-text)]">{site.phone}</a>
+                                </p>
+                            )}
+                        </PageEmpty>
+                    </div>
+                </main>
             </SitePage>
         );
     }
@@ -46,27 +59,25 @@ export default function RestaurantReservationPage() {
     const initial = valid ? { date, time, partySize } : undefined;
 
     return (
-        <SitePage site={site} current="rezervasyon">
-            <EditableBlock target="photo:hero-rezervasyon" label="Rezervasyon kapağı" chip="Fotoğrafı değiştir" className="outline-offset-[-4px]">
-            <section className="relative overflow-hidden bg-[#2A2622] text-white">
-                {heroImage && (
-                    <>
-                        <img src={heroImage} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
-                        <div aria-hidden="true" className="absolute inset-0 bg-[rgba(20,16,12,0.6)]" />
-                    </>
-                )}
-                <HeaderSpacer />
-                <div {...textX} className={cn('relative mx-auto flex w-full max-w-[1180px] flex-col gap-3 px-5 pb-10 pt-8 md:px-12 md:pb-16 md:pt-14', textX.className)}>
-                    <span className="text-xs font-medium uppercase tracking-[0.28em] text-white/80">{name} · Rezervasyon</span>
-                    <h1 className={cn(serif, 'm-0 text-[52px] leading-[0.92] tracking-[-0.025em] md:text-[96px]')}>Masanızı <span className="italic">ayırtın.</span></h1>
-                    <p className="m-0 mt-1 max-w-[46ch] text-[15px] leading-relaxed text-white/85 md:text-[17px]">
+        <SitePage site={site} current="rezervasyon" overlayHeader={elit}>
+            <main className={elit ? 'flex flex-1 flex-col' : main}>
+            {elit ? (
+                <EliteReservationHero site={site}>
+                    <p {...textX} className={cn('m-0 max-w-[560px] font-[family-name:var(--site-serif)] text-xl italic leading-[1.45] text-[color-mix(in_srgb,var(--site-on-cover)_88%,transparent)] md:text-[22px]', textX.className)}>
                         Gününüzü, saatinizi ve masanızı seçin; talebiniz restorana iletilir, onaylanınca masanız sizi bekler.
                     </p>
-                </div>
-            </section>
-            </EditableBlock>
+                    {!edit && <Link to={RESERVATION_LOOKUP_PATH} className="inline-flex min-h-11 items-center border-b border-[var(--site-accent-on-dark)] text-xs uppercase tracking-[0.26em] text-[var(--site-on-cover)] no-underline">Rezervasyonumu sorgula →</Link>}
+                </EliteReservationHero>
+            ) : (
+            <ReservationHero site={site} kicker="Rezervasyon" title="Masanızı" accent="ayırtın." titleProps={textX}
+                action={!edit && <Link to={RESERVATION_LOOKUP_PATH} className={heroOutlineLink}>Rezervasyonumu sorgula →</Link>}>
+                <p {...textX} className={cn('m-0 max-w-[520px] text-base leading-relaxed text-[rgba(251,244,232,0.85)] md:text-[17px]', textX.className)}>
+                    Gününüzü, saatinizi ve masanızı seçin; talebiniz restorana iletilir, onaylanınca masanız sizi bekler.
+                </p>
+            </ReservationHero>
+            )}
             <ExternalHint source="reservation" className="flex flex-1 flex-col">
-            <div className="flex flex-1 flex-col bg-[#F5F2ED] leading-normal text-[#141414]">
+            <div className={cn('flex flex-1 flex-col leading-normal text-[var(--site-text)]', elit && 'mx-auto w-full max-w-[1320px] px-2 py-10 sm:px-6 md:py-16')}>
                 <ReservationFlow
                     // Hızlı seçiciden yeni bir seçimle gelinirse akış o seçimle baştan kurulur.
                     key={params.toString()}
@@ -80,6 +91,7 @@ export default function RestaurantReservationPage() {
                 />
             </div>
             </ExternalHint>
+            </main>
         </SitePage>
     );
 }

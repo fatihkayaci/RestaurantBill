@@ -15,11 +15,13 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import MenuBrowser from './components/MenuBrowser';
-import { customerRootStyle } from './customerTheme';
-import { countdownText, dayWord, downloadIcs, reservationStatusBadge } from './reservationCalendar';
+import { customerFontsHref, customerRootStyle } from './customerTheme';
+import { countdownText, dateParts, dayWord, downloadIcs, reservationStatusBadge } from './reservationCalendar';
+import { reservationTone } from './reservationTone';
+import { SitePage } from './site/SiteFrame';
 import { ImageSlot } from './site/SiteChrome';
-import { FONTS_HREF, reservationHref, serif } from './site/siteParts';
-import { SITE_FONTS_HREF, directionsUrl, formatDay, headingFont, telHref } from './site/siteTheme';
+import { reservationHref, serif } from './site/siteParts';
+import { directionsUrl, headingFont, telHref } from './site/siteTheme';
 import { fullAddress, rememberReservationToken } from './site/useSite';
 
 interface CartLine {
@@ -34,7 +36,7 @@ const REFRESH_MS = 60_000;
 // Geri sayım dakikada bir ilerler.
 const TICK_MS = 30_000;
 
-const card = 'rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)]';
+const card = 'rounded-[24px] bg-[var(--site-card)] md:rounded-[32px]';
 const eyebrowClass = 'text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--site-sub)]';
 const primaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--site-accent)] px-6 text-[15px] font-semibold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90 disabled:opacity-50';
 const secondaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--site-border)] bg-[var(--site-card)] px-5 text-[15px] font-semibold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)] disabled:opacity-50';
@@ -158,7 +160,7 @@ export default function ReservationDetailPage() {
         const next: Record<string, CartLine> = {};
         let dropped = false;
         for (const item of detail.preOrder.items) {
-            const product = products.get(item.productId);
+            const product = products.get(item.productId ?? '');
             if (!product) { dropped = true; continue; }
             const current = next[product.id];
             next[product.id] = {
@@ -215,8 +217,7 @@ export default function ReservationDetailPage() {
 
     const root = (children: ReactNode) => (
         <div style={customerRootStyle(site?.site)} className="min-h-screen text-[var(--site-text)]">
-            <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
-            <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
+            <link rel="stylesheet" href={customerFontsHref(site?.site)} precedence="default" />
             {children}
         </div>
     );
@@ -259,10 +260,8 @@ export default function ReservationDetailPage() {
     const pending = preOrder?.status === ORDER_REQUEST_PENDING;
     // Menü: pencere açıkken ve bekleyen ön sipariş yokken (ya da müşteri değiştiriyorken).
     const showMenu = window_.canPreOrder && (!pending || editing);
-    const badge = reservationStatusBadge(detail.status);
     const restaurant = site.companyName || site.branchName;
     const address = fullAddress(site);
-    const active = detail.status === RESERVATION_PENDING || detail.status === RESERVATION_CONFIRMED;
     const activePreOrder = preOrder && (preOrder.status === ORDER_REQUEST_PENDING || preOrder.status === ORDER_REQUEST_APPROVED);
     // Ön sipariş henüz açılmadıysa vaat kartı; açılış saati geçtiyse sunucunun nedeni (kapandı, kapalı…) yazılır.
     const preOrderNotYet = detail.status === RESERVATION_CONFIRMED && window_.enabled && !window_.canPreOrder
@@ -283,68 +282,60 @@ export default function ReservationDetailPage() {
         ].filter(Boolean).join('\n'),
     });
 
-    return root(
-        <main className={cn('min-h-screen', showMenu && itemCount > 0 ? 'pb-36' : 'pb-10')}>
-            <header className="border-b border-[var(--site-border)] bg-[var(--site-card)] px-4 py-3">
-                <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-                    <Link to="/" className={cn(serif, 'truncate text-[26px] italic leading-tight text-[var(--site-text)] no-underline')}>{restaurant}</Link>
-                    <span className={cn('shrink-0 rounded-full px-3 py-1.5 text-xs font-bold', badge.className)}>
-                        {badge.text}{detail.code && <span className="hidden font-mono font-semibold md:inline"> · {detail.code}</span>}
-                    </span>
-                </div>
-            </header>
+    return (
+        <SitePage site={site} current="rezervasyon-sorgula" mobileActions={[]}>
+            <main className={cn('mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pt-4 leading-normal text-[var(--site-text)] sm:px-4', showMenu && itemCount > 0 ? 'pb-36' : 'pb-4')}>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+                    <div className="flex min-w-0 flex-col gap-4">
+                        <ReservationCard detail={detail} now={now} address={address} onCalendar={addToCalendar}>
+                            <CancelArea detail={detail} onCancelled={data => setDetail(data)} />
+                        </ReservationCard>
+                        {detail.status === RESERVATION_PENDING && <PendingSteps detail={detail} />}
+                        {detail.status === RESERVATION_REJECTED && <RejectedNext detail={detail} slots={freeSlots} phone={detail.restaurantPhone} />}
+                    </div>
 
-            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 px-4 pt-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6 lg:pt-8">
-                <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1">
-                    <StatusHero detail={detail} site={site} now={now} />
-                    {detail.status === RESERVATION_PENDING && <PendingSteps detail={detail} />}
-                    {detail.status === RESERVATION_REJECTED && <RejectedNext detail={detail} slots={freeSlots} phone={detail.restaurantPhone} />}
-                </div>
+                    <aside aria-label="Rezervasyon kodu ve adres" className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+                        <CodeCard detail={detail} address={address} restaurant={restaurant} />
+                    </aside>
 
-                <aside aria-label="Rezervasyon işlemleri" className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-                    {active && (
-                        <ActionTiles address={address} phone={detail.restaurantPhone} onCalendar={addToCalendar} />
-                    )}
-                    <CodeCard detail={detail} onCancelled={data => setDetail(data)} />
-                </aside>
+                    <div className="flex min-w-0 flex-col gap-4 lg:col-start-1">
+                        {preOrder && !editing && (
+                            <PreOrderSummary detail={detail} productsById={productsById} restaurant={restaurant}
+                                onEdit={startEditing} onCancel={cancelPreOrder} cancelling={cancellingPreOrder} />
+                        )}
 
-                <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-2">
-                    {preOrder && !editing && (
-                        <PreOrderSummary detail={detail} productsById={productsById} restaurant={restaurant}
-                            onEdit={startEditing} onCancel={cancelPreOrder} cancelling={cancellingPreOrder} />
-                    )}
+                        {preOrderNotYet && <PreOrderPromise detail={detail} site={site} />}
 
-                    {preOrderNotYet && <PreOrderPromise detail={detail} site={site} />}
-
-                    {!preOrderNotYet && !showMenu && window_.enabled && !pending && preOrder?.status !== ORDER_REQUEST_APPROVED
-                        && detail.status === RESERVATION_CONFIRMED && window_.reason && (
-                        <p className={cn(card, 'm-0 flex items-start gap-2 p-4 text-[15px]')}>
-                            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
-                            {window_.reason}
-                        </p>
-                    )}
-
-                    {showMenu && (
-                        <div className="flex flex-col gap-1">
-                            <h2 className={cn(serif, 'm-0 text-[30px] leading-tight')}>{editing ? 'Ön siparişinizi değiştirin' : 'Ön sipariş verin'}</h2>
-                            <p className="m-0 text-sm text-[var(--site-sub)]">
-                                Gelmeden siparişinizi verin; masanıza oturduğunuzda mutfağa iletilir, beklemezsiniz. Masanıza oturana kadar değiştirebilir ya da iptal edebilirsiniz. Ödeme restoranda alınır.
+                        {!preOrderNotYet && !showMenu && window_.enabled && !pending && preOrder?.status !== ORDER_REQUEST_APPROVED
+                            && detail.status === RESERVATION_CONFIRMED && window_.reason && (
+                            <p className={cn(card, 'm-0 flex items-start gap-2 p-5 text-[15px]')}>
+                                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
+                                {window_.reason}
                             </p>
-                            {editing && (
-                                <button type="button" onClick={() => { setEditing(false); setCart({}); }} className="mt-1 self-start text-sm font-semibold text-[var(--site-sub)] underline">
-                                    Vazgeç
-                                </button>
-                            )}
-                        </div>
-                    )}
+                        )}
 
-                    {showMenu && (
-                        <div className="-mx-4 md:-mx-6">
-                            <MenuBrowser categories={categories} quantities={quantities} onAdd={add} onRemove={remove} stickyBgClass="bg-[color-mix(in_srgb,var(--site-bg)_95%,transparent)]" />
-                        </div>
-                    )}
+                        {showMenu && (
+                            <div className={cn(card, 'flex flex-col gap-1 p-5 sm:p-8')}>
+                                <h2 className={cn(serif, 'm-0 text-[30px] leading-tight md:text-[40px]')}>{editing ? <>Ön siparişinizi <em className="font-semibold italic text-[var(--site-terracotta-text)]">değiştirin.</em></> : <>Ön sipariş <em className="font-semibold italic text-[var(--site-terracotta-text)]">verin.</em></>}</h2>
+                                <p className="m-0 mt-1 text-[15px] leading-relaxed text-[var(--site-sub)]">
+                                    Gelmeden siparişinizi verin; masanıza oturduğunuzda mutfağa iletilir, beklemezsiniz. Masanıza oturana kadar değiştirebilir ya da iptal edebilirsiniz. Ödeme restoranda alınır.
+                                </p>
+                                {editing && (
+                                    <button type="button" onClick={() => { setEditing(false); setCart({}); }} className="mt-1 inline-flex min-h-11 items-center self-start text-sm font-bold text-[var(--site-sub)] underline">
+                                        Vazgeç
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {showMenu && (
+                            <div className="-mx-2 sm:-mx-4 md:-mx-6">
+                                <MenuBrowser categories={categories} quantities={quantities} onAdd={add} onRemove={remove} stickyBgClass="bg-[color-mix(in_srgb,var(--site-bg)_95%,transparent)]" />
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </main>
 
             {showMenu && itemCount > 0 && (
                 <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--site-border)] bg-[var(--site-bg)] px-4 pb-5 pt-3">
@@ -451,7 +442,7 @@ export default function ReservationDetailPage() {
                     </div>
                 </div>
             )}
-        </main>
+        </SitePage>
     );
 }
 
@@ -481,48 +472,80 @@ function statusHeadline(detail: ReservationDetail): { lead: string; title: React
     }
 }
 
-function StatusHero({ detail, site, now }: { detail: ReservationDetail; site: PublicSite; now: number }) {
+// Rezervasyon kartı (tasarım: "Renkli · Rezervasyon sorgula", sonuç tarafı): başlık + durum rozeti, durum renginde
+// tarih yarısı ve krem bilgi yarısı olan bilet, durum notu, Takvime ekle · Yol tarifi · Ara ve iptal.
+function ReservationCard({ detail, now, address, onCalendar, children }: {
+    detail: ReservationDetail; now: number; address: string; onCalendar: () => void; children?: ReactNode;
+}) {
     const headline = statusHeadline(detail);
     const upcoming = detail.status === RESERVATION_CONFIRMED || detail.status === RESERVATION_PENDING;
     const countdown = upcoming ? countdownText(detail.startsAtUtc, now) : null;
-    const closed = detail.status === RESERVATION_CANCELLED || detail.status === RESERVATION_NO_SHOW || detail.status === RESERVATION_REJECTED;
+    const badge = reservationStatusBadge(detail.status);
+    const tone = reservationTone(detail.status);
+    const parts = dateParts(detail.date);
+    const note = headline.text ?? (countdown ? `${headline.lead} Rezervasyonunuza ${countdown}.` : headline.lead);
+    const phone = detail.restaurantPhone;
 
     return (
-        <section aria-labelledby="rez-baslik" className={cn(card, 'overflow-hidden shadow-[0_18px_40px_-28px_rgba(20,16,12,0.35)]')}>
-            <div className="relative overflow-hidden bg-[var(--site-hero)] px-5 pb-6 pt-7 text-white sm:px-7 sm:pt-9">
-                {site.site.coverImageUrl && (
-                    <>
-                        <img src={site.site.coverImageUrl} alt="" aria-hidden="true" className={cn('absolute inset-0 h-full w-full object-cover', closed && 'grayscale')} />
-                        <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,16,12,0.45),rgba(20,16,12,0.85))]" />
-                    </>
-                )}
-                <div className="relative flex flex-col gap-2" role="status" aria-live="polite">
-                    <span className="text-[13px] text-white/80">{headline.lead}</span>
-                    <h1 id="rez-baslik" className={cn(serif, 'm-0 text-[40px] leading-[0.98] tracking-[-0.02em] sm:text-[52px]')}>{headline.title}</h1>
-                    {headline.text && <p className="m-0 max-w-[44ch] text-[15px] leading-relaxed text-white/85">{headline.text}</p>}
-                    {countdown && (
-                        <span className="mt-2 inline-flex items-center gap-2 self-start rounded-full border border-white/30 bg-white/15 px-3.5 py-2 text-[13px] font-semibold backdrop-blur-[10px]">
-                            <Clock className="h-3.5 w-3.5" aria-hidden="true" />{countdown}
-                        </span>
+        <section aria-labelledby="rez-baslik" className={cn(card, 'flex flex-col gap-6 p-5 sm:p-8 md:p-12')}>
+            <div className="flex flex-wrap items-start justify-between gap-3" role="status" aria-live="polite">
+                <div className="flex min-w-0 flex-col gap-2">
+                    <span className="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--site-muted)]">Rezervasyon kartınız</span>
+                    <h1 id="rez-baslik" className={cn(serif, 'm-0 break-words text-[36px] font-extrabold leading-[0.98] tracking-[-0.02em] sm:text-[44px] md:text-[52px] [&_.italic]:font-semibold [&_.italic]:text-[var(--site-terracotta-text)]')}>{headline.title}</h1>
+                </div>
+                <span className={cn('inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-extrabold', tone.badge)}>
+                    <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', tone.dot)} />{badge.text}
+                </span>
+            </div>
+
+            {/* Bilet */}
+            <div className="flex flex-wrap overflow-hidden rounded-[22px] bg-[var(--site-bg)] md:rounded-[28px]">
+                <div className={cn('flex min-w-0 flex-[1_1_240px] flex-col gap-1.5 px-6 py-6 md:px-[30px] md:py-7', tone.ticket)}>
+                    {detail.code && <span className="font-mono text-xs font-extrabold uppercase tracking-[0.2em]">{detail.code}</span>}
+                    <span className={cn(serif, 'text-[44px] font-extrabold leading-none md:text-[54px]')}>{parts.day} {parts.month}</span>
+                    <span className={cn(serif, 'text-[20px] font-semibold italic md:text-[22px]')}>{parts.weekday}{countdown && <span className="not-italic font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)] text-sm font-bold"> · {countdown}</span>}</span>
+                </div>
+                <div aria-hidden="true" className="hidden w-0 border-l-[3px] border-dashed border-[var(--site-card)] sm:block" />
+                <dl className="m-0 grid min-w-0 flex-[1_1_240px] grid-cols-2 gap-[18px] px-6 py-6 md:px-[30px] md:py-7">
+                    <TicketField label="Saat" value={detail.time} size="lg" />
+                    <TicketField label="Kişi" value={String(detail.partySize)} size="lg" />
+                    <TicketField label="Masa" value={detail.tableName.replace(/^Masa\s+/i, '')} />
+                    <TicketField label="Bitiş" value={detail.endTime} />
+                </dl>
+            </div>
+
+            <p className={cn('m-0 rounded-[18px] px-5 py-4 text-[15px] leading-relaxed', tone.note)}>{note}</p>
+
+            {upcoming && (
+                <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
+                    <button type="button" onClick={onCalendar}
+                        className="flex h-[54px] items-center justify-center gap-2 rounded-full bg-[var(--site-paper)] px-5 font-extrabold text-[var(--site-on-paper)] transition-opacity hover:opacity-90">
+                        <CalendarPlus className="h-[17px] w-[17px]" aria-hidden="true" />Takvime ekle
+                    </button>
+                    {address && (
+                        <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer"
+                            className="flex h-[54px] items-center justify-center gap-2 rounded-full bg-[var(--site-bg)] px-5 font-extrabold text-[var(--site-text)] no-underline transition-opacity hover:opacity-90">
+                            <Navigation className="h-4 w-4" aria-hidden="true" />Yol tarifi
+                        </a>
+                    )}
+                    {phone && (
+                        <a href={telHref(phone)} aria-label={`Restoranı ara: ${phone}`}
+                            className="flex h-[54px] items-center justify-center gap-2 rounded-full bg-[var(--site-bg)] px-5 font-extrabold text-[var(--site-text)] no-underline transition-opacity hover:opacity-90">
+                            <Phone className="h-4 w-4" aria-hidden="true" />Ara
+                        </a>
                     )}
                 </div>
-            </div>
-            <p className="m-0 border-b border-[var(--site-line)] px-5 pt-4 text-sm text-[var(--site-sub)] sm:px-7">{formatDay(detail.date)}</p>
-            <dl className="m-0 grid grid-cols-3 divide-x divide-[var(--site-line)] px-1 py-4 sm:px-3">
-                <Tile label="Saat" value={detail.time} sub={`bitiş ${detail.endTime}`} />
-                <Tile label="Kişi" value={String(detail.partySize)} />
-                <Tile label="Masa" value={detail.tableName.replace(/^Masa\s+/i, '')} />
-            </dl>
+            )}
+            {children}
         </section>
     );
 }
 
-function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function TicketField({ label, value, size }: { label: string; value: string; size?: 'lg' }) {
     return (
-        <div className="min-w-0 px-4">
-            <dt className={eyebrowClass}>{label}</dt>
-            <dd className={cn(serif, 'm-0 mt-1 truncate text-[28px] leading-none tabular-nums')}>{value}</dd>
-            {sub && <dd className="m-0 mt-1 text-xs text-[var(--site-sub)]">{sub}</dd>}
+        <div className="flex min-w-0 flex-col gap-0.5">
+            <dt className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--site-muted)]">{label}</dt>
+            <dd className={cn(serif, 'm-0 truncate font-extrabold leading-tight tabular-nums', size === 'lg' ? 'text-[30px]' : 'text-[22px]')}>{value}</dd>
         </div>
     );
 }
@@ -542,7 +565,7 @@ function PendingSteps({ detail }: { detail: ReservationDetail }) {
                 <li key={step.label} aria-current={step.state === 'current' ? 'step' : undefined} className="flex items-center gap-3 text-[15px]">
                     <span aria-hidden="true" className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full border',
                         step.state === 'done' ? 'border-[var(--site-text)] bg-[var(--site-paper)] text-[var(--site-on-paper)]'
-                            : step.state === 'current' ? 'border-[var(--site-accent)] text-[var(--site-accent)]' : 'border-[var(--site-border)] text-[var(--site-muted)]')}>
+                            : step.state === 'current' ? 'border-[var(--site-accent)] text-[var(--site-accent-text)]' : 'border-[var(--site-border)] text-[var(--site-muted)]')}>
                         {step.state === 'done' ? <Check className="h-3.5 w-3.5" strokeWidth={3} />
                             : step.state === 'current' ? <span className="h-2 w-2 animate-pulse rounded-full bg-current motion-reduce:animate-none" />
                                 : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
@@ -586,50 +609,44 @@ function RejectedNext({ detail, slots, phone }: { detail: ReservationDetail; slo
     );
 }
 
-// ── Eylemler ve kod ────────────────────────────────────────────────────────────────────────────
+// ── Kod ve iptal ───────────────────────────────────────────────────────────────────────────────
 
-function ActionTiles({ address, phone, onCalendar }: { address: string; phone: string; onCalendar: () => void }) {
-    const tile = 'flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-[18px] border border-[var(--site-border)] bg-[var(--site-card)] px-2 text-[13px] font-semibold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)]';
-    const count = 1 + (address ? 1 : 0) + (phone ? 1 : 0);
+// Sağ sütun: zeytin kutuda kod (sorgulama bağlantısıyla) ve adres.
+function CodeCard({ detail, address, restaurant }: { detail: ReservationDetail; address: string; restaurant: string }) {
+    if (!detail.code && !address) return null;
     return (
-        <section aria-label="Yol tarifi, takvim ve arama" className="flex flex-col gap-3">
+        <section aria-label="Rezervasyon kodu" className="flex flex-col gap-4 rounded-[24px] bg-[var(--site-olive)] p-6 text-[var(--site-on-paper)] sm:p-8 md:rounded-[36px]">
+            {detail.code && (
+                <div className="flex flex-col gap-2">
+                    <span className="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--site-mustard-text)]">Rezervasyon kodu</span>
+                    <span className="font-mono text-[30px] font-bold tracking-[0.14em]">{detail.code}</span>
+                    <p className="m-0 text-sm leading-relaxed text-[var(--site-on-paper-sub)]">
+                        Bu kod ve telefon numaranızla rezervasyonunuzu <Link to={RESERVATION_LOOKUP_PATH} className="font-bold text-[var(--site-on-paper)] underline underline-offset-4">sorgulayabilirsiniz</Link>.
+                    </p>
+                </div>
+            )}
             {address && (
-                <div className={cn(card, 'hidden items-start gap-3 p-4 lg:flex')}>
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
+                <div className={cn('flex items-start gap-3', detail.code && 'border-t border-[var(--site-paper-line-strong)] pt-4')}>
+                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[var(--site-mustard-text)]" aria-hidden="true" />
                     <div className="min-w-0">
-                        <p className={cn(eyebrowClass, 'm-0')}>Adres</p>
-                        <p className="m-0 mt-1 text-[15px] leading-snug">{address}</p>
+                        <p className="m-0 font-extrabold">{restaurant}</p>
+                        <p className="m-0 mt-0.5 text-[15px] leading-snug text-[var(--site-on-paper-sub)]">{address}</p>
                     </div>
                 </div>
             )}
-            <div className={cn('grid gap-2', count === 3 ? 'grid-cols-3' : count === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
-                {address && (
-                    <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={tile}>
-                        <Navigation className="h-5 w-5" aria-hidden="true" />Yol tarifi
-                    </a>
-                )}
-                <button type="button" onClick={onCalendar} className={tile}>
-                    <CalendarPlus className="h-5 w-5" aria-hidden="true" />Takvime ekle
-                </button>
-                {phone && (
-                    <a href={telHref(phone)} className={tile}>
-                        <Phone className="h-5 w-5" aria-hidden="true" />Ara
-                    </a>
-                )}
-            </div>
         </section>
     );
 }
 
-// Kod ve misafirin kendi iptali. İptal sayfanın içinde onaylanır (window.confirm bazı uygulama içi tarayıcılarda açılmaz);
+// Misafirin kendi iptali. İptal sayfanın içinde onaylanır (window.confirm bazı uygulama içi tarayıcılarda açılmaz);
 // kimlik "Rezervasyon sorgula" ile aynı: kod + rezervasyondaki telefon.
-function CodeCard({ detail, onCancelled }: { detail: ReservationDetail; onCancelled: (data: ReservationDetail) => void }) {
+function CancelArea({ detail, onCancelled }: { detail: ReservationDetail; onCancelled: (data: ReservationDetail) => void }) {
     const [open, setOpen] = useState(false);
     const [phone, setPhone] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const active = detail.status === RESERVATION_PENDING || detail.status === RESERVATION_CONFIRMED;
-    if (!detail.code && !active) return null;
+    if (!active) return null;
 
     const deadline = new Date(detail.cancelDeadline);
     const deadlineText = Number.isNaN(deadline.getTime()) ? null
@@ -656,65 +673,60 @@ function CodeCard({ detail, onCancelled }: { detail: ReservationDetail; onCancel
         }
     };
 
-    return (
-        <section aria-label="Rezervasyon kodu" className={cn(card, 'flex flex-col gap-3 p-4')}>
-            {detail.code && (
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                    <span className="text-sm text-[var(--site-sub)]">Kod</span>
-                    <span className="font-mono text-xl font-bold tracking-[0.14em]">{detail.code}</span>
-                    <p className="m-0 w-full text-xs text-[var(--site-sub)]">Bu kod ve telefon numaranızla rezervasyonunuzu <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[var(--site-text)] underline underline-offset-4">sorgulayabilirsiniz</Link>.</p>
-                </div>
-            )}
+    if (!detail.canCancel) {
+        return (
+            <p className="m-0 text-sm text-[var(--site-muted)]">
+                Rezervasyona 2 saatten az kaldı; iptal ya da değişiklik için restoranı arayın
+                {detail.restaurantPhone && <>: <a href={telHref(detail.restaurantPhone)} className="inline-flex min-h-11 items-center font-bold text-[var(--site-text)]">{detail.restaurantPhone}</a></>}.
+            </p>
+        );
+    }
 
-            {active && detail.canCancel && !open && (
+    if (!open) {
+        return (
+            <div className="flex flex-col gap-0.5">
                 <button type="button" onClick={() => { setOpen(true); setError(null); }}
-                    className="self-start text-sm font-semibold text-[var(--site-error)] underline underline-offset-4">
+                    className="inline-flex min-h-11 items-center self-start bg-transparent p-0 font-extrabold text-[var(--site-terracotta-text)] underline underline-offset-4">
                     Rezervasyonu iptal et
                 </button>
-            )}
+                <p className="m-0 text-xs text-[var(--site-muted)]">Rezervasyona 2 saat kalana kadar online iptal edebilirsiniz.</p>
+            </div>
+        );
+    }
 
-            {active && detail.canCancel && open && (
-                <form onSubmit={submit} noValidate className="flex flex-col gap-3 rounded-xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)]/40 p-3.5">
-                    <div>
-                        <p className="m-0 text-[15px] font-semibold">Rezervasyon iptal edilsin mi?</p>
-                        <p className="m-0 mt-0.5 text-sm text-[var(--site-sub)]">
-                            Onay için rezervasyonda yazdığınız telefon numarasını girin.{deadlineText && ` Son online iptal: ${deadlineText}.`}
-                        </p>
-                    </div>
-                    <label htmlFor="iptal-telefon" className="sr-only">Telefon</label>
-                    <input
-                        id="iptal-telefon"
-                        type="tel"
-                        inputMode="tel"
-                        autoComplete="tel"
-                        value={phone}
-                        onChange={e => { setPhone(formatTurkishPhoneInput(e.target.value)); setError(null); }}
-                        placeholder="05xx xxx xx xx"
-                        maxLength={16}
-                        aria-invalid={error ? true : undefined}
-                        className="h-12 w-full rounded-xl border border-[var(--site-border)] bg-[var(--site-card)] px-4 text-base tabular-nums focus:border-[var(--site-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]/25"
-                    />
-                    {error && <p role="alert" className="m-0 text-sm font-medium text-[var(--site-error)]">{error}</p>}
-                    <div className="grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => setOpen(false)} disabled={busy} className={secondaryButton}>Vazgeç</button>
-                        <button type="submit" disabled={busy}
-                            className="flex h-12 items-center justify-center rounded-full bg-[var(--site-error)] px-4 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
-                            {busy ? 'İptal ediliyor…' : 'Evet, iptal et'}
-                        </button>
-                    </div>
-                </form>
-            )}
-
-            {active && !detail.canCancel && (
-                <p className="m-0 text-xs text-[var(--site-sub)]">
-                    Rezervasyona 2 saatten az kaldı; iptal ya da değişiklik için restoranı arayın
-                    {detail.restaurantPhone && <>: <a href={telHref(detail.restaurantPhone)} className="font-semibold text-[var(--site-text)]">{detail.restaurantPhone}</a></>}.
+    return (
+        <form onSubmit={submit} noValidate className="flex flex-col gap-3 rounded-[18px] border-2 border-[var(--site-terracotta-text)] px-5 py-[18px]">
+            <div>
+                <p className="m-0 font-bold">Rezervasyon iptal edilsin mi? Bu işlem geri alınamaz.</p>
+                <p className="m-0 mt-0.5 text-sm text-[var(--site-sub)]">
+                    Onay için rezervasyonda yazdığınız telefon numarasını girin.{deadlineText && ` Son online iptal: ${deadlineText}.`}
                 </p>
-            )}
-            {active && detail.canCancel && !open && (
-                <p className="m-0 text-xs text-[var(--site-sub)]">Rezervasyona 2 saat kalana kadar online iptal edebilirsiniz.</p>
-            )}
-        </section>
+            </div>
+            <label htmlFor="iptal-telefon" className="sr-only">Telefon</label>
+            <input
+                id="iptal-telefon"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={e => { setPhone(formatTurkishPhoneInput(e.target.value)); setError(null); }}
+                placeholder="05xx xxx xx xx"
+                maxLength={16}
+                aria-invalid={error ? true : undefined}
+                className="h-12 w-full rounded-[14px] border border-[var(--site-border-strong)] bg-[var(--site-bg)] px-4 text-base tabular-nums focus:border-[var(--site-text)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]/40"
+            />
+            {error && <p role="alert" className="m-0 text-sm font-semibold text-[var(--site-error)]">{error}</p>}
+            <div className="flex flex-wrap justify-end gap-2">
+                <button type="button" onClick={() => setOpen(false)} disabled={busy}
+                    className="h-12 rounded-full border border-[var(--site-border-strong)] bg-transparent px-5 font-bold text-[var(--site-text)] disabled:opacity-50">
+                    Vazgeç
+                </button>
+                <button type="submit" disabled={busy}
+                    className="h-12 rounded-full bg-[var(--site-error)] px-5 font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                    {busy ? 'İptal ediliyor…' : 'Evet, iptal et'}
+                </button>
+            </div>
+        </form>
     );
 }
 
@@ -792,7 +804,7 @@ function PreOrderSummary({ detail, productsById, restaurant, onEdit, onCancel, c
                 <>
                     <ul className="flex flex-col divide-y divide-[var(--site-line)] text-[15px]">
                         {preOrder.items.map((item, i) => {
-                            const product = productsById.get(item.productId);
+                            const product = productsById.get(item.productId ?? '');
                             return (
                                 <li key={`${item.productId}-${i}`} className="flex items-center gap-3 py-2.5">
                                     <ImageSlot src={product?.imageUrl} alt="" restaurant={restaurant} logoTextClassName="text-[9px]" className="h-12 w-12 shrink-0 rounded-xl" />

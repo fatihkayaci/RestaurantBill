@@ -31,8 +31,12 @@ export interface BranchSite {
     instagramUrl: string;
     /** "#RRGGBB" ya da boş */
     accentColor: string;
-    /** Hazır renk teması (SITE_THEMES anahtarı); boş = terracotta. */
+    /** Hazır renk teması (tasarımın temalarından biri; Renkli'de vurgu + kapak, Sade'de yalnız vurgu); boş = varsayılan. */
     theme: string;
+    /** Sitenin tasarımı ("renkli" | "sade"); boş = renkli. Eski API yanıtında yoksa da renkli. */
+    design?: string;
+    /** Yazı tipi çifti (SITE_FONTS anahtarı, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi. */
+    font?: string;
     /** Mekân fotoğrafları, sitedeki sırayla (en çok 12). */
     galleryImageUrls: string[];
     /** Boş: "her gün aynı" (opensAt/closesAt). Doluysa Pazartesi → Pazar 7 gün. */
@@ -42,6 +46,8 @@ export interface BranchSite {
     whatsappPhone: string;
     /** SITE_AMENITIES anahtarları. */
     amenities: string[];
+    /** Sitede gizlenen hazır "Sık sorulanlar" anahtarları (site/siteFaqs.ts); boş = hepsi görünür. */
+    hiddenFaqs: string[];
     rating: number | null;
     reviewCount: number | null;
     /** Google Haritalar yorum sayfası. */
@@ -379,8 +385,14 @@ export interface ReservationDetail {
 // ── Personel tarafı ──────────────────────────────────────────────────────────
 
 export interface OrderRequestItem {
-    productId: string;
+    /** "product" ya da "setMenu" (eski sunucu: yok → ürün). */
+    kind?: 'product' | 'setMenu';
+    productId: string | null;
+    setMenuId?: string | null;
+    /** Ürünün ya da menünün adı. */
     productName: string;
+    /** Menü kaleminde seçilen ürünler ("Kola (+₺10)"); üründe boş. */
+    selections?: string[];
     quantity: number;
     unitPrice: number;
     note: string;

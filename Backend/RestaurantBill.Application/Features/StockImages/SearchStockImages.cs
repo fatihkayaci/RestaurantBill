@@ -13,6 +13,10 @@ namespace RestaurantBill.Application.Features.StockImages;
 public class SearchStockImagesQuery : IRequest<Result<List<StockImageDto>>>
 {
     public string? Q { get; set; }
+    /// <summary>Hepsi (varsayılan), mekân fotoğrafları önce ya da yalnız yemekler. Bkz. <see cref="StockImageScope"/>.</summary>
+    public StockImageScope Scope { get; set; }
+    /// <summary>İsteğe bağlı tek grup ("Kafe"); Türkçe harf duyarsız birebir eşleşir.</summary>
+    public string? Group { get; set; }
 }
 
 public class SearchStockImagesQueryHandler(IAppDbContext db, IOptions<BunnyStorageOptions> storageOptions)
@@ -26,7 +30,7 @@ public class SearchStockImagesQueryHandler(IAppDbContext db, IOptions<BunnyStora
             .ToListAsync(cancellationToken);
 
         string cdnBaseUrl = storageOptions.Value.CdnBaseUrl.TrimEnd('/');
-        List<StockImageDto> result = StockImageSearch.Rank(images, request.Q)
+        List<StockImageDto> result = StockImageSearch.Search(images, request.Q, request.Scope, request.Group)
             .Select(s => new StockImageDto { Id = s.Id, Title = s.Title, Group = s.Group, Url = $"{cdnBaseUrl}/{s.StorageKey}" })
             .ToList();
 
@@ -41,13 +45,51 @@ public class SearchStockImagesQueryHandler(IAppDbContext db, IOptions<BunnyStora
 /// </summary>
 public static class StockImageSearch
 {
-    public const int MaxResults = 48;
+    // Seçicide görseller kaydırdıkça yüklenir (loading="lazy"); tüm kataloğu (mekân + yemek) gösterecek kadar geniş.
+    public const int MaxResults = 300;
     public const int MaxQueryLength = 100;
 
     private const int TitleExact = 0;
     private const int KeywordExact = 1;
     private const int Prefix = 2;
     private const int Contains = 3;
+
+    /// <summary>
+    /// Kapsam ve grup süzgeciyle arama. <see cref="StockImageScope.Food"/>: mekân grupları çıkar.
+    /// <see cref="StockImageScope.Venue"/>: boş sorguda yalnız mekân grupları (grup sırası, sonra SortOrder); sorguda önce
+    /// mekân eşleşmeleri, sonra geri kalanlar. Toplam en çok <see cref="MaxResults"/>.
+    /// </summary>
+    public static List<StockImage> Search(IEnumerable<StockImage> images, string? query, StockImageScope scope, string? group = null)
+    {
+        IEnumerable<StockImage> pool = images;
+        string folded = SearchText.Fold(group);
+        if (folded.Length > 0)
+            pool = pool.Where(s => SearchText.Fold(s.Group) == folded);
+
+        switch (scope)
+        {
+            case StockImageScope.Food:
+                return Rank(pool.Where(s => !StockImageGroups.IsVenue(s.Group)), query);
+            case StockImageScope.Venue:
+            {
+                List<StockImage> list = pool.ToList();
+                List<StockImage> venue = list.Where(s => StockImageGroups.IsVenue(s.Group)).ToList();
+                if (SearchText.Fold(query).Length == 0)
+                {
+                    return venue
+                        .OrderBy(s => StockImageGroups.VenueOrder(s.Group)).ThenBy(s => s.SortOrder).ThenBy(s => s.Title)
+                        .Take(MaxResults)
+                        .ToList();
+                }
+
+                List<StockImage> first = Rank(venue, query);
+                List<StockImage> rest = Rank(list.Where(s => !StockImageGroups.IsVenue(s.Group)), query);
+                return first.Concat(rest).Take(MaxResults).ToList();
+            }
+            default:
+                return Rank(pool, query);
+        }
+    }
 
     public static List<StockImage> Rank(IEnumerable<StockImage> images, string? query)
     {

@@ -23,7 +23,7 @@ function CoversPage() {
     const preview = useSitePreview();
     if (!preview) return null;
     return (
-        <SitePage site={preview.site} current="home" lastCall={false}>
+        <SitePage site={preview.site} current="home">
             <main className="flex flex-1 flex-col">
                 <PageCovers site={preview.site.site} restaurantName={restaurantName(preview.site)} />
             </main>

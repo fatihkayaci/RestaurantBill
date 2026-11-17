@@ -116,6 +116,101 @@ public class StockImageHandlerTests
         }
     }
 
+    public class ScopeTests : ApplicationTestBase
+    {
+        private async Task<List<string>> SearchTitlesAsync(string? q, StockImageScope scope, string? group = null)
+        {
+            var result = await new SearchStockImagesQueryHandler(Db, Options())
+                .Handle(new SearchStockImagesQuery { Q = q, Scope = scope, Group = group }, CancellationToken.None);
+            Assert.True(result.IsSuccess, result.Error);
+            return result.Value!.Select(i => i.Title).ToList();
+        }
+
+        private async Task SeedMixedAsync()
+        {
+            DbContext.StockImages.AddRange(
+                StockImage.Create("shared/stock/cay.webp", "Çay", ["sıcak içecek", "bahçe"], "Sıcak içecek", sortOrder: 0),
+                StockImage.Create("shared/stock/adana.webp", "Adana", ["kebap"], "Kebap ve ızgara", sortOrder: 1),
+                StockImage.Create("shared/stock/masa-sofra-1.webp", "Kurulu sofra", ["masa"], "Masa ve sofra", sortOrder: 0),
+                StockImage.Create("shared/stock/teras-bahce-1.webp", "Bahçe masaları", ["bahçe", "açık hava"], "Teras ve bahçe", sortOrder: 5),
+                StockImage.Create("shared/stock/kafe-1.webp", "Kafe köşesi", ["kahve"], "Kafe", sortOrder: 9),
+                StockImage.Create("shared/stock/mekan-2.webp", "Akşam salonu", ["salon"], "Mekân", sortOrder: 2),
+                StockImage.Create("shared/stock/mekan-1.webp", "Aydınlık salon", ["salon"], "Mekân", sortOrder: 1));
+            await DbContext.SaveChangesAsync();
+        }
+
+        [Fact]
+        public async Task DefaultScope_ReturnsEverything_AsBefore()
+        {
+            await SeedMixedAsync();
+
+            Assert.Equal(7, (await SearchTitlesAsync(null, StockImageScope.All)).Count);
+        }
+
+        [Fact]
+        public async Task VenueScope_EmptyQuery_ReturnsVenueGroupsOnly_ByGroupOrderThenSortOrder()
+        {
+            await SeedMixedAsync();
+
+            Assert.Equal(
+                new[] { "Aydınlık salon", "Akşam salonu", "Kafe köşesi", "Bahçe masaları", "Kurulu sofra" },
+                await SearchTitlesAsync("  ", StockImageScope.Venue));
+        }
+
+        [Fact]
+        public async Task VenueScope_EmptyQuery_NoVenueRows_ReturnsEmpty()
+        {
+            DbContext.StockImages.Add(StockImage.Create("shared/stock/cay.webp", "Çay", null, "Sıcak içecek"));
+            await DbContext.SaveChangesAsync();
+
+            Assert.Empty(await SearchTitlesAsync(null, StockImageScope.Venue));
+        }
+
+        [Fact]
+        public async Task VenueScope_WithQuery_RanksVenueMatchesFirst_ThenTheRest()
+        {
+            await SeedMixedAsync();
+
+            // Hepsi kapsamında "Çay" (kelime birebir, SortOrder 0) önde olurdu; mekân kapsamında mekân eşleşmesi önce gelir.
+            Assert.Equal(new[] { "Bahçe masaları", "Çay" }, await SearchTitlesAsync("bahçe", StockImageScope.Venue));
+        }
+
+        [Fact]
+        public async Task VenueScope_WithQuery_IsCappedAtMaxResults()
+        {
+            // Sınırdan fazla eşleşme: yarısı mekân, yarısı yemek.
+            int half = StockImageSearch.MaxResults / 2 + 10;
+            DbContext.StockImages.AddRange(Enumerable.Range(0, half)
+                .Select(i => StockImage.Create($"shared/stock/mekan-{i}.webp", $"Salon {i}", null, "Mekân"))
+                .Concat(Enumerable.Range(0, half).Select(i => StockImage.Create($"shared/stock/s-{i}.webp", $"Salon tabağı {i}", null, "Ana yemek")))
+                .ToArray());
+            await DbContext.SaveChangesAsync();
+
+            List<string> titles = await SearchTitlesAsync("salon", StockImageScope.Venue);
+
+            Assert.Equal(StockImageSearch.MaxResults, titles.Count);
+            Assert.All(titles.Take(half), t => Assert.DoesNotContain("tabağı", t));
+        }
+
+        [Fact]
+        public async Task FoodScope_ExcludesVenueGroups_WithAndWithoutQuery()
+        {
+            await SeedMixedAsync();
+
+            Assert.Equal(new[] { "Çay", "Adana" }, await SearchTitlesAsync(null, StockImageScope.Food));
+            Assert.Equal(new[] { "Çay" }, await SearchTitlesAsync("bahce", StockImageScope.Food));
+        }
+
+        [Fact]
+        public async Task GroupFilter_IsTurkishInsensitive_AndCombinesWithScope()
+        {
+            await SeedMixedAsync();
+
+            Assert.Equal(new[] { "Aydınlık salon", "Akşam salonu" }, await SearchTitlesAsync(null, StockImageScope.Venue, "mekan"));
+            Assert.Empty(await SearchTitlesAsync(null, StockImageScope.Food, "Kafe"));
+        }
+    }
+
     public class SetProductStockImageTests : ApplicationTestBase
     {
         private async Task<(Product Product, StockImage Image)> SeedAsync(string currentKey, Guid? categoryBranchId = null)

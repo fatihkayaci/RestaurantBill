@@ -22,11 +22,14 @@ public class StockImagesController : BaseController
     /// <summary>
     /// Searches the stock image library (Turkish, diacritics-insensitive: "cay" finds "Çay"). Empty q returns the default
     /// list. Ranking: exact title &gt; keyword / prefix &gt; contains; at most 48 results. Each item has the full CDN url.
+    /// scope: all (default), venue (site photos: venue groups first; empty q returns venue groups only) or food (products
+    /// and set menus: venue groups excluded). group: optional single group name.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Search([FromQuery] string? q, CancellationToken cancellationToken)
+    public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] StockImageScope? scope, [FromQuery] string? group,
+        CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new SearchStockImagesQuery { Q = q }, cancellationToken);
+        var result = await _mediator.Send(new SearchStockImagesQuery { Q = q, Scope = scope ?? StockImageScope.All, Group = group }, cancellationToken);
         return HandleResult(result);
     }
 }

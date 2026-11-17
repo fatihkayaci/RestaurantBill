@@ -136,7 +136,7 @@ eklenmedi.
 ### Alan anahtarları (`changes[].field`, `revert.fields`)
 
 `headline, tagline, coverImage, storyTitle, about, aboutImage, hours, hoursNote, instagramUrl, directionsNote,
-whatsappPhone, theme, accentColor, gallery, amenities, rating, reviewCount, reviewsUrl, featuredReviews, founderPhoto,
+whatsappPhone, design, font, theme, accentColor, gallery, amenities, hiddenFaqs, rating, reviewCount, reviewsUrl, featuredReviews, founderPhoto,
 founderName, founderTitle, founderQuote, foundedYear, values, milestones, seoTitle, seoDescription, shareImage,
 heroMenu, heroAbout, heroVenue, heroContact, heroReservation`,
 ayrıca her bölüm için `region:{regionId}` (bölümün fotoğrafı ve açıklaması birlikte).
@@ -158,8 +158,11 @@ Gövde, eski `PUT api/branch/site` ile aynı alanları ve üç ek alanı taşır
   "opensAt": "12:00", "closesAt": "23:00",              // ya da null; haftalık saat varsa yok sayılır (en sık aralık yazılır)
   "hoursNote": "", "instagramUrl": "https://…", "accentColor": "#A3301A",
   "theme": "terracotta",
+  "design": "sade",                              // "renkli" | "sade" | "elit" | "" (= renkli); null/eksik = değiştirme
+  "font": "playfair-inter",                      // yazı tipi çifti (aşağıda) | "" (= tasarımın kendi çifti); null/eksik = değiştirme
   "weeklyHours": [{ "day": 1, "isOpen": true, "opens": "12:00", "closes": "23:00" } /* … 7 gün ya da [] */],
   "directionsNote": "", "whatsappPhone": "", "amenities": ["avlu"],
+  "hiddenFaqs": ["odeme"],                       // gizlenen hazır sorular; null/eksik = değiştirme
   "rating": 4.7, "reviewCount": 1240, "reviewsUrl": "https://…",
   "featuredReviews": [{ "author": "", "text": "", "source": "Google" }],
   "founderName": "", "founderTitle": "", "founderQuote": "", "foundedYear": 1987,
@@ -223,6 +226,81 @@ sitenin kapağı kullanılır; Mekân'da sıra: kendi kapağı → ilk mekân fo
   `heroContact` "İletişim kapağı", `heroReservation` "Rezervasyon kapağı"; alan bazında "Geri al" çalışır.
 - DTO: `BranchSiteDto.MenuHeroUrl … ReservationHeroUrl` (taslak, yayındaki ve `api/public/site`).
 - Testler: `SiteDraftHandlerTests` (taslak → yayın, hazır görsel, iki kez yükleme, geri al, at) ve `SiteSnapshotTests`.
+
+### Sık sorulanlar (gizlenen sorular) ve yeni olanaklar
+
+İletişim sayfasındaki "Sık sorulanlar" restoranın yazdığı metin değildir: sorular ve cevaplar ön yüzde, restoranın
+ayarlarından (rezervasyon kuralları, teslimat mahalleleri, ödeme yolları, mekân olanakları) oluşur. Her soru varsayılan
+olarak açıktır; restoran istemediğini gizler. Sunucu yalnız gizlenenlerin anahtarlarını saklar:
+
+- `SiteContent.HiddenFaqs` (jsonb içerik, yeni sütun/migration yok; eski kayıtlarda anahtar yok = boş = hepsi görünür).
+- Doğrulama: en çok 30 anahtar; her biri `^[a-z0-9-]{1,40}$`; kırpılır, küçük harfe çevrilir, tekrar atılır (sıra korunur).
+  Sunucu soru listesini bilmez: bilinmeyen anahtar da kabul edilir (soru ön yüzden kalkınca zararsız kalır).
+- PUT gövdesinde `hiddenFaqs`; `null`/eksik = değiştirme (eski form göndermez). Taslak/yayın/geri al alanı `hiddenFaqs`
+  ("Sık sorulanlar", sayfa "İletişim"). `BranchSiteDto.HiddenFaqs` taslakta, yayındakinde ve `api/public/site`'ta döner.
+- Ön yüzdeki anahtarlar: `rezervasyon`, `rezervasyon-sorgula`, `teslimat-bolgeleri`, `siparis-takip`, `odeme` ve olanak
+  soruları (`otopark`, `engelli`, `cocuk`, `evcil`, `wifi`, `vejetaryen`, `kartla-odeme`, `acik-alan`, `canli-muzik`,
+  `sigara-alani`, `ozel-gun`). Olanak sorusu yalnız olanak işaretliyse ("Evet, …") görünür; işaretli değilse cevabı
+  bilinmediği için soru hiç çizilmez ("hayır" denmez).
+
+`SiteContent.AmenityKeys` sonuna dört olanak eklendi (ön yüzdeki `SITE_AMENITIES` ile aynı sıra): `bebek-sandalyesi`,
+`aile-salonu`, `sigara-alani`, `ozel-gun`. Mekân sayfasındaki "Özel günler" kutusu yalnız `ozel-gun` işaretliyken görünür.
+
+### Tasarım (`design`) ve renk teması
+
+Restoran önce sitenin **tasarımını**, sonra o tasarımın içinde **rengini** seçer. İkisi ayrı alanlardır:
+
+| Alan | Değerler | Anlamı |
+|---|---|---|
+| `design` | `renkli` · `sade` · `elit` · `""` | Sayfa düzeni, yazı tipi ve kutu renkleri. `""` = varsayılan (`renkli`). |
+| `theme` | `terracotta` … `beyaz` · `""` | Tasarımın içindeki renk (vurgu; Renkli'de ayrıca kapak zemini). |
+| `accentColor` | `#RRGGBB` · `""` | Özel vurgu rengi; iki tasarımda da okunurluğa göre ayarlanır. |
+
+- **Renkli ve sıcak** (`renkli`): kum zemin, krem kutular, Fraunces, renkli kapak, zeytin/hardal/kiremit kutular, zeytin alt bilgi.
+- **Sade** (`sade`): krem zemin (#F6F1E9), beyaz kutular, Instrument Serif, beyaz kapak kutusu, açık kum alt bilgi.
+- **Elit** (`elit`): krem zemin (#F4EEE3) ve ara bantlar (#EAE2D4), koyu espresso bantlar (#2B2119), Bodoni Moda +
+  Montserrat (300), köşesiz düğmeler, ince altın çizgiler; sayfa başında tam genişlik fotoğraf kapağı (koyu perde, yavaş
+  yakınlaşma; fotoğraf yoksa koyu desenli bant), üst menü kapağın üstünde saydam. Tema yalnız vurgu ailesini seçer:
+  Altın (varsayılan), Bordo, Zeytin, Lacivert, Kömür (`terracotta`/`beyaz` anahtarları Elit'te Altın'a düşer).
+  Bileşenler `pages/public/site/elite/` altında; sayfalar `site.site.design` ile dallanır.
+- Saklama: `SiteContent.Design` (jsonb içerik; yeni sütun/migration yok, eski kayıtlarda anahtar yok = boş = renkli).
+  `SiteContent.DesignKeys` ön yüzdeki `SITE_DESIGNS` ile aynıdır.
+- Doğrulama: kırpılır, küçük harfe çevrilir; bilinmeyen anahtar `400 "Geçersiz site tasarımı."`.
+- PUT gövdesinde `design`; `null`/eksik = değiştirme (eski form göndermez). Taslak/yayın/geri al alanı `design`
+  ("Tasarım", sayfa "Tema"). `BranchSiteDto.Design` taslakta, yayındakinde ve `api/public/site`'ta, sipariş takibinde
+  (`DeliveryTrackingDto.Design`) döner.
+- Ön yüz: `pages/public/site/siteTheme.ts` → `siteRootStyle(accent, theme, design)` tasarımın paletini, yazı tipini
+  ve kutu renklerini CSS değişkeni olarak verir; düzeni farklı olan birkaç parça `useSiteDesign()` ile dallanır.
+- Testler: `SiteContentHandlerTests` (doğrulama, eski formun alanı koruması) ve `SiteDraftHandlerTests`
+  (taslak → geri al → yayınla, temadan bağımsız).
+
+### Yazı tipi (`font`)
+
+Tasarımın altında "Yazı tipi" seçilir: ilk seçenek **Tasarımın yazı tipi** (`""`; tasarım değişince onun çiftine geçer),
+altında hazır başlık + gövde çiftleri. Hepsi Google Fonts, hepsinde Türkçe harfler (latin-ext) var.
+
+| Anahtar | Başlık | Gövde | Not |
+|---|---|---|---|
+| `fraunces-manrope` | Fraunces | Manrope | Renkli'nin kendi çifti |
+| `instrument-manrope` | Instrument Serif | Manrope | Sade'nin kendi çifti; tek ağırlık |
+| `bodoni-montserrat` | Bodoni Moda | Montserrat (300) | Elit'in kendi çifti |
+| `playfair-inter` | Playfair Display | Inter | |
+| `dmserif-dmsans` | DM Serif Display | DM Sans | tek ağırlık |
+| `cormorant-lato` | Cormorant Garamond | Lato | |
+| `grotesk-inter` | Space Grotesk | Inter | modern, serifsiz |
+
+- Saklama: `SiteContent.Font` (jsonb, migration yok; eski kayıtta anahtar yok = boş). `SiteContent.FontKeys` ön yüzdeki
+  `SITE_FONTS` ile aynıdır.
+- Doğrulama: kırpılır, küçük harfe çevrilir; bilinmeyen anahtar `400 "Geçersiz yazı tipi."`; `null`/eksik = değiştirme.
+- Taslak/yayın/geri al alanı `font` ("Yazı tipi", sayfa "Tema"). `BranchSiteDto.Font` taslakta, yayındakinde,
+  `api/public/site`'ta ve sipariş takibinde (`DeliveryTrackingDto.Font`) döner.
+- Ön yüz: `siteRootStyle(accent, theme, design, font)` çiftin ailelerini `--site-serif` / `--site-sans`'a, gövde ağırlığını
+  köke yazar; başlık ağırlığı tasarımdan gelir (`--site-serif-weight`: Renkli 700, Sade ve Elit 400). Tek ağırlıklı başlık
+  yazı tiplerinde sahte kalın kapalıdır. Sayfalar yalnız seçili çiftin CSS'ini yükler (`siteFontsHref(design, font)`,
+  akış sayfalarında `customerFontsHref`); admin'deki seçici bütün çiftleri yükler. Ana sayfadaki dev ad, çiftin ölçülmüş
+  harf genişliğiyle (`charWidth`) küçülür.
+- Testler: `SiteContentTests` (alan adı normalleştirme, null korur), `SiteContentHandlerTests` (doğrulama) ve
+  `SiteDraftHandlerTests` (taslak → geri al → yayınla, null değiştirmez).
 
 ## 3. Google ve paylaşım: otomatik değerler
 

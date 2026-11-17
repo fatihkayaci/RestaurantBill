@@ -1,5 +1,6 @@
 using RestaurantBill.Application.DTOs.Delivery;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.DTOs.CustomerSite;
 
@@ -133,6 +134,53 @@ public class PublicTableInfoDto
     public QrFeaturesDto QrFeatures { get; set; } = new();
     /// <summary>Şube şu an online paket sipariş alıyor mu (ayarda açık ve durdurulmamış; saat kontrolü hariç).</summary>
     public bool AcceptsOnlineOrders { get; set; }
+    /// <summary>"IBAN ile öde" penceresinin bilgileri; restoran açmadıysa ya da IBAN geçerli değilse null (hiç gönderilmez).</summary>
+    public TableIbanPaymentDto? IbanPayment { get; set; }
+}
+
+// Masa QR sayfasındaki "IBAN ile öde": misafir IBAN'ı kopyalar, ödemeyi yapar, dekontu WhatsApp'tan restorana gönderir.
+public class TableIbanPaymentDto
+{
+    /// <summary>Boşluksuz "TR..." (kopyalanan değer).</summary>
+    public string Iban { get; set; } = string.Empty;
+    /// <summary>"TR33 0006 ..." (ekranda gösterilen).</summary>
+    public string IbanFormatted { get; set; } = string.Empty;
+    public string AccountHolder { get; set; } = string.Empty;
+    /// <summary>Boş olabilir.</summary>
+    public string BankName { get; set; } = string.Empty;
+    /// <summary>Dekontun gönderileceği WhatsApp numarası: sitenin WhatsApp'ı, yoksa cep telefonuysa şube telefonu; ikisi de yoksa boş.</summary>
+    public string WhatsappPhone { get; set; } = string.Empty;
+    /// <summary>Gösterilen ve "Ara" ile aranan numara: WhatsApp numarası, yoksa şube telefonu; boş olabilir.</summary>
+    public string Phone { get; set; } = string.Empty;
+
+    /// <summary>Gösterim kapalıysa ya da IBAN geçersizse null.</summary>
+    public static TableIbanPaymentDto? From(Branch branch)
+    {
+        if (!branch.ShowsIbanOnTable) return null;
+
+        string sitePhone = branch.GetSiteContent().WhatsappPhone.Trim();
+        string branchPhone = branch.Number.Trim();
+        string whatsapp = sitePhone.Length > 0 ? sitePhone
+            : IsTurkishMobile(branchPhone) ? branchPhone
+            : string.Empty;
+
+        return new TableIbanPaymentDto
+        {
+            Iban = branch.Iban,
+            IbanFormatted = TurkishIban.Format(branch.Iban),
+            AccountHolder = branch.IbanHolderName,
+            BankName = branch.PaymentBankName,
+            WhatsappPhone = whatsapp,
+            Phone = whatsapp.Length > 0 ? whatsapp : branchPhone,
+        };
+    }
+
+    /// <summary>Türkiye cep numarası: 05xx / +90 5xx / 5xx (10 hane, 5 ile başlar). Sabit hatta WhatsApp olmaz.</summary>
+    public static bool IsTurkishMobile(string? phone)
+    {
+        string normalized = TurkishPhone.Normalize(phone);
+        return normalized.Length == TurkishPhone.NormalizedLength && normalized[3] == '5';
+    }
 }
 
 // Masa QR karşılama ekranının anahtarları. Admin "QR menü özellikleri" ve müşteri sayfası aynı şekli kullanır.
@@ -203,8 +251,14 @@ public class OrderRequestDto
 
 public class OrderRequestItemDto
 {
-    public Guid ProductId { get; set; }
+    /// <summary>"product" ya da "setMenu" (CartLineInput.ProductKind / SetMenuKind).</summary>
+    public string Kind { get; set; } = "product";
+    public Guid? ProductId { get; set; }
+    public Guid? SetMenuId { get; set; }
+    /// <summary>Ürünün ya da menünün adı.</summary>
     public string ProductName { get; set; } = string.Empty;
+    /// <summary>Menü kaleminde seçilen ürünlerin adları (seçimli bölümler; ek ücret varsa "(+₺10)"); ürün kaleminde boş.</summary>
+    public List<string> Selections { get; set; } = [];
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public string Note { get; set; } = string.Empty;

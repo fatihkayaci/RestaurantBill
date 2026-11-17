@@ -150,6 +150,127 @@ public class SiteContentHandlerTests : ApplicationTestBase
     }
 
     [Fact]
+    public void Validator_HiddenFaqs_RejectsBadKeysAndTooMany_AcceptsSlugsAndNull()
+    {
+        var validator = new UpdateBranchSiteCommandValidator();
+
+        var bad = validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = ["rezervasyon", "Ödeme yolu!", new string('a', 41)] });
+        bad.ShouldHaveValidationErrorFor("HiddenFaqs[1]");
+        bad.ShouldHaveValidationErrorFor("HiddenFaqs[2]");
+        bad.ShouldNotHaveValidationErrorFor("HiddenFaqs[0]");
+
+        var many = validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = [.. Enumerable.Range(0, SiteContent.HiddenFaqsMax + 1).Select(i => $"soru-{i}")] });
+        many.ShouldHaveValidationErrorFor("HiddenFaqs.Count");
+
+        validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = ["rezervasyon-sorgula", "otopark", "teslimat-bolgeleri"] }).ShouldNotHaveAnyValidationErrors();
+        validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = null }).ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
+    [InlineData("pembe")]
+    [InlineData("tema2")]
+    [InlineData("renkli-sade")]
+    public void Validator_Design_RejectsUnknownKey(string design)
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Design = design })
+            .ShouldHaveValidationErrorFor(x => x.Design);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("renkli")]
+    [InlineData("sade")]
+    [InlineData(" Sade ")]
+    [InlineData("elit")]
+    [InlineData(" ELIT ")]
+    public void Validator_Design_AcceptsKnownEmptyAndNull(string? design)
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Design = design })
+            .ShouldNotHaveAnyValidationErrors();
+
+    [Fact]
+    public async Task Update_Design_NormalizedAndKeptWhenOldFormOmitsIt()
+    {
+        await SeedAsync();
+        UpdateBranchSiteCommand command = FullCommand(_salon.Id);
+        command.Design = " SADE ";
+        var first = await UpdateAsync(command);
+        Assert.True(first.IsSuccess, first.Error);
+        Assert.Equal("sade", first.Value!.Design);
+
+        // Eski form alanı göndermez (null): tasarım korunur.
+        command.Design = null;
+        var second = await UpdateAsync(command);
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.Equal("sade", second.Value!.Design);
+
+        var site = await new GetPublicSiteQueryHandler(Db, _tenant, Cdn).Handle(new GetPublicSiteQuery(), CancellationToken.None);
+        Assert.True(site.IsSuccess, site.Error);
+        Assert.Equal("sade", site.Value!.Site.Design);
+
+        // Boş = varsayılana (renkli) döner.
+        command.Design = "";
+        var third = await UpdateAsync(command);
+        Assert.True(third.IsSuccess, third.Error);
+        Assert.Equal(string.Empty, third.Value!.Design);
+    }
+
+    [Theory]
+    [InlineData("comic-sans")]
+    [InlineData("playfair")]
+    [InlineData("inter-playfair")]
+    public void Validator_Font_RejectsUnknownKey(string font)
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Font = font })
+            .ShouldHaveValidationErrorFor(x => x.Font);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("fraunces-manrope")]
+    [InlineData("instrument-manrope")]
+    [InlineData("bodoni-montserrat")]
+    [InlineData("playfair-inter")]
+    [InlineData("dmserif-dmsans")]
+    [InlineData("cormorant-lato")]
+    [InlineData(" Grotesk-Inter ")]
+    public void Validator_Font_AcceptsKnownEmptyAndNull(string? font)
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Font = font })
+            .ShouldNotHaveAnyValidationErrors();
+
+    [Fact]
+    public void Validator_AcceptsNewAmenityKeys()
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Amenities = ["bebek-sandalyesi", "aile-salonu", "sigara-alani", "ozel-gun"] })
+            .ShouldNotHaveAnyValidationErrors();
+
+    [Fact]
+    public async Task Update_NewAmenities_KeptInFixedOrder_AndOldFormKeepsHiddenFaqs()
+    {
+        await SeedAsync();
+        UpdateBranchSiteCommand command = FullCommand(_salon.Id);
+        command.Amenities = ["ozel-gun", "otopark", "bebek-sandalyesi", "sigara-alani", "aile-salonu"];
+        command.HiddenFaqs = ["Otopark", "odeme", "otopark"];
+
+        var first = await UpdateAsync(command);
+        Assert.True(first.IsSuccess, first.Error);
+        Assert.Equal(["otopark", "bebek-sandalyesi", "aile-salonu", "sigara-alani", "ozel-gun"], first.Value!.Amenities);
+        // Küçük harfe çevrilir, tekrar atılır, sıra korunur.
+        Assert.Equal(["otopark", "odeme"], first.Value.HiddenFaqs);
+
+        // Eski form alanı göndermez (null): gizlenenler korunur.
+        command.HiddenFaqs = null;
+        var second = await UpdateAsync(command);
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.Equal(["otopark", "odeme"], second.Value!.HiddenFaqs);
+
+        var site = await new GetPublicSiteQueryHandler(Db, _tenant, Cdn).Handle(new GetPublicSiteQuery(), CancellationToken.None);
+        Assert.True(site.IsSuccess, site.Error);
+        Assert.Equal(["otopark", "odeme"], site.Value!.Site.HiddenFaqs);
+    }
+
+    [Fact]
     public void Validator_AcceptsEmptyCommand()
         => new UpdateBranchSiteCommandValidator().TestValidate(new UpdateBranchSiteCommand()).ShouldNotHaveAnyValidationErrors();
 

@@ -217,6 +217,10 @@ export interface DeliveryTracking {
     accentColor?: string;
     /** Sitenin hazır renk teması; boş = varsayılan. */
     theme?: string;
+    /** Sitenin tasarımı ("renkli" | "sade"); boş = renkli. */
+    design?: string;
+    /** Sitenin yazı tipi çifti; boş = tasarımın kendi yazı tipi. */
+    font?: string;
     coverImageUrl?: string;
     /** Restoranın onayladığı an. */
     acceptedAt?: string | null;

@@ -21,15 +21,19 @@ import DeliveryMenu from './delivery/DeliveryMenu';
 import DeliverySetMenuSheet from './delivery/DeliverySetMenuSheet';
 import DeliveryCheckout from './delivery/DeliveryCheckout';
 import Sheet from './delivery/Sheet';
-import { customerRootStyle } from './customerTheme';
+import { customerFontsHref, customerRootStyle } from './customerTheme';
 import type { PublicSite } from '@/features/customerSite/types';
 import { GlassStatusPill } from './site/SiteCards';
-import { FlowSiteHeader, HeaderSpacer } from './site/SiteFrame';
-import { FONTS_HREF, serif, siteCardDark } from './site/siteParts';
-import { SITE_FONTS_HREF, glass, headingFont, telHref } from './site/siteTheme';
+import { FlowSiteHeader } from './site/SiteFrame';
+import { serif, siteCardDark } from './site/siteParts';
+import { headingFont, resolveDesign, telHref } from './site/siteTheme';
+import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import { normalizeSite } from './site/useSite';
 
 const QUOTE_DEBOUNCE_MS = 400;
+
+/** Sağdaki zeytin "Sepetiniz" özeti: içindeki ortak parçalar (satırlar, toplamlar) krem yazıyla okunsun diye yerel renkler. */
+const summaryTone = '[--site-text:#FBF4E8] [--site-sub:#D4CBB6] [--site-muted:#D4CBB6] [--site-border:rgba(243,231,211,0.15)] [--site-border-strong:rgba(243,231,211,0.3)] [--site-raised:rgba(243,231,211,0.1)] [--site-bg:rgba(243,231,211,0.1)] [--site-qty-bg:rgba(243,231,211,0.12)] [--site-qty-minus:#FBF4E8] [--site-qty-plus:var(--site-mustard)] [--site-qty-plus-text:#24180F]';
 
 function timeOfDay(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -72,10 +76,14 @@ export default function DeliveryOrderPage() {
     // Sitenin bilgisi: üst menü (FlowSiteHeader), tema, kapak. Alınamazsa menü yerine kapakta geri bağlantısı çizilir.
     const [siteData, setSiteData] = useState<PublicSite | null>(null);
     const [siteFailed, setSiteFailed] = useState(false);
+    // Sade tasarımda menü kutusu beyaz: sağdaki sepet özeti krem yazılı zeytin kutu değil, beyaz kutu olur.
+    const sadeDesign = resolveDesign(siteData?.site.design) === 'sade';
     const site = siteData && {
         name: siteData.companyName || siteData.branchName,
         accent: siteData.site.accentColor,
         theme: siteData.site.theme,
+        design: siteData.site.design,
+        font: siteData.site.font,
         cover: siteData.site.coverImageUrl,
         place: [siteData.district, siteData.city].filter(Boolean).join(', '),
     };
@@ -234,9 +242,11 @@ export default function DeliveryOrderPage() {
     // Üst menü koyu kapağın üstünde durur; kapağı olmayan hata ekranında çizilmez (orada "Ana sayfa" bağlantısı var).
     const nav = !siteFailed;
     const root = (children: ReactNode, withNav = true) => (
-        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme })} className="min-h-screen overflow-x-clip bg-[var(--site-bg)]">
-            <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
-            <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
+        // Elit: köşesiz, ince serif giydirme (rb-el-flow); düzen ve mantık aynı.
+        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme, design: site?.design, font: site?.font })}
+            className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)]', resolveDesign(site?.design) === 'elit' && 'rb-el-flow')}>
+            <EliteFlowStyle design={site?.design} />
+            <link rel="stylesheet" href={customerFontsHref(site)} precedence="default" />
             {withNav && siteData && <FlowSiteHeader site={siteData} current="siparis" />}
             {children}
         </div>
@@ -258,7 +268,7 @@ export default function DeliveryOrderPage() {
     }
 
     if (!data) {
-        return root(<LoadingSkeleton nav={nav} />);
+        return root(<LoadingSkeleton />);
     }
 
     const restaurant = site?.name || data.branchName;
@@ -268,8 +278,8 @@ export default function DeliveryOrderPage() {
         return root(
             <main className="min-h-screen pb-12">
                 <Hero nav={nav} restaurant={restaurant} cover={site?.cover} eyebrow={['Paket sipariş', site?.place].filter(Boolean).join(' · ')} />
-                <div className="relative mx-auto -mt-6 max-w-xl px-4">
-                    <div className="rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] p-4 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.25)] md:p-5">
+                <div className="relative mx-auto max-w-xl px-2 sm:px-4">
+                    <div className="rounded-[24px] bg-[var(--site-card)] p-5 md:rounded-[32px] md:p-8">
                         <h2 className={cn(headingFont, 'text-2xl font-bold')}>Hangi şubeden sipariş vermek istersiniz?</h2>
                         <ul className="mt-4 flex flex-col gap-2.5">
                             {data.branches.map(b => (
@@ -340,17 +350,17 @@ export default function DeliveryOrderPage() {
                 restaurant={restaurant}
                 cover={site?.cover}
                 eyebrow={['Paket sipariş', zone?.name ?? (multiBranch ? data.branchName : site?.place)].filter(Boolean).join(' · ')}
-                status={<GlassStatusPill open={data.state === 'open'}>{pillText}</GlassStatusPill>}
+                status={<GlassStatusPill tone="light" open={data.state === 'open'} className="border-0">{pillText}</GlassStatusPill>}
                 action={multiBranch ? (
                     <button type="button" onClick={() => setPickingBranch(true)}
-                        className={cn(glass, 'flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25')}>
+                        className="flex h-11 items-center gap-1.5 rounded-full bg-[var(--site-card)] px-4 text-sm font-bold text-[var(--site-text)] transition-opacity hover:opacity-85">
                         <Store className="h-4 w-4" aria-hidden="true" />Şube değiştir
                     </button>
                 ) : null}
             />
 
-            <div className="relative mx-auto -mt-6 max-w-6xl px-4 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8">
-                <div className="min-w-0">
+            <div className="relative mx-auto max-w-[1408px] px-2 sm:px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-4">
+                <div className="min-w-0 rounded-[24px] bg-[var(--site-card)] p-4 sm:p-8 md:rounded-[32px] lg:p-12">
                     <div className="flex flex-col gap-3">
                         {data.state !== 'disabled' && (
                             <ZoneCard zones={data.zones} zone={zone} onPick={() => setZonePickerOpen(true)} />
@@ -397,28 +407,29 @@ export default function DeliveryOrderPage() {
 
                 {/* Masaüstü: sağda yapışkan sepet. Telefonda yerine alttaki sepet çubuğu ve pencere. */}
                 {data.state !== 'disabled' && (
-                    <aside aria-label="Sepetiniz" className="sticky top-4 mt-0 hidden max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] shadow-[0_12px_32px_-16px_rgba(0,0,0,0.25)] lg:flex">
-                        <div className="flex items-center justify-between gap-3 border-b border-[var(--site-border)] px-5 py-4">
-                            <h2 className={cn(headingFont, 'text-2xl font-bold')}>Sepetiniz</h2>
-                            {count > 0 && <span className="rounded-full bg-[var(--site-raised)] px-2.5 py-1 text-sm font-semibold tabular-nums">{count} ürün</span>}
+                    <aside aria-label="Sepetiniz" className={cn(sadeDesign ? 'border border-[var(--site-border)] bg-[var(--site-card)]' : cn(summaryTone, 'bg-[var(--site-menu-box)]'),
+                        'sticky top-4 mt-0 hidden max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[32px] text-[var(--site-text)] lg:flex')}>
+                        <div className="flex items-center justify-between gap-3 px-7 pb-3 pt-7">
+                            <h2 className={cn(headingFont, 'text-[38px] leading-none')}>Sepetiniz</h2>
+                            {count > 0 && <span className="rounded-full bg-[var(--site-mustard)] px-2.5 py-1 text-sm font-extrabold tabular-nums text-[#24180F]">{count} ürün</span>}
                         </div>
-                        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">
+                        <div className="min-h-0 flex-1 overflow-y-auto px-7 py-2">
                             {lines.length === 0 ? <EmptyCart /> : cartLines}
                         </div>
-                        {lines.length > 0 && <div className="border-t border-[var(--site-border)] p-4">{cartTotals}</div>}
+                        {lines.length > 0 && <div className="border-t border-dashed border-[var(--site-border-strong)] px-7 pb-7 pt-4">{cartTotals}</div>}
                     </aside>
                 )}
             </div>
 
             {count > 0 && (
-                <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--site-border)] bg-[rgba(255,255,255,0.95)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-[14px] lg:hidden">
+                <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--site-border)] bg-[color-mix(in_srgb,var(--site-bg)_95%,transparent)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-[14px] lg:hidden">
                     <div className="mx-auto max-w-3xl">
                         {minimum && <MinimumProgress {...minimum} className="mb-2.5" />}
                         {checkoutHint && <p className="mb-2 text-center text-[13px] font-medium text-[var(--site-muted)]">{checkoutHint}</p>}
                         <button type="button" onClick={() => setCartOpen(true)}
-                            className="flex h-14 w-full items-center justify-between gap-3 rounded-full bg-[var(--site-accent)] pl-2 pr-6 text-[var(--site-on-accent)] shadow-[0_10px_24px_-10px_rgba(0,0,0,0.45)] transition-opacity hover:opacity-90">
+                            className="flex h-14 w-full items-center justify-between gap-3 rounded-full bg-[var(--site-paper)] pl-2 pr-6 text-[var(--site-on-paper)] shadow-[0_10px_24px_-10px_rgba(0,0,0,0.45)] transition-opacity hover:opacity-90">
                             <span className="flex items-center gap-3 text-base font-semibold">
-                                <span className="flex h-10 min-w-10 items-center justify-center rounded-full bg-white/20 px-2 text-base font-bold tabular-nums">{count}</span>
+                                <span className="flex h-10 min-w-10 items-center justify-center rounded-full bg-[var(--site-mustard)] px-2 text-base font-extrabold tabular-nums text-[#24180F]">{count}</span>
                                 Sepete git
                             </span>
                             <span className={cn(headingFont, 'text-lg font-bold tabular-nums')}>{formatPrice(total)} ₺</span>
@@ -465,40 +476,44 @@ export default function DeliveryOrderPage() {
     );
 }
 
+/** Sipariş adımları (bilgi amaçlı): Sepet → Teslimat → Ödeme → Onay; bu sayfa ilk adımdır. */
+const ORDER_STEPS = ['Sepet', 'Teslimat', 'Ödeme', 'Onay'];
+
 /**
- * Sayfanın başı (sitenin alt sayfalarındaki kapak gibi): kapak fotoğrafı (yoksa sitenin koyu zemini), durum hapı ve sitenin
- * serif yazısıyla ad. `nav` ise üstte sitenin menüsü (FlowSiteHeader) için boşluk bırakılır; değilse (site bilgisi
- * alınamadı) solda ana sayfaya geri bağlantısı çizilir.
+ * Sayfanın başı (Renkli: kum zeminde başlık satırı): ana sayfaya dönüş, büyük "Paket sipariş" başlığı, restoran ve mahalle
+ * satırı, durum hapı ve sağda adımlar. `nav` yoksa (site bilgisi alınamadı) yalnız dönüş bağlantısı ve başlık.
  */
-function Hero({ restaurant, eyebrow, cover, action, status, nav }: {
+function Hero({ restaurant, eyebrow, action, status, nav }: {
     restaurant: string; eyebrow: string; cover?: string; action?: ReactNode; status?: ReactNode; nav: boolean;
 }) {
-    const topRow = !nav || !!action;
-    const gap = topRow ? 'mt-6 md:mt-10' : 'mt-4 md:mt-8';
     return (
-        <header className="relative overflow-hidden bg-[var(--site-ink)] text-white">
-            {cover && <img src={cover} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />}
-            {cover && <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-[rgba(20,16,12,0.5)] via-[rgba(20,16,12,0.55)] to-[rgba(20,16,12,0.85)]" />}
-            {nav && <HeaderSpacer />}
-            <div className={cn('relative mx-auto max-w-6xl px-4 pb-12 md:px-6 md:pb-16', nav ? 'pt-2' : 'pt-4 md:pt-6')}>
-                {topRow && (
-                    <div className="flex items-center justify-between gap-3">
-                        {!nav && (
-                            <Link to="/" aria-label="Restoranın ana sayfası"
-                                className={cn(glass, 'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors hover:bg-white/25')}>
-                                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-                            </Link>
-                        )}
-                        {action && <div className="ml-auto">{action}</div>}
-                    </div>
-                )}
-                {status && <div className={cn('flex', gap)}>{status}</div>}
-                <p className={cn('flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.22em] text-white/80', status ? 'mt-4' : gap)}>
-                    <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />{eyebrow}
-                </p>
-                <h1 className={cn(serif, 'm-0 mt-1 break-words text-[48px] italic leading-[0.95] tracking-[-0.02em] md:text-[80px]')}>
-                    {restaurant}
-                </h1>
+        <header className="mx-auto max-w-[1408px] px-3 pb-4 pt-5 sm:px-6 md:pb-6 md:pt-7">
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+                <div className="flex min-w-0 flex-col gap-2.5">
+                    <Link to="/" className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-bold text-[var(--site-sub)] no-underline hover:text-[var(--site-text)]">
+                        <ArrowLeft className="h-4 w-4" aria-hidden="true" />{nav ? 'Ana sayfa' : restaurant}
+                    </Link>
+                    <p className="m-0 flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-[0.22em] text-[var(--site-accent-text)]">
+                        <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />{eyebrow}
+                    </p>
+                    <h1 className={cn(serif, 'm-0 break-words text-[52px] font-extrabold leading-[0.9] md:text-[clamp(60px,6.4vw,100px)]')}>
+                        Paket <em className="rb-accent font-semibold italic text-[var(--site-accent-text)]">sipariş</em>
+                    </h1>
+                    {status && <div className="mt-1 flex flex-wrap items-center gap-2">{status}{action}</div>}
+                    {!status && action}
+                </div>
+                <ol aria-label="Sipariş adımları" className="m-0 hidden list-none flex-wrap items-center gap-2.5 p-0 text-sm font-bold md:flex">
+                    {ORDER_STEPS.map((label, i) => (
+                        <li key={label} className="flex items-center gap-2.5" aria-current={i === 0 ? 'step' : undefined}>
+                            {i > 0 && <span aria-hidden="true" className="h-px w-7 bg-[var(--site-border-strong)]" />}
+                            <span className={cn('inline-flex items-center gap-2', i > 0 && 'text-[var(--site-muted)]')}>
+                                <span aria-hidden="true" className={cn('flex h-7 w-7 items-center justify-center rounded-full text-[13px]',
+                                    i === 0 ? 'bg-[var(--site-accent-text)] text-[var(--site-card)]' : 'border border-[var(--site-border-strong)]')}>{i === ORDER_STEPS.length - 1 ? '✓' : i + 1}</span>
+                                {label}
+                            </span>
+                        </li>
+                    ))}
+                </ol>
             </div>
         </header>
     );
@@ -524,7 +539,7 @@ function zoneFacts(zone: DeliveryZone) {
     };
 }
 
-const zoneShell = 'rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] p-4 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.25)] md:p-5';
+const zoneShell = 'rounded-[20px] bg-[var(--site-bg)] p-4 md:p-5';
 
 /** Mahalle kartı: seçimden önce "Mahallenizi seçin", sonra süre, ücret ve en az tutar hep görünür. */
 function ZoneCard({ zones, zone, onPick }: { zones: DeliveryZone[]; zone: DeliveryZone | null; onPick: () => void }) {
@@ -713,16 +728,16 @@ function CartLines({ lines, quote, onChange, onNote }: {
                     <li key={line.key} className="py-3">
                         <div className="flex items-center gap-3">
                             <div className="min-w-0 flex-1">
-                                <p className="text-[15px] font-semibold leading-snug">{line.name}</p>
+                                <p className={cn(serif, 'm-0 text-[19px] font-semibold leading-tight')}>{line.name}</p>
                                 {line.selectionNames.length > 0 && <p className="text-sm text-[var(--site-sub)]">{line.selectionNames.join(', ')}</p>}
-                                <p className="text-sm font-semibold tabular-nums">{formatPrice(quoted?.lineTotal ?? line.unitPrice * line.quantity)} ₺</p>
+                                <p className="text-sm font-extrabold tabular-nums">{formatPrice(quoted?.lineTotal ?? line.unitPrice * line.quantity)} ₺</p>
                             </div>
-                            <div className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--site-raised)] p-0.5">
+                            <div className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--site-qty-bg,var(--site-bg))] p-1">
                                 <button type="button" onClick={() => onChange(line.key, -1)} aria-label={`${line.name} bir azalt`}
-                                    className="flex h-11 w-11 items-center justify-center rounded-full"><Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" /></button>
+                                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--site-qty-minus,var(--site-card))] text-[#24180F]"><Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" /></button>
                                 <span className="min-w-5 text-center text-base font-bold tabular-nums">{line.quantity}</span>
                                 <button type="button" onClick={() => onChange(line.key, 1)} aria-label={`${line.name} bir artır`}
-                                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--site-accent)] text-[var(--site-on-accent)]"><Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" /></button>
+                                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--site-qty-plus,var(--site-paper))] text-[var(--site-qty-plus-text,var(--site-on-paper))]"><Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" /></button>
                             </div>
                         </div>
                         {line.kind === 'product' && (
@@ -732,7 +747,7 @@ function CartLines({ lines, quote, onChange, onNote }: {
                                 maxLength={300}
                                 placeholder="Not ekle (ör. acısız)"
                                 aria-label={`${line.name} için not`}
-                                className="mt-2 h-11 w-full rounded-xl border border-[var(--site-border-strong)] bg-[var(--site-bg)] px-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]"
+                                className="mt-2 h-11 w-full rounded-2xl border border-[var(--site-border)] bg-[var(--site-bg)] px-3.5 text-[15px] text-[var(--site-text)] placeholder:text-[var(--site-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]"
                             />
                         )}
                         {line.kind === 'setMenu' && line.note && <p className="mt-1 text-sm text-[var(--site-sub)]">Not: {line.note}</p>}
@@ -753,7 +768,7 @@ function CartTotals({ subtotal, fee, total, zoneName, minimum, hint, hintIsError
             <dl className="mb-3 space-y-1 text-[15px]">
                 <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Ara toplam</dt><dd className="tabular-nums">{formatPrice(subtotal)} ₺</dd></div>
                 <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Teslimat{zoneName ? ` (${zoneName})` : ''}</dt><dd className="tabular-nums">{zoneName ? `${formatPrice(fee)} ₺` : '—'}</dd></div>
-                <div className={cn(headingFont, 'flex justify-between pt-1 text-xl font-bold')}><dt>Toplam</dt><dd className="tabular-nums">{formatPrice(total)} ₺</dd></div>
+                <div className="flex items-baseline justify-between border-t border-dashed border-[var(--site-border-strong)] pt-3"><dt className="font-bold">Toplam</dt><dd className={cn(headingFont, 'text-[36px] font-semibold! leading-none tabular-nums')}>{formatPrice(total)} ₺</dd></div>
             </dl>
             {minimum && <MinimumProgress {...minimum} className="mb-3" />}
             {hint && (
@@ -763,7 +778,7 @@ function CartTotals({ subtotal, fee, total, zoneName, minimum, hint, hintIsError
                 </p>
             )}
             <button type="button" disabled={!canCheckout} onClick={onCheckout}
-                className="flex h-14 w-full items-center justify-center rounded-full bg-[var(--site-accent)] text-base font-semibold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:opacity-50">
+                className="flex h-[60px] w-full items-center justify-center rounded-full bg-[var(--site-accent)] text-base font-extrabold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:opacity-50">
                 Devam et
             </button>
         </>
@@ -771,24 +786,20 @@ function CartTotals({ subtotal, fee, total, zoneName, minimum, hint, hintIsError
 }
 
 /** Yüklenirken sayfanın iskeleti: başlık, mahalle kutusu, kategori şeridi ve ürün kartları (masaüstünde sepet). */
-function LoadingSkeleton({ nav }: { nav: boolean }) {
+function LoadingSkeleton() {
     const block = 'animate-pulse rounded-2xl bg-[var(--site-raised)]';
     return (
         <main className="min-h-screen pb-12" aria-busy="true" aria-label="Sipariş sayfası yükleniyor">
-            <div className="bg-[var(--site-ink)]">
-                {nav && <HeaderSpacer />}
-                <div className={cn('mx-auto max-w-6xl px-4 pb-12 md:px-6 md:pb-16', nav ? 'pt-2' : 'pt-4 md:pt-6')}>
-                    {!nav && <div className="h-11 w-11 animate-pulse rounded-full bg-white/15" />}
-                    <div className="mt-6 h-3 w-24 animate-pulse rounded bg-white/15 md:mt-10" />
-                    <div className="mt-3 h-10 w-64 max-w-full animate-pulse rounded-xl bg-white/15 md:h-14 md:w-96" />
-                    <div className="mt-5 flex gap-2">
-                        {[120, 96, 80].map(w => <div key={w} style={{ width: w }} className="h-8 animate-pulse rounded-full bg-white/15" />)}
-                    </div>
+            <div className="mx-auto max-w-[1408px] px-3 pb-6 pt-7 sm:px-6">
+                <div className="h-4 w-24 animate-pulse rounded bg-[var(--site-raised)]" />
+                <div className="mt-4 h-14 w-72 max-w-full animate-pulse rounded-xl bg-[var(--site-raised)] md:h-20 md:w-[28rem]" />
+                <div className="mt-4 flex gap-2">
+                    {[120, 96].map(w => <div key={w} style={{ width: w }} className="h-9 animate-pulse rounded-full bg-[var(--site-raised)]" />)}
                 </div>
             </div>
-            <div className="relative mx-auto -mt-6 max-w-6xl px-4 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
+            <div className="relative mx-auto max-w-[1408px] px-2 sm:px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-4">
                 <div>
-                    <div className="h-[118px] rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] p-4">
+                    <div className="h-[118px] rounded-[22px] bg-[var(--site-card)] p-4">
                         <div className={cn(block, 'h-5 w-32')} />
                         <div className={cn(block, 'mt-3 h-12 rounded-xl')} />
                     </div>

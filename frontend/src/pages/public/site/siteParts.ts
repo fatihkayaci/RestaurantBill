@@ -5,48 +5,61 @@ import { fullAddress, hoursText } from './useSite';
 // Restoran sitesinin ortak parçaları: yazı tipleri, sınıf dizileri, hareket CSS'i ve hangi sayfanın gösterileceği
 // (restoranın girmediği veri uydurulmaz). Bütün renkler temanın CSS değişkenlerinden (siteTheme.ts → siteRootStyle).
 
-export const FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap';
-export const serif = "font-[family-name:'Instrument_Serif',serif] font-normal";
-export const sans = "font-[family-name:'Inter',system-ui,sans-serif]";
-export const eyebrow = 'text-xs font-medium uppercase tracking-[0.28em] text-[var(--site-muted)]';
+/** Başlık yazı tipi: tasarımın serif'i (`--site-serif`; Renkli: Fraunces kalın, sıkı aralık; Sade: Instrument Serif,
+ *  tek ağırlık — kök stil sahte kalını kapatır). */
+export const serif = 'font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] font-(--site-serif-weight,700) tracking-[var(--site-serif-tracking,-0.02em)]';
+/** Gövde yazı tipi: tasarımın `--site-sans`'ı (Renkli ve Sade: Manrope; Elit: Montserrat). */
+export const sans = "font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)]";
+/** Bölüm üst satırı (Tema 2): küçük, aralıklı büyük harf, vurgu yazısı renginde. */
+export const eyebrow = 'text-xs font-bold uppercase tracking-[0.28em] text-[var(--site-accent-text)]';
+/** Tema 2 bölüm başlığı (serif, büyük); italik parça vurgu yazısı renginde (.rb-site kuralı). */
+export const sectionTitle = "font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] font-(--site-serif-weight,700) tracking-[var(--site-serif-tracking,-0.02em)] m-0 text-[48px] leading-[0.95] md:text-[clamp(48px,5.4vw,80px)]";
+/** Bölümlerin ortak genişliği ve kenar boşluğu (tasarım: 1320 px, 32 px; telefonda 16 px). */
+export const sectionWrap = 'mx-auto w-full max-w-[1320px] px-4 sm:px-8';
 export const line = 'border-[var(--site-line)]';
-export const footLabel = 'text-xs font-medium uppercase tracking-[0.2em] text-[var(--site-muted)]';
+export const footLabel = 'text-xs font-bold uppercase tracking-[0.2em] text-[var(--site-muted)]';
 /** İkincil gövde yazısı. */
 export const subText = 'text-[var(--site-sub)]';
 /** Üstüne gelince soldan sağa çizilen alt çizgi. */
 export const underlineLink = 'bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-[position:0_100%] bg-no-repeat pb-0.5 transition-[background-size] duration-300 hover:bg-[length:100%_1px] focus-visible:bg-[length:100%_1px] motion-reduce:transition-none';
 /** "Devamı →" bağlantıları: alt çizgili, ok üstüne gelince kayar. */
-export const moreLink = 'group inline-flex items-center gap-2 self-start border-b border-[var(--site-text)] pb-1 text-[13px] font-medium uppercase tracking-[0.16em] text-[var(--site-text)]';
+export const moreLink = 'group inline-flex min-h-11 items-center gap-2 self-start text-[15px] font-bold text-[var(--site-text)] underline-offset-4 hover:underline';
 export const moreArrow = 'inline-block transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none';
 
 // ── Kart dili (SiteCards.tsx bileşenleriyle birlikte; bütün alt sayfalar ve ana sayfa kullanır) ──
 /** Yuvarlak köşeli kart yüzeyi (bilgi kartları). Büyük kartlarda `siteCardLg`. */
-export const siteCard = 'rounded-[20px] border border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)]';
+export const siteCard = 'rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)]';
 /** Büyük kart yüzeyi (form, uzun içerik): daha geniş köşe. */
-export const siteCardLg = 'rounded-[20px] border border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[24px]';
-/** Koyu kart yüzeyi (rezervasyon gibi çağrılar). */
-export const siteCardDark = 'rounded-[20px] bg-[var(--site-paper)] text-[var(--site-on-paper)]';
+export const siteCardLg = 'rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[28px]';
+/** Koyu kart yüzeyi (sepet, rezervasyon gibi çağrılar). İçinde vurgu yazısı koyu zemine göre açılır. */
+export const siteCardDark = 'rounded-[24px] bg-[var(--site-paper)] text-[var(--site-on-paper)] [--site-accent-text:var(--site-accent-on-dark)]';
 
 /** Kart etiketi: küçük, aralıklı büyük harf. */
-export const cardLabel = 'text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--site-muted)] md:text-xs md:tracking-[0.2em]';
+export const cardLabel = 'text-xs font-bold uppercase tracking-[0.16em] text-[var(--site-muted)]';
 /** Kartın büyük değeri (telefon, saat, kullanıcı adı): serif. */
 export const cardValue = cn(serif, 'text-[26px] leading-none md:text-[32px]');
 /** Kart içindeki metin bağlantısı ("Yol tarifi al →", "Menüyü gör →"). */
-export const cardLink = 'self-start text-sm font-semibold text-[var(--site-text)] underline underline-offset-4 transition-colors hover:text-[var(--site-accent-text)]';
+export const cardLink = 'inline-flex min-h-11 items-center self-start text-[15px] font-bold text-[var(--site-text)] underline underline-offset-4 transition-colors hover:text-[var(--site-accent-text)]';
 
-const buttonBase = 'inline-flex h-11 items-center justify-center gap-2 self-start whitespace-nowrap rounded-full px-[18px] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-accent)] focus-visible:ring-offset-2';
+const buttonBase = 'inline-flex h-11 items-center justify-center gap-2 self-start whitespace-nowrap rounded-full px-5 text-sm font-bold no-underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-text)] focus-visible:ring-offset-2';
 /** Kart düğmeleri: `outline` açık kartta ikincil, `dark` haritadaki koyu hap, `accent` vurgu renginde ana eylem, `ghost` koyu kartta ikincil. */
 export const cardButton = {
-    outline: cn(buttonBase, 'border border-[var(--site-text)] text-[var(--site-text)] hover:bg-[var(--site-text)] hover:text-[var(--site-bg)]'),
+    outline: cn(buttonBase, 'border border-[var(--site-border-strong)] text-[var(--site-text)] hover:border-[var(--site-text)]'),
     dark: cn(buttonBase, 'bg-[var(--site-paper)] text-[var(--site-on-paper)] hover:opacity-90'),
-    accent: cn(buttonBase, 'bg-[var(--site-accent)] px-5 font-bold text-[var(--site-on-accent)] hover:opacity-90'),
-    ghost: cn(buttonBase, 'border border-white/40 text-[var(--site-on-paper)] hover:bg-white/10'),
+    accent: cn(buttonBase, 'bg-[var(--site-accent)] font-extrabold text-[var(--site-on-accent)] hover:opacity-90'),
+    ghost: cn(buttonBase, 'border border-[var(--site-paper-line-strong)] text-[var(--site-on-paper)] hover:bg-white/10'),
+    /** Koyu panelin ana düğmesi (açık zemin, koyu yazı). */
+    light: cn(buttonBase, 'bg-[var(--site-on-paper)] font-extrabold text-[var(--site-paper)] hover:opacity-90'),
 } as const;
 
-/** Koyu kapak üstündeki cam düğme. */
-export const glassButton = 'inline-flex h-[52px] items-center justify-center whitespace-nowrap rounded-full border border-white/45 bg-white/15 px-6 text-[15px] font-semibold text-white backdrop-blur-[12px] transition-colors hover:bg-white/25';
-/** Koyu kapak üstündeki ana düğme. */
-export const heroAccentButton = 'inline-flex h-[52px] items-center justify-center whitespace-nowrap rounded-full bg-[var(--site-accent)] px-7 text-[15px] font-bold text-[var(--site-on-accent)] transition-opacity hover:opacity-90';
+/** Kapağın ana düğmesi (Tema 2: vurgu renginde büyük hap). */
+export const heroAccentButton = 'inline-flex h-14 items-center justify-center whitespace-nowrap rounded-full bg-[var(--site-accent)] px-[30px] text-base font-extrabold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90';
+/** Kapağın ikincil düğmesi (ince çizgili hap). */
+export const heroOutlineButton = 'inline-flex h-14 items-center justify-center whitespace-nowrap rounded-full border border-[var(--site-border-strong)] px-[30px] text-base font-bold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)]';
+/** Başlıktaki küçük hap (Sepet, Masa ayırt) ve yuvarlak ikon düğmesi. */
+export const headerPill = 'inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[var(--site-border-mid)] px-4 text-sm font-bold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)]';
+export const headerAccentPill = 'inline-flex h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--site-accent)] px-5 text-sm font-extrabold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90';
+export const iconCircle = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--site-border-mid)] text-[var(--site-text)] transition-colors hover:border-[var(--site-text)]';
 
 // Kayan şeritler ve dönen rozet; hareket azaltma tercihinde durur.
 export const MOTION_CSS = `
@@ -56,6 +69,8 @@ export const MOTION_CSS = `
 .rb-kay-yavas{animation:rb-kay 70s linear infinite}
 .rb-don{animation:rb-don 18s linear infinite}
 @media (prefers-reduced-motion: reduce){.rb-kay,.rb-kay-yavas,.rb-don{animation:none}}
+.rb-site :is(h1,h2,h3,blockquote) .italic,.rb-site em.rb-accent{color:var(--site-accent-text);font-weight:600}
+[data-site-design=elit] .rb-site :is(h1,h2,h3,blockquote) .italic,[data-site-design=elit] .rb-site em.rb-accent{color:inherit;font-weight:inherit}
 `;
 
 /** `siparis`: paket sipariş akışı (/siparis ve sipariş takibi); menü listesinde değil, başlığın "Paket sipariş" düğmesi. */
@@ -128,6 +143,10 @@ export const SITE_AMENITIES: { key: string; label: string }[] = [
     { key: 'canli-muzik', label: 'Canlı müzik' },
     { key: 'vejetaryen', label: 'Vejetaryen seçenek' },
     { key: 'kartla-odeme', label: 'Kartla ödeme' },
+    { key: 'bebek-sandalyesi', label: 'Bebek sandalyesi' },
+    { key: 'aile-salonu', label: 'Aile salonu' },
+    { key: 'sigara-alani', label: 'Sigara içilebilir alan' },
+    { key: 'ozel-gun', label: 'Grup ve özel gün organizasyonu' },
 ];
 
 export function amenityLabel(key: string): string | null {
@@ -150,35 +169,32 @@ export function formatRating(value: number): string {
     return value.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
-/** 12 sütunlu ızgarada genişlik sınıfları (lg). Tailwind sınıfları sabit yazılmalı. */
-export const LG_SPAN: Record<number, string> = {
-    3: 'lg:col-span-3', 4: 'lg:col-span-4', 5: 'lg:col-span-5', 6: 'lg:col-span-6',
-    7: 'lg:col-span-7', 8: 'lg:col-span-8', 9: 'lg:col-span-9', 12: 'lg:col-span-12',
-};
+/** Arama için: küçük harf, aksanlar ve Türkçe harfler sadeleşir ("Köfte" → "kofte"). */
+export function foldText(text: string): string {
+    return text.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+/** Sayının okunuşuna göre yönelme eki: 38 → "e" (otuz sekiz → sekize), 30 → "a", 22 → "ye", 0 → "a". */
+export function dativeSuffix(n: number): string {
+    const ones = ['', 'e', 'ye', 'e', 'e', 'e', 'ya', 'ye', 'e', 'a'];
+    const tens = ['a', 'a', 'ye', 'a', 'a', 'ye', 'a', 'e', 'e', 'a'];
+    const v = Math.abs(Math.trunc(n)) % 100;
+    if (v % 10 !== 0) return ones[v % 10];
+    if (v === 0 && n !== 0) return 'e'; // yüz, bin → yüze, bine
+    return tens[v / 10];
+}
 
 /**
- * Bento yerleşimi: istenen genişlikleri (12'lik) satırlara dizer; satırı dolduramayan son kart kalan genişliği alır.
- * Böylece az veride boşluk değil, daha az ama daha geniş kart görünür.
+ * "21:30'a kadar", "22:00'ye kadar", "23:15'e kadar": Türkçe yönelme eki saatin okunuşunun son sözcüğüne göre
+ * (otuz → 'a, yirmi iki → 'ye, on beş → 'e).
  */
-export function packRow<T extends { span: number }>(items: T[]): (T & { width: number })[] {
-    const out: (T & { width: number })[] = [];
-    let row: (T & { width: number })[] = [];
-    let used = 0;
-    const close = () => {
-        if (row.length === 0) return;
-        const last = row[row.length - 1];
-        last.width += 12 - used;
-        out.push(...row);
-        row = [];
-        used = 0;
-    };
-    for (const item of items) {
-        const span = Math.min(12, item.span);
-        if (used + span > 12) close();
-        row.push({ ...item, width: span });
-        used += span;
-        if (used === 12) close();
-    }
-    close();
-    return out;
+export function untilTime(hhmm: string): string {
+    const [h, m] = hhmm.split(':').map(Number);
+    return `${hhmm}'${dativeSuffix(m !== 0 ? m : h)} kadar`;
+}
+
+/** Ürünlerin girilmiş hazırlık sürelerinin ortalaması (dk, yuvarlanmış); hiç süre yoksa null. */
+export function averagePrepMinutes(site: PublicSite): number | null {
+    const preps = site.categories.flatMap(c => c.products).map(p => p.prepMinutes).filter((m): m is number => !!m);
+    return preps.length ? Math.round(preps.reduce((a, b) => a + b, 0) / preps.length) : null;
 }

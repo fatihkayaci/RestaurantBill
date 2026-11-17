@@ -47,5 +47,13 @@ public class OrderRequestItemConfiguration : IEntityTypeConfiguration<OrderReque
             .WithMany()
             .HasForeignKey(i => i.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Menü kalemi: menü silinirse (ürün gibi) talep kalemi de gider.
+        builder.HasOne(i => i.SetMenu)
+            .WithMany()
+            .HasForeignKey(i => i.SetMenuId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(i => i.SelectionsJson).HasColumnType("jsonb").HasDefaultValue("{}");
     }
 }

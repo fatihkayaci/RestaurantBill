@@ -21,11 +21,11 @@ export const EDITOR_TABS = [
 export type EditorTab = typeof EDITOR_TABS[number]['key'];
 
 /**
- * Düzenleyicide sekmesi olan sayfalar: yalnız burada değişen bir şey kalanlar. Menü, İletişim ve Rezervasyon'da kapak
- * dışında düzenlenen bir şey yok (ya da her şeyi başka sekmede/Genel ayarlar'da da var): bütün kapaklar
- * "Sayfa kapakları" sekmesinde. Önizle'de bütün sayfalar sitenin kendi menüsünden açılır.
+ * Düzenleyicide sekmesi olan sayfalar: yalnız burada değişen bir şey kalanlar. Menü ve Rezervasyon'da kapak dışında
+ * düzenlenen bir şey yok: bütün kapaklar "Sayfa kapakları" sekmesinde. İletişim'de "Sık sorulanlar"ın aç/kapa listesi
+ * var. Önizle'de bütün sayfalar sitenin kendi menüsünden açılır.
  */
-export const EDIT_TABS = EDITOR_TABS.filter(t => t.key === 'home' || t.key === 'hakkimizda' || t.key === 'mekan' || t.key === 'kapaklar');
+export const EDIT_TABS = EDITOR_TABS.filter(t => t.key === 'home' || t.key === 'hakkimizda' || t.key === 'mekan' || t.key === 'iletisim' || t.key === 'kapaklar');
 
 export function tabByPath(path: string): EditorTab | null {
     return EDITOR_TABS.find(t => t.path === path)?.key ?? null;
@@ -42,8 +42,9 @@ export function toTexts(d: BranchSite): SiteDraftTexts {
     return {
         headline: d.headline ?? '', tagline: d.tagline ?? '', storyTitle: d.storyTitle ?? '', about: d.about ?? '',
         opensAt: d.opensAt, closesAt: d.closesAt, hoursNote: d.hoursNote ?? '', instagramUrl: d.instagramUrl ?? '',
-        accentColor: d.accentColor ?? '', theme: d.theme ?? '', weeklyHours: d.weeklyHours ?? [],
+        accentColor: d.accentColor ?? '', theme: d.theme ?? '', design: d.design ?? '', font: d.font ?? '', weeklyHours: d.weeklyHours ?? [],
         directionsNote: d.directionsNote ?? '', whatsappPhone: d.whatsappPhone ?? '', amenities: d.amenities ?? [],
+        hiddenFaqs: d.hiddenFaqs ?? [],
         rating: d.rating ?? null, reviewCount: d.reviewCount ?? null, reviewsUrl: d.reviewsUrl ?? '',
         featuredReviews: d.featuredReviews ?? [], founderName: d.founderName ?? '', founderTitle: d.founderTitle ?? '',
         founderQuote: d.founderQuote ?? '', foundedYear: d.foundedYear ?? null, values: d.values ?? [], milestones: d.milestones ?? [],

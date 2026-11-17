@@ -92,11 +92,13 @@ export function normalizeSite(site: PublicSite): PublicSite {
         site: {
             ...(c as BranchSite),
             theme: c.theme ?? '',
+            design: c.design ?? '',
             galleryImageUrls: c.galleryImageUrls ?? [],
             weeklyHours: c.weeklyHours ?? [],
             directionsNote: c.directionsNote ?? '',
             whatsappPhone: c.whatsappPhone ?? '',
             amenities: c.amenities ?? [],
+            hiddenFaqs: c.hiddenFaqs ?? [],
             rating: c.rating ?? null,
             reviewCount: c.reviewCount ?? null,
             reviewsUrl: c.reviewsUrl ?? '',

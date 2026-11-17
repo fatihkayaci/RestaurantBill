@@ -7,25 +7,36 @@ import {
 import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { cn } from '@/lib/utils';
 import {
-    SITE_FONTS_HREF, container, formatDay, formatSitePrice, headingFont, siteRootStyle, wordmarkParts,
+    container, formatDay, formatSitePrice, headingFont, resolveDesign, resolveFont, siteFontsHref, siteRootStyle, wordmarkParts,
 } from './siteTheme';
+import { SiteDesignContext } from './siteDesign';
 
 // Restoran sitesinin ortak parçaları (tasarım: canvas "Restoran Sitesi v2" · Kafe sitesi).
 
-/** Sitenin kökü: temanın renk değişkenleri (`theme` hazır tema anahtarı, `accent` özel vurgu rengi; ikisi de boşsa terracotta). */
-export function SiteShell({ accent, theme, children }: { accent?: string; theme?: string; children: ReactNode }) {
-    // Site açıkken sayfanın tamamı (zemin, bildirimler, pencereler) Inter Tight; personel ekranına dönünce kalkar.
-    // Sınıf sitenin çizildiği belgeye eklenir (admin'deki önizleme çerçevesinde çerçevenin belgesi, admin değil).
+/** Sitenin kökü: tasarımın ve temanın renk değişkenleri (`design` "renkli" | "sade", `theme` hazır tema anahtarı,
+ *  `accent` özel vurgu rengi; boşsa varsayılanlar), tasarımın yazı tipleri ve tasarım bağlamı (useSiteDesign). */
+export function SiteShell({ accent, theme, design, font, children }: {
+    accent?: string; theme?: string; design?: string; font?: string; children: ReactNode;
+}) {
+    const key = resolveDesign(design);
+    const body = resolveFont(font, key).body;
+    // Site açıkken sayfanın tamamı (zemin, bildirimler, pencereler) sitenin gövde yazı tipi; personel ekranına dönünce
+    // kalkar. Sınıf sitenin çizildiği belgeye eklenir (admin'deki önizleme çerçevesinde çerçevenin belgesi, admin değil).
     const ref = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const root = (ref.current?.ownerDocument ?? document).documentElement;
         root.classList.add('restaurant-site');
         return () => root.classList.remove('restaurant-site');
     }, []);
+    useEffect(() => {
+        const root = (ref.current?.ownerDocument ?? document).documentElement;
+        root.style.setProperty('--site-root-sans', body);
+        return () => { root.style.removeProperty('--site-root-sans'); };
+    }, [body]);
     return (
-        <div ref={ref} style={siteRootStyle(accent, theme)} className="flex min-h-screen flex-col text-base leading-normal">
-            <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
-            {children}
+        <div ref={ref} style={siteRootStyle(accent, theme, key, font)} data-site-design={key} className="flex min-h-screen flex-col text-base leading-normal">
+            <link rel="stylesheet" href={siteFontsHref(key, font)} precedence="default" />
+            <SiteDesignContext.Provider value={key}>{children}</SiteDesignContext.Provider>
         </div>
     );
 }
@@ -180,7 +191,8 @@ export function SiteStatus({ error }: { error: string | null }) {
     }
     return (
         <main className="flex-1" aria-busy="true">
-            <div className="h-[440px] animate-pulse bg-[var(--site-hero)] md:h-[560px]" />
+            <div className="h-[68px] border-b border-[var(--site-line)]" />
+            <div className="mx-auto mt-16 h-[260px] w-[min(900px,90%)] animate-pulse rounded-[28px] bg-[var(--site-placeholder)] md:h-[360px]" />
             <div className={cn(container, 'grid grid-cols-2 gap-4 py-12 md:grid-cols-4')}>
                 {[...Array(4)].map((_, i) => <div key={i} className="aspect-square animate-pulse rounded-[22px] bg-[var(--site-raised)]" />)}
             </div>

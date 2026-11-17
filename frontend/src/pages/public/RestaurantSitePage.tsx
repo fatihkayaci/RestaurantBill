@@ -1,73 +1,54 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
-import { canReserveOnline, type PublicProduct, type PublicSite, type ReservationRules } from '@/features/customerSite/types';
+import { canReserveOnline, type PublicProduct, type PublicSite } from '@/features/customerSite/types';
 import type { OnlineSetMenu } from '@/features/delivery/types';
+import { trackingStepIndex } from '@/features/delivery/deliveryStatus';
+import { useActiveDeliveryOrder, useSiteCart, type SiteCart } from '@/features/delivery/useSiteCart';
 import { cn } from '@/lib/utils';
-import { useOnlineOrderingAvailable } from '@/features/delivery/useOnlineOrderingAvailable';
 import { StockImageLabel } from './components/StockImageLabel';
 import { MyReservations, SiteShell, SiteStatus } from './site/SiteChrome';
-import { HeaderSpacer, HeroBackdrop, SitePage } from './site/SiteFrame';
-import { collagePhotos, pickFeatured } from './site/siteMedia';
-import {
-    ClockIcon, CupIcon, HeroStatusPill, HoursBlock, InfoCard, InstagramIcon, MapStub, OpenBadge, PhoneIcon, Stars,
-} from './site/SiteCards';
-import { FeaturedBadge, MenuProductCard } from './site/SiteProductCards';
+import { SitePage } from './site/SiteFrame';
+import { AddButton, PlusIcon } from './site/SiteMenuBoard';
+import { EditorGallery, EditorVisit } from './site/EditorExtras';
 import { SlotsSummary } from './site/SiteSetMenus';
-import { productPhotos, savingLabel, setMenuImage } from './site/setMenuParts';
+import { savingLabel } from './site/setMenuParts';
 import {
-    LG_SPAN, RESERVATION_PATH, cardButton, cardLabel, cardLink, eyebrow, formatRating, glassButton, heroAccentButton, instagramHandle,
-    packRow, reservationHref, serif, siteCard, siteCardDark, sinceYear,
+    RESERVATION_PATH, averagePrepMinutes, cardButton, dativeSuffix, foldText, formatRating, hasAboutPage, productCount,
+    serif, sinceYear, untilTime,
 } from './site/siteParts';
-import { directionsUrl, formatSitePrice, telHref } from './site/siteTheme';
-import { fullAddress, restaurantName, useMyReservations, useSite } from './site/useSite';
+import { formatSitePrice, resolveDesign, resolveFont, splitAccent, telHref } from './site/siteTheme';
+import EliteHome from './site/elite/EliteHome';
+import { useSiteDesign } from './site/siteDesign';
+import { restaurantName, useMyReservations, useSite, weekSchedule } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
-import { SITE_LIMITS, editTarget, useSiteEdit } from './site/siteEditContext';
+import { SITE_LIMITS, editExternal, useSiteEdit, useSitePreview, useSiteWindow } from './site/siteEditContext';
 
-// Restoranın müşteriye açık ana sayfası (tasarım: canvas "Site Sayfaları" · Ana sayfa Öneri B "kart vitrin" + A'nın
-// kolaj kapak kuralı). Kısa kapak (fotoğraf yoksa menü fotoğraflarından kolaj, o da yoksa kategori deseni) ve ilk ekranda
-// saat, konum ve eylemler (Masa ayırt, Paket sipariş, Yol tarifi). Altında bento ızgara: öne çıkan tabak, saat, konum,
-// rezervasyon/paket sipariş, puan, hikâye, hazır menü, menü ve Instagram kartları. Her kart bir alana bağlı: alan boşsa
-// kart çizilmez ve ızgara kalan kartlarla kapanır (az veride boşluk değil, daha az kart). Restoranın girmediği veri uydurulmaz.
+// Restoranın müşteriye açık ana sayfası (tasarım: "Renkli ana sayfa"). Kum zeminde renkli, yuvarlak köşeli kutular:
+// (1) kapak (temanın kapak rengi; fotoğraf varsa sağda, yoksa noktalı desen + iki daire ve italik kelime), süren sipariş
+// hapı, üst satır, dev ad, alt başlık, hardal ve çizgili düğme, krem Google puanı kartı; altta koyu şerit (durum · paket
+// sipariş · hazırlık · en az sipariş). (2) Zeytin "Bugünün menüsü": arama, kategori hapları, krem ürün kartları (online
+// sipariş açıkken + düğmeleri). (3) Hardal başlık kutusu + kaydırılan hazır menüler. (4) Kiremit hikâye kutusu + krem
+// yorumlar. Ardından alt bilgi (Footer B). Verisi olmayan hücre, kutu ya da satır çizilmez.
 
 // Eski rezervasyon adresi (/?bolum=rezervasyon&tarih&saat&kisi) artık /rezervasyon sayfasına yönlenir.
 const LEGACY_VIEW_PARAM = 'bolum';
-/** Menü kartı bu kadar ürüne kadar ürünleri tek tek listeler; fazlasında kategori çipleri ve "Menüden seçmeler". */
-const LIST_ALL_PRODUCTS = 8;
 
-// Dev isim: uzun adlar ekrana sığsın diye harf sayısına göre küçülür (italik serif ≈ 0,42em/harf).
-function fitName(name: string, maxPx: number, widthVw = 88): CSSProperties {
-    const vw = widthVw / (Math.max(3, name.length) * 0.42);
-    return { fontSize: `min(${maxPx}px, ${vw.toFixed(2)}vw)` };
+/** Ana sayfanın açık kutuları: krem, yuvarlak köşe. */
+const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[36px]';
+/** Kapak ve menü kutusunun yazısı ve vurgusu (Renkli: koyu zeminde krem yazı, açık hardal vurgu; Sade: beyaz kutuda
+ *  koyu yazı, vurgu yazısı). */
+const cream = 'text-[var(--site-on-cover)]';
+const mustard = 'text-[var(--site-cover-accent)]';
+
+function timeOfDay(iso: string): string {
+    return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
-
-function localIsoDate(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function toMinutes(t: string): number {
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-}
-
-/** Bugünün en yakın üç rezervasyon başlangıcı (en az 30 dk sonrası); bugün kapalıysa ya da saat geçtiyse boş. */
-function nextSlots(rules: ReservationRules, now = new Date()): string[] {
-    const day = rules.days.find(d => d.day === now.getDay());
-    if (!day?.isOpen) return [];
-    const earliest = now.getHours() * 60 + now.getMinutes() + 30;
-    const out: string[] = [];
-    for (let t = toMinutes(day.firstStart); t <= toMinutes(day.lastStart) && out.length < 3; t += rules.slotIntervalMinutes) {
-        if (t >= earliest) out.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`);
-    }
-    return out;
-}
-
-interface BentoCard { key: string; span: number; node: ReactNode; dark?: boolean; mobileFull?: boolean }
 
 export default function RestaurantSitePage() {
     const { site, error } = useSite();
     const { mine } = useMyReservations();
     const [params] = useSearchParams();
-    const canOrder = useOnlineOrderingAvailable();
+    const cart = useSiteCart();
 
     if (params.get(LEGACY_VIEW_PARAM) === 'rezervasyon') {
         const next = new URLSearchParams(params);
@@ -79,510 +60,566 @@ export default function RestaurantSitePage() {
     if (!site) {
         return <SiteShell><SiteStatus error={error} /></SiteShell>;
     }
+    if (resolveDesign(site.site.design) === 'elit') return <EliteHome site={site} mine={mine} />;
 
     return (
         <SitePage site={site} current="home">
-            <HomeHero site={site} canOrder={canOrder} />
-            <main className="flex flex-1 flex-col">
-                <HomeBento site={site} canOrder={canOrder} />
-                <HomePicks site={site} />
-                <HomeReviews site={site} />
-                {mine.length > 0 && (
-                    <section className="mx-auto w-full max-w-[1344px] px-5 pb-10 md:px-12">
-                        <div className={cn(siteCard, 'p-5 md:p-7')}><MyReservations items={mine} /></div>
-                    </section>
-                )}
-                <PhotoStrip site={site} />
+            <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
+                <HomeHero site={site} cart={cart} />
+                {mine.length > 0 && <div className={cn(box, 'p-5 md:p-8')}><MyReservations items={mine} /></div>}
+                <ExternalHint source="menu"><MenuBox site={site} cart={cart} /></ExternalHint>
+                <ExternalHint source="setMenus"><SetMenusRow site={site} cart={cart} /></ExternalHint>
+                <StoryReviewsRow site={site} />
+                <EditorGallery site={site} />
+                <EditorVisit site={site} />
             </main>
         </SitePage>
     );
 }
 
-// ── Kapak ────────────────────────────────────────────────────────────────────────────────────────
+// ── 1. Birleşik kapak ────────────────────────────────────────────────────────────────────────────
 
-function HomeHero({ site, canOrder }: { site: PublicSite; canOrder: boolean }) {
-    const edit = useSiteEdit();
-    const name = restaurantName(site);
-    const content = site.site;
-    const canReserve = canReserveOnline(site);
-    const location = [site.district, site.city].filter(Boolean).join(', ');
-    const eyebrowLine = [site.categories[0]?.name, location, content.foundedYear ? sinceYear(content.foundedYear) : null].filter(Boolean).join(' · ');
-    const lead = content.tagline || content.headline;
-    const hasPhotos = Boolean(content.coverImageUrl) || collagePhotos(site, 1).length > 0;
-
-    // İlk ekranın eylemleri: ana düğme vurgu renginde, diğerleri cam. Rezervasyon > paket sipariş > menü.
-    const actions: { key: string; label: string; to?: string; href?: string }[] = [];
-    if (canReserve) actions.push({ key: 'rez', label: 'Masa ayırt', to: RESERVATION_PATH });
-    if (canOrder) actions.push({ key: 'paket', label: 'Paket sipariş', to: '/siparis' });
-    actions.push({ key: 'menu', label: 'Menüyü gör', to: '/menu' });
-    if (actions.length < 3 && site.phone) actions.push({ key: 'ara', label: 'Ara', href: telHref(site.phone) });
-
-    return (
-        <EditableBlock target="photo:cover" label="Kapak fotoğrafı" chip="Fotoğrafı değiştir" className="outline-offset-[-4px]">
-        <section id="ust" className={cn('relative flex flex-col overflow-hidden bg-[var(--site-hero)] text-white',
-            hasPhotos ? 'min-h-[520px] md:min-h-[560px]' : 'min-h-[440px] md:min-h-[480px]')}>
-            <HeroBackdrop site={site} image={content.coverImageUrl || undefined}
-                overlay="bg-[linear-gradient(180deg,rgba(20,16,12,0.55),rgba(20,16,12,0.3)_45%,rgba(20,16,12,0.78))]" />
-            <HeaderSpacer />
-            {edit && !content.coverImageUrl && (
-                <span className="relative mx-auto mt-4 rounded-full border border-dashed border-white/60 bg-black/25 px-4 py-2 font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold">
-                    + Kapak fotoğrafı ekle
-                </span>
-            )}
-            <div className="relative mx-auto flex w-full max-w-[1344px] flex-1 flex-col justify-end gap-6 px-5 pb-7 md:flex-row md:items-end md:justify-between md:gap-8 md:px-12 md:pb-14">
-                <div className="flex min-w-0 max-w-[820px] flex-col gap-3 md:gap-4">
-                    {eyebrowLine && !edit && <span className="text-[11px] font-medium uppercase tracking-[0.28em] md:text-xs">{eyebrowLine}</span>}
-                    {/* Ad Ayarlar'dan gelir; kapak adsız boş görünmesin diye düzenleyicide de yazılır (tıklanmaz). */}
-                    <h1 className={cn(serif, 'm-0 max-w-full break-words italic leading-[0.88] tracking-[-0.03em]')} style={fitName(name, 168)}>{name}</h1>
-                    {(lead || edit?.showEmpty) && (
-                        <EditableText as="p" field="tagline" value={content.tagline} fallback={content.headline}
-                            placeholder="Alt başlık yazın"
-                            className="m-0 max-w-[52ch] text-base leading-normal text-white/90 md:text-[19px]" />
-                    )}
-                    <HeroStatusPill site={site} className="md:hidden" />
-                    {!edit && (
-                        <div className="grid grid-cols-2 gap-2 pt-1 sm:flex sm:flex-wrap sm:gap-2.5 sm:pt-2">
-                            {actions.map((a, i) => {
-                                const cls = cn(i === 0 ? heroAccentButton : glassButton, 'px-4 sm:px-6', i >= 2 && 'hidden sm:inline-flex');
-                                return a.to
-                                    ? <Link key={a.key} to={a.to} className={cls}>{a.label}</Link>
-                                    : <a key={a.key} href={a.href} className={cls}>{a.label}</a>;
-                            })}
-                        </div>
-                    )}
-                </div>
-                <HeroStatusPill site={site} className="hidden md:inline-flex" />
-            </div>
-        </section>
-        </EditableBlock>
-    );
+// Dev ad: uzun adlar kutuya sığsın diye en uzun satırın harf sayısına göre küçülür. Harf genişliği yazı tipi çiftinden
+// (`charWidth`; Renkli kalın, Sade ince: Fraunces kalını ≈ 0,6em/harf, Instrument Serif ≈ 0,46em/harf).
+function heroNameStyle(lines: string[], sade: boolean, charWidth: number): CSSProperties {
+    const longest = Math.max(4, ...lines.map(l => l.length));
+    return sade
+        ? { fontSize: `min(100px, max(6.4vw, 52px), ${(80 / (longest * charWidth)).toFixed(2)}vw)` }
+        : { fontSize: `min(104px, max(6.6vw, 48px), ${(82 / (longest * charWidth)).toFixed(2)}vw)` };
 }
 
-// ── Bento ızgara ─────────────────────────────────────────────────────────────────────────────────
+interface StripCell { key: string; node: ReactNode; wrap?: (node: ReactNode) => ReactNode }
 
-function HomeBento({ site, canOrder }: { site: PublicSite; canOrder: boolean }) {
+function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
     const edit = useSiteEdit();
+    const sade = useSiteDesign() === 'sade';
     const showEmpty = Boolean(edit?.showEmpty);
     const content = site.site;
+    const name = restaurantName(site);
+    const [first, accent] = splitAccent(name);
     const canReserve = canReserveOnline(site);
-    const address = fullAddress(site);
-    const products = site.categories.flatMap(c => c.products);
-    // Düzenleyicide yalnız burada değişen kartlar: saat, puan, hikâye, Instagram (ürün, konum, rezervasyon… yok).
-    const featured = edit ? undefined : pickFeatured(products, 1, true)[0];
-    const hasHours = Boolean(content.weeklyHours.length || (content.opensAt && content.closesAt));
-    const slots = canReserve ? nextSlots(site.reservation) : [];
-    const today = localIsoDate(new Date());
+    const canOrder = cart.enabled;
+    const place = site.district || site.city;
+    const kicker = [content.foundedYear ? sinceYear(content.foundedYear) : null, place].filter(Boolean).join(' · ');
+    const lead = content.tagline || content.headline;
+    const hasMenu = productCount(site) > 0;
+    const actionsX = editExternal(edit, 'heroActions');
+    const cover = content.coverImageUrl;
+    // Fotoğrafsız kapağın sağındaki italik kelime: menünün ilk kategorisi (yoksa yazılmaz).
+    const panelWord = site.categories.find(c => c.products.length > 0)?.name.toLocaleLowerCase('tr-TR') ?? '';
 
-    // Küçük kartlar (3/12): saat, konum, rezervasyon/paket (koyu), puan; dörde tamamlanmıyorsa telefon.
-    const small: BentoCard[] = [];
-    if (hasHours) {
-        small.push({
-            key: 'saat', span: 3, node: (
-                <EditableBlock target="hours" label="Çalışma saatleri" className="h-full rounded-[20px]">
-                    <InfoCard icon={<ClockIcon />} label="Çalışma saatleri" labelId="ev-saat" className="h-full"
-                        action={site.isOpenNow !== null && <OpenBadge open={site.isOpenNow} />}>
-                        <HoursBlock site={site} compact weekHref="/iletisim#saatler" valueClassName="text-[24px] md:text-[30px]" />
-                        {content.hoursNote && <p className="m-0 text-sm text-[var(--site-sub)]">{content.hoursNote}</p>}
-                    </InfoCard>
-                </EditableBlock>
+    // İki düğme: ana düğme koyu. Sipariş > rezervasyon > menü; ikincisi kalanlardan ilki (yoksa telefon).
+    const actions: { key: string; label: string; to?: string; href?: string }[] = [];
+    if (canOrder) actions.push({ key: 'siparis', label: 'Sipariş ver', href: hasMenu ? '#menu' : undefined, to: hasMenu ? undefined : '/siparis' });
+    if (canReserve) actions.push({ key: 'rez', label: 'Masa ayırt', to: RESERVATION_PATH });
+    if (actions.length < 2) actions.push({ key: 'menu', label: 'Menüyü gör', to: '/menu' });
+    if (actions.length < 2 && site.phone) actions.push({ key: 'ara', label: 'Hemen ara', href: telHref(site.phone) });
+
+    // Alt şerit: durum + bugünün saatleri · paket sipariş · hazırlık · en az sipariş. Verisi olmayan hücre çizilmez.
+    const cellLabel = cn('text-[11px] font-extrabold uppercase tracking-[0.16em]', mustard);
+    const cellValue = cn(serif, 'text-2xl leading-[1.1]');
+    const cells: StripCell[] = [];
+    const today = weekSchedule(site)?.find(r => r.isToday) ?? null;
+    const hoursWrap = (node: ReactNode) => <EditableBlock target="hours" label="Çalışma saatleri" className="h-full">{node}</EditableBlock>;
+    if (site.isOpenNow !== null || today) {
+        cells.push({
+            key: 'durum', wrap: hoursWrap, node: (
+                <div className="flex items-center gap-3">
+                    {site.isOpenNow !== null && (
+                        <span aria-hidden="true" className={cn('h-[9px] w-[9px] shrink-0 rounded-full', site.isOpenNow ? 'bg-[var(--site-dot-ok)] shadow-[0_0_0_4px_color-mix(in_srgb,var(--site-dot-ok)_20%,transparent)]' : 'bg-[var(--site-dot-bad)] shadow-[0_0_0_4px_color-mix(in_srgb,var(--site-dot-bad)_20%,transparent)]')} />
+                    )}
+                    <span className="flex flex-col">
+                        {site.isOpenNow !== null && <span className="font-extrabold">{site.isOpenNow ? 'Şu an açık' : 'Şu an kapalı'}</span>}
+                        {today && <span className={site.isOpenNow !== null ? 'text-[13px] text-[color-mix(in_srgb,var(--site-on-cover)_85%,transparent)]' : 'font-extrabold'}>Bugün {today.text}</span>}
+                    </span>
+                </div>
             ),
         });
     } else if (showEmpty) {
-        small.push({ key: 'saat', span: 3, node: <EmptySlot target="hours" title="+ Saat ekle" /> });
+        cells.push({ key: 'durum', wrap: hoursWrap, node: <span className="font-bold">+ Saat ekle</span> });
     }
-    if (address && !edit) {
-        small.push({
-            key: 'konum', span: 3, node: (
-                <ExternalHint source="restaurant" className="h-full">
-                <section aria-labelledby="ev-konum" className={cn(siteCard, 'flex h-full min-w-0 flex-col overflow-hidden')}>
-                    <MapStub className="h-[72px] md:h-[110px]" />
-                    <div className="flex flex-1 flex-col gap-2 p-4 md:px-6 md:pb-6">
-                        <h2 id="ev-konum" className={cn(cardLabel, 'm-0')}>Konum</h2>
-                        <span className={cn(serif, 'hidden text-[24px] leading-[1.05] md:block')}>{[site.openAddress, site.district].filter(Boolean).join(', ') || address}</span>
-                        <span className={cn(serif, 'text-[22px] leading-none md:hidden')}>{site.district || site.city || address}</span>
-                        <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer"
-                            className={cn(cardButton.dark, 'mt-auto h-10 px-4 text-[13px] md:text-sm')}>Yol tarifi al</a>
-                    </div>
-                </section>
-                </ExternalHint>
-            ),
-        });
+    const ordering = cart.ordering;
+    if (canOrder && ordering && !edit) {
+        const value = ordering.state === 'open'
+            ? (ordering.lastOrderAt ? untilTime(timeOfDay(ordering.lastOrderAt)) : 'Sipariş alıyoruz')
+            : ordering.state === 'paused' ? 'Kısa bir ara' : 'Şu an kapalı';
+        cells.push({ key: 'paket', node: <><span className={cellLabel}>Paket sipariş</span><span className={cellValue}>{value}</span></> });
     }
-    if (canReserve && !edit) {
-        const evening = slots[0] ? toMinutes(slots[0]) >= 17 * 60 : false;
-        small.push({
-            key: 'rez', span: 3, dark: true, node: (
-                <ExternalHint source="reservation" className="h-full">
-                <section aria-labelledby="ev-rez" className={cn(siteCardDark, 'flex h-full flex-col gap-3.5 p-5 md:p-6')}>
-                    <h2 id="ev-rez" className={cn(cardLabel, 'm-0 text-[var(--site-on-paper-sub)]')}>{slots.length ? (evening ? 'Bu akşam' : 'Bugün') : 'Rezervasyon'}</h2>
-                    <p className={cn(serif, 'm-0 text-[30px] leading-[1.05] md:text-[32px]')}>Masanızı <span className="italic">ayırtın.</span></p>
-                    {slots.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                            {slots.map(time => (
-                                <Link key={time} to={reservationHref({ date: today, time, partySize: 2 })}
-                                    className="rounded-full border border-white/30 px-3 py-1.5 text-sm tabular-nums text-[var(--site-on-paper)] hover:bg-white/10">
-                                    {time}
-                                </Link>
-                            ))}
-                        </div>
-                    )}
-                    <Link to={RESERVATION_PATH} className={cn(cardButton.accent, 'mt-auto')}>Masa ayırt</Link>
-                </section>
-                </ExternalHint>
-            ),
-        });
+    const prep = averagePrepMinutes(site);
+    if (prep && !edit) cells.push({ key: 'hazirlik', node: <><span className={cellLabel}>Hazırlık</span><span className={cellValue}>~{prep} dakika</span></> });
+    if (canOrder && ordering && !edit) {
+        const active = ordering.zones.filter(z => z.isActive);
+        const minimums = [...new Set(active.map(z => z.minOrderAmount))];
+        if (active.length > 0 && minimums.some(m => m > 0)) {
+            const value = minimums.length === 1 ? formatSitePrice(minimums[0]) : 'Mahalleye göre';
+            cells.push({ key: 'min', node: <><span className={cellLabel}>Min. sipariş</span><span className={cellValue}>{value}</span></> });
+        }
     }
-    if (canOrder && !edit) {
-        small.push({
-            key: 'paket', span: 3, dark: true, node: (
-                <ExternalHint source="online" className="h-full">
-                <section aria-labelledby="ev-paket" className={cn(siteCardDark, 'flex h-full flex-col gap-3.5 p-5 md:p-6')}>
-                    <h2 id="ev-paket" className={cn(cardLabel, 'm-0 text-[var(--site-on-paper-sub)]')}>Paket sipariş</h2>
-                    <p className={cn(serif, 'm-0 text-[30px] leading-[1.05]')}>Kapınıza <span className="italic">sıcak gelsin.</span></p>
-                    <Link to="/siparis" className={cn(cardButton.accent, 'mt-auto')}>Sipariş ver</Link>
-                </section>
-                </ExternalHint>
-            ),
-        });
-    }
-    if (content.rating !== null) {
-        const firstReview = content.featuredReviews[0];
-        small.push({
-            key: 'puan', span: 3, node: (
-                <EditableBlock target="rating" label="Google puanı" className="h-full rounded-[20px]">
-                <section aria-labelledby="ev-puan" className={cn(siteCard, 'flex h-full flex-col gap-2.5 p-5 md:p-6')}>
-                    <h2 id="ev-puan" className={cn(cardLabel, 'm-0')}>Misafirlerimiz</h2>
-                    <p className={cn(serif, 'm-0 flex items-baseline gap-2 text-[40px] leading-none md:text-[44px]')}>
-                        <span aria-hidden="true" className="text-[0.7em] text-[#E8A33D]">★</span>{formatRating(content.rating)}
-                        <span className="sr-only"> / 5 puan</span>
-                    </p>
-                    {content.reviewCount !== null && (
-                        content.reviewsUrl
-                            ? <a href={content.reviewsUrl} target="_blank" rel="noopener noreferrer" className={cardLink}>{content.reviewCount.toLocaleString('tr-TR')} Google yorumu →</a>
-                            : <span className="text-sm text-[var(--site-sub)]">{content.reviewCount.toLocaleString('tr-TR')} yorum</span>
-                    )}
-                    {firstReview && (edit
-                        ? <EditableText as="p" field="review:0:text" value={firstReview.text} multiline placeholder="İlk yorumun metni" className={cn(serif, 'm-0 mt-auto line-clamp-3 text-[20px] leading-[1.2]')} />
-                        : <p className={cn(serif, 'm-0 mt-auto line-clamp-3 text-[20px] leading-[1.2]')}>“{firstReview.text}”</p>)}
-                </section>
-                </EditableBlock>
-            ),
-        });
-    } else if (showEmpty) {
-        small.push({ key: 'puan', span: 3, node: <EmptySlot target="rating" title="+ Google puanı ekle" /> });
-    }
-    if (site.phone && small.length < 4 && !edit) {
-        small.push({
-            key: 'tel', span: 3, node: (
-                <ExternalHint source="restaurant" className="h-full">
-                    <InfoCard icon={<PhoneIcon />} label="Telefon" labelId="ev-tel" className="h-full"
-                        action={<a href={telHref(site.phone)} className={cn(cardButton.outline, 'mt-auto')}>Hemen ara</a>}>
-                        <span className={cn(serif, 'text-[24px] leading-none md:text-[28px]')}>{site.phone}</span>
-                    </InfoCard>
-                </ExternalHint>
-            ),
-        });
-    }
-
-    // Öne çıkan tabak 6/12 ve iki satır; sağındaki 6 sütunu ilk dört küçük kart doldurur (sayı azsa genişlerler).
-    const beside = featured ? small.slice(0, 4) : [];
-    const after = featured ? small.slice(4) : small;
-    const besideWidths: Record<number, number[]> = { 0: [], 1: [6], 2: [6, 6], 3: [3, 3, 6], 4: [3, 3, 3, 3] };
-    const besideCards = beside.map((c, i) => ({ ...c, width: besideWidths[beside.length][i] }));
-
-    // Geniş kartlar: hikâye (7) + hazır menü (5), menü (8) + Instagram (4). Eksik olanın yerini komşusu alır.
-    const wide: BentoCard[] = [];
-    const story = storyCard(site, showEmpty);
-    if (story) wide.push({ key: 'hikaye', span: 7, node: story, mobileFull: true });
-    const setMenu = edit ? null : setMenuCard(site.setMenus ?? [], products);
-    if (setMenu) wide.push({ key: 'menuler', span: 5, node: <ExternalHint source="setMenus" className="h-full">{setMenu}</ExternalHint>, mobileFull: true });
-    if (products.length > 0 && !edit) wide.push({ key: 'menu', span: 8, node: <ExternalHint source="menu" className="h-full"><MenuCard site={site} /></ExternalHint>, mobileFull: true });
-    const insta = instagramCard(site, Boolean(edit));
-    if (insta) wide.push({ key: 'ig', span: 4, node: <EditableBlock target="contact" label="Instagram" className="h-full rounded-[20px]">{insta}</EditableBlock>, mobileFull: true });
-    else if (showEmpty) wide.push({ key: 'ig', span: 4, node: <EmptySlot target="contact" title="+ Instagram ekle" />, mobileFull: true });
-
-    // Telefonda iki sütun: açık küçük kartlar ikişer yan yana (tekse tam genişlik), koyu ve geniş kartlar tam genişlik.
-    const lightSmall = small.filter(c => !c.dark);
-    const lonelyLight = lightSmall.length % 2 === 1 ? lightSmall[lightSmall.length - 1].key : null;
-    const mobileSpan = (c: BentoCard) => (c.dark || c.mobileFull || c.key === lonelyLight ? 'col-span-2' : 'col-span-1');
-
-    if (!featured && small.length === 0 && wide.length === 0) return null;
-    const featuredSpan = cn('col-span-2', beside.length > 0 ? 'lg:col-span-6 lg:row-span-2' : 'lg:col-span-12 lg:min-h-[420px]');
+    const mdCols = ({ 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4' } as Record<number, string>)[cells.length];
 
     return (
-        <section aria-label="Restoran hakkında kısaca" className="mx-auto w-full max-w-[1344px] px-4 pb-10 pt-4 md:px-12 md:pb-16 md:pt-12">
-            <div className="grid grid-flow-row-dense grid-cols-2 gap-3 md:gap-4 lg:grid-cols-12">
-                {featured && (
-                    <ExternalHint source="menu" className={featuredSpan}>
-                        <FeaturedDishCard product={featured} className={edit ? 'h-full' : featuredSpan} />
-                    </ExternalHint>
+        <section id="ust" aria-labelledby="ev-ad"
+            className={cn('relative flex flex-col overflow-hidden rounded-[24px] bg-[var(--site-cover-bg)] md:rounded-[36px]', cream)}>
+            <div className="relative flex flex-col md:min-h-[600px] md:flex-row">
+                {/* Zemin: kapak fotoğrafı sağda (kapak renginden geçişle; telefonda yazının arkasında koyu perde); yoksa noktalı desen ve daireler. */}
+                <EditableBlock target="photo:cover" label="Kapak fotoğrafı" chip="Fotoğrafı değiştir" className="absolute inset-0">
+                    {cover && sade ? (
+                        <>
+                            <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_40%]" />
+                            <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.86)_70%,rgba(255,255,255,0.7)_100%)] md:bg-[linear-gradient(90deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.9)_30%,rgba(255,255,255,0.55)_48%,rgba(255,255,255,0)_66%)]" />
+                            {cover.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+                        </>
+                    ) : cover ? (
+                        <>
+                            <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover object-[65%_40%] md:left-auto md:w-[58%]" />
+                            <span aria-hidden="true" className="absolute inset-0 bg-[color-mix(in_srgb,var(--site-cover-bg)_86%,transparent)] md:left-auto md:w-[58%] md:bg-transparent md:bg-[linear-gradient(90deg,var(--site-cover-bg)_0%,transparent_38%)]" />
+                            {cover.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+                        </>
+                    ) : sade ? (
+                        <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+                            <span className="absolute -right-[140px] top-1/2 h-[760px] w-[760px] -translate-y-1/2 rounded-full border border-[rgba(30,26,22,0.07)]" />
+                            <span className="absolute -right-5 top-1/2 h-[520px] w-[520px] -translate-y-1/2 rounded-full border border-[var(--site-accent-line)]" />
+                            <span className="absolute right-[110px] top-1/2 hidden h-[260px] w-[260px] -translate-y-1/2 items-center justify-center rounded-full bg-[var(--site-accent-soft)] md:flex">
+                                {panelWord && !edit && <span className={cn(serif, 'max-w-[230px] break-words px-2 text-center text-[60px] italic leading-none text-[var(--site-accent-text)]')}>{panelWord}</span>}
+                            </span>
+                        </span>
+                    ) : (
+                        <span aria-hidden="true" className="pointer-events-none absolute inset-0 hidden overflow-hidden md:block">
+                            <span className="absolute inset-y-0 right-0 w-[46%] bg-[radial-gradient(color-mix(in_srgb,var(--site-on-cover)_16%,transparent)_2px,transparent_2.6px)] bg-[length:22px_22px]" />
+                            <span className="absolute right-[7%] top-1/2 h-[420px] w-[420px] -translate-y-1/2 rounded-full bg-[var(--site-cover-deep)] bg-[repeating-conic-gradient(from_45deg,color-mix(in_srgb,var(--site-on-cover)_7%,transparent)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />
+                            <span className="absolute right-[calc(7%+110px)] top-1/2 flex h-[200px] w-[200px] -translate-y-1/2 -rotate-[8deg] items-center justify-center rounded-full bg-[var(--site-mustard)]">
+                                {panelWord && !edit && <span className={cn(serif, 'max-w-[180px] break-words px-2 text-center text-[40px] italic leading-none text-[var(--site-text)]')}>{panelWord}</span>}
+                            </span>
+                        </span>
+                    )}
+                    {edit && !cover && (
+                        <span className="absolute right-6 top-6 whitespace-nowrap rounded-full border border-dashed border-[var(--site-border-strong)] bg-[var(--site-card)] px-4 py-2 font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[var(--site-text)]">
+                            + Kapak fotoğrafı ekle
+                        </span>
+                    )}
+                </EditableBlock>
+
+                {/* Yazı */}
+                <div className="pointer-events-none relative z-[1] flex flex-1 flex-col justify-between gap-9 px-5 pb-8 pt-7 sm:px-10 md:px-[52px] md:pb-12 md:pt-10 [&_a]:pointer-events-auto [&_[data-edit-text]]:pointer-events-auto">
+                    {!edit ? <ActiveOrderPill enabled={cart.enabled} /> : <span />}
+                    <div className="flex max-w-[640px] flex-col gap-[22px] [--site-accent-text:var(--site-cover-accent)]">
+                        {kicker && !edit && (
+                            <span className={cn('inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em]', mustard)}>
+                                <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-cover-accent)]" />{kicker}
+                            </span>
+                        )}
+                        {/* Ad Ayarlar'dan gelir; kapak adsız boş görünmesin diye düzenleyicide de yazılır (tıklanmaz). */}
+                        <h1 id="ev-ad" className={cn(serif, 'm-0 max-w-full break-words', sade ? 'leading-[0.92] tracking-[-0.015em]' : 'leading-[0.95] tracking-[-0.025em]')} style={heroNameStyle([first, accent], sade, resolveFont(content.font, sade ? 'sade' : 'renkli').charWidth[sade ? 'regular' : 'bold'])}>
+                            {first && <>{first}<br /></>}<em className="rb-accent italic">{accent}</em>
+                        </h1>
+                        {(lead || showEmpty) && (
+                            <EditableText as="p" field="tagline" value={content.tagline} fallback={content.headline} placeholder="Alt başlık yazın"
+                                className="m-0 max-w-[500px] text-base leading-[1.6] text-[color-mix(in_srgb,var(--site-on-cover)_90%,transparent)] md:text-lg" />
+                        )}
+                        {!edit && (
+                            <div {...actionsX} className={cn('flex flex-wrap gap-2.5', actionsX.className)}>
+                                {actions.slice(0, 2).map((a, i) => {
+                                    const cls = cn('inline-flex h-[58px] flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-[30px] text-base font-extrabold no-underline transition-opacity hover:opacity-90 sm:flex-none',
+                                        i === 0 ? 'bg-[var(--site-pop)] text-[var(--site-on-pop)]' : 'border-2 border-[color-mix(in_srgb,var(--site-on-cover)_55%,transparent)] text-[var(--site-on-cover)]');
+                                    return a.to
+                                        ? <Link key={a.key} to={a.to} className={cls}>{a.label}{i === 0 && <span aria-hidden="true">→</span>}</Link>
+                                        : <a key={a.key} href={a.href} className={cls}>{a.label}{i === 0 && <span aria-hidden="true">→</span>}</a>;
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Google puanı: geniş ekranda sağ altta buzlu kart, telefonda yazının altında. */}
+                {content.rating !== null ? (
+                    <div className="relative z-[1] mx-5 mb-6 self-start sm:mx-10 md:absolute md:bottom-6 md:right-6 md:m-0">
+                        <EditableBlock target="rating" label="Google puanı" className="rounded-[20px]">
+                            <div className="flex items-center gap-3 rounded-[22px] bg-[var(--site-card)] py-3 pl-3.5 pr-[18px] text-[var(--site-text)] shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
+                                <span className={cn(serif, 'text-[40px] font-extrabold leading-[0.9]')}>{formatRating(content.rating)}</span>
+                                <span className="flex flex-col gap-0.5">
+                                    <span role="img" aria-label={`Google puanı 5 üzerinden ${formatRating(content.rating)}`} className="text-sm tracking-[2px] text-[var(--site-accent-text)]">
+                                        {'★★★★★'.slice(0, Math.round(content.rating))}<span className="opacity-40">{'★★★★★'.slice(Math.round(content.rating))}</span>
+                                    </span>
+                                    <span className="text-xs font-extrabold">Google{content.reviewCount !== null && <> · {content.reviewCount.toLocaleString('tr-TR')} yorum</>}</span>
+                                </span>
+                            </div>
+                        </EditableBlock>
+                    </div>
+                ) : showEmpty && (
+                    <div className="relative z-[1] mx-5 mb-6 self-start sm:mx-10 md:absolute md:bottom-6 md:right-6 md:m-0">
+                        <EmptySlot target="rating" title="+ Google puanı ekle" className="min-h-[64px] bg-[var(--site-card)]" />
+                    </div>
                 )}
-                {besideCards.map(c => (
-                    <div key={c.key} className={cn('min-w-0', mobileSpan(c), LG_SPAN[c.width], beside.length === 1 && 'lg:row-span-2')}>{c.node}</div>
-                ))}
-                {packRow(after).map(c => (
-                    <div key={c.key} className={cn('min-w-0', mobileSpan(c), LG_SPAN[c.width])}>{c.node}</div>
-                ))}
-                {packRow(wide).map(c => (
-                    <div key={c.key} className={cn('col-span-2 min-w-0', LG_SPAN[c.width])}>{c.node}</div>
-                ))}
             </div>
+
+            {cells.length > 0 && (
+                <div className={cn('relative z-[1] grid grid-cols-2 bg-[var(--site-cover-deep)]', sade && 'border-t border-[var(--site-line)]', mdCols)}>
+                    {cells.map(c => {
+                        const cell = <div className="flex h-full flex-col justify-center gap-0.5 px-5 py-4 sm:px-7 sm:py-5">{c.node}</div>;
+                        return (
+                            <div key={c.key} className={cn('min-w-0 border-[color-mix(in_srgb,var(--site-on-cover)_15%,transparent)] even:border-l [&:nth-child(n+3)]:border-t odd:last:col-span-2',
+                                'md:border-l md:odd:last:col-span-1 md:[&:nth-child(n+3)]:border-t-0 md:first:border-l-0')}>
+                                {c.wrap ? c.wrap(cell) : cell}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </section>
     );
 }
 
-/** Öne çıkan tabak: büyük fotoğraf, altta kart: "Ustanın seçimi", ad, açıklama · süre, fiyat. */
-function FeaturedDishCard({ product, className }: { product: PublicProduct; className?: string }) {
-    const meta = [product.description?.trim(), product.prepMinutes ? `~${product.prepMinutes} dk` : null].filter(Boolean).join(' · ');
+const ORDER_STEPS = 4;
+
+/** Bu cihazdan verilmiş, henüz bitmemiş paket sipariş: kapağın üstünde hap (durum, numara, kalan süre, adımlar). */
+function ActiveOrderPill({ enabled }: { enabled: boolean }) {
+    const inPreview = useSitePreview() !== null;
+    const active = useActiveDeliveryOrder(enabled && !inPreview);
+    const [now] = useState(() => Date.now());
+    if (!active) return <span />;
+    const t = active.tracking;
+    const raw = trackingStepIndex(t.status);
+    const step = raw <= 1 ? 0 : raw <= 3 ? 1 : raw === 4 ? 2 : 3;
+    const eta = t.estimatedDeliveryAt ? Math.round((new Date(t.estimatedDeliveryAt).getTime() - now) / 60000) : null;
     return (
-        <Link to="/menu" className={cn('group relative block min-h-[300px] overflow-hidden rounded-[20px] bg-[var(--site-placeholder)] md:min-h-[440px] md:rounded-[24px]', className)}>
-            <img src={product.imageUrl} alt={product.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03] motion-reduce:transition-none" />
-            {product.isStockImage && <StockImageLabel className="bottom-auto top-3 right-3" />}
-            <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-4 rounded-[14px] bg-[var(--site-card)] p-4 text-[var(--site-text)] md:inset-x-4 md:bottom-4 md:rounded-[18px] md:p-5">
-                <div className="flex min-w-0 flex-col gap-1">
-                    {product.isFeatured ? <FeaturedBadge /> : <span className={cardLabel}>Menüden</span>}
-                    <span className={cn(serif, 'break-words text-[28px] leading-none md:text-[36px]')}>{product.name}</span>
-                    {meta && <span className="line-clamp-2 text-sm text-[var(--site-sub)]">{meta}</span>}
-                </div>
-                <span className="shrink-0 whitespace-nowrap text-xl font-bold md:text-2xl">{formatSitePrice(product.price)}</span>
-            </div>
+        <Link to={`/siparis/takip/${encodeURIComponent(active.token)}`}
+            className="inline-flex max-w-full flex-wrap items-center gap-3 self-start rounded-[24px] bg-[var(--site-menu-card)] py-2 pl-4 pr-2 text-sm text-[var(--site-text)] no-underline sm:rounded-full">
+            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-[var(--site-accent)] shadow-[0_0_0_4px_var(--site-accent-soft)]" />
+            <span>
+                <strong>Siparişiniz {t.statusLabel.toLocaleLowerCase('tr-TR')}</strong>{' '}
+                <span className="text-[var(--site-muted)]">· #{active.number}{eta !== null && eta > 0 && <> · yaklaşık {eta} dk</>}</span>
+            </span>
+            <span aria-hidden="true" className="inline-flex gap-[3px]">
+                {Array.from({ length: ORDER_STEPS }, (_, i) => (
+                    <span key={i} className={cn('h-1 w-[18px] rounded-sm', i <= step ? 'bg-[var(--site-accent)]' : 'bg-[rgba(30,26,22,0.15)]')} />
+                ))}
+            </span>
+            <span className="inline-flex h-11 items-center rounded-full bg-[var(--site-paper)] px-3.5 text-[13px] font-bold text-[var(--site-on-paper)]">Takip et</span>
         </Link>
     );
 }
 
-/** `showEmpty` (düzenleyici): yazı yokken de kart boş alanlarla çizilir. */
-function storyCard(site: PublicSite, showEmpty = false): ReactNode | null {
-    const c = site.site;
-    if (!c.storyTitle && !c.about && !showEmpty) return null;
-    const photo = c.aboutImageUrl || c.galleryImageUrls[0] || site.categories.flatMap(x => x.products).find(p => p.imageUrl && !p.isStockImage)?.imageUrl;
-    return (
-        <section aria-labelledby="ev-hikaye" className={cn(siteCard, 'grid h-full min-w-0 grid-cols-1 overflow-hidden', photo && 'sm:grid-cols-[minmax(0,240px)_1fr]')}>
-            {photo && (
-                <EditableBlock target="photo:about" label="Hikâye fotoğrafı" chip="Fotoğrafı değiştir" className="outline-offset-[-4px]">
-                    <img src={photo} alt="" loading="lazy" className="block h-[170px] w-full object-cover sm:h-full sm:min-h-[260px]" />
-                </EditableBlock>
-            )}
-            <div className="flex min-w-0 flex-col justify-center gap-3 p-6 md:p-8">
-                <EditableBlock target="year" label="Kuruluş yılı" className="self-start">
-                    <span className={eyebrow}>{c.foundedYear ? `Hikâyemiz · ${sinceYear(c.foundedYear)}` : 'Hikâyemiz'}</span>
-                </EditableBlock>
-                {(c.storyTitle || showEmpty) && (
-                    <EditableText as="h2" id="ev-hikaye" field="storyTitle" value={c.storyTitle} placeholder="Slogan yazın"
-                        className={cn(serif, 'm-0 break-words text-[30px] leading-[1.04] md:text-[40px]')} />
-                )}
-                {(c.about || showEmpty) && (
-                    <EditableText as="p" field="about" value={c.about} multiline placeholder="Kısa hikâyenizi yazın"
-                        className="m-0 line-clamp-4 whitespace-pre-line text-[15px] text-[var(--site-sub)]" />
-                )}
-                <Link to="/hakkimizda" className={cardLink}>Hakkımızda →</Link>
-            </div>
-        </section>
-    );
-}
+// ── 2. Bugünün menüsü ────────────────────────────────────────────────────────────────────────────
 
-function setMenuCard(menus: OnlineSetMenu[], products: PublicProduct[]): ReactNode | null {
-    const menu = menus[0];
-    if (!menu) return null;
-    const image = setMenuImage(menu, productPhotos(products));
-    const saving = savingLabel(menu);
+/** Ürün kartı (krem): varsa 76 px fotoğraf, serif ad, açıklama/süre ve italik etiket, fiyat, beyaz + düğmesi. */
+function ProductCard({ product, cart, onAdded }: { product: PublicProduct; cart: SiteCart; onAdded: (name: string) => void }) {
+    const meta = [product.description?.trim(), product.prepMinutes ? `~${product.prepMinutes} dk` : null].filter(Boolean).join(' · ');
+    const tag = product.isOutOfStock ? 'şu an tükendi' : product.isFeatured ? 'ustanın seçimi' : null;
     return (
-        <section aria-labelledby="ev-hazir" className={cn(siteCard, 'flex h-full min-w-0 flex-col overflow-hidden')}>
-            {image && (
-                <div className="relative h-[160px] shrink-0">
-                    <img src={image.url} alt="" loading="lazy" className="h-full w-full object-cover" />
-                    {saving && <span className="absolute left-3 top-3 rounded-full bg-[var(--site-accent)] px-3 py-1.5 text-xs font-bold text-[var(--site-on-accent)]">{saving}</span>}
-                    {image.isStock && <StockImageLabel />}
-                </div>
-            )}
-            <div className="flex flex-1 flex-col gap-2 p-6">
-                <span className={cardLabel}>Hazır menüler · {menus.length}</span>
-                <h2 id="ev-hazir" className={cn(serif, 'm-0 text-[30px] leading-none md:text-[32px]')}>{menu.name}</h2>
-                {!image && saving && <span className="self-start rounded-full bg-[var(--site-accent)] px-3 py-1 text-xs font-bold text-[var(--site-on-accent)]">{saving}</span>}
-                <SlotsSummary menu={menu} className="line-clamp-2 text-sm text-[var(--site-sub)]" />
-                <div className="mt-auto flex flex-wrap items-baseline justify-between gap-2 pt-1">
-                    <span className="flex items-baseline gap-2">
-                        <span className="text-2xl font-bold">{formatSitePrice(menu.price)}</span>
-                        {saving && <s className="text-[var(--site-muted)]"><span className="sr-only">Normal fiyatı </span>{formatSitePrice(menu.regularPrice)}</s>}
-                    </span>
-                    <Link to="/menu#menuler" className={cardLink}>{menus.length > 1 ? `${menus.length - 1} menü daha →` : 'Menüde gör →'}</Link>
-                </div>
-            </div>
-        </section>
-    );
-}
-
-/** Menü kartı: az ürünlü menüde ürünler tek tek, çok ürünlüde kategori çipleri (ürün sayısıyla). */
-function MenuCard({ site }: { site: PublicSite }) {
-    const products = site.categories.flatMap(c => c.products);
-    const listAll = products.length <= LIST_ALL_PRODUCTS;
-    return (
-        <section aria-labelledby="ev-menu" className={cn(siteCard, 'flex h-full min-w-0 flex-col gap-4 p-5 md:p-6')}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                    <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--site-accent-soft)] text-[var(--site-accent-text)] [&>svg]:h-5 [&>svg]:w-5"><CupIcon /></span>
-                    <h2 id="ev-menu" className={cn(cardLabel, 'm-0')}>Menü · {site.categories.length} kategori · {products.length} ürün</h2>
-                </div>
-                <Link to="/menu" className={cardButton.accent}>Menüyü gör</Link>
-            </div>
-            {listAll ? (
-                <ul className="m-0 grid list-none grid-cols-1 gap-x-6 p-0 sm:grid-cols-2 xl:grid-cols-4">
-                    {products.map(p => (
-                        <li key={p.id} className="flex justify-between gap-3 border-t border-[var(--site-border)] py-2.5">
-                            <span className="min-w-0 truncate font-semibold">{p.name}</span>
-                            <span className="shrink-0 tabular-nums">{formatSitePrice(p.price)}</span>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-                    {site.categories.map(c => (
-                        <li key={c.id}>
-                            <Link to={`/menu#kat-${c.id}`} className="flex h-11 items-center rounded-full border border-[var(--site-line)] px-[18px] text-sm font-semibold text-[var(--site-text)] hover:border-[var(--site-text)]">
-                                {c.name}<span className="ml-1.5 font-medium opacity-60">{c.products.length}</span>
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </section>
-    );
-}
-
-/** `editing` (düzenleyici): yalnız galeri fotoğrafları (menü fotoğrafları burada değişmez). */
-function instagramCard(site: PublicSite, editing = false): ReactNode | null {
-    const url = site.site.instagramUrl;
-    if (!url) return null;
-    const photos = editing ? site.site.galleryImageUrls.slice(0, 3).map(u => ({ url: u })) : collagePhotos(site, 3);
-    return (
-        <a href={url} target="_blank" rel="noopener noreferrer" className={cn(siteCard, 'flex h-full min-w-0 flex-col gap-3 p-5 no-underline md:p-6')}>
-            <span className="flex items-center gap-3">
-                <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--site-accent-soft)] text-[var(--site-accent-text)] [&>svg]:h-5 [&>svg]:w-5"><InstagramIcon /></span>
-                <span className={cardLabel}>{instagramHandle(url)}</span>
-            </span>
-            {photos.length >= 3 ? (
-                <span className="grid grid-cols-3 gap-1.5">
-                    {photos.map((p, i) => <img key={i} src={p.url} alt="" loading="lazy" className="aspect-square w-full rounded-[10px] object-cover" />)}
+        <li className="flex min-w-0 items-center gap-3.5 rounded-[22px] bg-[var(--site-menu-card)] p-3.5 text-[var(--site-text)]">
+            {product.imageUrl && (
+                <span className="relative shrink-0">
+                    <img src={product.imageUrl} alt={product.name} loading="lazy" className="block h-[78px] w-[78px] rounded-2xl bg-[var(--site-placeholder)] object-cover" />
+                    {product.isStockImage && <StockImageLabel className="bottom-1 right-1 px-1 text-[9px]" />}
                 </span>
-            ) : (
-                <span className={cn(serif, 'text-[26px] leading-[1.1]')}>Masamızdan kareler <span className="italic">Instagram'da.</span></span>
             )}
-            <span className="mt-auto text-sm font-semibold underline underline-offset-4">Takip et →</span>
-        </a>
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <h3 className={cn(serif, 'm-0 truncate text-[21px] leading-[1.15]', product.isOutOfStock && 'text-[var(--site-muted)]')}>{product.name}</h3>
+                {(meta || tag) && (
+                    <p className="m-0 line-clamp-2 text-[13px] leading-snug text-[var(--site-muted)]">
+                        {meta}
+                        {tag && <span className={cn(serif, 'text-base italic', product.isOutOfStock ? 'text-[var(--site-muted)]' : 'text-[var(--site-accent-text)]')}>{meta ? ' · ' : ''}{tag}</span>}
+                    </p>
+                )}
+                <span className="text-base font-extrabold tabular-nums">{formatSitePrice(product.price)}</span>
+            </div>
+            <AddButton product={product} cart={cart} onAdded={onAdded} variant="accent" />
+        </li>
     );
 }
 
-// ── Menüden seçmeler ─────────────────────────────────────────────────────────────────────────────
+function MenuBox({ site, cart }: { site: PublicSite; cart: SiteCart }) {
+    const categories = useMemo(() => site.categories.filter(c => c.products.length > 0), [site]);
+    const [tab, setTab] = useState<string | null>(null);
+    const [query, setQuery] = useState('');
+    const [announce, setAnnounce] = useState('');
+    if (categories.length === 0) return null;
 
-/** Ürün çoksa (menü kartı yalnız kategori gösteriyorsa) üç seçme ürün; öne çıkan büyük tabak tekrar edilmez. */
-function HomePicks({ site }: { site: PublicSite }) {
-    const edit = useSiteEdit();
-    const products = site.categories.flatMap(c => c.products);
-    if (products.length <= LIST_ALL_PRODUCTS || edit) return null;
-    const big = pickFeatured(products, 1, true)[0];
-    const picks = pickFeatured(products.filter(p => p.id !== big?.id), 3);
-    if (picks.length < 2) return null;
+    const selected = categories.find(c => c.id === tab) ?? categories[0];
+    const q = foldText(query);
+    const items = q
+        ? categories.flatMap(c => c.products.filter(p => foldText(`${p.name} ${p.description} ${c.name}`).includes(q)))
+        : selected.products;
+    const onAdded = (name: string) => setAnnounce(`${name} sepete eklendi.`);
+
     return (
-        <ExternalHint source="menu" className="mx-auto w-full max-w-[1344px]">
-        <section aria-labelledby="ev-secmeler" className="mx-auto flex w-full max-w-[1344px] flex-col gap-5 px-5 pb-12 md:gap-6 md:px-12 md:pb-16">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-                <h2 id="ev-secmeler" className={cn(serif, 'm-0 text-[40px] leading-none md:text-[52px]')}>Menüden <span className="italic">seçmeler.</span></h2>
-                <Link to="/menu" className={cardLink}>Tüm menü · {products.length} ürün →</Link>
+        <section id="menu" aria-labelledby="ev-menu"
+            className="relative flex scroll-mt-24 flex-col gap-[26px] overflow-hidden rounded-[24px] bg-[var(--site-menu-box)] p-5 text-[var(--site-on-menu-box)] sm:p-11 md:rounded-[36px]">
+            <span aria-hidden="true" className="pointer-events-none absolute -right-[60px] -top-[60px] h-[300px] w-[300px] rounded-full bg-[radial-gradient(color-mix(in_srgb,var(--site-on-menu-box)_16%,transparent)_2px,transparent_2.6px)] bg-[length:22px_22px]" />
+            <div className="relative flex flex-wrap items-center justify-between gap-4">
+                <h2 id="ev-menu" className={cn(serif, 'm-0 text-[42px] leading-[0.95] md:text-[clamp(42px,4.6vw,68px)] [--site-accent-text:var(--site-cover-accent)]')}>Bugünün <em className={cn('rb-accent italic', mustard)}>menüsü</em></h2>
+                <label className="flex h-[52px] w-full items-center gap-2.5 rounded-full bg-[color-mix(in_srgb,var(--site-on-menu-box)_12%,transparent)] px-5 focus-within:ring-2 focus-within:ring-[var(--site-on-menu-box)] sm:w-[320px]">
+                    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                    <span className="sr-only">Menüde ara</span>
+                    <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Menüde ara…"
+                        className="min-w-0 flex-1 border-0 bg-transparent text-[15px] text-[var(--site-on-menu-box)] outline-none placeholder:text-[var(--site-on-menu-box-sub)]" />
+                </label>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5 lg:grid-cols-3">
-                {picks.map(p => <MenuProductCard key={p.id} product={p} />)}
+            {!q && categories.length > 1 && (
+                <div role="group" aria-label="Kategoriler" className="relative flex max-w-full gap-1.5 self-start overflow-x-auto rounded-full bg-[color-mix(in_srgb,var(--site-on-menu-box)_10%,transparent)] p-[5px] [scrollbar-width:none]">
+                    {categories.map(c => {
+                        const on = c.id === selected.id;
+                        return (
+                            <button key={c.id} type="button" aria-pressed={on} onClick={() => setTab(c.id)}
+                                className={cn('inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-[18px] text-sm font-bold transition-colors',
+                                    on ? 'bg-[var(--site-pop)] text-[var(--site-on-pop)]' : 'text-[var(--site-on-menu-box)] hover:bg-[color-mix(in_srgb,var(--site-on-menu-box)_10%,transparent)]')}>
+                                {c.name}<span className="font-semibold opacity-75">{c.products.length}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+            {q && <p className="relative m-0 font-bold" aria-live="polite">“{query.trim()}” için {items.length} sonuç</p>}
+            {items.length > 0 ? (
+                <ul className="relative m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-2.5 p-0">
+                    {items.map(p => <ProductCard key={p.id} product={p} cart={cart} onAdded={onAdded} />)}
+                </ul>
+            ) : (
+                <p className="relative m-0 text-[var(--site-on-menu-box-sub)]">Bu aramayla eşleşen ürün yok. Başka bir şey deneyin.</p>
+            )}
+            <Link to="/menu" className="relative inline-flex h-[50px] items-center self-start rounded-full border-2 border-[color-mix(in_srgb,var(--site-on-menu-box)_40%,transparent)] px-6 font-extrabold text-[var(--site-on-menu-box)] no-underline transition-colors hover:border-[var(--site-on-menu-box)]">Tüm menü · {productCount(site)} ürün →</Link>
+            <p className="sr-only" aria-live="polite">{announce}</p>
+        </section>
+    );
+}
+
+// ── 3. Hazır menüler ─────────────────────────────────────────────────────────────────────────────
+
+function SetMenuAction({ menu, cart }: { menu: OnlineSetMenu; cart: SiteCart }) {
+    if (!menu.isAvailable) return <span className="text-sm font-bold text-[var(--site-muted)]">Şu an tükendi</span>;
+    if (!cart.enabled) return <Link to="/menu#menuler" className="inline-flex min-h-11 items-center text-sm font-bold underline underline-offset-4">Menüde gör →</Link>;
+    const found = cart.setMenuFor(menu.id);
+    if (!found || !found.menu.isAvailable) return null;
+    if (found.needsChoice) {
+        return <Link to="/siparis" aria-label={`${menu.name}: seçerek sepete ekle`} className="inline-flex h-12 items-center rounded-full bg-[var(--site-accent)] px-5 text-sm font-extrabold text-[var(--site-on-accent)] no-underline">Seç ve ekle</Link>;
+    }
+    return (
+        <button type="button" onClick={() => cart.addSetMenu(menu.id)} aria-label={`${menu.name} sepete ekle`}
+            className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-[var(--site-accent)] text-[var(--site-on-accent)] transition-opacity hover:opacity-90">
+            <PlusIcon size={20} />
+        </button>
+    );
+}
+
+function maxSavingPercent(menus: OnlineSetMenu[]): number {
+    return menus.reduce((max, m) => {
+        const diff = m.regularPrice - m.price;
+        return diff > 0 && m.regularPrice > 0 ? Math.max(max, Math.floor((diff / m.regularPrice) * 100)) : max;
+    }, 0);
+}
+
+function ArrowIcon({ dir }: { dir: 'left' | 'right' }) {
+    return (
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {dir === 'left' ? <path d="M20 12H4M10 18l-6-6 6-6" /> : <path d="M4 12h16M14 6l6 6-6 6" />}
+        </svg>
+    );
+}
+
+/** Başlık kutusu + kaydırılan menü kartları (geniş ekranda 3 kart ve oklar; telefonda parmakla kaydırma). */
+function SetMenusRow({ site, cart }: { site: PublicSite; cart: SiteCart }) {
+    const menus = site.setMenus ?? [];
+    const track = useRef<HTMLDivElement>(null);
+    const win = useSiteWindow();
+    const [pos, setPos] = useState({ index: 0, count: 1, canPrev: false, canNext: false });
+
+    useEffect(() => {
+        const el = track.current;
+        if (!el) return;
+        const update = () => {
+            const card = el.firstElementChild as HTMLElement | null;
+            const step = card ? card.offsetWidth + 16 : el.clientWidth;
+            const visible = Math.max(1, Math.round((el.clientWidth + 16) / step));
+            setPos({
+                index: Math.round(el.scrollLeft / step),
+                count: Math.max(1, menus.length - visible + 1),
+                canPrev: el.scrollLeft > 4,
+                canNext: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+            });
+        };
+        update();
+        el.addEventListener('scroll', update, { passive: true });
+        win.addEventListener('resize', update);
+        return () => {
+            el.removeEventListener('scroll', update);
+            win.removeEventListener('resize', update);
+        };
+    }, [menus.length, win]);
+
+    if (menus.length === 0) return null;
+    const scroll = (dir: 1 | -1) => {
+        const el = track.current;
+        const card = el?.firstElementChild as HTMLElement | null;
+        if (el && card) el.scrollBy({ left: dir * (card.offsetWidth + 16), behavior: 'smooth' });
+    };
+    const best = maxSavingPercent(menus);
+    const line = [`${menus.length} hazır menü`, best >= 1 ? `%${best}'${dativeSuffix(best)} varan avantaj` : null].filter(Boolean).join(' · ');
+    const fade = 'pointer-events-none absolute inset-y-0 z-[2] hidden w-[132px] items-center px-[18px] md:flex';
+    const arrow = 'pointer-events-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--site-paper)] text-[var(--site-on-paper)] shadow-[0_12px_28px_rgba(36,24,15,0.25)]';
+
+    return (
+        <section id="menuler" aria-labelledby="ev-hazir" className="flex scroll-mt-24 flex-wrap gap-4">
+            <div className="relative flex min-w-[260px] flex-[1_1_300px] flex-col justify-between gap-6 overflow-hidden rounded-[24px] bg-[var(--site-mustard)] p-7 text-[var(--site-text)] [--site-accent-text:currentColor] md:max-w-[300px] md:rounded-[36px] md:p-[34px]">
+                <span aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-10 h-[200px] w-[200px] rounded-full border-2 border-dashed border-[rgba(36,24,15,0.25)]" />
+                <h2 id="ev-hazir" className={cn(serif, 'relative m-0 text-[48px] font-extrabold leading-[0.92] md:text-[54px]')}>Hazır<br /><em className="rb-accent italic">menüler</em></h2>
+                <div className="relative flex flex-col gap-3.5">
+                    <span className="text-[15px] font-semibold leading-normal">{line}</span>
+                    {pos.count > 1 && (
+                        <div aria-hidden="true" className="flex gap-[5px]">
+                            {Array.from({ length: pos.count }, (_, k) => (
+                                <span key={k} className={cn('h-1.5 rounded-[3px] transition-[width] duration-300', k === pos.index ? 'w-[22px] bg-[var(--site-paper)]' : 'w-1.5 bg-[rgba(36,24,15,0.3)]')} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+            <div className="relative min-w-0 flex-[999_1_560px]">
+                {pos.canPrev && (
+                    <div className={cn(fade, 'left-0 justify-start rounded-l-[36px] bg-[linear-gradient(270deg,transparent_0%,color-mix(in_srgb,var(--site-bg)_92%,transparent)_62%,var(--site-bg)_100%)]')}>
+                        <button type="button" onClick={() => scroll(-1)} aria-label="Önceki menüler" className={arrow}><ArrowIcon dir="left" /></button>
+                    </div>
+                )}
+                {pos.canNext && (
+                    <div className={cn(fade, 'right-0 justify-end rounded-r-[36px] bg-[linear-gradient(90deg,transparent_0%,color-mix(in_srgb,var(--site-bg)_92%,transparent)_62%,var(--site-bg)_100%)]')}>
+                        <button type="button" onClick={() => scroll(1)} aria-label="Sonraki menüler" className={arrow}><ArrowIcon dir="right" /></button>
+                    </div>
+                )}
+                <div ref={track} className="flex h-full snap-x snap-mandatory gap-4 overflow-x-auto rounded-[24px] [scrollbar-width:none] md:rounded-[36px]">
+                    {menus.map(menu => {
+                        const saving = savingLabel(menu);
+                        return (
+                            <article key={menu.id}
+                                className="flex min-h-[300px] shrink-0 basis-[86%] snap-start flex-col gap-3 rounded-[24px] bg-[var(--site-card)] p-6 sm:basis-[calc((100%-16px)/2)] md:min-h-[340px] md:rounded-[36px] md:p-7 xl:basis-[calc((100%-32px)/3)]">
+                                {saving && <span className="self-start rounded-full bg-[var(--site-accent-text)] px-[13px] py-[7px] text-xs font-extrabold text-[var(--site-card)]">{saving}</span>}
+                                <h3 className={cn(serif, 'm-0 break-words text-[28px] leading-[1.08]')}>{menu.name}</h3>
+                                {menu.description && <p className="m-0 line-clamp-2 text-sm leading-relaxed text-[var(--site-sub)]">{menu.description}</p>}
+                                <SlotsSummary menu={menu} className="line-clamp-4 text-sm leading-relaxed text-[var(--site-sub)]" />
+                                <div className="mt-auto flex items-end justify-between gap-3 pt-3">
+                                    <span className="flex flex-col">
+                                        {saving && <s className="text-sm text-[var(--site-muted)]"><span className="sr-only">Normal fiyatı </span>{formatSitePrice(menu.regularPrice)}</s>}
+                                        <span className={cn(serif, 'text-[36px] font-extrabold leading-none')}>{saving && <span className="sr-only">Menü fiyatı </span>}{formatSitePrice(menu.price)}</span>
+                                    </span>
+                                    <SetMenuAction menu={menu} cart={cart} />
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
             </div>
         </section>
-        </ExternalHint>
     );
 }
 
-/** Restoranın seçtiği yorumlar (ikinci ve sonrası; ilki puan kartında). */
-function HomeReviews({ site }: { site: PublicSite }) {
+// ── 4. Hikâye + yorumlar ─────────────────────────────────────────────────────────────────────────
+
+function StoryReviewsRow({ site }: { site: PublicSite }) {
     const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
     const c = site.site;
-    const all = c.featuredReviews;
-    // Düzenleyicide bütün yorumlar burada kart olarak yönetilir (ilki sitede puan kartında da görünür).
-    const offset = c.rating !== null && !edit ? 1 : 0;
-    const reviews = all.slice(offset);
-    const max = SITE_LIMITS.review.max;
-    if (reviews.length === 0 && !(edit?.showEmpty && all.length < max)) return null;
-    const cells = reviews.length + (edit && all.length < max ? 1 : 0);
+    const hasStory = Boolean(c.storyTitle || c.about) || showEmpty;
+    // Yorumlar: sitede ilk ikisi; düzenleyicide hepsi (en çok 3) yönetilir.
+    const reviews = edit ? c.featuredReviews : c.featuredReviews.slice(0, 2);
+    const canAdd = Boolean(edit) && c.featuredReviews.length < SITE_LIMITS.review.max;
+    const hasReviews = reviews.length > 0 || canAdd;
+    if (!hasStory && !hasReviews) return null;
     return (
-        <section aria-labelledby="ev-yorumlar" className="mx-auto flex w-full max-w-[1344px] flex-col gap-5 px-5 pb-12 md:px-12 md:pb-16">
-            <h2 id="ev-yorumlar" className={cn(serif, 'm-0 text-[36px] leading-none md:text-[44px]')}>Misafirlerimiz <span className="italic">ne diyor?</span></h2>
-            <div className={cn('grid grid-cols-1 gap-3 md:gap-4', cells >= 2 && 'md:grid-cols-2', cells >= 3 && 'lg:grid-cols-3')}>
-                {reviews.map((r, i) => {
-                    const index = i + offset;
-                    return (
-                        <ListCard key={index} list="reviews" index={index} count={all.length} label="Yorum" className="flex">
-                            <figure className={cn(siteCard, 'm-0 flex flex-1 flex-col gap-3 p-6')}>
-                                <Stars value={5} className="text-base" />
+        <div className="flex flex-wrap gap-4">
+            {hasStory && <StoryBox site={site} />}
+            {hasReviews && (
+                <section aria-labelledby="ev-yorumlar" className="flex min-w-0 flex-[1_1_420px] flex-col gap-4">
+                    <h2 id="ev-yorumlar" className="sr-only">Misafir yorumları</h2>
+                    {reviews.map((r, i) => (
+                        <ListCard key={i} list="reviews" index={i} count={c.featuredReviews.length} label="Yorum" className="flex flex-1 rounded-[24px] md:rounded-[36px]">
+                            <figure className={cn(box, 'm-0 flex flex-1 flex-col gap-3.5 p-6 md:p-[30px]')}>
+                                <span aria-hidden="true" className={cn(serif, 'h-6 text-[56px] leading-none text-[var(--site-accent-text)]')}>“</span>
                                 {edit ? (
                                     <>
-                                        <EditableText as="blockquote" field={`review:${index}:text`} value={r.text} multiline placeholder="Yorumun metni"
-                                            className={cn(serif, 'm-0 text-[22px] leading-[1.25]')} />
-                                        <figcaption className="mt-auto flex flex-wrap gap-x-1.5 text-sm text-[var(--site-sub)]">
-                                            <EditableText field={`review:${index}:author`} value={r.author} placeholder="Yazan" />·
-                                            <EditableText field={`review:${index}:source`} value={r.source} placeholder="Kaynak" />
+                                        <EditableText as="blockquote" field={`review:${i}:text`} value={r.text} multiline placeholder="Yorumun metni"
+                                            className={cn(serif, 'm-0 text-[26px] leading-[1.25]')} />
+                                        <figcaption className="mt-auto flex flex-wrap gap-x-1.5 text-[13px] text-[var(--site-muted)]">
+                                            <EditableText field={`review:${i}:author`} value={r.author} placeholder="Yazan" />·
+                                            <EditableText field={`review:${i}:source`} value={r.source} placeholder="Kaynak" />
                                         </figcaption>
-                                        {index === 0 && c.rating !== null && <span className="text-xs text-[var(--site-muted)]">Sitede puan kartında görünür.</span>}
                                     </>
                                 ) : (
                                     <>
-                                        <blockquote className={cn(serif, 'm-0 text-[22px] leading-[1.25]')}>“{r.text}”</blockquote>
-                                        <figcaption className="mt-auto text-sm text-[var(--site-sub)]">{[r.author, r.source].filter(Boolean).join(' · ')}</figcaption>
+                                        <blockquote className={cn(serif, 'm-0 text-[22px] font-medium leading-[1.3] md:text-2xl')}>{r.text}</blockquote>
+                                        {(r.author || r.source) && <figcaption className="mt-auto text-[13px] text-[var(--site-muted)]">{[r.author, r.source].filter(Boolean).join(' · ')}</figcaption>}
                                     </>
                                 )}
                             </figure>
                         </ListCard>
-                    );
-                })}
-                <AddCard list="reviews" label="Yorum ekle" count={all.length} max={max} />
-            </div>
-        </section>
+                    ))}
+                    <AddCard list="reviews" label="Yorum ekle" count={c.featuredReviews.length} max={SITE_LIMITS.review.max} className="bg-[var(--site-card)]" />
+                    {!edit && c.reviewsUrl && (
+                        <a href={c.reviewsUrl} target="_blank" rel="noopener noreferrer" className={cn(cardButton.outline, 'h-12 bg-[var(--site-card)] px-[22px] text-[15px]')}>Google'da tüm yorumlar</a>
+                    )}
+                </section>
+            )}
+        </div>
     );
 }
 
-// ── Fotoğraf şeridi ──────────────────────────────────────────────────────────────────────────────
-
-/** Mekân ve menü fotoğrafları: 3 → 3'lü, 4–5 → 4'lü, 6 ve üstü → 6'lı. 3'ten azsa çizilmez. */
-function PhotoStrip({ site }: { site: PublicSite }) {
+/**
+ * Hikâye kutusu: hikâye fotoğrafı varsa fotoğraf + koyu geçiş ve beyaz yazı, yoksa vurgu rengi zemin ve vurgunun
+ * okunur yazı rengi. İçinde üst satır (kuruluş yılı), alıntı (slogan), usta, kısa hikâye ve "Hikâyenin devamı".
+ */
+function StoryBox({ site }: { site: PublicSite }) {
     const edit = useSiteEdit();
-    // Düzenleyicide yalnız galeri fotoğrafları (menü fotoğrafları Yemeklerimiz'den gelir).
-    const all = edit ? site.site.galleryImageUrls.slice(0, 6).map(url => ({ url, isStock: url.includes('/shared/stock/'), alt: '' })) : collagePhotos(site, 6);
-    if (all.length < (edit ? 1 : 3)) {
-        if (!edit?.showEmpty) return null;
-        return (
-            <div className="mx-auto w-full max-w-[1344px] px-5 pb-12 md:px-12">
-                <EmptySlot target="gallery:add" title="+ Fotoğraf ekle" />
-            </div>
-        );
-    }
-    const count = all.length >= 6 ? 6 : all.length >= 4 ? 4 : edit ? all.length : 3;
-    const photos = all.slice(0, count);
-    const cols = ({ 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-2 sm:grid-cols-4', 6: 'grid-cols-3 md:grid-cols-6' } as Record<number, string>)[count];
-    const instagram = site.site.instagramUrl;
-    const galleryCount = site.site.galleryImageUrls.length;
-    const igX = editTarget(edit, 'contact', 'Instagram');
+    const showEmpty = Boolean(edit?.showEmpty);
+    const c = site.site;
+    const photo = c.aboutImageUrl;
+    const [quoteMain, quoteAccent] = splitAccent(c.storyTitle);
+    const founder = [c.founderName, c.founderTitle].filter(Boolean).join(', ');
+    // Koyu kiremit zeminde krem yazı; italik parça ve üst satır açık hardal.
+    const tone = 'text-[var(--site-on-paper)] [--site-accent-text:var(--site-mustard-text)]';
     return (
-        <section aria-label="Fotoğraflar" className={cn('relative grid', cols)}>
-            {photos.map((p, i) => {
-                // Galeriden gelen kare galeri fotoğrafıdır; sonrakiler menüdeki ürün fotoğrafları.
-                const x = i < galleryCount ? editTarget(edit, `gallery:${i}`, `Mekân fotoğrafı ${i + 1}`) : { className: '' };
-                return (
-                    <div key={i} {...x} className={cn('relative', x.className)}>
-                        <img src={p.url} alt={p.alt} loading="lazy" className="block aspect-square w-full object-cover" />
-                        {p.isStock && <StockImageLabel />}
+        <EditableBlock target="photo:about" label="Hikâye fotoğrafı" chip="Fotoğrafı değiştir" className="flex min-w-0 flex-[1_1_560px] rounded-[24px] md:rounded-[32px]">
+            <section aria-labelledby="ev-hikaye"
+                className={cn('relative flex min-h-[420px] min-w-0 flex-1 flex-col justify-between gap-7 overflow-hidden rounded-[24px] bg-[var(--site-story)] p-6 sm:p-11 md:min-h-[460px] md:rounded-[36px]', tone)}>
+                {photo ? (
+                    <>
+                        <img src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--site-story)_60%,transparent)_0%,color-mix(in_srgb,var(--site-story)_40%,transparent)_30%,color-mix(in_srgb,var(--site-story)_94%,transparent)_80%)]" />
+                        {photo.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+                    </>
+                ) : (
+                    <span aria-hidden="true" className="absolute inset-0 bg-[repeating-conic-gradient(from_45deg,color-mix(in_srgb,var(--site-on-paper)_7%,transparent)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />
+                )}
+                <div className="relative flex flex-wrap items-center justify-between gap-3">
+                    <EditableBlock target="year" label="Kuruluş yılı" className="rounded-full">
+                        <h2 id="ev-hikaye" className="m-0 text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-mustard-text)]">{c.foundedYear ? `Hikâyemiz · ${sinceYear(c.foundedYear)}` : 'Hikâyemiz'}</h2>
+                    </EditableBlock>
+                    {edit && !photo && <span className="rounded-full bg-[var(--site-card)] px-3 py-1.5 font-[family-name:'DM_Sans',system-ui,sans-serif] text-sm font-semibold text-[var(--site-text)]">+ Hikâye fotoğrafı ekle</span>}
+                </div>
+                <div className="relative flex flex-col gap-4">
+                    {edit ? (
+                        (c.storyTitle || showEmpty) && (
+                            <EditableText as="p" field="storyTitle" value={c.storyTitle} placeholder="Slogan yazın"
+                                className={cn(serif, 'm-0 break-words text-[34px] leading-[1.06] md:text-[clamp(34px,3.4vw,50px)]')} />
+                        )
+                    ) : c.storyTitle && (
+                        <blockquote className={cn(serif, 'm-0 break-words text-[32px] font-semibold leading-[1.08] md:text-[clamp(32px,3.2vw,48px)]')}>
+                            “{quoteMain && <>{quoteMain} </>}<span className="italic">{quoteAccent}</span>”
+                        </blockquote>
+                    )}
+                    {(c.about || showEmpty) && (
+                        <EditableText as="p" field="about" value={c.about} multiline placeholder="Kısa hikâyenizi yazın"
+                            className="m-0 line-clamp-4 max-w-[60ch] whitespace-pre-line text-[15px] leading-relaxed opacity-90" />
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        {founder ? (edit ? (
+                            <span className="flex flex-wrap gap-x-1.5 text-[15px] font-bold">
+                                — <EditableText field="founderName" value={c.founderName} placeholder="Ustanın adı" />
+                                {(c.founderTitle || showEmpty) && <>, <EditableText field="founderTitle" value={c.founderTitle} placeholder="Unvanı" /></>}
+                            </span>
+                        ) : <span className="text-[15px] font-bold">— {founder}</span>) : <span />}
+                        {!edit && hasAboutPage(site) && (
+                            <Link to="/hakkimizda" className="inline-flex h-12 items-center rounded-full bg-[var(--site-mustard)] px-[22px] text-sm font-extrabold text-[var(--site-text)] no-underline transition-opacity hover:opacity-90">Hikâyenin devamı →</Link>
+                        )}
                     </div>
-                );
-            })}
-            {instagram && (
-                <a href={instagram} target="_blank" rel="noopener noreferrer" {...igX}
-                    className={cn('absolute left-1/2 top-1/2 flex h-14 max-w-[calc(100%-32px)] -translate-x-1/2 -translate-y-1/2 items-center gap-2.5 rounded-full bg-[var(--site-card)] px-7 font-semibold text-[var(--site-text)] shadow-[0_12px_30px_rgba(0,0,0,0.18)]', igX.className)}>
-                    <span aria-hidden="true" className="shrink-0 [&>svg]:h-5 [&>svg]:w-5"><InstagramIcon /></span>
-                    <span className="truncate">{instagramHandle(instagram)}</span>
-                </a>
-            )}
-        </section>
+                </div>
+            </section>
+        </EditableBlock>
     );
 }

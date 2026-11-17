@@ -70,6 +70,8 @@ export interface SiteEditApi {
     focusRequest: { field: SiteTextField; n: number } | null;
     /** Düzenleyiciden "bu öğeyi göster" isteği (eksikler listesi): öğeye kaydırır ve seçer. */
     revealRequest: { target: SiteEditTarget; n: number } | null;
+    /** Hazır "Sık sorulanlar" sorusunu sitede gizler / yeniden gösterir (taslağın hiddenFaqs listesi). */
+    toggleFaq?: (key: string) => void;
 }
 
 export const SiteEditContext = createContext<SiteEditApi | null>(null);
@@ -132,10 +134,9 @@ export const EXTERNAL_SOURCES: Record<string, ExternalSource> = {
     tables: { hover: "Masalar'da değişir", title: 'Bölümler ve masalar', text: 'Bölüm adları ve masa sayıları Masalar sayfasından değişir. Bölümün fotoğrafı ve açıklaması burada, kartın üstünde değişir.', links: [{ label: 'Masalar', to: ADMIN_PATHS.tables }] },
     messages: { hover: "Mesajlar Şikayet ve Öneriler'e gelir", title: 'İletişim formu', text: 'Formdan gelen mesajlar Şikayet ve Öneriler sayfasında toplanır. Formun kendisi her sitede aynıdır.', links: [{ label: 'Şikayet ve Öneriler', to: ADMIN_PATHS.messages }] },
     auto: { hover: 'Otomatik hesaplanır', title: 'Otomatik hesaplanır', text: 'Bu satır menüdeki ürünlerden, masalardan ve çalışma saatlerinden kendiliğinden hesaplanır.', links: [{ label: 'Yemeklerimiz', to: ADMIN_PATHS.menu }, { label: 'Masalar', to: ADMIN_PATHS.tables }] },
-    eyebrow: { hover: 'Otomatik oluşur', title: 'Kapaktaki üst satır', text: 'İlk menü kategorisi, ilçe ve kuruluş yılından oluşur.', links: [{ label: 'Yemeklerimiz', to: ADMIN_PATHS.menu }, { label: 'Ayarlar', to: ADMIN_PATHS.restaurant }], edit: { label: 'Kuruluş yılını değiştir', target: 'year' } },
-    heroActions: { hover: 'Ayarlara göre çıkar', title: 'Kapak düğmeleri', text: '“Masa ayırt” rezervasyon açıkken, “Paket sipariş” online sipariş açıkken görünür; “Menüyü gör” her zaman vardır.', links: [{ label: 'Rezervasyon ayarları', to: ADMIN_PATHS.reservationRules }, { label: 'Online sipariş ayarları', to: ADMIN_PATHS.onlineOrdering }] },
+    eyebrow: { hover: 'Otomatik oluşur', title: 'Kapaktaki üst satır', text: 'Kuruluş yılından ve ilçeden oluşur.', links: [{ label: 'Yemeklerimiz', to: ADMIN_PATHS.menu }, { label: 'Ayarlar', to: ADMIN_PATHS.restaurant }], edit: { label: 'Kuruluş yılını değiştir', target: 'year' } },
+    heroActions: { hover: 'Ayarlara göre çıkar', title: 'Kapak düğmeleri', text: '“Sipariş ver” online sipariş açıkken, “Masa ayırt” rezervasyon açıkken görünür; ikisinden biri yoksa yerine “Menüyü gör” gelir.', links: [{ label: 'Rezervasyon ayarları', to: ADMIN_PATHS.reservationRules }, { label: 'Online sipariş ayarları', to: ADMIN_PATHS.onlineOrdering }] },
     actions: { hover: 'Ayarlara göre çıkar', title: 'Hızlı eylemler', text: '“Ara” ve “Yol tarifi” telefondan ve adresten (Ayarlar), “Masa ayırt” rezervasyon ayarından, “WhatsApp” buradaki WhatsApp numarasından gelir.', links: [{ label: 'Ayarlar', to: ADMIN_PATHS.restaurant }, { label: 'Rezervasyon ayarları', to: ADMIN_PATHS.reservationRules }], edit: { label: 'WhatsApp numarasını değiştir', target: 'contact' } },
-    lastCall: { hover: 'Otomatik oluşur', title: '“Acıktınız mı?” kartı', text: 'Her sayfanın sonundaki bu kart saatlerden, ilçeden, telefondan ve sipariş/rezervasyon ayarlarından kendiliğinden oluşur.', links: [{ label: 'Ayarlar', to: ADMIN_PATHS.restaurant }, { label: 'Online sipariş ayarları', to: ADMIN_PATHS.onlineOrdering }], edit: { label: 'Çalışma saatlerini değiştir', target: 'hours' } },
     fixed: { hover: 'Sabit yazı', title: 'Sabit yazı', text: 'Bu yazı ve bağlantılar her restoran sitesinde aynıdır; değiştirilemez.', links: [] },
     reservationText: { hover: 'Sabit yazı', title: 'Rezervasyon sayfası', text: '“Masanızı ayırtın.” başlığı ve açıklaması sabittir. Akışın içeriği (günler, saatler, masalar) rezervasyon ayarlarından ve masalardan gelir.', links: [{ label: 'Rezervasyon ayarları', to: ADMIN_PATHS.reservationRules }, { label: 'Masalar', to: ADMIN_PATHS.tables }] },
 };

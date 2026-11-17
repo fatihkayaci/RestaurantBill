@@ -157,6 +157,7 @@ public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant
 
         table.QrFeatures = QrFeaturesDto.From(branch.GetQrFeatures());
         table.AcceptsOnlineOrders = branch.AcceptsOnlineOrders;
+        table.IbanPayment = TableIbanPaymentDto.From(branch);
         return Result<PublicTableInfoDto>.Success(table);
     }
 }

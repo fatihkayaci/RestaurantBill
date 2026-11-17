@@ -2,7 +2,7 @@ import type { PublicProduct } from '@/features/customerSite/types';
 import type { OnlineSetMenu } from '@/features/delivery/types';
 import { formatSitePrice } from './siteTheme';
 
-// Hazır menü kartlarının (SiteSetMenus.tsx) ortak hesapları: görsel seçimi ve indirim rozeti.
+// Hazır menü kartlarının (SiteMenuBoard.tsx) ortak hesapları: görsel seçimi ve indirim rozeti.
 
 /** Kart görseli; isStock: hazır görsel kütüphanesinden ("Temsili görsel" etiketi). */
 export interface SetMenuPhoto { url: string; isStock: boolean; }

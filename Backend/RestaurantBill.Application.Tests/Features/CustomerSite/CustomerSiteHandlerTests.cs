@@ -1,4 +1,5 @@
 using System.Globalization;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.Features.CustomerSite.Public;
 using RestaurantBill.Application.Features.CustomerSite.Staff;
 using RestaurantBill.Application.Tests.Fakes;
@@ -43,7 +44,7 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
 
     private async Task<Guid> SendOrderRequestAsync(Table table, Product product, int quantity = 2)
     {
-        var handler = new CreateOrderRequestCommandHandler(Db, _tenant, _tableNotifications);
+        var handler = new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications);
         var result = await handler.Handle(new CreateOrderRequestCommand
         {
             TableId = table.Id,
@@ -93,7 +94,7 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
         DbContext.Products.Add(otherProduct);
         await DbContext.SaveChangesAsync();
 
-        var handler = new CreateOrderRequestCommandHandler(Db, _tenant, _tableNotifications);
+        var handler = new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications);
         var result = await handler.Handle(new CreateOrderRequestCommand
         {
             TableId = table.Id,
@@ -109,7 +110,7 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
     {
         var (table, product) = await SeedRestaurantAsync();
 
-        var handler = new CreateOrderRequestCommandHandler(Db, new FakeTenantResolver { Slug = "baska-restoran" }, _tableNotifications);
+        var handler = new CreateOrderRequestCommandHandler(Db, new FakeTenantResolver { Slug = "baska-restoran" }, new OrderPricingService(Db), _tableNotifications);
         var result = await handler.Handle(new CreateOrderRequestCommand
         {
             TableId = table.Id,

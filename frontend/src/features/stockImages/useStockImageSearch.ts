@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { stockImageService, type StockImage } from './api/stockImageService';
+import { stockImageService, type StockImage, type StockSearchOptions } from './api/stockImageService';
 
 export type StockSearchState =
     | { status: 'loading' }
@@ -12,9 +12,10 @@ const SEARCH_DELAY_MS = 250;
 
 /**
  * Hazır görsel araması (sıralama sunucuda): yazdıkça kısa gecikmeyle arar; eşleşme yoksa boş ekran yerine varsayılan
- * listeyi `noMatch` ile döner. Ürün/menü penceresi (StockImagePickerModal) ve site düzenleyicisinin paneli kullanır.
+ * listeyi `noMatch` ile döner (aynı kapsam ve grupla). Ürün/menü penceresi (StockImagePickerModal, `food`) ve site
+ * düzenleyicisinin paneli (StockGrid, `venue`) kullanır.
  */
-export function useStockImageSearch(query: string) {
+export function useStockImageSearch(query: string, { scope, group }: StockSearchOptions = {}) {
     const [state, setState] = useState<StockSearchState>({ status: 'loading' });
     const [reloadKey, setReloadKey] = useState(0);
 
@@ -24,10 +25,11 @@ export function useStockImageSearch(query: string) {
             setState({ status: 'loading' });
             try {
                 const q = query.trim();
-                let items = await stockImageService.search(q, controller.signal);
+                const options = { scope, group };
+                let items = await stockImageService.search(q, options, controller.signal);
                 let noMatch = false;
                 if (items.length === 0 && q) {
-                    items = await stockImageService.search('', controller.signal);
+                    items = await stockImageService.search('', options, controller.signal);
                     noMatch = true;
                 }
                 setState({ status: 'ready', items, noMatch });
@@ -40,7 +42,7 @@ export function useStockImageSearch(query: string) {
             window.clearTimeout(timer);
             controller.abort();
         };
-    }, [query, reloadKey]);
+    }, [query, scope, group, reloadKey]);
 
     return { state, retry: () => setReloadKey(k => k + 1) };
 }
