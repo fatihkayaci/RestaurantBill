@@ -97,6 +97,7 @@ export function normalizeSite(site: PublicSite): PublicSite {
             directionsNote: c.directionsNote ?? '',
             whatsappPhone: c.whatsappPhone ?? '',
             amenities: c.amenities ?? [],
+            hiddenFaqs: c.hiddenFaqs ?? [],
             rating: c.rating ?? null,
             reviewCount: c.reviewCount ?? null,
             reviewsUrl: c.reviewsUrl ?? '',

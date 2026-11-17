@@ -141,6 +141,10 @@ export const SITE_AMENITIES: { key: string; label: string }[] = [
     { key: 'canli-muzik', label: 'Canlı müzik' },
     { key: 'vejetaryen', label: 'Vejetaryen seçenek' },
     { key: 'kartla-odeme', label: 'Kartla ödeme' },
+    { key: 'bebek-sandalyesi', label: 'Bebek sandalyesi' },
+    { key: 'aile-salonu', label: 'Aile salonu' },
+    { key: 'sigara-alani', label: 'Sigara içilebilir alan' },
+    { key: 'ozel-gun', label: 'Grup ve özel gün organizasyonu' },
 ];
 
 export function amenityLabel(key: string): string | null {

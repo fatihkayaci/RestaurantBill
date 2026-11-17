@@ -133,6 +133,14 @@ const AMENITY_ICONS: Record<string, string> = {
     'canli-muzik': 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
     vejetaryen: 'M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10zM2 21c0-3 1.9-5.4 5.2-6',
     'kartla-odeme': 'M2 5h20v14H2zM2 10h20M6 15h4',
+    // Yüksek sandalye: oturak, sırtlık, tepsi ve ayaklar.
+    'bebek-sandalyesi': 'M7 3h10v7H7zM5 10h14M8 10l-2 11M16 10l2 11M7 16h10',
+    // Aile: iki büyük, bir küçük baş ve gövdeler.
+    'aile-salonu': 'M7 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM4 21v-7a3 3 0 0 1 6 0v7M14 21v-7a3 3 0 0 1 6 0v7M10 21v-4a2 2 0 0 1 4 0v4',
+    // Sigara: çubuk, kül ucu ve duman.
+    'sigara-alani': 'M2 16h15v4H2zM19 16h1v4h-1M22 16v4M18 12c0-2 2-2 2-4s-2-2-2-4M21 12c0-2 1-2 1-4',
+    // Pasta: üç kat ve mumlar.
+    'ozel-gun': 'M4 21h16M5 21v-6h14v6M7 15v-4h10v4M9 11V8M12 11V7M15 11V8M12 5v.01M9 6v.01M15 6v.01',
 };
 
 const iconProps = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const;

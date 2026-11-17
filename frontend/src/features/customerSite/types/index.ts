@@ -42,6 +42,8 @@ export interface BranchSite {
     whatsappPhone: string;
     /** SITE_AMENITIES anahtarları. */
     amenities: string[];
+    /** Sitede gizlenen hazır "Sık sorulanlar" anahtarları (site/siteFaqs.ts); boş = hepsi görünür. */
+    hiddenFaqs: string[];
     rating: number | null;
     reviewCount: number | null;
     /** Google Haritalar yorum sayfası. */

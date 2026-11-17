@@ -221,10 +221,15 @@ export default function SiteEditorPage() {
         if (focus) focusText(focus);
     }, [updateTexts, focusText]);
 
+    // Hazır "Sık sorulanlar" sorusunu gizle / göster: taslağın hiddenFaqs listesi (Yayınla'ya kadar yalnız taslakta).
+    const toggleFaq = useCallback((key: string) => updateTexts(t => ({
+        ...t, hiddenFaqs: t.hiddenFaqs.includes(key) ? t.hiddenFaqs.filter(k => k !== key) : [...t.hiddenFaqs, key],
+    })), [updateTexts]);
+
     const selected = selection?.target ?? null;
     const editApi = useMemo<SiteEditApi | null>(() => (previewMode ? null : {
-        showEmpty, selected, select, setText, listOp, openAdmin, focusRequest, revealRequest,
-    }), [previewMode, showEmpty, selected, select, setText, listOp, openAdmin, focusRequest, revealRequest]);
+        showEmpty, selected, select, setText, listOp, openAdmin, focusRequest, revealRequest, toggleFaq,
+    }), [previewMode, showEmpty, selected, select, setText, listOp, openAdmin, focusRequest, revealRequest, toggleFaq]);
 
     const closePopover = useCallback(() => { setSelection(null); setStockTarget(null); }, []);
     useEffect(() => {

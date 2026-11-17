@@ -1,9 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
-import { isOnlineOrderingAvailable, useOnlineOrdering } from '@/features/delivery/useOnlineOrderingAvailable';
-import { DoorPayment } from '@/features/courier/types';
-import { formatPrice } from '@/lib/format';
+import type { PublicSite } from '@/features/customerSite/types';
+import { useOnlineOrdering } from '@/features/delivery/useOnlineOrderingAvailable';
 import { cn } from '@/lib/utils';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
 import { SitePage } from './site/SiteFrame';
@@ -11,6 +9,7 @@ import { instagramHandle, serif, untilTime } from './site/siteParts';
 import { directionsUrl, telHref, whatsappHref } from './site/siteTheme';
 import { fullAddress, useSite, weekSchedule } from './site/useSite';
 import ContactForm from './site/ContactForm';
+import { faqItems, visibleFaqs } from './site/siteFaqs';
 import { EditableBlock, EditableText, EmptySlot, ExternalHint } from './site/siteEdit';
 import { useSiteEdit } from './site/siteEditContext';
 import { oliveBg } from './site/renkliTones';
@@ -167,59 +166,11 @@ function AddressBox({ site }: { site: PublicSite }) {
 }
 
 // ── Sık sorulanlar ───────────────────────────────────────────────────────────────────────────────
-// Sorular ve cevaplar restoranın gerçek ayarlarından oluşur (rezervasyon kuralları, teslimat mahalleleri, ödeme yolları);
-// ayarı olmayan soru çizilmez. Hiç soru yoksa bölüm yok.
-
-interface Faq { q: string; a: string }
-
-function useFaqs(site: PublicSite): Faq[] {
-    const ordering = useOnlineOrdering();
-    const faqs: Faq[] = [];
-    if (canReserveOnline(site)) {
-        const r = site.reservation;
-        const limits = [
-            r.maxPartySize > 0 ? `en fazla ${r.maxPartySize} kişilik` : null,
-            r.maxDaysAhead > 0 ? `${r.maxDaysAhead} gün sonrasına kadar` : null,
-        ].filter(Boolean).join(', ');
-        faqs.push({
-            q: 'Rezervasyon nasıl yapılır?',
-            a: `Üst menüdeki “Masa ayırt”tan gün, saat ve kişi sayısını seçmeniz yeterli.${limits ? ` Online olarak ${limits} rezervasyon alıyoruz.` : ''}${site.phone ? ` Daha kalabalık gruplar için ${site.phone} numarasından bize ulaşın.` : ''}`,
-        });
-        faqs.push({
-            q: 'Rezervasyonumu nasıl sorgularım?',
-            a: 'Size verilen kısa kod ve telefon numaranızla “Rezervasyon sorgula” sayfasından durumunu görebilirsiniz. Rezervasyonunuzu saatinden 2 saat öncesine kadar oradan iptal edebilirsiniz.',
-        });
-    }
-    if (isOnlineOrderingAvailable(ordering) && ordering) {
-        const zones = ordering.zones.filter(z => z.isActive);
-        if (zones.length > 0) {
-            const list = zones.map(z => {
-                const parts = [
-                    z.fee > 0 ? `${formatPrice(z.fee)} ₺ teslimat` : 'ücretsiz teslimat',
-                    z.minOrderAmount > 0 ? `en az ${formatPrice(z.minOrderAmount)} ₺` : null,
-                    z.estimatedMinutes > 0 ? `~${z.estimatedMinutes} dk` : null,
-                ].filter(Boolean).join(', ');
-                return `${z.name} (${parts})`;
-            }).join('; ');
-            faqs.push({ q: 'Paket servis hangi bölgelere var?', a: `${list}. Sipariş sırasında mahallenizi seçince ücret ve süre kendiliğinden görünür.` });
-        }
-        faqs.push({
-            q: 'Siparişimi nasıl takip ederim?',
-            a: 'Siparişinizi verdiğinizde açılan takip sayfasında durumunu canlı görebilirsiniz. Aynı cihazdan üst menüdeki “Siparişim”e dokunarak da bu sayfaya dönebilirsiniz.',
-        });
-        const methods = [
-            ordering.paymentMethods.includes(DoorPayment.Nakit) ? 'nakit' : null,
-            ordering.paymentMethods.includes(DoorPayment.Kart) ? 'kartla' : null,
-        ].filter(Boolean);
-        if (methods.length > 0) {
-            faqs.push({ q: 'Ödemeyi nasıl yapabilirim?', a: `Paket siparişlerde ödemeyi kapıda ${methods.join(' veya ')} yapabilirsiniz.` });
-        }
-    }
-    return faqs;
-}
+// Hazır sorular (site/siteFaqs.ts): cevaplar restoranın ayarlarından oluşur; restoranın gizlediği ve cevabı olmayan
+// soru çizilmez. Hiç soru yoksa bölüm yok. Düzenleyicide bunun yerine aç/kapa listesi (FaqEditorBox).
 
 function FaqSection({ site }: { site: PublicSite }) {
-    const faqs = useFaqs(site);
+    const faqs = visibleFaqs(site, useOnlineOrdering());
     const [open, setOpen] = useState(0);
     if (faqs.length === 0) return null;
     return (
@@ -231,9 +182,9 @@ function FaqSection({ site }: { site: PublicSite }) {
             <div className="flex min-w-0 flex-[999_1_520px] flex-col">
                 {faqs.map((f, i) => {
                     const isOpen = open === i;
-                    const id = `sss-${i}`;
+                    const id = `sss-${f.key}`;
                     return (
-                        <div key={f.q} className="border-b border-[rgba(36,24,15,0.12)]">
+                        <div key={f.key} className="border-b border-[rgba(36,24,15,0.12)]">
                             <button type="button" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpen(isOpen ? -1 : i)}
                                 className="flex w-full items-center justify-between gap-4 bg-transparent py-5 text-left text-[var(--site-text)] md:py-6">
                                 <span className={cn(serif, 'text-[22px] font-semibold leading-[1.15] md:text-[28px]')}>{f.q}</span>
@@ -245,6 +196,63 @@ function FaqSection({ site }: { site: PublicSite }) {
                     );
                 })}
             </div>
+        </section>
+    );
+}
+
+/**
+ * Yalnız düzenleyicide: bütün hazır sorular. Şu an geçerli olanların yanında aç/kapa anahtarı (kapatılan, taslağın
+ * hiddenFaqs listesine yazılır; Yayınla'ya kadar müşteri sitesi değişmez); geçerli olmayanlar soluk ve nedeniyle.
+ */
+function FaqEditorBox({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const items = faqItems(site, useOnlineOrdering());
+    if (!edit) return null;
+    const hidden = new Set(site.site.hiddenFaqs ?? []);
+    const live = items.filter(f => f.a !== null);
+    const waiting = items.filter(f => f.a === null);
+    return (
+        <section aria-labelledby="ilt-sss-ed" className={cn(box, 'flex flex-col gap-5 p-6 sm:p-10')}>
+            <div className="flex flex-col gap-1.5">
+                <h2 id="ilt-sss-ed" className={cn(serif, 'm-0 text-[34px] font-bold leading-none md:text-[40px]')}>Sık sorulanlar</h2>
+                <p className="m-0 font-[family-name:'DM_Sans',system-ui,sans-serif] text-sm text-[var(--site-sub)]">
+                    Sorular ve cevaplar ayarlarınızdan kendiliğinden oluşur. İstemediğinizi kapatın; değişiklik Yayınla'dan sonra sitede görünür.
+                </p>
+            </div>
+            <ul className="m-0 flex list-none flex-col p-0">
+                {live.map(f => {
+                    const on = !hidden.has(f.key);
+                    return (
+                        <li key={f.key} className="flex items-start gap-4 border-b border-[var(--site-line)] py-4">
+                            <div className={cn('min-w-0 flex-1', !on && 'opacity-55')}>
+                                <p className="m-0 font-bold">{f.q}</p>
+                                <p className="m-0 mt-1 text-sm leading-relaxed text-[var(--site-sub)]">{f.a}</p>
+                            </div>
+                            <button type="button" role="switch" aria-checked={on} aria-label={`${f.q} ${on ? 'sitede görünüyor' : 'gizli'}`}
+                                onClick={() => edit.toggleFaq?.(f.key)}
+                                className="flex h-11 shrink-0 items-center gap-2 rounded-full px-1 font-[family-name:'DM_Sans',system-ui,sans-serif] text-sm font-semibold">
+                                <span aria-hidden="true" className={cn('relative h-6 w-11 rounded-full transition-colors', on ? 'bg-[#2B7FFF]' : 'bg-[#CFC5B4]')}>
+                                    <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left]', on ? 'left-[22px]' : 'left-0.5')} />
+                                </span>
+                                <span className="w-12 text-left">{on ? 'Açık' : 'Gizli'}</span>
+                            </button>
+                        </li>
+                    );
+                })}
+            </ul>
+            {waiting.length > 0 && (
+                <div className="flex flex-col gap-2">
+                    <p className="m-0 font-[family-name:'DM_Sans',system-ui,sans-serif] text-xs font-bold uppercase tracking-[0.14em] text-[var(--site-muted)]">Şu an görünmeyenler</p>
+                    <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                        {waiting.map(f => (
+                            <li key={f.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 text-sm text-[var(--site-muted)]">
+                                <span className="font-semibold">{f.q}</span>
+                                <span className="font-[family-name:'DM_Sans',system-ui,sans-serif] text-[13px]">{f.reason}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </section>
     );
 }
@@ -294,8 +302,8 @@ export default function RestaurantContactPage() {
                     </div>
                 </div>
 
-                {/* 3. Sık sorulanlar (ayarlardan oluşur; düzenleyicide çizilmez) */}
-                {!edit && <FaqSection site={site} />}
+                {/* 3. Sık sorulanlar (ayarlardan oluşur; düzenleyicide aç/kapa listesi) */}
+                {edit ? <FaqEditorBox site={site} /> : <FaqSection site={site} />}
             </main>
         </SitePage>
     );

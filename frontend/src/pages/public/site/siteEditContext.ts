@@ -70,6 +70,8 @@ export interface SiteEditApi {
     focusRequest: { field: SiteTextField; n: number } | null;
     /** Düzenleyiciden "bu öğeyi göster" isteği (eksikler listesi): öğeye kaydırır ve seçer. */
     revealRequest: { target: SiteEditTarget; n: number } | null;
+    /** Hazır "Sık sorulanlar" sorusunu sitede gizler / yeniden gösterir (taslağın hiddenFaqs listesi). */
+    toggleFaq?: (key: string) => void;
 }
 
 export const SiteEditContext = createContext<SiteEditApi | null>(null);

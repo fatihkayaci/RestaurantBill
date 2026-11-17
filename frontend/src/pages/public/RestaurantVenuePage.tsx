@@ -233,7 +233,9 @@ function AmenitiesRow({ site }: { site: PublicSite }) {
     const amenT = editTarget(edit, 'amenities', 'Olanaklar');
     const whatsapp = c.whatsappPhone;
     const phone = site.phone;
-    const showSpecial = edit ? Boolean(whatsapp) : Boolean(whatsapp || phone);
+    // "Özel günler" yalnız restoran "Grup ve özel gün organizasyonu" olanağını seçtiyse (ve ulaşılacak numara varsa).
+    const events = c.amenities.includes('ozel-gun');
+    const showSpecial = events && (edit ? Boolean(whatsapp) : Boolean(whatsapp || phone));
     const maxParty = canReserveOnline(site) && site.reservation.maxPartySize > 0 ? site.reservation.maxPartySize : null;
     const waT = editTarget(edit, 'contact', 'WhatsApp');
     const bigButton = 'flex h-[54px] items-center justify-center gap-2 rounded-full px-5 text-base font-extrabold no-underline transition-opacity hover:opacity-90 [&>svg]:h-[18px] [&>svg]:w-[18px]';
@@ -287,7 +289,11 @@ function AmenitiesRow({ site }: { site: PublicSite }) {
                     </div>
                 </section>
             ) : showEmpty && (
-                <div className="min-w-0 flex-[1_1_360px]"><EmptySlot target="contact" title="+ WhatsApp numarası ekle" className="min-h-[160px]" /></div>
+                <div className="min-w-0 flex-[1_1_360px]">
+                    {events
+                        ? <EmptySlot target="contact" title="+ WhatsApp numarası ekle" className="min-h-[160px]" />
+                        : <EmptySlot target="amenities" title="+ “Grup ve özel gün organizasyonu” olanağını seçin" className="min-h-[160px]" />}
+                </div>
             )}
         </div>
     );
