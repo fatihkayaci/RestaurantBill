@@ -28,6 +28,11 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
                 return Result.Failure("Bu isimde bir kategori zaten mevcut.");
 
             Category category = Category.Create(command.Name, restaurantId, command.TaxRate);
+            // Yeni kategori en başa gelir; yönetici sonra yerini değiştirir.
+            int? firstSortOrder = await _db.Categories
+                .Where(c => c.BranchId == restaurantId)
+                .MinAsync(c => (int?)c.SortOrder, cancellationToken);
+            category.SetSortOrder((firstSortOrder ?? 1) - 1);
             _db.Categories.Add(category);
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _userService.UserId, cancellationToken);

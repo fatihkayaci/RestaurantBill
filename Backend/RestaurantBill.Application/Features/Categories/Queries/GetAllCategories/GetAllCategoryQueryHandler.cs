@@ -24,7 +24,7 @@ namespace RestaurantBill.Application.Features.Categories.Queries.GetAllCategorie
             var categories = await _db.Categories
                 .AsNoTracking()
                 .Where(c => c.BranchId == restaurantId)
-                .OrderBy(c => c.Name)
+                .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
                 .Select(c => new CategoryDto
                 {
                     Id = c.Id,

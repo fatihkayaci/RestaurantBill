@@ -38,6 +38,9 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
                 return Result.Failure("Böyle bir kategori bulunamadı.");
 
             bool priceChanged = product.Price != request.Price;
+            // Başka kategoriye taşınan ürün yeni kategorisinin başına gelir.
+            if (product.CategoryId != request.CategoryId)
+                product.SetSortOrder(await ProductSortOrder.TopOfCategoryAsync(_db, request.CategoryId, cancellationToken));
             product.Update(request.Name, request.Price, request.IsActive, request.CategoryId);
 
             // Menü fiyatları ürün fiyatlarından hesaplanır: bu ürünü içeren menüler yeni fiyatla yeniden hesaplanır.

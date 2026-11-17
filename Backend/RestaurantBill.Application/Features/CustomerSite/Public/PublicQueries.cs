@@ -38,13 +38,13 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
 
         var categories = await db.Categories.AsNoTracking()
             .Where(c => c.BranchId == branch.Id)
-            .OrderBy(c => c.CreatedAt)
+            .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
             .Select(c => new PublicCategoryDto { Id = c.Id, Name = c.Name })
             .ToListAsync(cancellationToken);
 
         var products = await db.Products.AsNoTracking()
             .Where(p => p.Category.BranchId == branch.Id && p.IsActive)
-            .OrderBy(p => p.Name)
+            .OrderBy(p => p.SortOrder).ThenBy(p => p.Name)
             .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.PrepMinutes, p.IsOutOfStock })
             .ToListAsync(cancellationToken);
 

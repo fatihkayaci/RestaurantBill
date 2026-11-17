@@ -23,6 +23,8 @@ namespace RestaurantBill.Domain.Entities
         public decimal? TaxRate { get; private set; }
         // "Tükendi": ürün aktif kalır ama online siparişte seçilemez.
         public bool IsOutOfStock { get; private set; }
+        // Kategori içindeki sıra (küçük önce). Menüde, garsonda ve sitede bu sırayla listelenir; yeni ürün başa eklenir.
+        public int SortOrder { get; private set; }
 
         public const int DescriptionMaxLength = 160;
         public const int PrepMinutesMax = 240;
@@ -50,6 +52,11 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"Hazırlanma süresi 1 ile {PrepMinutesMax} dakika arasında olmalıdır.");
 
             PrepMinutes = prepMinutes;
+        }
+
+        public void SetSortOrder(int sortOrder)
+        {
+            SortOrder = sortOrder;
         }
 
         public void SetOutOfStock(bool isOutOfStock)

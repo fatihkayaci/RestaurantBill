@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Categories.Commands.CreateCategory;
 using RestaurantBill.Application.Features.Categories.Commands.DeleteCategory;
+using RestaurantBill.Application.Features.Categories.Commands.ReorderCategories;
 using RestaurantBill.Application.Features.Categories.Commands.UpdateCategory;
 using RestaurantBill.Application.Features.Categories.Queries.GetAllCategories;
 
@@ -56,6 +57,15 @@ namespace RestaurantBill.WebAPI.Controllers
         /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         /// <returns>200 OK with success message on update.</returns>
         
+        /// <summary>Sets the order of the branch's categories (first id is shown first).</summary>
+        [Authorize(Roles = "Owner,Admin")]
+        [HttpPost("reorder")]
+        public async Task<IActionResult> ReorderCategories([FromBody]ReorderCategoriesCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
         [Authorize(Roles = "Owner,Admin")]
         [HttpPost("update")]
         public async Task<IActionResult> UpdateCategory([FromBody]UpdateCategoryCommand command, CancellationToken cancellationToken)

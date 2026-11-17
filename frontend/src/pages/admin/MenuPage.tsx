@@ -10,7 +10,7 @@ import StockImagePickerModal from "@/features/stockImages/components/StockImageP
 import type { StockImage } from "@/features/stockImages/api/stockImageService";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X, Check, Pencil, Image as ImageIcon, Images, Upload, Crop, UtensilsCrossed, Trash2 } from 'lucide-react';
+import { X, Check, Pencil, Image as ImageIcon, Images, Upload, Crop, UtensilsCrossed, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { SuggestedChips } from '@/components/ui/suggested-chips';
 import { CATEGORY_SUGGESTIONS } from '@/features/categories/constants';
@@ -27,6 +27,8 @@ import { getApiErrorMessage } from '@/lib/apiError';
 const EMPTY_FORM = {
     name: '', price: 0, cost: 0, categoryId: '', isActive: true, id: '', description: '', isFeatured: false,
     prepMinutes: '', useCategoryTax: true, taxRate: '',
+    // Kategorideki sıra (1 = en başta). Boş: yeni ürün en başa gelir, düzenlenen ürün yerinde kalır.
+    position: '',
 };
 const PREP_MINUTES_MAX = 240;
 
@@ -39,6 +41,14 @@ function profitHint(price: number, cost: number): { text: string; isLoss: boolea
         text: `${profit < 0 ? 'Zarar' : 'Kâr'}: ₺${formatPrice(Math.abs(profit))} (%${margin})`,
         isLoss: profit < 0,
     };
+}
+
+/** Bir kategorinin ürünlerini verilen sıraya dizer; diğer kategorilerin ürünleri yerinde kalır. */
+function applyCategoryOrder<T extends { id: string; categoryId: string }>(all: T[], categoryId: string, orderedIds: string[]): T[] {
+    const byId = new Map(all.map(p => [p.id, p]));
+    const queue = orderedIds.map(id => byId.get(id)).filter((p): p is T => !!p);
+    let i = 0;
+    return all.map(p => (p.categoryId === categoryId ? queue[i++] ?? p : p));
 }
 
 export default function Menu() {
@@ -80,6 +90,8 @@ export default function Menu() {
         && (!withoutPhotoOnly || (p.isActive && !p.imageUrl))
     );
     const activeCount = products.filter(p => p.isActive).length;
+    // Sıralama yalnızca tek kategori seçiliyken anlamlı: "Tümü"nde komşu kart başka kategoriden olabilir.
+    const canReorderProducts = selectedCategory !== 'all' && !withoutPhotoOnly && filteredProducts.length > 1;
     const categoryCounts = categories.map(cat => ({
         category: cat,
         count: products.filter(p => p.categoryId === cat.id).length,
@@ -164,6 +176,7 @@ export default function Menu() {
             prepMinutes: product.prepMinutes != null ? String(product.prepMinutes) : '',
             useCategoryTax: product.taxRate == null,
             taxRate: product.taxRate != null ? String(product.taxRate) : '',
+            position: String(products.filter(p => p.categoryId === product.categoryId).findIndex(p => p.id === product.id) + 1),
         });
         setFieldErrors({});
         clearPendingImage();
@@ -202,6 +215,40 @@ export default function Menu() {
         });
         setPendingStock(null);
         closeCropModal();
+    };
+
+    /** Ürünü kategorisinde `toIndex` konumuna taşır (0 = en başta) ve sırayı kaydeder. */
+    const moveProductTo = async (product: ProductWithCost, toIndex: number, source: ProductWithCost[] = products) => {
+        const list = source.filter(p => p.categoryId === product.categoryId);
+        const from = list.findIndex(p => p.id === product.id);
+        const target = Math.max(0, Math.min(list.length - 1, toIndex));
+        if (from < 0 || from === target) return;
+        const ids = list.map(p => p.id);
+        ids.splice(from, 1);
+        ids.splice(target, 0, product.id);
+        setProducts(applyCategoryOrder(source, product.categoryId, ids));
+        try {
+            await productService.reorderProducts(product.categoryId, ids);
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Ürün sırası kaydedilemedi.'));
+            setProducts(await productService.getProductsWithCost());
+        }
+    };
+
+    const moveCategory = async (index: number, direction: -1 | 1) => {
+        const target = index + direction;
+        if (target < 0 || target >= categories.length) return;
+        const reordered = [...categories];
+        [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+        setCategories(reordered);
+        try {
+            await categoryService.reorderCategories(reordered.map(c => c.id));
+            // "Tümü" görünümü kategori sırasını izler: ürün listesini de yeni sırayla al.
+            setProducts(await productService.getProductsWithCost());
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Kategori sırası kaydedilemedi.'));
+            setCategories(await categoryService.getCategories());
+        }
     };
 
     const handleToggleActive = async (product: ProductWithCost) => {
@@ -341,6 +388,12 @@ export default function Menu() {
                 errors.taxRate = 'KDV oranı 0 ile 100 arasında olmalıdır.';
             else taxRate = parsed;
         }
+        let position: number | null = null;
+        if (form.position.trim() !== '') {
+            const parsed = Number(form.position);
+            if (!Number.isInteger(parsed) || parsed < 1) errors.position = 'Sıra 1 veya daha büyük bir tam sayı olmalıdır.';
+            else position = parsed;
+        }
         if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
         setIsSaving(true);
@@ -382,6 +435,9 @@ export default function Menu() {
 
             const updated = await productService.getProductsWithCost();
             setProducts(updated);
+            // İstenen sıra: yeni ürün en başa, başka kategoriye taşınan ürün o kategorinin başına gelmiştir.
+            const saved = productId ? updated.find(p => p.id === productId) : undefined;
+            if (saved && position !== null) await moveProductTo(saved, position - 1, updated);
             closeModal();
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
@@ -492,7 +548,7 @@ export default function Menu() {
                 >
                     Tümü ({products.length})
                 </button>
-                {categoryCounts.map(({ category: cat, count }) => (
+                {categoryCounts.map(({ category: cat, count }, catIndex) => (
                     editCategory?.id === cat.id ? (
                         <div key={cat.id} className="flex items-center gap-1.5">
                             <input
@@ -529,9 +585,31 @@ export default function Menu() {
                                     : "border border-border text-muted-foreground hover:text-foreground"
                             )}
                         >
+                            {selectedCategory === cat.id && categories.length > 1 && (
+                                <button
+                                    onClick={() => moveCategory(catIndex, -1)}
+                                    disabled={catIndex === 0}
+                                    aria-label={`${cat.name} kategorisini öne al`}
+                                    title="Öne al"
+                                    className="-ml-2.5 p-1 rounded-full hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                >
+                                    <ChevronLeft className="h-3.5 w-3.5" />
+                                </button>
+                            )}
                             <button onClick={() => setSelectedCategory(cat.id)} className="py-0.5">
                                 {cat.name} ({count})
                             </button>
+                            {selectedCategory === cat.id && categories.length > 1 && (
+                                <button
+                                    onClick={() => moveCategory(catIndex, 1)}
+                                    disabled={catIndex === categories.length - 1}
+                                    aria-label={`${cat.name} kategorisini geriye al`}
+                                    title="Geriye al"
+                                    className="p-1 rounded-full hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                >
+                                    <ChevronRight className="h-3.5 w-3.5" />
+                                </button>
+                            )}
                             <button
                                 onClick={() => startEditCategory(cat)}
                                 aria-label={`${cat.name} kategorisini düzenle`}
@@ -592,6 +670,14 @@ export default function Menu() {
                 )}
             </div>
 
+            {categories.length > 0 && products.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                    {selectedCategory === 'all'
+                        ? 'Menüde, garson ekranında ve sitede bu sırayla görünür. Sırayı değiştirmek için bir kategori seçin; yeni eklenen en başa gelir.'
+                        : 'Kategoriyi ‹ › ile, ürünleri kartlardaki oklarla ya da ürünü düzenleyip "Sıra" yazarak taşıyın.'}
+                </p>
+            )}
+
             {categories.length > 0 && (
                 <SuggestedChips
                     options={CATEGORY_SUGGESTIONS}
@@ -639,9 +725,34 @@ export default function Menu() {
                 />
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredProducts.map(product => (
+                    {filteredProducts.map((product, index) => (
                         <div key={product.id} className="flex h-full flex-col gap-3 rounded-xl border border-border bg-card p-4">
-                            <div className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                            <div className="relative aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                                {canReorderProducts && (
+                                    <div className="absolute left-2 top-2 z-10 flex items-center rounded-full bg-black/60 text-white shadow-sm backdrop-blur-sm">
+                                        <button
+                                            type="button"
+                                            onClick={() => moveProductTo(product, index - 1)}
+                                            disabled={index === 0}
+                                            aria-label={`${product.name}: öne al`}
+                                            title="Öne al"
+                                            className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent"
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </button>
+                                        <span className="min-w-[1.25rem] text-center text-xs font-semibold tabular-nums" aria-label={`Sıra ${index + 1}`}>{index + 1}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => moveProductTo(product, index + 1)}
+                                            disabled={index === filteredProducts.length - 1}
+                                            aria-label={`${product.name}: geriye al`}
+                                            title="Geriye al"
+                                            className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent"
+                                        >
+                                            <ChevronRight className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                )}
                                 {product.imageUrl ? (
                                     <img
                                         src={product.imageUrl}
@@ -856,7 +967,8 @@ export default function Menu() {
                                 <select
                                     className={cn(inputClass, fieldErrors.categoryId && "border-destructive")}
                                     value={form.categoryId}
-                                    onChange={e => setForm({ ...form, categoryId: e.target.value })}
+                                    // Kategori değişince eski sıra anlamını yitirir: ürün yeni kategorinin başına gelir.
+                                    onChange={e => setForm({ ...form, categoryId: e.target.value, position: '' })}
                                 >
                                     <option value="">Kategori seçin</option>
                                     {categories.map(c => (
@@ -864,6 +976,25 @@ export default function Menu() {
                                     ))}
                                 </select>
                                 {fieldErrors.categoryId && <p className="text-xs text-destructive mt-1">{fieldErrors.categoryId}</p>}
+                            </div>
+
+                            <div>
+                                <label htmlFor="product-position" className={labelClass}>
+                                    Sıra <span className="font-normal text-muted-foreground">(kategoride · isteğe bağlı)</span>
+                                </label>
+                                <input
+                                    id="product-position"
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={1}
+                                    className={cn(inputClass, fieldErrors.position && "border-destructive")}
+                                    placeholder={editProduct ? '' : '1 (en başa)'}
+                                    value={form.position}
+                                    onChange={e => setForm({ ...form, position: e.target.value })}
+                                />
+                                {fieldErrors.position
+                                    ? <p className="text-xs text-destructive mt-1">{fieldErrors.position}</p>
+                                    : <p className="text-xs text-muted-foreground mt-1">1 en başta görünür. Boş bırakırsanız yeni ürün en başa eklenir.</p>}
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

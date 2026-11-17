@@ -20,6 +20,10 @@ export const categoryService = {
             TaxRate: data.taxRate
         });
     },
+    /** Kategorilerin sırası: ilk id menüde, garsonda ve sitede ilk görünür. */
+    reorderCategories: async (orderedCategoryIds: string[]) => {
+        await api.post('/category/reorder', { OrderedCategoryIds: orderedCategoryIds });
+    },
     deleteCategory: async (id: string) => {
         await api.delete(`/category/${id}`);
     },

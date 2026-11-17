@@ -37,6 +37,8 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
             product.UpdateSiteDetails(request.Description, request.IsFeatured);
             product.SetPrepMinutes(request.PrepMinutes);
             product.SetTaxRate(request.TaxRate);
+            // Yeni ürün kategorisinin en başına gelir; yönetici sonra yerini değiştirir.
+            product.SetSortOrder(await ProductSortOrder.TopOfCategoryAsync(_db, request.CategoryId, cancellationToken));
             _db.Products.Add(product);
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
