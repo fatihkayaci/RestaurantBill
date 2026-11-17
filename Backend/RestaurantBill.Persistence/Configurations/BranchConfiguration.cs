@@ -22,6 +22,14 @@ public class BranchConfiguration : IEntityTypeConfiguration<Branch>
             .HasMaxLength(Branch.IbanHolderNameMaxLength)
             .HasDefaultValue(string.Empty);
 
+        builder.Property(b => b.PaymentBankName)
+            .HasMaxLength(Branch.PaymentBankNameMaxLength)
+            .HasDefaultValue(string.Empty);
+
+        // Masa QR'ında "IBAN ile öde": restoran açmadıkça kapalı.
+        builder.Property(b => b.ShowIbanOnTable)
+            .HasDefaultValue(false);
+
         // Rezervasyon ayarları tek bir jsonb sütununda; null = hiç ayarlanmamış (varsayılanlar).
         builder.Property(b => b.ReservationSettings)
             .HasColumnType("jsonb")

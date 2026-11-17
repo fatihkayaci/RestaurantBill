@@ -41,8 +41,13 @@ namespace RestaurantBill.Domain.Entities
         // İkisi de boşsa IBAN ile ödeme kapalıdır.
         public string Iban { get; private set; } = string.Empty;
         public string IbanHolderName { get; private set; } = string.Empty;
+        /// <summary>İsteğe bağlı banka adı ("Ziraat Bankası"); masa QR'ının "IBAN ile öde" penceresinde gösterilir.</summary>
+        public string PaymentBankName { get; private set; } = string.Empty;
+        /// <summary>Masa QR sayfasında "IBAN ile öde" görünsün mü (varsayılan kapalı). Geçerli IBAN olmadan açılamaz.</summary>
+        public bool ShowIbanOnTable { get; private set; }
 
-        public const int IbanHolderNameMaxLength = 70;
+        public const int IbanHolderNameMaxLength = 100;
+        public const int PaymentBankNameMaxLength = 60;
 
         /// <summary>Admin'in kaydettiği rezervasyon kuralları; null ise hiç ayarlanmamış (varsayılanlar geçerli).</summary>
         public ReservationSettings? ReservationSettings { get; private set; }
@@ -81,16 +86,25 @@ namespace RestaurantBill.Domain.Entities
 
         public bool HasIban => Iban.Length > 0;
 
-        /// <summary>İkisi de boş: IBAN'ı kaldırır. Aksi halde geçerli bir TR IBAN ve hesap sahibi adı zorunludur.</summary>
-        public void SetIban(string? iban, string? holderName)
+        /// <summary>Masa QR sayfasında "IBAN ile öde" gerçekten gösterilir mi: anahtar açık, IBAN geçerli ve hesap sahibi dolu.</summary>
+        public bool ShowsIbanOnTable => ShowIbanOnTable && TurkishIban.IsValid(Iban) && IbanHolderName.Length > 0;
+
+        /// <summary>
+        /// IBAN ve hesap sahibi ikisi de boş: IBAN'ı kaldırır (banka adı ve QR gösterimi de kapanır). Aksi halde geçerli bir
+        /// TR IBAN ve hesap sahibi adı zorunludur; banka adı isteğe bağlıdır.
+        /// </summary>
+        public void SetIban(string? iban, string? holderName, string? bankName = null)
         {
             string normalized = TurkishIban.Normalize(iban);
             string holder = holderName?.Trim() ?? string.Empty;
+            string bank = bankName?.Trim() ?? string.Empty;
 
             if (normalized.Length == 0 && holder.Length == 0)
             {
                 Iban = string.Empty;
                 IbanHolderName = string.Empty;
+                PaymentBankName = string.Empty;
+                ShowIbanOnTable = false;
                 return;
             }
 
@@ -100,9 +114,20 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException("Hesap sahibinin adını girin.");
             if (holder.Length > IbanHolderNameMaxLength)
                 throw new DomainException($"Hesap sahibi adı en fazla {IbanHolderNameMaxLength} karakter olabilir.");
+            if (bank.Length > PaymentBankNameMaxLength)
+                throw new DomainException($"Banka adı en fazla {PaymentBankNameMaxLength} karakter olabilir.");
 
             Iban = normalized;
             IbanHolderName = holder;
+            PaymentBankName = bank;
+        }
+
+        /// <summary>Masa QR sayfasındaki "IBAN ile öde" anahtarı; açmak için önce geçerli IBAN ve hesap sahibi kaydedilmiş olmalı.</summary>
+        public void SetShowIbanOnTable(bool show)
+        {
+            if (show && !(TurkishIban.IsValid(Iban) && IbanHolderName.Length > 0))
+                throw new DomainException("QR menüde göstermek için önce geçerli bir IBAN ve hesap sahibi girin.");
+            ShowIbanOnTable = show;
         }
 
         public const int SiteHeadlineMaxLength = 80;
@@ -407,6 +432,8 @@ namespace RestaurantBill.Domain.Entities
         {
             Iban = string.Empty;
             IbanHolderName = string.Empty;
+            PaymentBankName = string.Empty;
+            ShowIbanOnTable = false;
         }
 
         public void ResetOnlineOrdering()

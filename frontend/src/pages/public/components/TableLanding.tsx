@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BellRing, CalendarDays, Check, ChevronRight, ClipboardList, Moon, Receipt, ShoppingBag } from 'lucide-react';
+import { ArrowRight, BellRing, CalendarDays, Check, ChevronRight, ClipboardList, Landmark, Moon, Receipt, ShoppingBag } from 'lucide-react';
 import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import type { PublicProduct, PublicSite } from '@/features/customerSite/types';
 import { formatPrice } from '@/lib/format';
@@ -32,6 +32,8 @@ interface Props {
     /** null: düğme gizli (admin kapattı). */
     callWaiter: TableAction | null;
     billRequest: TableAction | null;
+    /** "IBAN ile öde" penceresini açar; null: restoran açmadı (karo yok). */
+    onPayByIban: (() => void) | null;
     showDelivery: boolean;
     /** "Paket servis" bağlantısı: masanın şubesiyle açılır (/siparis?sube=…). */
     deliveryHref?: string;
@@ -59,7 +61,7 @@ function chefPicks(site: PublicSite): PublicProduct[] {
 // ve hardal ana eylem: menü), altında krem kutular: garson + hesap, siparişlerim, şefin önerileri ve ikincil bağlantılar. Garson/hesap gönderilince ekranın en büyük
 // nesnesi onay penceresi olur (geri sayım çubuğuyla). Admin'in kapattığı özellikler hiç gösterilmez.
 export default function TableLanding({
-    site, restaurantName, tableName, regionName, orderingEnabled, onOpenMenu, callWaiter, billRequest, showDelivery,
+    site, restaurantName, tableName, regionName, orderingEnabled, onOpenMenu, callWaiter, billRequest, onPayByIban, showDelivery,
     deliveryHref = '/siparis', showReservation, myOrders, onAction, onShowConfirmation,
 }: Props) {
     const closed = site.isOpenNow === false;
@@ -142,6 +144,18 @@ export default function TableLanding({
                             onReopen={() => onShowConfirmation('bill')} />
                     )}
                 </div>
+            )}
+
+            {onPayByIban && (
+                <button type="button" onClick={onPayByIban}
+                    className={cn(creamBox, 'flex min-h-[72px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-[var(--site-alt)] sm:px-5')}>
+                    <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--site-accent)] text-[var(--site-on-accent)]"><Landmark className="h-5 w-5" /></span>
+                    <span className="min-w-0 flex-1">
+                        <span className={cn(serif, 'block text-[20px] leading-tight')}>IBAN ile öde</span>
+                        <span className="block text-sm text-[var(--site-sub)]">Havale / EFT, dekontu WhatsApp'tan gönderin</span>
+                    </span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
+                </button>
             )}
 
             {myOrders && (
@@ -245,7 +259,7 @@ function ActionTile({ action, icon, title, busyTitle, waitingText, onClick, onRe
 }
 
 /** Garson çağrıldı / Hesap istendi onayı (karşılamada ve menüde aynı pencere). */
-export function TableActionConfirmation({ kind, callWaiter, billRequest, regionName, onClose, onOpenMenu, onAction }: {
+export function TableActionConfirmation({ kind, callWaiter, billRequest, regionName, onClose, onOpenMenu, onAction, onPayByIban }: {
     kind: TableActionKind;
     callWaiter: TableAction | null;
     billRequest: TableAction | null;
@@ -254,6 +268,8 @@ export function TableActionConfirmation({ kind, callWaiter, billRequest, regionN
     /** "Menüye dön": karşılamadaysa menüyü açar; menüdeyse yalnız kapatır (verilmez). */
     onOpenMenu?: () => void;
     onAction: (kind: TableActionKind) => void;
+    /** Hesap onayında "IBAN ile öde" (restoran açtıysa). */
+    onPayByIban?: () => void;
 }) {
     if (kind === 'waiter' && callWaiter) {
         const repeat = callWaiter.state.status === 'done' && !callWaiter.state.sent;
@@ -263,7 +279,7 @@ export function TableActionConfirmation({ kind, callWaiter, billRequest, regionN
                 title={repeat ? <>Garson az önce <span className="italic">çağrıldı.</span></> : <>Garson <span className="italic">geliyor.</span></>}
                 text={`${regionName ? `${regionName} bölümüne` : 'Masanıza bakan garsona'} haber verildi`}
                 againText="sonra tekrar çağırabilirsiniz"
-                secondary={billRequest ? { label: 'Hesap iste', onClick: () => { onClose(); onAction('bill'); } } : null}
+                secondary={billRequest ? { label: 'Hesap iste', icon: <Receipt className="h-4 w-4" aria-hidden="true" />, onClick: () => { onClose(); onAction('bill'); } } : null}
                 onClose={onClose}
                 closeLabel="Menüye dön"
                 onCloseToMenu={onOpenMenu}
@@ -279,7 +295,7 @@ export function TableActionConfirmation({ kind, callWaiter, billRequest, regionN
                 text="Garson ve kasa bilgilendirildi. Hesap birkaç dakika içinde masanıza gelir."
                 againText="sonra tekrar isteyebilirsiniz"
                 billTotal={billRequest.state.status === 'done' ? billRequest.state.billTotal : null}
-                secondary={null}
+                secondary={onPayByIban ? { label: 'IBAN ile öde', icon: <Landmark className="h-4 w-4" aria-hidden="true" />, onClick: () => { onClose(); onPayByIban(); } } : null}
                 onClose={onClose}
                 closeLabel="Tamam"
             />
@@ -295,7 +311,7 @@ function ActionConfirmation({ action, title, text, againText, billTotal, seconda
     text: string;
     againText: string;
     billTotal?: number | null;
-    secondary: { label: string; onClick: () => void } | null;
+    secondary: { label: string; icon: ReactNode; onClick: () => void } | null;
     onClose: () => void;
     closeLabel: string;
     onCloseToMenu?: () => void;
@@ -354,7 +370,7 @@ function ActionConfirmation({ action, title, text, againText, billTotal, seconda
                     <div className="mt-6 flex flex-col gap-2.5">
                         {secondary && (
                             <button type="button" onClick={secondary.onClick} className={cn(pillOutline, 'w-full')}>
-                                <Receipt className="h-4 w-4" aria-hidden="true" />{secondary.label}
+                                {secondary.icon}{secondary.label}
                             </button>
                         )}
                         <button type="button" onClick={() => { onClose(); onCloseToMenu?.(); }} className={cn(pillDark, 'w-full')}>

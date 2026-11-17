@@ -9,7 +9,8 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Branches.Payment;
 
-// Oturumdaki şubenin IBAN bilgisi: admin Restoran sayfasında düzenler, kasiyer IBAN ile ödemede QR'a yazar.
+// Oturumdaki şubenin IBAN bilgisi: admin Ayarlar → Ödeme'de düzenler, kasiyer IBAN ile ödemede QR'a yazar. Admin isterse
+// aynı hesap masa QR sayfasında "IBAN ile öde" olarak da gösterilir (ShowIbanOnTable; varsayılan kapalı).
 
 public class BranchPaymentSettingsDto
 {
@@ -18,12 +19,17 @@ public class BranchPaymentSettingsDto
     /// <summary>"TR33 0006 ..." biçiminde, ekranda göstermek için.</summary>
     public string IbanFormatted { get; set; } = string.Empty;
     public string AccountHolderName { get; set; } = string.Empty;
+    public string BankName { get; set; } = string.Empty;
+    /// <summary>Masa QR sayfasında "IBAN ile öde" açık mı.</summary>
+    public bool ShowIbanOnTable { get; set; }
 
     public static BranchPaymentSettingsDto From(Branch branch) => new()
     {
         Iban = branch.Iban,
         IbanFormatted = branch.HasIban ? TurkishIban.Format(branch.Iban) : string.Empty,
         AccountHolderName = branch.IbanHolderName,
+        BankName = branch.PaymentBankName,
+        ShowIbanOnTable = branch.ShowIbanOnTable,
     };
 }
 
@@ -51,6 +57,10 @@ public class UpdateBranchPaymentSettingsCommand : IRequest<Result<BranchPaymentS
     /// <summary>Boş bırakılırsa (hesap sahibiyle birlikte) IBAN kaldırılır.</summary>
     public string Iban { get; set; } = string.Empty;
     public string AccountHolderName { get; set; } = string.Empty;
+    /// <summary>İsteğe bağlı.</summary>
+    public string BankName { get; set; } = string.Empty;
+    /// <summary>Masa QR sayfasında "IBAN ile öde"; geçerli IBAN ve hesap sahibi olmadan açılamaz.</summary>
+    public bool ShowIbanOnTable { get; set; }
 }
 
 public class UpdateBranchPaymentSettingsCommandValidator : AbstractValidator<UpdateBranchPaymentSettingsCommand>
@@ -68,6 +78,14 @@ public class UpdateBranchPaymentSettingsCommandValidator : AbstractValidator<Upd
         RuleFor(x => x.AccountHolderName)
             .MaximumLength(Branch.IbanHolderNameMaxLength)
             .WithMessage($"Hesap sahibi adı en fazla {Branch.IbanHolderNameMaxLength} karakter olabilir.");
+
+        RuleFor(x => x.BankName)
+            .MaximumLength(Branch.PaymentBankNameMaxLength)
+            .WithMessage($"Banka adı en fazla {Branch.PaymentBankNameMaxLength} karakter olabilir.");
+
+        RuleFor(x => x.ShowIbanOnTable)
+            .Must((command, show) => !show || (TurkishIban.IsValid(command.Iban) && !string.IsNullOrWhiteSpace(command.AccountHolderName)))
+            .WithMessage("QR menüde göstermek için önce geçerli bir IBAN ve hesap sahibi girin.");
     }
 }
 
@@ -82,7 +100,8 @@ public class UpdateBranchPaymentSettingsCommandHandler(IAppDbContext db, ICurren
 
         try
         {
-            branch.SetIban(request.Iban, request.AccountHolderName);
+            branch.SetIban(request.Iban, request.AccountHolderName, request.BankName);
+            branch.SetShowIbanOnTable(request.ShowIbanOnTable);
         }
         catch (DomainException ex)
         {
@@ -97,7 +116,8 @@ public class UpdateBranchPaymentSettingsCommandHandler(IAppDbContext db, ICurren
             AuditLogSeverity.Info,
             "BranchIbanUpdated",
             branch.HasIban
-                ? $"{actor?.FullName} {branch.BranchName} şubesinin IBAN bilgisini güncelledi ({branch.IbanHolderName}, …{branch.Iban[^4..]})."
+                ? $"{actor?.FullName} {branch.BranchName} şubesinin IBAN bilgisini güncelledi ({branch.IbanHolderName}, …{branch.Iban[^4..]}; " +
+                  $"QR menüde {(branch.ShowIbanOnTable ? "gösteriliyor" : "gösterilmiyor")})."
                 : $"{actor?.FullName} {branch.BranchName} şubesinin IBAN bilgisini kaldırdı.",
             nameof(Branch),
             branch.Id));

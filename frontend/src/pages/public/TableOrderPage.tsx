@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, BellRing, Check, ClipboardList, Minus, Moon, Plus, Receipt, UtensilsCrossed, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BellRing, Check, ClipboardList, Landmark, Minus, Moon, Plus, Receipt, UtensilsCrossed, X } from 'lucide-react';
 import { publicService } from '@/features/customerSite/api/publicService';
 import {
     ORDER_REQUEST_APPROVED, ORDER_REQUEST_PENDING, ORDER_REQUEST_REJECTED, canReserveOnline, type PublicProduct, type PublicSite,
     type PublicTableInfo,
 } from '@/features/customerSite/types';
+import type { TableIbanPayment } from '@/features/customerSite/tableIbanPayment';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import IbanPaySheet from './components/IbanPaySheet';
 import MyOrdersSheet from './components/MyOrdersSheet';
 import TableLanding, { TableActionConfirmation, type TableActionKind } from './components/TableLanding';
 import { customerRootStyle, opensText } from './customerTheme';
@@ -40,7 +42,7 @@ export default function TableOrderPage() {
     const { tableId = '' } = useParams();
     const [params, setParams] = useSearchParams();
     const inMenu = params.get('ekran') === 'menu';
-    const [table, setTable] = useState<PublicTableInfo | null>(null);
+    const [table, setTable] = useState<(PublicTableInfo & { ibanPayment?: TableIbanPayment | null }) | null>(null);
     const [site, setSite] = useState<PublicSite | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [loadTick, setLoadTick] = useState(0);
@@ -52,12 +54,17 @@ export default function TableOrderPage() {
     const [myOrdersOpen, setMyOrdersOpen] = useState(false);
     const [sentId, setSentId] = useState<string | null>(null);
     const [confirm, setConfirm] = useState<TableActionKind | null>(null);
+    const [ibanOpen, setIbanOpen] = useState(false);
     const { requests, addRequest } = useTableOrderRequests(tableId);
 
     const callWaiterRun = useCallback(() => publicService.callWaiter(tableId), [tableId]);
     const billRequestRun = useCallback(() => publicService.requestBill(tableId), [tableId]);
     const callWaiter = useTableAction(callWaiterRun, 'Garson çağrılamadı. Lütfen tekrar deneyin.');
     const billRequest = useTableAction(billRequestRun, 'Hesap istenemedi. Lütfen tekrar deneyin ya da garsona haber verin.');
+    // "IBAN ile öde"deki tutar: son "Hesap iste"nin bildirdiği masa toplamı (bekleme süresi bitince de hatırlanır).
+    const [lastBillTotal, setLastBillTotal] = useState<number | null>(null);
+    const reportedBillTotal = billRequest.state.status === 'done' ? billRequest.state.billTotal : null;
+    if (reportedBillTotal != null && reportedBillTotal !== lastBillTotal) setLastBillTotal(reportedBillTotal);
 
     const showView = (menu: boolean) => {
         setParams(menu ? { ekran: 'menu' } : {});
@@ -208,6 +215,8 @@ export default function TableOrderPage() {
     const billAction = features.billRequestEnabled ? billRequest : null;
     const myOrdersButton = requests.length > 0;
     const sent = sentId ? requests.find(r => r.id === sentId) ?? null : null;
+    const ibanPayment = table.ibanPayment ?? null;
+    const openIban = ibanPayment ? () => setIbanOpen(true) : null;
 
     const overlays = (
         <>
@@ -228,7 +237,11 @@ export default function TableOrderPage() {
                     onClose={() => setConfirm(null)}
                     onOpenMenu={inMenu ? undefined : () => showView(true)}
                     onAction={kind => void runAction(kind)}
+                    onPayByIban={openIban ?? undefined}
                 />
+            )}
+            {ibanOpen && ibanPayment && (
+                <IbanPaySheet payment={ibanPayment} tableName={table.name} amount={lastBillTotal} onClose={() => setIbanOpen(false)} />
             )}
         </>
     );
@@ -262,6 +275,7 @@ export default function TableOrderPage() {
                     onOpenMenu={() => showView(true)}
                     callWaiter={waiterAction}
                     billRequest={billAction}
+                    onPayByIban={openIban}
                     showDelivery={features.deliveryLinkEnabled && table.acceptsOnlineOrders}
                     deliveryHref={`/siparis?sube=${encodeURIComponent(table.branchId)}`}
                     showReservation={features.reservationLinkEnabled && canReserveOnline(site)}
@@ -276,7 +290,7 @@ export default function TableOrderPage() {
 
     const quantityOf = (productId: string) => cart[productId]?.quantity ?? 0;
     const reopen = opensText(site.site.opensAt);
-    const showActionBar = !!(waiterAction || billAction);
+    const showActionBar = !!(waiterAction || billAction || openIban);
 
     return root(
         <main className={cn('min-h-screen', (canOrder && itemCount > 0) || showActionBar ? 'pb-36' : 'pb-12')}>
@@ -395,6 +409,18 @@ export default function TableOrderPage() {
                                 {billAction && (
                                     <MenuActionButton label="Hesap iste" icon={<Receipt className="h-4 w-4" />} action={billAction}
                                         onClick={() => void runAction('bill')} onReopen={() => setConfirm('bill')} />
+                                )}
+                                {openIban && (
+                                    <button
+                                        type="button"
+                                        onClick={openIban}
+                                        aria-label={waiterAction || billAction ? 'IBAN ile öde' : undefined}
+                                        className={cn('flex h-14 shrink-0 items-center justify-center gap-2 rounded-full border-2 border-[var(--site-border-mid)] bg-[var(--site-card)] text-[15px] font-extrabold text-[var(--site-text)] transition-colors hover:border-[var(--site-text)]',
+                                            waiterAction || billAction ? 'w-14' : 'min-w-0 flex-1 px-4')}
+                                    >
+                                        <Landmark className="h-4 w-4" aria-hidden="true" />
+                                        {!(waiterAction || billAction) && 'IBAN ile öde'}
+                                    </button>
                                 )}
                             </>
                         )}

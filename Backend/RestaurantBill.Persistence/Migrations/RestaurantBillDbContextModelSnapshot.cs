@@ -181,8 +181,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<string>("IbanHolderName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(70)
-                        .HasColumnType("character varying(70)")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("InstagramUrl")
@@ -215,11 +215,23 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<TimeOnly?>("OpensAt")
                         .HasColumnType("time without time zone");
 
+                    b.Property<string>("PaymentBankName")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasDefaultValue("");
+
                     b.Property<string>("QrFeatures")
                         .HasColumnType("jsonb");
 
                     b.Property<string>("ReservationSettings")
                         .HasColumnType("jsonb");
+
+                    b.Property<bool>("ShowIbanOnTable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("SiteAbout")
                         .IsRequired()

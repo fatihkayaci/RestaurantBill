@@ -4,6 +4,7 @@ import type {
     Availability, DaySlot, OrderRequestStatus, PublicSite, PublicTableInfo, ReservationDetail, ReservationStatusInfo,
     TableActionResult,
 } from '../types';
+import type { TableIbanPayment } from '../tableIbanPayment';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5077';
 
@@ -48,7 +49,8 @@ export const publicService = {
         return response.data;
     },
     getTable: async (tableId: string) => {
-        const response = await publicApi.get<PublicTableInfo>(`/table/${tableId}`);
+        // ibanPayment: restoran "IBAN ile öde"yi açmadıysa null.
+        const response = await publicApi.get<PublicTableInfo & { ibanPayment?: TableIbanPayment | null }>(`/table/${tableId}`);
         return response.data;
     },
     getAvailability: async (branchId: string, date: string, time: string) => {
