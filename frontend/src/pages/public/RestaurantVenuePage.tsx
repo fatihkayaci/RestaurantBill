@@ -12,12 +12,13 @@ import { directionsUrl, splitAccent, telHref, whatsappHref } from './site/siteTh
 import { fullAddress, hoursLine, restaurantName, useSite } from './site/useSite';
 import { EditableBlock, EditableText, EmptySlot, ExternalHint } from './site/siteEdit';
 import { editTarget, useSiteEdit } from './site/siteEditContext';
+import { oliveBg, terracottaBg } from './site/renkliTones';
 
-// /mekan (tasarım: "Tema 2 · Açık — Mekân"). Krem sayfada beyaz, yuvarlak köşeli kutular: (1) kapak: mekân fotoğrafı
-// soldan beyaz geçişle (yoksa sağda süs masa planı), "Mekân", dev serif başlık, kısa tarif, "Masa ayırt" ve
+// /mekan (tasarım: "Renkli ve sıcak — Mekân"). Kum sayfada krem, yuvarlak köşeli kutular: (1) zeytin kapak, krem yazı,
+// hardal üst satır ve italik: mekân fotoğrafı soldan zeytin geçişle (yoksa sağda krem çizgili, hardal noktalı masa planı), "Mekân", dev serif başlık, kısa tarif, "Masa ayırt" ve
 // "Nasıl gelinir?" düğmeleri. (2) "Nerede oturmak istersiniz?": Masalar'daki bölümler sütun sütun (fotoğraf, kişi ya
-// da masa sayısı, açıklama). (3) Galeri: büyük kare + küçük kareler. (4) Olanaklar (ikonlu) + vurgu renginde
-// "Özel günler" (WhatsApp / telefon). (5) "Nasıl gelinir?": süs harita, adres, ulaşım notu, otopark, saatler ve
+// da masa sayısı, açıklama). (3) Galeri: büyük kare + küçük kareler. (4) Olanaklar (ikonlu) + kiremit
+// "Özel günler" (koyu WhatsApp, hardal telefon). (5) "Nasıl gelinir?": süs harita, adres, ulaşım notu, otopark, saatler ve
 // yol tarifi. Fotoğraflı ya da fotoğrafsız görünüm veriden kendiliğinden seçilir; girilmemiş bilgi gösterilmez.
 
 const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[32px]';
@@ -105,27 +106,28 @@ function VenueHero({ site, hasLocation }: { site: PublicSite; hasLocation: boole
     const actionClass = 'inline-flex h-[54px] flex-1 items-center justify-center whitespace-nowrap rounded-full px-7 text-base no-underline transition-opacity hover:opacity-90 sm:flex-none';
 
     return (
-        <section aria-labelledby="mk-baslik" className={cn(box, 'relative flex min-h-[460px] overflow-hidden md:min-h-[540px]')}>
+        <section aria-labelledby="mk-baslik"
+            className={cn(box, oliveBg, 'relative flex min-h-[460px] overflow-hidden text-[var(--site-on-paper)] md:min-h-[540px] [--site-accent-text:var(--site-mustard-text)]')}>
             <EditableBlock target="photo:hero-mekan" label="Mekân kapağı" chip="Fotoğrafı değiştir" className="absolute inset-0">
                 {photo ? (
                     <>
                         <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover object-[60%_40%]" />
-                        {/* Telefonda yazının arkası aşağı doğru koyulaşan beyaz perde; geniş ekranda soldan beyaz geçiş. */}
-                        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.55)_0%,rgba(255,255,255,0.9)_50%,rgba(255,255,255,0.97)_100%)] md:bg-[linear-gradient(90deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.88)_30%,rgba(255,255,255,0.45)_48%,rgba(255,255,255,0)_64%)]" />
+                        {/* Telefonda yazının arkası aşağı doğru koyulaşan zeytin perde; geniş ekranda soldan zeytin geçiş. */}
+                        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(62,74,51,0.6)_0%,rgba(62,74,51,0.9)_50%,rgba(62,74,51,0.97)_100%)] md:bg-[linear-gradient(90deg,rgba(62,74,51,0.97)_0%,rgba(62,74,51,0.88)_30%,rgba(62,74,51,0.45)_48%,rgba(62,74,51,0)_64%)]" />
                         {photo.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                     </>
                 ) : (
                     <TablePlan className="absolute right-14 top-1/2 hidden -translate-y-1/2 lg:grid" />
                 )}
                 {edit && !c.venueHeroUrl && (
-                    <span className="absolute right-6 top-6 whitespace-nowrap rounded-full border border-dashed border-[var(--site-border-strong)] bg-[var(--site-card)] px-4 py-2 font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold">
+                    <span className="absolute right-6 top-6 whitespace-nowrap rounded-full border border-dashed border-[var(--site-border-strong)] bg-[var(--site-card)] px-4 py-2 font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[var(--site-text)]">
                         + Mekân kapağı seç
                     </span>
                 )}
             </EditableBlock>
             <div className="pointer-events-none relative z-[1] flex max-w-[720px] flex-col justify-end gap-[22px] px-5 py-10 sm:px-10 md:px-14 md:py-16 [&_[data-edit-text]]:pointer-events-auto [&_a]:pointer-events-auto">
-                <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-sub)]">
-                    <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--site-accent)]" />Mekân
+                <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-mustard-text)]">
+                    <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-mustard-text)]" />Mekân
                 </span>
                 {edit ? (
                     <EditableText as="h1" id="mk-baslik" field="headline" value={c.headline} fallback={[main, accent].filter(Boolean).join(' ')}
@@ -137,13 +139,13 @@ function VenueHero({ site, hasLocation }: { site: PublicSite; hasLocation: boole
                 )}
                 {(c.tagline || showEmpty) && (
                     <EditableText as="p" field="tagline" value={c.tagline} placeholder="Alt başlık"
-                        className="m-0 max-w-[500px] text-base leading-[1.65] text-[#3E3731] md:text-lg" />
+                        className="m-0 max-w-[500px] text-base leading-[1.65] text-[rgba(251,244,232,0.88)] md:text-lg" />
                 )}
                 {!edit && (canReserve || hasLocation) && (
                     <div className="flex flex-wrap gap-2.5">
-                        {canReserve && <Link to={RESERVATION_PATH} className={cn(actionClass, 'bg-[var(--site-paper)] font-extrabold text-[var(--site-on-paper)]')}>Masa ayırt</Link>}
+                        {canReserve && <Link to={RESERVATION_PATH} className={cn(actionClass, 'bg-[var(--site-mustard)] font-extrabold text-[var(--site-text)]')}>Masa ayırt</Link>}
                         {hasLocation && (
-                            <a href={`#${LOCATION_ID}`} className={cn(actionClass, 'border border-[var(--site-border-strong)] bg-white/70 font-bold text-[var(--site-text)]')}>Nasıl gelinir?</a>
+                            <a href={`#${LOCATION_ID}`} className={cn(actionClass, 'border-2 border-[rgba(251,244,232,0.5)] font-bold text-[var(--site-on-paper)] hover:border-[var(--site-on-paper)]')}>Nasıl gelinir?</a>
                         )}
                     </div>
                 )}
@@ -189,8 +191,8 @@ function Areas({ site }: { site: PublicSite }) {
                                 </div>
                             )}
                             <div className="flex items-baseline justify-between gap-3">
-                                <h3 className={cn(serif, 'm-0 min-w-0 break-words text-[32px] leading-none md:text-[36px]')}>{region.name}</h3>
-                                {count && !edit && <span className={cn(serif, 'shrink-0 text-2xl italic text-[var(--site-accent-text)]')}>{count}</span>}
+                                <h3 className={cn(serif, 'm-0 min-w-0 break-words text-[32px] font-semibold leading-none md:text-[36px]')}>{region.name}</h3>
+                                {count && !edit && <span className={cn(serif, 'shrink-0 text-2xl font-semibold italic text-[var(--site-accent-text)]')}>{count}</span>}
                             </div>
                             {(region.description || showEmpty) && (
                                 <EditableText as="p" field={`region:${region.id}`} value={region.description ?? ''} placeholder="Kısa açıklama"
@@ -257,9 +259,12 @@ function AmenitiesRow({ site }: { site: PublicSite }) {
             )}
             {showSpecial ? (
                 <section aria-labelledby="mk-ozel"
-                    className={cn(box, 'flex min-w-0 flex-[1_1_360px] flex-col justify-between gap-7 bg-[var(--site-accent)] px-5 py-9 text-[var(--site-on-accent)] [--site-accent-text:currentColor] sm:p-10 md:p-11')}>
+                    className={cn(box, terracottaBg, 'flex min-w-0 flex-[1_1_360px] flex-col justify-between gap-7 px-5 py-9 text-[var(--site-on-paper)] [--site-accent-text:currentColor] sm:p-10 md:p-11')}>
                     <div className="flex flex-col gap-3.5">
-                        <span className="text-xs font-extrabold uppercase tracking-[0.24em]">Özel günler</span>
+                        {/* Hardal yazı kiremitte 3.7:1 kalıyor: etiket krem, hardal yalnız yanındaki çizgide. */}
+                        <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em]">
+                            <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-mustard)]" />Özel günler
+                        </span>
                         <h2 id="mk-ozel" className={cn(serif, 'm-0 text-[40px] leading-none md:text-[46px]')}>Doğum günü, nişan, iş yemeği…</h2>
                         <p className="m-0 text-base leading-[1.65]">
                             {maxParty ? `Online rezervasyon ${maxParty} kişiye kadar; daha kalabalık gruplar ve özel günler için bize yazın ya da arayın.` : 'Kalabalık gruplar ve özel günler için bize yazın ya da arayın.'}
@@ -274,7 +279,7 @@ function AmenitiesRow({ site }: { site: PublicSite }) {
                         )}
                         {phone && (
                             <ExternalHint source="restaurant">
-                                <a href={telHref(phone)} aria-label={`Telefonla arayın: ${phone}`} className={cn(bigButton, 'bg-[var(--site-card)] text-[var(--site-text)]')}>
+                                <a href={telHref(phone)} aria-label={`Telefonla arayın: ${phone}`} className={cn(bigButton, 'bg-[var(--site-mustard)] text-[var(--site-text)]')}>
                                     <PhoneIcon />{phone}
                                 </a>
                             </ExternalHint>

@@ -10,7 +10,7 @@ import { SITE_LIMITS, editTarget, useSiteEdit } from './siteEditContext';
 
 const MOSAIC_SMALL = 4;
 
-/** Fotoğrafsız kapağın sağındaki 4×4 masa planı (süs): 2 vurgu renginde masa, 1 çizgili masa, 0 kesikli boş yer. */
+/** Fotoğrafsız (zeytin) kapağın sağındaki 4×4 masa planı (süs): 2 hardal masa, 1 krem çizgili masa, 0 kesikli boş yer. */
 const TABLE_PLAN = [1, 1, 0, 1, 1, 2, 1, 1, 0, 1, 1, 2, 1, 1, 0, 1];
 
 export function TablePlan({ className }: { className?: string }) {
@@ -18,7 +18,7 @@ export function TablePlan({ className }: { className?: string }) {
         <div aria-hidden="true" className={cn('pointer-events-none grid grid-cols-[repeat(4,56px)] gap-[22px]', className)}>
             {TABLE_PLAN.map((v, i) => (
                 <span key={i} className={cn('h-14 w-14', i % 3 === 0 ? 'rounded-full' : 'rounded-[14px]',
-                    v === 2 ? 'bg-[var(--site-accent)]' : v === 1 ? 'border-[1.5px] border-[rgba(30,26,22,0.22)]' : 'border-[1.5px] border-dashed border-[rgba(30,26,22,0.12)]')} />
+                    v === 2 ? 'bg-[var(--site-mustard)]' : v === 1 ? 'border-2 border-[rgba(251,244,232,0.4)]' : 'border-2 border-dashed border-[rgba(251,244,232,0.2)]')} />
             ))}
         </div>
     );
@@ -73,7 +73,7 @@ export function VenueGallery({ site, photos, title }: { site: PublicSite; photos
                 {shot(big, 0, 'absolute inset-0', false)}
                 {ig && (
                     <a href={ig} target="_blank" rel="noopener noreferrer" {...igT}
-                        className={cn('absolute left-3 top-3 inline-flex h-11 items-center gap-2 rounded-full bg-white/90 px-4 text-sm font-bold text-[var(--site-text)] no-underline shadow-[0_4px_14px_rgba(30,26,22,0.14)] backdrop-blur-[8px] transition-opacity hover:opacity-90 md:left-4 md:top-4 [&>svg]:h-4 [&>svg]:w-4', igT.className)}>
+                        className={cn('absolute left-3 top-3 inline-flex h-11 items-center gap-2 rounded-full bg-[var(--site-card)]/90 px-4 text-sm font-bold text-[var(--site-text)] no-underline shadow-[0_4px_14px_rgba(36,24,15,0.14)] backdrop-blur-[8px] transition-opacity hover:opacity-90 md:left-4 md:top-4 [&>svg]:h-4 [&>svg]:w-4', igT.className)}>
                         <InstagramIcon />{instagramHandle(ig)}
                     </a>
                 )}
@@ -106,13 +106,13 @@ export function VenueGallery({ site, photos, title }: { site: PublicSite; photos
 export function MapPanel({ name, className }: { name: string; className?: string }) {
     return (
         <div aria-hidden="true"
-            className={cn('relative overflow-hidden bg-[#ECE4D7] bg-[linear-gradient(rgba(30,26,22,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(30,26,22,0.05)_1px,transparent_1px)] bg-[length:40px_40px]', className)}>
+            className={cn('relative overflow-hidden bg-[#ECE4D7] bg-[linear-gradient(rgba(36,24,15,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(36,24,15,0.05)_1px,transparent_1px)] bg-[length:40px_40px]', className)}>
             <span className="absolute -left-[10%] -right-[10%] top-[40%] h-[18px] -rotate-[8deg] bg-[#FBF8F3]" />
             <span className="absolute -left-[10%] -right-[10%] top-[74%] h-2.5 rotate-[5deg] bg-[#FBF8F3]" />
             <span className="absolute -bottom-[10%] -top-[10%] left-[64%] w-3 rotate-[14deg] bg-[#FBF8F3]" />
             <span className="absolute right-0 top-0 h-[52%] w-[30%] rounded-bl-[140px] bg-[#CBDAD3]" />
             <div className="absolute left-[44%] top-[42%] flex max-w-[80%] -translate-x-1/2 -translate-y-full flex-col items-center">
-                <span className={cn(serif, 'max-w-full truncate rounded-[14px] bg-[var(--site-paper)] px-4 py-2.5 text-xl text-[var(--site-on-paper)]')}>{name}</span>
+                <span className={cn(serif, 'max-w-full truncate font-semibold rounded-[14px] bg-[var(--site-paper)] px-4 py-2.5 text-xl text-[var(--site-on-paper)]')}>{name}</span>
                 <span className="mt-1.5 h-[22px] w-[22px] rounded-full border-4 border-white bg-[var(--site-accent)] shadow-[0_4px_12px_rgba(0,0,0,0.25)]" />
             </div>
         </div>

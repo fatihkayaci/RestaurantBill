@@ -9,12 +9,14 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
 import { serif } from './siteParts';
 import { telHref } from './siteTheme';
+import { terracottaBg } from './renkliTones';
 
-// İletişim sayfasındaki "Mesaj bırakın" formu (Tema 2): konu (mesaj türü: öneri, şikâyet, diğer), ad, telefon ya da
+// İletişim sayfasındaki "Mesaj bırakın" formu (Renkli ve sıcak: krem kutuda kum alanlar, kiremit seçili konu, vurgu
+// renginde gönder düğmesi): konu (mesaj türü: öneri, şikâyet, diğer), ad, telefon ya da
 // e-posta (isteğe bağlı), mesaj ve KVKK onayı. Admin panelinde "Şikayet ve Öneriler"e düşer. Gizli "website" alanı bot
 // tuzağıdır; sunucu da sık denemeyi sınırlar (429). Gönderilince "Mesajınız ulaştı." ve "Yeni mesaj yaz".
 
-const field = 'w-full rounded-2xl border border-[rgba(30,26,22,0.15)] bg-[var(--site-bg)] px-[18px] text-base font-medium text-[var(--site-text)] transition-colors placeholder:font-normal placeholder:text-[var(--site-muted)] hover:border-[var(--site-border-strong)] focus:border-[var(--site-text)] focus:bg-[var(--site-card)] focus:outline-none focus:ring-2 focus:ring-[var(--site-text)]/15';
+const field = 'w-full rounded-2xl border border-[rgba(36,24,15,0.15)] bg-[var(--site-bg)] px-[18px] text-base font-medium text-[var(--site-text)] transition-colors placeholder:font-normal placeholder:text-[var(--site-muted)] hover:border-[var(--site-border-strong)] focus:border-[var(--site-text)] focus:bg-[var(--site-card)] focus:outline-none focus:ring-2 focus:ring-[var(--site-text)]/15';
 const labelClass = 'flex flex-col gap-2 text-[13px] font-extrabold';
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-text)] focus-visible:ring-offset-2';
 
@@ -84,7 +86,7 @@ export default function ContactForm({ branchId, phone }: { branchId: string; pho
                         return (
                             <label key={option.value}
                                 className={cn('flex h-11 cursor-pointer items-center rounded-full border px-[18px] text-sm font-bold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--site-text)] has-[:focus-visible]:ring-offset-2',
-                                    on ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]' : 'border-[rgba(30,26,22,0.18)] text-[var(--site-text)] hover:border-[var(--site-text)]')}>
+                                    on ? cn('border-[#A9401F] text-[var(--site-on-paper)]', terracottaBg) : 'border-[rgba(36,24,15,0.18)] text-[var(--site-text)] hover:border-[var(--site-text)]')}>
                                 <input type="radio" name="ilt-tur" value={option.value} checked={on} onChange={() => setType(option.value)} className="sr-only" />
                                 {option.label}
                             </label>
@@ -124,7 +126,7 @@ export default function ContactForm({ branchId, phone }: { branchId: string; pho
             {error && <p id="ilt-form-hata" role="alert" className="m-0 rounded-2xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3.5 text-sm font-semibold text-[var(--site-error)]">{error}</p>}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <button type="submit" disabled={sending}
-                    className={cn('h-[58px] w-full rounded-full bg-[var(--site-paper)] px-8 text-base font-extrabold text-[var(--site-on-paper)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto', focusRing)}>
+                    className={cn('h-[58px] w-full rounded-full bg-[var(--site-accent)] px-8 text-base font-extrabold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto', focusRing)}>
                     {sending ? 'Gönderiliyor…' : 'Mesajı gönder'}
                 </button>
                 {phone && (

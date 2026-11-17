@@ -11,10 +11,11 @@ import { fullAddress, useSite, weekSchedule } from './site/useSite';
 import ContactForm from './site/ContactForm';
 import { EditableBlock, EditableText, EmptySlot, ExternalHint } from './site/siteEdit';
 import { useSiteEdit } from './site/siteEditContext';
+import { oliveBg } from './site/renkliTones';
 
-// /iletisim (tasarım: "Tema 2 · Açık — İletişim"). Krem sayfada beyaz yuvarlak kutular: (1) solda "Bize ulaşın." ve
-// açık/kapalı hapı, sağda her gerçek kanal için bütün satırı bağlantı olan liste (Telefon, WhatsApp, Instagram; e-posta
-// saklanmadığı için yok). (2) "Mesaj bırakın" formu (mevcut iletişim mesajı ucu) + sağda koyu çalışma saatleri kutusu
+// /iletisim (tasarım: "Renkli ve sıcak — İletişim"). Kum sayfada yuvarlak kutular: (1) hardal kapak: solda "Bize ulaşın."
+// ve açık/kapalı hapı, sağda her gerçek kanal için bütün satırı bağlantı olan liste (Telefon, WhatsApp, Instagram; e-posta
+// saklanmadığı için yok). (2) Krem "Mesaj bırakın" formu (mevcut iletişim mesajı ucu) + sağda zeytin çalışma saatleri kutusu
 // (bugün vurgulu, paket siparişin son saati) ve süs haritalı adres kutusu. Verisi olmayan kutu ya da satır çizilmez.
 
 const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[32px]';
@@ -35,18 +36,18 @@ function ChannelRow({ href, external, label, value, note, icon, main = false }: 
 }) {
     return (
         <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}
-            className="flex items-center gap-4 border-b border-[var(--site-line)] py-5 text-[var(--site-text)] no-underline transition-opacity hover:opacity-80 sm:gap-5 sm:py-6">
+            className="flex items-center gap-4 border-b border-[rgba(36,24,15,0.18)] py-5 text-[var(--site-text)] no-underline transition-opacity hover:opacity-80 sm:gap-5 sm:py-6">
             <span aria-hidden="true" className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14',
-                main ? 'bg-[var(--site-accent)] text-[var(--site-on-accent)]' : 'bg-[var(--site-bg)] text-[var(--site-text)]')}>
+                main ? 'bg-[var(--site-accent)] text-[var(--site-on-accent)]' : 'bg-[var(--site-card)] text-[var(--site-text)]')}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={icon} /></svg>
             </span>
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--site-muted)]">{label}</span>
-                <span className={cn(serif, 'break-words text-[26px] leading-[1.1] sm:text-[clamp(28px,2.6vw,40px)]')}>{value}</span>
+                <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#4A3A2C]">{label}</span>
+                <span className={cn(serif, 'break-words text-[22px] font-semibold leading-[1.1] min-[400px]:text-[26px] sm:text-[clamp(28px,2.6vw,40px)]')}>{value}</span>
             </span>
-            {note && <span className="hidden max-w-[180px] shrink-0 text-right text-[13px] text-[var(--site-muted)] md:block">{note}</span>}
-            <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[rgba(30,26,22,0.15)] sm:h-12 sm:w-12">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
+            {note && <span className="hidden max-w-[180px] shrink-0 text-right text-[13px] text-[#4A3A2C] md:block">{note}</span>}
+            <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--site-paper)] text-[var(--site-on-paper)] sm:h-12 sm:w-12">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
             </span>
         </a>
     );
@@ -82,7 +83,7 @@ function Channels({ site }: { site: PublicSite }) {
     return <div className="flex min-w-0 flex-[999_1_560px] flex-col">{rows}</div>;
 }
 
-/** Koyu çalışma saatleri kutusu: gün gün (bugün vurgulu), açık/kapalı rozeti, not ve paket siparişin son saati. */
+/** Zeytin çalışma saatleri kutusu: gün gün (bugün vurgulu), açık/kapalı rozeti, not ve paket siparişin son saati. */
 function HoursBox({ site }: { site: PublicSite }) {
     const edit = useSiteEdit();
     const ordering = useOnlineOrdering();
@@ -91,7 +92,7 @@ function HoursBox({ site }: { site: PublicSite }) {
     const lastOrder = ordering?.state === 'open' && ordering.lastOrderAt ? timeOfDay(ordering.lastOrderAt) : null;
     return (
         <EditableBlock target="hours" label="Çalışma saatleri" className="rounded-[24px] md:rounded-[32px]">
-            <section id="saatler" aria-labelledby="ilt-saat" className="flex scroll-mt-24 flex-col gap-4 rounded-[24px] bg-[var(--site-paper)] p-6 text-[var(--site-on-paper)] sm:p-9 md:rounded-[32px]">
+            <section id="saatler" aria-labelledby="ilt-saat" className={cn(oliveBg, 'flex scroll-mt-24 flex-col gap-4 rounded-[24px] p-6 text-[var(--site-on-paper)] sm:p-9 md:rounded-[32px]')}>
                 <div className="flex items-center justify-between gap-3">
                     <h2 id="ilt-saat" className={cn(serif, 'm-0 text-[32px] leading-none sm:text-[36px]')}>Çalışma saatleri</h2>
                     {site.isOpenNow !== null && (
@@ -104,7 +105,7 @@ function HoursBox({ site }: { site: PublicSite }) {
                 <dl className="m-0 flex flex-col">
                     {rows.map(r => (
                         <div key={r.day} className={cn('-mx-3 flex justify-between gap-4 rounded-[10px] px-3 py-2 text-[15px]',
-                            r.isToday ? 'bg-[rgba(246,241,233,0.1)] font-extrabold' : 'text-[var(--site-on-paper-sub)]')}>
+                            r.isToday ? 'bg-[rgba(251,244,232,0.12)] font-extrabold' : 'text-[var(--site-on-paper-sub)]')}>
                             <dt>{r.label}{r.isToday && ' · bugün'}</dt>
                             <dd className="m-0 tabular-nums">{r.text}</dd>
                         </div>
@@ -112,7 +113,7 @@ function HoursBox({ site }: { site: PublicSite }) {
                 </dl>
                 {site.site.hoursNote && <p className="m-0 text-sm text-[var(--site-on-paper-sub)]">{site.site.hoursNote}</p>}
                 {lastOrder && !edit && (
-                    <div className="flex justify-between gap-4 border-t border-dashed border-[rgba(246,241,233,0.2)] pt-3 text-sm">
+                    <div className="flex justify-between gap-4 border-t border-dashed border-[rgba(251,244,232,0.22)] pt-3 text-sm">
                         <span className="text-[var(--site-on-paper-sub)]">Paket sipariş</span>
                         <span className="font-extrabold">{untilTime(lastOrder)}</span>
                     </div>
@@ -135,7 +136,7 @@ function AddressBox({ site }: { site: PublicSite }) {
             {showAddress && (
                 <ExternalHint source="restaurant">
                     <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" aria-label="Haritada aç"
-                        className="relative block min-h-[180px] flex-1 overflow-hidden bg-[#ECE4D7] bg-[linear-gradient(rgba(30,26,22,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(30,26,22,0.05)_1px,transparent_1px)] bg-[length:30px_30px] transition-opacity hover:opacity-90">
+                        className="relative block min-h-[180px] flex-1 overflow-hidden bg-[#ECE4D7] bg-[linear-gradient(rgba(36,24,15,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(36,24,15,0.05)_1px,transparent_1px)] bg-[length:30px_30px] transition-opacity hover:opacity-90">
                         <span aria-hidden="true" className="absolute -left-[10%] -right-[10%] top-[46%] h-3 -rotate-[8deg] bg-[#FBF8F3]" />
                         <span aria-hidden="true" className="absolute -bottom-[10%] -top-[10%] left-[62%] w-[9px] rotate-[14deg] bg-[#FBF8F3]" />
                         <span aria-hidden="true" className="absolute right-0 top-0 h-1/2 w-[32%] rounded-bl-[90px] bg-[#CBDAD3]" />
@@ -146,7 +147,7 @@ function AddressBox({ site }: { site: PublicSite }) {
             <div className="flex flex-col gap-2.5 px-6 pb-7 pt-6 sm:px-7">
                 <h2 id="ilt-adres" className="m-0 text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--site-muted)]">Adres</h2>
                 {showAddress && (
-                    <p className={cn(serif, 'm-0 break-words text-[26px] leading-[1.15]')}>
+                    <p className={cn(serif, 'm-0 break-words text-[26px] font-semibold leading-[1.15]')}>
                         {site.openAddress || address}
                         {site.openAddress && (site.district || site.city) && <><br />{[site.district, site.city].filter(Boolean).join(' / ')}</>}
                     </p>
@@ -172,14 +173,14 @@ export default function RestaurantContactPage() {
         <SitePage site={site} current="iletisim">
             <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
                 {/* 1. Kanallar */}
-                <section aria-labelledby="ilt-baslik" className={cn(box, 'flex flex-wrap gap-x-[72px] gap-y-8 p-6 sm:p-10 md:p-14')}>
+                <section aria-labelledby="ilt-baslik" className={cn(box, 'flex flex-wrap gap-x-[72px] gap-y-8 bg-[var(--site-mustard)] p-6 sm:p-10 md:p-14 [--site-accent-text:var(--site-story)]')}>
                     <div className="flex min-w-0 flex-[1_1_360px] flex-col justify-between gap-7">
                         <div className="flex flex-col gap-5">
-                            <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-sub)]">
-                                <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--site-accent)]" />İletişim
+                            <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-text)]">
+                                <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-text)]" />İletişim
                             </span>
-                            <h1 id="ilt-baslik" className={cn(serif, 'm-0 text-[64px] leading-[0.88] md:text-[clamp(64px,7vw,112px)]')}>Bize<br /><em className="rb-accent italic">ulaşın.</em></h1>
-                            <p className="m-0 max-w-[420px] text-base leading-[1.65] text-[#3E3731] md:text-[17px]">Rezervasyon, paket sipariş, özel gün ya da bir öneri… Size en kolay gelen yoldan yazın, arayın.</p>
+                            <h1 id="ilt-baslik" className={cn(serif, 'm-0 text-[64px] font-extrabold leading-[0.88] md:text-[clamp(64px,7vw,112px)]')}>Bize<br /><em className="rb-accent italic">ulaşın.</em></h1>
+                            <p className="m-0 max-w-[420px] text-base leading-[1.65] text-[#3A2A1C] md:text-[17px]">Rezervasyon, paket sipariş, özel gün ya da bir öneri… Size en kolay gelen yoldan yazın, arayın.</p>
                         </div>
                         {site.isOpenNow !== null && (
                             <EditableBlock target="hours" label="Çalışma saatleri" className="self-start rounded-full">
