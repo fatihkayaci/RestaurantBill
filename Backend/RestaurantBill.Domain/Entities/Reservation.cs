@@ -104,6 +104,27 @@ namespace RestaurantBill.Domain.Entities
             Status = ReservationStatus.Cancelled;
         }
 
+        /// <summary>Misafir rezervasyonunu en geç bu kadar önce kendisi iptal edebilir; sonrası için restoranı arar.</summary>
+        public static readonly TimeSpan GuestCancelCutoff = TimeSpan.FromHours(2);
+
+        /// <summary>Misafirin kendi iptalinin son anı (rezervasyon saatinden GuestCancelCutoff önce).</summary>
+        public DateTime GuestCancelDeadline => ReservationTime - GuestCancelCutoff;
+
+        /// <summary>Misafir şu an kendisi iptal edebilir mi: bekleyen ya da onaylı ve son iptal anı geçmemiş.</summary>
+        public bool CanGuestCancel(DateTime utcNow)
+            => (Status == ReservationStatus.Pending || Status == ReservationStatus.Confirmed) && utcNow < GuestCancelDeadline;
+
+        /// <summary>Misafirin kendi iptali (rezervasyon sayfasından, kod + telefonla).</summary>
+        public void CancelByGuest(DateTime utcNow)
+        {
+            if (Status != ReservationStatus.Pending && Status != ReservationStatus.Confirmed)
+                throw new DomainException("Bu rezervasyon zaten kapatılmış.");
+            if (utcNow >= GuestCancelDeadline)
+                throw new DomainException($"Rezervasyona {GuestCancelCutoff.TotalHours:0} saatten az kaldığı için online iptal edilemiyor. Lütfen restoranı arayın.");
+
+            Status = ReservationStatus.Cancelled;
+        }
+
         /// <summary>Misafir geldi ("Geldi"). Bekleyen ön sipariş varsa çağıran mutfağa gönderir.</summary>
         public void Seat(DateTime utcNow)
         {

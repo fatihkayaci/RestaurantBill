@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.Features.DataManagement;
 using RestaurantBill.Application.Features.Delivery.Staff;
 using RestaurantBill.Application.Features.Orders.Overdue;
 using RestaurantBill.Application.Interfaces;
@@ -25,6 +26,9 @@ namespace RestaurantBill.Infrastructure.Extensions
             services.AddScoped<ICourierNotificationService, CourierNotificationService>();
             services.AddScoped<IOrderPricingService, OrderPricingService>();
             services.AddScoped<IDeliveryOrderSweeper, DeliveryOrderSweeper>();
+            services.AddScoped<ICompanyPurger, CompanyPurger>();
+            // Kapatılan şirketin durumu her istekte veritabanına sorulmasın diye (CompanyClosureMiddleware) tek örnek.
+            services.AddSingleton<CompanyClosureCache>();
 
             // Masa QR'ı "Garson çağır" / "Hesap iste" bekleme süresi bellekte tutulur; tüm istekler aynı örneği görmeli.
             services.TryAddSingleton(TimeProvider.System);
@@ -35,10 +39,16 @@ namespace RestaurantBill.Infrastructure.Extensions
             services.Configure<BunnyStorageOptions>(configuration.GetSection(BunnyStorageOptions.SectionName));
             services.AddHttpClient<IImageStorageService, BunnyStorageService>();
 
+            // Restoran sitelerinin sunucu tarafı başlık/og etiketleri: ön yüzün index.html'i (tek örnek, son iyi kopyayı tutar).
+            services.Configure<SeoOptions>(configuration.GetSection(SeoOptions.SectionName));
+            services.AddHttpClient(SiteIndexHtmlSource.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(3));
+            services.AddSingleton<ISiteIndexHtmlSource, SiteIndexHtmlSource>();
+
             services.AddHostedService<RefreshTokenCleanupService>();
             services.AddHostedService<DayEndCloseService>();
             services.AddHostedService<OverdueOrderItemAlertService>();
             services.AddHostedService<DeliveryAutoRejectService>();
+            services.AddHostedService<CompanyPurgeService>();
 
             return services;
         }

@@ -84,6 +84,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("BlockedAttemptCount")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("BlockedByUserId")
                         .HasColumnType("uuid");
 
@@ -99,6 +102,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTime?>("LastBlockedAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(13)
@@ -108,6 +114,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("SourceDeliveryOrderId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -224,13 +233,30 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("SiteContent")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("SiteCoverImage")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("SiteDraft")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("SiteDraftUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SiteDraftVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("SiteHeadline")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("SitePublishedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SiteStoryTitle")
                         .IsRequired()
@@ -384,11 +410,17 @@ namespace RestaurantBill.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CreatedUser")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletionScheduledAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -618,6 +650,14 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<int?>("EstimatedMinutes")
                         .HasColumnType("integer");
+
+                    b.Property<decimal?>("HandoverCashDifference")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("HandoverCountedCash")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -1809,6 +1849,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("Capacity")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");

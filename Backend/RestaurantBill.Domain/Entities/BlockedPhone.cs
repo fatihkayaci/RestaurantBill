@@ -14,10 +14,22 @@ namespace RestaurantBill.Domain.Entities
         public string Phone { get; private set; } = string.Empty;
         public string Reason { get; private set; } = string.Empty;
         public Guid BlockedByUserId { get; private set; }
+        /// <summary>Engel panodaki bir siparişten konduysa o sipariş; elle eklenen numarada null.</summary>
+        public Guid? SourceDeliveryOrderId { get; private set; }
+        /// <summary>Engel yüzünden geri çevrilen sipariş denemeleri.</summary>
+        public int BlockedAttemptCount { get; private set; }
+        public DateTime? LastBlockedAttemptAt { get; private set; }
 
         protected BlockedPhone() { }
 
-        public static BlockedPhone Create(Guid branchId, string phone, string? reason, Guid blockedByUserId)
+        /// <summary>Engelli numaradan gelen sipariş denemesi geri çevrildi.</summary>
+        public void RegisterBlockedAttempt(DateTime utcNow)
+        {
+            BlockedAttemptCount++;
+            LastBlockedAttemptAt = utcNow;
+        }
+
+        public static BlockedPhone Create(Guid branchId, string phone, string? reason, Guid blockedByUserId, Guid? sourceDeliveryOrderId = null)
         {
             if (branchId == Guid.Empty)
                 throw new DomainException("Geçersiz şube.");
@@ -35,7 +47,8 @@ namespace RestaurantBill.Domain.Entities
                 BranchId = branchId,
                 Phone = normalized,
                 Reason = trimmed,
-                BlockedByUserId = blockedByUserId
+                BlockedByUserId = blockedByUserId,
+                SourceDeliveryOrderId = sourceDeliveryOrderId
             };
         }
     }

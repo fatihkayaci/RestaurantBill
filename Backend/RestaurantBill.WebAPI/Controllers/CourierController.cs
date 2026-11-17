@@ -52,5 +52,21 @@ public class CourierController : BaseController
         return HandleResult(result);
     }
 
+    /// <summary>Yanlış basılan teslimi geri alır (ilk 2 dakika, tahsilat kasaya teslim edilmeden); sipariş yeniden yolda.</summary>
+    [HttpPost("orders/{id:guid}/undo-deliver")]
+    public async Task<IActionResult> UndoDeliver([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new UndoDeliverDeliveryOrderCommand { Id = id }, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>{ ids: [...] } — "Hepsiyle yola çık": ekrandaki hazır siparişler tek seferde yola çıkar.</summary>
+    [HttpPost("orders/dispatch")]
+    public async Task<IActionResult> DispatchMany([FromBody] DispatchCourierOrdersCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
     public sealed record CourierDeliverBody(PaymentMethod PaymentMethod);
 }

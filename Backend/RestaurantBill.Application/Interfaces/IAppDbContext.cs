@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using RestaurantBill.Domain.Entities;
 
 namespace RestaurantBill.Application.Interfaces;
@@ -37,6 +38,9 @@ public interface IAppDbContext
     DbSet<CustomerPhoneVerification> CustomerPhoneVerifications { get; }
     DbSet<ContactMessage> ContactMessages { get; }
     DbSet<StockImage> StockImages { get; }
+
+    /// <summary>Toplu silme ve işlem (transaction) için; ilişkisel olmayan (InMemory test) sağlayıcıda da vardır.</summary>
+    DatabaseFacade Database { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

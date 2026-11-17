@@ -43,6 +43,17 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public bool CanDispatch { get; set; }
         /// <summary>"Teslim ettim" basılabilir mi (sipariş yolda).</summary>
         public bool CanDeliver { get; set; }
+        /// <summary>"Teslimi geri al" bu ana kadar basılabilir (UTC); süre geçtiyse ya da kasaya teslim edildiyse null.</summary>
+        public DateTime? UndoDeliverUntil { get; set; }
+    }
+
+    /// <summary>"Hepsiyle yola çık" sonucu.</summary>
+    public class CourierBulkDispatchResultDto
+    {
+        public int DispatchedCount { get; set; }
+        public List<int> DispatchedNumbers { get; set; } = [];
+        /// <summary>İstenip yola çıkarılamayanlar (artık hazır değil, iptal edildi ya da başka kuryeye geçti).</summary>
+        public int SkippedCount { get; set; }
     }
 
     /// <summary>Kuryenin "Bugün" özeti ve üzerindeki, kasaya teslim edilmemiş tahsilat.</summary>
@@ -67,6 +78,10 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public PaymentMethod CollectedMethod { get; set; }
         public decimal CollectedAmount { get; set; }
         public DateTime? DeliveredAt { get; set; }
+        /// <summary>Kuryenin tahsil ettiği an (UTC).</summary>
+        public DateTime? CollectedAt { get; set; }
+        /// <summary>Tahsilat önceki bir iş gününde yapıldı ve hâlâ kasaya teslim edilmedi.</summary>
+        public bool IsFromPreviousDay { get; set; }
     }
 
     /// <summary>"Teslim al" sonucu: kasaya geçen sipariş sayısı ve tutarlar.</summary>
@@ -76,5 +91,29 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public decimal CashAmount { get; set; }
         public decimal CardAmount { get; set; }
         public decimal Total => CashAmount + CardAmount;
+        /// <summary>Kasaya girmesi beklenen nakit (CashAmount ile aynı).</summary>
+        public decimal ExpectedCash { get; set; }
+        /// <summary>Kasiyerin saydığı nakit; sayım girilmediyse ya da teslimde nakit yoksa null.</summary>
+        public decimal? CountedCash { get; set; }
+        /// <summary>Sayılan − beklenen; eksi = eksik. Sayım yoksa null.</summary>
+        public decimal? CashDifference { get; set; }
+    }
+
+    /// <summary>"Teslim geçmişi"nde bir teslim: aynı anda, aynı kasiyerce teslim alınan siparişler.</summary>
+    public class CourierHandoverHistoryDto
+    {
+        public DateTime SettledAt { get; set; }
+        public Guid CourierUserId { get; set; }
+        public string CourierName { get; set; } = string.Empty;
+        public string SettledByName { get; set; } = string.Empty;
+        public int OrderCount { get; set; }
+        public List<int> Numbers { get; set; } = [];
+        /// <summary>Beklenen nakit: teslimdeki nakit siparişlerin toplamı.</summary>
+        public decimal ExpectedCash { get; set; }
+        public decimal CardAmount { get; set; }
+        /// <summary>Sayılan nakit; sayım yoksa (nakitsiz teslim ya da eski kayıt) null.</summary>
+        public decimal? CountedCash { get; set; }
+        /// <summary>Sayılan − beklenen; eksi = eksik.</summary>
+        public decimal? CashDifference { get; set; }
     }
 }

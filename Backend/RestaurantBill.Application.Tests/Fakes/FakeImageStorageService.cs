@@ -32,7 +32,20 @@ public class FakeImageStorageService : IImageStorageService
 
     public Task DeleteAsync(string key, CancellationToken cancellationToken)
     {
+        if (ThrowOnDelete)
+            throw new HttpRequestException("CDN yanıt vermedi.");
         DeletedKeys.Add(key);
+        return Task.CompletedTask;
+    }
+
+    public List<string> DeletedFolders { get; } = [];
+    public bool ThrowOnDelete { get; set; }
+
+    public Task DeleteFolderAsync(string folder, CancellationToken cancellationToken)
+    {
+        if (ThrowOnDelete)
+            throw new HttpRequestException("CDN yanıt vermedi.");
+        DeletedFolders.Add(folder);
         return Task.CompletedTask;
     }
 }

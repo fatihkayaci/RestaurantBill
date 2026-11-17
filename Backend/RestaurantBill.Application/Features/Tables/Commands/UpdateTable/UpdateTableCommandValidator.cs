@@ -1,3 +1,4 @@
+using RestaurantBill.Domain.Entities;
 using FluentValidation;
 namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable;
 
@@ -14,5 +15,9 @@ public class UpdateTableCommandValidator : AbstractValidator<UpdateTableCommand>
 
         RuleFor(x => x.RegionId)
             .NotEqual(Guid.Empty).WithMessage("Bölge seçilmelidir.");
+
+        RuleFor(x => x.Capacity)
+            .InclusiveBetween(1, Table.MaxCapacity).When(x => x.Capacity.HasValue)
+            .WithMessage($"Kapasite 1 ile {Table.MaxCapacity} kişi arasında olmalı.");
     }
 }

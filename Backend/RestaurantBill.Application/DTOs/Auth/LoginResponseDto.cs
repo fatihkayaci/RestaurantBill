@@ -6,6 +6,9 @@ public class LoginResponseDto
     public bool NeedsSlugSetup { get; set; }
     public bool NeedsPhoneVerification { get; set; }
 
+    /// <summary>Sahip hesabı kapattı (silinmeyi bekliyor): ön yüz yalnızca "Vazgeç" ekranını gösterir.</summary>
+    public bool AccountClosing { get; set; }
+
     // Controller cookie'ye yazıp response'tan temizler; Application katmanı HttpContext bilmez.
     public string? RefreshToken { get; set; }
     public DateTime RefreshTokenExpiresAt { get; set; }

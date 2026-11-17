@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RestaurantBill.Application.Features.ContactMessages.Public;
 using RestaurantBill.Application.Features.CustomerSite.Public;
+using RestaurantBill.Application.Features.CustomerSite.Seo;
 using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Features.Delivery.Public;
 
@@ -23,12 +24,35 @@ public class PublicController : BaseController
         _mediator = mediator;
     }
 
+    /// <summary>Restoran hizmet veriyor mu: sahibi hesabı kapattıysa müşteri sayfaları nötr bir ekran gösterir.</summary>
+    [EnableRateLimiting("public-read")]
+    [HttpGet("status")]
+    public async Task<IActionResult> GetStatus(CancellationToken cancellationToken)
+        => HandleResult(await _mediator.Send(new GetPublicStatusQuery(), cancellationToken));
+
     [EnableRateLimiting("public-read")]
     [HttpGet("site")]
     public async Task<IActionResult> GetSite([FromQuery] Guid? branchId, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetPublicSiteQuery { BranchId = branchId }, cancellationToken);
         return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Restoran sitesinin index.html'i, yayındaki başlık/açıklama/og etiketleriyle (Google ve WhatsApp/Instagram botları
+    /// JavaScript çalıştırmaz). nginx restoran alt alan adlarındaki sayfa açılışlarını buraya verir: ?path=/menu.
+    /// Restoran bulunamazsa index.html olduğu gibi döner; index.html hiç alınamazsa 503 (nginx ön yüze düşer).
+    /// </summary>
+    [EnableRateLimiting("public-html")]
+    [HttpGet("site-html")]
+    public async Task<IActionResult> GetSiteHtml([FromQuery] string? path, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetSiteHtmlQuery { Path = path ?? "/" }, cancellationToken);
+        // index.html asset adları her yayında değişir; tarayıcı ve ara katmanlar her açılışta yeniden sormalı.
+        Response.Headers.CacheControl = "no-cache";
+        if (result.IsFailure)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { result.Error });
+        return Content(result.Value!, "text/html; charset=utf-8");
     }
 
     [EnableRateLimiting("public-read")]
@@ -105,6 +129,18 @@ public class PublicController : BaseController
     [EnableRateLimiting("reservation-lookup")]
     [HttpPost("reservations/lookup")]
     public async Task<IActionResult> LookupReservation([FromBody] LookupReservationCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Misafirin kendi iptali: { code, phone } (sorgulamayla aynı kimlik). Yalnızca bekleyen/onaylı rezervasyon, saatinden
+    /// 2 saat öncesine kadar. Güncel rezervasyon sayfası verisini döner; eşleşmezse sorgulamayla aynı genel 400 mesajı.
+    /// </summary>
+    [EnableRateLimiting("reservation-lookup")]
+    [HttpPost("reservations/cancel")]
+    public async Task<IActionResult> CancelReservation([FromBody] CancelReservationByGuestCommand command, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);

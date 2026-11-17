@@ -1,0 +1,454 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs.CustomerSite;
+using RestaurantBill.Application.Features.Branches.Site;
+using RestaurantBill.Application.Features.CustomerSite.Public;
+using RestaurantBill.Application.Tests.Fakes;
+using RestaurantBill.Application.Tests.Infrastructure;
+using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Shared;
+
+namespace RestaurantBill.Application.Tests.Features.CustomerSite;
+
+// Görsel site düzenleyicisi: taslak kaydet / çatışma, yayınla, at, alan bazında geri al, taslağa fotoğraf ve hazır görsel.
+// Kural: müşteri sitesi Yayınla'ya kadar eski hâli görür; dosya ancak ne yayında ne taslakta kullanılıyorsa silinir, shared/ asla.
+public class SiteDraftHandlerTests : ApplicationTestBase
+{
+    private const string Slug = "ocak";
+    private const string StockKey = "shared/stock/mangal.webp";
+
+    private readonly FakeTenantResolver _tenant = new() { Slug = Slug };
+    private readonly FakeImageStorageService _storage = new();
+    private static readonly IOptions<BunnyStorageOptions> Cdn = Options.Create(new BunnyStorageOptions { CdnBaseUrl = "https://cdn.test/" });
+    private static readonly IOptions<SeoOptions> Seo = Options.Create(new SeoOptions());
+
+    private Branch _branch = default!;
+    private Region _salon = default!;
+    private StockImage _stock = default!;
+
+    private async Task SeedAsync()
+    {
+        User owner = await SeedActorAsync("Fatma Usta");
+        Company company = Company.Create("Ocak", owner);
+        company.Slug = Slug;
+        DbContext.Companies.Add(company);
+        _branch = Branch.Create(company.Id, "Moda", "", "", "", "İstanbul", "Kadıköy", "Moda Cd. 48", 10m);
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(_branch, CurrentUser.BranchId);
+        DbContext.Branches.Add(_branch);
+        _stock = StockImage.Create(StockKey, "Mangal başı", ["mangal"], "Mekân");
+        DbContext.StockImages.Add(_stock);
+        await DbContext.SaveChangesAsync();
+        _salon = await SeedRegionAsync();
+
+        // Yayında: kendi yüklenmiş kapak ve hikâye fotoğrafı.
+        _branch.UpdateSite("Ocakbaşı", "Közde pişen et.", "", "", null, null, "", "", "");
+        _branch.ReplaceSiteImage(SiteImageSlot.Cover, "site/eski-kapak.webp");
+        _branch.ReplaceSiteImage(SiteImageSlot.About, "site/hikaye.webp");
+        await DbContext.SaveChangesAsync();
+    }
+
+    private Task<Result<SiteEditorDto>> GetAsync()
+        => new GetSiteEditorQueryHandler(Db, CurrentUser, Cdn, Seo).Handle(new GetSiteEditorQuery(), CancellationToken.None);
+
+    private Task<Result<SiteDraftResultDto>> SaveAsync(SaveSiteDraftCommand command)
+        => new SaveSiteDraftCommandHandler(Db, CurrentUser, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
+
+    private Task<Result<SiteEditorDto>> ImageAsync(SetSiteDraftImageCommand command, string? nextKey = null)
+    {
+        if (nextKey is not null) _storage.NextKey = nextKey;
+        return new SetSiteDraftImageCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
+    }
+
+    private Task<Result<SiteDraftResultDto>> PublishAsync(int version)
+        => new PublishSiteDraftCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new PublishSiteDraftCommand { Version = version }, CancellationToken.None);
+
+    private Task<Result<SiteDraftResultDto>> DiscardAsync(int version)
+        => new DiscardSiteDraftCommandHandler(Db, CurrentUser, _storage, Cdn, Seo)
+            .Handle(new DiscardSiteDraftCommand { Version = version }, CancellationToken.None);
+
+    private async Task<PublicSiteDto> PublicSiteAsync()
+    {
+        var site = await new GetPublicSiteQueryHandler(Db, _tenant, Cdn).Handle(new GetPublicSiteQuery(), CancellationToken.None);
+        Assert.True(site.IsSuccess, site.Error);
+        return site.Value!;
+    }
+
+    private static SaveSiteDraftCommand TextsFrom(BranchSiteDto site, int version) => new()
+    {
+        Version = version,
+        Headline = site.Headline,
+        Tagline = site.Tagline,
+        StoryTitle = site.StoryTitle,
+        About = site.About,
+        OpensAt = site.OpensAt,
+        ClosesAt = site.ClosesAt,
+        HoursNote = site.HoursNote,
+        InstagramUrl = site.InstagramUrl,
+        AccentColor = site.AccentColor,
+        Theme = site.Theme,
+        WeeklyHours = site.WeeklyHours,
+        DirectionsNote = site.DirectionsNote,
+        WhatsappPhone = site.WhatsappPhone,
+        Amenities = site.Amenities,
+        Rating = site.Rating,
+        ReviewCount = site.ReviewCount,
+        ReviewsUrl = site.ReviewsUrl,
+        FeaturedReviews = site.FeaturedReviews,
+        FounderName = site.FounderName,
+        FounderTitle = site.FounderTitle,
+        FounderQuote = site.FounderQuote,
+        FoundedYear = site.FoundedYear,
+        Values = site.Values,
+        Milestones = site.Milestones,
+        RegionDetails = site.RegionDetails,
+        SeoTitle = site.SeoTitle,
+        SeoDescription = site.SeoDescription,
+    };
+
+    [Fact]
+    public async Task Editor_WithoutDraft_ShowsPublished_NoChanges()
+    {
+        await SeedAsync();
+
+        SiteEditorDto editor = (await GetAsync()).Value!;
+
+        Assert.False(editor.HasChanges);
+        Assert.Empty(editor.Changes);
+        Assert.Equal(0, editor.Version);
+        Assert.Equal("Közde pişen et.", editor.Draft.Tagline);
+        Assert.Equal("https://cdn.test/site/eski-kapak.webp", editor.Draft.CoverImageUrl);
+        Assert.Equal("https://ocak.sophram.com", editor.SiteUrl);
+        Assert.Equal("Salon", Assert.Single(editor.Draft.RegionDetails).Name);
+        // Otomatik SEO: ad · ilçe; görsel = kapak.
+        Assert.Equal("Ocak · Kadıköy", editor.Seo.Title);
+        Assert.True(editor.Seo.TitleIsAuto);
+        Assert.Equal("https://cdn.test/site/eski-kapak.webp", editor.Seo.ShareImageUrl);
+        Assert.Equal("Menü · Ocak", editor.Seo.PageTitles["/menu"]);
+    }
+
+    [Fact]
+    public async Task SaveDraft_ChangesDraftOnly_PublicSiteUnchanged_UntilPublish()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Tagline = "Odun fırınından taze pide.";
+        command.SeoTitle = "Ocak Kadıköy — ocakbaşı";
+
+        var saved = await SaveAsync(command);
+
+        Assert.True(saved.IsSuccess, saved.Error);
+        Assert.False(saved.Value!.Conflict);
+        SiteEditorDto after = saved.Value.Editor;
+        Assert.Equal(1, after.Version);
+        Assert.True(after.HasChanges);
+        Assert.Equal(["tagline", "seoTitle"], after.Changes.Select(c => c.Field));
+        Assert.Equal("Alt başlık", after.Changes[0].Label);
+        Assert.Equal("Anasayfa", after.Changes[0].Page);
+        Assert.Equal("Közde pişen et.", after.Published.Tagline);
+        Assert.Equal("Ocak Kadıköy — ocakbaşı", after.Seo.Title);
+
+        PublicSiteDto site = await PublicSiteAsync();
+        Assert.Equal("Közde pişen et.", site.Site.Tagline);
+        Assert.Equal("Ocak · Kadıköy", site.Seo.Title); // yayındaki SEO hâlâ otomatik
+
+        var published = await PublishAsync(after.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.False(published.Value!.Editor.HasChanges);
+        Assert.NotNull(published.Value.Editor.PublishedAt);
+
+        site = await PublicSiteAsync();
+        Assert.Equal("Odun fırınından taze pide.", site.Site.Tagline);
+        Assert.Equal("Ocak Kadıköy — ocakbaşı", site.Seo.Title);
+        Branch stored = await DbContext.Branches.AsNoTracking().FirstAsync(b => b.Id == _branch.Id);
+        Assert.Null(stored.SiteDraft);
+        Assert.Equal("Ocak Kadıköy — ocakbaşı", stored.GetSiteContent().SeoTitle); // SEO jsonb'de saklandı
+
+        AuditLog log = Assert.Single(DbContext.AuditLogs.Where(a => a.Action == "SitePublished"));
+        Assert.Contains("2 değişikliği yayınladı", log.Message);
+        Assert.Contains("Alt başlık", log.Message);
+    }
+
+    [Fact]
+    public async Task SaveDraft_StaleVersion_ReturnsConflict_AndDoesNotWrite()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        SaveSiteDraftCommand first = TextsFrom(editor.Draft, editor.Version);
+        first.Headline = "Birinci sekme";
+        Assert.False((await SaveAsync(first)).Value!.Conflict);
+
+        // İkinci sekme hâlâ eski sürümü tutuyor.
+        SaveSiteDraftCommand second = TextsFrom(editor.Draft, editor.Version);
+        second.Headline = "İkinci sekme";
+        var result = await SaveAsync(second);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(result.Value!.Conflict);
+        Assert.Equal("Birinci sekme", result.Value.Editor.Draft.Headline); // güncel hâl döner
+        Assert.Equal(1, result.Value.Editor.Version);
+
+        // Yayınla ve at da eski sürümle çatışır.
+        Assert.True((await PublishAsync(0)).Value!.Conflict);
+        Assert.True((await DiscardAsync(0)).Value!.Conflict);
+        Assert.Equal("Ocakbaşı", (await PublicSiteAsync()).Site.Headline);
+    }
+
+    [Fact]
+    public async Task SaveDraft_DomainError_ReturnsFailure()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.InstagramUrl = "instagram.com/ocak";
+
+        var result = await SaveAsync(command);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("https://", result.Error);
+        Assert.Null((await DbContext.Branches.AsNoTracking().FirstAsync(b => b.Id == _branch.Id)).SiteDraft);
+    }
+
+    [Fact]
+    public async Task UploadToDraft_DoesNotTouchPublished_ReUploadDeletesDraftOnlyFile()
+    {
+        await SeedAsync();
+
+        var first = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, Content = new MemoryStream([1]) }, "site/kapak-1.webp");
+        Assert.True(first.IsSuccess, first.Error);
+        Assert.Equal("https://cdn.test/site/kapak-1.webp", first.Value!.Draft.CoverImageUrl);
+        Assert.Equal("https://cdn.test/site/eski-kapak.webp", first.Value.Published.CoverImageUrl);
+        Assert.Equal(["coverImage"], first.Value.Changes.Select(c => c.Field));
+        Assert.Empty(_storage.DeletedKeys); // yayındaki kapak taslakta değişti ama hâlâ yayında
+        Assert.Equal(2000, _storage.LastMaxSize);
+
+        var second = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, Content = new MemoryStream([1]) }, "site/kapak-2.webp");
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.Equal(["site/kapak-1.webp"], _storage.DeletedKeys); // yalnız taslağa yüklenmiş ilk dosya
+        Assert.Equal("https://cdn.test/site/eski-kapak.webp", (await PublicSiteAsync()).Site.CoverImageUrl);
+    }
+
+    [Fact]
+    public async Task Publish_DeletesReplacedOwnFiles_NeverShared()
+    {
+        await SeedAsync();
+        // Kapak: hazır görsel; hikâye fotoğrafı: yeni yükleme; galeri: hazır görsel.
+        Assert.True((await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, StockImageId = _stock.Id })).IsSuccess);
+        Assert.True((await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.About, Content = new MemoryStream([1]) }, "site/hikaye-2.webp")).IsSuccess);
+        var editor = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Gallery, StockImageId = _stock.Id });
+        Assert.True(editor.IsSuccess, editor.Error);
+        Assert.Empty(_storage.DeletedKeys);
+
+        var published = await PublishAsync(editor.Value!.Version);
+
+        Assert.True(published.IsSuccess, published.Error);
+        PublicSiteDto site = await PublicSiteAsync();
+        Assert.Equal($"https://cdn.test/{StockKey}", site.Site.CoverImageUrl);
+        Assert.Equal("https://cdn.test/site/hikaye-2.webp", site.Site.AboutImageUrl);
+        Assert.Equal([$"https://cdn.test/{StockKey}"], site.Site.GalleryImageUrls);
+        Assert.Equal(["site/eski-kapak.webp", "site/hikaye.webp"], _storage.DeletedKeys.Order());
+
+        // Hazır kapak da kaldırılıp yayınlanırsa paylaşılan dosya silinmez.
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover });
+        var removedGallery = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Gallery, GalleryIndex = 0 });
+        Assert.True(removedGallery.IsSuccess, removedGallery.Error);
+        Assert.True((await PublishAsync(removedGallery.Value!.Version)).IsSuccess);
+        Assert.DoesNotContain(_storage.DeletedKeys, k => k.StartsWith("shared/", StringComparison.Ordinal));
+        Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.CoverImageUrl);
+    }
+
+    [Fact]
+    public async Task Discard_DeletesDraftOnlyUploads_KeepsPublished_AndLogs()
+    {
+        await SeedAsync();
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, Content = new MemoryStream([1]) }, "site/kapak-yeni.webp");
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Founder, StockImageId = _stock.Id });
+        var editor = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Region, RegionId = _salon.Id, Content = new MemoryStream([1]) }, "site/salon.webp");
+        Assert.Equal(3, editor.Value!.Changes.Count);
+        Assert.Equal($"region:{_salon.Id}", editor.Value.Changes[^1].Field);
+        Assert.Equal("Bölüm · Salon", editor.Value.Changes[^1].Label);
+
+        // jsonb dönüştürücüsünden geçen taslak (izlemesiz okuma) aynı değerleri taşır.
+        Branch stored = await DbContext.Branches.AsNoTracking().FirstAsync(b => b.Id == _branch.Id);
+        Assert.Equal("site/kapak-yeni.webp", stored.SiteDraft!.CoverImage);
+        Assert.Equal(StockKey, stored.SiteDraft.Content.FounderPhoto);
+        Assert.Equal("site/salon.webp", Assert.Single(stored.SiteDraft.Content.RegionDetails).PhotoKey);
+        Assert.Equal("Közde pişen et.", stored.SiteDraft.Tagline);
+        Assert.Equal(editor.Value.Version, stored.SiteDraftVersion);
+
+        var discarded = await DiscardAsync(editor.Value.Version);
+
+        Assert.True(discarded.IsSuccess, discarded.Error);
+        Assert.False(discarded.Value!.Editor.HasChanges);
+        Assert.Equal("https://cdn.test/site/eski-kapak.webp", discarded.Value.Editor.Draft.CoverImageUrl);
+        Assert.Equal(["site/kapak-yeni.webp", "site/salon.webp"], _storage.DeletedKeys.Order());
+        Assert.Single(DbContext.AuditLogs.Where(a => a.Action == "SiteDraftDiscarded"));
+    }
+
+    [Fact]
+    public async Task Revert_RestoresPublishedValue_AndDeletesDraftUpload()
+    {
+        await SeedAsync();
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, Content = new MemoryStream([1]) }, "site/kapak-yeni.webp");
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Tagline = "Yeni alt başlık";
+        editor = (await SaveAsync(command)).Value!.Editor;
+        Assert.Equal(2, editor.Changes.Count);
+
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new RevertSiteDraftFieldsCommand { Version = editor.Version, Fields = ["coverImage"] }, CancellationToken.None);
+
+        Assert.True(reverted.IsSuccess, reverted.Error);
+        Assert.Equal(["tagline"], reverted.Value!.Editor.Changes.Select(c => c.Field));
+        Assert.Equal("https://cdn.test/site/eski-kapak.webp", reverted.Value.Editor.Draft.CoverImageUrl);
+        Assert.Equal(["site/kapak-yeni.webp"], _storage.DeletedKeys);
+    }
+
+    [Fact]
+    public async Task StockImage_UnknownOrInactive_Fails_GalleryReplaceKeepsOrder()
+    {
+        await SeedAsync();
+        var unknown = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Share, StockImageId = Guid.NewGuid() });
+        Assert.False(unknown.IsSuccess);
+
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Gallery, Content = new MemoryStream([1]) }, "site/g1.webp");
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Gallery, Content = new MemoryStream([1]) }, "site/g2.webp");
+        var replaced = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Gallery, GalleryIndex = 0, StockImageId = _stock.Id });
+
+        Assert.True(replaced.IsSuccess, replaced.Error);
+        Assert.Equal([$"https://cdn.test/{StockKey}", "https://cdn.test/site/g2.webp"], replaced.Value!.Draft.GalleryImageUrls);
+        Assert.Equal(["site/g1.webp"], _storage.DeletedKeys);
+
+        var share = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Share, StockImageId = _stock.Id });
+        Assert.Equal($"https://cdn.test/{StockKey}", share.Value!.Seo.ShareImageUrl);
+        Assert.False(share.Value.Seo.ShareImageIsAuto);
+    }
+
+    [Fact]
+    public async Task RegionImage_ForeignRegion_Fails()
+    {
+        await SeedAsync();
+
+        var result = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Region, RegionId = Guid.NewGuid(), StockImageId = _stock.Id });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Bölüm bulunamadı.", result.Error);
+    }
+
+    [Fact]
+    public async Task OldImageEndpoint_DoesNotDeleteFileStillUsedByDraft()
+    {
+        await SeedAsync();
+        // Taslak, yayındaki hikâye fotoğrafını kullanmaya devam ediyor (yalnız metin değişti).
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Headline = "Taslak başlık";
+        await SaveAsync(command);
+
+        _storage.NextKey = "site/hikaye-eski-form.webp";
+        var result = await new SetBranchSiteImageCommandHandler(Db, CurrentUser, _storage, Cdn)
+            .Handle(new SetBranchSiteImageCommand { Slot = SiteImageSlot.About, Content = new MemoryStream([1]) }, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Empty(_storage.DeletedKeys);
+    }
+
+    // ── Alt sayfa kapakları (Menü, Hakkımızda, Mekân, İletişim, Rezervasyon) ─────────────────────────
+
+    [Fact]
+    public async Task HeroImage_GoesToDraft_ListedAsChange_PublicUnchangedUntilPublish()
+    {
+        await SeedAsync();
+
+        var result = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.MenuHero, Content = new MemoryStream([1]) }, "site/menu-kapak.webp");
+
+        Assert.True(result.IsSuccess, result.Error);
+        SiteEditorDto editor = result.Value!;
+        Assert.Equal("https://cdn.test/site/menu-kapak.webp", editor.Draft.MenuHeroUrl);
+        Assert.Equal(string.Empty, editor.Published.MenuHeroUrl);
+        Assert.Equal(string.Empty, editor.Draft.AboutHeroUrl);
+        SiteChangeDto change = Assert.Single(editor.Changes);
+        Assert.Equal("heroMenu", change.Field);
+        Assert.Equal("Menü kapağı", change.Label);
+        Assert.Equal(2000, _storage.LastMaxSize);
+        Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.MenuHeroUrl);
+
+        var published = await PublishAsync(editor.Version);
+
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.Equal("https://cdn.test/site/menu-kapak.webp", (await PublicSiteAsync()).Site.MenuHeroUrl);
+        Assert.Empty(_storage.DeletedKeys);
+    }
+
+    [Fact]
+    public async Task HeroImage_Stock_NeverDeleted_UploadReplacedTwice_DeletesOnlyUnusedDraftFile()
+    {
+        await SeedAsync();
+
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.VenueHero, Content = new MemoryStream([1]) }, "site/mekan-1.webp");
+        var stock = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.VenueHero, StockImageId = _stock.Id });
+
+        Assert.True(stock.IsSuccess, stock.Error);
+        Assert.Equal($"https://cdn.test/{StockKey}", stock.Value!.Draft.VenueHeroUrl);
+        Assert.Equal(["site/mekan-1.webp"], _storage.DeletedKeys); // ilk taslak yüklemesi hiçbir yerde kullanılmıyor
+
+        var removed = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.VenueHero });
+        Assert.True(removed.IsSuccess, removed.Error);
+        Assert.Equal(string.Empty, removed.Value!.Draft.VenueHeroUrl);
+        Assert.DoesNotContain(_storage.DeletedKeys, k => k.StartsWith("shared/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task HeroImage_PublishedThenReplaced_OldFileDeletedOnPublish_RevertAndDiscardKeepPublished()
+    {
+        await SeedAsync();
+        var first = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.ContactHero, Content = new MemoryStream([1]) }, "site/iletisim-1.webp");
+        await PublishAsync(first.Value!.Version);
+
+        // Taslakta değişir: yayındaki dosya hâlâ yayında olduğu için silinmez.
+        var second = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.ContactHero, Content = new MemoryStream([1]) }, "site/iletisim-2.webp");
+        Assert.Empty(_storage.DeletedKeys);
+
+        // Geri al: taslağa yüklenen dosya artık kullanılmaz ve silinir; yayındaki kalır.
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new RevertSiteDraftFieldsCommand { Version = second.Value!.Version, Fields = ["heroContact"] }, CancellationToken.None);
+        Assert.True(reverted.IsSuccess, reverted.Error);
+        Assert.Equal("https://cdn.test/site/iletisim-1.webp", reverted.Value!.Editor.Draft.ContactHeroUrl);
+        Assert.Equal(["site/iletisim-2.webp"], _storage.DeletedKeys);
+
+        // Yeniden değiştirip yayınla: yayından kalkan ilk dosya silinir.
+        var third = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.ContactHero, Content = new MemoryStream([1]) }, "site/iletisim-3.webp");
+        await PublishAsync(third.Value!.Version);
+        Assert.Equal(["site/iletisim-1.webp", "site/iletisim-2.webp"], _storage.DeletedKeys.Order());
+        Assert.Equal("https://cdn.test/site/iletisim-3.webp", (await PublicSiteAsync()).Site.ContactHeroUrl);
+
+        // Taslakta kaldırıp atınca yayındaki dosya kalır.
+        var cleared = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.ContactHero });
+        var discarded = await DiscardAsync(cleared.Value!.Version);
+        Assert.True(discarded.IsSuccess, discarded.Error);
+        Assert.DoesNotContain("site/iletisim-3.webp", _storage.DeletedKeys);
+        Assert.Equal("https://cdn.test/site/iletisim-3.webp", discarded.Value!.Editor.Draft.ContactHeroUrl);
+    }
+
+    [Fact]
+    public async Task Completeness_Draft_ScoresDraft_PublishedUnchanged()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.WhatsappPhone = "0532 000 00 00";
+        await SaveAsync(command);
+
+        var handler = new GetSiteCompletenessQueryHandler(Db, CurrentUser);
+        SiteCompletenessDto published = (await handler.Handle(new GetSiteCompletenessQuery(), CancellationToken.None)).Value!;
+        SiteCompletenessDto draft = (await handler.Handle(new GetSiteCompletenessQuery { Draft = true }, CancellationToken.None)).Value!;
+
+        Assert.False(published.Items.Single(i => i.Key == "whatsapp").Done);
+        Assert.True(draft.Items.Single(i => i.Key == "whatsapp").Done);
+        Assert.True(draft.Score > published.Score);
+    }
+}

@@ -267,7 +267,7 @@ public class DeliveryStaffFlowTests : DeliveryTestBase
         Assert.Null(delivery.SettledAt);
         Assert.False(LinkedOrder(delivery).IsClosed());
 
-        var couriers = await new GetCouriersQueryHandler(Db, CurrentUser).Handle(new GetCouriersQuery(), CancellationToken.None);
+        var couriers = await new GetCouriersQueryHandler(Db, CurrentUser, new FixedBusinessDay(), Clock).Handle(new GetCouriersQuery(), CancellationToken.None);
         CourierSummaryDto summary = Assert.Single(couriers.Value!);
         Assert.Equal(courier.Id, summary.UserId);
         Assert.Equal(0, summary.OpenOrderCount);

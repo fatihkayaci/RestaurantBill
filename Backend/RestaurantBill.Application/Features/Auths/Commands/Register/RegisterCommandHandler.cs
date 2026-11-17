@@ -19,7 +19,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Register
         private readonly RefreshTokenSettings _refreshTokenSettings;
 
         // Türkiye'de yeme-içme hizmeti KDV oranı; şube ayarlarından değiştirilebilir.
-        private const decimal DefaultTaxRate = 10m;
+        private const decimal DefaultTaxRate = Branch.DefaultTaxRate;
 
         public RegisterCommandHandler(IAppDbContext db, IPasswordHasher<User> passwordHasher, IJwtTokenGenerator jwtTokenGenerator, IConfiguration configuration)
         {

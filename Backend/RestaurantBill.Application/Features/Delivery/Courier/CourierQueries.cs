@@ -57,6 +57,7 @@ public class GetCourierOrdersQueryHandler(IAppDbContext db, ICurrentUserService 
             .Select(b => b.City)
             .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
         Dictionary<Guid, string> productNames = await db.LoadSelectionNamesAsync(orders, cancellationToken);
+        DateTime now = clock.GetUtcNow().UtcDateTime;
 
         // Önce üzerindeki siparişler (yoldakiler en üstte, sonra kabul sırası), altta bugün teslim edilenler (en yeni üstte).
         List<CourierOrderDto> result = orders
@@ -89,7 +90,8 @@ public class GetCourierOrdersQueryHandler(IAppDbContext db, ICurrentUserService 
                 CollectedAmount = d.CollectedAmount,
                 SettledAt = d.SettledAt,
                 CanDispatch = d.Status == DeliveryOrderStatus.Ready,
-                CanDeliver = d.Status == DeliveryOrderStatus.OnTheWay
+                CanDeliver = d.Status == DeliveryOrderStatus.OnTheWay,
+                UndoDeliverUntil = d.UndoDeliverDeadline() is DateTime until && until > now ? until : null
             })
             .ToList();
 

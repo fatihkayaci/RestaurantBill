@@ -8,6 +8,8 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
     {
         public string Name { get; set; } = string.Empty;
         public Guid RegionId { get; set; }
+        /// <summary>En fazla kaç kişi; isteğe bağlı.</summary>
+        public int? Capacity { get; set; }
 
         public string[] CacheKeysToInvalidate => new[] { "tables:all" };
     }

@@ -9,4 +9,10 @@ public interface IImageStorageService
     Task<string> UploadAsync(Stream content, Guid branchId, string folder, int maxSize, CancellationToken cancellationToken);
 
     Task DeleteAsync(string key, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Bir şubenin/şirketin kendi klasörünü (ör. "products/{id}/") içindekilerle birlikte siler. Yalnızca
+    /// "{klasör}/{32 haneli id}/" biçimi kabul edilir; paylaşılan (shared/) klasör hiçbir zaman silinmez.
+    /// </summary>
+    Task DeleteFolderAsync(string folder, CancellationToken cancellationToken);
 }

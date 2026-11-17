@@ -53,5 +53,20 @@ namespace RestaurantBill.Infrastructure.Services
             request.Headers.Add("AccessKey", _options.AccessKey);
             await _http.SendAsync(request, cancellationToken);
         }
+
+        public async Task DeleteFolderAsync(string folder, CancellationToken cancellationToken)
+        {
+            // Yalnızca "{products|site}/{id:N}/": kök ya da shared/ gibi bir önek bütün depoyu silebilir.
+            if (!StorageKeys.IsOwnFolder(folder))
+                throw new ArgumentException($"Silinemeyecek klasör: '{folder}'.", nameof(folder));
+
+            // Bunny Storage API: sonu "/" ile biten yol klasörü içindekilerle birlikte siler. Klasör yoksa 404 döner (sorun değil).
+            string url = $"https://storage.bunnycdn.com/{_options.StorageZoneName}/{folder}";
+            using var request = new HttpRequestMessage(HttpMethod.Delete, url);
+            request.Headers.Add("AccessKey", _options.AccessKey);
+            HttpResponseMessage response = await _http.SendAsync(request, cancellationToken);
+            if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                response.EnsureSuccessStatusCode();
+        }
     }
 }

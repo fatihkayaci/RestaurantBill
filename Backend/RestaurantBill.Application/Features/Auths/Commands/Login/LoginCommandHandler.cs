@@ -13,6 +13,8 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
 {
     public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginResponseDto>>
     {
+        public const string ClosedRestaurantMessage = "Bu restoran artık hizmet vermiyor.";
+
         private readonly IAppDbContext _db;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
@@ -52,7 +54,12 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 return Result<LoginResponseDto>.Failure("Böyle bir Restaurant bulunamadı. Url i değiştirip tekrar deneyiniz");
 
             if (!string.IsNullOrWhiteSpace(request.UserName))
+            {
+                // Kapatılan şirkette personel giremez; sahibi girip vazgeçebilir.
+                if (company.IsClosed)
+                    return Result<LoginResponseDto>.Failure(ClosedRestaurantMessage);
                 return await LoginAsEmployeeAsync(request, company, cancellationToken);
+            }
 
             return await LoginAsOwnerAsync(request, company, cancellationToken);
         }
@@ -93,6 +100,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             {
                 Token = _jwtTokenGenerator.GenerateToken(emailUser, scopeId, single.Role, single.UserName, single.Company.Id),
                 NeedsSlugSetup = string.IsNullOrWhiteSpace(single.Company.Slug),
+                AccountClosing = single.Company.IsClosed,
                 RefreshToken = rawRefreshToken,
                 RefreshTokenExpiresAt = refreshExpiresAt,
                 RememberMe = request.RememberMe
@@ -189,6 +197,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
             return Result<LoginResponseDto>.Success(new LoginResponseDto
             {
                 Token = _jwtTokenGenerator.GenerateToken(user, scopeId, UserRole.Owner, user.Email!, company.Id),
+                AccountClosing = company.IsClosed,
                 RefreshToken = rawRefreshToken,
                 RefreshTokenExpiresAt = refreshExpiresAt,
                 RememberMe = request.RememberMe

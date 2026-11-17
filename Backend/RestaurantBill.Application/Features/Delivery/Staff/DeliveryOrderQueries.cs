@@ -179,7 +179,7 @@ public class GetCouriersQuery : IRequest<Result<List<CourierSummaryDto>>>
     public Guid? BranchId { get; set; }
 }
 
-public class GetCouriersQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
+public class GetCouriersQueryHandler(IAppDbContext db, ICurrentUserService currentUser, IBusinessDayResolver businessDay, TimeProvider clock)
     : IRequestHandler<GetCouriersQuery, Result<List<CourierSummaryDto>>>
 {
     public async Task<Result<List<CourierSummaryDto>>> Handle(GetCouriersQuery request, CancellationToken cancellationToken)
@@ -205,9 +205,19 @@ public class GetCouriersQueryHandler(IAppDbContext db, ICurrentUserService curre
             .Select(d => new
             {
                 CourierId = d.CourierUserId!.Value, d.Id, d.Number, d.ZoneName, d.CustomerName, d.Status, d.CollectedMethod, d.CollectedAmount,
-                d.DeliveredAt
+                d.DeliveredAt, d.CollectedAt
             })
             .ToListAsync(cancellationToken);
+
+        // Önceki iş gününden kalan tahsilat: kurye parayı gün kapanmadan teslim etmemiş.
+        Branch? branch = await db.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == branchId, cancellationToken);
+        DateTime? todayStart = null;
+        if (branch is not null)
+        {
+            DateOnly today = businessDay.ResolveBusinessDay(branch, clock.GetUtcNow().UtcDateTime);
+            todayStart = businessDay.ToUtcRange(branch, today, today).FromUtc;
+        }
+        bool IsOld(DateTime? collectedAt) => todayStart is DateTime start && collectedAt is DateTime at && at < start;
 
         return Result<List<CourierSummaryDto>>.Success(couriers.Select(c =>
         {
@@ -225,6 +235,9 @@ public class GetCouriersQueryHandler(IAppDbContext db, ICurrentUserService curre
                 OutstandingCashOrderCount = cash.Count,
                 OutstandingCard = card.Sum(o => o.CollectedAmount ?? 0m),
                 OutstandingCardOrderCount = card.Count,
+                PreviousDayCash = cash.Where(o => IsOld(o.CollectedAt)).Sum(o => o.CollectedAmount ?? 0m),
+                PreviousDayOrderCount = cash.Concat(card).Count(o => IsOld(o.CollectedAt)),
+                OldestCollectedAt = cash.Concat(card).Min(o => o.CollectedAt),
                 OutstandingOrders = cash.Concat(card)
                     .OrderBy(o => o.DeliveredAt)
                     .Select(o => new CourierOutstandingOrderDto
@@ -235,7 +248,9 @@ public class GetCouriersQueryHandler(IAppDbContext db, ICurrentUserService curre
                         CustomerName = DeliveryScope.MaskName(o.CustomerName),
                         CollectedMethod = o.CollectedMethod!.Value,
                         CollectedAmount = o.CollectedAmount ?? 0m,
-                        DeliveredAt = o.DeliveredAt
+                        DeliveredAt = o.DeliveredAt,
+                        CollectedAt = o.CollectedAt,
+                        IsFromPreviousDay = IsOld(o.CollectedAt)
                     })
                     .ToList()
             };

@@ -104,7 +104,7 @@ public class RequestTableBillCommandHandler(IAppDbContext db, ITenantResolver te
             return Result<TableActionResultDto>.Failure(NoOpenBillMessage);
 
         if (cooldown.TryStart(TableAction.BillRequest, table.Id) is TimeSpan remaining)
-            return Result<TableActionResultDto>.Success(new TableActionResultDto { Sent = false, RetryAfterSeconds = TableActionCooldown.Seconds(remaining) });
+            return Result<TableActionResultDto>.Success(new TableActionResultDto { Sent = false, RetryAfterSeconds = TableActionCooldown.Seconds(remaining), BillTotal = order.RemainingAmount });
 
         try
         {
@@ -137,6 +137,12 @@ public class RequestTableBillCommandHandler(IAppDbContext db, ITenantResolver te
         await cashierNotifications.SendOrdersChangedAsync(order.BranchId);
         await cashierNotifications.SendBillRequestedAsync(order.BranchId, table.Id, table.Name, RequestedByName);
 
-        return Result<TableActionResultDto>.Success(new TableActionResultDto { Sent = true, RetryAfterSeconds = TableActionCooldown.Seconds(TableActionCooldown.Window) });
+        return Result<TableActionResultDto>.Success(new TableActionResultDto
+        {
+            Sent = true,
+            RetryAfterSeconds = TableActionCooldown.Seconds(TableActionCooldown.Window),
+            // Karşılama ekranındaki "Hesabınız geliyor" penceresinde ödenecek kalan gösterilir.
+            BillTotal = order.RemainingAmount
+        });
     }
 }

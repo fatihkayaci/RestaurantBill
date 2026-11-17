@@ -273,7 +273,7 @@ public class CourierFlowTests : DeliveryTestBase
         Assert.Contains(CashierNotifications.DeliveryOrdersChanged, d => d.Payload.Id == delivery.Id);
         Assert.Equal(kaan.Id, Assert.Single(CourierNotifications.Sent).CourierUserId);
 
-        var couriers = await new GetCouriersQueryHandler(Db, CurrentUser).Handle(new GetCouriersQuery(), CancellationToken.None);
+        var couriers = await new GetCouriersQueryHandler(Db, CurrentUser, new DayOfClock(), Clock).Handle(new GetCouriersQuery(), CancellationToken.None);
         CourierSummaryDto summary = Assert.Single(couriers.Value!);
         Assert.Equal(0m, summary.OutstandingCash);
         Assert.Empty(summary.OutstandingOrders);

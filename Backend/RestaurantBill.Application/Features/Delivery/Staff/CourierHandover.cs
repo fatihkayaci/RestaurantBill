@@ -21,6 +21,11 @@ public class HandoverCourierCashCommand : IRequest<Result<CourierHandoverResultD
     public Guid CourierUserId { get; set; }
     public Guid CashRegisterId { get; set; }
     public List<Guid> DeliveryOrderIds { get; set; } = [];
+    /// <summary>
+    /// Kasiyerin kuryeden aldığı nakdi sayıp yazdığı tutar. Beklenenle farkı (eksik/fazla) teslim kaydına yazılır, teslimi
+    /// durdurmaz. null: sayım girilmedi (eski istemci); teslimde nakit yoksa yok sayılır.
+    /// </summary>
+    public decimal? CountedCash { get; set; }
 }
 
 public class HandoverCourierCashCommandValidator : AbstractValidator<HandoverCourierCashCommand>
@@ -35,6 +40,9 @@ public class HandoverCourierCashCommandValidator : AbstractValidator<HandoverCou
             .WithMessage($"Tek seferde en fazla {HandoverCourierCashCommand.MaxOrders} sipariş teslim alınabilir.")
             .Must(ids => ids.Distinct().Count() == ids.Count).WithMessage("Aynı sipariş birden fazla kez gönderilemez.")
             .Must(ids => !ids.Contains(Guid.Empty)).WithMessage("Geçersiz sipariş.");
+        RuleFor(x => x.CountedCash)
+            .InclusiveBetween(0m, 1_000_000m).When(x => x.CountedCash is not null)
+            .WithMessage("Sayılan tutar 0 ile 1.000.000 arasında olmalı.");
     }
 }
 
@@ -178,6 +186,25 @@ public class HandoverCourierCashCommandHandler(
             return Failure(ex.Message);
         }
 
+        // Nakit sayımı: fark teslimdeki her siparişe yazılır (geçmişte teslim olarak gruplanır) ve denetim kaydına geçer.
+        result.ExpectedCash = result.CashAmount;
+        bool hasCash = deliveries.Any(d => d.CollectedMethod == PaymentMethod.Nakit);
+        if (hasCash && request.CountedCash is decimal counted)
+        {
+            foreach (DeliveryOrder delivery in deliveries)
+                delivery.RecordHandoverCashCount(result.CashAmount, counted);
+
+            decimal difference = DeliveryOrder.CashCountDifference(result.CashAmount, counted);
+            result.CountedCash = counted;
+            result.CashDifference = difference;
+            if (difference != 0m)
+                db.AuditLogs.Add(AuditLog.Create(branchId, actor, AuditLogCategory.Payment, AuditLogSeverity.Warning,
+                    "CourierCashCountDifference",
+                    $"{actor}, {courierName} kuryesinden nakit teslim alırken {(difference < 0 ? "eksik" : "fazla")} saydı: " +
+                    $"beklenen ₺{result.CashAmount:0.##}, sayılan ₺{counted:0.##}, fark ₺{difference:0.##} ({register.Name}).",
+                    nameof(DeliveryOrder), deliveries.OrderBy(d => d.Number).First().Id));
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         foreach (DeliveryOrder delivery in deliveries)
@@ -189,4 +216,74 @@ public class HandoverCourierCashCommandHandler(
     }
 
     private static Result<CourierHandoverResultDto> Failure(string message) => Result<CourierHandoverResultDto>.Failure(message);
+}
+
+// ── "Teslim geçmişi": kasiyerin son teslim aldıkları, sayım farkıyla ─────────────────────────────────────────────
+/// <summary>
+/// Son <see cref="Days"/> günde teslim alınan kurye tahsilatları, teslim başına bir satır (en yeni üstte). Bir teslim:
+/// aynı kurye, aynı kasiyer, aynı SettledAt (handler hepsini tek anla yazar).
+/// </summary>
+public class GetCourierHandoversQuery : IRequest<Result<List<CourierHandoverHistoryDto>>>
+{
+    public const int DefaultDays = 7;
+    public const int MaxDays = 31;
+    public const int MaxRows = 100;
+
+    public Guid? BranchId { get; set; }
+    public int Days { get; set; } = DefaultDays;
+}
+
+public class GetCourierHandoversQueryHandler(IAppDbContext db, ICurrentUserService currentUser, TimeProvider clock)
+    : IRequestHandler<GetCourierHandoversQuery, Result<List<CourierHandoverHistoryDto>>>
+{
+    public async Task<Result<List<CourierHandoverHistoryDto>>> Handle(GetCourierHandoversQuery request, CancellationToken cancellationToken)
+    {
+        if (await DeliveryStaff.CheckAccessAsync(db, currentUser, cancellationToken) is { } denied)
+            return Result<List<CourierHandoverHistoryDto>>.Failure(denied);
+
+        var (branchId, error) = await DeliveryStaff.ResolveSingleBranchAsync(db, currentUser, request.BranchId, cancellationToken);
+        if (error is not null)
+            return Result<List<CourierHandoverHistoryDto>>.Failure(error);
+
+        int days = Math.Clamp(request.Days, 1, GetCourierHandoversQuery.MaxDays);
+        DateTime since = clock.GetUtcNow().UtcDateTime.AddDays(-days);
+
+        var rows = await db.DeliveryOrders.AsNoTracking()
+            .Where(d => d.BranchId == branchId && !d.IsDeleted && d.SettledAt != null && d.SettledAt >= since && d.CourierUserId != null)
+            .Select(d => new
+            {
+                SettledAt = d.SettledAt!.Value, CourierId = d.CourierUserId!.Value, d.SettledByUserId, d.Number,
+                d.CollectedMethod, d.CollectedAmount, d.HandoverCountedCash, d.HandoverCashDifference
+            })
+            .ToListAsync(cancellationToken);
+
+        var groups = rows
+            .GroupBy(r => (r.SettledAt, r.CourierId, r.SettledByUserId))
+            .OrderByDescending(g => g.Key.SettledAt)
+            .Take(GetCourierHandoversQuery.MaxRows)
+            .ToList();
+
+        List<Guid> userIds = groups.SelectMany(g => new[] { g.Key.CourierId, g.Key.SettledByUserId ?? Guid.Empty }).Distinct().ToList();
+        Dictionary<Guid, string> names = await db.Users.AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+
+        return Result<List<CourierHandoverHistoryDto>>.Success(groups.Select(g =>
+        {
+            var counted = g.FirstOrDefault(r => r.HandoverCountedCash is not null);
+            return new CourierHandoverHistoryDto
+            {
+                SettledAt = g.Key.SettledAt,
+                CourierUserId = g.Key.CourierId,
+                CourierName = names.GetValueOrDefault(g.Key.CourierId, string.Empty),
+                SettledByName = g.Key.SettledByUserId is Guid by ? names.GetValueOrDefault(by, string.Empty) : string.Empty,
+                OrderCount = g.Count(),
+                Numbers = g.Select(r => r.Number).Order().ToList(),
+                ExpectedCash = g.Where(r => r.CollectedMethod == PaymentMethod.Nakit).Sum(r => r.CollectedAmount ?? 0m),
+                CardAmount = g.Where(r => r.CollectedMethod == PaymentMethod.Kart).Sum(r => r.CollectedAmount ?? 0m),
+                CountedCash = counted?.HandoverCountedCash,
+                CashDifference = counted?.HandoverCashDifference
+            };
+        }).ToList());
+    }
 }

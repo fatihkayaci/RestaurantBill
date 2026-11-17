@@ -102,6 +102,15 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
             userName = membership.UserName;
             currentRole = membership.Role;
             companyId = membership.Branch.CompanyId;
+
+            // Sahip hesabı kapattıysa personelin oturumu sürmez.
+            Guid membershipCompanyId = companyId;
+            if (await _db.Companies.AnyAsync(c => c.Id == membershipCompanyId && c.ClosedAt != null, cancellationToken))
+            {
+                await RevokeAllForUserAsync(stored.UserId, cancellationToken);
+                await _db.SaveChangesAsync(cancellationToken);
+                return Result<RefreshTokenResponseDto>.Failure(InvalidSessionError);
+            }
         }
 
         // Rol değiştiyse (ör. Admin bir çalışanı azaltmış/yetkisini almış) tüm oturumlar kapatılır.

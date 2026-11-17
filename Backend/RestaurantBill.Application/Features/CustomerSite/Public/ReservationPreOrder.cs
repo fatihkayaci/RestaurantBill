@@ -100,7 +100,9 @@ internal static class ReservationLink
                 CanEdit = pending && window.CanPreOrder,
                 CanCancel = pending && reservation.Status == ReservationStatus.Confirmed
             },
-            OutOfStockProductIds = outOfStock
+            OutOfStockProductIds = outOfStock,
+            CanCancel = reservation.CanGuestCancel(nowUtc),
+            CancelDeadline = reservation.GuestCancelDeadline
         };
     }
 }

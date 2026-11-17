@@ -112,29 +112,20 @@ namespace RestaurantBill.Domain.Entities
         public const int HoursNoteMaxLength = 80;
         public const int InstagramUrlMaxLength = 200;
 
+        /// <summary>Eski form: yayındaki site metinlerini doğrudan değiştirir (kurallar <see cref="SiteSnapshot.WithBasics"/>).</summary>
         public void UpdateSite(string headline, string tagline, string storyTitle, string about, TimeOnly? opensAt, TimeOnly? closesAt,
             string hoursNote, string instagramUrl, string accentColor)
         {
-            if ((opensAt is null) != (closesAt is null))
-                throw new DomainException("Açılış ve kapanış saatini birlikte girin ya da ikisini de boş bırakın.");
-
-            string accent = accentColor.Trim();
-            if (accent.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(accent, "^#[0-9A-Fa-f]{6}$"))
-                throw new DomainException("Vurgu rengi #RRGGBB biçiminde olmalıdır.");
-
-            string instagram = instagramUrl.Trim();
-            if (instagram.Length > 0 && !instagram.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                throw new DomainException("Instagram adresi https:// ile başlamalıdır.");
-
-            SiteHeadline = headline.Trim();
-            SiteTagline = tagline.Trim();
-            SiteStoryTitle = storyTitle.Trim();
-            SiteAbout = about.Trim();
-            OpensAt = opensAt;
-            ClosesAt = closesAt;
-            HoursNote = hoursNote.Trim();
-            InstagramUrl = instagram;
-            SiteAccentColor = accent.ToUpperInvariant();
+            SiteSnapshot next = GetPublishedSite().WithBasics(headline, tagline, storyTitle, about, opensAt, closesAt, hoursNote, instagramUrl, accentColor);
+            SiteHeadline = next.Headline;
+            SiteTagline = next.Tagline;
+            SiteStoryTitle = next.StoryTitle;
+            SiteAbout = next.About;
+            OpensAt = next.OpensAt;
+            ClosesAt = next.ClosesAt;
+            HoursNote = next.HoursNote;
+            InstagramUrl = next.InstagramUrl;
+            SiteAccentColor = next.AccentColor;
         }
 
         /// <summary>Yeni anahtarı yazar, eskisini döner (silmek çağıranın işi). Boş anahtar görseli kaldırır.</summary>
@@ -146,12 +137,155 @@ namespace RestaurantBill.Domain.Entities
                 previous = SiteCoverImage;
                 SiteCoverImage = key;
             }
+            else if (slot == SiteImageSlot.Founder)
+            {
+                SiteContent = GetSiteContent().WithFounderPhoto(key, out previous);
+            }
+            else if (slot == SiteImageSlot.Share)
+            {
+                SiteContent = GetSiteContent().WithShareImage(key, out previous);
+            }
+            else if (Entities.SiteContent.IsHeroSlot(slot))
+            {
+                SiteContent = GetSiteContent().WithHeroImage(slot, key, out previous);
+            }
             else
             {
                 previous = SiteAboutImage;
                 SiteAboutImage = key;
             }
             return previous;
+        }
+
+        /// <summary>Sitenin ek içeriği (tema, mekân fotoğrafları, haftalık saatler, usta, yorumlar...); null ise hiç kaydedilmemiş.</summary>
+        public SiteContent? SiteContent { get; private set; }
+
+        public SiteContent GetSiteContent() => SiteContent ?? Entities.SiteContent.Empty;
+
+        /// <summary>
+        /// Metin alanlarını kaydeder (fotoğraflar korunur). Haftalık saat girildiyse eski tek aralık (OpensAt/ClosesAt) en sık
+        /// görülen aralıkla güncellenir: rezervasyon ve online sipariş varsayılanları onu kullanmaya devam eder.
+        /// </summary>
+        public void UpdateSiteContent(SiteContentTexts texts, int currentYear)
+        {
+            SiteContent next = GetSiteContent().WithTexts(texts, currentYear);
+            if (next.MostCommonRange() is { } range)
+            {
+                OpensAt = range.Opens;
+                ClosesAt = range.Closes;
+            }
+            SiteContent = next;
+        }
+
+        public void AddSiteGalleryImage(string key) => SiteContent = GetSiteContent().WithGalleryImage(key);
+
+        /// <summary>Galeriden çıkarır; silinecek anahtarı döner.</summary>
+        public string RemoveSiteGalleryImage(int index)
+        {
+            SiteContent = GetSiteContent().WithoutGalleryImage(index, out string removed);
+            return removed;
+        }
+
+        public void ReorderSiteGallery(IReadOnlyList<int> order) => SiteContent = GetSiteContent().WithGalleryOrder(order);
+
+        /// <summary>Bölüm fotoğrafını yazar (boş anahtar kaldırır), eskisini döner.</summary>
+        public string ReplaceSiteRegionPhoto(Guid regionId, string key)
+        {
+            SiteContent = GetSiteContent().WithRegionPhoto(regionId, key, out string previous);
+            return previous;
+        }
+
+        // ── Site taslağı ("Taslak + Yayınla") ──────────────────────────────────────────────────────────
+        // Müşteri sitesi yayındaki sütunları okur; düzenleyici yalnızca taslağı değiştirir. Yayınla taslağı sütunlara kopyalar.
+
+        /// <summary>Yayınlanmamış site taslağı (jsonb); null ise taslak yok, düzenleyici yayındaki hâli gösterir.</summary>
+        public SiteSnapshot? SiteDraft { get; private set; }
+        /// <summary>Taslağın sürümü: her taslak yazımında, yayında ve atmada artar. Eski sürümle kaydetmek "başkası düzenledi" çatışmasıdır.</summary>
+        public int SiteDraftVersion { get; private set; }
+        public DateTime? SiteDraftUpdatedAt { get; private set; }
+        public DateTime? SitePublishedAt { get; private set; }
+
+        /// <summary>Müşterinin şu an gördüğü site (şubenin sütunları).</summary>
+        public SiteSnapshot GetPublishedSite() => new()
+        {
+            Headline = SiteHeadline,
+            Tagline = SiteTagline,
+            StoryTitle = SiteStoryTitle,
+            About = SiteAbout,
+            CoverImage = SiteCoverImage,
+            AboutImage = SiteAboutImage,
+            OpensAt = OpensAt,
+            ClosesAt = ClosesAt,
+            HoursNote = HoursNote,
+            InstagramUrl = InstagramUrl,
+            AccentColor = SiteAccentColor,
+            Content = GetSiteContent(),
+        };
+
+        /// <summary>Düzenleyicide görünen hâl: taslak varsa o, yoksa yayındaki.</summary>
+        public SiteSnapshot GetSiteDraft() => SiteDraft ?? GetPublishedSite();
+
+        public bool IsSiteDraftStale(int version) => version != SiteDraftVersion;
+
+        public void SaveSiteDraft(SiteSnapshot draft, DateTime nowUtc)
+        {
+            SiteDraft = draft;
+            SiteDraftVersion++;
+            SiteDraftUpdatedAt = nowUtc;
+        }
+
+        /// <summary>Taslağı yayına alır (yoksa bir şey değişmez) ve taslağı kapatır.</summary>
+        public void PublishSiteDraft(DateTime nowUtc)
+        {
+            if (SiteDraft is { } draft)
+            {
+                SiteHeadline = draft.Headline;
+                SiteTagline = draft.Tagline;
+                SiteStoryTitle = draft.StoryTitle;
+                SiteAbout = draft.About;
+                SiteCoverImage = draft.CoverImage;
+                SiteAboutImage = draft.AboutImage;
+                OpensAt = draft.OpensAt;
+                ClosesAt = draft.ClosesAt;
+                HoursNote = draft.HoursNote;
+                InstagramUrl = draft.InstagramUrl;
+                SiteAccentColor = draft.AccentColor;
+                SiteContent = draft.Content;
+            }
+            SiteDraft = null;
+            SiteDraftVersion++;
+            SiteDraftUpdatedAt = null;
+            SitePublishedAt = nowUtc;
+        }
+
+        /// <summary>Taslağı siler; site son yayınlanan hâline döner.</summary>
+        public void DiscardSiteDraft()
+        {
+            SiteDraft = null;
+            SiteDraftVersion++;
+            SiteDraftUpdatedAt = null;
+        }
+
+        /// <summary>Yayında ya da taslakta kullanılan bütün site fotoğrafı anahtarları: bunlardan biri silinmez.</summary>
+        public IReadOnlySet<string> SiteImageKeysInUse()
+        {
+            HashSet<string> keys = [.. GetPublishedSite().ImageKeys()];
+            if (SiteDraft is { } draft) keys.UnionWith(draft.ImageKeys());
+            return keys;
+        }
+
+        /// <summary>
+        /// Şubenin yerel saatiyle şu an açık mı. Haftalık saat varsa ona, yoksa tek aralığa bakılır; hiçbiri yoksa null.
+        /// Kapanış açılıştan önceyse (ör. 18:00–02:00) gece yarısını aşan aralık sayılır.
+        /// </summary>
+        public bool? IsOpenAt(DateTime local)
+        {
+            bool? weekly = GetSiteContent().IsOpenAt(local);
+            if (weekly is not null) return weekly;
+            if (OpensAt is not TimeOnly opens || ClosesAt is not TimeOnly closes) return null;
+            TimeOnly now = TimeOnly.FromDateTime(local);
+            if (opens == closes) return true;
+            return opens < closes ? now >= opens && now < closes : now >= opens || now < closes;
         }
 
         protected Branch() { }
@@ -205,6 +339,80 @@ namespace RestaurantBill.Domain.Entities
 
             DayEndTime = dayEndTime;
             TimeZoneId = timeZoneId;
+        }
+
+        // ── Varsayılanlara dön ("Verileri sil" → Sıfırla) ──────────────────────────────────────────────
+        // Yeni kayıt olmuş bir restoranın değerleri. Şubenin adı ve şirketin adresi (slug) hiç değişmez.
+
+        /// <summary>Türkiye'de yeme-içme hizmeti KDV oranı; kayıtta ilk şubeye yazılan değer.</summary>
+        public const decimal DefaultTaxRate = 10m;
+        public const string DefaultTimeZoneId = "Europe/Istanbul";
+
+        /// <summary>Açılış/kapanış, saat notu ve haftalık saatler (yayındaki site ve taslak) silinir.</summary>
+        public void ResetWorkingHours()
+        {
+            OpensAt = null;
+            ClosesAt = null;
+            HoursNote = string.Empty;
+            if (SiteContent is { } content)
+                SiteContent = content with { WeeklyHours = [] };
+            if (SiteDraft is { } draft)
+                SiteDraft = draft with { OpensAt = null, ClosesAt = null, HoursNote = string.Empty, Content = draft.Content with { WeeklyHours = [] } };
+        }
+
+        /// <summary>
+        /// Sitenin metinleri, fotoğrafları, teması ve taslağı silinir; çalışma saatleri korunur (onlar ayrı bir maddedir).
+        /// Artık kullanılmayan fotoğraf anahtarlarını döner (dosyaları silmek çağıranın işi; paylaşılan anahtarlar silinmez).
+        /// </summary>
+        public IReadOnlyList<string> ResetSite()
+        {
+            List<string> keys = [.. SiteImageKeysInUse()];
+            IReadOnlyList<SiteDayHours> weeklyHours = GetSiteContent().WeeklyHours;
+
+            SiteHeadline = string.Empty;
+            SiteTagline = string.Empty;
+            SiteStoryTitle = string.Empty;
+            SiteAbout = string.Empty;
+            SiteCoverImage = string.Empty;
+            SiteAboutImage = string.Empty;
+            InstagramUrl = string.Empty;
+            SiteAccentColor = string.Empty;
+            SiteContent = weeklyHours.Count > 0 ? Entities.SiteContent.Empty with { WeeklyHours = weeklyHours } : null;
+            SiteDraft = null;
+            SiteDraftVersion++;
+            SiteDraftUpdatedAt = null;
+            SitePublishedAt = null;
+            return keys;
+        }
+
+        /// <summary>Yönetici, telefon ve e-posta kayıttaki gibi sahibin bilgileri olur; adres boşalır, KDV %10'a döner.</summary>
+        public void ResetInfo(string managerName, string number, string email)
+        {
+            ManagerName = managerName;
+            Number = number;
+            Email = email;
+            City = string.Empty;
+            District = string.Empty;
+            OpenAddress = string.Empty;
+            TaxRate = DefaultTaxRate;
+        }
+
+        public void ResetDayEnd()
+        {
+            DayEndTime = new TimeOnly(0, 0);
+            TimeZoneId = DefaultTimeZoneId;
+        }
+
+        public void ResetPaymentSettings()
+        {
+            Iban = string.Empty;
+            IbanHolderName = string.Empty;
+        }
+
+        public void ResetOnlineOrdering()
+        {
+            OnlineOrderSettings = null;
+            OnlineOrdersPaused = false;
         }
 
         public void EnsureCanBeDeleted(IEnumerable<Region> linkedRegions, IEnumerable<UserBranch> linkedStaff)

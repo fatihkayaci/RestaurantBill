@@ -55,7 +55,20 @@ public class DeliveryOrdersController : BaseController
         {
             CourierUserId = userId,
             CashRegisterId = body.CashRegisterId,
-            DeliveryOrderIds = body.DeliveryOrderIds ?? []
+            DeliveryOrderIds = body.DeliveryOrderIds ?? [],
+            CountedCash = body.CountedCash
+        }, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>"Teslim geçmişi": son günlerin teslimleri, nakit sayım farkıyla (days: 1–31, varsayılan 7).</summary>
+    [HttpGet("couriers/handovers")]
+    public async Task<IActionResult> GetHandovers([FromQuery] Guid? branchId, [FromQuery] int? days, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetCourierHandoversQuery
+        {
+            BranchId = branchId,
+            Days = days ?? GetCourierHandoversQuery.DefaultDays
         }, cancellationToken);
         return HandleResult(result);
     }
@@ -116,7 +129,7 @@ public class DeliveryOrdersController : BaseController
     public sealed record ReasonBody(string? Reason);
     public sealed record CourierBody(Guid? CourierUserId);
     public sealed record DeliverBody(PaymentMethod Method);
-    public sealed record HandoverBody(Guid CashRegisterId, List<Guid>? DeliveryOrderIds);
+    public sealed record HandoverBody(Guid CashRegisterId, List<Guid>? DeliveryOrderIds, decimal? CountedCash = null);
 }
 
 // Online siparişin şube ayarları (Owner/Admin) ve kasanın "Online siparişi durdur" anahtarı.
@@ -206,6 +219,17 @@ public class DeliveryZonesController : BaseController
     public async Task<IActionResult> Delete([FromRoute] Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new DeleteDeliveryZoneCommand { Id = id }, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Toplu kaydet: { zones: [{ id, name, fee, minOrderAmount, estimatedMinutes, isActive }] }. Şubenin tüm bölgeleri,
+    /// sitedeki sırayla; ya hepsi ya hiçbiri.
+    /// </summary>
+    [HttpPut("bulk")]
+    public async Task<IActionResult> SaveBulk([FromBody] SaveDeliveryZonesBulkCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }
 
