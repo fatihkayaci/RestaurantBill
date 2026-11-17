@@ -89,6 +89,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         InstagramUrl = site.InstagramUrl,
         AccentColor = site.AccentColor,
         Theme = site.Theme,
+        Design = site.Design,
         WeeklyHours = site.WeeklyHours,
         DirectionsNote = site.DirectionsNote,
         WhatsappPhone = site.WhatsappPhone,
@@ -128,6 +129,59 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.True(editor.Seo.TitleIsAuto);
         Assert.Equal("https://cdn.test/site/eski-kapak.webp", editor.Seo.ShareImageUrl);
         Assert.Equal("Menü · Ocak", editor.Seo.PageTitles["/menu"]);
+    }
+
+    [Fact]
+    public async Task Design_DraftThenPublish_AndRevert_IndependentOfTheme()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Equal(string.Empty, editor.Draft.Design); // boş = renkli (ön yüz)
+
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Design = " Sade ";
+        command.Theme = "bordo";
+        var saved = await SaveAsync(command);
+
+        Assert.True(saved.IsSuccess, saved.Error);
+        SiteEditorDto after = saved.Value!.Editor;
+        Assert.Equal(["design", "theme"], after.Changes.Select(c => c.Field));
+        SiteChangeDto change = after.Changes[0];
+        Assert.Equal("Tasarım", change.Label);
+        Assert.Equal("Tema", change.Page);
+        Assert.Equal("sade", after.Draft.Design);
+        Assert.Equal("bordo", after.Draft.Theme);
+        Assert.Equal(string.Empty, after.Published.Design);
+        Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.Design);
+
+        // Yalnız tasarım geri alınır; renk teması taslakta kalır.
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new RevertSiteDraftFieldsCommand { Version = after.Version, Fields = ["design"] }, CancellationToken.None);
+        Assert.True(reverted.IsSuccess, reverted.Error);
+        Assert.Equal(string.Empty, reverted.Value!.Editor.Draft.Design);
+        Assert.Equal("bordo", reverted.Value.Editor.Draft.Theme);
+        Assert.Equal("theme", Assert.Single(reverted.Value.Editor.Changes).Field);
+
+        // Yeniden seç ve yayınla: müşteri sitesi görür.
+        command = TextsFrom(reverted.Value.Editor.Draft, reverted.Value.Editor.Version);
+        command.Design = "sade";
+        var again = await SaveAsync(command);
+        Assert.True(again.IsSuccess, again.Error);
+        var published = await PublishAsync(again.Value!.Editor.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.False(published.Value!.Editor.HasChanges);
+        Assert.Equal("sade", published.Value.Editor.Published.Design);
+        Assert.Equal("sade", (await PublicSiteAsync()).Site.Design);
+        Assert.Equal("bordo", (await PublicSiteAsync()).Site.Theme);
+
+        // Tasarımı göndermeyen kayıt (null) tasarımı değiştirmez.
+        command = TextsFrom(published.Value.Editor.Draft, published.Value.Editor.Version);
+        command.Design = null;
+        command.Headline = "Yeni başlık";
+        var keep = await SaveAsync(command);
+        Assert.True(keep.IsSuccess, keep.Error);
+        Assert.Equal("sade", keep.Value!.Editor.Draft.Design);
+        Assert.DoesNotContain(keep.Value.Editor.Changes, c => c.Field == "design");
     }
 
     [Fact]

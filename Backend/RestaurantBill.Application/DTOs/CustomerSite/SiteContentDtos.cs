@@ -22,6 +22,8 @@ public class BranchSiteDto
 
     /// <summary>Hazır renk teması ("terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"); boş = terracotta.</summary>
     public string Theme { get; set; } = string.Empty;
+    /// <summary>Sitenin tasarımı ("renkli", "sade"); boş = renkli. Renk teması her tasarımda ayrı çizilir.</summary>
+    public string Design { get; set; } = string.Empty;
     /// <summary>Mekân fotoğrafları (tam adres), sitedeki sırayla; en çok 12.</summary>
     public List<string> GalleryImageUrls { get; set; } = [];
     /// <summary>Boş: "her gün aynı" (OpensAt/ClosesAt). Doluysa Pazartesi → Pazar 7 gün.</summary>
@@ -82,6 +84,7 @@ public class BranchSiteDto
             InstagramUrl = site.InstagramUrl,
             AccentColor = site.AccentColor,
             Theme = content.Theme,
+            Design = content.Design,
             GalleryImageUrls = content.GalleryImages.Select(k => ImageUrl(cdnBaseUrl, k)).ToList(),
             WeeklyHours = content.WeeklyHours.Select(SiteDayHoursDto.From).ToList(),
             DirectionsNote = content.DirectionsNote,

@@ -47,6 +47,8 @@ namespace RestaurantBill.Domain.Entities
         public string? SeoDescription { get; init; }
         /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları; null: değiştirme (eski form bu alanı göndermez).</summary>
         public IReadOnlyList<string>? HiddenFaqs { get; init; }
+        /// <summary>Sitenin tasarımı ("renkli", "sade"); boş = varsayılan (renkli). null: değiştirme (eski form göndermez).</summary>
+        public string? Design { get; init; }
     }
 
     /// <summary>
@@ -87,6 +89,10 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Sitenin hazır renk temaları; boş = varsayılan (terracotta). Ön yüzdeki SITE_THEMES ile aynı anahtarlar.</summary>
         public static readonly IReadOnlyList<string> ThemeKeys = ["terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"];
 
+        /// <summary>Sitenin tasarımları; boş = varsayılan ("renkli"). Ön yüzdeki SITE_DESIGNS ile aynı anahtarlar.
+        /// Tasarım ve renk teması ayrıdır: her tasarım bütün temaları (ve özel vurgu rengini) kendi paletiyle çizer.</summary>
+        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade"];
+
         /// <summary>Mekânın olanakları: yalnız bu hazır listeden seçilir (uydurma beyan olmasın). Sırası sitedeki sıradır.</summary>
         public static readonly IReadOnlyList<string> AmenityKeys =
             ["avlu", "teras", "otopark", "vale", "cocuk", "wifi", "engelli", "evcil", "canli-muzik", "vejetaryen", "kartla-odeme",
@@ -95,6 +101,8 @@ namespace RestaurantBill.Domain.Entities
         public static SiteContent Empty { get; } = new();
 
         public string Theme { get; init; } = string.Empty;
+        /// <summary>Sitenin tasarımı (<see cref="DesignKeys"/>); boş = varsayılan (renkli).</summary>
+        public string Design { get; init; } = string.Empty;
         /// <summary>Mekân fotoğraflarının depo anahtarları, sitedeki sırayla.</summary>
         public IReadOnlyList<string> GalleryImages { get; init; } = [];
         /// <summary>Boş ya da Pazartesi → Pazar 7 gün.</summary>
@@ -168,6 +176,10 @@ namespace RestaurantBill.Domain.Entities
             if (theme.Length > 0 && !ThemeKeys.Contains(theme))
                 throw new DomainException("Geçersiz site teması.");
 
+            string design = texts.Design is null ? Design : texts.Design.Trim().ToLowerInvariant();
+            if (design.Length > 0 && !DesignKeys.Contains(design))
+                throw new DomainException("Geçersiz site tasarımı.");
+
             string directions = Limit(texts.DirectionsNote, DirectionsNoteMaxLength, "Nasıl gelinir notu");
             string whatsapp = NormalizePhone(texts.WhatsappPhone);
             string reviewsUrl = Limit(texts.ReviewsUrl, ReviewsUrlMaxLength, "Yorum bağlantısı");
@@ -237,6 +249,7 @@ namespace RestaurantBill.Domain.Entities
             return this with
             {
                 Theme = theme,
+                Design = design,
                 WeeklyHours = NormalizeWeek(texts.WeeklyHours),
                 DirectionsNote = directions,
                 WhatsappPhone = whatsapp,

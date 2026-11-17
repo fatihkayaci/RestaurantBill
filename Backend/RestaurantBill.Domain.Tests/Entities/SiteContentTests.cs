@@ -54,6 +54,12 @@ public class SiteContentTests
     public void UnknownTheme_Throws(string theme)
         => Assert.Throws<DomainException>(() => NewBranch().UpdateSiteContent(new SiteContentTexts { Theme = theme }, Year));
 
+    [Theory]
+    [InlineData("pembe")]
+    [InlineData("tema2")]
+    public void UnknownDesign_Throws(string design)
+        => Assert.Throws<DomainException>(() => NewBranch().UpdateSiteContent(new SiteContentTexts { Design = design }, Year));
+
     [Fact]
     public void UnknownAmenity_Throws()
         => Assert.Throws<DomainException>(() => NewBranch().UpdateSiteContent(new SiteContentTexts { Amenities = ["havuz"] }, Year));

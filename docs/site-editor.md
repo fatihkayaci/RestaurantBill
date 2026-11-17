@@ -136,7 +136,7 @@ eklenmedi.
 ### Alan anahtarları (`changes[].field`, `revert.fields`)
 
 `headline, tagline, coverImage, storyTitle, about, aboutImage, hours, hoursNote, instagramUrl, directionsNote,
-whatsappPhone, theme, accentColor, gallery, amenities, hiddenFaqs, rating, reviewCount, reviewsUrl, featuredReviews, founderPhoto,
+whatsappPhone, design, theme, accentColor, gallery, amenities, hiddenFaqs, rating, reviewCount, reviewsUrl, featuredReviews, founderPhoto,
 founderName, founderTitle, founderQuote, foundedYear, values, milestones, seoTitle, seoDescription, shareImage,
 heroMenu, heroAbout, heroVenue, heroContact, heroReservation`,
 ayrıca her bölüm için `region:{regionId}` (bölümün fotoğrafı ve açıklaması birlikte).
@@ -158,6 +158,7 @@ Gövde, eski `PUT api/branch/site` ile aynı alanları ve üç ek alanı taşır
   "opensAt": "12:00", "closesAt": "23:00",              // ya da null; haftalık saat varsa yok sayılır (en sık aralık yazılır)
   "hoursNote": "", "instagramUrl": "https://…", "accentColor": "#A3301A",
   "theme": "terracotta",
+  "design": "sade",                              // "renkli" | "sade" | "" (= renkli); null/eksik = değiştirme
   "weeklyHours": [{ "day": 1, "isOpen": true, "opens": "12:00", "closes": "23:00" } /* … 7 gün ya da [] */],
   "directionsNote": "", "whatsappPhone": "", "amenities": ["avlu"],
   "hiddenFaqs": ["odeme"],                       // gizlenen hazır sorular; null/eksik = değiştirme
@@ -243,6 +244,29 @@ olarak açıktır; restoran istemediğini gizler. Sunucu yalnız gizlenenlerin a
 
 `SiteContent.AmenityKeys` sonuna dört olanak eklendi (ön yüzdeki `SITE_AMENITIES` ile aynı sıra): `bebek-sandalyesi`,
 `aile-salonu`, `sigara-alani`, `ozel-gun`. Mekân sayfasındaki "Özel günler" kutusu yalnız `ozel-gun` işaretliyken görünür.
+
+### Tasarım (`design`) ve renk teması
+
+Restoran önce sitenin **tasarımını**, sonra o tasarımın içinde **rengini** seçer. İkisi ayrı alanlardır:
+
+| Alan | Değerler | Anlamı |
+|---|---|---|
+| `design` | `renkli` · `sade` · `""` | Sayfa düzeni, yazı tipi ve kutu renkleri. `""` = varsayılan (`renkli`). |
+| `theme` | `terracotta` … `beyaz` · `""` | Tasarımın içindeki renk (vurgu; Renkli'de ayrıca kapak zemini). |
+| `accentColor` | `#RRGGBB` · `""` | Özel vurgu rengi; iki tasarımda da okunurluğa göre ayarlanır. |
+
+- **Renkli ve sıcak** (`renkli`): kum zemin, krem kutular, Fraunces, renkli kapak, zeytin/hardal/kiremit kutular, zeytin alt bilgi.
+- **Sade** (`sade`): krem zemin (#F6F1E9), beyaz kutular, Instrument Serif, beyaz kapak kutusu, açık kum alt bilgi.
+- Saklama: `SiteContent.Design` (jsonb içerik; yeni sütun/migration yok, eski kayıtlarda anahtar yok = boş = renkli).
+  `SiteContent.DesignKeys` ön yüzdeki `SITE_DESIGNS` ile aynıdır.
+- Doğrulama: kırpılır, küçük harfe çevrilir; bilinmeyen anahtar `400 "Geçersiz site tasarımı."`.
+- PUT gövdesinde `design`; `null`/eksik = değiştirme (eski form göndermez). Taslak/yayın/geri al alanı `design`
+  ("Tasarım", sayfa "Tema"). `BranchSiteDto.Design` taslakta, yayındakinde ve `api/public/site`'ta, sipariş takibinde
+  (`DeliveryTrackingDto.Design`) döner.
+- Ön yüz: `pages/public/site/siteTheme.ts` → `siteRootStyle(accent, theme, design)` tasarımın paletini, yazı tipini
+  ve kutu renklerini CSS değişkeni olarak verir; düzeni farklı olan birkaç parça `useSiteDesign()` ile dallanır.
+- Testler: `SiteContentHandlerTests` (doğrulama, eski formun alanı koruması) ve `SiteDraftHandlerTests`
+  (taslak → geri al → yayınla, temadan bağımsız).
 
 ## 3. Google ve paylaşım: otomatik değerler
 

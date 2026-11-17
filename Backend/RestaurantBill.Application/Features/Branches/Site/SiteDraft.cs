@@ -40,6 +40,7 @@ internal static class SiteEditor
         ["instagramUrl"] = ("Instagram", "İletişim"),
         ["directionsNote"] = ("Nasıl gelinir", "İletişim"),
         ["whatsappPhone"] = ("WhatsApp", "İletişim"),
+        ["design"] = ("Tasarım", "Tema"),
         ["theme"] = ("Tema", "Tema"),
         ["accentColor"] = ("Vurgu rengi", "Tema"),
         ["gallery"] = ("Mekân fotoğrafları", "Mekân"),

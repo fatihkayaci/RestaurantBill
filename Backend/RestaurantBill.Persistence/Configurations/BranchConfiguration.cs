@@ -104,7 +104,7 @@ internal static class SiteContentJson
         List<StoredValue>? Values, List<StoredMilestone>? Milestones, List<StoredRegion>? Regions,
         string? SeoTitle = null, string? SeoDescription = null, string? ShareImage = null,
         string? MenuHero = null, string? AboutHero = null, string? VenueHero = null, string? ContactHero = null, string? ReservationHero = null,
-        List<string>? HiddenFaqs = null);
+        List<string>? HiddenFaqs = null, string? Design = null);
 
     private const string TimeFormat = "HH:mm";
 
@@ -128,7 +128,7 @@ internal static class SiteContentJson
             c.RegionDetails.Select(r => new StoredRegion(r.RegionId, r.PhotoKey, r.Description)).ToList(),
             c.SeoTitle, c.SeoDescription, c.ShareImage,
             c.MenuHero, c.AboutHero, c.VenueHero, c.ContactHero, c.ReservationHero,
-            [.. c.HiddenFaqs]);
+            [.. c.HiddenFaqs], c.Design);
 
     public static SiteContent Deserialize(string json) => FromStored(JsonSerializer.Deserialize<Stored>(json)!);
 
@@ -137,6 +137,7 @@ internal static class SiteContentJson
         return new SiteContent
         {
             Theme = s.Theme ?? string.Empty,
+            Design = s.Design ?? string.Empty,
             GalleryImages = s.Gallery ?? [],
             WeeklyHours = (s.Week ?? []).Select(d => new SiteDayHours((DayOfWeek)d.Day, d.Open,
                 TimeOnly.ParseExact(d.Opens, TimeFormat, CultureInfo.InvariantCulture),

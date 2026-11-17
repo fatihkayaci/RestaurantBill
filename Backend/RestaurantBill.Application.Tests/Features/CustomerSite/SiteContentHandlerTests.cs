@@ -166,6 +166,53 @@ public class SiteContentHandlerTests : ApplicationTestBase
         validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = null }).ShouldNotHaveAnyValidationErrors();
     }
 
+    [Theory]
+    [InlineData("pembe")]
+    [InlineData("tema2")]
+    [InlineData("renkli-sade")]
+    public void Validator_Design_RejectsUnknownKey(string design)
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Design = design })
+            .ShouldHaveValidationErrorFor(x => x.Design);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("renkli")]
+    [InlineData("sade")]
+    [InlineData(" Sade ")]
+    public void Validator_Design_AcceptsKnownEmptyAndNull(string? design)
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Design = design })
+            .ShouldNotHaveAnyValidationErrors();
+
+    [Fact]
+    public async Task Update_Design_NormalizedAndKeptWhenOldFormOmitsIt()
+    {
+        await SeedAsync();
+        UpdateBranchSiteCommand command = FullCommand(_salon.Id);
+        command.Design = " SADE ";
+        var first = await UpdateAsync(command);
+        Assert.True(first.IsSuccess, first.Error);
+        Assert.Equal("sade", first.Value!.Design);
+
+        // Eski form alanı göndermez (null): tasarım korunur.
+        command.Design = null;
+        var second = await UpdateAsync(command);
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.Equal("sade", second.Value!.Design);
+
+        var site = await new GetPublicSiteQueryHandler(Db, _tenant, Cdn).Handle(new GetPublicSiteQuery(), CancellationToken.None);
+        Assert.True(site.IsSuccess, site.Error);
+        Assert.Equal("sade", site.Value!.Site.Design);
+
+        // Boş = varsayılana (renkli) döner.
+        command.Design = "";
+        var third = await UpdateAsync(command);
+        Assert.True(third.IsSuccess, third.Error);
+        Assert.Equal(string.Empty, third.Value!.Design);
+    }
+
     [Fact]
     public void Validator_AcceptsNewAmenityKeys()
         => new UpdateBranchSiteCommandValidator()

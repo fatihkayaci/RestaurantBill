@@ -111,6 +111,8 @@ public abstract class SiteTextsInput
 
     // Ek içerik (fotoğraflar ayrı uçlardan değişir).
     public string Theme { get; set; } = string.Empty;
+    /// <summary>Sitenin tasarımı ("renkli", "sade"; boş = renkli). null (eski form göndermez): değiştirme.</summary>
+    public string? Design { get; set; }
     /// <summary>Boş: "her gün aynı". Doluysa 7 gün.</summary>
     public List<SiteDayHoursDto> WeeklyHours { get; set; } = [];
     public string DirectionsNote { get; set; } = string.Empty;
@@ -146,6 +148,7 @@ public abstract class SiteTextsInput
         Content = new SiteContentTexts
         {
             Theme = Theme ?? string.Empty,
+            Design = Design,
             WeeklyHours = (WeeklyHours ?? []).Select(d => new SiteDayHours(
                 (DayOfWeek)d.Day, d.IsOpen, TimeOnly.ParseExact(d.Opens, "HH:mm", CultureInfo.InvariantCulture),
                 TimeOnly.ParseExact(d.Closes, "HH:mm", CultureInfo.InvariantCulture))).ToList(),
@@ -203,6 +206,8 @@ public abstract class SiteTextsValidator<T> : AbstractValidator<T> where T : Sit
 
         RuleFor(x => x.Theme).Must(t => string.IsNullOrWhiteSpace(t) || SiteContent.ThemeKeys.Contains(t.Trim().ToLowerInvariant()))
             .WithMessage("Geçersiz site teması.");
+        RuleFor(x => x.Design).Must(d => string.IsNullOrWhiteSpace(d) || SiteContent.DesignKeys.Contains(d.Trim().ToLowerInvariant()))
+            .When(x => x.Design is not null).WithMessage("Geçersiz site tasarımı.");
         RuleFor(x => x.WeeklyHours).Must(w => w.Count == 0 || (w.Count == 7 && w.Select(d => d.Day).Distinct().Count() == 7))
             .WithMessage("Haftalık saatlerde her gün bir kez yer almalıdır.");
         RuleForEach(x => x.WeeklyHours).ChildRules(day =>
