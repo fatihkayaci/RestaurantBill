@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { canReserveOnline, type PublicSite, type PublicTable } from '@/features/customerSite/types';
+import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from './components/StockImageLabel';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
@@ -8,11 +8,13 @@ import { PageEmpty, SitePage } from './site/SiteFrame';
 import { DirectionsIcon, PhoneIcon, WhatsAppIcon } from './site/SiteCards';
 import { AmenityIcon, MapPanel, TablePlan, VenueGallery, WayIcon } from './site/VenueParts';
 import { RESERVATION_PATH, SITE_AMENITIES, hasVenuePage, serif } from './site/siteParts';
-import { directionsUrl, splitAccent, telHref, whatsappHref } from './site/siteTheme';
+import { directionsUrl, resolveDesign, splitAccent, telHref, whatsappHref } from './site/siteTheme';
 import { fullAddress, hoursLine, restaurantName, useSite } from './site/useSite';
 import { EditableBlock, EditableText, EmptySlot, ExternalHint } from './site/siteEdit';
 import { editTarget, useSiteEdit } from './site/siteEditContext';
 import { oliveBg, terracottaBg } from './site/renkliTones';
+import { heroPhoto, regionPhrase, seatCount, venuePhotos } from './site/venueData';
+import EliteVenue from './site/elite/EliteVenue';
 
 // /mekan (tasarım: "Renkli ve sıcak — Mekân"). Kum sayfada krem, yuvarlak köşeli kutular: (1) zeytin kapak, krem yazı,
 // hardal üst satır ve italik: mekân fotoğrafı soldan zeytin geçişle (yoksa sağda krem çizgili, hardal noktalı masa planı), "Mekân", dev serif başlık, kısa tarif, "Masa ayırt" ve
@@ -24,45 +26,11 @@ import { oliveBg, terracottaBg } from './site/renkliTones';
 const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[32px]';
 const LOCATION_ID = 'konum';
 
-/** Mekân fotoğrafları: galeri → hikâye → kapak (tekrarsız). */
-function venuePhotos(site: PublicSite): string[] {
-    const c = site.site;
-    return [...new Set([...c.galleryImageUrls, c.aboutImageUrl, c.coverImageUrl].filter(Boolean))];
-}
-
-/** Kapak: Mekân'ın kendi kapağı → galerinin ilk fotoğrafı → hikâye → sitenin kapağı. */
-function heroPhoto(site: PublicSite): string {
-    const c = site.site;
-    return c.venueHeroUrl || c.galleryImageUrls[0] || c.aboutImageUrl || c.coverImageUrl;
-}
-
-/** Türkçe bulunma eki: "salon" → "salonda", "teras" → "terasta", "bahçe" → "bahçede" (son ünlü ve sert ünsüz uyumu). */
-function locative(word: string): string {
-    const lower = word.trim().toLocaleLowerCase('tr-TR');
-    const vowel = [...lower].reverse().find(ch => 'aıoueiöü'.includes(ch));
-    const a = vowel && 'eiöü'.includes(vowel) ? 'e' : 'a';
-    const d = 'fstkçşhp'.includes(lower.slice(-1)) ? 't' : 'd';
-    return `${lower}${d}${a}`;
-}
-
-/** "Salonda, avluda" + "ya da terasta." (en çok üç bölüm); tek bölümde null. */
-function regionPhrase(names: string[]): [string, string] | null {
-    if (names.length < 2) return null;
-    const locs = names.slice(0, 3).map(locative);
-    const head = locs.slice(0, -1).join(', ');
-    return [head.charAt(0).toLocaleUpperCase('tr-TR') + head.slice(1), `ya da ${locs[locs.length - 1]}.`];
-}
-
-/** Masaların toplam kişi sayısı; yalnız her masanın kapasitesi girildiyse (yoksa null, uydurulmaz). */
-function seatCount(tables: PublicTable[]): number | null {
-    if (tables.length === 0 || !tables.every(t => t.capacity && t.capacity > 0)) return null;
-    return tables.reduce((sum, t) => sum + (t.capacity ?? 0), 0);
-}
-
 export default function RestaurantVenuePage() {
     const { site, error } = useSite();
     const edit = useSiteEdit();
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
+    if (resolveDesign(site.site.design) === 'elit') return <EliteVenue site={site} />;
 
     const showEmpty = Boolean(edit?.showEmpty);
 

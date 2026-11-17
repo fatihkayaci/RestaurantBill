@@ -7,20 +7,21 @@ import { useActiveDeliveryOrder, useSiteCart, type SiteCart } from '@/features/d
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from './components/StockImageLabel';
 import { MyReservations, SiteShell, SiteStatus } from './site/SiteChrome';
-import { SitePage, VisitSection } from './site/SiteFrame';
+import { SitePage } from './site/SiteFrame';
 import { AddButton, PlusIcon } from './site/SiteMenuBoard';
-import { InstagramIcon } from './site/SiteCards';
+import { EditorGallery, EditorVisit } from './site/EditorExtras';
 import { SlotsSummary } from './site/SiteSetMenus';
 import { savingLabel } from './site/setMenuParts';
 import {
-    RESERVATION_PATH, averagePrepMinutes, cardButton, dativeSuffix, foldText, formatRating, hasAboutPage, instagramHandle, productCount,
+    RESERVATION_PATH, averagePrepMinutes, cardButton, dativeSuffix, foldText, formatRating, hasAboutPage, productCount,
     serif, sinceYear, untilTime,
 } from './site/siteParts';
-import { formatSitePrice, splitAccent, telHref } from './site/siteTheme';
+import { formatSitePrice, resolveDesign, splitAccent, telHref } from './site/siteTheme';
+import EliteHome from './site/elite/EliteHome';
 import { useSiteDesign } from './site/siteDesign';
 import { restaurantName, useMyReservations, useSite, weekSchedule } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
-import { SITE_LIMITS, editExternal, editTarget, useSiteEdit, useSitePreview, useSiteWindow } from './site/siteEditContext';
+import { SITE_LIMITS, editExternal, useSiteEdit, useSitePreview, useSiteWindow } from './site/siteEditContext';
 
 // Restoranın müşteriye açık ana sayfası (tasarım: "Renkli ana sayfa"). Kum zeminde renkli, yuvarlak köşeli kutular:
 // (1) kapak (temanın kapak rengi; fotoğraf varsa sağda, yoksa noktalı desen + iki daire ve italik kelime), süren sipariş
@@ -59,6 +60,7 @@ export default function RestaurantSitePage() {
     if (!site) {
         return <SiteShell><SiteStatus error={error} /></SiteShell>;
     }
+    if (resolveDesign(site.site.design) === 'elit') return <EliteHome site={site} mine={mine} />;
 
     return (
         <SitePage site={site} current="home">
@@ -619,45 +621,4 @@ function StoryBox({ site }: { site: PublicSite }) {
             </section>
         </EditableBlock>
     );
-}
-
-// ── Yalnız düzenleyicide ─────────────────────────────────────────────────────────────────────────
-
-/**
- * Mekân fotoğrafları (galeri) ve Instagram bağlantısı yeni ana sayfa tasarımında yok; düzenleyicide yine buradan
- * değiştirilebilsinler diye yalnız düzenleme görünümünde kutu olarak çizilir. Müşteri görmez.
- */
-function EditorGallery({ site }: { site: PublicSite }) {
-    const edit = useSiteEdit();
-    if (!edit) return null;
-    const photos = site.site.galleryImageUrls.slice(0, 6);
-    const instagram = site.site.instagramUrl;
-    const igX = editTarget(edit, 'contact', 'Instagram');
-    return (
-        <section aria-label="Mekân fotoğrafları" className={cn(box, 'flex flex-col gap-4 p-5 sm:p-8')}>
-            <p className="m-0 font-[family-name:'DM_Sans',system-ui,sans-serif] text-sm text-[var(--site-sub)]">Mekân fotoğrafları ve Instagram (ana sayfada görünmez; Mekân sayfasında ve paylaşımda kullanılır).</p>
-            {photos.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
-                    {photos.map((url, i) => {
-                        const x = editTarget(edit, `gallery:${i}`, `Mekân fotoğrafı ${i + 1}`);
-                        return <img key={i} src={url} alt="" {...x} className={cn('block aspect-square w-full rounded-[14px] object-cover', x.className)} />;
-                    })}
-                </div>
-            ) : <EmptySlot target="gallery:add" title="+ Fotoğraf ekle" />}
-            {instagram ? (
-                <a href={instagram} target="_blank" rel="noopener noreferrer" {...igX}
-                    className={cn('inline-flex h-12 items-center gap-2.5 self-start rounded-full bg-[var(--site-bg)] px-5 font-bold no-underline', igX.className)}>
-                    <span aria-hidden="true" className="[&>svg]:h-5 [&>svg]:w-5"><InstagramIcon /></span>{instagramHandle(instagram)}
-                </a>
-            ) : <EmptySlot target="contact" title="+ Instagram ekle" className="min-h-[64px]" />}
-        </section>
-    );
-}
-
-// Adres · saatler · iletişim her sayfada alt bilgide durur. Düzenleyicide alt bilgi çizilmez; saatler ve iletişim
-// orada da değiştirilebilsin diye yalnız düzenleme görünümünde sayfanın sonunda gösterilir.
-function EditorVisit({ site }: { site: PublicSite }) {
-    const edit = useSiteEdit();
-    if (!edit) return null;
-    return <div className={box}><VisitSection site={site} /></div>;
 }

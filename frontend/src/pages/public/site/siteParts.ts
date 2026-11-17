@@ -11,7 +11,8 @@ export const FONTS_HREF = SITE_FONTS_HREF;
 /** Başlık yazı tipi: tasarımın serif'i (`--site-serif`; Renkli: Fraunces kalın, sıkı aralık; Sade: Instrument Serif,
  *  tek ağırlık — kök stil sahte kalını kapatır). */
 export const serif = 'font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] font-bold tracking-[var(--site-serif-tracking,-0.02em)]';
-export const sans = "font-[family-name:Manrope,system-ui,sans-serif]";
+/** Gövde yazı tipi: tasarımın `--site-sans`'ı (Renkli ve Sade: Manrope; Elit: Montserrat). */
+export const sans = "font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)]";
 /** Bölüm üst satırı (Tema 2): küçük, aralıklı büyük harf, vurgu yazısı renginde. */
 export const eyebrow = 'text-xs font-bold uppercase tracking-[0.28em] text-[var(--site-accent-text)]';
 /** Tema 2 bölüm başlığı (serif, büyük); italik parça vurgu yazısı renginde (.rb-site kuralı). */
@@ -72,6 +73,7 @@ export const MOTION_CSS = `
 .rb-don{animation:rb-don 18s linear infinite}
 @media (prefers-reduced-motion: reduce){.rb-kay,.rb-kay-yavas,.rb-don{animation:none}}
 .rb-site :is(h1,h2,h3,blockquote) .italic,.rb-site em.rb-accent{color:var(--site-accent-text);font-weight:600}
+[data-site-design=elit] .rb-site :is(h1,h2,h3,blockquote) .italic,[data-site-design=elit] .rb-site em.rb-accent{color:inherit;font-weight:inherit}
 `;
 
 /** `siparis`: paket sipariş akışı (/siparis ve sipariş takibi); menü listesinde değil, başlığın "Paket sipariş" düğmesi. */

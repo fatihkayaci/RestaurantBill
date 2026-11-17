@@ -1,15 +1,12 @@
-import { useState, type FormEvent } from 'react';
-import { isAxiosError } from 'axios';
 import { Link } from 'react-router-dom';
-import { publicContactService } from '@/features/contactMessages/api/contactMessageService';
 import {
-    CONTACT_CONTACT_MAX, CONTACT_MESSAGE_MAX, CONTACT_MESSAGE_MIN, CONTACT_MESSAGE_TYPES, CONTACT_NAME_MAX, ContactMessageType,
+    CONTACT_CONTACT_MAX, CONTACT_MESSAGE_MAX, CONTACT_MESSAGE_MIN, CONTACT_MESSAGE_TYPES, CONTACT_NAME_MAX,
 } from '@/features/contactMessages/types';
-import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
 import { serif } from './siteParts';
 import { telHref } from './siteTheme';
 import { terracottaBg } from './renkliTones';
+import { useContactForm } from './useContactForm';
 
 // İletişim sayfasındaki "Mesaj bırakın" formu (Renkli ve sıcak: krem kutuda kum alanlar, kiremit seçili konu, vurgu
 // renginde gönder düğmesi): konu (mesaj türü: öneri, şikâyet, diğer), ad, telefon ya da
@@ -21,41 +18,10 @@ const labelClass = 'flex flex-col gap-2 text-[13px] font-extrabold';
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-text)] focus-visible:ring-offset-2';
 
 export default function ContactForm({ branchId, phone }: { branchId: string; phone?: string }) {
-    const [name, setName] = useState('');
-    const [contact, setContact] = useState('');
-    const [type, setType] = useState<ContactMessageType>(ContactMessageType.Oneri);
-    const [message, setMessage] = useState('');
-    const [consent, setConsent] = useState(false);
-    const [website, setWebsite] = useState('');
-    const [sending, setSending] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [sent, setSent] = useState(false);
-
-    const submit = async (e: FormEvent) => {
-        e.preventDefault();
-        if (sending) return;
-        if (!name.trim()) { setError('Adınızı girin.'); return; }
-        if (message.trim().length < CONTACT_MESSAGE_MIN) { setError(`Mesajınız en az ${CONTACT_MESSAGE_MIN} karakter olmalı.`); return; }
-        if (!consent) { setError('Devam etmek için KVKK aydınlatma metnini onaylayın.'); return; }
-
-        setSending(true);
-        setError(null);
-        try {
-            await publicContactService.submit({ branchId, name: name.trim(), contact: contact.trim(), type, message: message.trim(), website });
-            setSent(true);
-            setName('');
-            setContact('');
-            setMessage('');
-            setConsent(false);
-            setType(ContactMessageType.Oneri);
-        } catch (err) {
-            if (isAxiosError(err) && err.response?.status === 429) setError('Çok sık deneme yapıldı. Birkaç dakika sonra tekrar deneyin.');
-            else if (isAxiosError(err) && !err.response) setError('Bağlantı kurulamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.');
-            else setError(getApiErrorMessage(err, 'Mesajınız gönderilemedi. Lütfen tekrar deneyin.'));
-        } finally {
-            setSending(false);
-        }
-    };
+    const {
+        name, setName, contact, setContact, type, setType, message, setMessage, consent, setConsent, website, setWebsite,
+        sending, error, sent, submit, reset,
+    } = useContactForm(branchId);
 
     if (sent) {
         return (
@@ -65,7 +31,7 @@ export default function ContactForm({ branchId, phone }: { branchId: string; pho
                 </span>
                 <h2 className={cn(serif, 'm-0 text-[44px] leading-none md:text-[52px]')}>Mesajınız <em className="rb-accent italic">ulaştı.</em></h2>
                 <p className="m-0 max-w-[420px] text-base leading-relaxed text-[var(--site-sub)]">Teşekkür ederiz. Restoran ekibi mesajınızı okuyacak; iletişim bilgisi bıraktıysanız size dönüş yapılabilir.</p>
-                <button type="button" onClick={() => setSent(false)} className={cn('h-[50px] rounded-full border border-[var(--site-border-strong)] px-6 font-bold text-[var(--site-text)] hover:border-[var(--site-text)]', focusRing)}>
+                <button type="button" onClick={reset} className={cn('h-[50px] rounded-full border border-[var(--site-border-strong)] px-6 font-bold text-[var(--site-text)] hover:border-[var(--site-text)]', focusRing)}>
                     Yeni mesaj yaz
                 </button>
             </div>

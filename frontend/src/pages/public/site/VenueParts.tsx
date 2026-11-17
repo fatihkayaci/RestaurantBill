@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { InstagramIcon } from './SiteCards';
 import { instagramHandle, serif } from './siteParts';
 import { SITE_LIMITS, editTarget, useSiteEdit } from './siteEditContext';
+import { photoTarget } from './venueData';
 
 // Mekân sayfasının (tasarım: "Tema 2 · Açık — Mekân") kendi parçaları: fotoğrafsız kapağın masa planı süsü, galeri
 // mozaiği, süs harita paneli ve olanak / yol ikonları. Yalnız RestaurantVenuePage kullanır.
@@ -22,15 +23,6 @@ export function TablePlan({ className }: { className?: string }) {
             ))}
         </div>
     );
-}
-
-/** Galerideki bir fotoğrafın düzenleyicideki hedefi: galeri karesi, hikâye fotoğrafı ya da kapak. */
-function photoTarget(site: PublicSite, src: string): { target: string; label: string } {
-    const c = site.site;
-    const i = c.galleryImageUrls.indexOf(src);
-    if (i >= 0) return { target: `gallery:${i}`, label: `Mekân fotoğrafı ${i + 1}` };
-    if (src === c.aboutImageUrl) return { target: 'photo:about', label: 'Hikâye fotoğrafı' };
-    return { target: 'photo:cover', label: 'Kapak fotoğrafı' };
 }
 
 /**

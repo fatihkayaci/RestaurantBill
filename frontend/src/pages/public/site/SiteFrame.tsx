@@ -18,6 +18,9 @@ import { directionsUrl, resolveDesign, splitAccent, telHref, whatsappHref } from
 import { fullAddress, restaurantName, useSiteDocumentTitle, weekSchedule } from './useSite';
 import { EditableBlock, EmptySlot, ExternalHint } from './siteEdit';
 import { editExternal, useSiteEdit, useSiteWindow } from './siteEditContext';
+import { useSiteDesign } from './siteDesign';
+import { EliteFooter, EliteHeader } from './elite/EliteFrame';
+import { ELITE_CSS } from './elite/eliteParts';
 
 // Restoran sitesinin ortak çerçevesi (tasarım: "Tema 2 · Açık"): ortalı başlık (solda sayfalar, ortada serif ad ve
 // küçük konum satırı, sağda sipariş takibi, Sepet ve "Masa ayırt"), ziyaret
@@ -86,7 +89,14 @@ function FlameIcon() {
  * "Sepet" (online sipariş açıkken; hardal adet rozeti) ve "Masa ayırt". Dar ekranda ad + Sepet + menü düğmesi. Üstte
  * yapışık kalır (kaydırınca arkası buzlanır); `sticky={false}` ise (akış sayfaları) sayfayla kayar.
  */
-export function SiteHeader({ site, current, sticky = true }: { site: PublicSite; current: SitePageKey; sticky?: boolean }) {
+export function SiteHeader({ site, current, sticky = true, overlay = false }: { site: PublicSite; current: SitePageKey; sticky?: boolean; overlay?: boolean }) {
+    // Elit: koyu üst menü; kapağı fotoğraflı sayfalarda (`overlay`) kapağın üstünde saydam. Tasarım site verisinden
+    // (SiteShell dışındaki akış sayfalarında da doğru tasarım).
+    if (resolveDesign(site.site.design) === 'elit') return <EliteHeader site={site} current={current} overlay={overlay} sticky={sticky} />;
+    return <ClassicHeader site={site} current={current} sticky={sticky} />;
+}
+
+function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: SitePageKey; sticky: boolean }) {
     const scrolled = useScrolled(sticky);
     const win = useSiteWindow();
     const edit = useSiteEdit();
@@ -224,14 +234,18 @@ export function FlowSiteHeader({ site, current }: { site: PublicSite; current: S
 
 export function MobileActionBar({ actions }: { actions: MobileAction[] }) {
     const x = editExternal(useSiteEdit(), 'actions');
+    // Elit: köşesiz, büyük harfli düğmeler.
+    const elit = useSiteDesign() === 'elit';
     if (actions.length === 0) return null;
     return (
         <nav aria-label="Hızlı eylemler" {...x}
             className={cn(x.className, "fixed inset-x-0 bottom-0 z-40 border-t border-[var(--site-line)] bg-[color-mix(in_srgb,var(--site-bg)_94%,transparent)] px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_24px_rgba(30,26,22,0.08)] backdrop-blur-[14px] md:hidden")}>
             <ul className="m-0 flex list-none gap-2 p-0">
                 {actions.map(a => {
-                    const cls = cn('flex h-12 w-full items-center justify-center gap-1.5 rounded-full px-2 text-sm font-bold no-underline',
-                        a.primary ? 'bg-[var(--site-accent)] font-extrabold text-[var(--site-on-accent)]' : 'border border-[var(--site-border-strong)] text-[var(--site-text)]');
+                    const cls = cn('flex h-12 w-full items-center justify-center gap-1.5 px-2 no-underline',
+                        elit ? 'text-[11px] font-medium uppercase tracking-[0.06em]' : 'rounded-full text-sm font-bold',
+                        a.primary ? cn('bg-[var(--site-accent)] text-[var(--site-on-accent)]', elit ? 'bg-[var(--site-paper)] text-[var(--site-on-paper)]' : 'font-extrabold')
+                            : 'border border-[var(--site-border-strong)] text-[var(--site-text)]');
                     return (
                         <li key={a.key} className={cn('min-w-0', a.primary ? 'flex-[1.4]' : 'flex-1')}>
                             {a.to
@@ -366,6 +380,11 @@ function InstagramIcon() {
  * `visit={false}`: adres/saat/iletişim sütunları yok (İletişim sayfası bunları zaten gösterir).
  */
 export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite; bottomBar: boolean; visit?: boolean }) {
+    if (resolveDesign(site.site.design) === 'elit') return <EliteFooter site={site} bottomBar={bottomBar} visit={visit} />;
+    return <ClassicFooter site={site} bottomBar={bottomBar} visit={visit} />;
+}
+
+function ClassicFooter({ site, bottomBar, visit }: { site: PublicSite; bottomBar: boolean; visit: boolean }) {
     const edit = useSiteEdit();
     const fixedX = editExternal(edit, 'fixed');
     const ordering = useOnlineOrdering();
@@ -498,10 +517,11 @@ function useScrollOnEnter() {
  * sarmalayıcısının görünümünü değiştirir; `stickyHeader={false}` başlığı sayfayla kayan hâle getirir.
  * `mobileActions` alt çubuğun
  * düğmelerini değiştirir (boş dizi: çubuk yok); verilmezse Ara · Yol tarifi · Masa ayırt. Alt bilginin ziyaret sütunları
- * İletişim'de (aynı bilgiler sayfada) yoktur.
+ * İletişim'de (aynı bilgiler sayfada) yoktur. `overlayHeader`: Elit'te üst menü sayfanın tam genişlik kapağının üstünde
+ * saydam durur (kapak onun yerini bırakır); diğer tasarımlarda etkisi yok.
  */
-export function SitePage({ site, current, className, stickyHeader = true, mobileActions, children }: {
-    site: PublicSite; current: SitePageKey; className?: string; stickyHeader?: boolean;
+export function SitePage({ site, current, className, stickyHeader = true, overlayHeader = false, mobileActions, children }: {
+    site: PublicSite; current: SitePageKey; className?: string; stickyHeader?: boolean; overlayHeader?: boolean;
     mobileActions?: MobileAction[]; children: ReactNode;
 }) {
     useScrollOnEnter();
@@ -516,9 +536,10 @@ export function SitePage({ site, current, className, stickyHeader = true, mobile
     return (
         <SiteShell accent={site.site.accentColor} theme={site.site.theme} design={site.site.design}>
             <style>{MOTION_CSS}</style>
-            <div className={cn('rb-site flex min-h-screen flex-col overflow-x-clip', className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
+            {resolveDesign(site.site.design) === 'elit' && <style>{ELITE_CSS}</style>}
+            <div className={cn('rb-site relative flex min-h-screen flex-col overflow-x-clip', className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
                 {/* Düzenleyicide yalnız burada değişen bölümler çizilir: başlık, alt bilgi ve alt çubuk yok. */}
-                {!edit && <SiteHeader site={site} current={current} sticky={stickyHeader} />}
+                {!edit && <SiteHeader site={site} current={current} sticky={stickyHeader} overlay={overlayHeader} />}
                 {children}
                 {!edit && <SiteFooter site={site} bottomBar={actions.length > 0} visit={footerVisit} />}
                 {!edit && <MobileActionBar actions={actions} />}

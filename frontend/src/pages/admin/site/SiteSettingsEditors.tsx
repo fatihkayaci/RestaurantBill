@@ -40,7 +40,7 @@ export function Panel({ id, title, description, children }: { id?: string; title
 // ── Tasarım ve tema ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Sitenin tasarımı ("Renkli ve sıcak" / "Sade"): her kart tasarımın küçük bir maketini o anki tema ve vurgu rengiyle
+ * Sitenin tasarımı ("Renkli ve sıcak" / "Sade" / "Elit"): her kart tasarımın küçük bir maketini o anki tema ve vurgu rengiyle
  * çizer (sayfa zemini, kapak, menü kutusu, alt bilgi, başlık yazı tipi). Renkli varsayılandır ve "" olarak kaydedilir.
  */
 export function DesignPicker({ design, theme, accent, onDesign }: {
@@ -63,7 +63,8 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
                         onClick={() => onDesign(key === DEFAULT_DESIGN ? '' : key)}
                         className={cn('flex flex-col gap-2.5 rounded-xl border-2 p-2.5 text-left transition-colors',
                             on ? 'border-foreground' : 'border-border hover:border-foreground/40')}>
-                        {/* Küçük maket: üst menü, kapak (başlık + düğme), menü kutusu ve alt bilgi şeridi. */}
+                        {key === 'elit' ? <EliteMock accent={c.pop} accentText={c.accentText} /> : (
+                        /* Küçük maket: üst menü, kapak (başlık + düğme), menü kutusu ve alt bilgi şeridi. */
                         <span aria-hidden="true" className="flex h-[148px] flex-col gap-1.5 overflow-hidden rounded-lg p-2" style={{ background: P.bg }}>
                             <span className="flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2" style={{ background: sade ? P.card : 'transparent' }}>
                                 {!sade && <span className="h-3.5 w-3.5 rounded-full" style={{ background: t.hero }} />}
@@ -76,7 +77,7 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
                                     <span className="text-[22px] leading-[0.95]" style={{ fontFamily: P.serif, fontWeight: sade ? 400 : 800, letterSpacing: P.serifTracking }}>
                                         Ocak<br /><em style={{ color: c.heroAccent, fontWeight: sade ? 400 : 600 }}>Kadıköy</em>
                                     </span>
-                                    <span className="h-3.5 w-14 rounded-full" style={{ background: P.pop }} />
+                                    <span className="h-3.5 w-14 rounded-full" style={{ background: c.pop }} />
                                 </span>
                                 <span className="flex flex-[2] flex-col gap-1.5">
                                     <span className="flex flex-1 flex-col justify-center gap-1 rounded-md px-1.5"
@@ -89,6 +90,7 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
                             </span>
                             <span className="h-3 shrink-0 rounded" style={{ background: P.footer }} />
                         </span>
+                        )}
                         <span className="flex items-center justify-between gap-2">
                             <span className="text-sm font-semibold text-foreground">{d.label}</span>
                             {on && <Check className="h-4 w-4 text-foreground" aria-hidden="true" />}
@@ -101,14 +103,49 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
     );
 }
 
+/**
+ * Elit tasarımın maketi: koyu tam genişlik kapak (aralıklı ad, italik ikinci satır, ince vurgu çizgileri, köşesiz
+ * düğme), krem bantta noktalı menü satırları ve koyu alt bilgi. `accent`: koyu zemindeki vurgu; `accentText`: kremdeki.
+ */
+function EliteMock({ accent, accentText }: { accent: string; accentText: string }) {
+    const P = SITE_DESIGNS.elit.palette;
+    return (
+        <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg" style={{ background: P.bg }}>
+            <span className="relative flex flex-[3] flex-col items-center justify-center gap-1 px-2" style={{ background: P.paper, color: P.onPaper }}>
+                <span className="absolute inset-0 opacity-60" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.25), transparent 40%, rgba(0,0,0,0.3))' }} />
+                <span className="relative flex items-center gap-1.5">
+                    <span className="h-px w-4" style={{ background: accent }} />
+                    <span className="text-[6px] uppercase tracking-[0.3em]" style={{ color: accent, fontFamily: P.sans }}>Kadıköy</span>
+                    <span className="h-px w-4" style={{ background: accent }} />
+                </span>
+                <span className="relative text-center text-[19px] leading-[0.95]" style={{ fontFamily: P.serif, fontWeight: 400 }}>
+                    Ocak<br /><em>Kadıköy</em>
+                </span>
+                <span className="relative mt-1 h-2.5 w-12" style={{ background: accent }} />
+            </span>
+            <span className="flex flex-[2] flex-col justify-center gap-1.5 px-3" style={{ background: P.alt }}>
+                {[0, 1].map(i => (
+                    <span key={i} className="flex items-end gap-1">
+                        <span className="h-1.5 w-10 rounded-full" style={{ background: P.fg }} />
+                        <span className="mb-px flex-1 border-b border-dotted" style={{ borderColor: P.muted }} />
+                        <span className="h-1.5 w-5 rounded-full" style={{ background: accentText }} />
+                    </span>
+                ))}
+            </span>
+            <span className="h-3 shrink-0" style={{ background: P.footer, borderTop: `1px solid ${accent}` }} />
+        </span>
+    );
+}
+
 // Vurgu seçenekleri (zemin her temada aynı; özel renk yalnız vurguyu değiştirir).
 const ACCENT_OPTIONS: Record<SiteDesignKey, string[]> = {
     renkli: ['#DC5B2F', '#EBB03F', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#24180F', '#9AA5B1'],
     sade: ['#E8B04B', '#E2683C', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#2A2622', '#9AA5B1'],
+    elit: ['#C8A35F', '#D4A0A0', '#B9BD8E', '#A9B8D0', '#CFC6B8', '#E79A9A', '#2F4F8F', '#A8354A'],
 };
 
 /** Seçili tasarımın hazır temaları ve isteğe bağlı özel vurgu rengi. Renkli: tema kapak rengini ve vurguyu seçer;
- *  Sade: yalnız vurguyu (kapak beyaz kutu). */
+ *  Sade: yalnız vurguyu (kapak beyaz kutu); Elit: yalnız vurgu ailesini (koyu zeminde açık, kremde koyu ton). */
 export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
     design?: string; theme: string; accent: string; onTheme: (key: string) => void; onAccent: (hex: string) => void;
 }) {
@@ -118,7 +155,9 @@ export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
     return (
         <div className="space-y-4">
             <p className="m-0 text-sm text-muted-foreground">
-                {key === 'sade' ? 'Sade tasarımda tema vurgu rengini seçer; kapak ve kutular beyaz kalır.' : 'Renkli tasarımda tema ana sayfa kapağının rengini ve vurguyu seçer.'}
+                {key === 'sade' ? 'Sade tasarımda tema vurgu rengini seçer; kapak ve kutular beyaz kalır.'
+                    : key === 'elit' ? 'Elit tasarımda tema yalnız vurgu ailesini seçer (çizgiler, süsler, düğmeler); zemin krem ve koyu espresso kalır.'
+                        : 'Renkli tasarımda tema ana sayfa kapağının rengini ve vurguyu seçer.'}
             </p>
             <div role="radiogroup" aria-label="Site teması" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                 {designThemes(key).map(t => {

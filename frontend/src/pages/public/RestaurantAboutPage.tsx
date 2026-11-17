@@ -1,12 +1,13 @@
-import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from './components/StockImageLabel';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
 import { PageEmpty, SitePage } from './site/SiteFrame';
-import { RESERVATION_PATH, formatRating, hasAboutPage, productCount, serif, sinceYear } from './site/siteParts';
-import { initials, splitAccent } from './site/siteTheme';
+import { RESERVATION_PATH, hasAboutPage, serif, sinceYear } from './site/siteParts';
+import { initials, resolveDesign, splitAccent } from './site/siteTheme';
+import { aboutStats as stats } from './site/aboutStats';
+import EliteAbout from './site/elite/EliteAbout';
 import { hoursLine, restaurantName, useSite } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
 import { SITE_LIMITS, editTarget, useSiteEdit } from './site/siteEditContext';
@@ -25,28 +26,11 @@ const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rou
 const darkLabel = 'text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-cover-accent)]';
 const label = 'text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-accent-text)]';
 
-interface Stat { key: string; value: string; label: string; wrap?: (node: ReactNode) => ReactNode }
-
-/** Yalnız gerçek veriden rakamlar: kaç yıldır, menüdeki ürün sayısı, salon kapasitesi (her masanın kapasitesi girildiyse), Google puanı. */
-function stats(site: PublicSite): Stat[] {
-    const c = site.site;
-    const out: Stat[] = [];
-    const years = c.foundedYear ? new Date().getFullYear() - c.foundedYear : 0;
-    if (years >= 1) out.push({ key: 'yil', value: String(years), label: 'yıldır sizinle', wrap: n => <EditableBlock target="year" label="Kuruluş yılı" className="h-full">{n}</EditableBlock> });
-    const products = productCount(site);
-    if (products > 0) out.push({ key: 'urun', value: String(products), label: 'menüdeki lezzet' });
-    const tables = site.regions.flatMap(r => r.tables);
-    if (tables.length > 0 && tables.every(t => t.capacity && t.capacity > 0)) {
-        out.push({ key: 'kapasite', value: String(tables.reduce((sum, t) => sum + (t.capacity ?? 0), 0)), label: 'kişilik salon' });
-    }
-    if (c.rating !== null) out.push({ key: 'puan', value: formatRating(c.rating), label: 'Google puanı', wrap: n => <EditableBlock target="rating" label="Google puanı" className="h-full">{n}</EditableBlock> });
-    return out.slice(0, 4);
-}
-
 export default function RestaurantAboutPage() {
     const { site, error } = useSite();
     const edit = useSiteEdit();
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
+    if (resolveDesign(site.site.design) === 'elit') return <EliteAbout site={site} />;
 
     const showEmpty = Boolean(edit?.showEmpty);
 
