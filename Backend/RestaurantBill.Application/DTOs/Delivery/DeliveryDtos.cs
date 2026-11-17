@@ -219,6 +219,8 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public string Theme { get; set; } = string.Empty;
         /// <summary>Sitenin tasarımı (SiteContent.DesignKeys); boş = varsayılan (renkli).</summary>
         public string Design { get; set; } = string.Empty;
+        /// <summary>Sitenin yazı tipi çifti (SiteContent.FontKeys); boş = tasarımın kendi yazı tipi.</summary>
+        public string Font { get; set; } = string.Empty;
         public string CoverImageUrl { get; set; } = string.Empty;
         /// <summary>Restoranın onayladığı an (UTC); adım saatleri için.</summary>
         public DateTime? AcceptedAt { get; set; }

@@ -49,6 +49,8 @@ namespace RestaurantBill.Domain.Entities
         public IReadOnlyList<string>? HiddenFaqs { get; init; }
         /// <summary>Sitenin tasarımı ("renkli", "sade", "elit"); boş = varsayılan (renkli). null: değiştirme (eski form göndermez).</summary>
         public string? Design { get; init; }
+        /// <summary>Yazı tipi çifti (<see cref="SiteContent.FontKeys"/>); boş = tasarımın kendi yazı tipi. null: değiştirme.</summary>
+        public string? Font { get; init; }
     }
 
     /// <summary>
@@ -93,6 +95,10 @@ namespace RestaurantBill.Domain.Entities
         /// Tasarım ve renk teması ayrıdır: her tasarım bütün temaları (ve özel vurgu rengini) kendi paletiyle çizer.</summary>
         public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade", "elit"];
 
+        /// <summary>Başlık + gövde yazı tipi çiftleri; boş = tasarımın kendi çifti. Ön yüzdeki SITE_FONTS ile aynı anahtarlar.</summary>
+        public static readonly IReadOnlyList<string> FontKeys =
+            ["fraunces-manrope", "instrument-manrope", "bodoni-montserrat", "playfair-inter", "dmserif-dmsans", "cormorant-lato", "grotesk-inter"];
+
         /// <summary>Mekânın olanakları: yalnız bu hazır listeden seçilir (uydurma beyan olmasın). Sırası sitedeki sıradır.</summary>
         public static readonly IReadOnlyList<string> AmenityKeys =
             ["avlu", "teras", "otopark", "vale", "cocuk", "wifi", "engelli", "evcil", "canli-muzik", "vejetaryen", "kartla-odeme",
@@ -103,6 +109,8 @@ namespace RestaurantBill.Domain.Entities
         public string Theme { get; init; } = string.Empty;
         /// <summary>Sitenin tasarımı (<see cref="DesignKeys"/>); boş = varsayılan (renkli).</summary>
         public string Design { get; init; } = string.Empty;
+        /// <summary>Yazı tipi çifti (<see cref="FontKeys"/>); boş = tasarımın kendi yazı tipi.</summary>
+        public string Font { get; init; } = string.Empty;
         /// <summary>Mekân fotoğraflarının depo anahtarları, sitedeki sırayla.</summary>
         public IReadOnlyList<string> GalleryImages { get; init; } = [];
         /// <summary>Boş ya da Pazartesi → Pazar 7 gün.</summary>
@@ -180,6 +188,10 @@ namespace RestaurantBill.Domain.Entities
             if (design.Length > 0 && !DesignKeys.Contains(design))
                 throw new DomainException("Geçersiz site tasarımı.");
 
+            string font = texts.Font is null ? Font : texts.Font.Trim().ToLowerInvariant();
+            if (font.Length > 0 && !FontKeys.Contains(font))
+                throw new DomainException("Geçersiz yazı tipi.");
+
             string directions = Limit(texts.DirectionsNote, DirectionsNoteMaxLength, "Nasıl gelinir notu");
             string whatsapp = NormalizePhone(texts.WhatsappPhone);
             string reviewsUrl = Limit(texts.ReviewsUrl, ReviewsUrlMaxLength, "Yorum bağlantısı");
@@ -250,6 +262,7 @@ namespace RestaurantBill.Domain.Entities
             {
                 Theme = theme,
                 Design = design,
+                Font = font,
                 WeeklyHours = NormalizeWeek(texts.WeeklyHours),
                 DirectionsNote = directions,
                 WhatsappPhone = whatsapp,

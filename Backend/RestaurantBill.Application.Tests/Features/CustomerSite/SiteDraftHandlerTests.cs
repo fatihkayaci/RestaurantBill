@@ -90,6 +90,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         AccentColor = site.AccentColor,
         Theme = site.Theme,
         Design = site.Design,
+        Font = site.Font,
         WeeklyHours = site.WeeklyHours,
         DirectionsNote = site.DirectionsNote,
         WhatsappPhone = site.WhatsappPhone,
@@ -182,6 +183,52 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.True(keep.IsSuccess, keep.Error);
         Assert.Equal("sade", keep.Value!.Editor.Draft.Design);
         Assert.DoesNotContain(keep.Value.Editor.Changes, c => c.Field == "design");
+    }
+
+    [Fact]
+    public async Task Font_DraftThenPublish_AndNullKeepsIt()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Equal(string.Empty, editor.Draft.Font); // boş = tasarımın kendi yazı tipi
+
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Font = " Playfair-Inter ";
+        var saved = await SaveAsync(command);
+        Assert.True(saved.IsSuccess, saved.Error);
+        SiteEditorDto after = saved.Value!.Editor;
+        SiteChangeDto change = Assert.Single(after.Changes);
+        Assert.Equal("font", change.Field);
+        Assert.Equal("Yazı tipi", change.Label);
+        Assert.Equal("Tema", change.Page);
+        Assert.Equal("playfair-inter", after.Draft.Font);
+        Assert.Equal(string.Empty, after.Published.Font);
+        Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.Font);
+
+        // Geri al: yayındaki (boş) değere döner.
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new RevertSiteDraftFieldsCommand { Version = after.Version, Fields = ["font"] }, CancellationToken.None);
+        Assert.True(reverted.IsSuccess, reverted.Error);
+        Assert.Equal(string.Empty, reverted.Value!.Editor.Draft.Font);
+        Assert.False(reverted.Value.Editor.HasChanges);
+
+        command = TextsFrom(reverted.Value.Editor.Draft, reverted.Value.Editor.Version);
+        command.Font = "playfair-inter";
+        var again = await SaveAsync(command);
+        Assert.True(again.IsSuccess, again.Error);
+        var published = await PublishAsync(again.Value!.Editor.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.Equal("playfair-inter", published.Value!.Editor.Published.Font);
+        Assert.Equal("playfair-inter", (await PublicSiteAsync()).Site.Font);
+
+        // Yazı tipini göndermeyen kayıt (null) değiştirmez.
+        command = TextsFrom(published.Value.Editor.Draft, published.Value.Editor.Version);
+        command.Font = null;
+        command.Headline = "Yeni başlık";
+        var keep = await SaveAsync(command);
+        Assert.True(keep.IsSuccess, keep.Error);
+        Assert.Equal("playfair-inter", keep.Value!.Editor.Draft.Font);
+        Assert.DoesNotContain(keep.Value.Editor.Changes, c => c.Field == "font");
     }
 
     [Fact]

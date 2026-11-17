@@ -136,7 +136,7 @@ eklenmedi.
 ### Alan anahtarları (`changes[].field`, `revert.fields`)
 
 `headline, tagline, coverImage, storyTitle, about, aboutImage, hours, hoursNote, instagramUrl, directionsNote,
-whatsappPhone, design, theme, accentColor, gallery, amenities, hiddenFaqs, rating, reviewCount, reviewsUrl, featuredReviews, founderPhoto,
+whatsappPhone, design, font, theme, accentColor, gallery, amenities, hiddenFaqs, rating, reviewCount, reviewsUrl, featuredReviews, founderPhoto,
 founderName, founderTitle, founderQuote, foundedYear, values, milestones, seoTitle, seoDescription, shareImage,
 heroMenu, heroAbout, heroVenue, heroContact, heroReservation`,
 ayrıca her bölüm için `region:{regionId}` (bölümün fotoğrafı ve açıklaması birlikte).
@@ -159,6 +159,7 @@ Gövde, eski `PUT api/branch/site` ile aynı alanları ve üç ek alanı taşır
   "hoursNote": "", "instagramUrl": "https://…", "accentColor": "#A3301A",
   "theme": "terracotta",
   "design": "sade",                              // "renkli" | "sade" | "elit" | "" (= renkli); null/eksik = değiştirme
+  "font": "playfair-inter",                      // yazı tipi çifti (aşağıda) | "" (= tasarımın kendi çifti); null/eksik = değiştirme
   "weeklyHours": [{ "day": 1, "isOpen": true, "opens": "12:00", "closes": "23:00" } /* … 7 gün ya da [] */],
   "directionsNote": "", "whatsappPhone": "", "amenities": ["avlu"],
   "hiddenFaqs": ["odeme"],                       // gizlenen hazır sorular; null/eksik = değiştirme
@@ -272,6 +273,34 @@ Restoran önce sitenin **tasarımını**, sonra o tasarımın içinde **rengini*
   ve kutu renklerini CSS değişkeni olarak verir; düzeni farklı olan birkaç parça `useSiteDesign()` ile dallanır.
 - Testler: `SiteContentHandlerTests` (doğrulama, eski formun alanı koruması) ve `SiteDraftHandlerTests`
   (taslak → geri al → yayınla, temadan bağımsız).
+
+### Yazı tipi (`font`)
+
+Tasarımın altında "Yazı tipi" seçilir: ilk seçenek **Tasarımın yazı tipi** (`""`; tasarım değişince onun çiftine geçer),
+altında hazır başlık + gövde çiftleri. Hepsi Google Fonts, hepsinde Türkçe harfler (latin-ext) var.
+
+| Anahtar | Başlık | Gövde | Not |
+|---|---|---|---|
+| `fraunces-manrope` | Fraunces | Manrope | Renkli'nin kendi çifti |
+| `instrument-manrope` | Instrument Serif | Manrope | Sade'nin kendi çifti; tek ağırlık |
+| `bodoni-montserrat` | Bodoni Moda | Montserrat (300) | Elit'in kendi çifti |
+| `playfair-inter` | Playfair Display | Inter | |
+| `dmserif-dmsans` | DM Serif Display | DM Sans | tek ağırlık |
+| `cormorant-lato` | Cormorant Garamond | Lato | |
+| `grotesk-inter` | Space Grotesk | Inter | modern, serifsiz |
+
+- Saklama: `SiteContent.Font` (jsonb, migration yok; eski kayıtta anahtar yok = boş). `SiteContent.FontKeys` ön yüzdeki
+  `SITE_FONTS` ile aynıdır.
+- Doğrulama: kırpılır, küçük harfe çevrilir; bilinmeyen anahtar `400 "Geçersiz yazı tipi."`; `null`/eksik = değiştirme.
+- Taslak/yayın/geri al alanı `font` ("Yazı tipi", sayfa "Tema"). `BranchSiteDto.Font` taslakta, yayındakinde,
+  `api/public/site`'ta ve sipariş takibinde (`DeliveryTrackingDto.Font`) döner.
+- Ön yüz: `siteRootStyle(accent, theme, design, font)` çiftin ailelerini `--site-serif` / `--site-sans`'a, gövde ağırlığını
+  köke yazar; başlık ağırlığı tasarımdan gelir (`--site-serif-weight`: Renkli 700, Sade ve Elit 400). Tek ağırlıklı başlık
+  yazı tiplerinde sahte kalın kapalıdır. Sayfalar yalnız seçili çiftin CSS'ini yükler (`siteFontsHref(design, font)`,
+  akış sayfalarında `customerFontsHref`); admin'deki seçici bütün çiftleri yükler. Ana sayfadaki dev ad, çiftin ölçülmüş
+  harf genişliğiyle (`charWidth`) küçülür.
+- Testler: `SiteContentTests` (alan adı normalleştirme, null korur), `SiteContentHandlerTests` (doğrulama) ve
+  `SiteDraftHandlerTests` (taslak → geri al → yayınla, null değiştirmez).
 
 ## 3. Google ve paylaşım: otomatik değerler
 

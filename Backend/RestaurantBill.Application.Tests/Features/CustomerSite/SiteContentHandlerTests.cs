@@ -215,6 +215,30 @@ public class SiteContentHandlerTests : ApplicationTestBase
         Assert.Equal(string.Empty, third.Value!.Design);
     }
 
+    [Theory]
+    [InlineData("comic-sans")]
+    [InlineData("playfair")]
+    [InlineData("inter-playfair")]
+    public void Validator_Font_RejectsUnknownKey(string font)
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Font = font })
+            .ShouldHaveValidationErrorFor(x => x.Font);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("fraunces-manrope")]
+    [InlineData("instrument-manrope")]
+    [InlineData("bodoni-montserrat")]
+    [InlineData("playfair-inter")]
+    [InlineData("dmserif-dmsans")]
+    [InlineData("cormorant-lato")]
+    [InlineData(" Grotesk-Inter ")]
+    public void Validator_Font_AcceptsKnownEmptyAndNull(string? font)
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Font = font })
+            .ShouldNotHaveAnyValidationErrors();
+
     [Fact]
     public void Validator_AcceptsNewAmenityKeys()
         => new UpdateBranchSiteCommandValidator()

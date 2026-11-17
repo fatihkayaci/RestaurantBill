@@ -24,6 +24,8 @@ public class BranchSiteDto
     public string Theme { get; set; } = string.Empty;
     /// <summary>Sitenin tasarımı ("renkli", "sade", "elit"); boş = renkli. Renk teması her tasarımda ayrı çizilir.</summary>
     public string Design { get; set; } = string.Empty;
+    /// <summary>Yazı tipi çifti (SiteContent.FontKeys, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi.</summary>
+    public string Font { get; set; } = string.Empty;
     /// <summary>Mekân fotoğrafları (tam adres), sitedeki sırayla; en çok 12.</summary>
     public List<string> GalleryImageUrls { get; set; } = [];
     /// <summary>Boş: "her gün aynı" (OpensAt/ClosesAt). Doluysa Pazartesi → Pazar 7 gün.</summary>
@@ -85,6 +87,7 @@ public class BranchSiteDto
             AccentColor = site.AccentColor,
             Theme = content.Theme,
             Design = content.Design,
+            Font = content.Font,
             GalleryImageUrls = content.GalleryImages.Select(k => ImageUrl(cdnBaseUrl, k)).ToList(),
             WeeklyHours = content.WeeklyHours.Select(SiteDayHoursDto.From).ToList(),
             DirectionsNote = content.DirectionsNote,

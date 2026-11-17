@@ -41,6 +41,7 @@ internal static class SiteEditor
         ["directionsNote"] = ("Nasıl gelinir", "İletişim"),
         ["whatsappPhone"] = ("WhatsApp", "İletişim"),
         ["design"] = ("Tasarım", "Tema"),
+        ["font"] = ("Yazı tipi", "Tema"),
         ["theme"] = ("Tema", "Tema"),
         ["accentColor"] = ("Vurgu rengi", "Tema"),
         ["gallery"] = ("Mekân fotoğrafları", "Mekân"),
