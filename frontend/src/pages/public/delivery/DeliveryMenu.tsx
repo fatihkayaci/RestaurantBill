@@ -47,21 +47,20 @@ function menuContents(menu: OnlineSetMenu): string {
 }
 
 // Paket sipariş menüsü: yapışkan kategori şeridi (kaydırdıkça bulunulan bölüm işaretlenir), fotoğraflı ürün kartları ve
-// +/− adet. "Tükendi" ürünler soluk ve eklenemez; menüler (set) seçim penceresiyle eklenir. Kategorisi olmayan menüler en
-// üstte öne çıkan "Menüler" bölümünde büyük kartlarla, kategorisi olanlar o kategorinin başında durur.
+// +/− adet. "Tükendi" ürünler soluk ve eklenemez; menüler (set) seçim penceresiyle eklenir. Bütün menüler en
+// üstte "Menüler" bölümünde büyük kartlarla durur (kategorisi olsa da).
 // Masa menüsü (TableOrderPage) de aynı kartları kullanır: `featuredSection` en üste "Şefin önerileri"ni ekler, `readOnly`
 // eklemesiz göz atmadır; ürünün hazırlanma süresi (prepMinutes) varsa kartta görünür.
 export default function DeliveryMenu<P extends MenuCardProduct>({
     categories, setMenus = [], restaurant, productQuantity, setMenuQuantity = noQuantity, onAddProduct, onRemoveProduct,
     onOpenSetMenu = noop, stickyTopClass = 'top-0', featuredSection = false, readOnly = false, empty,
 }: Props<P>) {
-    const categoryIds = new Set(categories.map(c => c.id));
-    const looseMenus = setMenus.filter(m => !m.categoryId || !categoryIds.has(m.categoryId));
+    // Bütün hazır menüler (kategorisi olsun olmasın) tek "Menüler" bölümünde; kategoriler yalnız ürünleri gösterir.
     const featuredProducts = featuredSection ? categories.flatMap(c => c.products).filter(p => p.isFeatured && !p.isOutOfStock) : [];
     const sections = [
         ...(featuredProducts.length > 0 ? [{ id: FEATURED_SECTION, name: 'Şefin önerileri', menus: [] as OnlineSetMenu[], products: featuredProducts }] : []),
-        ...(looseMenus.length > 0 ? [{ id: SET_MENU_SECTION, name: 'Menüler', menus: looseMenus, products: [] as P[] }] : []),
-        ...categories.map(c => ({ id: c.id, name: c.name, menus: setMenus.filter(m => m.categoryId === c.id), products: c.products })),
+        ...(setMenus.length > 0 ? [{ id: SET_MENU_SECTION, name: 'Menüler', menus: setMenus, products: [] as P[] }] : []),
+        ...categories.map(c => ({ id: c.id, name: c.name, menus: [] as OnlineSetMenu[], products: c.products })),
     ].filter(s => s.menus.length + s.products.length > 0);
 
     const sectionKey = sections.map(s => s.id).join('|');
