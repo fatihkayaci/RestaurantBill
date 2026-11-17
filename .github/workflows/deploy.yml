@@ -43,10 +43,24 @@ jobs:
         script: |
           set -e
           cd /root/RestaurantBill
+
+          # 1) Her deploy'dan önce veritabanı yedeği. Migration'lar API açılırken uygulanır; sorun olursa bu dosyadan
+          #    dönülür. Yedek alınamazsa (boş dosya, pg_dump hatası) deploy DURUR, canlı eski hâliyle kalır.
+          mkdir -p /root/backups
+          BACKUP="/root/backups/restaurant-$(date +%Y%m%d-%H%M)-pre-deploy.sql"
+          docker exec restaurant_postgres_db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > "$BACKUP"
+          test -s "$BACKUP"
+          gzip -f "$BACKUP"
+          echo "Yedek alındı: $BACKUP.gz ($(du -h "$BACKUP.gz" | cut -f1))"
+          # Disk dolmasın: 14 günden eski otomatik deploy yedeklerini sil (elle alınan yedeklere dokunulmaz).
+          find /root/backups -name 'restaurant-*-pre-deploy.sql.gz' -mtime +14 -delete
+
+          # 2) Kodu al ve imajları ESKİ sürüm çalışırken derle (sunucu yavaş; derleme dakikalar sürer, site bu sırada açık).
           git fetch origin main
           git reset --hard origin/main
-          docker compose down
-          docker image prune -f
           docker compose build api
           docker compose build frontend
+
+          # 3) Yalnız değişen konteynerler yeniden başlar: kesinti birkaç saniye.
           docker compose up -d
+          docker image prune -f
