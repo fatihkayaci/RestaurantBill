@@ -23,6 +23,9 @@ services:
       - CorsSettings__AllowedOrigins=${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost}
       - CorsSettings__AllowedOriginSuffix=${CORS_ALLOWED_ORIGIN_SUFFIX:-}
       - Swagger__Enabled=${SWAGGER_ENABLED:-false}
+      # Restoran sitelerinin başlık/og etiketleri (GET api/public/site-html): ön yüzün index.html'i compose ağından okunur.
+      - Seo__IndexHtmlUrl=${SEO_INDEX_HTML_URL:-http://frontend/index.html}
+      - Seo__RootDomain=${SEO_ROOT_DOMAIN:-sophram.com}
     volumes:
       - api_logs:/app/logs
     healthcheck:
