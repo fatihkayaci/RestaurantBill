@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { EXTERNAL_SOURCES, SITE_LIMITS, type SiteEditTarget } from '@/pages/public/site/siteEditContext';
 import { SITE_AMENITIES } from '@/pages/public/site/siteParts';
 import { restaurantName } from '@/pages/public/site/useSite';
-import { ThemePicker, WeeklyHoursEditor } from '../SiteSettingsEditors';
+import { DesignPicker, ThemePicker, WeeklyHoursEditor } from '../SiteSettingsEditors';
 import { photoTarget, type EditorCtx } from './editorActions';
 import { isStockUrl, tooBig } from './editorModel';
 import { ed } from './editorStyles';
@@ -242,10 +242,19 @@ export function PopoverBody({ ctx, target, onDone }: { ctx: EditorCtx; target: S
 
 // ── "Genel ayarlar" bölümleri ───────────────────────────────────────────────────────────────────
 
+/** "Tasarımlar": önce tasarım; renk (tema) altında, seçilen tasarımın temalarıyla. Seçim taslağa ve önizlemeye hemen gider. */
+export function DesignFields({ ctx }: { ctx: EditorCtx }) {
+    const t = ctx.texts;
+    return (
+        <DesignPicker design={t.design ?? ''} theme={t.theme} accent={t.accentColor}
+            onDesign={design => ctx.state.updateTexts(x => ({ ...x, design }))} />
+    );
+}
+
 export function ThemeFields({ ctx }: { ctx: EditorCtx }) {
     const t = ctx.texts;
     return (
-        <ThemePicker theme={t.theme} accent={t.accentColor}
+        <ThemePicker design={t.design} theme={t.theme} accent={t.accentColor}
             onTheme={theme => ctx.state.updateTexts(x => ({ ...x, theme }))}
             onAccent={accentColor => ctx.state.updateTexts(x => ({ ...x, accentColor }))} />
     );

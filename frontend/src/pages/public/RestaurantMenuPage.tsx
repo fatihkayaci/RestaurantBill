@@ -136,7 +136,7 @@ export default function RestaurantMenuPage() {
     }
 
     const chip = (on: boolean) => cn('inline-flex h-11 items-center gap-1.5 rounded-full border px-4 text-[13px] font-bold transition-colors',
-        on ? 'border-[var(--site-mustard)] bg-[var(--site-mustard)] text-[var(--site-text)]' : 'border-[rgba(251,244,232,0.45)] text-[var(--site-on-paper)] hover:border-[var(--site-on-paper)]');
+        on ? 'border-[var(--site-pop)] bg-[var(--site-pop)] text-[var(--site-on-pop)]' : 'border-[color-mix(in_srgb,var(--site-on-cover)_45%,transparent)] text-[var(--site-on-cover)] hover:border-[var(--site-on-cover)]');
 
     return (
         // Başlık sayfayla kayar (stickyHeader={false}); üstte yapışık kalan yalnız kategori şeridi.
@@ -144,17 +144,17 @@ export default function RestaurantMenuPage() {
             <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
                 <section aria-labelledby="mn-baslik" className="rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[36px]">
                     {/* Kapak bloğu: temanın kapak renginde, damalı desen; ad, dev "Menü", alt başlık, arama ve süzgeçler. */}
-                    <div className="relative flex flex-col items-center gap-[18px] overflow-hidden rounded-t-[24px] bg-[var(--site-hero-bg)] px-5 pb-12 md:rounded-t-[36px] pt-14 text-center text-[var(--site-on-paper)] sm:px-14 md:pb-14 md:pt-[72px]">
-                        <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(from_45deg,rgba(251,244,232,0.07)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />
-                        <span className="relative text-xs font-extrabold uppercase tracking-[0.3em] text-[var(--site-mustard-text)]">{name}</span>
+                    <div className="relative flex flex-col items-center gap-[18px] overflow-hidden rounded-t-[24px] bg-[var(--site-cover-bg)] px-5 pb-12 md:rounded-t-[36px] pt-14 text-center text-[var(--site-on-cover)] sm:px-14 md:pb-14 md:pt-[72px]">
+                        <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(from_45deg,color-mix(in_srgb,var(--site-on-cover)_7%,transparent)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />
+                        <span className="relative text-xs font-extrabold uppercase tracking-[0.3em] text-[var(--site-cover-accent)]">{name}</span>
                         <h1 id="mn-baslik" className={cn(serif, 'relative m-0 text-[88px] font-extrabold leading-[0.85] tracking-[-0.03em] md:text-[clamp(88px,10vw,156px)]')}>Menü</h1>
                         {(site.site.tagline || edit?.showEmpty) && (
                             <EditableText field="tagline" value={site.site.tagline} placeholder="Alt başlık yazın"
-                                className={cn(serif, 'relative max-w-full text-xl font-semibold italic text-[var(--site-mustard-text)] md:text-2xl')} />
+                                className={cn(serif, 'relative max-w-full text-xl font-semibold italic text-[var(--site-cover-accent)] md:text-2xl')} />
                         )}
                         {!edit && !menuEmpty && (
                             <div className="relative mt-3 flex w-full flex-col items-center gap-3.5">
-                                <label className="flex h-[58px] w-full max-w-[480px] items-center gap-3 rounded-full bg-[var(--site-card)] px-[22px] text-[var(--site-text)] focus-within:ring-2 focus-within:ring-[var(--site-mustard)]">
+                                <label className="flex h-[58px] w-full max-w-[480px] items-center gap-3 rounded-full bg-[var(--site-menu-card)] px-[22px] text-[var(--site-text)] focus-within:ring-2 focus-within:ring-[var(--site-mustard)]">
                                     <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--site-muted)" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
                                     <span className="sr-only">Menüde ara</span>
                                     <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Ne canınız çekti?"
@@ -173,7 +173,7 @@ export default function RestaurantMenuPage() {
                     <ExternalHint source="menu">
                         {/* Yapışkan kategori şeridi (zeytin; görünen bölüm hardal alt çizgili) */}
                         {nav.length > 1 && (
-                            <nav aria-label="Kategoriler" className="sticky top-0 z-[4] bg-[var(--site-menu-box)]">
+                            <nav aria-label="Kategoriler" className="sticky top-0 z-[4] border-y border-[color-mix(in_srgb,var(--site-on-menu-box)_8%,transparent)] bg-[var(--site-menu-box)]">
                                 <div ref={strip} className="overflow-x-auto px-5 [scrollbar-width:none] sm:px-10">
                                     <div className="mx-auto flex w-max gap-6 md:gap-[30px]">
                                         {nav.map(n => {
@@ -181,7 +181,7 @@ export default function RestaurantMenuPage() {
                                             return (
                                                 <a key={n.id} href={`#${n.id}`} data-nav={n.id} aria-current={on ? 'location' : undefined}
                                                     className={cn('inline-flex min-h-[54px] shrink-0 items-center whitespace-nowrap border-b-[3px] px-0.5 pt-[3px] text-[15px] no-underline transition-colors',
-                                                        on ? 'border-[var(--site-mustard)] font-extrabold text-[var(--site-on-paper)]' : 'border-transparent font-semibold text-[#D4CBB6] hover:text-[var(--site-on-paper)]')}>
+                                                        on ? 'border-[var(--site-pop)] font-extrabold text-[var(--site-on-menu-box)]' : 'border-transparent font-semibold text-[var(--site-on-menu-box-sub)] hover:text-[var(--site-on-menu-box)]')}>
                                                     {n.label}
                                                 </a>
                                             );
@@ -294,7 +294,7 @@ function ProductLine({ product, cart, onAdded }: { product: PublicProduct; cart:
             <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-baseline gap-2.5">
                     <h3 className={cn(serif, 'm-0 min-w-0 break-words text-[21px] leading-[1.15] md:text-[23px]', product.isOutOfStock && 'text-[var(--site-muted)]')}>{product.name}</h3>
-                    <span aria-hidden="true" className="min-w-5 flex-1 -translate-y-1.5 border-b-2 border-dotted border-[rgba(169,64,31,0.35)]" />
+                    <span aria-hidden="true" className="min-w-5 flex-1 -translate-y-1.5 border-b-2 border-dotted border-[color-mix(in_srgb,var(--site-terracotta-text)_35%,transparent)]" />
                     <span className="shrink-0 whitespace-nowrap text-lg font-extrabold tabular-nums text-[var(--site-accent-text)]">{formatSitePrice(product.price)}</span>
                 </div>
                 {(meta || tag) && (
@@ -302,7 +302,7 @@ function ProductLine({ product, cart, onAdded }: { product: PublicProduct; cart:
                         {meta}
                         {tag && (product.isOutOfStock
                             ? <span className="font-bold">{meta ? ' · ' : ''}{tag}</span>
-                            : <span className={cn('inline-block rounded-full bg-[var(--site-menu-box)] px-[9px] py-px text-xs font-bold text-[#F3E7D3]', meta && 'ml-2')}><span aria-hidden="true">★ </span>{tag}</span>)}
+                            : <span className={cn('inline-block rounded-full bg-[var(--site-menu-box)] px-[9px] py-px text-xs font-bold text-[var(--site-on-menu-box)]', meta && 'ml-2')}><span aria-hidden="true">★ </span>{tag}</span>)}
                     </p>
                 )}
             </div>

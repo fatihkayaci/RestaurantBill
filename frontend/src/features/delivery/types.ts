@@ -217,6 +217,8 @@ export interface DeliveryTracking {
     accentColor?: string;
     /** Sitenin hazır renk teması; boş = varsayılan. */
     theme?: string;
+    /** Sitenin tasarımı ("renkli" | "sade"); boş = renkli. */
+    design?: string;
     coverImageUrl?: string;
     /** Restoranın onayladığı an. */
     acceptedAt?: string | null;

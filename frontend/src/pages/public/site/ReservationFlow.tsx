@@ -62,13 +62,13 @@ const card = 'rounded-[24px] bg-[var(--site-card)] md:rounded-[32px]';
 const chipOff = 'border-[rgba(36,24,15,0.18)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-text)]';
 const chipDisabled = 'cursor-not-allowed border-transparent bg-[rgba(36,24,15,0.08)] text-[rgba(36,24,15,0.4)]';
 /** Seçili gün: kiremit zemin, krem yazı (5.6:1). */
-const dayOn = cn('border-[#A9401F] text-[var(--site-on-paper)]', terracottaBg);
+const dayOn = cn('border-[var(--site-terracotta)] text-[var(--site-on-terracotta)]', terracottaBg);
 const dayOff = 'border-transparent bg-[var(--site-bg)] text-[var(--site-text)] hover:border-[var(--site-text)]';
 /** Seçili saat: koyu kahve zemin, krem yazı. */
 const slotOn = 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]';
 /** Masa kartı: kum zemin; seçili kiremit çerçeve. */
 const tableOff = 'border-transparent bg-[var(--site-bg)] text-[var(--site-text)] hover:border-[rgba(36,24,15,0.3)]';
-const tableOn = 'border-[#A9401F] bg-[var(--site-card)] text-[var(--site-text)] shadow-[inset_0_0_0_1px_#A9401F]';
+const tableOn = 'border-[var(--site-terracotta-text)] bg-[var(--site-card)] text-[var(--site-text)] shadow-[inset_0_0_0_1px_var(--site-terracotta-text)]';
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-text)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--site-card)]';
 const inputClass = 'h-14 w-full rounded-2xl border border-[rgba(36,24,15,0.15)] bg-[var(--site-bg)] px-[18px] text-base font-medium text-[var(--site-text)] transition-colors placeholder:font-normal placeholder:text-[var(--site-muted)] hover:border-[var(--site-border-strong)] focus:border-[var(--site-text)] focus:bg-[var(--site-card)] focus:outline-none focus:ring-2 focus:ring-[var(--site-text)]/15';
 const labelClass = 'mb-2 block text-[13px] font-extrabold text-[var(--site-text)]';
@@ -77,7 +77,7 @@ const secondaryButton = 'flex h-12 items-center justify-center gap-2 rounded-ful
 const alertClass = 'rounded-2xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3.5 text-sm font-semibold text-[var(--site-error)]';
 const eyebrowClass = 'text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--site-muted)]';
 /** Saat grubu ve bölüm adı: italik Fraunces, zeytin (krem üstünde ~9:1). */
-const groupLabel = cn(serif, 'text-xl font-semibold italic text-[#3E4A33]');
+const groupLabel = cn(serif, 'text-xl font-semibold italic text-[var(--site-olive)]');
 /** Hızlı kişi seçimi. */
 const QUICK_PARTY = [2, 4, 6, 8];
 
@@ -414,7 +414,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             {QUICK_PARTY.filter(n => n <= maxParty).map(n => (
                                 <button key={n} type="button" aria-pressed={partySize === n} onClick={() => changeParty(n)}
                                     className={cn('h-11 rounded-full border px-4 text-sm font-bold transition-colors', focusRing,
-                                        partySize === n ? cn('border-[#3E4A33] text-[var(--site-on-paper)]', oliveBg) : 'border-[rgba(36,24,15,0.2)] text-[var(--site-text)] hover:border-[var(--site-text)]')}>
+                                        partySize === n ? cn('border-[var(--site-olive)] text-[var(--site-on-paper)]', oliveBg) : 'border-[rgba(36,24,15,0.2)] text-[var(--site-text)] hover:border-[var(--site-text)]')}>
                                     {n} kişi
                                 </button>
                             ))}
@@ -523,10 +523,10 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                                     <span className={cn(serif, 'text-[20px] leading-tight')}>{table.name}</span>
                                                     {capacityText && <span className="text-xs opacity-80">{capacityText}</span>}
                                                     <span className="flex items-center gap-1.5 text-xs font-medium opacity-80">
-                                                        <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', busy || tooSmall ? 'bg-[var(--site-border-strong)]' : on ? 'bg-[#A9401F]' : 'bg-[#2E9E57]')} />
+                                                        <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', busy || tooSmall ? 'bg-[var(--site-border-strong)]' : on ? 'bg-[var(--site-terracotta-text)]' : 'bg-[#2E9E57]')} />
                                                         {busy ? 'Bu saatte dolu' : tooSmall ? 'Size dar' : on ? 'Seçili' : 'Boş'}
                                                     </span>
-                                                    {on && <Check className="absolute right-3 top-3 h-4 w-4 text-[#A9401F]" strokeWidth={2.75} aria-hidden="true" />}
+                                                    {on && <Check className="absolute right-3 top-3 h-4 w-4 text-[var(--site-terracotta-text)]" strokeWidth={2.75} aria-hidden="true" />}
                                                 </button>
                                             );
                                         })}
@@ -603,13 +603,13 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     const summaryCard = (
         // Bilet biçiminde "Rezervasyon kartınız": kiremit üst (gün, ay, italik hafta günü), kesik çizgi, krem alt (saat · kişi · masa).
         <div className="hidden flex-col lg:flex">
-            <div className={cn(terracottaBg, 'flex flex-col gap-1.5 rounded-t-[32px] px-8 pb-6 pt-8 text-[var(--site-on-paper)]')}>
+            <div className={cn(terracottaBg, 'flex flex-col gap-1.5 rounded-t-[32px] px-8 pb-6 pt-8 text-[var(--site-on-terracotta)]')}>
                 {/* Hardal yazı kiremitte 4.5:1'i tutmuyor: etiket krem, hardal yalnız yanındaki çizgide. */}
                 <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.2em]">
                     <span aria-hidden="true" className="h-0.5 w-6 shrink-0 bg-[var(--site-mustard)]" />Rezervasyon kartınız
                 </span>
                 <span className={cn(serif, 'text-[46px] font-extrabold leading-none')}>{dayMonth(date)}</span>
-                <span className={cn(serif, 'text-[22px] font-semibold italic text-[#F8E3B6]')}>{weekday(date)}</span>
+                <span className={cn(serif, 'text-[22px] font-semibold italic text-[var(--site-on-terracotta-soft)]')}>{weekday(date)}</span>
             </div>
             <div aria-hidden="true" className="relative z-[1] mx-6 -my-px h-0 border-t-[3px] border-dashed border-[var(--site-bg)]" />
             <div className="flex flex-col gap-4 rounded-b-[32px] bg-[var(--site-card)] px-8 pb-8 pt-6">
@@ -709,7 +709,7 @@ function FlowSection({ id, className, num, title, legend, note, children }: {
             <legend className="sr-only">{legend}</legend>
             <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p aria-hidden="true" className="m-0 flex items-baseline gap-3.5">
-                    <span className={cn(serif, 'text-[32px] italic text-[#A9401F] md:text-[40px]')}>{num}</span>
+                    <span className={cn(serif, 'text-[32px] italic text-[var(--site-terracotta-text)] md:text-[40px]')}>{num}</span>
                     <span className={cn(serif, 'text-[30px] leading-none md:text-[38px]')}>{title}</span>
                 </p>
                 {note && <span className="text-sm text-[var(--site-muted)]">{note}</span>}

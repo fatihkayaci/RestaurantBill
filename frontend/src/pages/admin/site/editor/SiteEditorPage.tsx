@@ -19,7 +19,7 @@ import {
     COMPLETENESS_TARGETS, EDIT_TABS, buildPreviewSite, getText, popoverKind, relativeTime, tabByPath, tabPath, textFieldLabel,
     withListOp, withText, type EditorTab, type ListOp,
 } from './editorModel';
-import { ContactFields, ExternalList, HoursFields, PopoverBody, RatingFields, SeoFields, ThemeFields } from './EditorSections';
+import { ContactFields, DesignFields, ExternalList, HoursFields, PopoverBody, RatingFields, SeoFields, ThemeFields } from './EditorSections';
 import { ed } from './editorStyles';
 import { StockGrid, UploadDrop } from './PhotoPicker';
 import { PreviewApp } from './PreviewApp';
@@ -623,6 +623,7 @@ function AnchoredPopover({ stage, frame, scale, anchor, photo, wide, onClose, ch
 const SETTINGS_SECTIONS = [
     { id: 'genel-saat', label: 'Çalışma saatleri' },
     { id: 'genel-iletisim', label: 'İletişim ve sosyal' },
+    { id: 'genel-tasarim', label: 'Tasarımlar' },
     { id: 'genel-tema', label: 'Tema ve renk' },
     { id: 'genel-google', label: 'Google ve paylaşım' },
     { id: 'genel-diger', label: 'Başka sayfalardan gelenler' },
@@ -665,6 +666,7 @@ function GeneralSettingsDialog({ open, ctx, base, onClose }: { open: boolean; ct
                             <RatingFields ctx={ctx} idPrefix="g-" />
                         </div>
                     ))}
+                    {section('genel-tasarim', 'Tasarımlar', <DesignFields ctx={ctx} />)}
                     {section('genel-tema', 'Tema ve renk', <ThemeFields ctx={ctx} />)}
                     {section('genel-google', 'Google ve paylaşım', <SeoFields ctx={ctx} live={live} />)}
                     {section('genel-diger', 'Başka sayfalardan gelenler', <ExternalList ctx={ctx} />)}

@@ -113,7 +113,7 @@ function VenueHero({ site, hasLocation }: { site: PublicSite; hasLocation: boole
                     <>
                         <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover object-[60%_40%]" />
                         {/* Telefonda yazının arkası aşağı doğru koyulaşan zeytin perde; geniş ekranda soldan zeytin geçiş. */}
-                        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(62,74,51,0.6)_0%,rgba(62,74,51,0.9)_50%,rgba(62,74,51,0.97)_100%)] md:bg-[linear-gradient(90deg,rgba(62,74,51,0.97)_0%,rgba(62,74,51,0.88)_30%,rgba(62,74,51,0.45)_48%,rgba(62,74,51,0)_64%)]" />
+                        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--site-olive)_60%,transparent)_0%,color-mix(in_srgb,var(--site-olive)_90%,transparent)_50%,color-mix(in_srgb,var(--site-olive)_97%,transparent)_100%)] md:bg-[linear-gradient(90deg,color-mix(in_srgb,var(--site-olive)_97%,transparent)_0%,color-mix(in_srgb,var(--site-olive)_88%,transparent)_30%,color-mix(in_srgb,var(--site-olive)_45%,transparent)_48%,transparent_64%)]" />
                         {photo.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                     </>
                 ) : (
@@ -261,7 +261,7 @@ function AmenitiesRow({ site }: { site: PublicSite }) {
             )}
             {showSpecial ? (
                 <section aria-labelledby="mk-ozel"
-                    className={cn(box, terracottaBg, 'flex min-w-0 flex-[1_1_360px] flex-col justify-between gap-7 px-5 py-9 text-[var(--site-on-paper)] [--site-accent-text:currentColor] sm:p-10 md:p-11')}>
+                    className={cn(box, terracottaBg, 'flex min-w-0 flex-[1_1_360px] flex-col justify-between gap-7 px-5 py-9 text-[var(--site-on-terracotta)] [--site-accent-text:currentColor] sm:p-10 md:p-11')}>
                     <div className="flex flex-col gap-3.5">
                         {/* Hardal yazı kiremitte 3.7:1 kalıyor: etiket krem, hardal yalnız yanındaki çizgide. */}
                         <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em]">

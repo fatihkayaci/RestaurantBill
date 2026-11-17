@@ -3,9 +3,12 @@ import { ArrowLeft, ArrowRight, Check, ImagePlus, Plus, Trash2 } from 'lucide-re
 import type { SiteDayHours, SiteMilestone, SiteReview, SiteValue } from '@/features/customerSite/types';
 import { inputClass, labelClass } from '@/lib/formStyles';
 import { cn } from '@/lib/utils';
-import { SITE_THEMES, DEFAULT_THEME, resolveTheme } from '@/pages/public/site/siteTheme';
+import {
+    DEFAULT_DESIGN, DEFAULT_THEME, SITE_DESIGNS, SITE_DESIGN_KEYS, SITE_FONTS_HREF, designThemes, resolveDesign, resolveSiteColors, resolveTheme,
+    type SiteDesignKey,
+} from '@/pages/public/site/siteTheme';
 
-// "Restoran sitesi" ayar sayfasının düzenleyicileri: tema, haftalık saat, mekân galerisi ve kısa liste alanları.
+// "Restoran sitesi" ayar sayfasının düzenleyicileri: tasarım, tema, haftalık saat, mekân galerisi ve kısa liste alanları.
 
 const smallButton = 'inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50';
 
@@ -34,31 +37,103 @@ export function Panel({ id, title, description, children }: { id?: string; title
     );
 }
 
-// ── Tema ─────────────────────────────────────────────────────────────────────────────────────────
+// ── Tasarım ve tema ──────────────────────────────────────────────────────────────────────────────
 
-// Vurgu seçenekleri (zemin her temada aynı kum; tema kapak rengini ve vurguyu seçer, özel renk yalnız vurguyu değiştirir).
-const ACCENT_OPTIONS = ['#DC5B2F', '#EBB03F', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#24180F', '#9AA5B1'];
-
-/** Hazır temalar (zemin ortak; tema ana sayfa kapağının rengini ve vurguyu seçer) ve isteğe bağlı özel vurgu rengi. */
-export function ThemePicker({ theme, accent, onTheme, onAccent }: {
-    theme: string; accent: string; onTheme: (key: string) => void; onAccent: (hex: string) => void;
+/**
+ * Sitenin tasarımı ("Renkli ve sıcak" / "Sade"): her kart tasarımın küçük bir maketini o anki tema ve vurgu rengiyle
+ * çizer (sayfa zemini, kapak, menü kutusu, alt bilgi, başlık yazı tipi). Renkli varsayılandır ve "" olarak kaydedilir.
+ */
+export function DesignPicker({ design, theme, accent, onDesign }: {
+    design: string; theme: string; accent: string; onDesign: (key: string) => void;
 }) {
-    const selected = resolveTheme(theme).key;
-    const current = resolveTheme(theme);
+    const selected = resolveDesign(design);
+    return (
+        <div role="radiogroup" aria-label="Site tasarımı" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Kartlardaki yazı örneği için iki tasarımın serif'i (tarayıcı yalnız kullanılanı indirir). */}
+            <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
+            {SITE_DESIGN_KEYS.map(key => {
+                const d = SITE_DESIGNS[key];
+                const P = d.palette;
+                const c = resolveSiteColors(accent, theme, key);
+                const t = c.theme;
+                const on = selected === key;
+                const sade = key === 'sade';
+                return (
+                    <button key={key} type="button" role="radio" aria-checked={on}
+                        onClick={() => onDesign(key === DEFAULT_DESIGN ? '' : key)}
+                        className={cn('flex flex-col gap-2.5 rounded-xl border-2 p-2.5 text-left transition-colors',
+                            on ? 'border-foreground' : 'border-border hover:border-foreground/40')}>
+                        {/* Küçük maket: üst menü, kapak (başlık + düğme), menü kutusu ve alt bilgi şeridi. */}
+                        <span aria-hidden="true" className="flex h-[148px] flex-col gap-1.5 overflow-hidden rounded-lg p-2" style={{ background: P.bg }}>
+                            <span className="flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2" style={{ background: sade ? P.card : 'transparent' }}>
+                                {!sade && <span className="h-3.5 w-3.5 rounded-full" style={{ background: t.hero }} />}
+                                <span className="h-1.5 w-10 rounded-full" style={{ background: P.fg }} />
+                                <span className="ml-auto h-3 w-9 rounded-full" style={{ background: c.accent }} />
+                            </span>
+                            <span className="flex min-h-0 flex-1 gap-1.5">
+                                <span className="flex flex-[3] flex-col justify-between rounded-md p-2"
+                                    style={{ background: t.cover ?? t.hero, color: P.onHero, border: sade ? `1px solid ${t.border}` : undefined }}>
+                                    <span className="text-[22px] leading-[0.95]" style={{ fontFamily: P.serif, fontWeight: sade ? 400 : 800, letterSpacing: P.serifTracking }}>
+                                        Ocak<br /><em style={{ color: c.heroAccent, fontWeight: sade ? 400 : 600 }}>Kadıköy</em>
+                                    </span>
+                                    <span className="h-3.5 w-14 rounded-full" style={{ background: P.pop }} />
+                                </span>
+                                <span className="flex flex-[2] flex-col gap-1.5">
+                                    <span className="flex flex-1 flex-col justify-center gap-1 rounded-md px-1.5"
+                                        style={{ background: t.menuBox, border: sade ? `1px solid ${t.border}` : undefined }}>
+                                        <span className="h-1.5 w-3/4 rounded-full" style={{ background: P.onMenuBox }} />
+                                        <span className="h-3 rounded" style={{ background: P.menuCard }} />
+                                    </span>
+                                    <span className="h-4 rounded" style={{ background: P.mustard }} />
+                                </span>
+                            </span>
+                            <span className="h-3 shrink-0 rounded" style={{ background: P.footer }} />
+                        </span>
+                        <span className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-foreground">{d.label}</span>
+                            {on && <Check className="h-4 w-4 text-foreground" aria-hidden="true" />}
+                        </span>
+                        <span className="text-xs leading-snug text-muted-foreground">{d.description}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+// Vurgu seçenekleri (zemin her temada aynı; özel renk yalnız vurguyu değiştirir).
+const ACCENT_OPTIONS: Record<SiteDesignKey, string[]> = {
+    renkli: ['#DC5B2F', '#EBB03F', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#24180F', '#9AA5B1'],
+    sade: ['#E8B04B', '#E2683C', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#2A2622', '#9AA5B1'],
+};
+
+/** Seçili tasarımın hazır temaları ve isteğe bağlı özel vurgu rengi. Renkli: tema kapak rengini ve vurguyu seçer;
+ *  Sade: yalnız vurguyu (kapak beyaz kutu). */
+export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
+    design?: string; theme: string; accent: string; onTheme: (key: string) => void; onAccent: (hex: string) => void;
+}) {
+    const key = resolveDesign(design);
+    const current = resolveTheme(theme, key);
+    const selected = current.key;
     return (
         <div className="space-y-4">
+            <p className="m-0 text-sm text-muted-foreground">
+                {key === 'sade' ? 'Sade tasarımda tema vurgu rengini seçer; kapak ve kutular beyaz kalır.' : 'Renkli tasarımda tema ana sayfa kapağının rengini ve vurguyu seçer.'}
+            </p>
             <div role="radiogroup" aria-label="Site teması" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.values(SITE_THEMES).map(t => {
+                {designThemes(key).map(t => {
                     const on = selected === t.key;
+                    const c = resolveSiteColors(null, t.key, key);
+                    const cover = t.cover ?? t.hero;
                     return (
                         <button key={t.key} type="button" role="radio" aria-checked={on}
                             onClick={() => onTheme(t.key === DEFAULT_THEME ? '' : t.key)}
                             className={cn('flex flex-col gap-2 rounded-xl border-2 p-2.5 text-left transition-colors', on ? 'border-foreground' : 'border-border hover:border-foreground/40')}>
-                            {/* Küçük önizleme: zemin, kart, yazı, düğme */}
+                            {/* Küçük önizleme: zemin, kapak (yazı ve vurgu yazısı), düğme */}
                             <span aria-hidden="true" className="flex h-16 items-end gap-1.5 rounded-lg p-2" style={{ background: t.bg }}>
-                                <span className="flex h-full flex-1 flex-col justify-center gap-1 rounded-md px-2" style={{ background: t.hero }}>
-                                    <span className="h-1.5 w-3/4 rounded-full" style={{ background: t.card }} />
-                                    <span className="h-1.5 w-1/2 rounded-full bg-[#F2C25E]" />
+                                <span className="flex h-full flex-1 flex-col justify-center gap-1 rounded-md px-2" style={{ background: cover, border: `1px solid ${t.border}` }}>
+                                    <span className="h-1.5 w-3/4 rounded-full" style={{ background: c.palette.onHero }} />
+                                    <span className="h-1.5 w-1/2 rounded-full" style={{ background: c.heroAccent }} />
                                 </span>
                                 <span className="h-6 w-12 rounded-full" style={{ background: t.accent }} />
                             </span>
@@ -79,7 +154,7 @@ export function ThemePicker({ theme, accent, onTheme, onAccent }: {
                         <span aria-hidden="true" className="h-6 w-6 rounded-full" style={{ background: current.accent }} />
                         Tema rengi
                     </button>
-                    {ACCENT_OPTIONS.filter(c => c.toUpperCase() !== current.accent.toUpperCase()).map(color => {
+                    {ACCENT_OPTIONS[key].filter(c => c.toUpperCase() !== current.accent.toUpperCase()).map(color => {
                         const on = accent.toUpperCase() === color.toUpperCase();
                         return (
                             <button key={color} type="button" role="radio" aria-checked={on} aria-label={color} onClick={() => onAccent(color)}

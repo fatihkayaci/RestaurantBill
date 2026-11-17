@@ -1,18 +1,21 @@
 import type { PublicSite } from '@/features/customerSite/types';
 import { cn } from '@/lib/utils';
 import { fullAddress, hoursText } from './useSite';
+import { SITE_FONTS_HREF } from './siteTheme';
 
 // Restoran sitesinin ortak parçaları: yazı tipleri, sınıf dizileri, hareket CSS'i ve hangi sayfanın gösterileceği
 // (restoranın girmediği veri uydurulmaz). Bütün renkler temanın CSS değişkenlerinden (siteTheme.ts → siteRootStyle).
 
-export const FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500..900;1,9..144,500..900&family=Manrope:wght@400;500;600;700;800&display=swap';
-/** Başlık yazı tipi (Renkli: Fraunces, kalın, sıkı aralık). Adı geçmişten kalma: artık serif ama "ince" değil. */
-export const serif = 'font-[family-name:Fraunces,Georgia,serif] font-bold tracking-[-0.02em]';
+/** İki tasarımın yazı tipleri birlikte (tasarımı bilmeyen sayfalar için; bilen sayfa `siteFontsHref(design)` kullanır). */
+export const FONTS_HREF = SITE_FONTS_HREF;
+/** Başlık yazı tipi: tasarımın serif'i (`--site-serif`; Renkli: Fraunces kalın, sıkı aralık; Sade: Instrument Serif,
+ *  tek ağırlık — kök stil sahte kalını kapatır). */
+export const serif = 'font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] font-bold tracking-[var(--site-serif-tracking,-0.02em)]';
 export const sans = "font-[family-name:Manrope,system-ui,sans-serif]";
 /** Bölüm üst satırı (Tema 2): küçük, aralıklı büyük harf, vurgu yazısı renginde. */
 export const eyebrow = 'text-xs font-bold uppercase tracking-[0.28em] text-[var(--site-accent-text)]';
 /** Tema 2 bölüm başlığı (serif, büyük); italik parça vurgu yazısı renginde (.rb-site kuralı). */
-export const sectionTitle = "font-[family-name:Fraunces,Georgia,serif] font-bold tracking-[-0.02em] m-0 text-[48px] leading-[0.95] md:text-[clamp(48px,5.4vw,80px)]";
+export const sectionTitle = "font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] font-bold tracking-[var(--site-serif-tracking,-0.02em)] m-0 text-[48px] leading-[0.95] md:text-[clamp(48px,5.4vw,80px)]";
 /** Bölümlerin ortak genişliği ve kenar boşluğu (tasarım: 1320 px, 32 px; telefonda 16 px). */
 export const sectionWrap = 'mx-auto w-full max-w-[1320px] px-4 sm:px-8';
 export const line = 'border-[var(--site-line)]';

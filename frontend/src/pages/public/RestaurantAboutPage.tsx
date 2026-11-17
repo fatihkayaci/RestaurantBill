@@ -21,7 +21,8 @@ import { SITE_LIMITS, editTarget, useSiteEdit } from './site/siteEditContext';
 
 const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[32px]';
 /** Koyu zeminlerde üst satır: açık hardal (koyu kiremit ve zeytin üstünde 4.5:1). */
-const darkLabel = 'text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-mustard-text)]';
+/** Kapak ve usta kutusundaki üst satır (Renkli: açık hardal; Sade: vurgu yazısı). */
+const darkLabel = 'text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-cover-accent)]';
 const label = 'text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-accent-text)]';
 
 interface Stat { key: string; value: string; label: string; wrap?: (node: ReactNode) => ReactNode }
@@ -87,18 +88,18 @@ function AboutHero({ site }: { site: PublicSite }) {
     const [main, accent] = c.storyTitle ? splitAccent(c.storyTitle) : fallback;
     return (
         <section aria-labelledby="hk-baslik"
-            className="relative flex min-h-[440px] overflow-hidden rounded-[24px] bg-[var(--site-hero-bg)] text-[var(--site-on-paper)] md:min-h-[560px] md:rounded-[32px]">
+            className="relative flex min-h-[440px] overflow-hidden rounded-[24px] bg-[var(--site-cover-bg)] text-[var(--site-on-cover)] md:min-h-[560px] md:rounded-[32px]">
             <EditableBlock target="photo:hero-hakkimizda" label="Hakkımızda kapağı" chip="Fotoğrafı değiştir" className="absolute inset-0">
                 {photo ? (
                     <>
                         <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_45%]" />
-                        <span aria-hidden="true" className="absolute inset-0 bg-[color-mix(in_srgb,var(--site-hero-bg)_86%,transparent)] md:bg-transparent md:bg-[linear-gradient(90deg,color-mix(in_srgb,var(--site-hero-bg)_97%,transparent)_0%,color-mix(in_srgb,var(--site-hero-bg)_90%,transparent)_32%,color-mix(in_srgb,var(--site-hero-bg)_50%,transparent)_50%,transparent_68%)]" />
+                        <span aria-hidden="true" className="absolute inset-0 bg-[color-mix(in_srgb,var(--site-cover-bg)_86%,transparent)] md:bg-transparent md:bg-[linear-gradient(90deg,color-mix(in_srgb,var(--site-cover-bg)_97%,transparent)_0%,color-mix(in_srgb,var(--site-cover-bg)_90%,transparent)_32%,color-mix(in_srgb,var(--site-cover-bg)_50%,transparent)_50%,transparent_68%)]" />
                         {photo.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                     </>
                 ) : (
                     <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
                         <span className={cn(serif, 'absolute right-[8%] top-1/2 -translate-y-1/2 text-[260px] font-semibold italic leading-[0.7] text-[color-mix(in_srgb,var(--site-mustard)_22%,transparent)] md:text-[520px]')}>“</span>
-                        <span className="absolute -right-40 top-1/2 h-[700px] w-[700px] -translate-y-1/2 rounded-full border border-[rgba(251,244,232,0.12)]" />
+                        <span className="absolute -right-40 top-1/2 h-[700px] w-[700px] -translate-y-1/2 rounded-full border border-[color-mix(in_srgb,var(--site-on-cover)_12%,transparent)]" />
                         <span className="absolute -right-10 top-1/2 h-[460px] w-[460px] -translate-y-1/2 rounded-full border border-[var(--site-accent-line)]" />
                     </span>
                 )}
@@ -108,9 +109,9 @@ function AboutHero({ site }: { site: PublicSite }) {
                     </span>
                 )}
             </EditableBlock>
-            <div className="pointer-events-none relative z-[1] flex max-w-[760px] flex-col justify-end gap-[22px] px-5 py-10 sm:px-10 md:px-14 md:py-16 [--site-accent-text:var(--site-mustard-text)] [&_[data-edit-text]]:pointer-events-auto">
+            <div className="pointer-events-none relative z-[1] flex max-w-[760px] flex-col justify-end gap-[22px] px-5 py-10 sm:px-10 md:px-14 md:py-16 [--site-accent-text:var(--site-cover-accent)] [&_[data-edit-text]]:pointer-events-auto">
                 <span className={cn('inline-flex items-center gap-2.5', darkLabel)}>
-                    <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-mustard-text)]" />Hikâyemiz
+                    <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-cover-accent)]" />Hikâyemiz
                 </span>
                 {edit ? (
                     <EditableText as="h1" id="hk-baslik" field="storyTitle" value={c.storyTitle} fallback={[main, accent].filter(Boolean).join(' ')} placeholder="Slogan yazın"
@@ -122,7 +123,7 @@ function AboutHero({ site }: { site: PublicSite }) {
                 )}
                 {(c.tagline || showEmpty) && (
                     <EditableText as="p" field="tagline" value={c.tagline} placeholder="Kısa giriş yazın"
-                        className="m-0 max-w-[520px] text-base leading-[1.65] text-[rgba(251,244,232,0.9)] md:text-lg" />
+                        className="m-0 max-w-[520px] text-base leading-[1.65] text-[color-mix(in_srgb,var(--site-on-cover)_90%,transparent)] md:text-lg" />
                 )}
             </div>
         </section>
@@ -158,7 +159,7 @@ function StoryPaper({ site }: { site: PublicSite }) {
                     {hasStory ? (
                         <EditableText as="p" field="about" value={c.about} multiline placeholder="Hikâyenizi yazın: nasıl başladınız, neyi farklı yapıyorsunuz."
                             className={cn('m-0 whitespace-pre-line',
-                                c.about && "first-letter:float-left first-letter:pr-3 first-letter:pt-1.5 first-letter:font-[family-name:Fraunces,Georgia,serif] first-letter:font-bold first-letter:text-[80px] first-letter:leading-[0.78] first-letter:text-[var(--site-accent-text)] md:first-letter:text-[96px]")} />
+                                c.about && "first-letter:float-left first-letter:pr-3 first-letter:pt-1.5 first-letter:font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] first-letter:font-bold first-letter:text-[80px] first-letter:leading-[0.78] first-letter:text-[var(--site-accent-text)] md:first-letter:text-[96px]")} />
                     ) : (
                         <>
                             {place && <p className="m-0">{place}.</p>}
@@ -230,7 +231,7 @@ function FounderAndValues({ site }: { site: PublicSite }) {
         <div className="flex flex-wrap gap-4">
             {showFounder && (
                 <section aria-labelledby="hk-usta"
-                    className="relative flex min-h-[420px] min-w-0 flex-[1_1_460px] flex-col justify-end gap-4 overflow-hidden rounded-[24px] bg-[var(--site-menu-box)] p-6 text-[var(--site-on-paper)] sm:p-10 md:min-h-[520px] md:rounded-[32px] [--site-accent-text:var(--site-mustard-text)]">
+                    className="relative flex min-h-[420px] min-w-0 flex-[1_1_460px] flex-col justify-end gap-4 overflow-hidden rounded-[24px] bg-[var(--site-menu-box)] p-6 text-[var(--site-on-menu-box)] sm:p-10 md:min-h-[520px] md:rounded-[32px] [--site-accent-text:var(--site-cover-accent)]">
                     {c.founderPhotoUrl ? (
                         <>
                             <img src={c.founderPhotoUrl} alt={c.founderName} {...photoT} className={cn('absolute inset-0 h-full w-full object-cover', photoT.className)} />
@@ -239,7 +240,7 @@ function FounderAndValues({ site }: { site: PublicSite }) {
                     ) : edit ? (
                         <div className="absolute left-6 top-6 w-[180px] sm:left-10 sm:top-10"><EmptySlot target="photo:founder" title="+ Portre ekle" className="bg-[var(--site-card)]" /></div>
                     ) : c.founderName && (
-                        <span aria-hidden="true" className={cn(serif, 'absolute left-6 top-6 flex h-[120px] w-[120px] items-center justify-center rounded-full border border-[rgba(246,241,233,0.25)] text-[56px] font-semibold text-[var(--site-mustard-text)] sm:left-10 sm:top-10 sm:h-[150px] sm:w-[150px] sm:text-[64px]')}>
+                        <span aria-hidden="true" className={cn(serif, 'absolute left-6 top-6 flex h-[120px] w-[120px] items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--site-on-menu-box)_25%,transparent)] text-[56px] font-semibold text-[var(--site-cover-accent)] sm:left-10 sm:top-10 sm:h-[150px] sm:w-[150px] sm:text-[64px]')}>
                             {initials(c.founderName)}
                         </span>
                     )}
@@ -248,7 +249,7 @@ function FounderAndValues({ site }: { site: PublicSite }) {
                         className={cn(serif, 'relative m-0 break-words text-[44px] leading-none md:text-[52px]')} />
                     {(c.founderTitle || showEmpty) && (
                         <EditableText as="p" field="founderTitle" value={c.founderTitle} placeholder="Unvanı"
-                            className="relative m-0 max-w-[440px] text-base leading-[1.7] text-[#E3D8C8]" />
+                            className="relative m-0 max-w-[440px] text-base leading-[1.7] text-[var(--site-on-menu-box-sub)]" />
                     )}
                 </section>
             )}

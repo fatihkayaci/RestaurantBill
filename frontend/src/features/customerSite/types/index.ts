@@ -31,8 +31,10 @@ export interface BranchSite {
     instagramUrl: string;
     /** "#RRGGBB" ya da boş */
     accentColor: string;
-    /** Hazır renk teması (SITE_THEMES anahtarı; Tema 2'de yalnız vurgu rengi); boş = altın (varsayılan). */
+    /** Hazır renk teması (tasarımın temalarından biri; Renkli'de vurgu + kapak, Sade'de yalnız vurgu); boş = varsayılan. */
     theme: string;
+    /** Sitenin tasarımı ("renkli" | "sade"); boş = renkli. Eski API yanıtında yoksa da renkli. */
+    design?: string;
     /** Mekân fotoğrafları, sitedeki sırayla (en çok 12). */
     galleryImageUrls: string[];
     /** Boş: "her gün aynı" (opensAt/closesAt). Doluysa Pazartesi → Pazar 7 gün. */

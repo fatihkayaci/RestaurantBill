@@ -189,7 +189,7 @@ function FaqSection({ site }: { site: PublicSite }) {
                                 className="flex w-full items-center justify-between gap-4 bg-transparent py-5 text-left text-[var(--site-text)] md:py-6">
                                 <span className={cn(serif, 'text-[22px] font-semibold leading-[1.15] md:text-[28px]')}>{f.q}</span>
                                 <span aria-hidden="true" className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-2xl transition-transform duration-200 motion-reduce:transition-none',
-                                    isOpen ? 'rotate-45 bg-[var(--site-terracotta,#A9401F)] text-[#FBF4E8]' : 'border border-[rgba(36,24,15,0.18)]')}>+</span>
+                                    isOpen ? 'rotate-45 bg-[var(--site-terracotta,#A9401F)] text-[var(--site-on-terracotta,#FBF4E8)]' : 'border border-[rgba(36,24,15,0.18)]')}>+</span>
                             </button>
                             {isOpen && <p id={id} className="m-0 pb-6 pr-0 text-base leading-[1.7] text-[#5A4A3C] md:pr-16">{f.a}</p>}
                         </div>

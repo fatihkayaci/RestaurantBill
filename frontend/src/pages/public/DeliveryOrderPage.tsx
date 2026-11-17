@@ -26,7 +26,7 @@ import type { PublicSite } from '@/features/customerSite/types';
 import { GlassStatusPill } from './site/SiteCards';
 import { FlowSiteHeader } from './site/SiteFrame';
 import { FONTS_HREF, serif, siteCardDark } from './site/siteParts';
-import { SITE_FONTS_HREF, headingFont, telHref } from './site/siteTheme';
+import { SITE_FONTS_HREF, headingFont, resolveDesign, telHref } from './site/siteTheme';
 import { normalizeSite } from './site/useSite';
 
 const QUOTE_DEBOUNCE_MS = 400;
@@ -75,10 +75,13 @@ export default function DeliveryOrderPage() {
     // Sitenin bilgisi: üst menü (FlowSiteHeader), tema, kapak. Alınamazsa menü yerine kapakta geri bağlantısı çizilir.
     const [siteData, setSiteData] = useState<PublicSite | null>(null);
     const [siteFailed, setSiteFailed] = useState(false);
+    // Sade tasarımda menü kutusu beyaz: sağdaki sepet özeti krem yazılı zeytin kutu değil, beyaz kutu olur.
+    const sadeDesign = resolveDesign(siteData?.site.design) === 'sade';
     const site = siteData && {
         name: siteData.companyName || siteData.branchName,
         accent: siteData.site.accentColor,
         theme: siteData.site.theme,
+        design: siteData.site.design,
         cover: siteData.site.coverImageUrl,
         place: [siteData.district, siteData.city].filter(Boolean).join(', '),
     };
@@ -237,7 +240,7 @@ export default function DeliveryOrderPage() {
     // Üst menü koyu kapağın üstünde durur; kapağı olmayan hata ekranında çizilmez (orada "Ana sayfa" bağlantısı var).
     const nav = !siteFailed;
     const root = (children: ReactNode, withNav = true) => (
-        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme })} className="min-h-screen overflow-x-clip bg-[var(--site-bg)]">
+        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme, design: site?.design })} className="min-h-screen overflow-x-clip bg-[var(--site-bg)]">
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
             <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
             {withNav && siteData && <FlowSiteHeader site={siteData} current="siparis" />}
@@ -400,7 +403,8 @@ export default function DeliveryOrderPage() {
 
                 {/* Masaüstü: sağda yapışkan sepet. Telefonda yerine alttaki sepet çubuğu ve pencere. */}
                 {data.state !== 'disabled' && (
-                    <aside aria-label="Sepetiniz" className={cn(summaryTone, 'sticky top-4 mt-0 hidden max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[32px] bg-[var(--site-menu-box)] text-[var(--site-text)] lg:flex')}>
+                    <aside aria-label="Sepetiniz" className={cn(sadeDesign ? 'border border-[var(--site-border)] bg-[var(--site-card)]' : cn(summaryTone, 'bg-[var(--site-menu-box)]'),
+                        'sticky top-4 mt-0 hidden max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[32px] text-[var(--site-text)] lg:flex')}>
                         <div className="flex items-center justify-between gap-3 px-7 pb-3 pt-7">
                             <h2 className={cn(headingFont, 'text-[38px] leading-none')}>Sepetiniz</h2>
                             {count > 0 && <span className="rounded-full bg-[var(--site-mustard)] px-2.5 py-1 text-sm font-extrabold tabular-nums text-[#24180F]">{count} ürün</span>}

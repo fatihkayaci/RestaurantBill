@@ -86,7 +86,7 @@ export default function ContactForm({ branchId, phone }: { branchId: string; pho
                         return (
                             <label key={option.value}
                                 className={cn('flex h-11 cursor-pointer items-center rounded-full border px-[18px] text-sm font-bold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--site-text)] has-[:focus-visible]:ring-offset-2',
-                                    on ? cn('border-[#A9401F] text-[var(--site-on-paper)]', terracottaBg) : 'border-[rgba(36,24,15,0.18)] text-[var(--site-text)] hover:border-[var(--site-text)]')}>
+                                    on ? cn('border-[var(--site-terracotta)] text-[var(--site-on-terracotta)]', terracottaBg) : 'border-[rgba(36,24,15,0.18)] text-[var(--site-text)] hover:border-[var(--site-text)]')}>
                                 <input type="radio" name="ilt-tur" value={option.value} checked={on} onChange={() => setType(option.value)} className="sr-only" />
                                 {option.label}
                             </label>

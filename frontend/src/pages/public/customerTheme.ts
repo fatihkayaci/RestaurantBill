@@ -9,10 +9,12 @@ export interface CustomerBrand {
     accentColor?: string | null;
     /** Hazır renk teması (SITE_THEMES anahtarı); boş = varsayılan. */
     theme?: string | null;
+    /** Sitenin tasarımı ("renkli" | "sade"); boş = renkli. */
+    design?: string | null;
 }
 
 export function customerRootStyle(brand?: CustomerBrand | null): CSSProperties {
-    return siteRootStyle(brand?.accentColor, brand?.theme);
+    return siteRootStyle(brand?.accentColor, brand?.theme, brand?.design);
 }
 
 /** Restoranın açılış saati bugün mü yarın mı: "Bugün 08:00'de" / "Yarın 08:00'de" (telefonun saatine göre). */

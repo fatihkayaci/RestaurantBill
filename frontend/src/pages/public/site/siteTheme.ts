@@ -1,14 +1,44 @@
 import type { CSSProperties } from 'react';
 
-// Restoranın müşteri sitesinin görünümü (tasarım: "Renkli ve sıcak"). Renkler tek yerde CSS değişkeni olarak tanımlı;
-// site sayfaları, rezervasyon akışı, masa QR sayfası ve paket sipariş sayfaları bu değişkenleri kullanır.
-// Zemin her temada aynı sıcak kum (#EFE2CC), kutular krem (#FBF4E8), yazı koyu kahve (#24180F). Admin "Restoran sitesi"
-// ayarında seçilen tema VURGU rengini (düğme, + düğmesi, vurgu yazısı) ve ana sayfa kapağının ZEMİN rengini belirler;
-// boş tema = tasarımın kiremit kapağı ve turuncu vurgusu. İsterse vurgu rengini ayrıca değiştirir (accentColor): düğme
-// yazısı ve açık zemindeki vurgu yazısı okunurluk (WCAG AA, 4.5:1) için otomatik ayarlanır.
+// Restoranın müşteri sitesinin görünümü. Restoran önce TASARIMI ("Renkli ve sıcak" ya da "Sade"), sonra o tasarımın
+// içinde RENGİ (hazır tema ya da özel vurgu rengi) seçer. Her ikisi de tek yerde, CSS değişkeni olarak tanımlıdır:
+// site sayfaları, rezervasyon akışı, masa QR sayfası ve paket sipariş sayfaları yalnız bu değişkenleri kullanır.
+//
+// - Renkli ve sıcak (varsayılan): kum zemin #EFE2CC, krem kutular #FBF4E8, Fraunces; tema VURGU rengini ve ana sayfa
+//   kapağının ZEMİNİNİ seçer; zeytin/hardal/kiremit kutular, zeytin alt bilgi.
+// - Sade ("Tema 2 · Açık"): krem zemin #F6F1E9, beyaz kutular, Instrument Serif; tema yalnız VURGU rengini seçer;
+//   kapak ve menü kutusu beyaz, alt bilgi açık kum (#E6DBC9), koyu kutular mürekkep rengi.
+//
+// Renkli kutuların (kapak, menü kutusu, hikâye, zeytin, kiremit, hardal, alt bilgi) her biri zemin + üstündeki yazı
+// değişkeniyle gelir (`--site-cover-bg` / `--site-on-cover` …). Sayfa bu çiftleri kullanır; tasarım değerlerini değiştirir.
+// İki kapak değişkeni var:
+// - `--site-cover-bg` (+ `--site-cover-deep`, `--site-on-cover`, `--site-cover-accent`): site sayfalarının kapağı
+//   (ana sayfa, Menü, Hakkımızda). Renkli: temanın koyu kapak rengi, krem yazı; Sade: beyaz kutu, koyu yazı.
+// - `--site-hero-bg` (+ `--site-hero-deep`): HER ZAMAN koyu kapak, üstünde `--site-on-paper` krem yazı (masa QR sayfası,
+//   akış sayfaları). Renkli: temanın kapak rengi (= cover); Sade: mürekkep rengi.
+// Özel vurgu renginde düğme yazısı ve açık zemindeki vurgu yazısı okunurluk (WCAG AA, 4.5:1) için otomatik ayarlanır.
 
-export const SITE_FONTS_HREF =
-    'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500..900;1,9..144,500..900&family=Manrope:wght@400;500;600;700;800&display=swap';
+/** Sitenin tasarımları (backend: SiteContent.DesignKeys). Boş/bilinmeyen = varsayılan (renkli). */
+export const SITE_DESIGN_KEYS = ['renkli', 'sade'] as const;
+export type SiteDesignKey = (typeof SITE_DESIGN_KEYS)[number];
+export const DEFAULT_DESIGN: SiteDesignKey = 'renkli';
+
+export function resolveDesign(key?: string | null): SiteDesignKey {
+    return (SITE_DESIGN_KEYS as readonly string[]).includes(key ?? '') ? key as SiteDesignKey : DEFAULT_DESIGN;
+}
+
+const MANROPE = 'family=Manrope:wght@400;500;600;700;800';
+const FRAUNCES = 'family=Fraunces:ital,opsz,wght@0,9..144,500..900;1,9..144,500..900';
+const INSTRUMENT = 'family=Instrument+Serif:ital@0;1';
+const fontsUrl = (...families: string[]) => `https://fonts.googleapis.com/css2?${families.join('&')}&display=swap`;
+
+/** Tasarımın yazı tipleri (başlık serif'i + Manrope). */
+export function siteFontsHref(design?: string | null): string {
+    return resolveDesign(design) === 'sade' ? fontsUrl(INSTRUMENT, MANROPE) : fontsUrl(FRAUNCES, MANROPE);
+}
+
+/** Tasarımı bilmeyen sayfalar için iki tasarımın yazı tipleri birlikte (tarayıcı yalnız kullanılan dosyayı indirir). */
+export const SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, MANROPE);
 
 export interface SiteThemePreset {
     key: string;
@@ -25,17 +55,50 @@ export interface SiteThemePreset {
     /** Düğme zemini (yazısı onAccent) */
     accent: string;
     onAccent: string;
-    /** Açık zeminde vurgu yazısı (italik başlık parçası, etiket, rozet); #EFE2CC ve #FBF4E8 üstünde en az 4.5:1 */
+    /** Açık zeminde vurgu yazısı (italik başlık parçası, etiket, rozet); zemin ve kutular üstünde en az 4.5:1 */
     accentText: string;
-    /** Ana sayfa kapağının zemini ve alt şeridi (üstünde krem yazı ve açık hardal vurgu, en az 4.5:1). */
+    /** Koyu kapak zemini ve alt şeridi (üstünde krem yazı; masa QR ve akış sayfaları). */
     hero: string;
     heroDeep: string;
-    /** Ana sayfadaki menü kutusunun zemini (kapakla aynı renk olmasın diye). */
+    /** Site sayfalarının kapağı (ana sayfa, Menü, Hakkımızda); yoksa `hero`. Sade: beyaz kutu (üstünde koyu yazı). */
+    cover?: string;
+    coverDeep?: string;
+    /** Ana sayfadaki menü kutusunun zemini (Renkli: kapakla aynı renk olmasın diye; Sade: beyaz kutu). */
     menuBox: string;
 }
 
-/** "Renkli ve sıcak" paleti (bütün temalarda ortak). */
-export const SITE_PALETTE = {
+/** Tasarımın paleti (bütün temalarda ortak). `null` olan renkler temanın vurgusundan hesaplanır. */
+export interface SitePalette {
+    bg: string; fg: string; alt: string; card: string; text2: string; muted: string; wordmark: string; placeholder: string;
+    rgb: string; heroOverlay: string; disabled: string;
+    /** Koyu panel (sepet, çağrı kartı, akış sayfalarının kapağı) */
+    paper: string; onPaper: string; onPaperSub: string; paperRgb: string;
+    /** Hardal kutu / rozet (üstünde koyu yazı). */
+    mustard: string;
+    /** Koyu zeminlerde (koyu panel, hikâye, zeytin) vurgu yazısı; null = vurgunun koyu zemin için açılmışı. */
+    mustardText: string | null;
+    /** Kapak ve menü kutusunun üstündeki yazı, ikincil yazı ve vurgu yazısı (null = açık zemindeki vurgu yazısı). */
+    onHero: string; onMenuBox: string; onMenuBoxSub: string; heroAccent: string | null;
+    /** Menü kutusundaki ürün kartları. */
+    menuCard: string;
+    /** Kapak, menü kutusu ve alt bilgideki açık/kapalı noktası. */
+    dotOk: string; dotBad: string;
+    /** Kapak ve menü kutusundaki ana düğme (Renkli: hardal; Sade: koyu). */
+    pop: string; onPop: string;
+    story: string;
+    olive: string;
+    /** Kiremit kutu ("Özel günler", seçili konu); null = temanın vurgusu (yazısı onAccent). */
+    terracotta: string | null; onTerracotta: string | null;
+    /** Açık zeminde kiremit yazı (seçili işaret, numara); null = vurgu yazısı. */
+    terracottaText: string | null;
+    /** Kiremit kutuda ikincil vurgu yazısı (bilet kartındaki gün); null = kutunun yazısı. */
+    onTerracottaSoft: string | null;
+    footer: string; onFooter: string; footerMuted: string; footerLabel: string | null;
+    footerMap: string; footerRoad: string; footerWater: string;
+    serif: string; serifTracking: string;
+}
+
+const RENKLI: SitePalette = {
     bg: '#EFE2CC',
     fg: '#24180F',
     alt: '#F3E7D3',
@@ -46,70 +109,162 @@ export const SITE_PALETTE = {
     placeholder: '#E6D5B8',
     rgb: '36,24,15',
     heroOverlay: 'rgba(251,244,232,0.82)',
-    mustard: '#EBB03F',
-    /** Koyu zeminlerde (kapak, hikâye) hardal yazı: #EBB03F'nin biraz açığı, koyu kiremit üstünde de 4.5:1. */
-    mustardText: '#F2C25E',
-    terracotta: '#A9401F',
-    olive: '#3E4A33',
-    story: '#6E2A15',
-    // Koyu panel (sepet, çağrı kartı)
+    disabled: '#A08F7C',
     paper: '#24180F',
     onPaper: '#FBF4E8',
     onPaperSub: '#CBBFAE',
-} as const;
+    paperRgb: '251,244,232',
+    mustard: '#EBB03F',
+    // #EBB03F'nin biraz açığı: koyu kiremit üstünde de 4.5:1.
+    mustardText: '#F2C25E',
+    onHero: '#FBF4E8',
+    onMenuBox: '#F3E7D3',
+    onMenuBoxSub: '#D4CBB6',
+    heroAccent: '#F2C25E',
+    menuCard: '#FBF4E8',
+    dotOk: '#7BE0A2',
+    dotBad: '#F4A28C',
+    pop: '#EBB03F',
+    onPop: '#24180F',
+    story: '#6E2A15',
+    olive: '#3E4A33',
+    terracotta: '#A9401F',
+    onTerracotta: '#FBF4E8',
+    terracottaText: '#A9401F',
+    onTerracottaSoft: '#F8E3B6',
+    footer: '#3E4A33',
+    onFooter: '#F3E7D3',
+    footerMuted: '#D4CBB6',
+    footerLabel: '#EBB03F',
+    footerMap: '#34402B',
+    footerRoad: '#4C5A40',
+    footerWater: '#2E4744',
+    serif: 'Fraunces, Georgia, serif',
+    serifTracking: '-0.02em',
+};
 
-const P = SITE_PALETTE;
-const INK = P.fg;
-const base = { bg: P.bg, card: P.card, border: `rgba(${P.rgb},0.12)`, text: P.fg, muted: P.muted };
-/** Turuncu vurgu (tasarımın #D9562B'si koyu yazıyla 4.38:1 kaldığı için bir tık açık). */
-const ORANGE = { accent: '#DC5B2F', onAccent: INK, accentText: '#A9401F' };
-/** Hardal vurgu. */
-const MUSTARD = { accent: P.mustard, onAccent: INK, accentText: '#7A5208' };
+/** Sade ("Tema 2 · Açık", d439b68) paleti. */
+const SADE: SitePalette = {
+    bg: '#F6F1E9',
+    fg: '#1E1A16',
+    alt: '#EEE7DC',
+    card: '#FFFFFF',
+    text2: '#4F473F',
+    muted: '#6B6259',
+    wordmark: '#E3D8C8',
+    placeholder: '#E9E1D5',
+    rgb: '30,26,22',
+    heroOverlay: 'rgba(246,241,233,0.80)',
+    disabled: '#A79D90',
+    paper: '#1E1A16',
+    onPaper: '#F6F1E9',
+    onPaperSub: '#B8AEA2',
+    paperRgb: '246,241,233',
+    // Sade'nin hazır menü kutusu tonu.
+    mustard: '#EDE5D8',
+    mustardText: null,
+    onHero: '#1E1A16',
+    onMenuBox: '#1E1A16',
+    onMenuBoxSub: '#6B6259',
+    heroAccent: null,
+    menuCard: '#F6F1E9',
+    dotOk: '#22A35A',
+    dotBad: '#C8472C',
+    pop: '#1E1A16',
+    onPop: '#F6F1E9',
+    story: '#1E1A16',
+    olive: '#2E2823',
+    terracotta: null,
+    onTerracotta: null,
+    terracottaText: null,
+    onTerracottaSoft: null,
+    footer: '#E6DBC9',
+    onFooter: '#1E1A16',
+    footerMuted: '#52493F',
+    footerLabel: null,
+    footerMap: '#D6C8B2',
+    footerRoad: '#EFE7DA',
+    footerWater: '#BFD0CC',
+    serif: "'Instrument Serif', Georgia, serif",
+    serifTracking: '-0.01em',
+};
 
-export const SITE_THEMES: Record<string, SiteThemePreset> = {
-    altin: {
-        key: 'altin', label: 'Kiremit', description: 'Kiremit kapak, turuncu vurgu. Varsayılan.', ...base, ...ORANGE,
-        hero: '#8C3317', heroDeep: '#722A12', menuBox: P.olive,
+type PresetInput = Omit<SiteThemePreset, 'bg' | 'card' | 'border' | 'text' | 'muted'>;
+
+function presets(p: SitePalette, list: PresetInput[]): Record<string, SiteThemePreset> {
+    const base = { bg: p.bg, card: p.card, border: `rgba(${p.rgb},0.12)`, text: p.fg, muted: p.muted };
+    return Object.fromEntries(list.map(t => [t.key, { ...base, ...t }]));
+}
+
+// Renkli: turuncu vurgu (tasarımın #D9562B'si koyu yazıyla 4.38:1 kaldığı için bir tık açık) ya da hardal vurgu.
+const ORANGE = { accent: '#DC5B2F', onAccent: RENKLI.fg, accentText: '#A9401F' };
+const MUSTARD = { accent: RENKLI.mustard, onAccent: RENKLI.fg, accentText: '#7A5208' };
+const KIREMIT = { hero: '#8C3317', heroDeep: '#722A12' };
+
+const RENKLI_THEMES = presets(RENKLI, [
+    { key: 'altin', label: 'Kiremit', description: 'Kiremit kapak, turuncu vurgu. Varsayılan.', ...ORANGE, ...KIREMIT, menuBox: RENKLI.olive },
+    { key: 'terracotta', label: 'Kiremit · hardal', description: 'Kiremit kapak, hardal vurgu. Ocakbaşı, ızgara.', ...MUSTARD, ...KIREMIT, menuBox: RENKLI.olive },
+    { key: 'zeytin', label: 'Zeytin', description: 'Zeytin yeşili kapak, turuncu vurgu. Ege, meyhane, kahvaltı.', ...ORANGE, hero: RENKLI.olive, heroDeep: '#2F3926', menuBox: '#8C3317' },
+    { key: 'lacivert', label: 'Lacivert', description: 'Gece mavisi kapak, hardal vurgu. Balık, deniz kenarı.', ...MUSTARD, hero: '#1F3550', heroDeep: '#172839', menuBox: RENKLI.olive },
+    { key: 'bordo', label: 'Bordo', description: 'Şarap rengi kapak, hardal vurgu. Akşam yemeği, steakhouse.', ...MUSTARD, hero: '#7A2232', heroDeep: '#5E1A27', menuBox: RENKLI.olive },
+    { key: 'komur', label: 'Kömür', description: 'Koyu kahve kapak, hardal vurgu. Bar, gece mekânı.', ...MUSTARD, hero: RENKLI.fg, heroDeep: '#17100A', menuBox: RENKLI.olive },
+    { key: 'beyaz', label: 'Toprak', description: 'Toprak rengi kapak, turuncu vurgu. Sade ve sıcak.', ...ORANGE, hero: '#4A3C30', heroDeep: '#3A2F25', menuBox: RENKLI.olive },
+]);
+
+// Sade: zemin ortak, tema yalnız vurguyu seçer (kapak ve menü kutusu beyaz). Değerler d439b68'in siteTheme.ts'inden.
+const WHITE = { hero: SADE.paper, heroDeep: '#2A2622', cover: SADE.card, coverDeep: SADE.card, menuBox: SADE.card };
+const SADE_THEMES = presets(SADE, [
+    { key: 'altin', label: 'Altın', description: 'Sıcak krem zemin, altın vurgu. Varsayılan.', accent: '#E8B04B', onAccent: SADE.fg, accentText: '#8A5D0B', ...WHITE },
+    { key: 'terracotta', label: 'Terracotta', description: 'Kiremit turuncusu vurgu. Ocakbaşı, ızgara, pide.', accent: '#E2683C', onAccent: SADE.fg, accentText: '#A63F17', ...WHITE },
+    { key: 'zeytin', label: 'Zeytin', description: 'Adaçayı yeşili vurgu. Ege, meyhane, kahvaltı.', accent: '#9DBF8E', onAccent: SADE.fg, accentText: '#3F6B34', ...WHITE },
+    { key: 'lacivert', label: 'Lacivert', description: 'Koyu lacivert vurgu. Balık, deniz kenarı.', accent: '#2F4F8F', onAccent: '#FFFFFF', accentText: '#2F4F8F', ...WHITE },
+    { key: 'bordo', label: 'Bordo', description: 'Şarap rengi vurgu. Akşam yemeği, steakhouse.', accent: '#A8354A', onAccent: '#FFFFFF', accentText: '#8E2433', ...WHITE },
+    { key: 'komur', label: 'Kömür', description: 'Kömür siyahı vurgu. Bar, gece mekânı; sade ve güçlü.', accent: '#2A2622', onAccent: SADE.bg, accentText: '#2A2622', ...WHITE },
+    { key: 'beyaz', label: 'Sade gri', description: 'Serin gri vurgu. Sade ve modern.', accent: '#9AA5B1', onAccent: SADE.fg, accentText: '#4A5563', ...WHITE },
+]);
+
+export interface SiteDesignInfo {
+    key: SiteDesignKey;
+    label: string;
+    /** Admin'deki tek satırlık tarif. */
+    description: string;
+    palette: SitePalette;
+    themes: Record<string, SiteThemePreset>;
+}
+
+export const SITE_DESIGNS: Record<SiteDesignKey, SiteDesignInfo> = {
+    renkli: {
+        key: 'renkli', label: 'Renkli ve sıcak', description: 'Kum zemin, renkli kapak ve kutular, kalın başlıklar.',
+        palette: RENKLI, themes: RENKLI_THEMES,
     },
-    terracotta: {
-        key: 'terracotta', label: 'Kiremit · hardal', description: 'Kiremit kapak, hardal vurgu. Ocakbaşı, ızgara.', ...base, ...MUSTARD,
-        hero: '#8C3317', heroDeep: '#722A12', menuBox: P.olive,
-    },
-    zeytin: {
-        key: 'zeytin', label: 'Zeytin', description: 'Zeytin yeşili kapak, turuncu vurgu. Ege, meyhane, kahvaltı.', ...base, ...ORANGE,
-        hero: P.olive, heroDeep: '#2F3926', menuBox: '#8C3317',
-    },
-    lacivert: {
-        key: 'lacivert', label: 'Lacivert', description: 'Gece mavisi kapak, hardal vurgu. Balık, deniz kenarı.', ...base, ...MUSTARD,
-        hero: '#1F3550', heroDeep: '#172839', menuBox: P.olive,
-    },
-    bordo: {
-        key: 'bordo', label: 'Bordo', description: 'Şarap rengi kapak, hardal vurgu. Akşam yemeği, steakhouse.', ...base, ...MUSTARD,
-        hero: '#7A2232', heroDeep: '#5E1A27', menuBox: P.olive,
-    },
-    komur: {
-        key: 'komur', label: 'Kömür', description: 'Koyu kahve kapak, hardal vurgu. Bar, gece mekânı.', ...base, ...MUSTARD,
-        hero: P.fg, heroDeep: '#17100A', menuBox: P.olive,
-    },
-    beyaz: {
-        key: 'beyaz', label: 'Toprak', description: 'Toprak rengi kapak, turuncu vurgu. Sade ve sıcak.', ...base, ...ORANGE,
-        hero: '#4A3C30', heroDeep: '#3A2F25', menuBox: P.olive,
+    sade: {
+        key: 'sade', label: 'Sade', description: 'Açık krem zemin, beyaz kutular, ince serif başlıklar.',
+        palette: SADE, themes: SADE_THEMES,
     },
 };
 
+/** Renkli tasarımın temaları (geriye dönük ad). */
+export const SITE_THEMES = RENKLI_THEMES;
+
 /** Boş tema anahtarı bu temayı verir (backend'de anahtarı yok; admin'de seçilince "" kaydedilir). */
 export const DEFAULT_THEME = 'altin';
-export const SITE_THEME_KEYS = Object.keys(SITE_THEMES);
+export const SITE_THEME_KEYS = Object.keys(RENKLI_THEMES);
 
-/** Varsayılan temanın vurgu rengi (admin'de "tema rengi" seçeneği). */
-export const DEFAULT_ACCENT = SITE_THEMES[DEFAULT_THEME].accent;
-
-export function resolveTheme(key?: string | null): SiteThemePreset {
-    return (key && SITE_THEMES[key]) || SITE_THEMES[DEFAULT_THEME];
+/** Tasarımın temaları, admin'deki sırayla. */
+export function designThemes(design?: string | null): SiteThemePreset[] {
+    return Object.values(SITE_DESIGNS[resolveDesign(design)].themes);
 }
 
-/** Koyu bant ve panellerin zemini (sepet paneli, akış sayfalarının kapağı). */
-export const SITE_INK = P.paper;
+/** Varsayılan temanın vurgu rengi (Renkli; admin'de "tema rengi" seçeneği). */
+export const DEFAULT_ACCENT = RENKLI_THEMES[DEFAULT_THEME].accent;
+
+export function resolveTheme(key?: string | null, design?: string | null): SiteThemePreset {
+    const themes = SITE_DESIGNS[resolveDesign(design)].themes;
+    return (key && themes[key]) || themes[DEFAULT_THEME];
+}
+
+/** Koyu bant ve panellerin zemini (sepet paneli, akış sayfalarının kapağı); Renkli değeri. */
+export const SITE_INK = RENKLI.paper;
 
 // ── Renk hesapları (özel vurgu rengi için) ───────────────────────────────────────────────────────
 function isHex(value: string | undefined | null): value is string {
@@ -151,42 +306,95 @@ export function ensureContrast(color: string, bg: string, min = 4.5): string {
 }
 
 /** Düğme zemini ve yazısı: koyu ya da beyaz yazıdan okunanı; ikisi de yetmiyorsa zemin koyulaştırılır. */
-function accentPair(accent: string): { accent: string; onAccent: string } {
-    const dark = contrastRatio(INK, accent);
+function accentPair(accent: string, ink: string): { accent: string; onAccent: string } {
+    const dark = contrastRatio(ink, accent);
     const white = contrastRatio('#FFFFFF', accent);
-    if (dark >= 4.5 && dark >= white) return { accent, onAccent: INK };
+    if (dark >= 4.5 && dark >= white) return { accent, onAccent: ink };
     if (white >= 4.5) return { accent, onAccent: '#FFFFFF' };
-    if (dark >= 4.5) return { accent, onAccent: INK };
+    if (dark >= 4.5) return { accent, onAccent: ink };
     return { accent: ensureContrast(accent, '#FFFFFF'), onAccent: '#FFFFFF' };
 }
 
-/**
- * Sitenin kök stili. `theme`: hazır tema anahtarı (boş/bilinmeyen = kiremit). `accentColor`: restoranın özel vurgu
- * rengi (boşsa temanınki). Parametresiz çağrı varsayılan temayı verir.
- */
-export function siteRootStyle(accentColor?: string | null, theme?: string | null): CSSProperties {
-    const t = resolveTheme(theme);
+/** Tasarım × tema × özel vurgu için çözülmüş renkler (siteRootStyle'ın değerleri; karşıtlık denetimi de bunu kullanır). */
+export interface ResolvedSiteColors {
+    design: SiteDesignKey;
+    palette: SitePalette;
+    theme: SiteThemePreset;
+    accent: string; onAccent: string; accentText: string; accentOnDark: string;
+    mustardText: string; heroAccent: string; terracotta: string; onTerracotta: string; terracottaText: string; footerLabel: string;
+}
+
+export function resolveSiteColors(accentColor?: string | null, theme?: string | null, design?: string | null): ResolvedSiteColors {
+    const d = resolveDesign(design);
+    const P = SITE_DESIGNS[d].palette;
+    const t = resolveTheme(theme, d);
     const custom = isHex(accentColor) && accentColor.toUpperCase() !== t.accent.toUpperCase();
-    const pair = custom ? accentPair(accentColor) : { accent: t.accent, onAccent: t.onAccent };
-    // Vurgu yazısı hem kum zeminde hem krem kutularda okunmalı (kum daha koyu: ona göre).
-    const accentText = custom ? ensureContrast(accentColor, P.bg) : t.accentText;
+    const pair = custom ? accentPair(accentColor, P.fg) : { accent: t.accent, onAccent: t.onAccent };
+    // Vurgu yazısı hem zeminde hem kutularda okunmalı (Renkli: kum zemin en koyusu; Sade: ara bant #EEE7DC).
+    const accentText = custom ? ensureContrast(accentColor, d === 'sade' ? P.alt : P.bg) : t.accentText;
     // Koyu panelde (sepet, çağrı kartı) vurgu: koyu vurgular açılır.
-    const onDark = ensureContrast(pair.accent, P.paper);
+    const accentOnDark = ensureContrast(pair.accent, P.paper);
+    return {
+        design: d, palette: P, theme: t, ...pair, accentText, accentOnDark,
+        // Sade'de koyu kutular mürekkep rengi; üstlerindeki vurgu, en açık koyu kutuya (zeytin) göre açılır.
+        mustardText: P.mustardText ?? ensureContrast(pair.accent, P.olive),
+        heroAccent: P.heroAccent ?? accentText,
+        terracotta: P.terracotta ?? pair.accent,
+        onTerracotta: P.onTerracotta ?? pair.onAccent,
+        terracottaText: P.terracottaText ?? accentText,
+        // Alt bilginin kum zemininde vurgu yazısı; gerekirse koyulaşır (altının #8A5D0B'si 4.2:1 kalıyordu).
+        footerLabel: P.footerLabel ?? ensureContrast(accentText, P.footer),
+    };
+}
+
+/**
+ * Sitenin kök stili. `theme`: hazır tema anahtarı (boş/bilinmeyen = tasarımın varsayılanı). `accentColor`: restoranın
+ * özel vurgu rengi (boşsa temanınki). `design`: "renkli" | "sade" (boş = renkli). Parametresiz çağrı varsayılanı verir.
+ */
+export function siteRootStyle(accentColor?: string | null, theme?: string | null, design?: string | null): CSSProperties {
+    const c = resolveSiteColors(accentColor, theme, design);
+    const { palette: P, theme: t } = c;
     const line = (a: number) => `rgba(${P.rgb},${a})`;
     return {
-        '--site-accent': pair.accent,
-        '--site-on-accent': pair.onAccent,
-        '--site-accent-text': accentText,
-        '--site-accent-bright': onDark,
-        '--site-accent-on-dark': onDark,
-        '--site-accent-line': `${pair.accent}AA`,
-        '--site-accent-soft': `color-mix(in srgb, ${pair.accent} 22%, ${P.card})`,
+        '--site-serif': P.serif,
+        '--site-serif-tracking': P.serifTracking,
+        '--site-accent': c.accent,
+        '--site-on-accent': c.onAccent,
+        '--site-accent-text': c.accentText,
+        '--site-accent-bright': c.accentOnDark,
+        '--site-accent-on-dark': c.accentOnDark,
+        '--site-accent-on-sand': c.footerLabel,
+        '--site-accent-line': `${c.accent}AA`,
+        '--site-accent-soft': `color-mix(in srgb, ${c.accent} 22%, ${P.card})`,
+        // Renkli kutular: zemin + üstündeki yazı (Sade'de açık kutular beyaz, koyu kutular mürekkep).
         '--site-hero-bg': t.hero,
         '--site-hero-deep': t.heroDeep,
+        '--site-cover-bg': t.cover ?? t.hero,
+        '--site-cover-deep': t.coverDeep ?? t.heroDeep,
+        '--site-on-cover': P.onHero,
+        '--site-cover-accent': c.heroAccent,
         '--site-menu-box': t.menuBox,
+        '--site-on-menu-box': P.onMenuBox,
+        '--site-on-menu-box-sub': P.onMenuBoxSub,
+        '--site-menu-card': P.menuCard,
+        '--site-dot-ok': P.dotOk,
+        '--site-dot-bad': P.dotBad,
+        '--site-pop': P.pop,
+        '--site-on-pop': P.onPop,
         '--site-story': P.story,
+        '--site-olive': P.olive,
+        '--site-terracotta': c.terracotta,
+        '--site-on-terracotta': c.onTerracotta,
+        '--site-terracotta-text': c.terracottaText,
+        '--site-on-terracotta-soft': P.onTerracottaSoft ?? c.onTerracotta,
         '--site-mustard': P.mustard,
-        '--site-mustard-text': P.mustardText,
+        '--site-mustard-text': c.mustardText,
+        '--site-footer-bg': P.footer,
+        '--site-on-footer': P.onFooter,
+        '--site-footer-muted': P.footerMuted,
+        '--site-footer-map': P.footerMap,
+        '--site-footer-road': P.footerRoad,
+        '--site-footer-water': P.footerWater,
         '--site-ink': P.paper,
         '--site-hero': P.paper,
         '--site-overlay': P.heroOverlay,
@@ -205,12 +413,12 @@ export function siteRootStyle(accentColor?: string | null, theme?: string | null
         '--site-line': line(0.1),
         '--site-border-mid': line(0.2),
         '--site-border-strong': line(0.3),
-        '--site-disabled': '#A08F7C',
+        '--site-disabled': P.disabled,
         '--site-paper': P.paper,
         '--site-on-paper': P.onPaper,
         '--site-on-paper-sub': P.onPaperSub,
-        '--site-paper-line': 'rgba(251,244,232,0.14)',
-        '--site-paper-line-strong': 'rgba(251,244,232,0.28)',
+        '--site-paper-line': `rgba(${P.paperRgb},0.14)`,
+        '--site-paper-line-strong': `rgba(${P.paperRgb},0.28)`,
         '--site-ok-bg': '#E3F1E6',
         '--site-ok-line': '#9CCBA9',
         '--site-ok': '#1B6A43',
@@ -219,13 +427,15 @@ export function siteRootStyle(accentColor?: string | null, theme?: string | null
         '--site-error': '#A3301A',
         colorScheme: 'light',
         fontFamily: 'Manrope, system-ui, sans-serif',
+        // Sade'nin serif'i (Instrument Serif) tek ağırlıklı: kalın sınıflar sahte kalın çizmesin.
+        fontSynthesisWeight: c.design === 'sade' ? 'none' : undefined,
         backgroundColor: 'var(--site-bg)',
         color: 'var(--site-text)',
     } as CSSProperties;
 }
 
-/** Başlıklar ve büyük fiyatlar: Fraunces (kalın, sıkı aralık). */
-export const headingFont = "font-[family-name:Fraunces,Georgia,serif] font-bold! tracking-[-0.02em]";
+/** Başlıklar ve büyük fiyatlar: tasarımın serif'i (Renkli: Fraunces kalın, sıkı aralık; Sade: Instrument Serif). */
+export const headingFont = 'font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] font-bold! tracking-[var(--site-serif-tracking,-0.02em)]';
 
 /** Başlığı iki parçaya böler: ikinci parça italik vurgu yazısıyla yazılır (Tema 2 başlık dili).
  *  "Közün başında, ustanın elinden." → ["Közün başında,", "ustanın elinden."]; virgül yoksa son kelime vurgulanır. */

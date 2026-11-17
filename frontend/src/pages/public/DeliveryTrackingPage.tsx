@@ -147,7 +147,7 @@ export default function DeliveryTrackingPage() {
     const brand = order?.companyName || order?.branchName || '';
 
     const root = (children: ReactNode) => (
-        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme })} className="min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]">
+        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design })} className="min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]">
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
             <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
             {children}

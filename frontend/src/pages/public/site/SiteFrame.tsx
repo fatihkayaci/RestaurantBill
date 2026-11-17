@@ -8,13 +8,13 @@ import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode
 import { StockImageLabel } from '../components/StockImageLabel';
 import { SiteShell } from './SiteChrome';
 import {
-    FONTS_HREF, MOTION_CSS, RESERVATION_PATH, cardButton, eyebrow, headerAccentPill, heroAccentButton, heroOutlineButton,
+    MOTION_CSS, RESERVATION_PATH, cardButton, eyebrow, headerAccentPill, heroAccentButton, heroOutlineButton,
     iconCircle, instagramHandle, sans, sectionWrap, serif, siteNav, untilTime, type SitePageKey,
 } from './siteParts';
 import { PhoneIcon } from './SiteCards';
 import type { MobileAction } from './siteActions';
 import { useMobileActions } from './siteActions';
-import { directionsUrl, splitAccent, telHref, whatsappHref } from './siteTheme';
+import { directionsUrl, resolveDesign, splitAccent, telHref, whatsappHref } from './siteTheme';
 import { fullAddress, restaurantName, useSiteDocumentTitle, weekSchedule } from './useSite';
 import { EditableBlock, EmptySlot, ExternalHint } from './siteEdit';
 import { editExternal, useSiteEdit, useSiteWindow } from './siteEditContext';
@@ -80,7 +80,8 @@ function FlameIcon() {
 }
 
 /**
- * Sitenin başlığı (tasarım: "Renkli" üst menü): kum zeminde; solda kapak renginde yuvarlak içinde alev ve ad + konum,
+ * Sitenin başlığı. Sade tasarımda (Tema 2 · kutulu) krem sayfanın üstünde beyaz yuvarlak kutu: solda ad ve küçük konum
+ * satırı, ortada krem hap grubunda sayfalar (açık sayfa beyaz hap), krem Sepet. Renkli tasarımda ("Renkli" üst menü) kum zeminde; solda kapak renginde yuvarlak içinde alev ve ad + konum,
  * ortada krem hap grubunda sayfalar (açık sayfa koyu hap), sağda "Siparişim" (bu cihazdan sipariş verildiyse), koyu
  * "Sepet" (online sipariş açıkken; hardal adet rozeti) ve "Masa ayırt". Dar ekranda ad + Sepet + menü düğmesi. Üstte
  * yapışık kalır (kaydırınca arkası buzlanır); `sticky={false}` ise (akış sayfaları) sayfayla kayar.
@@ -101,6 +102,8 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
     const canOrder = cart.enabled;
     const [trackPath] = useState(lastOrderTrackingPath);
     const place = placeLine(site);
+    // Site verisinden (SiteShell dışındaki akış sayfalarında da doğru tasarım).
+    const sade = resolveDesign(site.site.design) === 'sade';
 
     useEffect(() => {
         if (!open) return;
@@ -111,29 +114,44 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
 
     const toTop = () => { if (current === 'home') win.scrollTo({ top: 0, behavior: 'smooth' }); };
     const close = () => setOpen(false);
-    const creamPill = 'inline-flex h-[50px] items-center gap-2 whitespace-nowrap rounded-full bg-[var(--site-card)] px-[18px] text-sm font-bold text-[var(--site-text)] no-underline transition-opacity hover:opacity-85';
-    const menuLink = 'flex min-h-12 items-center rounded-2xl px-4 text-[17px] font-bold text-[var(--site-text)] no-underline hover:bg-[var(--site-bg)]';
+    const creamPill = sade
+        ? 'inline-flex h-12 items-center gap-2 whitespace-nowrap rounded-full bg-[var(--site-bg)] px-4 text-sm font-bold text-[var(--site-text)] no-underline transition-colors hover:bg-[var(--site-alt)]'
+        : 'inline-flex h-[50px] items-center gap-2 whitespace-nowrap rounded-full bg-[var(--site-card)] px-[18px] text-sm font-bold text-[var(--site-text)] no-underline transition-opacity hover:opacity-85';
+    const menuLink = cn('flex min-h-12 items-center rounded-2xl px-4 text-[17px] text-[var(--site-text)] no-underline hover:bg-[var(--site-bg)]', sade ? 'font-semibold' : 'font-bold');
 
     return (
-        <div className={cn(sans, sticky ? 'sticky' : 'relative', 'top-0 z-50 px-2 pt-2 transition-[background-color,box-shadow] sm:px-4 sm:pt-3.5',
-            scrolled ? 'bg-[color-mix(in_srgb,var(--site-bg)_90%,transparent)] pb-2 shadow-[0_10px_30px_-20px_rgba(36,24,15,0.45)] backdrop-blur-[12px]' : 'bg-transparent')}>
-            <header className="mx-auto max-w-[1408px] text-[var(--site-text)]">
-                <nav aria-label="Ana menü" className="flex items-center justify-between gap-3 py-1.5 pl-1 pr-1 sm:pl-3">
-                    <Link to="/" onClick={toTop} {...nameX}
-                        className={cn('flex min-h-11 min-w-0 items-center gap-2 text-[var(--site-text)] no-underline sm:gap-3', nameX.className)}>
-                        <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--site-hero-bg)] text-[var(--site-mustard)] sm:h-[46px] sm:w-[46px]"><FlameIcon /></span>
-                        <span className="flex min-w-0 flex-col leading-none">
-                            <span className={cn(serif, 'truncate text-[19px] font-extrabold sm:text-[26px]')}>{name}</span>
-                            {place && <span className="mt-1 hidden truncate text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--site-accent-text)] sm:block">{place}</span>}
-                        </span>
-                    </Link>
-                    <div className="hidden gap-0.5 rounded-full bg-[var(--site-card)] p-[5px] lg:flex">
+        <div className={cn(sans, sticky ? 'sticky' : 'relative', 'top-0 z-50 px-2 pt-2',
+            sade ? 'sm:px-4 sm:pt-4'
+                : cn('transition-[background-color,box-shadow] sm:px-4 sm:pt-3.5',
+                    scrolled ? 'bg-[color-mix(in_srgb,var(--site-bg)_90%,transparent)] pb-2 shadow-[0_10px_30px_-20px_rgba(36,24,15,0.45)] backdrop-blur-[12px]' : 'bg-transparent'))}>
+            <header className={cn('mx-auto max-w-[1408px] text-[var(--site-text)]',
+                sade && cn('rounded-[24px] bg-[var(--site-card)] transition-shadow', scrolled ? 'shadow-[0_14px_36px_-18px_rgba(30,26,22,0.35)]' : 'shadow-[0_1px_0_rgba(30,26,22,0.04)]'))}>
+                <nav aria-label="Ana menü" className={cn('flex items-center justify-between gap-3', sade ? 'py-2 pl-4 pr-2 sm:py-3 sm:pl-6 sm:pr-3' : 'py-1.5 pl-1 pr-1 sm:pl-3')}>
+                    {sade ? (
+                        <Link to="/" onClick={toTop} {...nameX}
+                            className={cn('flex min-h-11 min-w-0 items-center gap-3 leading-none text-[var(--site-text)] no-underline', nameX.className)}>
+                            <span className={cn(serif, 'min-w-0 truncate text-[26px] tracking-[-0.01em] sm:text-[30px]')}>{name}</span>
+                            {place && <span className="hidden shrink-0 whitespace-nowrap text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--site-accent-text)] xl:inline">{place}</span>}
+                        </Link>
+                    ) : (
+                        <Link to="/" onClick={toTop} {...nameX}
+                            className={cn('flex min-h-11 min-w-0 items-center gap-2 text-[var(--site-text)] no-underline sm:gap-3', nameX.className)}>
+                            <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--site-hero-bg)] text-[var(--site-mustard)] sm:h-[46px] sm:w-[46px]"><FlameIcon /></span>
+                            <span className="flex min-w-0 flex-col leading-none">
+                                <span className={cn(serif, 'truncate text-[19px] font-extrabold sm:text-[26px]')}>{name}</span>
+                                {place && <span className="mt-1 hidden truncate text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--site-accent-text)] sm:block">{place}</span>}
+                            </span>
+                        </Link>
+                    )}
+                    <div className={cn('hidden gap-0.5 rounded-full lg:flex', sade ? 'bg-[var(--site-bg)] p-1' : 'bg-[var(--site-card)] p-[5px]')}>
                         {nav.map(item => {
                             const on = current === item.key;
                             return (
                                 <Link key={item.key} to={item.to} aria-current={on ? 'page' : undefined}
-                                    className={cn('inline-flex h-11 items-center whitespace-nowrap rounded-full px-[18px] text-sm no-underline transition-colors',
-                                        on ? 'bg-[var(--site-paper)] font-extrabold text-[var(--site-on-paper)]' : 'font-bold text-[var(--site-text)] hover:bg-[var(--site-bg)]')}>
+                                    className={cn('inline-flex h-11 items-center whitespace-nowrap rounded-full text-sm no-underline transition-colors',
+                                        sade
+                                            ? cn('px-4', on ? 'bg-[var(--site-card)] font-bold text-[var(--site-text)] shadow-[0_1px_2px_rgba(30,26,22,0.08)]' : 'font-semibold text-[var(--site-sub)] hover:text-[var(--site-text)]')
+                                            : cn('px-[18px]', on ? 'bg-[var(--site-paper)] font-extrabold text-[var(--site-on-paper)]' : 'font-bold text-[var(--site-text)] hover:bg-[var(--site-bg)]'))}>
                                     {item.label}
                                 </Link>
                             );
@@ -145,9 +163,11 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
                         )}
                         {canOrder && (
                             <Link to="/siparis" aria-label={`Sepet, ${cart.count} ürün`} aria-current={current === 'siparis' ? 'page' : undefined} {...orderX}
-                                className={cn('inline-flex h-[50px] items-center gap-2.5 whitespace-nowrap rounded-full bg-[var(--site-paper)] py-0 pl-3.5 pr-2 text-sm font-bold text-[var(--site-on-paper)] no-underline transition-opacity hover:opacity-90 sm:pl-[18px]', orderX.className)}>
+                                className={cn(sade ? cn(creamPill, 'px-3.5 sm:px-4')
+                                    : 'inline-flex h-[50px] items-center gap-2.5 whitespace-nowrap rounded-full bg-[var(--site-paper)] py-0 pl-3.5 pr-2 text-sm font-bold text-[var(--site-on-paper)] no-underline transition-opacity hover:opacity-90 sm:pl-[18px]', orderX.className)}>
                                 Sepet
-                                <span className="inline-flex h-[34px] min-w-[34px] items-center justify-center rounded-full bg-[var(--site-mustard)] px-2 font-extrabold tabular-nums text-[var(--site-text)]">{cart.count}</span>
+                                <span className={cn('inline-flex items-center justify-center rounded-full font-extrabold tabular-nums',
+                                    sade ? 'h-6 min-w-6 bg-[var(--site-paper)] px-1.5 text-xs text-[var(--site-on-paper)]' : 'h-[34px] min-w-[34px] bg-[var(--site-mustard)] px-2 text-[var(--site-text)]')}>{cart.count}</span>
                             </Link>
                         )}
                         {canReserve ? (
@@ -157,7 +177,7 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
                             <Link to="/siparis" {...orderX} className={cn(headerAccentPill, 'hidden h-[50px] px-[22px] sm:inline-flex', orderX.className)}>Sipariş ver</Link>
                         )}
                         <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={panelId}
-                            aria-label={open ? 'Menüyü kapat' : 'Menüyü aç'} className={cn(iconCircle, 'h-[50px] w-[50px] border-0 bg-[var(--site-card)] lg:hidden')}>
+                            aria-label={open ? 'Menüyü kapat' : 'Menüyü aç'} className={cn(iconCircle, 'border-0 lg:hidden', sade ? 'h-12 w-12 bg-[var(--site-bg)]' : 'h-[50px] w-[50px] bg-[var(--site-card)]')}>
                             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
                                 {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 8h16M4 16h16" />}
                             </svg>
@@ -165,7 +185,7 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
                     </div>
                 </nav>
                 {open && (
-                    <nav id={panelId} aria-label="Sayfalar" className="mt-2 rounded-[24px] bg-[var(--site-card)] shadow-[0_16px_40px_-20px_rgba(36,24,15,0.4)] lg:hidden">
+                    <nav id={panelId} aria-label="Sayfalar" className={cn('lg:hidden', sade ? 'border-t border-[var(--site-line)]' : 'mt-2 rounded-[24px] bg-[var(--site-card)] shadow-[0_16px_40px_-20px_rgba(36,24,15,0.4)]')}>
                         <div className="flex flex-col gap-0.5 px-2 py-3">
                             <Link to="/" onClick={close} aria-current={current === 'home' ? 'page' : undefined} className={menuLink}>Ana sayfa</Link>
                             {nav.map(item => (
@@ -316,17 +336,17 @@ export function VisitSection({ site, className }: { site: PublicSite; className?
     );
 }
 
-// ── Alt bilgi (Footer B · zeytin tonu) ─────────────────────────────────────────────────────────────
+// ── Alt bilgi (Footer B · Renkli: zeytin, Sade: kum tonu; renkler --site-footer-* değişkenlerinde) ─────────────────────────────────────────────────────────────
 
 /** Süs amaçlı mini harita (gerçek harita değil): tıklayınca Google Haritalar'da yol tarifi açılır. */
 function MapThumb({ href }: { href: string }) {
     return (
         <a href={href} target="_blank" rel="noopener noreferrer" aria-label="Haritada aç"
-            className="relative block h-[150px] overflow-hidden rounded-2xl bg-[#34402B] bg-[linear-gradient(rgba(243,231,211,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(243,231,211,0.06)_1px,transparent_1px)] bg-[length:24px_24px] transition-opacity hover:opacity-90">
-            <span aria-hidden="true" className="absolute -left-[10%] -right-[10%] top-[46%] h-[9px] -rotate-[9deg] bg-[#4C5A40]" />
-            <span aria-hidden="true" className="absolute -bottom-[10%] -top-[10%] left-[60%] w-[7px] rotate-[14deg] bg-[#4C5A40]" />
-            <span aria-hidden="true" className="absolute right-0 top-0 h-1/2 w-[34%] rounded-bl-[60px] bg-[#2E4744]" />
-            <span aria-hidden="true" className="absolute left-[46%] top-[42%] h-[18px] w-[18px] rounded-full border-[3px] border-[#3E4A33] bg-[var(--site-accent)] shadow-[0_0_0_6px_rgba(243,231,211,0.12)]" />
+            className="relative block h-[150px] overflow-hidden rounded-2xl bg-[var(--site-footer-map)] bg-[linear-gradient(color-mix(in_srgb,var(--site-on-footer)_6%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_srgb,var(--site-on-footer)_6%,transparent)_1px,transparent_1px)] bg-[length:24px_24px] transition-opacity hover:opacity-90">
+            <span aria-hidden="true" className="absolute -left-[10%] -right-[10%] top-[46%] h-[9px] -rotate-[9deg] bg-[var(--site-footer-road)]" />
+            <span aria-hidden="true" className="absolute -bottom-[10%] -top-[10%] left-[60%] w-[7px] rotate-[14deg] bg-[var(--site-footer-road)]" />
+            <span aria-hidden="true" className="absolute right-0 top-0 h-1/2 w-[34%] rounded-bl-[60px] bg-[var(--site-footer-water)]" />
+            <span aria-hidden="true" className="absolute left-[46%] top-[42%] h-[18px] w-[18px] rounded-full border-[3px] border-[var(--site-footer-bg)] bg-[var(--site-accent)] shadow-[0_0_0_6px_color-mix(in_srgb,var(--site-on-footer)_12%,transparent)]" />
         </a>
     );
 }
@@ -361,10 +381,10 @@ export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite
     const lastOrder = ordering?.state === 'open' && ordering.lastOrderAt ? timeOfDay(ordering.lastOrderAt) : null;
     const hasSocial = Boolean(content.whatsappPhone || content.instagramUrl);
 
-    const label = 'm-0 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#EBB03F]';
-    const muted = 'text-[#D4CBB6]';
+    const label = 'm-0 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--site-accent-on-sand)]';
+    const muted = 'text-[var(--site-footer-muted)]';
     const link = 'inline-flex min-h-11 items-center self-start text-[15px] no-underline hover:opacity-75';
-    const roundIcon = 'flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(243,231,211,0.3)] text-[#F3E7D3] transition-colors hover:border-[#F3E7D3]';
+    const roundIcon = 'flex h-11 w-11 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--site-on-footer)_30%,transparent)] text-[var(--site-on-footer)] transition-colors hover:border-[var(--site-on-footer)]';
 
     const todayText = [
         today ? `Bugün ${today.text}` : null,
@@ -377,14 +397,14 @@ export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite
 
     return (
         <footer className={cn(sans, 'mt-auto bg-[var(--site-bg)] px-2 pb-2 sm:px-4 sm:pb-4', bottomBar && 'pb-[calc(88px+env(safe-area-inset-bottom))] sm:pb-[calc(88px+env(safe-area-inset-bottom))] md:pb-4')}>
-            <div className="mx-auto max-w-[1408px] overflow-hidden rounded-[24px] bg-[#3E4A33] text-[#F3E7D3] md:rounded-[36px]">
+            <div className="mx-auto max-w-[1408px] overflow-hidden rounded-[24px] bg-[var(--site-footer-bg)] text-[var(--site-on-footer)] md:rounded-[36px]">
                 <div className={cn(sectionWrap, 'flex flex-col gap-10 pt-10 md:pt-14')}>
                     {showToday && (
-                        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-[rgba(243,231,211,0.14)] bg-[rgba(243,231,211,0.07)] px-5 py-4">
+                        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-[color-mix(in_srgb,var(--site-on-footer)_14%,transparent)] bg-[color-mix(in_srgb,var(--site-on-footer)_7%,transparent)] px-5 py-4">
                             <div className="flex flex-wrap items-center gap-x-[18px] gap-y-2.5">
                                 {site.isOpenNow !== null && (
                                     <span className="inline-flex items-center gap-2 font-extrabold">
-                                        <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', site.isOpenNow ? 'bg-[#7BE0A2]' : 'bg-[#F4A28C]')} />
+                                        <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', site.isOpenNow ? 'bg-[var(--site-dot-ok)]' : 'bg-[var(--site-dot-bad)]')} />
                                         {site.isOpenNow ? 'Şu an açık' : 'Şu an kapalı'}
                                     </span>
                                 )}
@@ -393,7 +413,7 @@ export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite
                             {(canOrder || canReserve) && (
                                 <div className="flex flex-wrap gap-2">
                                     {canOrder && <Link to="/siparis" className="inline-flex h-[46px] items-center rounded-full bg-[var(--site-accent)] px-5 text-sm font-extrabold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90">Sipariş ver</Link>}
-                                    {canReserve && <Link to={RESERVATION_PATH} className="inline-flex h-[46px] items-center rounded-full border border-[rgba(243,231,211,0.4)] px-5 text-sm font-bold no-underline transition-colors hover:border-[#F3E7D3]">Masa ayırt</Link>}
+                                    {canReserve && <Link to={RESERVATION_PATH} className="inline-flex h-[46px] items-center rounded-full border border-[color-mix(in_srgb,var(--site-on-footer)_40%,transparent)] px-5 text-sm font-bold no-underline transition-colors hover:border-[var(--site-on-footer)]">Masa ayırt</Link>}
                                 </div>
                             )}
                         </div>
@@ -418,7 +438,7 @@ export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite
                                 <dl className="m-0 flex flex-col">
                                     {rows.map(r => (
                                         <div key={r.day} className={cn('-mx-2.5 flex justify-between gap-4 rounded-[10px] px-2.5 py-[7px] text-sm',
-                                            r.isToday ? 'bg-[rgba(243,231,211,0.12)] font-extrabold text-[#F3E7D3]' : muted)}>
+                                            r.isToday ? 'bg-[color-mix(in_srgb,var(--site-on-footer)_12%,transparent)] font-extrabold text-[var(--site-on-footer)]' : muted)}>
                                             <dt>{r.label}{r.isToday && ' · bugün'}</dt>
                                             <dd className="m-0 tabular-nums">{r.text}</dd>
                                         </div>
@@ -448,11 +468,11 @@ export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite
                     </div>
                 </div>
 
-                <div className={cn(sectionWrap, 'mt-12 flex flex-wrap justify-between gap-x-6 border-t border-[rgba(243,231,211,0.15)] pb-3 pt-2 text-[13px]', muted)}>
-                    <span {...fixedX} className={cn('inline-flex min-h-11 items-center', fixedX.className)}>© {new Date().getFullYear()} {name} ·&nbsp;<strong className="font-bold text-[#F3E7D3]">Sophram</strong>&nbsp;ile hazırlandı</span>
+                <div className={cn(sectionWrap, 'mt-12 flex flex-wrap justify-between gap-x-6 border-t border-[color-mix(in_srgb,var(--site-on-footer)_15%,transparent)] pb-3 pt-2 text-[13px]', muted)}>
+                    <span {...fixedX} className={cn('inline-flex min-h-11 items-center', fixedX.className)}>© {new Date().getFullYear()} {name} ·&nbsp;<strong className="font-bold text-[var(--site-on-footer)]">Sophram</strong>&nbsp;ile hazırlandı</span>
                     <div className="flex flex-wrap gap-x-5">
-                        <Link to="/gizlilik-politikasi" {...fixedX} className={cn('inline-flex min-h-11 items-center hover:text-[#F3E7D3]', fixedX.className)}>KVKK</Link>
-                        <Link to="/login" {...fixedX} className={cn('inline-flex min-h-11 items-center hover:text-[#F3E7D3]', fixedX.className)}>Personel girişi</Link>
+                        <Link to="/gizlilik-politikasi" {...fixedX} className={cn('inline-flex min-h-11 items-center hover:text-[var(--site-on-footer)]', fixedX.className)}>KVKK</Link>
+                        <Link to="/login" {...fixedX} className={cn('inline-flex min-h-11 items-center hover:text-[var(--site-on-footer)]', fixedX.className)}>Personel girişi</Link>
                     </div>
                 </div>
             </div>
@@ -494,8 +514,7 @@ export function SitePage({ site, current, className, stickyHeader = true, mobile
     // Adres · saatler · iletişim her sayfanın alt bilgisinde; İletişim sayfası aynı bilgileri zaten gösterir.
     const footerVisit = current !== 'iletisim';
     return (
-        <SiteShell accent={site.site.accentColor} theme={site.site.theme}>
-            <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
+        <SiteShell accent={site.site.accentColor} theme={site.site.theme} design={site.site.design}>
             <style>{MOTION_CSS}</style>
             <div className={cn('rb-site flex min-h-screen flex-col overflow-x-clip', className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
                 {/* Düzenleyicide yalnız burada değişen bölümler çizilir: başlık, alt bilgi ve alt çubuk yok. */}

@@ -92,6 +92,7 @@ export function normalizeSite(site: PublicSite): PublicSite {
         site: {
             ...(c as BranchSite),
             theme: c.theme ?? '',
+            design: c.design ?? '',
             galleryImageUrls: c.galleryImageUrls ?? [],
             weeklyHours: c.weeklyHours ?? [],
             directionsNote: c.directionsNote ?? '',

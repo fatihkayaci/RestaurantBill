@@ -7,13 +7,16 @@ import {
 import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { cn } from '@/lib/utils';
 import {
-    SITE_FONTS_HREF, container, formatDay, formatSitePrice, headingFont, siteRootStyle, wordmarkParts,
+    container, formatDay, formatSitePrice, headingFont, resolveDesign, siteFontsHref, siteRootStyle, wordmarkParts,
 } from './siteTheme';
+import { SiteDesignContext } from './siteDesign';
 
 // Restoran sitesinin ortak parçaları (tasarım: canvas "Restoran Sitesi v2" · Kafe sitesi).
 
-/** Sitenin kökü: temanın renk değişkenleri (`theme` hazır tema anahtarı, `accent` özel vurgu rengi; ikisi de boşsa terracotta). */
-export function SiteShell({ accent, theme, children }: { accent?: string; theme?: string; children: ReactNode }) {
+/** Sitenin kökü: tasarımın ve temanın renk değişkenleri (`design` "renkli" | "sade", `theme` hazır tema anahtarı,
+ *  `accent` özel vurgu rengi; boşsa varsayılanlar), tasarımın yazı tipleri ve tasarım bağlamı (useSiteDesign). */
+export function SiteShell({ accent, theme, design, children }: { accent?: string; theme?: string; design?: string; children: ReactNode }) {
+    const key = resolveDesign(design);
     // Site açıkken sayfanın tamamı (zemin, bildirimler, pencereler) Manrope; personel ekranına dönünce kalkar.
     // Sınıf sitenin çizildiği belgeye eklenir (admin'deki önizleme çerçevesinde çerçevenin belgesi, admin değil).
     const ref = useRef<HTMLDivElement>(null);
@@ -23,9 +26,9 @@ export function SiteShell({ accent, theme, children }: { accent?: string; theme?
         return () => root.classList.remove('restaurant-site');
     }, []);
     return (
-        <div ref={ref} style={siteRootStyle(accent, theme)} className="flex min-h-screen flex-col text-base leading-normal">
-            <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
-            {children}
+        <div ref={ref} style={siteRootStyle(accent, theme, key)} data-site-design={key} className="flex min-h-screen flex-col text-base leading-normal">
+            <link rel="stylesheet" href={siteFontsHref(key)} precedence="default" />
+            <SiteDesignContext.Provider value={key}>{children}</SiteDesignContext.Provider>
         </div>
     );
 }

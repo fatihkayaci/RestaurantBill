@@ -32,7 +32,7 @@ function groupSlots(slots: DaySlot[]): { name: string; slots: DaySlot[] }[] {
     })).filter(g => g.slots.length > 0);
 }
 
-const serif = 'font-[family-name:Fraunces,Georgia,serif] font-bold tracking-[-0.02em]';
+const serif = 'font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] font-bold tracking-[var(--site-serif-tracking,-0.02em)]';
 const roundButton = 'h-11 w-11 rounded-full border border-[var(--site-border-mid)] bg-[var(--site-card)] text-xl text-[var(--site-text)] disabled:opacity-35';
 
 // Ana sayfanın rezervasyon kartı (tasarım: "Birleşik · açık" · saat tablosu): 7 günlük şerit, kişi sayısı,
@@ -93,7 +93,7 @@ export default function DergiReserve({ branchId, rules, onContinue }: {
                                 onClick={() => { if (!on) { setSlots(null); setDay(d.value); } }}
                                 className={cn('flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-[14px] border',
                                     !d.open ? 'cursor-not-allowed border-dashed border-[var(--site-border-strong)] bg-transparent text-[var(--site-border-strong)]'
-                                        : on ? 'border-[#A9401F] bg-[#A9401F] text-[var(--site-on-paper)]' : 'border-transparent bg-[var(--site-bg)] text-[var(--site-text)]')}>
+                                        : on ? 'border-[var(--site-terracotta)] bg-[var(--site-terracotta)] text-[var(--site-on-terracotta)]' : 'border-transparent bg-[var(--site-bg)] text-[var(--site-text)]')}>
                                 <span className="text-[11px] font-medium uppercase tracking-[0.12em] opacity-75">{d.top}</span>
                                 <span className={cn(serif, 'text-[30px] leading-none')}>{d.num}</span>
                                 <span className="text-[11px] opacity-70">{d.month}</span>

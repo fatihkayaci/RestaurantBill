@@ -17,6 +17,7 @@ import {
     serif, sinceYear, untilTime,
 } from './site/siteParts';
 import { formatSitePrice, splitAccent, telHref } from './site/siteTheme';
+import { useSiteDesign } from './site/siteDesign';
 import { restaurantName, useMyReservations, useSite, weekSchedule } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
 import { SITE_LIMITS, editExternal, editTarget, useSiteEdit, useSitePreview, useSiteWindow } from './site/siteEditContext';
@@ -33,9 +34,10 @@ const LEGACY_VIEW_PARAM = 'bolum';
 
 /** Ana sayfanın açık kutuları: krem, yuvarlak köşe. */
 const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[36px]';
-/** Koyu zeminlerdeki krem yazı ve açık hardal vurgu. */
-const cream = 'text-[var(--site-on-paper)]';
-const mustard = 'text-[var(--site-mustard-text)]';
+/** Kapak ve menü kutusunun yazısı ve vurgusu (Renkli: koyu zeminde krem yazı, açık hardal vurgu; Sade: beyaz kutuda
+ *  koyu yazı, vurgu yazısı). */
+const cream = 'text-[var(--site-on-cover)]';
+const mustard = 'text-[var(--site-cover-accent)]';
 
 function timeOfDay(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -75,16 +77,20 @@ export default function RestaurantSitePage() {
 
 // ── 1. Birleşik kapak ────────────────────────────────────────────────────────────────────────────
 
-// Dev ad: uzun adlar kutuya sığsın diye en uzun satırın harf sayısına göre küçülür (Fraunces kalın ≈ 0,6em/harf).
-function heroNameStyle(lines: string[]): CSSProperties {
+// Dev ad: uzun adlar kutuya sığsın diye en uzun satırın harf sayısına göre küçülür (Renkli: Fraunces kalın ≈ 0,6em/harf;
+// Sade: Instrument Serif ≈ 0,46em/harf).
+function heroNameStyle(lines: string[], sade: boolean): CSSProperties {
     const longest = Math.max(4, ...lines.map(l => l.length));
-    return { fontSize: `min(104px, max(6.6vw, 48px), ${(82 / (longest * 0.6)).toFixed(2)}vw)` };
+    return sade
+        ? { fontSize: `min(100px, max(6.4vw, 52px), ${(80 / (longest * 0.46)).toFixed(2)}vw)` }
+        : { fontSize: `min(104px, max(6.6vw, 48px), ${(82 / (longest * 0.6)).toFixed(2)}vw)` };
 }
 
 interface StripCell { key: string; node: ReactNode; wrap?: (node: ReactNode) => ReactNode }
 
 function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
     const edit = useSiteEdit();
+    const sade = useSiteDesign() === 'sade';
     const showEmpty = Boolean(edit?.showEmpty);
     const content = site.site;
     const name = restaurantName(site);
@@ -118,11 +124,11 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
             key: 'durum', wrap: hoursWrap, node: (
                 <div className="flex items-center gap-3">
                     {site.isOpenNow !== null && (
-                        <span aria-hidden="true" className={cn('h-[9px] w-[9px] shrink-0 rounded-full', site.isOpenNow ? 'bg-[#7BE0A2] shadow-[0_0_0_4px_rgba(123,224,162,0.2)]' : 'bg-[#F4A28C] shadow-[0_0_0_4px_rgba(244,162,140,0.2)]')} />
+                        <span aria-hidden="true" className={cn('h-[9px] w-[9px] shrink-0 rounded-full', site.isOpenNow ? 'bg-[var(--site-dot-ok)] shadow-[0_0_0_4px_color-mix(in_srgb,var(--site-dot-ok)_20%,transparent)]' : 'bg-[var(--site-dot-bad)] shadow-[0_0_0_4px_color-mix(in_srgb,var(--site-dot-bad)_20%,transparent)]')} />
                     )}
                     <span className="flex flex-col">
                         {site.isOpenNow !== null && <span className="font-extrabold">{site.isOpenNow ? 'Şu an açık' : 'Şu an kapalı'}</span>}
-                        {today && <span className={site.isOpenNow !== null ? 'text-[13px] text-[rgba(251,244,232,0.85)]' : 'font-extrabold'}>Bugün {today.text}</span>}
+                        {today && <span className={site.isOpenNow !== null ? 'text-[13px] text-[color-mix(in_srgb,var(--site-on-cover)_85%,transparent)]' : 'font-extrabold'}>Bugün {today.text}</span>}
                     </span>
                 </div>
             ),
@@ -151,20 +157,34 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
 
     return (
         <section id="ust" aria-labelledby="ev-ad"
-            className={cn('relative flex flex-col overflow-hidden rounded-[24px] bg-[var(--site-hero-bg)] md:rounded-[36px]', cream)}>
+            className={cn('relative flex flex-col overflow-hidden rounded-[24px] bg-[var(--site-cover-bg)] md:rounded-[36px]', cream)}>
             <div className="relative flex flex-col md:min-h-[600px] md:flex-row">
                 {/* Zemin: kapak fotoğrafı sağda (kapak renginden geçişle; telefonda yazının arkasında koyu perde); yoksa noktalı desen ve daireler. */}
                 <EditableBlock target="photo:cover" label="Kapak fotoğrafı" chip="Fotoğrafı değiştir" className="absolute inset-0">
-                    {cover ? (
+                    {cover && sade ? (
                         <>
-                            <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover object-[65%_40%] md:left-auto md:w-[58%]" />
-                            <span aria-hidden="true" className="absolute inset-0 bg-[color-mix(in_srgb,var(--site-hero-bg)_86%,transparent)] md:left-auto md:w-[58%] md:bg-transparent md:bg-[linear-gradient(90deg,var(--site-hero-bg)_0%,transparent_38%)]" />
+                            <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_40%]" />
+                            <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.86)_70%,rgba(255,255,255,0.7)_100%)] md:bg-[linear-gradient(90deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.9)_30%,rgba(255,255,255,0.55)_48%,rgba(255,255,255,0)_66%)]" />
                             {cover.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                         </>
+                    ) : cover ? (
+                        <>
+                            <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover object-[65%_40%] md:left-auto md:w-[58%]" />
+                            <span aria-hidden="true" className="absolute inset-0 bg-[color-mix(in_srgb,var(--site-cover-bg)_86%,transparent)] md:left-auto md:w-[58%] md:bg-transparent md:bg-[linear-gradient(90deg,var(--site-cover-bg)_0%,transparent_38%)]" />
+                            {cover.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+                        </>
+                    ) : sade ? (
+                        <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+                            <span className="absolute -right-[140px] top-1/2 h-[760px] w-[760px] -translate-y-1/2 rounded-full border border-[rgba(30,26,22,0.07)]" />
+                            <span className="absolute -right-5 top-1/2 h-[520px] w-[520px] -translate-y-1/2 rounded-full border border-[var(--site-accent-line)]" />
+                            <span className="absolute right-[110px] top-1/2 hidden h-[260px] w-[260px] -translate-y-1/2 items-center justify-center rounded-full bg-[var(--site-accent-soft)] md:flex">
+                                {panelWord && !edit && <span className={cn(serif, 'max-w-[230px] break-words px-2 text-center text-[60px] italic leading-none text-[var(--site-accent-text)]')}>{panelWord}</span>}
+                            </span>
+                        </span>
                     ) : (
                         <span aria-hidden="true" className="pointer-events-none absolute inset-0 hidden overflow-hidden md:block">
-                            <span className="absolute inset-y-0 right-0 w-[46%] bg-[radial-gradient(rgba(243,231,211,0.16)_2px,transparent_2.6px)] bg-[length:22px_22px]" />
-                            <span className="absolute right-[7%] top-1/2 h-[420px] w-[420px] -translate-y-1/2 rounded-full bg-[var(--site-hero-deep)] bg-[repeating-conic-gradient(from_45deg,rgba(243,231,211,0.07)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />
+                            <span className="absolute inset-y-0 right-0 w-[46%] bg-[radial-gradient(color-mix(in_srgb,var(--site-on-cover)_16%,transparent)_2px,transparent_2.6px)] bg-[length:22px_22px]" />
+                            <span className="absolute right-[7%] top-1/2 h-[420px] w-[420px] -translate-y-1/2 rounded-full bg-[var(--site-cover-deep)] bg-[repeating-conic-gradient(from_45deg,color-mix(in_srgb,var(--site-on-cover)_7%,transparent)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />
                             <span className="absolute right-[calc(7%+110px)] top-1/2 flex h-[200px] w-[200px] -translate-y-1/2 -rotate-[8deg] items-center justify-center rounded-full bg-[var(--site-mustard)]">
                                 {panelWord && !edit && <span className={cn(serif, 'max-w-[180px] break-words px-2 text-center text-[40px] italic leading-none text-[var(--site-text)]')}>{panelWord}</span>}
                             </span>
@@ -180,25 +200,25 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                 {/* Yazı */}
                 <div className="pointer-events-none relative z-[1] flex flex-1 flex-col justify-between gap-9 px-5 pb-8 pt-7 sm:px-10 md:px-[52px] md:pb-12 md:pt-10 [&_a]:pointer-events-auto [&_[data-edit-text]]:pointer-events-auto">
                     {!edit ? <ActiveOrderPill enabled={cart.enabled} /> : <span />}
-                    <div className="flex max-w-[640px] flex-col gap-[22px] [--site-accent-text:var(--site-mustard-text)]">
+                    <div className="flex max-w-[640px] flex-col gap-[22px] [--site-accent-text:var(--site-cover-accent)]">
                         {kicker && !edit && (
                             <span className={cn('inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em]', mustard)}>
-                                <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-mustard-text)]" />{kicker}
+                                <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-cover-accent)]" />{kicker}
                             </span>
                         )}
                         {/* Ad Ayarlar'dan gelir; kapak adsız boş görünmesin diye düzenleyicide de yazılır (tıklanmaz). */}
-                        <h1 id="ev-ad" className={cn(serif, 'm-0 max-w-full break-words leading-[0.95] tracking-[-0.025em]')} style={heroNameStyle([first, accent])}>
+                        <h1 id="ev-ad" className={cn(serif, 'm-0 max-w-full break-words', sade ? 'leading-[0.92] tracking-[-0.015em]' : 'leading-[0.95] tracking-[-0.025em]')} style={heroNameStyle([first, accent], sade)}>
                             {first && <>{first}<br /></>}<em className="rb-accent italic">{accent}</em>
                         </h1>
                         {(lead || showEmpty) && (
                             <EditableText as="p" field="tagline" value={content.tagline} fallback={content.headline} placeholder="Alt başlık yazın"
-                                className="m-0 max-w-[500px] text-base leading-[1.6] text-[rgba(251,244,232,0.9)] md:text-lg" />
+                                className="m-0 max-w-[500px] text-base leading-[1.6] text-[color-mix(in_srgb,var(--site-on-cover)_90%,transparent)] md:text-lg" />
                         )}
                         {!edit && (
                             <div {...actionsX} className={cn('flex flex-wrap gap-2.5', actionsX.className)}>
                                 {actions.slice(0, 2).map((a, i) => {
                                     const cls = cn('inline-flex h-[58px] flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-[30px] text-base font-extrabold no-underline transition-opacity hover:opacity-90 sm:flex-none',
-                                        i === 0 ? 'bg-[var(--site-mustard)] text-[var(--site-text)]' : 'border-2 border-[rgba(251,244,232,0.55)] text-[var(--site-on-paper)]');
+                                        i === 0 ? 'bg-[var(--site-pop)] text-[var(--site-on-pop)]' : 'border-2 border-[color-mix(in_srgb,var(--site-on-cover)_55%,transparent)] text-[var(--site-on-cover)]');
                                     return a.to
                                         ? <Link key={a.key} to={a.to} className={cls}>{a.label}{i === 0 && <span aria-hidden="true">→</span>}</Link>
                                         : <a key={a.key} href={a.href} className={cls}>{a.label}{i === 0 && <span aria-hidden="true">→</span>}</a>;
@@ -231,11 +251,11 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
             </div>
 
             {cells.length > 0 && (
-                <div className={cn('relative z-[1] grid grid-cols-2 bg-[var(--site-hero-deep)]', mdCols)}>
+                <div className={cn('relative z-[1] grid grid-cols-2 bg-[var(--site-cover-deep)]', sade && 'border-t border-[var(--site-line)]', mdCols)}>
                     {cells.map(c => {
                         const cell = <div className="flex h-full flex-col justify-center gap-0.5 px-5 py-4 sm:px-7 sm:py-5">{c.node}</div>;
                         return (
-                            <div key={c.key} className={cn('min-w-0 border-[rgba(251,244,232,0.15)] even:border-l [&:nth-child(n+3)]:border-t odd:last:col-span-2',
+                            <div key={c.key} className={cn('min-w-0 border-[color-mix(in_srgb,var(--site-on-cover)_15%,transparent)] even:border-l [&:nth-child(n+3)]:border-t odd:last:col-span-2',
                                 'md:border-l md:odd:last:col-span-1 md:[&:nth-child(n+3)]:border-t-0 md:first:border-l-0')}>
                                 {c.wrap ? c.wrap(cell) : cell}
                             </div>
@@ -261,11 +281,11 @@ function ActiveOrderPill({ enabled }: { enabled: boolean }) {
     const eta = t.estimatedDeliveryAt ? Math.round((new Date(t.estimatedDeliveryAt).getTime() - now) / 60000) : null;
     return (
         <Link to={`/siparis/takip/${encodeURIComponent(active.token)}`}
-            className="inline-flex max-w-full flex-wrap items-center gap-3 self-start rounded-[24px] bg-[var(--site-card)] py-2 pl-4 pr-2 text-sm text-[var(--site-text)] no-underline sm:rounded-full">
+            className="inline-flex max-w-full flex-wrap items-center gap-3 self-start rounded-[24px] bg-[var(--site-menu-card)] py-2 pl-4 pr-2 text-sm text-[var(--site-text)] no-underline sm:rounded-full">
             <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-[var(--site-accent)] shadow-[0_0_0_4px_var(--site-accent-soft)]" />
             <span>
                 <strong>Siparişiniz {t.statusLabel.toLocaleLowerCase('tr-TR')}</strong>{' '}
-                <span className="text-[#6B5B4C]">· #{active.number}{eta !== null && eta > 0 && <> · yaklaşık {eta} dk</>}</span>
+                <span className="text-[var(--site-muted)]">· #{active.number}{eta !== null && eta > 0 && <> · yaklaşık {eta} dk</>}</span>
             </span>
             <span aria-hidden="true" className="inline-flex gap-[3px]">
                 {Array.from({ length: ORDER_STEPS }, (_, i) => (
@@ -284,7 +304,7 @@ function ProductCard({ product, cart, onAdded }: { product: PublicProduct; cart:
     const meta = [product.description?.trim(), product.prepMinutes ? `~${product.prepMinutes} dk` : null].filter(Boolean).join(' · ');
     const tag = product.isOutOfStock ? 'şu an tükendi' : product.isFeatured ? 'ustanın seçimi' : null;
     return (
-        <li className="flex min-w-0 items-center gap-3.5 rounded-[22px] bg-[var(--site-card)] p-3.5 text-[var(--site-text)]">
+        <li className="flex min-w-0 items-center gap-3.5 rounded-[22px] bg-[var(--site-menu-card)] p-3.5 text-[var(--site-text)]">
             {product.imageUrl && (
                 <span className="relative shrink-0">
                     <img src={product.imageUrl} alt={product.name} loading="lazy" className="block h-[78px] w-[78px] rounded-2xl bg-[var(--site-placeholder)] object-cover" />
@@ -322,25 +342,25 @@ function MenuBox({ site, cart }: { site: PublicSite; cart: SiteCart }) {
 
     return (
         <section id="menu" aria-labelledby="ev-menu"
-            className="relative flex scroll-mt-24 flex-col gap-[26px] overflow-hidden rounded-[24px] bg-[var(--site-menu-box)] p-5 text-[#F3E7D3] sm:p-11 md:rounded-[36px]">
-            <span aria-hidden="true" className="pointer-events-none absolute -right-[60px] -top-[60px] h-[300px] w-[300px] rounded-full bg-[radial-gradient(rgba(243,231,211,0.16)_2px,transparent_2.6px)] bg-[length:22px_22px]" />
+            className="relative flex scroll-mt-24 flex-col gap-[26px] overflow-hidden rounded-[24px] bg-[var(--site-menu-box)] p-5 text-[var(--site-on-menu-box)] sm:p-11 md:rounded-[36px]">
+            <span aria-hidden="true" className="pointer-events-none absolute -right-[60px] -top-[60px] h-[300px] w-[300px] rounded-full bg-[radial-gradient(color-mix(in_srgb,var(--site-on-menu-box)_16%,transparent)_2px,transparent_2.6px)] bg-[length:22px_22px]" />
             <div className="relative flex flex-wrap items-center justify-between gap-4">
-                <h2 id="ev-menu" className={cn(serif, 'm-0 text-[42px] leading-[0.95] md:text-[clamp(42px,4.6vw,68px)] [--site-accent-text:var(--site-mustard-text)]')}>Bugünün <em className={cn('rb-accent italic', mustard)}>menüsü</em></h2>
-                <label className="flex h-[52px] w-full items-center gap-2.5 rounded-full bg-[rgba(243,231,211,0.12)] px-5 focus-within:ring-2 focus-within:ring-[#F3E7D3] sm:w-[320px]">
+                <h2 id="ev-menu" className={cn(serif, 'm-0 text-[42px] leading-[0.95] md:text-[clamp(42px,4.6vw,68px)] [--site-accent-text:var(--site-cover-accent)]')}>Bugünün <em className={cn('rb-accent italic', mustard)}>menüsü</em></h2>
+                <label className="flex h-[52px] w-full items-center gap-2.5 rounded-full bg-[color-mix(in_srgb,var(--site-on-menu-box)_12%,transparent)] px-5 focus-within:ring-2 focus-within:ring-[var(--site-on-menu-box)] sm:w-[320px]">
                     <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
                     <span className="sr-only">Menüde ara</span>
                     <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Menüde ara…"
-                        className="min-w-0 flex-1 border-0 bg-transparent text-[15px] text-[#F3E7D3] outline-none placeholder:text-[#D4CBB6]" />
+                        className="min-w-0 flex-1 border-0 bg-transparent text-[15px] text-[var(--site-on-menu-box)] outline-none placeholder:text-[var(--site-on-menu-box-sub)]" />
                 </label>
             </div>
             {!q && categories.length > 1 && (
-                <div role="group" aria-label="Kategoriler" className="relative flex max-w-full gap-1.5 self-start overflow-x-auto rounded-full bg-[rgba(243,231,211,0.1)] p-[5px] [scrollbar-width:none]">
+                <div role="group" aria-label="Kategoriler" className="relative flex max-w-full gap-1.5 self-start overflow-x-auto rounded-full bg-[color-mix(in_srgb,var(--site-on-menu-box)_10%,transparent)] p-[5px] [scrollbar-width:none]">
                     {categories.map(c => {
                         const on = c.id === selected.id;
                         return (
                             <button key={c.id} type="button" aria-pressed={on} onClick={() => setTab(c.id)}
                                 className={cn('inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-[18px] text-sm font-bold transition-colors',
-                                    on ? 'bg-[var(--site-mustard)] text-[var(--site-text)]' : 'text-[#F3E7D3] hover:bg-[rgba(243,231,211,0.1)]')}>
+                                    on ? 'bg-[var(--site-pop)] text-[var(--site-on-pop)]' : 'text-[var(--site-on-menu-box)] hover:bg-[color-mix(in_srgb,var(--site-on-menu-box)_10%,transparent)]')}>
                                 {c.name}<span className="font-semibold opacity-75">{c.products.length}</span>
                             </button>
                         );
@@ -353,9 +373,9 @@ function MenuBox({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                     {items.map(p => <ProductCard key={p.id} product={p} cart={cart} onAdded={onAdded} />)}
                 </ul>
             ) : (
-                <p className="relative m-0 text-[#D4CBB6]">Bu aramayla eşleşen ürün yok. Başka bir şey deneyin.</p>
+                <p className="relative m-0 text-[var(--site-on-menu-box-sub)]">Bu aramayla eşleşen ürün yok. Başka bir şey deneyin.</p>
             )}
-            <Link to="/menu" className="relative inline-flex h-[50px] items-center self-start rounded-full border-2 border-[rgba(243,231,211,0.4)] px-6 font-extrabold text-[#F3E7D3] no-underline transition-colors hover:border-[#F3E7D3]">Tüm menü · {productCount(site)} ürün →</Link>
+            <Link to="/menu" className="relative inline-flex h-[50px] items-center self-start rounded-full border-2 border-[color-mix(in_srgb,var(--site-on-menu-box)_40%,transparent)] px-6 font-extrabold text-[var(--site-on-menu-box)] no-underline transition-colors hover:border-[var(--site-on-menu-box)]">Tüm menü · {productCount(site)} ürün →</Link>
             <p className="sr-only" aria-live="polite">{announce}</p>
         </section>
     );
@@ -453,12 +473,12 @@ function SetMenusRow({ site, cart }: { site: PublicSite; cart: SiteCart }) {
             </div>
             <div className="relative min-w-0 flex-[999_1_560px]">
                 {pos.canPrev && (
-                    <div className={cn(fade, 'left-0 justify-start rounded-l-[36px] bg-[linear-gradient(270deg,rgba(239,226,204,0)_0%,rgba(239,226,204,0.92)_62%,#EFE2CC_100%)]')}>
+                    <div className={cn(fade, 'left-0 justify-start rounded-l-[36px] bg-[linear-gradient(270deg,transparent_0%,color-mix(in_srgb,var(--site-bg)_92%,transparent)_62%,var(--site-bg)_100%)]')}>
                         <button type="button" onClick={() => scroll(-1)} aria-label="Önceki menüler" className={arrow}><ArrowIcon dir="left" /></button>
                     </div>
                 )}
                 {pos.canNext && (
-                    <div className={cn(fade, 'right-0 justify-end rounded-r-[36px] bg-[linear-gradient(90deg,rgba(239,226,204,0)_0%,rgba(239,226,204,0.92)_62%,#EFE2CC_100%)]')}>
+                    <div className={cn(fade, 'right-0 justify-end rounded-r-[36px] bg-[linear-gradient(90deg,transparent_0%,color-mix(in_srgb,var(--site-bg)_92%,transparent)_62%,var(--site-bg)_100%)]')}>
                         <button type="button" onClick={() => scroll(1)} aria-label="Sonraki menüler" className={arrow}><ArrowIcon dir="right" /></button>
                     </div>
                 )}
@@ -558,10 +578,10 @@ function StoryBox({ site }: { site: PublicSite }) {
                 {photo ? (
                     <>
                         <img src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-                        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(110,42,21,0.6)_0%,rgba(110,42,21,0.4)_30%,rgba(110,42,21,0.94)_80%)]" />
+                        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--site-story)_60%,transparent)_0%,color-mix(in_srgb,var(--site-story)_40%,transparent)_30%,color-mix(in_srgb,var(--site-story)_94%,transparent)_80%)]" />
                     </>
                 ) : (
-                    <span aria-hidden="true" className="absolute inset-0 bg-[repeating-conic-gradient(from_45deg,rgba(243,231,211,0.07)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />
+                    <span aria-hidden="true" className="absolute inset-0 bg-[repeating-conic-gradient(from_45deg,color-mix(in_srgb,var(--site-on-paper)_7%,transparent)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />
                 )}
                 <div className="relative flex flex-wrap items-center justify-between gap-3">
                     <EditableBlock target="year" label="Kuruluş yılı" className="rounded-full">
