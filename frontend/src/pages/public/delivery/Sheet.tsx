@@ -43,10 +43,10 @@ export default function Sheet({ title, onClose, locked = false, footer, children
                 aria-modal="true"
                 aria-labelledby={titleId}
                 tabIndex={-1}
-                className="flex max-h-[92dvh] w-full flex-col rounded-t-3xl border-t border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] outline-none animate-in slide-in-from-bottom duration-200 sm:max-w-lg sm:rounded-3xl sm:border"
+                className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border-t border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] outline-none animate-in slide-in-from-bottom duration-200 sm:max-w-lg sm:rounded-3xl sm:border"
                 onClick={e => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between gap-3 border-b border-[var(--site-border)] px-5 py-4">
+                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--site-border)] px-5 py-4">
                     <h2 id={titleId} className={cn(headingFont, 'min-w-0 truncate text-2xl font-bold')}>{title}</h2>
                     <button
                         type="button"
@@ -58,8 +58,8 @@ export default function Sheet({ title, onClose, locked = false, footer, children
                         <X className="h-5 w-5" aria-hidden="true" />
                     </button>
                 </div>
-                <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
-                {footer && <div className="border-t border-[var(--site-border)] p-4">{footer}</div>}
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+                {footer && <div className="shrink-0 border-t border-[var(--site-border)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div>}
             </div>
         </div>
     );

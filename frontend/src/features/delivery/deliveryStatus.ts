@@ -1,18 +1,18 @@
 // Paket siparişin durumuna göre takip adımları ve pano sütunları (saf yardımcılar).
 import { DeliveryStatus, type DeliveryOrder, type DeliveryOrderStatus } from './types';
 
-/** Takip sayfasının adımları: Alındı → Onaylandı → Hazırlanıyor → Yolda → Teslim edildi. */
-export const TRACKING_STEPS = ['Alındı', 'Onaylandı', 'Hazırlanıyor', 'Yolda', 'Teslim edildi'] as const;
+/** Takip sayfasının adımları: Alındı → Onaylandı → Hazırlanıyor → Hazır → Yolda → Teslim edildi. */
+export const TRACKING_STEPS = ['Alındı', 'Onaylandı', 'Hazırlanıyor', 'Hazır', 'Yolda', 'Teslim edildi'] as const;
 
-/** Durumun takip adımındaki yeri (0–4); reddedilen/iptal edilen için -1. Hazır, "Hazırlanıyor" adımında kalır. */
+/** Durumun takip adımındaki yeri (0–5); reddedilen/iptal edilen için -1. */
 export function trackingStepIndex(status: DeliveryOrderStatus): number {
     switch (status) {
         case DeliveryStatus.Received: return 0;
         case DeliveryStatus.Accepted: return 1;
-        case DeliveryStatus.Preparing:
-        case DeliveryStatus.Ready: return 2;
-        case DeliveryStatus.OnTheWay: return 3;
-        case DeliveryStatus.Delivered: return 4;
+        case DeliveryStatus.Preparing: return 2;
+        case DeliveryStatus.Ready: return 3;
+        case DeliveryStatus.OnTheWay: return 4;
+        case DeliveryStatus.Delivered: return 5;
         default: return -1;
     }
 }
@@ -86,3 +86,53 @@ export const CANCEL_REASONS = [
     'Müşteriye ulaşılamadı.',
     'Ürün hazırlanamadı.',
 ] as const;
+
+// ── Söz verilen teslim saati ve gecikme ───────────────────────────────────────────────────────
+
+/** Gecikme uyarısının sarıya döndüğü eşik: söz verilen saate 5 dk ve daha az kaldı. */
+export const LATENESS_WARN_MINUTES = 5;
+
+export type LatenessLevel = 'onTime' | 'soon' | 'late';
+
+export interface Lateness {
+    level: LatenessLevel;
+    /** Söz verilen teslim anı (kabul + müşteriye söylenen süre). */
+    promisedAt: Date;
+    /** Kalan dakika (yukarı yuvarlanır); gecikmişse geçen dakika (aşağı yuvarlanır). */
+    minutes: number;
+}
+
+/** Müşteriye söz verilen teslim anı: kabul + söylenen süre (takip sayfası ve kurye ekranı da böyle hesaplar). */
+export function promisedDeliveryAt(order: Pick<DeliveryOrder, 'acceptedAt' | 'estimatedMinutes'>): Date | null {
+    if (!order.acceptedAt || !order.estimatedMinutes) return null;
+    return new Date(new Date(order.acceptedAt).getTime() + order.estimatedMinutes * 60_000);
+}
+
+/**
+ * Açık siparişin söz verilen saate göre durumu; teslim edilmişse teslim anına göre (zamanında mı, kaç dk geç).
+ * Yeni (henüz söz verilmemiş), reddedilen ve iptal edilen için null.
+ */
+export function deliveryLateness(order: DeliveryOrder, now: number): Lateness | null {
+    if (order.status < DeliveryStatus.Accepted || order.status > DeliveryStatus.Delivered) return null;
+    const promisedAt = promisedDeliveryAt(order);
+    if (!promisedAt) return null;
+    const at = order.status === DeliveryStatus.Delivered
+        ? (order.deliveredAt ? new Date(order.deliveredAt).getTime() : null)
+        : now;
+    if (at == null) return null;
+    const diffMinutes = (promisedAt.getTime() - at) / 60_000;
+    if (diffMinutes < 0) return { level: 'late', promisedAt, minutes: Math.max(1, Math.floor(-diffMinutes)) };
+    // Teslim edilmiş ve zamanında: sarı uyarı anlamsız.
+    if (order.status !== DeliveryStatus.Delivered && diffMinutes <= LATENESS_WARN_MINUTES) {
+        return { level: 'soon', promisedAt, minutes: Math.ceil(diffMinutes) };
+    }
+    return { level: 'onTime', promisedAt, minutes: Math.ceil(diffMinutes) };
+}
+
+/** Kuryenin şu anki yükü: Boşta / N aktif sipariş · M yolda. */
+export function courierLoadText(c: { openOrderCount: number; onTheWayCount: number }): string {
+    if (c.openOrderCount === 0) return 'Boşta';
+    const waiting = c.openOrderCount - c.onTheWayCount;
+    if (waiting <= 0) return `Yolda · ${c.onTheWayCount} sipariş`;
+    return c.onTheWayCount > 0 ? `${waiting} sipariş bekliyor · ${c.onTheWayCount} yolda` : `${waiting} aktif sipariş`;
+}

@@ -21,6 +21,9 @@ public static class RateLimitingExtensions
 
             // Müşteri sitesi (girişsiz uçlar): okuma bol, yazma (sipariş/rezervasyon talebi) sıkı.
             options.AddPolicy("public-read", context => PerClientWindow(context, "public-read", 120));
+            // Restoran sitesinin sayfa açılışı (index.html + başlık etiketleri): tarayıcılar ve arama botları; aşılırsa
+            // 429 döner ve nginx sayfayı doğrudan ön yüzden verir (etiketsiz), site yine açılır.
+            options.AddPolicy("public-html", context => PerClientWindow(context, "public-html", 300));
             options.AddPolicy("public-write", context => PerClientWindow(context, "public-write", 20));
             // Masa QR'ı "Garson çağır" / "Hesap iste": masa başına 60 sn bekleme sunucuda ayrıca uygulanır; bu sınır
             // tek bir cihazın masa masa dolaşıp garsonları meşgul etmesini keser.
@@ -33,10 +36,33 @@ public static class RateLimitingExtensions
             // kilit sunucuda ayrıca uygulanır (ReservationLookupGuard).
             options.AddPolicy("reservation-lookup", context => PerClientWindow(context, "reservation-lookup", 10, TimeSpan.FromMinutes(10)));
 
+            // "Verileri sil" sayfası (yalnızca sahip): önizleme/indirme kullanıcı başına 10 dakikada 30; silme, sıfırlama,
+            // hesap kapatma ve vazgeçme 10 dakikada 5. Şifre de bu uçlarda denendiği için tahmin denemesini de keser.
+            options.AddPolicy("data-read", context => PerUserWindow(context, "data-read", 30, TimeSpan.FromMinutes(10)));
+            options.AddPolicy("data-danger", context => PerUserWindow(context, "data-danger", 5, TimeSpan.FromMinutes(10)));
+
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
 
         return services;
+    }
+
+    // Girişli uçlar: kova kullanıcıdır (aynı IP'deki başka restoranlar etkilenmez); kimliksizse istemci adresi.
+    private static RateLimitPartition<string> PerUserWindow(HttpContext context, string policy, int permitLimit, TimeSpan window)
+    {
+        string? userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(userId))
+            return PerClientWindow(context, policy, permitLimit, window);
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: $"{policy}:user:{userId}",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = permitLimit,
+                Window = window,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
     }
 
     // Sunucuda API nginx arkasında çalışır; bağlantı adresi hep 127.0.0.1 olur ve tüm müşteriler tek

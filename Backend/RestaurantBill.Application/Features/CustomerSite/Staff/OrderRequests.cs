@@ -1,10 +1,13 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.CustomerSite;
+using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Exceptions;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.CustomerSite.Staff;
@@ -121,6 +124,18 @@ public class ApproveOrderRequestCommandHandler(
 public class RejectOrderRequestCommand : IRequest<Result>
 {
     public Guid Id { get; set; }
+    /// <summary>Müşteriye gösterilen neden ("Künefe bu akşam bitti, katmer önerebiliriz."); boş olabilir.</summary>
+    public string? Reason { get; set; }
+}
+
+public class RejectOrderRequestCommandValidator : AbstractValidator<RejectOrderRequestCommand>
+{
+    public RejectOrderRequestCommandValidator()
+    {
+        RuleFor(x => x.Reason)
+            .MaximumLength(OrderRequest.RejectReasonMaxLength)
+            .WithMessage($"Ret nedeni en fazla {OrderRequest.RejectReasonMaxLength} karakter olabilir.");
+    }
 }
 
 public class RejectOrderRequestCommandHandler(IAppDbContext db, ICurrentUserService currentUser, ITableNotificationService tableNotifications)
@@ -145,7 +160,27 @@ public class RejectOrderRequestCommandHandler(IAppDbContext db, ICurrentUserServ
         if (accessError is not null)
             return Result.Failure(accessError);
 
-        orderRequest.Reject();
+        try
+        {
+            orderRequest.Reject(request.Reason);
+        }
+        catch (DomainException ex)
+        {
+            return Result.Failure(ex.Message);
+        }
+
+        string actorName = await db.ActorNameAsync(currentUser, cancellationToken);
+        db.AuditLogs.Add(AuditLog.Create(
+            orderRequest.Table.Region.BranchId,
+            actorName,
+            AuditLogCategory.Order,
+            AuditLogSeverity.Info,
+            "OrderRequestRejected",
+            $"{actorName} {orderRequest.Table.Name} masasından gelen müşteri siparişini reddetti."
+                + (orderRequest.RejectReason.Length > 0 ? $" Neden: {orderRequest.RejectReason}" : string.Empty),
+            nameof(OrderRequest),
+            orderRequest.Id));
+
         await db.SaveChangesAsync(cancellationToken);
 
         await tableNotifications.SendCustomerRequestsChangedAsync(orderRequest.Table.Region.BranchId);

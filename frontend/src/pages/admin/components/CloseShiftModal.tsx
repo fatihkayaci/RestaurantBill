@@ -6,6 +6,7 @@ import type { PaymentMethod, ShiftSummary } from '@/features/cashier/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatTL } from '@/lib/format';
 import { Modal, ModalTitle } from '@/components/ui/modal';
+import UnsettledCourierCashWarning from '@/pages/cashier/components/UnsettledCourierCashWarning';
 
 interface Props {
     shift: { id: string; cashRegisterName: string };
@@ -79,8 +80,8 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
 
     return (
         <Modal onClose={onClose} closeOnOverlay={false} overlayClassName="z-50 bg-black/60 backdrop-blur-[3px] p-4">
-            <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
-                <div className="flex items-start justify-between mb-1">
+            <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-hidden bg-card border border-border rounded-2xl shadow-2xl">
+                <div className="flex shrink-0 items-start justify-between border-b border-border px-6 pt-6 pb-4">
                     <div>
                         <ModalTitle className="font-serif text-xl font-bold text-foreground">Günü Kapat</ModalTitle>
                         <p className="text-sm text-muted-foreground mt-0.5">{shift.cashRegisterName}</p>
@@ -94,6 +95,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
                     </button>
                 </div>
 
+                <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
                 {loadFailed ? (
                     <p className="text-sm text-destructive mt-6 text-center">Vardiya özeti alınamadı.</p>
                 ) : !summary ? (
@@ -107,6 +109,7 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
                                 </p>
                             </div>
                         )}
+                        <UnsettledCourierCashWarning couriers={summary.couriersWithUnsettledCash} />
 
                         <div className="mt-4 flex flex-col gap-2.5">
                             <div className="flex items-center justify-between text-sm">
@@ -161,8 +164,12 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
                                 className="mt-2 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
                             />
                         </div>
+                    </>
+                )}
+                </div>
 
-                        <div className="mt-5 flex flex-col gap-2">
+                {!loadFailed && summary && (
+                        <div className="flex shrink-0 flex-col gap-2 border-t border-border px-6 py-4">
                             <button
                                 onClick={handleCloseWithCount}
                                 disabled={submitting}
@@ -178,7 +185,6 @@ export default function CloseShiftModal({ shift, onClose, onClosed }: Props) {
                                 {submitting ? 'Kapatılıyor...' : 'Saymadan Kapat (sayım sonra girilir)'}
                             </button>
                         </div>
-                    </>
                 )}
             </div>
         </Modal>

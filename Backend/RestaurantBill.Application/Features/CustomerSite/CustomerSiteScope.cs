@@ -23,8 +23,20 @@ public static class CustomerSiteScope
         if (string.IsNullOrWhiteSpace(slug))
             return null;
 
+        // Kapatılan (silinmeyi bekleyen) şirketin sitesi, QR'ı ve sipariş sayfaları çalışmaz.
         return await db.Companies.AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Slug == slug && !c.IsDeleted, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Slug == slug && !c.IsDeleted && c.ClosedAt == null, cancellationToken);
+    }
+
+    public const string ClosedRestaurantMessage = "Bu restoran artık hizmet vermiyor.";
+
+    /// <summary>Slug'ın şirketi kapatılmış mı (müşteri sayfaları nötr "hizmet vermiyor" ekranını gösterir).</summary>
+    public static async Task<bool> IsClosedAsync(IAppDbContext db, ITenantResolver tenant, CancellationToken cancellationToken)
+    {
+        string? slug = tenant.Slug;
+        if (string.IsNullOrWhiteSpace(slug))
+            return false;
+        return await db.Companies.AsNoTracking().AnyAsync(c => c.Slug == slug && !c.IsDeleted && c.ClosedAt != null, cancellationToken);
     }
 
     // branchId verilmezse şirketin en eski şubesi.

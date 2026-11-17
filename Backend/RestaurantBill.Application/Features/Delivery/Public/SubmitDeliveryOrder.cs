@@ -94,10 +94,15 @@ public class SubmitDeliveryOrderCommandHandler(
         if (phone.Length == 0)
             return Fail("Geçerli bir telefon numarası girin.");
 
-        bool blocked = await db.BlockedPhones.AsNoTracking()
-            .AnyAsync(b => b.BranchId == branch.Id && b.Phone == phone && !b.IsDeleted, cancellationToken);
-        if (blocked)
+        BlockedPhone? blocked = await db.BlockedPhones
+            .FirstOrDefaultAsync(b => b.BranchId == branch.Id && b.Phone == phone && !b.IsDeleted, cancellationToken);
+        if (blocked is not null)
+        {
+            // Engelli numaranın denemesi sayılır (Ayarlar → Engelli numaralar'da görünür); müşteriye yine aynı mesaj.
+            blocked.RegisterBlockedAttempt(clock.GetUtcNow().UtcDateTime);
+            await db.SaveChangesAsync(cancellationToken);
             return Fail(BlockedPhone.CustomerMessage);
+        }
 
         DateTime now = clock.GetUtcNow().UtcDateTime;
         DeliveryScope.Availability availability = DeliveryScope.AvailabilityOf(branch, now);

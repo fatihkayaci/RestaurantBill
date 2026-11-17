@@ -9,13 +9,14 @@ import { userService } from '@/features/users/api/userService';
 import { branchService } from '@/features/branches/api/branchService';
 import { reportService } from '@/features/reports/api/reportService';
 import { presetRange, type DatePreset } from '@/features/reports/hooks/useReportFilter';
-import type { PaymentMethod, Shift, ShiftStartCandidate, ShiftSummary } from '@/features/cashier/types';
+import type { PaymentMethod, Shift, ShiftCourierCash, ShiftStartCandidate, ShiftSummary } from '@/features/cashier/types';
 import type { ShiftReport } from '@/features/reports/types';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatAmount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import CloseShiftModal from './components/CloseShiftModal';
+import UnsettledCourierCashWarning from '@/pages/cashier/components/UnsettledCourierCashWarning';
 import LateCountModal from './components/LateCountModal';
 import ShiftDetailModal from './components/ShiftDetailModal';
 import StartShiftModal from './components/StartShiftModal';
@@ -66,6 +67,8 @@ export default function ShiftsPage() {
     const [startTarget, setStartTarget] = useState<ShiftStartCandidate | null>(null);
     const [closeTarget, setCloseTarget] = useState<{ id: string; cashRegisterName: string } | null>(null);
     const [closeWithoutCountTarget, setCloseWithoutCountTarget] = useState<{ id: string; cashRegisterName: string } | null>(null);
+    // Sayımsız kapatma onayında kuryede kalan tahsilat uyarısı (vardiya özetinden).
+    const [withoutCountCouriers, setWithoutCountCouriers] = useState<ShiftCourierCash[]>([]);
     const [lateCountTarget, setLateCountTarget] = useState<Shift | null>(null);
     const [detailTarget, setDetailTarget] = useState<{ id: string; cashRegisterName: string } | null>(null);
     const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
@@ -133,6 +136,14 @@ export default function ShiftsPage() {
         });
         return () => { stop(); };
     }, [refreshAll]);
+
+    const askCloseWithoutCount = (target: { id: string; cashRegisterName: string }) => {
+        setWithoutCountCouriers([]);
+        setCloseWithoutCountTarget(target);
+        shiftService.getShiftSummary(target.id)
+            .then(summary => setWithoutCountCouriers(summary.couriersWithUnsettledCash ?? []))
+            .catch(() => {});
+    };
 
     const handleCloseWithoutCount = async () => {
         if (!closeWithoutCountTarget) return;
@@ -280,7 +291,7 @@ export default function ShiftsPage() {
                                         )}
                                         <div className="flex gap-2 mt-auto">
                                             <button onClick={() => setCloseTarget({ id: shift.id, cashRegisterName: candidate.cashRegisterName })} className="flex-1 rounded-lg bg-rb-gold text-rb-gold-foreground text-sm font-semibold py-2 hover:opacity-90 transition-opacity">Gün kapat</button>
-                                            <button onClick={() => setCloseWithoutCountTarget({ id: shift.id, cashRegisterName: candidate.cashRegisterName })} className="rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors">Sayımsız kapat</button>
+                                            <button onClick={() => askCloseWithoutCount({ id: shift.id, cashRegisterName: candidate.cashRegisterName })} className="rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors">Sayımsız kapat</button>
                                             <button onClick={() => setDetailTarget({ id: shift.id, cashRegisterName: candidate.cashRegisterName })} className="rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors">Detay</button>
                                         </div>
                                     </>
@@ -478,6 +489,7 @@ export default function ShiftsPage() {
                             {closeWithoutCountTarget?.cashRegisterName} kasasındaki vardiya sayım yapılmadan kapanır ve "Sayım bekliyor" olarak işaretlenir. Sayımı sonradan buradan girebilir ya da sıradaki kişinin açılışta saymasını bekleyebilirsin.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    <UnsettledCourierCashWarning couriers={withoutCountCouriers} className="" />
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={submitting}>İptal</AlertDialogCancel>
                         <Button onClick={handleCloseWithoutCount} disabled={submitting}>Sayımsız kapat</Button>

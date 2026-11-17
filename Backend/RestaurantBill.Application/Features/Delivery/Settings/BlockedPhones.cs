@@ -18,12 +18,12 @@ internal static class BlockedPhoneOps
     public const string AlreadyBlockedMessage = "Bu numara zaten engelli.";
 
     public static async Task<Result<BlockedPhoneDto>> BlockAsync(IAppDbContext db, ICurrentUserService currentUser, Guid branchId, string phone,
-        string? reason, string source, CancellationToken cancellationToken)
+        string? reason, string source, CancellationToken cancellationToken, Guid? sourceDeliveryOrderId = null, int? sourceNumber = null)
     {
         BlockedPhone blocked;
         try
         {
-            blocked = BlockedPhone.Create(branchId, phone, reason, currentUser.UserId);
+            blocked = BlockedPhone.Create(branchId, phone, reason, currentUser.UserId, sourceDeliveryOrderId);
         }
         catch (DomainException ex)
         {
@@ -46,7 +46,9 @@ internal static class BlockedPhoneOps
             Phone = blocked.Phone,
             Reason = blocked.Reason,
             CreatedAt = blocked.CreatedAt,
-            BlockedByName = actor
+            BlockedByName = actor,
+            SourceDeliveryOrderId = blocked.SourceDeliveryOrderId,
+            SourceDeliveryOrderNumber = sourceNumber
         });
     }
 }
@@ -70,13 +72,22 @@ public class GetBlockedPhonesQueryHandler(IAppDbContext db, ICurrentUserService 
             .Where(u => userIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
+        List<Guid> sourceIds = phones.Where(p => p.SourceDeliveryOrderId != null).Select(p => p.SourceDeliveryOrderId!.Value).Distinct().ToList();
+        Dictionary<Guid, int> numbers = await db.DeliveryOrders.AsNoTracking()
+            .Where(d => sourceIds.Contains(d.Id))
+            .ToDictionaryAsync(d => d.Id, d => d.Number, cancellationToken);
+
         return Result<List<BlockedPhoneDto>>.Success(phones.Select(p => new BlockedPhoneDto
         {
             Id = p.Id,
             Phone = p.Phone,
             Reason = p.Reason,
             CreatedAt = p.CreatedAt,
-            BlockedByName = names.GetValueOrDefault(p.BlockedByUserId, string.Empty)
+            BlockedByName = names.GetValueOrDefault(p.BlockedByUserId, string.Empty),
+            BlockedAttemptCount = p.BlockedAttemptCount,
+            LastBlockedAttemptAt = p.LastBlockedAttemptAt,
+            SourceDeliveryOrderId = p.SourceDeliveryOrderId,
+            SourceDeliveryOrderNumber = p.SourceDeliveryOrderId is Guid id && numbers.TryGetValue(id, out int number) ? number : null
         }).ToList());
     }
 }
@@ -132,13 +143,13 @@ public class BlockDeliveryOrderPhoneCommandHandler(IAppDbContext db, ICurrentUse
         List<Guid> branchIds = await db.GetAccessibleBranchIdsAsync(currentUser, cancellationToken);
         var order = await db.DeliveryOrders.AsNoTracking()
             .Where(d => d.Id == request.DeliveryOrderId && branchIds.Contains(d.BranchId) && !d.IsDeleted)
-            .Select(d => new { d.BranchId, d.CustomerPhone, d.Number })
+            .Select(d => new { d.Id, d.BranchId, d.CustomerPhone, d.Number })
             .FirstOrDefaultAsync(cancellationToken);
         if (order is null)
             return Result<BlockedPhoneDto>.Failure(DeliveryScope.NotFoundMessage);
 
         return await BlockedPhoneOps.BlockAsync(db, currentUser, order.BranchId, order.CustomerPhone, request.Reason,
-            $" (paket sipariş #{order.Number})", cancellationToken);
+            $" (paket sipariş #{order.Number})", cancellationToken, order.Id, order.Number);
     }
 }
 

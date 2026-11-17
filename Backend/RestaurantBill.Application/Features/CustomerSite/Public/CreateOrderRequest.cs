@@ -50,6 +50,9 @@ public class CreateOrderRequestCommandValidator : AbstractValidator<CreateOrderR
 public class CreateOrderRequestCommandHandler(IAppDbContext db, ITenantResolver tenant, ITableNotificationService tableNotifications)
     : IRequestHandler<CreateOrderRequestCommand, Result<OrderRequestStatusDto>>
 {
+    public static string OutOfStockMessage(string productName)
+        => $"{productName} şu an tükendi. Sepetinizden çıkarıp tekrar gönderin.";
+
     public async Task<Result<OrderRequestStatusDto>> Handle(CreateOrderRequestCommand request, CancellationToken cancellationToken)
     {
         Company? company = await CustomerSiteScope.ResolveCompanyAsync(db, tenant, cancellationToken);
@@ -81,6 +84,11 @@ public class CreateOrderRequestCommandHandler(IAppDbContext db, ITenantResolver 
 
         if (products.Count != productIds.Count)
             return Result<OrderRequestStatusDto>.Failure("Seçtiğiniz ürünlerden biri artık menüde yok. Sayfayı yenileyip tekrar deneyin.");
+
+        // "Tükendi" ürün masadan da sipariş edilemez (paket siparişte olduğu gibi); garsona hiç düşmez.
+        Product? soldOut = products.FirstOrDefault(p => p.IsOutOfStock);
+        if (soldOut is not null)
+            return Result<OrderRequestStatusDto>.Failure(OutOfStockMessage(soldOut.Name));
 
         OrderRequest orderRequest = OrderRequest.Create(table.Id, request.Note);
         foreach (OrderRequestItemInput item in request.Items)

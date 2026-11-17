@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Copy, ExternalLink } from 'lucide-react';
+import {
+    AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { deliveryService, onlineOrderingSettingsService } from '@/features/delivery/api/deliveryService';
@@ -44,7 +48,8 @@ function validate(s: OnlineOrderSettings): string | null {
 }
 
 // Ayarlar → Online sipariş: şubenin paket sipariş ayarları. Genel ve Çalışma saatleri tek ayar kaydıdır (aynı Kaydet);
-// bölgeler ve engelli numaralar her işlemde hemen kaydedilir. Alt sekme adreste: ?sekme=online&bolum=<anahtar>.
+// bölgeler kendi tek "Kaydet" çubuğuyla, engelli numaralar her işlemde hemen kaydedilir. Alt sekme adreste:
+// ?sekme=online&bolum=<anahtar>. Bölgelerde kaydedilmemiş değişiklik varken alt sekmeden çıkmak onay ister.
 // Ön sipariş ayarı da aynı kayıtta durur ama Ayarlar → Rezervasyon'da düzenlenir; burası onu kaydederken
 // sunucudaki güncel değeri gönderir, böylece iki form birbirinin değişikliğini ezmez.
 export default function OnlineOrderingSettingsTab() {
@@ -57,6 +62,11 @@ export default function OnlineOrderingSettingsTab() {
     const [loadError, setLoadError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [pausing, setPausing] = useState(false);
+    // Bölgeler sekmesi kapanınca içeriği silinir: kaydedilmemiş değişiklik varken sekme değişimi onay ister.
+    const [zonesDirty, setZonesDirty] = useState(false);
+    // Onay bekleyen gidiş: alt sekme anahtarı ya da "/" ile başlayan sayfa adresi.
+    const [pendingTab, setPendingTab] = useState<string | null>(null);
+    const navigate = useNavigate();
 
     const load = useCallback(() => {
         onlineOrderingSettingsService.getSettings()
@@ -129,6 +139,21 @@ export default function OnlineOrderingSettingsTab() {
 
     const settingsTab = tab === 'genel' || tab === 'saatler';
 
+    const goToTab = (value: string) => setParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.set('bolum', value);
+        return next;
+    });
+
+    const changeTab = (value: string) => {
+        if (value === tab || !TABS.includes(value as TabKey)) return;
+        if (tab === 'bolgeler' && zonesDirty) {
+            setPendingTab(value);
+            return;
+        }
+        goToTab(value);
+    };
+
     return (
         <div className="flex flex-col gap-5 pb-24">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -141,7 +166,9 @@ export default function OnlineOrderingSettingsTab() {
                     )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <Link to="/admin/online-orders" className="flex h-10 items-center rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground hover:border-rb-gold">
+                    <Link to="/admin/online-orders" onClick={e => {
+                        if (tab === 'bolgeler' && zonesDirty) { e.preventDefault(); setPendingTab('/admin/online-orders'); }
+                    }} className="flex h-10 items-center rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground hover:border-rb-gold">
                         Siparişler panosu
                     </Link>
                     <a href="/siparis" target="_blank" rel="noreferrer" className="flex h-10 items-center gap-1.5 rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground hover:border-rb-gold">
@@ -156,11 +183,7 @@ export default function OnlineOrderingSettingsTab() {
                     <button type="button" onClick={load} className="h-10 rounded-lg border border-border bg-card px-4 text-sm font-semibold">Tekrar dene</button>
                 </div>
             ) : (
-                <Tabs value={tab} onValueChange={value => setParams(prev => {
-                    const next = new URLSearchParams(prev);
-                    next.set('bolum', value);
-                    return next;
-                })}>
+                <Tabs value={tab} onValueChange={changeTab}>
                     <TabsList variant="line" className="flex-wrap justify-start group-data-horizontal/tabs:h-auto [&>[data-slot=tabs-trigger]]:h-9 [&>[data-slot=tabs-trigger]]:flex-none">
                         <TabsTrigger value="genel">Genel</TabsTrigger>
                         <TabsTrigger value="saatler">Çalışma saatleri</TabsTrigger>
@@ -176,10 +199,11 @@ export default function OnlineOrderingSettingsTab() {
                                         <Switch checked={draft.enabled} onCheckedChange={enabled => update({ enabled })} aria-label="Online sipariş açık"
                                             label={<span className="w-12 text-xs text-muted-foreground">{draft.enabled ? 'Açık' : 'Kapalı'}</span>} />
                                     </Row>
-                                    <Row label="Şu an durdur" hint="Yoğunlukta geçici kapatma; kasiyer de panodan açıp kapatabilir. Hemen uygulanır.">
-                                        <Switch checked={draft.paused} disabled={pausing || !saved?.enabled} onCheckedChange={togglePause} onClassName="bg-rb-red"
-                                            aria-label="Online siparişe kapalı"
-                                            label={<span className="w-12 text-xs text-muted-foreground">{draft.paused ? 'Kapalı' : 'Açık'}</span>} />
+                                    <Row label="Şu an sipariş alınıyor" hint="Yoğunlukta kapatıp geçici durdurun; kasiyer de panodan açıp kapatabilir. Hemen uygulanır.">
+                                        {/* Açık = sipariş alınıyor; sunucudaki alan "paused" (tersi). */}
+                                        <Switch checked={!draft.paused} disabled={pausing || !saved?.enabled} onCheckedChange={open => togglePause(!open)}
+                                            aria-label="Şu an sipariş alınıyor"
+                                            label={<span className="w-20 text-xs text-muted-foreground">{draft.paused ? 'Durduruldu' : 'Açık'}</span>} />
                                     </Row>
                                     <Row label="Kapıda ödeme" hint="Online ödeme yok; müşteri teslimatta öder.">
                                         <div className="flex flex-wrap gap-3">
@@ -269,7 +293,7 @@ export default function OnlineOrderingSettingsTab() {
                     </TabsContent>
 
                     <TabsContent value="bolgeler" className="mt-3">
-                        <DeliveryZonesTab />
+                        <DeliveryZonesTab onDirtyChange={setZonesDirty} />
                     </TabsContent>
 
                     <TabsContent value="engelli" className="mt-3">
@@ -277,6 +301,27 @@ export default function OnlineOrderingSettingsTab() {
                     </TabsContent>
                 </Tabs>
             )}
+
+            <AlertDialog open={pendingTab !== null} onOpenChange={open => !open && setPendingTab(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Kaydedilmemiş değişiklikler</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Teslimat bölgelerinde kaydedilmemiş değişiklikler var. Buradan çıkarsanız kaybolacak.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Sekmede kal</AlertDialogCancel>
+                        <Button variant="destructive" onClick={() => {
+                            const target = pendingTab;
+                            setPendingTab(null);
+                            setZonesDirty(false);
+                            if (target?.startsWith('/')) navigate(target);
+                            else if (target) goToTab(target);
+                        }}>Değişiklikleri at</Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {settingsTab && draft && (
                 <div className="fixed inset-x-0 bottom-0 z-20 flex items-center justify-end gap-3 border-t border-border bg-card/95 px-4 py-3 backdrop-blur md:left-auto md:right-6 md:bottom-6 md:rounded-2xl md:border">

@@ -6,6 +6,8 @@ public class TableDto
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Note { get; set; } = string.Empty;
+    /// <summary>En fazla kaç kişi (rezervasyonda gösterilir); girilmemişse null.</summary>
+    public int? Capacity { get; set; }
     public TableStatus Status { get; set; }
     public decimal ActiveOrderTotal { get; set; }
     /// <summary>Açık siparişten tutar girerek alınmış ödemeler.</summary>

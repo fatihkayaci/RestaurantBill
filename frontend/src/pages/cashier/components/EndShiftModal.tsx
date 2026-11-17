@@ -7,6 +7,7 @@ import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatTL } from '@/lib/format';
 import { Modal, ModalTitle } from '@/components/ui/modal';
+import UnsettledCourierCashWarning from './UnsettledCourierCashWarning';
 
 interface Props {
     onClose: () => void;
@@ -74,8 +75,8 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
 
     return (
         <Modal onClose={onClose} closeOnOverlay={false} overlayClassName="z-50 bg-black/60 backdrop-blur-[3px] p-4">
-            <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
-                <div className="flex items-start justify-between mb-1">
+            <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-hidden bg-card border border-border rounded-2xl shadow-2xl">
+                <div className="flex shrink-0 items-start justify-between border-b border-border px-6 pt-6 pb-4">
                     <div>
                         <ModalTitle className="font-serif text-xl font-bold text-foreground">
                             {closedAt ? 'Z Raporu' : 'Günü Kapat'}
@@ -94,6 +95,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                     )}
                 </div>
 
+                <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
                 {!shift || loadFailed ? (
                     <p className="text-sm text-destructive mt-6 text-center">Açık bir vardiyanız bulunamadı.</p>
                 ) : !summary ? (
@@ -134,13 +136,6 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 </span>
                             </div>
                         </div>
-
-                        <button
-                            onClick={onShiftClosed}
-                            className="mt-5 w-full rounded-xl py-3.5 text-sm font-semibold text-rb-gold-foreground bg-rb-gold hover:opacity-90 transition-opacity"
-                        >
-                            Tamam
-                        </button>
                     </>
                 ) : (
                     <>
@@ -151,6 +146,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 </p>
                             </div>
                         )}
+                        <UnsettledCourierCashWarning couriers={summary.couriersWithUnsettledCash} />
 
                         <div className="mt-4 flex flex-col gap-2.5">
                             <div className="flex items-center justify-between text-sm">
@@ -191,8 +187,21 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 className="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
                             />
                         </div>
+                    </>
+                )}
+                </div>
 
-                        <div className="mt-5 flex flex-col gap-2">
+                {shift && !loadFailed && summary && (
+                    <div className="shrink-0 border-t border-border px-6 py-4">
+                        {closedAt ? (
+                        <button
+                            onClick={onShiftClosed}
+                            className="w-full rounded-xl py-3.5 text-sm font-semibold text-rb-gold-foreground bg-rb-gold hover:opacity-90 transition-opacity"
+                        >
+                            Tamam
+                        </button>
+                        ) : (
+                        <div className="flex flex-col gap-2">
                             <button
                                 onClick={() => handleCloseShift(true)}
                                 disabled={submitting}
@@ -208,7 +217,8 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 {submitting ? 'Kapatılıyor...' : 'Günü Kapat'}
                             </button>
                         </div>
-                    </>
+                        )}
+                    </div>
                 )}
             </div>
         </Modal>

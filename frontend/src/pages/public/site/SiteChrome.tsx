@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
     RESERVATION_CANCELLED, RESERVATION_CONFIRMED, RESERVATION_NO_SHOW, RESERVATION_PENDING, RESERVATION_REJECTED, RESERVATION_SEATED,
@@ -12,14 +12,18 @@ import {
 
 // Restoran sitesinin ortak parçaları (tasarım: canvas "Restoran Sitesi v2" · Kafe sitesi).
 
-export function SiteShell({ accent, children }: { accent?: string; children: ReactNode }) {
+/** Sitenin kökü: temanın renk değişkenleri (`theme` hazır tema anahtarı, `accent` özel vurgu rengi; ikisi de boşsa terracotta). */
+export function SiteShell({ accent, theme, children }: { accent?: string; theme?: string; children: ReactNode }) {
     // Site açıkken sayfanın tamamı (zemin, bildirimler, pencereler) Inter Tight; personel ekranına dönünce kalkar.
+    // Sınıf sitenin çizildiği belgeye eklenir (admin'deki önizleme çerçevesinde çerçevenin belgesi, admin değil).
+    const ref = useRef<HTMLDivElement>(null);
     useEffect(() => {
-        document.documentElement.classList.add('restaurant-site');
-        return () => document.documentElement.classList.remove('restaurant-site');
+        const root = (ref.current?.ownerDocument ?? document).documentElement;
+        root.classList.add('restaurant-site');
+        return () => root.classList.remove('restaurant-site');
     }, []);
     return (
-        <div style={siteRootStyle(accent)} className="flex min-h-screen flex-col text-base leading-normal">
+        <div ref={ref} style={siteRootStyle(accent, theme)} className="flex min-h-screen flex-col text-base leading-normal">
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
             {children}
         </div>
@@ -86,7 +90,7 @@ function ProductCard({ product, restaurant, imageClassName, tag, action }: Produ
                 <ImageSlot src={product.imageUrl} alt={product.name} restaurant={restaurant}
                     className={cn('rounded-2xl', imageClassName)} />
                 {tag && (
-                    <span className="absolute left-2.5 top-2.5 rounded-full border border-[var(--site-border)] bg-white px-2.5 py-1 text-xs font-bold text-[#111111]">{tag}</span>
+                    <span className="absolute left-2.5 top-2.5 rounded-full border border-[var(--site-border)] bg-[var(--site-card)] px-2.5 py-1 text-xs font-bold text-[var(--site-text)]">{tag}</span>
                 )}
             </div>
             <div className="flex min-w-0 flex-col gap-0.5 px-1.5">
@@ -111,7 +115,7 @@ export function ProductTile({ product, restaurant, tag }: { product: PublicProdu
 export function PickCard({ product, restaurant }: { product: PublicProduct; restaurant: string }) {
     return (
         <ProductCard product={product} restaurant={restaurant} imageClassName="aspect-[4/3]"
-            action={<Link to="/menu" className="whitespace-nowrap text-sm font-semibold text-[#111111] no-underline hover:opacity-75">Menüde gör →</Link>} />
+            action={<Link to="/menu" className="whitespace-nowrap text-sm font-semibold text-[var(--site-text)] no-underline hover:opacity-75">Menüde gör →</Link>} />
     );
 }
 
@@ -147,7 +151,7 @@ export function MyReservations({ items, className }: { items: ReservationStatusI
                                         {reservation.tableName} · {reservation.partySize} kişi
                                         {reservation.code && <> · Kod <span className="font-mono font-semibold tracking-[0.06em] text-[var(--site-text)]">{reservation.code}</span></>}
                                     </p>
-                                    <p className="mt-1 text-sm font-semibold text-[var(--site-accent)]">Rezervasyon ve ön sipariş →</p>
+                                    <p className="mt-1 text-sm font-semibold text-[var(--site-accent-text)]">Rezervasyon ve ön sipariş →</p>
                                 </div>
                                 <span className={cn('shrink-0 rounded-full px-3 py-1.5 text-xs font-bold', badge.className)}>{badge.text}</span>
                             </Link>
@@ -157,7 +161,7 @@ export function MyReservations({ items, className }: { items: ReservationStatusI
             </ul>
             <p className="text-sm text-[var(--site-sub)]">
                 Burada görmüyor musunuz?{' '}
-                <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[var(--site-accent)] underline-offset-4 hover:underline">Kodla sorgulayın</Link>
+                <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[var(--site-accent-text)] underline-offset-4 hover:underline">Kodla sorgulayın</Link>
             </p>
         </section>
     );
@@ -176,7 +180,7 @@ export function SiteStatus({ error }: { error: string | null }) {
     }
     return (
         <main className="flex-1" aria-busy="true">
-            <div className="h-[520px] animate-pulse bg-[var(--site-ink)] md:h-[640px]" />
+            <div className="h-[440px] animate-pulse bg-[var(--site-hero)] md:h-[560px]" />
             <div className={cn(container, 'grid grid-cols-2 gap-4 py-12 md:grid-cols-4')}>
                 {[...Array(4)].map((_, i) => <div key={i} className="aspect-square animate-pulse rounded-[22px] bg-[var(--site-raised)]" />)}
             </div>

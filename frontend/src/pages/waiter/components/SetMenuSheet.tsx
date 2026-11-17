@@ -47,7 +47,21 @@ export default function SetMenuSheet({ setMenu, line, onChange, onAdd, onClose }
     };
 
     return (
-        <BottomSheet label={`${setMenu.name} seçimleri`} onClose={onClose}>
+        <BottomSheet
+            label={`${setMenu.name} seçimleri`}
+            onClose={onClose}
+            footer={(
+                <button
+                    type="button"
+                    onClick={confirm}
+                    disabled={!line && !complete}
+                    className="flex h-14 w-full items-center justify-between rounded-2xl bg-foreground px-5 text-[17px] font-bold text-background disabled:opacity-50"
+                >
+                    <span>{line ? 'Tamam' : complete ? 'Sepete ekle' : 'Seçim yapın'}</span>
+                    <span>₺{formatPrice(setUnitPrice(setMenu, selections))}</span>
+                </button>
+            )}
+        >
             <div className="flex flex-col gap-4 px-1.5 pb-1">
                 <div>
                     <h3 className="font-serif text-[24px] font-bold leading-tight text-foreground">{setMenu.name}</h3>
@@ -94,16 +108,6 @@ export default function SetMenuSheet({ setMenu, line, onChange, onAdd, onClose }
                     aria-label={`${setMenu.name} notu`}
                     className="h-12 w-full rounded-full border border-border bg-background px-4 text-base outline-none focus:ring-2 focus:ring-rb-gold"
                 />
-
-                <button
-                    type="button"
-                    onClick={confirm}
-                    disabled={!line && !complete}
-                    className="flex h-14 items-center justify-between rounded-2xl bg-foreground px-5 text-[17px] font-bold text-background disabled:opacity-50"
-                >
-                    <span>{line ? 'Tamam' : complete ? 'Sepete ekle' : 'Seçim yapın'}</span>
-                    <span>₺{formatPrice(setUnitPrice(setMenu, selections))}</span>
-                </button>
             </div>
         </BottomSheet>
     );

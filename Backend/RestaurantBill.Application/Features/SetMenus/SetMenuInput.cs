@@ -46,7 +46,6 @@ public class SetMenuOptionInput
 
 public abstract class SetMenuInputValidator<T> : AbstractValidator<T> where T : SetMenuInput
 {
-    public const int MaxSlots = 10;
     public const int MaxOptionsPerSlot = 30;
 
     protected SetMenuInputValidator()
@@ -62,8 +61,7 @@ public abstract class SetMenuInputValidator<T> : AbstractValidator<T> where T : 
         RuleFor(x => x.DiscountValue).GreaterThanOrEqualTo(0).WithMessage("İndirim 0'dan küçük olamaz.");
 
         RuleFor(x => x.Slots)
-            .NotEmpty().WithMessage("Menüde en az bir bölüm olmalı.")
-            .Must(s => s.Count <= MaxSlots).WithMessage($"Bir menüde en fazla {MaxSlots} bölüm olabilir.");
+            .NotEmpty().WithMessage("Menüde en az bir bölüm olmalı.");
 
         RuleForEach(x => x.Slots).ChildRules(slot =>
         {

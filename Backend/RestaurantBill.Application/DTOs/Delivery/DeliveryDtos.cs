@@ -202,12 +202,24 @@ namespace RestaurantBill.Application.DTOs.Delivery
         /// <summary>Kabul anı + tahmini süre (UTC).</summary>
         public DateTime? EstimatedDeliveryAt { get; set; }
         public DateTime? DeliveredAt { get; set; }
+        /// <summary>Kuryenin yola çıktığı an (UTC).</summary>
+        public DateTime? DispatchedAt { get; set; }
+        /// <summary>Yalnızca sipariş yoldayken ve yalnızca ilk ad ("Kaan"); soyad, telefon gösterilmez.</summary>
+        public string CourierFirstName { get; set; } = string.Empty;
         public string RejectReason { get; set; } = string.Empty;
         public string CancelReason { get; set; } = string.Empty;
         /// <summary>Müşteri iptal edebilir mi (yalnızca restoran onaylamadan önce).</summary>
         public bool CanCancel { get; set; }
         public string BranchName { get; set; } = string.Empty;
         public string RestaurantPhone { get; set; } = string.Empty;
+        // Takip sayfasının markası (restoran sitesiyle aynı): şirket adı, vurgu rengi ("#RRGGBB" ya da boş), kapak görseli.
+        public string CompanyName { get; set; } = string.Empty;
+        public string AccentColor { get; set; } = string.Empty;
+        /// <summary>Sitenin hazır renk teması (SiteContent.ThemeKeys); boş = varsayılan.</summary>
+        public string Theme { get; set; } = string.Empty;
+        public string CoverImageUrl { get; set; } = string.Empty;
+        /// <summary>Restoranın onayladığı an (UTC); adım saatleri için.</summary>
+        public DateTime? AcceptedAt { get; set; }
     }
 
     public class DeliveryLineDto
@@ -302,6 +314,12 @@ namespace RestaurantBill.Application.DTOs.Delivery
         /// <summary>Teslim edilmiş, kasaya teslim alınmamış kart tahsilatı.</summary>
         public decimal OutstandingCard { get; set; }
         public int OutstandingCardOrderCount { get; set; }
+        /// <summary>Önceki iş günlerinde tahsil edilip hâlâ teslim edilmemiş nakit.</summary>
+        public decimal PreviousDayCash { get; set; }
+        /// <summary>Önceki iş günlerinden kalan (nakit + kart) sipariş sayısı.</summary>
+        public int PreviousDayOrderCount { get; set; }
+        /// <summary>Teslim edilmemiş en eski tahsilatın zamanı (UTC).</summary>
+        public DateTime? OldestCollectedAt { get; set; }
         /// <summary>Teslim alınmayı bekleyen siparişler, teslim sırasıyla (kasiyerin "Teslim al" seçimi).</summary>
         public List<CourierOutstandingOrderDto> OutstandingOrders { get; set; } = [];
     }
@@ -366,5 +384,11 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public string Reason { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public string BlockedByName { get; set; } = string.Empty;
+        /// <summary>Engel yüzünden geri çevrilen sipariş denemeleri.</summary>
+        public int BlockedAttemptCount { get; set; }
+        public DateTime? LastBlockedAttemptAt { get; set; }
+        /// <summary>Engel panodaki bir siparişten konduysa o siparişin Id'si ve numarası.</summary>
+        public Guid? SourceDeliveryOrderId { get; set; }
+        public int? SourceDeliveryOrderNumber { get; set; }
     }
 }

@@ -639,27 +639,30 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                             </div>
                         )}
 
-                        <button
-                            onClick={handleComplete}
-                            disabled={!canComplete}
-                            className={`w-full h-14 rounded-xl text-base font-semibold transition-colors ${
-                                canComplete
-                                    ? 'bg-rb-green text-rb-green-foreground hover:opacity-90 cursor-pointer'
-                                    : 'bg-rb-neutral-bg text-muted-foreground cursor-not-allowed'
-                            }`}
-                        >
-                            {submitting
-                                ? 'İşleniyor...'
-                                : paymentMethod === 'iban'
-                                    ? `Havale geldi, onayla (₺${formatPrice(netAmount)})`
-                                    : split === 'amount'
-                                    ? (amountTooHigh ? 'Tutar kalandan fazla' : amountValue > 0 ? `Tutarı Öde (₺${formatPrice(netAmount)})` : 'Tutar girin')
-                                    : split === 'items'
-                                    ? (hasSelection ? `Seçilenleri Öde (₺${formatPrice(netAmount)})` : 'Ürün seçin')
-                                    : paidOnAccount > 0
-                                    ? `Kalanı Öde (₺${formatPrice(netAmount)})`
-                                    : `Tümünü Öde (₺${formatPrice(netAmount)})`}
-                        </button>
+                        {/* Ödeme düğmesi uzun içerikte de görünür kalsın. */}
+                        <div className="sticky bottom-0 -mx-6 -mb-5 border-t border-border bg-[#FFFDF8] px-6 pt-3 pb-5 dark:bg-[#1C1712]">
+                            <button
+                                onClick={handleComplete}
+                                disabled={!canComplete}
+                                className={`w-full h-14 rounded-xl text-base font-semibold transition-colors ${
+                                    canComplete
+                                        ? 'bg-rb-green text-rb-green-foreground hover:opacity-90 cursor-pointer'
+                                        : 'bg-rb-neutral-bg text-muted-foreground cursor-not-allowed'
+                                }`}
+                            >
+                                {submitting
+                                    ? 'İşleniyor...'
+                                    : paymentMethod === 'iban'
+                                        ? `Havale geldi, onayla (₺${formatPrice(netAmount)})`
+                                        : split === 'amount'
+                                        ? (amountTooHigh ? 'Tutar kalandan fazla' : amountValue > 0 ? `Tutarı Öde (₺${formatPrice(netAmount)})` : 'Tutar girin')
+                                        : split === 'items'
+                                        ? (hasSelection ? `Seçilenleri Öde (₺${formatPrice(netAmount)})` : 'Ürün seçin')
+                                        : paidOnAccount > 0
+                                        ? `Kalanı Öde (₺${formatPrice(netAmount)})`
+                                        : `Tümünü Öde (₺${formatPrice(netAmount)})`}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

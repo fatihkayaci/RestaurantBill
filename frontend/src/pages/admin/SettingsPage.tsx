@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { authService } from '@/features/auth/api/authService';
+import { getSession, startSession } from '@/lib/auth';
+import { getApiErrorMessage } from '@/lib/apiError';
 import IbanSettingsCard from './components/IbanSettingsCard';
 import QrFeaturesCard from './components/QrFeaturesCard';
 import RestaurantInfoTab from './settings/RestaurantInfoTab';
@@ -60,6 +64,8 @@ export default function SettingsPage() {
                     <TabsContent value="online" className="mt-3"><OnlineOrderingSettingsTab /></TabsContent>
                     <TabsContent value="rezervasyon" className="mt-3"><ReservationSettingsTab /></TabsContent>
                 </Tabs>
+
+                {getSession()?.role === 'Owner' && <DataDeletionHint />}
             </div>
         </SettingsDirtyContext.Provider>
     );
@@ -69,4 +75,26 @@ export default function SettingsPage() {
 export function LegacySettingsRedirect({ sekme }: { sekme: SettingsTabKey }) {
     const [params] = useSearchParams();
     return <Navigate to={settingsPath(sekme, params.get('tab') ?? undefined)} replace />;
+}
+
+// "Verileri sil" şirket geneli bir sayfadır (Tümü modu); şube ayarlarında yalnızca oraya giden kısa bir yol var.
+function DataDeletionHint() {
+    const goToCompanyData = async () => {
+        try {
+            const token = await authService.switchBranch(null);
+            startSession(token);
+            window.location.assign('/owner/data');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Tümü görünümüne geçilemedi.'));
+        }
+    };
+
+    return (
+        <p className="text-xs text-muted-foreground">
+            Verileri silmek veya hesabı kapatmak için:{' '}
+            <button type="button" onClick={goToCompanyData} className="font-medium text-foreground underline underline-offset-2 hover:text-rb-gold">
+                Tümü → Verileri sil
+            </button>
+        </p>
+    );
 }

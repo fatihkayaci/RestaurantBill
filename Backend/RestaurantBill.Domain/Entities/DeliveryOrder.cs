@@ -71,6 +71,11 @@ namespace RestaurantBill.Domain.Entities
         public DateTime? CollectedAt { get; private set; }
         public DateTime? SettledAt { get; private set; }
         public Guid? SettledByUserId { get; private set; }
+        // Kasiyerin "Teslim al"da saydığı nakit ve beklenen nakitle farkı (sayılan − beklenen; eksi = eksik). Değerler o
+        // teslimin tamamına aittir ve teslimdeki her siparişte aynıdır (teslim = aynı SettledAt + SettledByUserId +
+        // CourierUserId). Nakitsiz teslimde ve bu alanlardan önceki teslimlerde null.
+        public decimal? HandoverCountedCash { get; private set; }
+        public decimal? HandoverCashDifference { get; private set; }
 
         public string ClientIp { get; private set; } = string.Empty;
 
@@ -286,6 +291,33 @@ namespace RestaurantBill.Domain.Entities
             Status = DeliveryOrderStatus.Delivered;
         }
 
+        /// <summary>Kuryenin yanlış "Teslim ettim"i geri alabileceği süre (dakika).</summary>
+        public const int UndoDeliverWindowMinutes = 2;
+
+        /// <summary>Teslim geri alınabiliyorsa son an (UTC); kasaya teslim edildiyse ya da teslim edilmediyse null.</summary>
+        public DateTime? UndoDeliverDeadline() => Status == DeliveryOrderStatus.Delivered && !IsSettled && DeliveredAt is DateTime at
+            ? at.AddMinutes(UndoDeliverWindowMinutes)
+            : null;
+
+        /// <summary>
+        /// Delivered → OnTheWay: yanlış basılan teslimin geri alınması. Yalnızca teslimden sonraki kısa süre içinde ve
+        /// tahsilat kasaya teslim edilmeden; tahsilat kaydı silinir.
+        /// </summary>
+        public void UndoDeliver(DateTime utcNow)
+        {
+            EnsureStatus("Yalnızca teslim edilmiş sipariş geri alınabilir.", DeliveryOrderStatus.Delivered);
+            if (IsSettled)
+                throw new DomainException("Tahsilat kasaya teslim edildi; teslim geri alınamaz.");
+            if (UndoDeliverDeadline() is not DateTime deadline || utcNow > deadline)
+                throw new DomainException($"Teslim yalnızca ilk {UndoDeliverWindowMinutes} dakika içinde geri alınabilir.");
+
+            DeliveredAt = null;
+            CollectedMethod = null;
+            CollectedAmount = null;
+            CollectedAt = null;
+            Status = DeliveryOrderStatus.OnTheWay;
+        }
+
         public bool IsSettled => SettledAt is not null;
 
         /// <summary>Kasiyerin "Teslim al"ı: tahsilat kasaya geçti. Durum değişmez; bağlı Order'ı ödeme kaydı kapatır.</summary>
@@ -299,6 +331,25 @@ namespace RestaurantBill.Domain.Entities
 
             SettledAt = utcNow;
             SettledByUserId = userId;
+        }
+
+        /// <summary>Kasa sayımında fark: sayılan − beklenen, kuruşa yuvarlı. Eksi: kurye eksik teslim etti.</summary>
+        public static decimal CashCountDifference(decimal expectedCash, decimal countedCash)
+            => Math.Round(countedCash - expectedCash, 2, MidpointRounding.AwayFromZero);
+
+        /// <summary>
+        /// "Teslim al"daki nakit sayımı: teslim edilen nakdin tamamı için sayılan tutar ve fark. Yalnızca teslim alınmış
+        /// siparişe yazılır; fark kaydedilir, teslimi durdurmaz.
+        /// </summary>
+        public void RecordHandoverCashCount(decimal expectedCash, decimal countedCash)
+        {
+            if (!IsSettled)
+                throw new DomainException("Sayım yalnızca teslim alınmış siparişe yazılabilir.");
+            if (expectedCash < 0 || countedCash < 0)
+                throw new DomainException("Sayılan tutar 0 ya da daha büyük olmalı.");
+
+            HandoverCountedCash = Math.Round(countedCash, 2, MidpointRounding.AwayFromZero);
+            HandoverCashDifference = CashCountDifference(expectedCash, countedCash);
         }
 
         public bool IsOpen => Status is not (DeliveryOrderStatus.Delivered or DeliveryOrderStatus.Rejected or DeliveryOrderStatus.Cancelled);

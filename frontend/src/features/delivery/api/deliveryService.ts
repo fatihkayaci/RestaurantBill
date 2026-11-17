@@ -78,6 +78,11 @@ export const onlineOrderingSettingsService = {
     deleteZone: async (id: string) => {
         await api.delete(`/delivery-zones/${id}`);
     },
+    /** Tek "Kaydet": tüm bölgeler, sitedeki sırayla (ya hepsi ya hiçbiri). */
+    saveZonesBulk: async (zones: (DeliveryZoneInput & { id: string })[]) => {
+        const response = await api.put<DeliveryZone[]>('/delivery-zones/bulk', { zones });
+        return response.data;
+    },
     reorderZones: async (zoneIds: string[]) => {
         const response = await api.put<DeliveryZone[]>('/delivery-zones/order', { zoneIds });
         return response.data;

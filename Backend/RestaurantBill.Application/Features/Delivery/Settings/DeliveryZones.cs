@@ -176,3 +176,97 @@ public class ReorderDeliveryZonesCommandHandler(IAppDbContext db, ICurrentUserSe
         return Result<List<DeliveryZoneDto>>.Success(zones.OrderBy(z => z.SortOrder).Select(DeliveryZoneMapping.ToDto).ToList());
     }
 }
+
+/// <summary>
+/// Bölgeler sekmesinin tek "Kaydet"i: şubenin tüm bölgeleri, istenen sırayla ve yeni değerleriyle. Sıra listedeki
+/// sıradır (0, 1, 2…). Liste sunucudakiyle aynı bölgeleri içermeli (bayat ekran başka birinin eklediğini/sildiğini ezmesin).
+/// Ya hepsi ya hiçbiri.
+/// </summary>
+public class SaveDeliveryZonesBulkCommand : IRequest<Result<List<DeliveryZoneDto>>>
+{
+    public const int MaxZones = 200;
+
+    public List<DeliveryZoneBulkItem> Zones { get; set; } = [];
+}
+
+public class DeliveryZoneBulkItem
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public decimal Fee { get; set; }
+    public decimal MinOrderAmount { get; set; }
+    public int EstimatedMinutes { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public class SaveDeliveryZonesBulkCommandValidator : AbstractValidator<SaveDeliveryZonesBulkCommand>
+{
+    public SaveDeliveryZonesBulkCommandValidator()
+    {
+        RuleFor(x => x.Zones)
+            .NotNull().WithMessage("Bölge listesi boş olamaz.")
+            .Must(z => z.Count <= SaveDeliveryZonesBulkCommand.MaxZones)
+            .WithMessage($"En fazla {SaveDeliveryZonesBulkCommand.MaxZones} bölge kaydedilebilir.");
+        RuleForEach(x => x.Zones).ChildRules(zone =>
+        {
+            zone.RuleFor(z => z.Name)
+                .NotEmpty().WithMessage("Bölge adı boş olamaz.")
+                .MaximumLength(DeliveryZone.NameMaxLength).WithMessage($"Bölge adı en fazla {DeliveryZone.NameMaxLength} karakter olabilir.");
+        });
+    }
+}
+
+public class SaveDeliveryZonesBulkCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
+    : IRequestHandler<SaveDeliveryZonesBulkCommand, Result<List<DeliveryZoneDto>>>
+{
+    public const string StaleListMessage = "Bölge listesi güncel değil. Sayfayı yenileyip tekrar deneyin.";
+
+    public async Task<Result<List<DeliveryZoneDto>>> Handle(SaveDeliveryZonesBulkCommand request, CancellationToken cancellationToken)
+    {
+        Guid branchId = currentUser.BranchId;
+        List<DeliveryZoneBulkItem> items = request.Zones ?? [];
+
+        List<DeliveryZone> zones = await db.DeliveryZones
+            .Where(z => z.BranchId == branchId && !z.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        List<Guid> ids = items.Select(i => i.Id).ToList();
+        if (ids.Count != zones.Count || ids.Distinct().Count() != ids.Count || ids.Any(id => zones.All(z => z.Id != id)))
+            return Result<List<DeliveryZoneDto>>.Failure(StaleListMessage);
+
+        // Ad tekrarı listenin kendi içinde aranır: iki bölgenin adını takas etmek de kaydedilebilsin.
+        string? duplicate = items
+            .GroupBy(i => i.Name.Trim().ToLower())
+            .Where(g => g.Count() > 1)
+            .Select(g => g.First().Name.Trim())
+            .FirstOrDefault();
+        if (duplicate is not null)
+            return Result<List<DeliveryZoneDto>>.Failure($"{duplicate} adında birden fazla bölge var.");
+
+        string actor = await db.ActorNameAsync(currentUser, cancellationToken);
+        for (int index = 0; index < items.Count; index++)
+        {
+            DeliveryZoneBulkItem item = items[index];
+            DeliveryZone zone = zones.First(z => z.Id == item.Id);
+            bool changed = zone.Name != item.Name.Trim() || zone.Fee != item.Fee || zone.MinOrderAmount != item.MinOrderAmount
+                || zone.EstimatedMinutes != item.EstimatedMinutes || zone.IsActive != item.IsActive;
+            try
+            {
+                zone.Update(item.Name, item.Fee, item.MinOrderAmount, item.EstimatedMinutes, index);
+            }
+            catch (DomainException ex)
+            {
+                return Result<List<DeliveryZoneDto>>.Failure($"{item.Name.Trim()}: {ex.Message}");
+            }
+            zone.SetActive(item.IsActive);
+
+            if (changed)
+                DeliveryZoneMapping.Audit(db, branchId, actor, "DeliveryZoneUpdated",
+                    $"{actor} {zone.Name} teslimat bölgesini güncelledi (ücret ₺{zone.Fee:0.##}, en az ₺{zone.MinOrderAmount:0.##}, {zone.EstimatedMinutes} dk{(zone.IsActive ? "" : ", kapalı")}).",
+                    zone.Id);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Result<List<DeliveryZoneDto>>.Success(zones.OrderBy(z => z.SortOrder).Select(DeliveryZoneMapping.ToDto).ToList());
+    }
+}

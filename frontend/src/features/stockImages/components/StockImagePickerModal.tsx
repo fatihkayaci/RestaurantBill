@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ImageOff, Search, X } from 'lucide-react';
 import { Modal, ModalTitle } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getApiErrorMessage } from '@/lib/apiError';
 import { inputClass } from '@/lib/formStyles';
-import { stockImageService, type StockImage } from '../api/stockImageService';
+import type { StockImage } from '../api/stockImageService';
+import { useStockImageSearch } from '../useStockImageSearch';
 
 interface StockImagePickerModalProps {
     /** Ürün/menü adı: arama kutusu bununla dolu açılır, eşleşenler hemen görünür. */
@@ -13,45 +13,11 @@ interface StockImagePickerModalProps {
     onSelect: (image: StockImage) => void;
 }
 
-type PickerState =
-    | { status: 'loading' }
-    | { status: 'error'; message: string }
-    // noMatch: aramaya uyan yok, items varsayılan liste. Katalog tamamen boşsa items da boştur.
-    | { status: 'ready'; items: StockImage[]; noMatch: boolean };
-
-const SEARCH_DELAY_MS = 250;
-
 // "Hazır görsellerden seç": ortak kütüphaneden fotoğraf seçer. Seçim kaydedilene kadar yalnızca önizlemedir;
 // kaydetme ürün/menü düzenleyicisinde yapılır (yeni kayıtta oluşturduktan sonra).
 export default function StockImagePickerModal({ initialQuery, onClose, onSelect }: StockImagePickerModalProps) {
     const [query, setQuery] = useState(initialQuery.trim());
-    const [state, setState] = useState<PickerState>({ status: 'loading' });
-    const [reloadKey, setReloadKey] = useState(0);
-
-    useEffect(() => {
-        const controller = new AbortController();
-        const timer = window.setTimeout(async () => {
-            setState({ status: 'loading' });
-            try {
-                const q = query.trim();
-                let items = await stockImageService.search(q, controller.signal);
-                let noMatch = false;
-                if (items.length === 0 && q) {
-                    // Eşleşme yoksa boş ekran yerine kütüphanenin varsayılan listesi gösterilir.
-                    items = await stockImageService.search('', controller.signal);
-                    noMatch = true;
-                }
-                setState({ status: 'ready', items, noMatch });
-            } catch (err) {
-                if (controller.signal.aborted) return;
-                setState({ status: 'error', message: getApiErrorMessage(err, 'Hazır görseller yüklenemedi.') });
-            }
-        }, SEARCH_DELAY_MS);
-        return () => {
-            window.clearTimeout(timer);
-            controller.abort();
-        };
-    }, [query, reloadKey]);
+    const { state, retry } = useStockImageSearch(query);
 
     return (
         <Modal onClose={onClose} overlayClassName="bg-black/40 backdrop-blur-sm">
@@ -97,7 +63,7 @@ export default function StockImagePickerModal({ initialQuery, onClose, onSelect 
                     {state.status === 'error' && (
                         <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
                             <p className="text-sm text-destructive">{state.message}</p>
-                            <button type="button" onClick={() => setReloadKey(k => k + 1)}
+                            <button type="button" onClick={retry}
                                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted">
                                 Tekrar dene
                             </button>

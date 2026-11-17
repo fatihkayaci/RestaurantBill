@@ -360,8 +360,8 @@ export default function CashRegisters() {
             {/* Kasa Ekle / Düzenle Modal */}
             {isModalOpen && (
                 <Modal onClose={() => setIsModalOpen(false)} overlayClassName="bg-black/40 backdrop-blur-sm">
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 flex flex-col overflow-hidden max-h-[calc(100dvh-2rem)] sm:max-h-[90vh]">
+                        <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <ModalTitle className="text-xl font-bold text-foreground">
                                 {editTarget ? 'Kasayı Düzenle' : 'Kasa Ekle'}
                             </ModalTitle>
@@ -370,7 +370,7 @@ export default function CashRegisters() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+                        <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
                             <div>
                                 <label className={labelClass}>Kasa Adı</label>
                                 <input
@@ -411,7 +411,7 @@ export default function CashRegisters() {
                             </label>
                         </form>
 
-                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                        <div className="shrink-0 px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
                             <button type="button" onClick={handleSubmit} className="px-4 py-2 text-sm rounded-lg bg-rb-gold hover:opacity-90 text-rb-gold-foreground font-medium transition-colors">
                                 {editTarget ? 'Kaydet' : 'Ekle'}
@@ -424,8 +424,8 @@ export default function CashRegisters() {
             {/* Para Giriş / Çıkış Modal */}
             {txTarget && (
                 <Modal onClose={closeTxDialog} overlayClassName="bg-black/40 backdrop-blur-sm">
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 flex flex-col overflow-hidden max-h-[calc(100dvh-2rem)] sm:max-h-[90vh]">
+                        <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <div>
                                 <ModalTitle className="text-xl font-bold text-foreground">
                                     {txType === 1 ? 'Para Girişi' : 'Para Çıkışı'}
@@ -437,7 +437,7 @@ export default function CashRegisters() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleTxSubmit} className="px-6 py-5">
+                        <form onSubmit={handleTxSubmit} className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
                             <label className={labelClass}>Tutar (₺)</label>
                             <input
                                 type="number"
@@ -455,7 +455,7 @@ export default function CashRegisters() {
                             </p>
                         </form>
 
-                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                        <div className="shrink-0 px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button type="button" onClick={closeTxDialog} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
                             <button
                                 type="button"
@@ -475,8 +475,8 @@ export default function CashRegisters() {
             {/* Kasalar Arası Aktarım Modal */}
             {transferSource && (
                 <Modal onClose={closeTransferDialog} overlayClassName="bg-black/40 backdrop-blur-sm">
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-sm mx-4 flex flex-col overflow-hidden max-h-[calc(100dvh-2rem)] sm:max-h-[90vh]">
+                        <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <div>
                                 <ModalTitle className="text-xl font-bold text-foreground">Kasalar Arası Aktarım</ModalTitle>
                                 <p className="text-sm text-muted-foreground mt-0.5">{transferSource.name}</p>
@@ -486,7 +486,7 @@ export default function CashRegisters() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleTransferSubmit} className="px-6 py-5 space-y-4">
+                        <form onSubmit={handleTransferSubmit} className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
                             <div>
                                 <label className={labelClass}>Hedef Kasa</label>
                                 <select
@@ -529,7 +529,7 @@ export default function CashRegisters() {
                             </div>
                         </form>
 
-                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                        <div className="shrink-0 px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button type="button" onClick={closeTransferDialog} className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors">İptal</button>
                             <button
                                 type="button"

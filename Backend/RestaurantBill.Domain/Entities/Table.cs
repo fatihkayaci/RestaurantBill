@@ -10,6 +10,10 @@ namespace RestaurantBill.Domain.Entities
         public string Name { get; private set; } = string.Empty;
         public string Note { get; private set; } = string.Empty;
         public TableStatus Status { get; private set; } = TableStatus.Available;
+        // Masaya en fazla kaç kişi oturur; rezervasyonda kişi sayısına uymayan masa soluklaşır. Girilmemişse null.
+        public int? Capacity { get; private set; }
+
+        public const int MaxCapacity = 50;
 
         protected Table() { }
 
@@ -36,6 +40,15 @@ namespace RestaurantBill.Domain.Entities
 
             Name = name;
             Note = note;
+        }
+
+        /// <summary>Kapasite: 1–50 kişi ya da null (girilmemiş).</summary>
+        public void SetCapacity(int? capacity)
+        {
+            if (capacity is < 1 or > MaxCapacity)
+                throw new DomainException($"Masa kapasitesi 1 ile {MaxCapacity} kişi arasında olmalı.");
+
+            Capacity = capacity;
         }
 
         public void AssignRegion(Guid regionId)

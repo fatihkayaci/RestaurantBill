@@ -67,8 +67,8 @@ export default function StartShiftModal({ candidate, onClose, onStarted }: Props
 
     return (
         <Modal onClose={onClose} overlayClassName="z-50 bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl" onClick={e => e.stopPropagation()}>
-                <div className="flex items-start justify-between gap-3 px-6 pt-5 pb-4">
+            <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="flex shrink-0 items-start justify-between gap-3 px-6 pt-5 pb-4">
                     <div>
                         <ModalTitle className="font-serif text-2xl font-bold text-foreground">Gün başlat</ModalTitle>
                         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -81,7 +81,7 @@ export default function StartShiftModal({ candidate, onClose, onStarted }: Props
                     </button>
                 </div>
 
-                <div className="space-y-4 px-6 pb-5">
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-5">
                     <fieldset className="space-y-2.5">
                         <legend className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kasa kime atanacak?</legend>
 
@@ -144,7 +144,7 @@ export default function StartShiftModal({ candidate, onClose, onStarted }: Props
                     )}
                 </div>
 
-                <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+                <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-6 py-4">
                     <button type="button" onClick={onClose} disabled={submitting} className="rounded-lg border border-border px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted">Vazgeç</button>
                     <button type="button" onClick={handleSubmit} disabled={submitting} className="rounded-lg bg-rb-gold px-4 py-2 text-sm font-semibold text-rb-gold-foreground transition-opacity hover:opacity-90 disabled:opacity-60">
                         {submitting ? 'Başlatılıyor…' : 'Günü başlat'}

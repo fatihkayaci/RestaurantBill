@@ -24,6 +24,8 @@ public class DeliveryOrderConfiguration : IEntityTypeConfiguration<DeliveryOrder
         builder.Property(d => d.DeliveryFee).HasPrecision(18, 2);
         builder.Property(d => d.Total).HasPrecision(18, 2);
         builder.Property(d => d.CollectedAmount).HasPrecision(18, 2);
+        builder.Property(d => d.HandoverCountedCash).HasPrecision(18, 2);
+        builder.Property(d => d.HandoverCashDifference).HasPrecision(18, 2);
 
         builder.Ignore(d => d.IsOpen);
         builder.Ignore(d => d.IsSettled);

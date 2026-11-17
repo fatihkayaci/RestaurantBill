@@ -113,3 +113,27 @@ No schema changes and no SQL. The handover writes `Payments` (including the `IsD
 ## C4: Frontend
 
 No schema changes and no SQL. Small backend additions only: `GET api/online-ordering/status` (`{ branchId, paused, enabled }`, Owner/Admin/Cashier, for the board's pause switch), `OnlineOrderingPauseDto.Enabled`, a guard that rejects adding products or set menus to a delivery order once it is OnTheWay or Delivered, and a courier hub notification when the kitchen makes an assigned delivery order Ready.
+
+## Courier cash count and blocked-number attempts
+
+Migration: `20261116182140_AddCourierCashCountAndBlockedAttempts`. Only additive columns, all nullable or with a
+default; no SQL and no backfill. `dotnet ef migrations has-pending-model-changes` reports no changes.
+
+| Column | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `DeliveryOrders.HandoverCountedCash` | `numeric(18,2)` | `NULL` | Cash the cashier counted at "Teslim al" |
+| `DeliveryOrders.HandoverCashDifference` | `numeric(18,2)` | `NULL` | Counted − expected; negative means short |
+| `BlockedPhones.BlockedAttemptCount` | `integer` NOT NULL | `0` | Order attempts rejected by the block |
+| `BlockedPhones.LastBlockedAttemptAt` | `timestamptz` | `NULL` | Last rejected attempt |
+| `BlockedPhones.SourceDeliveryOrderId` | `uuid` | `NULL` | The order the block came from (no FK) |
+
+- There is no handover table. One handover is the set of delivery orders with the same `SettledAt`,
+  `SettledByUserId` and `CourierUserId`; the handler writes them in one moment. The counted amount and the
+  difference belong to the whole handover and are repeated on each of its orders. The history endpoint groups them.
+- Handovers before this migration, card-only handovers and handovers sent without a count have `NULL` in both
+  columns. The history shows "—" for them.
+- The difference is recorded only. It does not add a cash transaction, so a shortage still shows up in the shift's
+  own count at close.
+- "Collected on a previous day" uses the existing `DeliveryOrders.CollectedAt` with the branch business day
+  (`IBusinessDayResolver`). No new column was needed.
+- Existing blocks keep `SourceDeliveryOrderId = NULL` and start counting from `0`.

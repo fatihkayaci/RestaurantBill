@@ -74,6 +74,11 @@ restaurant page that selects it.
 Both commands are branch-scoped like the upload commands and write an audit log (`ProductStockImageSelected`,
 `SetMenuStockImageSelected`). Nothing is uploaded or copied.
 
+Restaurant site photos (cover, about, founder, share image, gallery, region photos) can use stock images too. Those
+selections go into the site **draft**: `POST api/branch/site/draft/image/{slot}/stock`, `.../gallery/stock`,
+`.../regions/{id}/image/stock`, all with `{ stockImageId }`. See `docs/site-editor.md`. The same rule applies: publishing
+or discarding never deletes a `shared/` key.
+
 ## Catalog status
 
 89 photos from Pixabay (free for commercial use, no attribution required) are on the CDN and in the seed file.

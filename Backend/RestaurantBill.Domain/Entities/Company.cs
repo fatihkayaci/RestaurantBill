@@ -27,6 +27,37 @@ public class Company : BaseEntity
         };
     }
 
+    // ── Hesap kapatma ──────────────────────────────────────────────────────────────────────────────
+    // Sahibi hesabı kapatınca şirket hemen durur (personel girişi, müşteri sitesi, QR, sipariş). Sahip bekleme süresi
+    // boyunca girip vazgeçebilir; süre dolunca arka plan işi şirketi ve tüm verisini kalıcı olarak siler.
+
+    public const int ClosureGraceDays = 30;
+
+    /// <summary>Hesabın kapatıldığı an; null ise şirket çalışıyor.</summary>
+    public DateTime? ClosedAt { get; private set; }
+    /// <summary>Bu andan sonra şirket kalıcı olarak silinir.</summary>
+    public DateTime? DeletionScheduledAt { get; private set; }
+
+    public bool IsClosed => ClosedAt is not null;
+
+    public void Close(DateTime nowUtc)
+    {
+        if (IsClosed)
+            throw new DomainException("Hesap zaten kapatılmış.");
+        ClosedAt = nowUtc;
+        DeletionScheduledAt = nowUtc.AddDays(ClosureGraceDays);
+    }
+
+    public void CancelClosure()
+    {
+        if (!IsClosed)
+            throw new DomainException("Hesap kapatılmamış.");
+        ClosedAt = null;
+        DeletionScheduledAt = null;
+    }
+
+    public bool IsDueForDeletion(DateTime nowUtc) => IsClosed && DeletionScheduledAt is { } due && due <= nowUtc;
+
     public void UpdateName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))

@@ -33,8 +33,10 @@ app.UseCors("Allow");
 app.UseHttpsRedirection();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ExceptionMiddleware>();
-app.UseRateLimiter();
+// Kimlik önce çözülür: "Verileri sil" uçlarının sınırı kullanıcı başınadır (diğer politikalar IP'ye bakar, etkilenmez).
 app.UseAuthentication();
+app.UseRateLimiter();
+app.UseMiddleware<CompanyClosureMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 // Production'da API yüzeyini dışarı açmamak için Swagger yalnızca Development'ta veya açıkça istendiğinde yayınlanır.

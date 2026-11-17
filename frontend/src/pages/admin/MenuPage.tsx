@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
@@ -71,8 +72,12 @@ export default function Menu() {
     const [bannerUseGeneralTaxRate, setBannerUseGeneralTaxRate] = useState(false);
     const [bannerTaxRateSaving, setBannerTaxRateSaving] = useState(false);
 
+    // "Sitenizi güzelleştirin" → "Ürünlere git": ?fotografsiz=1 yalnız fotoğrafsız aktif ürünleri gösterir.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const withoutPhotoOnly = searchParams.get('fotografsiz') === '1';
     const filteredProducts = products.filter(p =>
-        selectedCategory === 'all' || p.categoryId === selectedCategory
+        (selectedCategory === 'all' || p.categoryId === selectedCategory)
+        && (!withoutPhotoOnly || (p.isActive && !p.imageUrl))
     );
     const activeCount = products.filter(p => p.isActive).length;
     const categoryCounts = categories.map(cat => ({
@@ -596,6 +601,16 @@ export default function Menu() {
                 />
             )}
 
+            {withoutPhotoOnly && (
+                <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rb-gold/40 bg-rb-gold-bg px-4 py-3 text-sm">
+                    <span className="text-foreground">
+                        <span className="font-semibold">Fotoğrafsız ürünler ({products.filter(p => p.isActive && !p.imageUrl).length}).</span>{' '}
+                        Ürünü düzenleyip fotoğraf yükleyin ya da <span className="font-semibold">“Hazır görsellerden seç”</span> ile hazır görsel arşivinden seçin.
+                    </span>
+                    <button type="button" onClick={() => setSearchParams({})} className="font-semibold text-foreground underline underline-offset-4">Tümünü göster</button>
+                </div>
+            )}
+
             {/* Kartlar */}
             {!loaded ? null : products.length === 0 ? (
                 <EmptyState
@@ -718,8 +733,8 @@ export default function Menu() {
             {/* Modal */}
             {isModalOpen && (
                 <Modal onClose={closeModal} overlayClassName="bg-black/40 backdrop-blur-sm">
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 flex flex-col overflow-hidden max-h-[calc(100dvh-2rem)] sm:max-h-[90dvh]">
+                        <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <ModalTitle className="text-xl font-bold text-foreground">
                                 {editProduct ? 'Ürünü Düzenle' : 'Ürün Ekle'}
                             </ModalTitle>
@@ -728,7 +743,7 @@ export default function Menu() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+                        <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
                             <div>
                                 <label className={labelClass}>Ürün Görseli</label>
                                 {(() => {
@@ -936,7 +951,7 @@ export default function Menu() {
                             </label>
                         </form>
 
-                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                        <div className="shrink-0 px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button
                                 type="button"
                                 onClick={closeModal}

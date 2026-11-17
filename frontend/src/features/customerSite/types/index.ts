@@ -11,6 +11,8 @@ export interface PublicProduct {
     isFeatured: boolean;
     /** Tahmini hazırlanma süresi (dk); null ise gösterilmez. */
     prepMinutes: number | null;
+    /** "Tükendi": menüde görünür, masadan sipariş edilemez. */
+    isOutOfStock: boolean;
 }
 
 /** Şubenin site içeriği; admin "Restoran sitesi" sayfası da aynı şekli kullanır. Boş alanın bölümü çizilmez. */
@@ -29,6 +31,139 @@ export interface BranchSite {
     instagramUrl: string;
     /** "#RRGGBB" ya da boş */
     accentColor: string;
+    /** Hazır renk teması (SITE_THEMES anahtarı); boş = terracotta. */
+    theme: string;
+    /** Mekân fotoğrafları, sitedeki sırayla (en çok 12). */
+    galleryImageUrls: string[];
+    /** Boş: "her gün aynı" (opensAt/closesAt). Doluysa Pazartesi → Pazar 7 gün. */
+    weeklyHours: SiteDayHours[];
+    /** "Nasıl gelinir" kısa metni. */
+    directionsNote: string;
+    whatsappPhone: string;
+    /** SITE_AMENITIES anahtarları. */
+    amenities: string[];
+    rating: number | null;
+    reviewCount: number | null;
+    /** Google Haritalar yorum sayfası. */
+    reviewsUrl: string;
+    featuredReviews: SiteReview[];
+    founderPhotoUrl: string;
+    founderName: string;
+    founderTitle: string;
+    founderQuote: string;
+    foundedYear: number | null;
+    values: SiteValue[];
+    milestones: SiteMilestone[];
+    /** Yalnız admin: şubenin bütün bölümleri (sitede bu bilgi regions[] içinde). */
+    regionDetails: SiteRegionDetail[];
+    /** Google/paylaşım başlığı; boş = otomatik ("Ad · ilçe"). */
+    seoTitle: string;
+    /** Google/paylaşım açıklaması; boş = otomatik. */
+    seoDescription: string;
+    /** Seçilen paylaşım görseli; boş = kapak (otomatik). */
+    shareImageUrl: string;
+    /** Alt sayfaların kendi kapakları; boş = sitenin kapağı (Mekân'da galeri → hikâye → kapak). */
+    menuHeroUrl: string;
+    aboutHeroUrl: string;
+    venueHeroUrl: string;
+    contactHeroUrl: string;
+    reservationHeroUrl: string;
+}
+
+/** Sitenin geçerli Google/paylaşım değerleri (girilmemişse otomatik olanlar). */
+export interface SiteSeo {
+    title: string;
+    description: string;
+    shareImageUrl: string;
+}
+
+// ── Görsel site düzenleyicisi (docs/site-editor.md) ─────────────────────────────────────────────
+
+export interface SiteChange {
+    /** "coverImage", "tagline", "values", "region:{id}"… */
+    field: string;
+    label: string;
+    /** "Anasayfa", "Hakkımızda", "Mekân", "İletişim", "Tema", "Google ve paylaşım". */
+    page: string;
+}
+
+export interface SiteEditorSeo extends SiteSeo {
+    autoTitle: string;
+    autoDescription: string;
+    autoShareImageUrl: string;
+    titleIsAuto: boolean;
+    descriptionIsAuto: boolean;
+    shareImageIsAuto: boolean;
+    /** { "/menu": "Menü · Ocak", … } */
+    pageTitles: Record<string, string>;
+}
+
+/** GET api/branch/site/draft: taslak, yayındaki, değişen alanlar ve sürüm. */
+export interface SiteEditor {
+    version: number;
+    hasChanges: boolean;
+    changes: SiteChange[];
+    draftUpdatedAt: string | null;
+    publishedAt: string | null;
+    draft: BranchSite;
+    published: BranchSite;
+    seo: SiteEditorSeo;
+    /** "https://ocak.sophram.com"; slug yoksa boş. */
+    siteUrl: string;
+}
+
+/** Haftalık saatin bir günü. day: 0 Pazar … 6 Cumartesi. Kapanış açılıştan önceyse gece yarısını aşar. */
+export interface SiteDayHours {
+    day: number;
+    isOpen: boolean;
+    /** "HH:mm" */
+    opens: string;
+    closes: string;
+}
+
+export interface SiteReview {
+    author: string;
+    text: string;
+    /** "Google", "Tripadvisor"… */
+    source: string;
+}
+
+export interface SiteValue {
+    title: string;
+    text: string;
+}
+
+export interface SiteMilestone {
+    year: number;
+    text: string;
+}
+
+export interface SiteRegionDetail {
+    regionId: string;
+    name: string;
+    tableCount: number;
+    photoUrl: string;
+    description: string;
+}
+
+/** "Sitenizi güzelleştirin": doluluk puanı ve görsel etkisine göre sıralı yapılacaklar. */
+export interface SiteCompleteness {
+    score: number;
+    totalProducts: number;
+    productsWithoutPhoto: number;
+    items: SiteChecklistItem[];
+}
+
+export interface SiteChecklistItem {
+    /** "cover", "gallery", "productPhotos", "story", "hours"… */
+    key: string;
+    title: string;
+    reason: string;
+    done: boolean;
+    weight: number;
+    /** 0–1 */
+    progress: number;
+    detail: string;
 }
 
 export interface PublicCategory {
@@ -40,12 +175,17 @@ export interface PublicCategory {
 export interface PublicTable {
     id: string;
     name: string;
+    /** En fazla kaç kişi; girilmemişse null. */
+    capacity?: number | null;
 }
 
 export interface PublicRegion {
     id: string;
     name: string;
     tables: PublicTable[];
+    /** Bölümün sitedeki fotoğrafı ve kısa açıklaması; girilmemişse boş. */
+    photoUrl?: string;
+    description?: string;
 }
 
 export interface PublicSite {
@@ -62,9 +202,13 @@ export interface PublicSite {
     setMenus: OnlineSetMenu[];
     regions: PublicRegion[];
     site: BranchSite;
-    /** Şubenin yerel saatine göre; saat girilmemişse null. */
+    /** Şubenin yerel saatine göre (haftalık saat varsa ona göre); saat girilmemişse null. */
     isOpenNow: boolean | null;
+    /** Şubenin yerel saatiyle bugün: 0 Pazar … 6 Cumartesi. */
+    today?: number;
     reservation: ReservationRules;
+    /** Yayındaki geçerli Google/paylaşım değerleri; eski sunucuda yok. */
+    seo?: SiteSeo;
 }
 
 /** Bir günün rezervasyon başlangıç aralığı. day: 0 Pazar … 6 Cumartesi (Date.getDay ile aynı). */
@@ -132,6 +276,8 @@ export interface QrFeatures {
 export interface TableActionResult {
     sent: boolean;
     retryAfterSeconds: number;
+    /** Yalnız "Hesap iste": masanın açık hesabında ödenecek kalan. */
+    billTotal?: number | null;
 }
 
 export interface Availability {
@@ -154,6 +300,8 @@ export const ORDER_REQUEST_EXPIRED = 5;
 export interface OrderRequestStatus {
     id: string;
     status: number;
+    /** Reddedildiyse garsonun yazdığı neden; boş olabilir. */
+    rejectReason?: string;
 }
 
 // Backend ReservationStatus: 2 iptal, 3 bekliyor, 4 onaylandı, 5 reddedildi, 6 geldi, 7 gelmedi (1: personelin açtığı eski tip).
@@ -222,6 +370,10 @@ export interface ReservationDetail {
     preOrderWindow: PreOrderWindow;
     preOrder: PublicPreOrder | null;
     outOfStockProductIds: string[];
+    /** Misafir rezervasyonu kendisi iptal edebilir mi (bekliyor/onaylı ve son iptal anı geçmemiş). */
+    canCancel: boolean;
+    /** Online iptalin son anı (UTC): rezervasyondan 2 saat önce. */
+    cancelDeadline: string;
 }
 
 // ── Personel tarafı ──────────────────────────────────────────────────────────

@@ -202,11 +202,24 @@ export interface DeliveryTracking {
     estimatedMinutes?: number | null;
     estimatedDeliveryAt?: string | null;
     deliveredAt?: string | null;
+    /** Kuryenin yola çıktığı an. */
+    dispatchedAt?: string | null;
+    /** Yalnızca sipariş yoldayken dolu: kuryenin ilk adı. */
+    courierFirstName?: string;
     rejectReason: string;
     cancelReason: string;
     canCancel: boolean;
     branchName: string;
     restaurantPhone: string;
+    /** Takip sayfasının markası (restoran sitesiyle aynı alanlar). */
+    companyName?: string;
+    /** "#RRGGBB" ya da boş. */
+    accentColor?: string;
+    /** Sitenin hazır renk teması; boş = varsayılan. */
+    theme?: string;
+    coverImageUrl?: string;
+    /** Restoranın onayladığı an. */
+    acceptedAt?: string | null;
 }
 
 // ── Personel ──────────────────────────────────────────────────────────────────────────────────
@@ -309,4 +322,10 @@ export interface BlockedPhone {
     reason: string;
     createdAt: string;
     blockedByName: string;
+    /** Engel yüzünden geri çevrilen sipariş denemeleri. */
+    blockedAttemptCount: number;
+    lastBlockedAttemptAt?: string | null;
+    /** Engel panodaki bir siparişten konduysa o sipariş. */
+    sourceDeliveryOrderId?: string | null;
+    sourceDeliveryOrderNumber?: number | null;
 }

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.DTOs.Delivery;
+using RestaurantBill.Application.Features.CustomerSite.Seo;
 using RestaurantBill.Application.Features.SetMenus;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -25,7 +26,9 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
     {
         Company? company = await CustomerSiteScope.ResolveCompanyAsync(db, tenant, cancellationToken);
         if (company is null)
-            return Result<PublicSiteDto>.Failure("Restoran bulunamadı.");
+            return Result<PublicSiteDto>.Failure(await CustomerSiteScope.IsClosedAsync(db, tenant, cancellationToken)
+                ? CustomerSiteScope.ClosedRestaurantMessage
+                : "Restoran bulunamadı.");
 
         Branch? branch = await CustomerSiteScope.ResolveBranchAsync(db, company.Id, request.BranchId, cancellationToken);
         if (branch is null)
@@ -42,7 +45,7 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
         var products = await db.Products.AsNoTracking()
             .Where(p => p.Category.BranchId == branch.Id && p.IsActive)
             .OrderBy(p => p.Name)
-            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.PrepMinutes })
+            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.PrepMinutes, p.IsOutOfStock })
             .ToListAsync(cancellationToken);
 
         foreach (PublicCategoryDto category in categories)
@@ -58,7 +61,8 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
                     IsStockImage = StorageKeys.IsShared(p.ImageUrl),
                     Description = p.Description,
                     IsFeatured = p.IsFeatured,
-                    PrepMinutes = p.PrepMinutes
+                    PrepMinutes = p.PrepMinutes,
+                    IsOutOfStock = p.IsOutOfStock
                 })
                 .ToList();
         }
@@ -72,15 +76,19 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
         var tables = await db.Tables.AsNoTracking()
             .Where(t => t.Region.BranchId == branch.Id && t.Status != TableStatus.OutOfService)
             .OrderBy(t => t.Name)
-            .Select(t => new { t.Id, t.Name, t.RegionId })
+            .Select(t => new { t.Id, t.Name, t.RegionId, t.Capacity })
             .ToListAsync(cancellationToken);
 
         foreach (PublicRegionDto region in regions)
         {
             region.Tables = tables
                 .Where(t => t.RegionId == region.Id)
-                .Select(t => new PublicTableDto { Id = t.Id, Name = t.Name })
+                .Select(t => new PublicTableDto { Id = t.Id, Name = t.Name, Capacity = t.Capacity })
                 .ToList();
+            // Bölümün sitedeki fotoğrafı ve açıklaması (Restoran sitesi ayarı).
+            SiteRegionDetail? detail = branch.GetSiteContent().RegionDetails.FirstOrDefault(d => d.RegionId == region.Id);
+            region.PhotoUrl = BranchSiteDto.ImageUrl(cdnBaseUrl, detail?.PhotoKey);
+            region.Description = detail?.Description ?? string.Empty;
         }
 
         List<OnlineSetMenuDto> setMenus = await PublicSetMenus.LoadAsync(db, branch.Id, cdnBaseUrl, listedOnly: true, cancellationToken);
@@ -105,20 +113,16 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
             SetMenus = setMenus,
             Regions = regions.Where(r => r.Tables.Count > 0).ToList(),
             Site = BranchSiteDto.From(branch, cdnBaseUrl),
-            IsOpenNow = IsOpenNow(branch),
-            Reservation = ReservationRulesDto.From(branch)
+            IsOpenNow = branch.IsOpenAt(LocalNow(branch)),
+            Today = (int)LocalNow(branch).DayOfWeek,
+            Reservation = ReservationRulesDto.From(branch),
+            Seo = SiteSeo.ToDto(SiteSeo.Resolve(branch.GetPublishedSite(), company.Name, branch.BranchName, branch.District), cdnBaseUrl),
         });
     }
 
-    // Kapanış açılıştan önceyse (ör. 18:00–02:00) gece yarısını aşan aralık sayılır.
-    private static bool? IsOpenNow(Branch branch)
-    {
-        if (branch.OpensAt is not TimeOnly opens || branch.ClosesAt is not TimeOnly closes) return null;
-        TimeZoneInfo zone = CustomerSiteScope.ZoneOf(branch.TimeZoneId);
-        TimeOnly now = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone));
-        if (opens == closes) return true;
-        return opens < closes ? now >= opens && now < closes : now >= opens || now < closes;
-    }
+    // "Şu an açık" (haftalık saat varsa ona göre, gece yarısını aşan aralıklar dahil): Branch.IsOpenAt.
+    private static DateTime LocalNow(Branch branch)
+        => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, CustomerSiteScope.ZoneOf(branch.TimeZoneId));
 }
 
 // ── Masa QR'ı: masa adı ve şubesi ───────────────────────────────────────────────────────────────
@@ -275,12 +279,17 @@ public class GetOrderRequestStatusQueryHandler(IAppDbContext db, ITenantResolver
 
         var row = await db.OrderRequests.AsNoTracking()
             .Where(r => r.Id == request.Id && r.Table.Region.Branch.CompanyId == company.Id)
-            .Select(r => new { r.Id, r.Status })
+            .Select(r => new { r.Id, r.Status, r.RejectReason })
             .FirstOrDefaultAsync(cancellationToken);
 
         return row is null
             ? Result<OrderRequestStatusDto>.Failure("Sipariş talebi bulunamadı.")
-            : Result<OrderRequestStatusDto>.Success(new OrderRequestStatusDto { Id = row.Id, Status = (int)row.Status });
+            : Result<OrderRequestStatusDto>.Success(new OrderRequestStatusDto
+            {
+                Id = row.Id,
+                Status = (int)row.Status,
+                RejectReason = row.Status == OrderRequestStatus.Rejected ? row.RejectReason : string.Empty
+            });
     }
 }
 

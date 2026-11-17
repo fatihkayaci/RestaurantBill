@@ -69,6 +69,32 @@ public class GetShiftSummaryQueryHandler : IRequestHandler<GetShiftSummaryQuery,
 
         decimal expectedCashInRegister = await _balanceCalculator.CalculateExpectedClosingBalanceAsync(shift, cancellationToken);
 
+        // Kuryede kalan tahsilat: teslim edilmiş ama kasiyerin "Teslim al"ıyla kasaya geçmemiş siparişler.
+        var unsettled = await _db.DeliveryOrders
+            .AsNoTracking()
+            .Where(d => d.BranchId == shift.BranchId && !d.IsDeleted && d.Status == DeliveryOrderStatus.Delivered
+                && d.SettledAt == null && d.CourierUserId != null && d.CollectedMethod != null)
+            .Select(d => new { CourierId = d.CourierUserId!.Value, Method = d.CollectedMethod!.Value, Amount = d.CollectedAmount ?? 0m })
+            .ToListAsync(cancellationToken);
+        List<Guid> courierIds = unsettled.Select(u => u.CourierId).Distinct().ToList();
+        Dictionary<Guid, string> courierNames = await _db.Users
+            .AsNoTracking()
+            .Where(u => courierIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+        List<ShiftCourierCashDto> couriers = unsettled
+            .GroupBy(u => u.CourierId)
+            .Select(g => new ShiftCourierCashDto
+            {
+                CourierUserId = g.Key,
+                FullName = courierNames.GetValueOrDefault(g.Key, string.Empty),
+                Cash = g.Where(u => u.Method == PaymentMethod.Nakit).Sum(u => u.Amount),
+                CashOrderCount = g.Count(u => u.Method == PaymentMethod.Nakit),
+                Card = g.Where(u => u.Method != PaymentMethod.Nakit).Sum(u => u.Amount),
+                CardOrderCount = g.Count(u => u.Method != PaymentMethod.Nakit)
+            })
+            .OrderByDescending(c => c.Cash).ThenBy(c => c.FullName)
+            .ToList();
+
         return Result<ShiftSummaryDto>.Success(new ShiftSummaryDto
         {
             ShiftId = shift.Id,
@@ -77,7 +103,8 @@ public class GetShiftSummaryQueryHandler : IRequestHandler<GetShiftSummaryQuery,
             Breakdown = breakdown,
             Total = payments.Sum(p => p.TotalAmount),
             ExpectedCashInRegister = _currentUser.CanSeeExpectedBalance() ? expectedCashInRegister : null,
-            OpenTablesCount = openTablesCount
+            OpenTablesCount = openTablesCount,
+            CouriersWithUnsettledCash = couriers
         });
     }
 }

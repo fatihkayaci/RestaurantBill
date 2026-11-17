@@ -4,10 +4,12 @@ interface Props {
     label: string;
     onClose: () => void;
     children: ReactNode;
+    /** Kaydırılan içeriğin altında hep görünür kalan alan (ör. onay düğmesi). */
+    footer?: ReactNode;
 }
 
 // Alttan açılan sayfa: "…" menüsü ve kasa seçimi. Dışına dokunmak ya da Esc kapatır.
-export default function BottomSheet({ label, onClose, children }: Props) {
+export default function BottomSheet({ label, onClose, children, footer }: Props) {
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
         window.addEventListener('keydown', onKey);
@@ -25,10 +27,17 @@ export default function BottomSheet({ label, onClose, children }: Props) {
             <div
                 role="dialog"
                 aria-label={label}
-                className="relative flex max-h-[85%] flex-col gap-1 overflow-y-auto rounded-t-3xl bg-card px-3 pt-2.5 pb-[max(16px,env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.25)] animate-in slide-in-from-bottom duration-200"
+                className="relative flex max-h-[85%] flex-col overflow-hidden rounded-t-3xl bg-card pt-2.5 shadow-[0_-12px_40px_rgba(0,0,0,0.25)] animate-in slide-in-from-bottom duration-200"
             >
                 <span aria-hidden="true" className="mx-auto mb-2 h-1.5 w-10 shrink-0 rounded-full bg-border" />
-                {children}
+                <div className={`flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 ${footer ? 'pb-2' : 'pb-[max(16px,env(safe-area-inset-bottom))]'}`}>
+                    {children}
+                </div>
+                {footer && (
+                    <div className="shrink-0 border-t border-border bg-card px-3 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
+                        {footer}
+                    </div>
+                )}
             </div>
         </div>
     );

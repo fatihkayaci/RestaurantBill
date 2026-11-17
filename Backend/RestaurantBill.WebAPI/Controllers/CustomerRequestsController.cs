@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using RestaurantBill.Application.Features.CustomerSite.Staff;
 
 namespace RestaurantBill.WebAPI.Controllers;
@@ -32,12 +33,15 @@ public class OrderRequestController : BaseController
         return HandleResult(result);
     }
 
+    /// <summary>Red; gövde isteğe bağlı: { reason } müşteriye "Onaylanmadı" kartında gösterilir.</summary>
     [HttpPost("{id:guid}/reject")]
-    public async Task<IActionResult> Reject([FromRoute] Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Reject([FromRoute] Guid id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RejectOrderRequestBody? body, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new RejectOrderRequestCommand { Id = id }, cancellationToken);
+        var result = await _mediator.Send(new RejectOrderRequestCommand { Id = id, Reason = body?.Reason }, cancellationToken);
         return HandleResult(result);
     }
+
+    public sealed record RejectOrderRequestBody(string? Reason);
 }
 
 // Müşterinin siteden gönderdiği rezervasyon taleplerinin personel tarafı.

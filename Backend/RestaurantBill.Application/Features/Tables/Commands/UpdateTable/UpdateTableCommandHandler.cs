@@ -38,6 +38,7 @@ namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
 
             table.Update(request.Name, table.Note);
             table.AssignRegion(request.RegionId);
+            table.SetCapacity(request.Capacity);
             if (request.Status.HasValue)
                 table.SetStatus(request.Status.Value);
 

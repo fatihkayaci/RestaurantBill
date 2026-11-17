@@ -18,10 +18,14 @@ public class PublicSiteDto
     public List<OnlineSetMenuDto> SetMenus { get; set; } = [];
     public List<PublicRegionDto> Regions { get; set; } = [];
     public BranchSiteDto Site { get; set; } = new();
-    /// <summary>Şubenin yerel saatiyle şu an açık mı; saat girilmemişse null.</summary>
+    /// <summary>Şubenin yerel saatiyle şu an açık mı (haftalık saat varsa ona göre); saat girilmemişse null.</summary>
     public bool? IsOpenNow { get; set; }
+    /// <summary>Şubenin yerel saatiyle bugün: 0 Pazar … 6 Cumartesi (haftalık saat tablosunda "bugün" vurgusu).</summary>
+    public int Today { get; set; }
     /// <summary>Sitenin rezervasyon arayüzünün ihtiyaç duyduğu kurallar.</summary>
     public ReservationRulesDto Reservation { get; set; } = new();
+    /// <summary>Ana sayfanın geçerli başlık/açıklama/görseli (document.title için). Alt sayfa başlığı: "Menü · {ad}".</summary>
+    public SiteSeoDto Seo { get; set; } = new();
 }
 
 // Şubenin rezervasyon ayarları. Müşteri sitesi ve admin "Rezervasyon ayarları" aynı şekli kullanır.
@@ -95,51 +99,28 @@ public class PublicProductDto
     public bool IsFeatured { get; set; }
     /// <summary>Tahmini hazırlanma süresi (dk); null ise gösterilmez.</summary>
     public int? PrepMinutes { get; set; }
+    /// <summary>"Tükendi": menüde görünür, masadan sipariş edilemez.</summary>
+    public bool IsOutOfStock { get; set; }
 }
 
-// Şubenin site içeriği. Admin "Restoran sitesi" sayfasında da aynı şekil kullanılır (görseller tam adresle).
-public class BranchSiteDto
-{
-    public string Headline { get; set; } = string.Empty;
-    public string Tagline { get; set; } = string.Empty;
-    public string StoryTitle { get; set; } = string.Empty;
-    public string About { get; set; } = string.Empty;
-    public string CoverImageUrl { get; set; } = string.Empty;
-    public string AboutImageUrl { get; set; } = string.Empty;
-    /// <summary>"HH:mm" ya da null.</summary>
-    public string? OpensAt { get; set; }
-    public string? ClosesAt { get; set; }
-    public string HoursNote { get; set; } = string.Empty;
-    public string InstagramUrl { get; set; } = string.Empty;
-    public string AccentColor { get; set; } = string.Empty;
-
-    public static BranchSiteDto From(Branch branch, string cdnBaseUrl) => new()
-    {
-        Headline = branch.SiteHeadline,
-        Tagline = branch.SiteTagline,
-        StoryTitle = branch.SiteStoryTitle,
-        About = branch.SiteAbout,
-        CoverImageUrl = string.IsNullOrWhiteSpace(branch.SiteCoverImage) ? string.Empty : $"{cdnBaseUrl}/{branch.SiteCoverImage}",
-        AboutImageUrl = string.IsNullOrWhiteSpace(branch.SiteAboutImage) ? string.Empty : $"{cdnBaseUrl}/{branch.SiteAboutImage}",
-        OpensAt = branch.OpensAt?.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
-        ClosesAt = branch.ClosesAt?.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
-        HoursNote = branch.HoursNote,
-        InstagramUrl = branch.InstagramUrl,
-        AccentColor = branch.SiteAccentColor,
-    };
-}
+// BranchSiteDto (şubenin site içeriği) ve ek site alanlarının DTO'ları: SiteContentDtos.cs.
 
 public class PublicRegionDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public List<PublicTableDto> Tables { get; set; } = [];
+    /// <summary>Bölümün sitedeki fotoğrafı (tam adres) ve kısa açıklaması; girilmemişse boş.</summary>
+    public string PhotoUrl { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 }
 
 public class PublicTableDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    /// <summary>En fazla kaç kişi; girilmemişse null.</summary>
+    public int? Capacity { get; set; }
 }
 
 public class PublicTableInfoDto
@@ -179,6 +160,8 @@ public class TableActionResultDto
     public bool Sent { get; set; }
     /// <summary>Bu masadan aynı istek kaç saniye sonra tekrar yapılabilir.</summary>
     public int RetryAfterSeconds { get; set; }
+    /// <summary>Yalnız "Hesap iste": masanın açık hesabında ödenecek kalan; garson çağırmada null.</summary>
+    public decimal? BillTotal { get; set; }
 }
 
 public class AvailabilityDto
@@ -190,6 +173,8 @@ public class OrderRequestStatusDto
 {
     public Guid Id { get; set; }
     public int Status { get; set; }
+    /// <summary>Reddedildiyse garsonun müşteriye yazdığı neden; boş olabilir.</summary>
+    public string RejectReason { get; set; } = string.Empty;
 }
 
 // Eski GET reservations/{id} ucu için; kimlik artık döndürülmez (rezervasyon bağlantısı token'la açılır).
@@ -302,6 +287,10 @@ public class ReservationDetailDto
     public PublicPreOrderDto? PreOrder { get; set; }
     /// <summary>Şu an tükenmiş ürünler; menüde eklenemez.</summary>
     public List<Guid> OutOfStockProductIds { get; set; } = [];
+    /// <summary>Misafir rezervasyonu kendisi iptal edebilir mi (bekliyor/onaylı ve son iptal anı geçmemiş).</summary>
+    public bool CanCancel { get; set; }
+    /// <summary>Misafirin online iptal edebileceği son an (UTC): rezervasyondan 2 saat önce.</summary>
+    public DateTime CancelDeadline { get; set; }
 }
 
 public class PreOrderWindowDto

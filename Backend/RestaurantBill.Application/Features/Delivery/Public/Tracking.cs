@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.Delivery;
 using RestaurantBill.Application.Features.CustomerSite;
@@ -13,6 +15,10 @@ namespace RestaurantBill.Application.Features.Delivery.Public;
 
 internal static class TrackingLookup
 {
+    /// <summary>"Kurye Kaan Demir" gibi tam addan yalnızca ilk kelime; boşsa boş.</summary>
+    public static string FirstName(string? fullName)
+        => (fullName ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? string.Empty;
+
     // Anahtar rastgele 128 bittir; yine de yalnızca slug'ın restoranındaki sipariş bulunur.
     public static async Task<(DeliveryOrder? Order, Branch? Branch)> FindAsync(
         IAppDbContext db, ITenantResolver tenant, string token, bool track, CancellationToken cancellationToken)
@@ -45,7 +51,8 @@ public class GetDeliveryTrackingQuery : IRequest<Result<DeliveryTrackingDto>>
     public string Token { get; set; } = string.Empty;
 }
 
-public class GetDeliveryTrackingQueryHandler(IAppDbContext db, ITenantResolver tenant)
+// storageOptions: kapak görselinin tam adresi için (yoksa kapak boş döner; eski testler iki parametreyle kurar).
+public class GetDeliveryTrackingQueryHandler(IAppDbContext db, ITenantResolver tenant, IOptions<BunnyStorageOptions>? storageOptions = null)
     : IRequestHandler<GetDeliveryTrackingQuery, Result<DeliveryTrackingDto>>
 {
     public async Task<Result<DeliveryTrackingDto>> Handle(GetDeliveryTrackingQuery request, CancellationToken cancellationToken)
@@ -56,8 +63,26 @@ public class GetDeliveryTrackingQueryHandler(IAppDbContext db, ITenantResolver t
 
         Dictionary<Guid, string> names = await db.LoadSelectionNamesAsync([order], cancellationToken);
 
+        // Müşteriye kuryenin yalnızca ilk adı, yalnızca sipariş yoldayken gösterilir.
+        string courierFirstName = string.Empty;
+        if (order.Status == DeliveryOrderStatus.OnTheWay && order.CourierUserId is Guid courierId)
+        {
+            string? fullName = await db.Users.AsNoTracking().Where(u => u.Id == courierId).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+            courierFirstName = TrackingLookup.FirstName(fullName);
+        }
+
+        // Takip sayfası restoranın markasıyla açılır: ad, vurgu rengi ve kapak (restoran sitesiyle aynı alanlar).
+        string companyName = await db.Companies.AsNoTracking()
+            .Where(c => c.Id == branch.CompanyId).Select(c => c.Name).FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+        string cdnBaseUrl = storageOptions?.Value.CdnBaseUrl.TrimEnd('/') ?? string.Empty;
+
         return Result<DeliveryTrackingDto>.Success(new DeliveryTrackingDto
         {
+            CompanyName = companyName,
+            AccentColor = branch.SiteAccentColor,
+            Theme = branch.GetSiteContent().Theme,
+            CoverImageUrl = string.IsNullOrWhiteSpace(branch.SiteCoverImage) || cdnBaseUrl.Length == 0 ? string.Empty : $"{cdnBaseUrl}/{branch.SiteCoverImage}",
+            AcceptedAt = order.AcceptedAt,
             Number = order.Number,
             Status = order.Status,
             StatusLabel = DeliveryScope.CustomerLabel(order.Status),
@@ -74,6 +99,8 @@ public class GetDeliveryTrackingQueryHandler(IAppDbContext db, ITenantResolver t
             EstimatedMinutes = order.EstimatedMinutes,
             EstimatedDeliveryAt = order.AcceptedAt is DateTime acceptedAt && order.EstimatedMinutes is int eta ? acceptedAt.AddMinutes(eta) : null,
             DeliveredAt = order.DeliveredAt,
+            DispatchedAt = order.DispatchedAt,
+            CourierFirstName = courierFirstName,
             RejectReason = order.RejectReason,
             CancelReason = order.CancelReason,
             CanCancel = order.Status == DeliveryOrderStatus.Received,

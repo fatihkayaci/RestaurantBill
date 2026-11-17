@@ -105,6 +105,9 @@ export default function RoleShell({
                 </div>
             </header>
 
+            {/* Yeni paket siparişi uyarı şeridinin yeri (OnlineOrderAlerts portal ile yerleştirir). */}
+            <div id="online-order-strip-slot" />
+
             {offline && (
                 <div role="status" className="flex items-center justify-center gap-2 bg-rb-red px-4 py-2 text-sm font-semibold text-rb-red-foreground">
                     <WifiOff className="h-4 w-4" aria-hidden="true" />

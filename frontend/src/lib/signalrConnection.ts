@@ -1,7 +1,23 @@
 import * as signalR from '@microsoft/signalr';
+import { jwtDecode } from 'jwt-decode';
 import { redirectToLogin, refreshAccessToken } from './axiosInstance';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5077';
+
+// Hub, token'ı yalnızca bağlanırken (negotiate) doğrular ve axios'un 401 → refresh akışından geçmez. Süresi dolmuş
+// token'la start() 401 alıp düşer ve ekran "Canlı bağlantı yok" der (ör. kurye telefonu 15 dk'dan sonra açınca).
+// Bu yüzden süresi dolmuş ya da 30 sn içinde dolacak token önce yenilenir.
+async function getHubAccessToken(): Promise<string> {
+    const token = localStorage.getItem('token');
+    if (!token) return '';
+    try {
+        const { exp } = jwtDecode<{ exp?: number }>(token);
+        if (exp && exp * 1000 - Date.now() < 30_000) return (await refreshAccessToken()) ?? '';
+    } catch {
+        // Çözülemeyen token: sunucu 401 döner, aşağıdaki akış devralır.
+    }
+    return token;
+}
 
 export interface ManagedHubConnection {
     connection: signalR.HubConnection;
@@ -53,7 +69,7 @@ export function createHubConnection(hubPath: string): ManagedHubConnection {
 
     const connection = new signalR.HubConnectionBuilder()
         .withUrl(`${API_BASE_URL}${hubPath}`, {
-            accessTokenFactory: () => localStorage.getItem('token') ?? '',
+            accessTokenFactory: getHubAccessToken,
         })
         .withAutomaticReconnect()
         .configureLogging({

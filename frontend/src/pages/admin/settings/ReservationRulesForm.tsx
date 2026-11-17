@@ -246,7 +246,7 @@ export default function ReservationRulesForm({ rules, onSaved }: Props) {
                 </p>
             </form>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-4 sm:px-5">
+            <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-2xl border-t border-border bg-card px-4 py-4 sm:px-5">
                 {rules.isCustomized ? (
                     <button
                         type="button"

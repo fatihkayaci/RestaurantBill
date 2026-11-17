@@ -37,6 +37,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
                     Id = t.Id,
                     Name = t.Name,
                     Note = t.Note,
+                    Capacity = t.Capacity,
                     Status = t.Status,
                     RegionId = t.RegionId,
                     RegionName = t.Region.Name

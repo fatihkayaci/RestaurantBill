@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
-import { Minus, Plus, UtensilsCrossed } from 'lucide-react';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { Clock, Minus, Plus, UtensilsCrossed } from 'lucide-react';
 import type { OnlineMenuCategory, OnlineMenuProduct, OnlineSetMenu } from '@/features/delivery/types';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -7,21 +7,34 @@ import { StockImageLabel } from '../components/StockImageLabel';
 import { ImageSlot } from '../site/SiteChrome';
 import { headingFont } from '../site/siteTheme';
 
-interface Props {
-    categories: OnlineMenuCategory[];
-    setMenus: OnlineSetMenu[];
+/** Kartın ürünü: paket menüsünün ürünü; masa menüsü hazırlanma süresini de verir. */
+export type MenuCardProduct = OnlineMenuProduct & { prepMinutes?: number | null };
+
+interface Props<P extends MenuCardProduct> {
+    categories: (Omit<OnlineMenuCategory, 'products'> & { products: P[] })[];
+    /** Paket menüler (set); masa menüsünde yok. */
+    setMenus?: OnlineSetMenu[];
     /** Görseli olmayan ürünün yer tutucusunda restoranın yazı logosu çizilir. */
     restaurant: string;
     productQuantity: (productId: string) => number;
-    setMenuQuantity: (setMenuId: string) => number;
-    onAddProduct: (product: OnlineMenuProduct) => void;
-    onRemoveProduct: (product: OnlineMenuProduct) => void;
-    onOpenSetMenu: (menu: OnlineSetMenu) => void;
+    setMenuQuantity?: (setMenuId: string) => number;
+    onAddProduct: (product: P) => void;
+    onRemoveProduct: (product: P) => void;
+    onOpenSetMenu?: (menu: OnlineSetMenu) => void;
     /** Yapışkan kategori şeridinin üstten boşluğu (sayfanın yapışkan başlığı varsa). */
     stickyTopClass?: string;
+    /** true: öne çıkan ürünler en üstte "Şefin önerileri" bölümünde de gösterilir (masa menüsü). */
+    featuredSection?: boolean;
+    /** true: yalnız göz atma; ekleme düğmeleri çizilmez (sipariş kapalı). */
+    readOnly?: boolean;
+    /** Menü boşken gösterilecek içerik (varsayılan: "Menü henüz hazırlanmadı"). */
+    empty?: ReactNode;
 }
 
 const SET_MENU_SECTION = 'menuler';
+const FEATURED_SECTION = 'oneriler';
+const noQuantity = () => 0;
+const noop = () => {};
 const sectionDomId = (id: string) => `paket-${id}`;
 
 /** "Adana + İçecek seçimi + Patates": tek seçenekli bölüm ürün adıyla, seçimli bölüm "<bölüm> seçimi" olarak yazılır. */
@@ -36,14 +49,18 @@ function menuContents(menu: OnlineSetMenu): string {
 // Paket sipariş menüsü: yapışkan kategori şeridi (kaydırdıkça bulunulan bölüm işaretlenir), fotoğraflı ürün kartları ve
 // +/− adet. "Tükendi" ürünler soluk ve eklenemez; menüler (set) seçim penceresiyle eklenir. Kategorisi olmayan menüler en
 // üstte öne çıkan "Menüler" bölümünde büyük kartlarla, kategorisi olanlar o kategorinin başında durur.
-export default function DeliveryMenu({
-    categories, setMenus, restaurant, productQuantity, setMenuQuantity, onAddProduct, onRemoveProduct, onOpenSetMenu,
-    stickyTopClass = 'top-0',
-}: Props) {
+// Masa menüsü (TableOrderPage) de aynı kartları kullanır: `featuredSection` en üste "Şefin önerileri"ni ekler, `readOnly`
+// eklemesiz göz atmadır; ürünün hazırlanma süresi (prepMinutes) varsa kartta görünür.
+export default function DeliveryMenu<P extends MenuCardProduct>({
+    categories, setMenus = [], restaurant, productQuantity, setMenuQuantity = noQuantity, onAddProduct, onRemoveProduct,
+    onOpenSetMenu = noop, stickyTopClass = 'top-0', featuredSection = false, readOnly = false, empty,
+}: Props<P>) {
     const categoryIds = new Set(categories.map(c => c.id));
     const looseMenus = setMenus.filter(m => !m.categoryId || !categoryIds.has(m.categoryId));
+    const featuredProducts = featuredSection ? categories.flatMap(c => c.products).filter(p => p.isFeatured && !p.isOutOfStock) : [];
     const sections = [
-        ...(looseMenus.length > 0 ? [{ id: SET_MENU_SECTION, name: 'Menüler', menus: looseMenus, products: [] as OnlineMenuProduct[] }] : []),
+        ...(featuredProducts.length > 0 ? [{ id: FEATURED_SECTION, name: 'Şefin önerileri', menus: [] as OnlineSetMenu[], products: featuredProducts }] : []),
+        ...(looseMenus.length > 0 ? [{ id: SET_MENU_SECTION, name: 'Menüler', menus: looseMenus, products: [] as P[] }] : []),
         ...categories.map(c => ({ id: c.id, name: c.name, menus: setMenus.filter(m => m.categoryId === c.id), products: c.products })),
     ].filter(s => s.menus.length + s.products.length > 0);
 
@@ -78,6 +95,7 @@ export default function DeliveryMenu({
     }, [active]);
 
     if (sections.length === 0) {
+        if (empty) return <>{empty}</>;
         return (
             <div className="flex flex-col items-center px-4 py-16 text-center">
                 <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-raised)] text-[var(--site-sub)]">
@@ -103,7 +121,7 @@ export default function DeliveryMenu({
         <div>
             {sections.length > 1 && (
                 <nav aria-label="Menü kategorileri"
-                    className={cn('sticky z-20 -mx-4 border-b border-[var(--site-border)] bg-[rgba(255,255,255,0.92)] backdrop-blur-[14px] md:-mx-6 lg:mx-0', stickyTopClass)}>
+                    className={cn('sticky z-20 -mx-4 border-b border-[var(--site-border)] bg-[color-mix(in_srgb,var(--site-bg)_92%,transparent)] backdrop-blur-[14px] md:-mx-6 lg:mx-0', stickyTopClass)}>
                     <div ref={stripRef} className="flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] md:px-6 lg:px-0 [&::-webkit-scrollbar]:hidden">
                         {sections.map(section => {
                             const selected = section.id === current;
@@ -128,6 +146,7 @@ export default function DeliveryMenu({
             <div className="flex flex-col gap-10 pb-6 pt-6 md:pt-8">
                 {sections.map(section => {
                     const featured = section.id === SET_MENU_SECTION;
+                    const chefPicks = section.id === FEATURED_SECTION;
                     const total = section.menus.length + section.products.length;
                     return (
                         <section key={section.id} id={sectionDomId(section.id)} aria-labelledby={`${sectionDomId(section.id)}-baslik`} className="scroll-mt-20">
@@ -136,6 +155,7 @@ export default function DeliveryMenu({
                                 <span className="shrink-0 text-sm font-medium text-[var(--site-sub)]">{total} çeşit</span>
                             </div>
                             {featured && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Birkaç lezzet bir arada, seçimi size kalsın.</p>}
+                            {chefPicks && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Mutfağın bugün önerdikleri.</p>}
 
                             {featured ? (
                                 <ul className="-mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
@@ -154,7 +174,7 @@ export default function DeliveryMenu({
                                     ))}
                                     {section.products.map(product => (
                                         <li key={product.id}>
-                                            <ProductCard product={product} restaurant={restaurant} quantity={productQuantity(product.id)}
+                                            <ProductCard product={product} restaurant={restaurant} quantity={productQuantity(product.id)} readOnly={readOnly}
                                                 onAdd={() => onAddProduct(product)} onRemove={() => onRemoveProduct(product)} />
                                         </li>
                                     ))}
@@ -210,22 +230,36 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
     );
 }
 
-function ProductCard({ product, restaurant, quantity, onAdd, onRemove }: {
-    product: OnlineMenuProduct; restaurant: string; quantity: number; onAdd: () => void; onRemove: () => void;
+function ProductCard({ product, restaurant, quantity, readOnly, onAdd, onRemove }: {
+    product: MenuCardProduct; restaurant: string; quantity: number; readOnly: boolean; onAdd: () => void; onRemove: () => void;
 }) {
     const soldOut = product.isOutOfStock;
     const description = product.description?.trim();
+    const prep = product.prepMinutes && product.prepMinutes > 0 ? product.prepMinutes : null;
+    const badges = quantity > 0 || (product.isFeatured && !soldOut);
     return (
         <article className={cardClass(quantity > 0, soldOut)}>
             <div className="flex min-w-0 flex-1 flex-col">
-                {product.isFeatured && !soldOut && (
-                    <span className="mb-1 self-start rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Ustanın seçimi</span>
+                {badges && (
+                    <span className="mb-1 flex flex-wrap items-center gap-1.5">
+                        {quantity > 0 && <InCartBadge quantity={quantity} />}
+                        {product.isFeatured && !soldOut && (
+                            <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Ustanın seçimi</span>
+                        )}
+                    </span>
                 )}
                 <h3 className={cn('text-base font-bold leading-snug', soldOut && 'text-[var(--site-sub)]')}>{product.name}</h3>
                 {description && <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-[var(--site-sub)]">{description}</p>}
+                {soldOut ? (
+                    <p className="mt-0.5 text-sm font-medium text-[var(--site-sub)]">Bugünlük tükendi</p>
+                ) : prep ? (
+                    <p className="mt-1 flex items-center gap-1 text-[13px] text-[var(--site-sub)]">
+                        <Clock className="h-3.5 w-3.5" aria-hidden="true" />~{prep} dk<span className="sr-only"> hazırlanma süresi</span>
+                    </p>
+                ) : null}
                 <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
                     <Price value={product.price} muted={soldOut} />
-                    {soldOut && quantity === 0 ? (
+                    {readOnly ? null : soldOut && quantity === 0 ? (
                         <span className="text-sm font-semibold text-[var(--site-sub)]">Şu an yok</span>
                     ) : quantity === 0 ? (
                         <AddButton label={`${product.name} sepete ekle`} onClick={onAdd} />
