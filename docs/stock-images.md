@@ -7,6 +7,10 @@ stores only that key in `ImageUrl`, so 100 restaurants using "Adana" still means
 Customer-facing pages (site menu, QR menu, delivery page) show a small "Temsili görsel" label on these images
 (`isStockImage` in the public DTOs).
 
+The library has two parts: **food** photos (dishes and drinks, for products and set menus) and **venue** photos
+(interiors, cafes, terraces, bars, tables, for site photo slots). The picker opens on the part that fits: products and
+set menus use `scope=food`, the site editor uses `scope=venue` (see [Venue photos](#venue-photos) and [API](#api)).
+
 ## Rules
 
 - Anything under `shared/` belongs to everyone. **It is never deleted** when a product or set menu changes or removes
@@ -51,7 +55,7 @@ Customer-facing pages (site menu, QR menu, delivery page) show a small "Temsili 
    | `storageKey` | yes | Must start with `shared/stock/`. Rows are matched by this key; never change it once products use it. |
    | `title` | yes | Turkish, max 100 chars. Shown under the thumbnail. |
    | `keywords` | no | Search words. Stored lower-case. Search ignores Turkish letters/accents ("cay" finds "Çay"). |
-   | `group` | no | "İçecek", "Ana yemek", "Tatlı", "Çorba", "Kahvaltı"… max 50 chars. |
+   | `group` | no | Food: "Kahvaltı", "Kebap ve ızgara", "Sıcak içecek", "Tatlı"… Venue: one of the reserved names below, spelled exactly. Max 50 chars. |
    | `sortOrder` | no | Lower comes first in the default list (empty search). Default 0. |
    | `isActive` | no | `false` hides it from the picker. Products already using it keep showing it. Default `true`. |
 
@@ -63,13 +67,48 @@ Customer-facing pages (site menu, QR menu, delivery page) show a small "Temsili 
 Only add a row after its file is on the CDN. A row without a file shows a broken image in the picker and on every
 restaurant page that selects it.
 
+## Venue photos
+
+Venue/ambiance photos for restaurants and cafes without their own photos: site cover, about, venue page hero, gallery,
+region (section) photos, page heroes, and founder / share image when picked from the library.
+
+Reserved venue groups (`StockImageGroups.Venue` in `Application/Features/StockImages/StockImageGroups.cs`, mirrored by
+`VENUE_STOCK_GROUPS` in `frontend/src/features/stockImages/api/stockImageService.ts`). The order below is the order of
+the default venue list. Every other group counts as food.
+
+| `group` | Contents | File names |
+|---|---|---|
+| `Mekân` | Restaurant hall, interior | `shared/stock/mekan-*.webp` |
+| `Kafe` | Cafe interior, counter, coffee corner | `shared/stock/kafe-*.webp` |
+| `Teras ve bahçe` | Terrace, garden, outdoor seating | `shared/stock/teras-bahce-*.webp` |
+| `Bar ve mutfak` | Bar, open kitchen, grill, oven | `shared/stock/bar-mutfak-*.webp` |
+| `Masa ve sofra` | Set tables, table details | `shared/stock/masa-sofra-*.webp` |
+
+`*` is a short lower-case ASCII slug or number: `mekan-salon-aksam.webp`, `kafe-03.webp`. Group matching ignores case and
+Turkish letters ("mekan" = "Mekân"), but write the names exactly as above. Venue photos are landscape (cover/hero use),
+WebP, 2000 px on the long side (the size site cover and page-hero uploads get; gallery uploads get 1600), quality ~80. Use
+`sortOrder` within a group to put the best photos first. Avoid recognizable people, logos, signs and brand names.
+
 ## API
 
 | Method | Route | Roles | Body / query | Returns |
 |---|---|---|---|---|
-| GET | `api/stock-images?q=` | Owner, Admin | `q` optional | `[{ id, title, group, url }]`, max 48. Empty `q`: default list by `sortOrder`. Ranking: exact title, exact keyword, title/keyword word prefix, contains; multi-word queries (the picker opens with the product name, e.g. "Adana Kebap") fall back to per-word matches, most words first. |
+| GET | `api/stock-images?q=&scope=&group=` | Owner, Admin | all optional | `[{ id, title, group, url }]`, max 48. Empty `q`: default list by `sortOrder`. Ranking: exact title, exact keyword, title/keyword word prefix, contains; multi-word queries (the picker opens with the product name, e.g. "Adana Kebap") fall back to per-word matches, most words first. `scope` and `group`: see below. |
 | POST | `api/product/{id}/stock-image` | Owner, Admin | `{ stockImageId }` | full CDN url |
 | POST | `api/set-menu/{id}/stock-image` | Owner, Admin | `{ stockImageId }` | full CDN url |
+
+`scope` (case-insensitive; an unknown value is a 400):
+
+| `scope` | Empty `q` | With `q` | Used by |
+|---|---|---|---|
+| omitted / `all` | All groups by `sortOrder` (as before) | Ranked over all groups | – |
+| `venue` | Venue groups only, by group order (table above), then `sortOrder`, then title | Venue matches first (ranked), then the other matches (ranked); 48 in total | Site editor (`StockGrid`) |
+| `food` | Venue groups excluded | Venue groups excluded | Product and set-menu picker (`StockImagePickerModal`) |
+
+`group` keeps one group only ("Kafe"; case and Turkish letters ignored) and combines with `scope`. The site editor's
+chips: Tümü (`scope=venue`) · Mekân · Kafe · Teras ve bahçe · Bar ve mutfak · Masa ve sofra (`scope=venue&group=…`) ·
+Yemekler (`scope=food`, with the food groups as sub-chips). While no venue rows exist, Tümü and the venue chips show
+"Mekân fotoğrafları yakında eklenecek…" with a button that switches to Yemekler.
 
 Both commands are branch-scoped like the upload commands and write an audit log (`ProductStockImageSelected`,
 `SetMenuStockImageSelected`). Nothing is uploaded or copied.
@@ -77,7 +116,8 @@ Both commands are branch-scoped like the upload commands and write an audit log 
 Restaurant site photos (cover, about, founder, share image, gallery, region photos) can use stock images too. Those
 selections go into the site **draft**: `POST api/branch/site/draft/image/{slot}/stock`, `.../gallery/stock`,
 `.../regions/{id}/image/stock`, all with `{ stockImageId }`. See `docs/site-editor.md`. The same rule applies: publishing
-or discarding never deletes a `shared/` key.
+or discarding never deletes a `shared/` key. Public pages label site photos as "Temsili görsel" by URL (the address
+contains `/shared/stock/`), not by a DTO flag.
 
 ## Catalog status
 

@@ -1,17 +1,30 @@
 import { useMemo, useRef, useState, type DragEvent } from 'react';
 import { Camera, Check, ImageOff, Loader2, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { StockImage } from '@/features/stockImages/api/stockImageService';
+import { VENUE_STOCK_GROUPS, type StockImage } from '@/features/stockImages/api/stockImageService';
 import { useStockImageSearch } from '@/features/stockImages/useStockImageSearch';
 import { cn } from '@/lib/utils';
 import { tooBig } from './editorModel';
 import { ed } from './editorStyles';
 
 // Hazır görsel seçici (arama, grup çipleri, ızgara; "Temsili görsel" etiketi, kullanılan görsel işaretli). Arama ve
-// sıralama ürünlerdeki hazır görsel penceresiyle aynı (useStockImageSearch). Önizlemenin üstündeki büyük katman
-// (StockOverlay) ve "Genel ayarlar"daki paylaşım görseli (PhotoPicker) kullanır.
+// sıralama ürünlerdeki hazır görsel penceresiyle aynı (useStockImageSearch) ama mekân kapsamında: site fotoğrafları için
+// mekân/ortam fotoğrafları önce gelir. Çipler: Tümü (mekân önce) · mekân grupları · Yemekler (yemek kapsamı, altında
+// yemek grupları). Önizlemenin üstündeki büyük katman (StockOverlay) ve "Genel ayarlar"daki paylaşım görseli (PhotoPicker)
+// kullanır.
 
 const ACCEPT = 'image/jpeg,image/png,image/webp';
+
+/** Üst çip: 'all' mekân önce hepsi, bir mekân grubu ya da 'food' yemekler. */
+type StockChip = 'all' | 'food' | (typeof VENUE_STOCK_GROUPS)[number];
+const CHIPS: { key: StockChip; label: string }[] = [
+    { key: 'all', label: 'Tümü' },
+    ...VENUE_STOCK_GROUPS.map(g => ({ key: g, label: g })),
+    { key: 'food', label: 'Yemekler' },
+];
+
+const chipClass = (on: boolean) => cn('flex h-7 items-center rounded-full border px-[11px] text-xs font-semibold',
+    on ? 'border-[#2A1F14] bg-[#2A1F14] text-[#FDFAF5] dark:border-foreground dark:bg-foreground dark:text-background' : 'border-[#DDD3C2] text-foreground dark:border-border');
 
 export function StockGrid({ currentUrl, markLabel, actionHint, busy, onPick, large = false, autoFocus = false }: {
     /** Yuvada şu an kullanılan görsel: ızgarada işaretlenir. */
@@ -27,12 +40,16 @@ export function StockGrid({ currentUrl, markLabel, actionHint, busy, onPick, lar
     autoFocus?: boolean;
 }) {
     const [query, setQuery] = useState('');
+    const [chip, setChip] = useState<StockChip>('all');
+    // Yemekler çipinin altındaki yemek grubu (gelen listeden, istemcide süzülür).
     const [group, setGroup] = useState<string | null>(null);
     const [picked, setPicked] = useState<string | null>(null);
-    const { state, retry } = useStockImageSearch(query);
+    const options = useMemo(() => (chip === 'food' ? { scope: 'food' as const } : { scope: 'venue' as const, group: chip === 'all' ? undefined : chip }), [chip]);
+    const { state, retry } = useStockImageSearch(query, options);
     const items = useMemo(() => (state.status === 'ready' ? state.items : []), [state]);
-    const groups = useMemo(() => [...new Set(items.map(i => i.group).filter((g): g is string => !!g))].slice(0, large ? 10 : 6), [items, large]);
+    const groups = useMemo(() => (chip === 'food' ? [...new Set(items.map(i => i.group).filter((g): g is string => !!g))].slice(0, large ? 10 : 6) : []), [items, large, chip]);
     const shown = group ? items.filter(i => i.group === group) : items;
+    const selectChip = (next: StockChip) => { setChip(next); setGroup(null); };
     const grid = large ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid-cols-2';
     const thumb = large ? 'h-[120px] md:h-[140px]' : 'h-[82px]';
 
@@ -44,13 +61,18 @@ export function StockGrid({ currentUrl, markLabel, actionHint, busy, onPick, lar
                 <input type="search" value={query} autoFocus={autoFocus} onChange={e => { setQuery(e.target.value); setGroup(null); }} placeholder="Ara: avlu, mangal, çay…"
                     className="min-w-0 flex-1 border-0 bg-transparent text-sm text-foreground outline-none" />
             </label>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Görsel grubu">
+                {CHIPS.map(c => (
+                    <button key={c.key} type="button" onClick={() => selectChip(c.key)} aria-pressed={chip === c.key} className={chipClass(chip === c.key)}>
+                        {c.label}
+                    </button>
+                ))}
+            </div>
             {groups.length > 1 && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 border-l-2 border-[#DDD3C2] pl-2 dark:border-border" role="group" aria-label="Yemek grubu">
                     {[null, ...groups].map(g => (
-                        <button key={g ?? 'all'} type="button" onClick={() => setGroup(g)} aria-pressed={group === g}
-                            className={cn('flex h-7 items-center rounded-full border px-[11px] text-xs font-semibold',
-                                group === g ? 'border-[#2A1F14] bg-[#2A1F14] text-[#FDFAF5] dark:border-foreground dark:bg-foreground dark:text-background' : 'border-[#DDD3C2] text-foreground dark:border-border')}>
-                            {g ?? 'Tümü'}
+                        <button key={g ?? 'all'} type="button" onClick={() => setGroup(g)} aria-pressed={group === g} className={chipClass(group === g)}>
+                            {g ?? 'Tüm yemekler'}
                         </button>
                     ))}
                 </div>
@@ -67,13 +89,21 @@ export function StockGrid({ currentUrl, markLabel, actionHint, busy, onPick, lar
                         <button type="button" onClick={retry} className={ed.btnSm}>Tekrar dene</button>
                     </div>
                 )}
-                {state.status === 'ready' && items.length === 0 && (
+                {state.status === 'ready' && items.length === 0 && (chip === 'food' ? (
                     <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
                         <ImageOff className="h-6 w-6" aria-hidden="true" />
                         <p className="text-sm">Henüz hazır görsel yok.</p>
                     </div>
-                )}
-                {state.status === 'ready' && state.noMatch && (
+                ) : (
+                    <div className="mx-auto flex max-w-sm flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+                        <ImageOff className="h-6 w-6" aria-hidden="true" />
+                        <p className="m-0 text-sm">
+                            Mekân fotoğrafları yakında eklenecek. Şimdilik yemek fotoğraflarından seçebilir ya da kendi fotoğrafınızı yükleyebilirsiniz.
+                        </p>
+                        <button type="button" onClick={() => selectChip('food')} className={ed.btnSm}>Yemek fotoğraflarına geç</button>
+                    </div>
+                ))}
+                {state.status === 'ready' && state.noMatch && items.length > 0 && (
                     <p className="mb-2 text-xs text-muted-foreground">“{query.trim()}” için eşleşen görsel yok. Tüm hazır görseller:</p>
                 )}
                 {shown.length > 0 && (

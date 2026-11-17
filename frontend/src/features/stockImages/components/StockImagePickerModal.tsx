@@ -13,11 +13,14 @@ interface StockImagePickerModalProps {
     onSelect: (image: StockImage) => void;
 }
 
+const FOOD = { scope: 'food' } as const;
+
 // "Hazır görsellerden seç": ortak kütüphaneden fotoğraf seçer. Seçim kaydedilene kadar yalnızca önizlemedir;
 // kaydetme ürün/menü düzenleyicisinde yapılır (yeni kayıtta oluşturduktan sonra).
 export default function StockImagePickerModal({ initialQuery, onClose, onSelect }: StockImagePickerModalProps) {
     const [query, setQuery] = useState(initialQuery.trim());
-    const { state, retry } = useStockImageSearch(query);
+    // Ürün ve menüler: yemek/içecek fotoğrafları (mekân grupları hariç).
+    const { state, retry } = useStockImageSearch(query, FOOD);
 
     return (
         <Modal onClose={onClose} overlayClassName="bg-black/40 backdrop-blur-sm">
