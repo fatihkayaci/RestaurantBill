@@ -10,7 +10,7 @@ import { canReserveOnline } from '@/features/customerSite/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
-import { HeaderSpacer, SitePage } from './site/SiteFrame';
+import { PageHero, SitePage } from './site/SiteFrame';
 import { RESERVATION_PATH, serif } from './site/siteParts';
 import { telHref } from './site/siteTheme';
 import { rememberReservationToken, restaurantName, useMyReservations, useSite } from './site/useSite';
@@ -65,25 +65,14 @@ export default function ReservationLookupPage() {
 
     return (
         <SitePage site={site} current="rezervasyon-sorgula">
-            <section className="relative overflow-hidden bg-[var(--site-hero)] text-white">
-                {site.site.coverImageUrl && (
-                    <>
-                        <img src={site.site.coverImageUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
-                        <div aria-hidden="true" className="absolute inset-0 bg-[rgba(20,16,12,0.6)]" />
-                    </>
-                )}
-                <HeaderSpacer />
-                <div className="relative mx-auto flex w-full max-w-[1180px] flex-col gap-3 px-5 pb-24 pt-8 md:px-12 md:pb-32 md:pt-14">
-                    <span className="text-xs font-medium uppercase tracking-[0.28em] text-white/80">{name} · Rezervasyon</span>
-                    <h1 className={cn(serif, 'm-0 text-[48px] leading-[0.92] tracking-[-0.025em] md:text-[88px]')}>Rezervasyon <span className="italic">sorgula.</span></h1>
-                    <p className="m-0 mt-1 max-w-[46ch] text-[15px] leading-relaxed text-white/85 md:text-[17px]">
-                        Bağlantınızı mı kaybettiniz? Kodunuz ve telefon numaranızla rezervasyonunuza ulaşın.
-                    </p>
-                </div>
-            </section>
+            <PageHero site={site} label={`${name} · Rezervasyon`} compact title="Rezervasyon sorgula.">
+                <p className="m-0 max-w-[46ch] text-base leading-relaxed text-[var(--site-sub)] md:text-[17px]">
+                    Bağlantınızı mı kaybettiniz? Kodunuz ve telefon numaranızla rezervasyonunuza ulaşın.
+                </p>
+            </PageHero>
 
             <div className="flex flex-1 flex-col bg-[var(--site-bg)] leading-normal text-[var(--site-text)]">
-                <main className="relative mx-auto -mt-16 flex w-full max-w-[560px] flex-col gap-5 px-4 pb-16 sm:px-5 md:-mt-20">
+                <main className="relative mx-auto flex w-full max-w-[560px] flex-col gap-5 px-4 pb-16 pt-10 sm:px-5 md:pt-14">
                     {mine.length > 0 && <SavedReservations items={mine} />}
 
                     <div className={cn('rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] p-5 sm:p-8', mine.length === 0 && 'shadow-[0_24px_48px_-28px_rgba(20,16,12,0.45)]')}>

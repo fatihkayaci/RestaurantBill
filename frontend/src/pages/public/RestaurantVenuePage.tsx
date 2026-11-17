@@ -4,7 +4,7 @@ import { canReserveOnline, type PublicSite } from '@/features/customerSite/types
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from './components/StockImageLabel';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
-import { PageEmpty, PageHero, SitePage } from './site/SiteFrame';
+import { AccentTitle, PageEmpty, PageHero, SitePage } from './site/SiteFrame';
 import { ClockIcon, DirectionsIcon, HeroStatusPill, HoursBlock, InfoCard, InstagramIcon, MapStub, OpenBadge } from './site/SiteCards';
 import {
     RESERVATION_PATH, amenityLabel, cardButton, cardLabel, eyebrow, hasVenuePage, instagramHandle, serif, siteCard, siteCardDark, siteCardLg,
@@ -144,11 +144,11 @@ export default function RestaurantVenuePage() {
         <SitePage site={site} current="mekan">
             <PageHero site={site} label={`Mekân · ${name}`} image={content.venueHeroUrl || content.galleryImageUrls[0] || content.aboutImageUrl || undefined}
                 imageTarget="photo:hero-mekan" imageLabel="Mekân kapağı" 
-                title={<EditableText field="headline" value={content.headline} fallback="Mekân" placeholder="Büyük başlık" />}
+                title={edit ? <EditableText field="headline" value={content.headline} fallback="Mekân" placeholder="Büyük başlık" /> : <AccentTitle text={content.headline || 'Mekân'} />}
                 compact titleClassName="text-[48px] leading-[0.98] md:text-[80px]" aside={<HeroStatusPill site={site} />}>
                 {(content.tagline || showEmpty) && (
                     <EditableText as="p" field="tagline" value={content.tagline} placeholder="Alt başlık"
-                        className="m-0 max-w-[60ch] text-base leading-normal text-white/90 md:text-[17px]" />
+                        className="m-0 max-w-[60ch] text-base leading-normal text-[var(--site-sub)] md:text-[17px]" />
                 )}
             </PageHero>
             <main className="mx-auto flex w-full max-w-[1344px] flex-1 flex-col gap-4 px-5 pb-10 pt-5 md:gap-6 md:px-12 md:pb-16 md:pt-14">

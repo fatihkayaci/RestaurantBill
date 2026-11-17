@@ -56,17 +56,17 @@ function groupSlots(slots: DaySlot[]): { name: string; slots: DaySlot[] }[] {
 }
 
 // Sitenin sıcak, editoryal paleti (SiteFrame ile aynı tonlar); vurgu rengi restoranın ayarından.
-const card = 'rounded-[20px] border border-[#DDD7CE] bg-white';
+const card = 'rounded-[20px] border border-[var(--site-border-mid)] bg-white';
 const chipOn = 'border-[var(--site-accent)] bg-[var(--site-accent)] text-[var(--site-on-accent)] shadow-[0_6px_16px_-8px_var(--site-accent)]';
-const chipOff = 'border-[#DDD7CE] bg-white text-[#141414] hover:border-[#141414]';
-const chipDisabled = 'cursor-not-allowed border-dashed border-[#CFC8BC] bg-transparent text-[#B8B1A6]';
+const chipOff = 'border-[var(--site-border-mid)] bg-white text-[var(--site-text)] hover:border-[var(--site-text)]';
+const chipDisabled = 'cursor-not-allowed border-dashed border-[var(--site-border-strong)] bg-transparent text-[var(--site-border-strong)]';
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-white';
-const inputClass = 'h-[52px] w-full rounded-xl border border-[#DDD7CE] bg-white px-4 text-base text-[#141414] transition-colors placeholder:text-[#9A948B] hover:border-[#BDB5A8] focus:border-[var(--site-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]/25';
-const labelClass = 'mb-1.5 block text-sm font-medium text-[#141414]';
+const inputClass = 'h-[52px] w-full rounded-xl border border-[var(--site-border-mid)] bg-white px-4 text-base text-[var(--site-text)] transition-colors placeholder:text-[var(--site-disabled)] hover:border-[var(--site-border-strong)] focus:border-[var(--site-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]/25';
+const labelClass = 'mb-1.5 block text-sm font-medium text-[var(--site-text)]';
 const primaryButton = 'flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[var(--site-accent)] text-base font-semibold text-[var(--site-on-accent)] transition-[opacity,transform] hover:-translate-y-px hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 motion-reduce:transition-none';
-const secondaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full border border-[#DDD7CE] bg-white px-5 text-[15px] font-semibold text-[#141414] transition-colors hover:border-[#141414]';
+const secondaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--site-border-mid)] bg-white px-5 text-[15px] font-semibold text-[var(--site-text)] transition-colors hover:border-[var(--site-text)]';
 const alertClass = 'rounded-xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3.5 text-sm font-medium text-[var(--site-error)]';
-const eyebrowClass = 'text-[11px] font-medium uppercase tracking-[0.22em] text-[#6F6A63]';
+const eyebrowClass = 'text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--site-muted)]';
 
 type Step = 'slot' | 'details' | 'done';
 
@@ -250,14 +250,14 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     const toSlot = () => { setStep('slot'); goTop(); };
 
     const stepBar = (
-        <div className="border-b border-[#DDD7CE] bg-white">
+        <div className="border-b border-[var(--site-border-mid)] bg-white">
             <div className="mx-auto flex max-w-[1180px] items-center gap-2 px-3 py-3 md:px-12 md:py-4">
                 {step !== 'done' && (
                     <button
                         type="button"
                         onClick={back}
                         aria-label={step === 'details' ? 'Önceki adım' : 'Restoran sayfasına dön'}
-                        className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#141414] transition-colors hover:bg-[#F5F2ED]', focusRing)}
+                        className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--site-text)] transition-colors hover:bg-[var(--site-bg)]', focusRing)}
                     >
                         <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                     </button>
@@ -271,15 +271,15 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             <li key={item.key} aria-current={state === 'current' ? 'step' : undefined} className={cn('flex min-w-0 items-center gap-2 sm:gap-3', i < STEPS.length - 1 && 'flex-1')}>
                                 <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums transition-colors',
                                     state === 'current' ? 'border-[var(--site-accent)] bg-[var(--site-accent)] text-[var(--site-on-accent)]'
-                                        : state === 'past' ? 'border-[#141414] bg-[#141414] text-white' : 'border-[#DDD7CE] bg-white text-[#9A948B]')}>
+                                        : state === 'past' ? 'border-[var(--site-text)] bg-[var(--site-text)] text-white' : 'border-[var(--site-border-mid)] bg-white text-[var(--site-disabled)]')}>
                                     {state === 'past' ? <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" /> : i + 1}
                                 </span>
                                 <span className={cn('whitespace-nowrap text-[13px] font-medium',
-                                    state === 'current' ? 'text-[#141414]' : 'text-[#9A948B]',
+                                    state === 'current' ? 'text-[var(--site-text)]' : 'text-[var(--site-disabled)]',
                                     state !== 'current' && 'hidden sm:inline')}>
                                     {item.label}
                                 </span>
-                                {i < STEPS.length - 1 && <span aria-hidden="true" className={cn('h-px min-w-3 flex-1', state === 'past' ? 'bg-[#141414]' : 'bg-[#DDD7CE]')} />}
+                                {i < STEPS.length - 1 && <span aria-hidden="true" className={cn('h-px min-w-3 flex-1', state === 'past' ? 'bg-[var(--site-text)]' : 'bg-[var(--site-border-mid)]')} />}
                             </li>
                         );
                     })}
@@ -290,7 +290,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
     if (step === 'done') {
         return (
-            <div className="flex flex-col bg-[#F5F2ED] text-[#141414]">
+            <div className="flex flex-col bg-[var(--site-bg)] text-[var(--site-text)]">
                 {stepBar}
                 <main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pb-16 pt-10 md:pt-14">
                     <div role="status" className="flex flex-col items-center gap-3 text-center">
@@ -298,7 +298,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             <Check className="h-7 w-7" strokeWidth={2.5} aria-hidden="true" />
                         </span>
                         <p className={cn(serif, 'm-0 mt-2 text-[40px] leading-[1] tracking-[-0.02em] md:text-[52px]')}>Talebiniz <span className="italic">alındı.</span></p>
-                        <p className="m-0 max-w-sm text-[15px] leading-relaxed text-[#4A4640]">
+                        <p className="m-0 max-w-sm text-[15px] leading-relaxed text-[var(--site-sub)]">
                             Restoran onaylayınca kesinleşir. Durumu rezervasyon sayfanızdan izleyin.
                         </p>
                     </div>
@@ -345,7 +345,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                 aria-label={chip.open ? formatDay(chip.value) : `${formatDay(chip.value)}, rezervasyon alınmıyor`}
                                 onClick={() => changeSlot(chip.value, time)}
                                 className={cn('flex h-[84px] w-[66px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-[14px] border transition-colors', focusRing,
-                                    !chip.open ? chipDisabled : on ? 'border-[#141414] bg-[#141414] text-white' : chipOff)}
+                                    !chip.open ? chipDisabled : on ? 'border-[var(--site-text)] bg-[var(--site-text)] text-white' : chipOff)}
                             >
                                 <span className="text-[10px] font-medium uppercase tracking-[0.12em] opacity-75">{chip.top}</span>
                                 <span className={cn(serif, 'text-[28px] leading-none tabular-nums', !chip.open && 'line-through decoration-1')}>{chip.num}</span>
@@ -354,8 +354,8 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                         );
                     })}
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[#ECE7DF] pt-4">
-                    <label htmlFor="rez-tarih" className="shrink-0 text-sm text-[#6F6A63]">Başka bir tarih</label>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[var(--site-alt)] pt-4">
+                    <label htmlFor="rez-tarih" className="shrink-0 text-sm text-[var(--site-muted)]">Başka bir tarih</label>
                     <input
                         id="rez-tarih"
                         type="date"
@@ -370,26 +370,26 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
             <FlowSection num="02" title="Kaç kişisiniz?" legend="Kişi sayısı">
                 <div className="flex items-center justify-between gap-4">
-                    <p className="m-0 text-sm text-[#6F6A63]">Online en fazla {maxParty} kişi</p>
+                    <p className="m-0 text-sm text-[var(--site-muted)]">Online en fazla {maxParty} kişi</p>
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
                             aria-label="Kişi sayısını azalt"
                             disabled={partySize <= 1}
                             onClick={() => changeParty(Math.max(1, partySize - 1))}
-                            className={cn('flex h-11 w-11 items-center justify-center rounded-full border border-[#DDD7CE] bg-white text-[#141414] transition-colors hover:border-[#141414] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[#DDD7CE]', focusRing)}
+                            className={cn('flex h-11 w-11 items-center justify-center rounded-full border border-[var(--site-border-mid)] bg-white text-[var(--site-text)] transition-colors hover:border-[var(--site-text)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[var(--site-border-mid)]', focusRing)}
                         >
                             <Minus className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
                         </button>
                         <output id="rez-kisi" aria-live="polite" aria-label={`${partySize} kişi`} className={cn(serif, 'min-w-[84px] text-center text-[30px] leading-none tabular-nums')}>
-                            {partySize} <span className="text-lg italic text-[#6F6A63]">kişi</span>
+                            {partySize} <span className="text-lg italic text-[var(--site-muted)]">kişi</span>
                         </output>
                         <button
                             type="button"
                             aria-label="Kişi sayısını artır"
                             disabled={partySize >= maxParty}
                             onClick={() => changeParty(Math.min(maxParty, partySize + 1))}
-                            className={cn('flex h-11 w-11 items-center justify-center rounded-full border border-[#DDD7CE] bg-white text-[#141414] transition-colors hover:border-[#141414] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[#DDD7CE]', focusRing)}
+                            className={cn('flex h-11 w-11 items-center justify-center rounded-full border border-[var(--site-border-mid)] bg-white text-[var(--site-text)] transition-colors hover:border-[var(--site-text)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[var(--site-border-mid)]', focusRing)}
                         >
                             <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
                         </button>
@@ -402,7 +402,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                     <p role="alert" className={alertClass}>{daySlotsError}</p>
                 ) : daySlots === null ? (
                     <div className="grid grid-cols-4 gap-2 sm:grid-cols-6" aria-busy="true" aria-label="Saatler yükleniyor">
-                        {[...Array(8)].map((_, i) => <div key={i} className="h-[60px] animate-pulse rounded-xl bg-[#F1EDE6]" />)}
+                        {[...Array(8)].map((_, i) => <div key={i} className="h-[60px] animate-pulse rounded-xl bg-[var(--site-alt)]" />)}
                     </div>
                 ) : !daySlots.some(s => !s.full) ? (
                     <EmptyNote>
@@ -447,7 +447,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                 <p className="m-0 min-w-0 truncate text-[15px] font-semibold">
                     {shortDay(date)} · {timeReady ? time : 'saat seçin'} · {partySize} kişi
                 </p>
-                <button type="button" onClick={() => scrollToSection('rez-gun')} className={cn('flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-[var(--site-accent)] hover:bg-[#F5F2ED]', focusRing)}>
+                <button type="button" onClick={() => scrollToSection('rez-gun')} className={cn('flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-[var(--site-accent)] hover:bg-[var(--site-bg)]', focusRing)}>
                     Değiştir
                 </button>
             </div>
@@ -461,7 +461,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
                         {!slotError && unavailable === null && (
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4" aria-busy="true" aria-label="Masalar yükleniyor">
-                                {[...Array(6)].map((_, i) => <div key={i} className="h-[72px] animate-pulse rounded-xl bg-[#F1EDE6]" />)}
+                                {[...Array(6)].map((_, i) => <div key={i} className="h-[72px] animate-pulse rounded-xl bg-[var(--site-alt)]" />)}
                             </div>
                         )}
 
@@ -471,7 +471,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                 <div key={region.id} className="flex flex-col gap-2.5">
                                     <h3 className={cn(eyebrowClass, 'm-0 flex items-center gap-3')}>
                                         {region.name}
-                                        <span aria-hidden="true" className="h-px flex-1 bg-[#ECE7DF]" />
+                                        <span aria-hidden="true" className="h-px flex-1 bg-[var(--site-alt)]" />
                                         <span className="normal-case tracking-normal">{freeCount > 0 ? `${freeCount} masa boş` : 'boş masa yok'}</span>
                                     </h3>
                                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
@@ -496,7 +496,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                                     <span className="text-[15px] font-semibold leading-tight">{table.name}</span>
                                                     {capacityText && <span className="text-xs opacity-80">{capacityText}</span>}
                                                     <span className="flex items-center gap-1.5 text-xs font-medium opacity-80">
-                                                        <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', busy || tooSmall ? 'bg-[#CFC8BC]' : on ? 'bg-current' : 'bg-[#2E9E57]')} />
+                                                        <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', busy || tooSmall ? 'bg-[var(--site-border-strong)]' : on ? 'bg-current' : 'bg-[#2E9E57]')} />
                                                         {busy ? 'Bu saatte dolu' : tooSmall ? 'Size dar' : on ? 'Seçili' : 'Boş'}
                                                     </span>
                                                     {on && <Check className="absolute right-3 top-3 h-4 w-4" strokeWidth={2.75} aria-hidden="true" />}
@@ -519,9 +519,9 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
             <div className={cn(card, 'flex items-center justify-between gap-3 p-4 lg:hidden')}>
                 <div className="min-w-0">
                     <p className={cn(serif, 'm-0 text-[26px] leading-tight')}>{selected?.name}</p>
-                    <p className="m-0 text-sm text-[#6F6A63]">{formatDay(date)} · {time} · {partySize} kişi</p>
+                    <p className="m-0 text-sm text-[var(--site-muted)]">{formatDay(date)} · {time} · {partySize} kişi</p>
                 </div>
-                <button type="button" onClick={toSlot} className={cn('flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-[var(--site-accent)] hover:bg-[#F5F2ED]', focusRing)}>
+                <button type="button" onClick={toSlot} className={cn('flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-[var(--site-accent)] hover:bg-[var(--site-bg)]', focusRing)}>
                     Değiştir
                 </button>
             </div>
@@ -550,7 +550,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                         </div>
                     </div>
                     <div>
-                        <label htmlFor="rez-not" className={labelClass}>Not <span className="font-normal text-[#9A948B]">(isteğe bağlı)</span></label>
+                        <label htmlFor="rez-not" className={labelClass}>Not <span className="font-normal text-[var(--site-disabled)]">(isteğe bağlı)</span></label>
                         <textarea
                             id="rez-not"
                             value={note}
@@ -561,7 +561,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             className={cn(inputClass, 'h-auto resize-y py-3 leading-relaxed')}
                         />
                     </div>
-                    <p className="m-0 text-[13px] leading-relaxed text-[#6F6A63]">
+                    <p className="m-0 text-[13px] leading-relaxed text-[var(--site-muted)]">
                         Talebi gönderince size bir rezervasyon kodu verilir; bu kod ve telefon numaranızla rezervasyonunuzu sonradan sorgulayabilirsiniz.
                     </p>
                     {formError && <p role="alert" className={alertClass}>{formError}</p>}
@@ -575,7 +575,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
     const summaryCard = (
         <div className={cn(card, 'hidden overflow-hidden lg:block')}>
-            <div className="relative flex min-h-[132px] flex-col justify-end overflow-hidden bg-[#2A2622] px-6 pb-5 pt-8 text-white">
+            <div className="relative flex min-h-[132px] flex-col justify-end overflow-hidden bg-[var(--site-paper)] px-6 pb-5 pt-8 text-white">
                 {site.site.coverImageUrl && (
                     <>
                         <img src={site.site.coverImageUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
@@ -585,7 +585,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                 <span className="relative text-[11px] font-medium uppercase tracking-[0.22em] text-white/75">Rezervasyonunuz</span>
                 <span className={cn(serif, 'relative mt-1 text-[32px] italic leading-none')}>{restaurantName}</span>
             </div>
-            <dl className="m-0 flex flex-col divide-y divide-[#ECE7DF] px-6 py-2">
+            <dl className="m-0 flex flex-col divide-y divide-[var(--site-alt)] px-6 py-2">
                 <SummaryRow label="Tarih" value={formatDay(date)} />
                 <SummaryRow label="Saat" value={timeReady ? time : '—'} />
                 <SummaryRow label="Kişi" value={`${partySize} kişi`} />
@@ -594,11 +594,11 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
             <div className="flex flex-col gap-2.5 px-6 pb-6 pt-2">
                 {cta()}
                 {step === 'details' ? (
-                    <button type="button" onClick={toSlot} className="self-center text-sm font-medium text-[#6F6A63] underline-offset-4 hover:text-[#141414] hover:underline">
+                    <button type="button" onClick={toSlot} className="self-center text-sm font-medium text-[var(--site-muted)] underline-offset-4 hover:text-[var(--site-text)] hover:underline">
                         Tarih ya da masayı değiştir
                     </button>
                 ) : (
-                    <p className="m-0 text-center text-xs text-[#6F6A63]">{selected ? 'Sonraki adımda adınızı ve telefonunuzu alacağız.' : 'Devam etmek için bir masa seçin.'}</p>
+                    <p className="m-0 text-center text-xs text-[var(--site-muted)]">{selected ? 'Sonraki adımda adınızı ve telefonunuzu alacağız.' : 'Devam etmek için bir masa seçin.'}</p>
                 )}
             </div>
         </div>
@@ -607,34 +607,34 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     const infoCard = (
         <div className={cn(card, 'flex flex-col gap-4 p-5 sm:p-6')}>
             <span className={eyebrowClass}>Bilmeniz gerekenler</span>
-            <ul className="m-0 flex list-none flex-col gap-3.5 p-0 text-sm leading-relaxed text-[#4A4640]">
+            <ul className="m-0 flex list-none flex-col gap-3.5 p-0 text-sm leading-relaxed text-[var(--site-sub)]">
                 <InfoItem icon={<Check className="h-4 w-4" aria-hidden="true" />}>Talebiniz restorana iletilir; restoran onaylayınca kesinleşir.</InfoItem>
                 <InfoItem icon={<Clock className="h-4 w-4" aria-hidden="true" />}>Masa {formatDuration(rules.durationMinutes)} süreyle sizin için ayrılır.</InfoItem>
                 <InfoItem icon={<Users className="h-4 w-4" aria-hidden="true" />}>Online en fazla {maxParty} kişilik rezervasyon yapılabilir.</InfoItem>
             </ul>
             {(address || site.phone || hours) && (
-                <div className="flex flex-col gap-3 border-t border-[#ECE7DF] pt-4 text-sm">
+                <div className="flex flex-col gap-3 border-t border-[var(--site-alt)] pt-4 text-sm">
                     {address && (
                         <InfoItem icon={<MapPin className="h-4 w-4" aria-hidden="true" />}>
-                            <span className="block text-[#141414]">{address}</span>
-                            <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#141414] underline decoration-[#DDD7CE] underline-offset-4 hover:decoration-[#141414]">Yol tarifi al</a>
+                            <span className="block text-[var(--site-text)]">{address}</span>
+                            <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className="font-semibold text-[var(--site-text)] underline decoration-[var(--site-border-mid)] underline-offset-4 hover:decoration-[var(--site-text)]">Yol tarifi al</a>
                         </InfoItem>
                     )}
                     {site.phone && (
                         <InfoItem icon={<Phone className="h-4 w-4" aria-hidden="true" />}>
-                            <a href={telHref(site.phone)} className="font-semibold tabular-nums text-[#141414] no-underline hover:underline">{site.phone}</a>
+                            <a href={telHref(site.phone)} className="font-semibold tabular-nums text-[var(--site-text)] no-underline hover:underline">{site.phone}</a>
                         </InfoItem>
                     )}
                     {hours && (
                         <InfoItem icon={<Clock className="h-4 w-4" aria-hidden="true" />}>
-                            <span className="text-[#141414]">Her gün <span className="tabular-nums">{hours}</span></span>
-                            {site.isOpenNow !== null && <span className="text-[#6F6A63]"> · {site.isOpenNow ? 'şu an açık' : 'şu an kapalı'}</span>}
+                            <span className="text-[var(--site-text)]">Her gün <span className="tabular-nums">{hours}</span></span>
+                            {site.isOpenNow !== null && <span className="text-[var(--site-muted)]"> · {site.isOpenNow ? 'şu an açık' : 'şu an kapalı'}</span>}
                         </InfoItem>
                     )}
                 </div>
             )}
             {mine.length === 0 && (
-                <p className="m-0 border-t border-[#ECE7DF] pt-4 text-sm text-[#6F6A63]">
+                <p className="m-0 border-t border-[var(--site-alt)] pt-4 text-sm text-[var(--site-muted)]">
                     Rezervasyonunuz var mı?{' '}
                     <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[var(--site-accent)] underline-offset-4 hover:underline">Kodla sorgulayın</Link>
                 </p>
@@ -653,20 +653,20 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
             </div>
 
             {/* Dar ekranda yapışkan onay çubuğu */}
-            <div className="sticky bottom-0 z-10 border-t border-[#DDD7CE] bg-white/95 backdrop-blur-md lg:hidden">
+            <div className="sticky bottom-0 z-10 border-t border-[var(--site-border-mid)] bg-white/95 backdrop-blur-md lg:hidden">
                 <div className="mx-auto flex max-w-2xl flex-col gap-2.5 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
                     {step === 'slot' ? (
-                        <p className="m-0 truncate text-center text-sm text-[#4A4640]">{selected ? summary : 'Bir masa seçin'}</p>
+                        <p className="m-0 truncate text-center text-sm text-[var(--site-sub)]">{selected ? summary : 'Bir masa seçin'}</p>
                     ) : null}
                     {cta()}
-                    {step === 'details' && <p className="m-0 text-center text-xs text-[#6F6A63]">Talebiniz restoran onayladığında kesinleşir.</p>}
+                    {step === 'details' && <p className="m-0 text-center text-xs text-[var(--site-muted)]">Talebiniz restoran onayladığında kesinleşir.</p>}
                 </div>
             </div>
         </>
     );
 
     return (
-        <div className={cn('flex flex-col bg-[#F5F2ED] text-[#141414]', embedded ? 'min-h-[70vh]' : 'min-h-screen')}>
+        <div className={cn('flex flex-col bg-[var(--site-bg)] text-[var(--site-text)]', embedded ? 'min-h-[70vh]' : 'min-h-screen')}>
             {stepBar}
             {step === 'details' ? <form onSubmit={submit} className="flex flex-1 flex-col">{layout}</form> : layout}
         </div>
@@ -684,7 +684,7 @@ function FlowSection({ id, className, num, title, legend, note, children }: {
                     <span className="text-[11px] font-medium tracking-[0.2em] text-[var(--site-accent)]">{num}</span>
                     <span className={cn(serif, 'text-[28px] leading-none tracking-[-0.01em] md:text-[32px]')}>{title}</span>
                 </p>
-                {note && <span className="text-sm text-[#6F6A63]">{note}</span>}
+                {note && <span className="text-sm text-[var(--site-muted)]">{note}</span>}
             </div>
             {children}
         </fieldset>
@@ -693,15 +693,15 @@ function FlowSection({ id, className, num, title, legend, note, children }: {
 
 function EmptyNote({ children }: { children: ReactNode }) {
     return (
-        <p className="m-0 rounded-xl border border-dashed border-[#DDD7CE] bg-[#FAF8F5] px-4 py-5 text-center text-sm text-[#6F6A63]">{children}</p>
+        <p className="m-0 rounded-xl border border-dashed border-[var(--site-border-mid)] bg-[var(--site-bg)] px-4 py-5 text-center text-sm text-[var(--site-muted)]">{children}</p>
     );
 }
 
 function SummaryRow({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
     return (
         <div className="flex items-baseline justify-between gap-4 py-3">
-            <dt className="text-xs font-medium uppercase tracking-[0.16em] text-[#6F6A63]">{label}</dt>
-            <dd className={cn('m-0 text-right text-[15px] font-semibold', muted && 'font-normal text-[#9A948B]')}>{value}</dd>
+            <dt className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--site-muted)]">{label}</dt>
+            <dd className={cn('m-0 text-right text-[15px] font-semibold', muted && 'font-normal text-[var(--site-disabled)]')}>{value}</dd>
         </div>
     );
 }
@@ -709,7 +709,7 @@ function SummaryRow({ label, value, muted = false }: { label: string; value: str
 function InfoItem({ icon, children }: { icon: ReactNode; children: ReactNode }) {
     return (
         <li className="flex list-none items-start gap-3">
-            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F5F2ED] text-[#4A4640]">{icon}</span>
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--site-bg)] text-[var(--site-sub)]">{icon}</span>
             <span className="min-w-0">{children}</span>
         </li>
     );
@@ -728,8 +728,8 @@ function ReservationTicket({ reservation, restaurantName }: { reservation: Reser
     };
 
     return (
-        <section aria-label="Rezervasyon özeti" className="relative overflow-hidden rounded-[22px] border border-[#DDD7CE] bg-white shadow-[0_18px_40px_-24px_rgba(20,16,12,0.35)]">
-            <div className="flex flex-col items-center gap-2 bg-[#141414] px-6 pb-7 pt-6 text-center text-white">
+        <section aria-label="Rezervasyon özeti" className="relative overflow-hidden rounded-[22px] border border-[var(--site-border-mid)] bg-white shadow-[0_18px_40px_-24px_rgba(20,16,12,0.35)]">
+            <div className="flex flex-col items-center gap-2 bg-[var(--site-text)] px-6 pb-7 pt-6 text-center text-white">
                 <span className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/60">{restaurantName}</span>
                 {code ? (
                     <>
@@ -751,11 +751,11 @@ function ReservationTicket({ reservation, restaurantName }: { reservation: Reser
 
             {/* Bilet kesiği */}
             <div aria-hidden="true" className="relative h-0">
-                <span className="absolute -left-3 -top-3 h-6 w-6 rounded-full border border-[#DDD7CE] bg-[#F5F2ED]" />
-                <span className="absolute -right-3 -top-3 h-6 w-6 rounded-full border border-[#DDD7CE] bg-[#F5F2ED]" />
+                <span className="absolute -left-3 -top-3 h-6 w-6 rounded-full border border-[var(--site-border-mid)] bg-[var(--site-bg)]" />
+                <span className="absolute -right-3 -top-3 h-6 w-6 rounded-full border border-[var(--site-border-mid)] bg-[var(--site-bg)]" />
             </div>
 
-            <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-dashed border-[#DDD7CE] px-6 pb-5 pt-6">
+            <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-dashed border-[var(--site-border-mid)] px-6 pb-5 pt-6">
                 <TicketField label="Tarih" value={formatDay(reservation.date)} wide />
                 <TicketField label="Saat" value={`${reservation.time}–${reservation.endTime}`} />
                 <TicketField label="Kişi" value={`${reservation.partySize} kişi`} />
@@ -763,9 +763,9 @@ function ReservationTicket({ reservation, restaurantName }: { reservation: Reser
                 <TicketField label="Ad" value={reservation.guestName} />
             </dl>
             {code && (
-                <p className="m-0 border-t border-[#ECE7DF] px-6 py-4 text-[13px] leading-relaxed text-[#6F6A63]">
+                <p className="m-0 border-t border-[var(--site-alt)] px-6 py-4 text-[13px] leading-relaxed text-[var(--site-muted)]">
                     Bu kod ve telefon numaranızla rezervasyonunuzu{' '}
-                    <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[#141414] underline underline-offset-4">sorgulayabilirsiniz</Link>.
+                    <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[var(--site-text)] underline underline-offset-4">sorgulayabilirsiniz</Link>.
                 </p>
             )}
         </section>
@@ -775,7 +775,7 @@ function ReservationTicket({ reservation, restaurantName }: { reservation: Reser
 function TicketField({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
     return (
         <div className={cn('min-w-0', wide && 'col-span-2')}>
-            <dt className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#6F6A63]">{label}</dt>
+            <dt className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--site-muted)]">{label}</dt>
             <dd className={cn(serif, 'm-0 mt-1 break-words text-[24px] leading-tight tabular-nums')}>{value}</dd>
         </div>
     );
@@ -820,7 +820,7 @@ function ConfirmationActions({ reservation, restaurantName, address, onNewReques
         ].filter(Boolean).join('\n'),
     });
 
-    const textButton = cn('inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 font-semibold text-[#141414] underline-offset-4 hover:underline', focusRing);
+    const textButton = cn('inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 font-semibold text-[var(--site-text)] underline-offset-4 hover:underline', focusRing);
 
     return (
         <div className="flex flex-col gap-2.5">
@@ -840,7 +840,7 @@ function ConfirmationActions({ reservation, restaurantName, address, onNewReques
                     </a>
                 )}
             </div>
-            <p className="m-0 flex items-center justify-center gap-1 text-sm text-[#6F6A63]">
+            <p className="m-0 flex items-center justify-center gap-1 text-sm text-[var(--site-muted)]">
                 <button type="button" onClick={copy} className={textButton}>
                     <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                     Bağlantıyı kopyala
