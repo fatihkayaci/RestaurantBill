@@ -116,6 +116,8 @@ public abstract class SiteTextsInput
     public string DirectionsNote { get; set; } = string.Empty;
     public string WhatsappPhone { get; set; } = string.Empty;
     public List<string> Amenities { get; set; } = [];
+    /// <summary>Gizlenen hazır soru anahtarları; null (eski form göndermez): değiştirme.</summary>
+    public List<string>? HiddenFaqs { get; set; }
     public decimal? Rating { get; set; }
     public int? ReviewCount { get; set; }
     public string ReviewsUrl { get; set; } = string.Empty;
@@ -150,6 +152,7 @@ public abstract class SiteTextsInput
             DirectionsNote = DirectionsNote ?? string.Empty,
             WhatsappPhone = WhatsappPhone ?? string.Empty,
             Amenities = Amenities ?? [],
+            HiddenFaqs = HiddenFaqs,
             Rating = Rating,
             ReviewCount = ReviewCount,
             ReviewsUrl = ReviewsUrl ?? string.Empty,
@@ -214,6 +217,10 @@ public abstract class SiteTextsValidator<T> : AbstractValidator<T> where T : Sit
             .WithMessage("WhatsApp numarası çok uzun.");
         RuleForEach(x => x.Amenities).Must(a => SiteContent.AmenityKeys.Contains(a.Trim().ToLowerInvariant()))
             .WithMessage("Olanaklar yalnız hazır listeden seçilebilir.");
+        RuleFor(x => x.HiddenFaqs!.Count).LessThanOrEqualTo(SiteContent.HiddenFaqsMax)
+            .When(x => x.HiddenFaqs is not null).WithMessage($"En fazla {SiteContent.HiddenFaqsMax} soru gizlenebilir.");
+        RuleForEach(x => x.HiddenFaqs).Must(k => k is not null && SiteContent.FaqKeyPattern.IsMatch(k.Trim().ToLowerInvariant()))
+            .When(x => x.HiddenFaqs is not null).WithMessage("Geçersiz soru anahtarı.");
         RuleFor(x => x.Rating).InclusiveBetween(SiteContent.RatingMin, SiteContent.RatingMax)
             .When(x => x.Rating.HasValue).WithMessage("Puan 1 ile 5 arasında olmalıdır.");
         RuleFor(x => x.ReviewCount).InclusiveBetween(0, SiteContent.ReviewCountMax)

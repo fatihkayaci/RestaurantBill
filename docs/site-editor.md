@@ -136,7 +136,7 @@ eklenmedi.
 ### Alan anahtarları (`changes[].field`, `revert.fields`)
 
 `headline, tagline, coverImage, storyTitle, about, aboutImage, hours, hoursNote, instagramUrl, directionsNote,
-whatsappPhone, theme, accentColor, gallery, amenities, rating, reviewCount, reviewsUrl, featuredReviews, founderPhoto,
+whatsappPhone, theme, accentColor, gallery, amenities, hiddenFaqs, rating, reviewCount, reviewsUrl, featuredReviews, founderPhoto,
 founderName, founderTitle, founderQuote, foundedYear, values, milestones, seoTitle, seoDescription, shareImage,
 heroMenu, heroAbout, heroVenue, heroContact, heroReservation`,
 ayrıca her bölüm için `region:{regionId}` (bölümün fotoğrafı ve açıklaması birlikte).
@@ -160,6 +160,7 @@ Gövde, eski `PUT api/branch/site` ile aynı alanları ve üç ek alanı taşır
   "theme": "terracotta",
   "weeklyHours": [{ "day": 1, "isOpen": true, "opens": "12:00", "closes": "23:00" } /* … 7 gün ya da [] */],
   "directionsNote": "", "whatsappPhone": "", "amenities": ["avlu"],
+  "hiddenFaqs": ["odeme"],                       // gizlenen hazır sorular; null/eksik = değiştirme
   "rating": 4.7, "reviewCount": 1240, "reviewsUrl": "https://…",
   "featuredReviews": [{ "author": "", "text": "", "source": "Google" }],
   "founderName": "", "founderTitle": "", "founderQuote": "", "foundedYear": 1987,
@@ -223,6 +224,25 @@ sitenin kapağı kullanılır; Mekân'da sıra: kendi kapağı → ilk mekân fo
   `heroContact` "İletişim kapağı", `heroReservation` "Rezervasyon kapağı"; alan bazında "Geri al" çalışır.
 - DTO: `BranchSiteDto.MenuHeroUrl … ReservationHeroUrl` (taslak, yayındaki ve `api/public/site`).
 - Testler: `SiteDraftHandlerTests` (taslak → yayın, hazır görsel, iki kez yükleme, geri al, at) ve `SiteSnapshotTests`.
+
+### Sık sorulanlar (gizlenen sorular) ve yeni olanaklar
+
+İletişim sayfasındaki "Sık sorulanlar" restoranın yazdığı metin değildir: sorular ve cevaplar ön yüzde, restoranın
+ayarlarından (rezervasyon kuralları, teslimat mahalleleri, ödeme yolları, mekân olanakları) oluşur. Her soru varsayılan
+olarak açıktır; restoran istemediğini gizler. Sunucu yalnız gizlenenlerin anahtarlarını saklar:
+
+- `SiteContent.HiddenFaqs` (jsonb içerik, yeni sütun/migration yok; eski kayıtlarda anahtar yok = boş = hepsi görünür).
+- Doğrulama: en çok 30 anahtar; her biri `^[a-z0-9-]{1,40}$`; kırpılır, küçük harfe çevrilir, tekrar atılır (sıra korunur).
+  Sunucu soru listesini bilmez: bilinmeyen anahtar da kabul edilir (soru ön yüzden kalkınca zararsız kalır).
+- PUT gövdesinde `hiddenFaqs`; `null`/eksik = değiştirme (eski form göndermez). Taslak/yayın/geri al alanı `hiddenFaqs`
+  ("Sık sorulanlar", sayfa "İletişim"). `BranchSiteDto.HiddenFaqs` taslakta, yayındakinde ve `api/public/site`'ta döner.
+- Ön yüzdeki anahtarlar: `rezervasyon`, `rezervasyon-sorgula`, `teslimat-bolgeleri`, `siparis-takip`, `odeme` ve olanak
+  soruları (`otopark`, `engelli`, `cocuk`, `evcil`, `wifi`, `vejetaryen`, `kartla-odeme`, `acik-alan`, `canli-muzik`,
+  `sigara-alani`, `ozel-gun`). Olanak sorusu yalnız olanak işaretliyse ("Evet, …") görünür; işaretli değilse cevabı
+  bilinmediği için soru hiç çizilmez ("hayır" denmez).
+
+`SiteContent.AmenityKeys` sonuna dört olanak eklendi (ön yüzdeki `SITE_AMENITIES` ile aynı sıra): `bebek-sandalyesi`,
+`aile-salonu`, `sigara-alani`, `ozel-gun`. Mekân sayfasındaki "Özel günler" kutusu yalnız `ozel-gun` işaretliyken görünür.
 
 ## 3. Google ve paylaşım: otomatik değerler
 

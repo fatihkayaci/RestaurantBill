@@ -150,6 +150,54 @@ public class SiteContentHandlerTests : ApplicationTestBase
     }
 
     [Fact]
+    public void Validator_HiddenFaqs_RejectsBadKeysAndTooMany_AcceptsSlugsAndNull()
+    {
+        var validator = new UpdateBranchSiteCommandValidator();
+
+        var bad = validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = ["rezervasyon", "Ödeme yolu!", new string('a', 41)] });
+        bad.ShouldHaveValidationErrorFor("HiddenFaqs[1]");
+        bad.ShouldHaveValidationErrorFor("HiddenFaqs[2]");
+        bad.ShouldNotHaveValidationErrorFor("HiddenFaqs[0]");
+
+        var many = validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = [.. Enumerable.Range(0, SiteContent.HiddenFaqsMax + 1).Select(i => $"soru-{i}")] });
+        many.ShouldHaveValidationErrorFor("HiddenFaqs.Count");
+
+        validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = ["rezervasyon-sorgula", "otopark", "teslimat-bolgeleri"] }).ShouldNotHaveAnyValidationErrors();
+        validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = null }).ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validator_AcceptsNewAmenityKeys()
+        => new UpdateBranchSiteCommandValidator()
+            .TestValidate(new UpdateBranchSiteCommand { Amenities = ["bebek-sandalyesi", "aile-salonu", "sigara-alani", "ozel-gun"] })
+            .ShouldNotHaveAnyValidationErrors();
+
+    [Fact]
+    public async Task Update_NewAmenities_KeptInFixedOrder_AndOldFormKeepsHiddenFaqs()
+    {
+        await SeedAsync();
+        UpdateBranchSiteCommand command = FullCommand(_salon.Id);
+        command.Amenities = ["ozel-gun", "otopark", "bebek-sandalyesi", "sigara-alani", "aile-salonu"];
+        command.HiddenFaqs = ["Otopark", "odeme", "otopark"];
+
+        var first = await UpdateAsync(command);
+        Assert.True(first.IsSuccess, first.Error);
+        Assert.Equal(["otopark", "bebek-sandalyesi", "aile-salonu", "sigara-alani", "ozel-gun"], first.Value!.Amenities);
+        // Küçük harfe çevrilir, tekrar atılır, sıra korunur.
+        Assert.Equal(["otopark", "odeme"], first.Value.HiddenFaqs);
+
+        // Eski form alanı göndermez (null): gizlenenler korunur.
+        command.HiddenFaqs = null;
+        var second = await UpdateAsync(command);
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.Equal(["otopark", "odeme"], second.Value!.HiddenFaqs);
+
+        var site = await new GetPublicSiteQueryHandler(Db, _tenant, Cdn).Handle(new GetPublicSiteQuery(), CancellationToken.None);
+        Assert.True(site.IsSuccess, site.Error);
+        Assert.Equal(["otopark", "odeme"], site.Value!.Site.HiddenFaqs);
+    }
+
+    [Fact]
     public void Validator_AcceptsEmptyCommand()
         => new UpdateBranchSiteCommandValidator().TestValidate(new UpdateBranchSiteCommand()).ShouldNotHaveAnyValidationErrors();
 

@@ -103,7 +103,8 @@ internal static class SiteContentJson
         string? FounderPhoto, string? FounderName, string? FounderTitle, string? FounderQuote, int? Founded,
         List<StoredValue>? Values, List<StoredMilestone>? Milestones, List<StoredRegion>? Regions,
         string? SeoTitle = null, string? SeoDescription = null, string? ShareImage = null,
-        string? MenuHero = null, string? AboutHero = null, string? VenueHero = null, string? ContactHero = null, string? ReservationHero = null);
+        string? MenuHero = null, string? AboutHero = null, string? VenueHero = null, string? ContactHero = null, string? ReservationHero = null,
+        List<string>? HiddenFaqs = null);
 
     private const string TimeFormat = "HH:mm";
 
@@ -126,7 +127,8 @@ internal static class SiteContentJson
             c.Milestones.Select(m => new StoredMilestone(m.Year, m.Text)).ToList(),
             c.RegionDetails.Select(r => new StoredRegion(r.RegionId, r.PhotoKey, r.Description)).ToList(),
             c.SeoTitle, c.SeoDescription, c.ShareImage,
-            c.MenuHero, c.AboutHero, c.VenueHero, c.ContactHero, c.ReservationHero);
+            c.MenuHero, c.AboutHero, c.VenueHero, c.ContactHero, c.ReservationHero,
+            [.. c.HiddenFaqs]);
 
     public static SiteContent Deserialize(string json) => FromStored(JsonSerializer.Deserialize<Stored>(json)!);
 
@@ -142,6 +144,7 @@ internal static class SiteContentJson
             DirectionsNote = s.Directions ?? string.Empty,
             WhatsappPhone = s.Whatsapp ?? string.Empty,
             Amenities = s.Amenities ?? [],
+            HiddenFaqs = s.HiddenFaqs ?? [],
             Rating = s.Rating,
             ReviewCount = s.ReviewCount,
             ReviewsUrl = s.ReviewsUrl ?? string.Empty,

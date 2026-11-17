@@ -44,6 +44,7 @@ internal static class SiteEditor
         ["accentColor"] = ("Vurgu rengi", "Tema"),
         ["gallery"] = ("Mekân fotoğrafları", "Mekân"),
         ["amenities"] = ("Olanaklar", "Mekân"),
+        ["hiddenFaqs"] = ("Sık sorulanlar", "İletişim"),
         ["rating"] = ("Google puanı", "Anasayfa"),
         ["reviewCount"] = ("Yorum sayısı", "Anasayfa"),
         ["reviewsUrl"] = ("Yorum bağlantısı", "Anasayfa"),

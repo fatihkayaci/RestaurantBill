@@ -93,6 +93,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         DirectionsNote = site.DirectionsNote,
         WhatsappPhone = site.WhatsappPhone,
         Amenities = site.Amenities,
+        HiddenFaqs = site.HiddenFaqs,
         Rating = site.Rating,
         ReviewCount = site.ReviewCount,
         ReviewsUrl = site.ReviewsUrl,
@@ -127,6 +128,44 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.True(editor.Seo.TitleIsAuto);
         Assert.Equal("https://cdn.test/site/eski-kapak.webp", editor.Seo.ShareImageUrl);
         Assert.Equal("Menü · Ocak", editor.Seo.PageTitles["/menu"]);
+    }
+
+    [Fact]
+    public async Task HiddenFaqs_DraftThenPublish_AndRevert()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Empty(editor.Draft.HiddenFaqs);
+
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.HiddenFaqs = ["odeme", "otopark"];
+        var saved = await SaveAsync(command);
+
+        Assert.True(saved.IsSuccess, saved.Error);
+        SiteEditorDto after = saved.Value!.Editor;
+        SiteChangeDto change = Assert.Single(after.Changes);
+        Assert.Equal("hiddenFaqs", change.Field);
+        Assert.Equal("Sık sorulanlar", change.Label);
+        Assert.Equal("İletişim", change.Page);
+        Assert.Equal(["odeme", "otopark"], after.Draft.HiddenFaqs);
+        Assert.Empty(after.Published.HiddenFaqs);
+        Assert.Empty((await PublicSiteAsync()).Site.HiddenFaqs);
+
+        // Alan bazında geri alınır.
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new RevertSiteDraftFieldsCommand { Version = after.Version, Fields = ["hiddenFaqs"] }, CancellationToken.None);
+        Assert.True(reverted.IsSuccess, reverted.Error);
+        Assert.False(reverted.Value!.Editor.HasChanges);
+        Assert.Empty(reverted.Value.Editor.Draft.HiddenFaqs);
+
+        // Yeniden gizle ve yayınla: müşteri sitesi görür.
+        command = TextsFrom(reverted.Value.Editor.Draft, reverted.Value.Editor.Version);
+        command.HiddenFaqs = ["rezervasyon"];
+        var again = await SaveAsync(command);
+        Assert.True(again.IsSuccess, again.Error);
+        var published = await PublishAsync(again.Value!.Editor.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.Equal(["rezervasyon"], (await PublicSiteAsync()).Site.HiddenFaqs);
     }
 
     [Fact]

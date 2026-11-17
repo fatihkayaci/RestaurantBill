@@ -31,6 +31,8 @@ public class BranchSiteDto
     public string WhatsappPhone { get; set; } = string.Empty;
     /// <summary>Hazır listeden olanak anahtarları ("avlu", "otopark", "vale"...).</summary>
     public List<string> Amenities { get; set; } = [];
+    /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları ("rezervasyon", "otopark"...); boş = hepsi görünür.</summary>
+    public List<string> HiddenFaqs { get; set; } = [];
     public decimal? Rating { get; set; }
     public int? ReviewCount { get; set; }
     /// <summary>Google Haritalar (ya da başka) yorum sayfası.</summary>
@@ -85,6 +87,7 @@ public class BranchSiteDto
             DirectionsNote = content.DirectionsNote,
             WhatsappPhone = content.WhatsappPhone,
             Amenities = [.. content.Amenities],
+            HiddenFaqs = [.. content.HiddenFaqs],
             Rating = content.Rating,
             ReviewCount = content.ReviewCount,
             ReviewsUrl = content.ReviewsUrl,
