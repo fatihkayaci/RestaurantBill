@@ -1,109 +1,163 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
+import type { PublicSite } from '@/features/customerSite/types';
+import { useOnlineOrdering } from '@/features/delivery/useOnlineOrderingAvailable';
 import { cn } from '@/lib/utils';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
-import { PageHero, SitePage } from './site/SiteFrame';
-import {
-    ClockIcon, DirectionsIcon, HeroStatusPill, HoursBlock, InfoCard, InstagramIcon, OpenBadge, PhoneIcon, WhatsAppIcon,
-} from './site/SiteCards';
-import {
-    RESERVATION_PATH, cardButton, cardLabel, cardValue, eyebrow, instagramHandle, serif, siteCard, siteCardLg,
-} from './site/siteParts';
+import { SitePage } from './site/SiteFrame';
+import { instagramHandle, serif, untilTime } from './site/siteParts';
 import { directionsUrl, telHref, whatsappHref } from './site/siteTheme';
-import { fullAddress, hoursLine, restaurantName, useSite, weekSchedule } from './site/useSite';
+import { fullAddress, useSite, weekSchedule } from './site/useSite';
 import ContactForm from './site/ContactForm';
 import { EditableBlock, EditableText, EmptySlot, ExternalHint } from './site/siteEdit';
-import { editExternal, useSiteEdit } from './site/siteEditContext';
+import { useSiteEdit } from './site/siteEditContext';
 
-// /iletisim (Öneri A+: seçilen A korunur). Kısa kapak + "şu an açık" hapı; telefonda kapağın hemen altında üç büyük
-// eylem (Ara, Yol tarifi, WhatsApp) ve bugünün saati; harita (adresten Google Haritalar gömmesi, üstünde adres kartı)
-// ile "Bize yazın" formu yan yana; altta gün gün saat tablosu (bugün vurgulu), "Nasıl gelinir", telefon, WhatsApp,
-// Instagram ve koyu rezervasyon kartı. Girilmemiş bilgi gösterilmez: adres yoksa harita yok (form tam genişlik).
+// /iletisim (tasarım: "Tema 2 · Açık — İletişim"). Krem sayfada beyaz yuvarlak kutular: (1) solda "Bize ulaşın." ve
+// açık/kapalı hapı, sağda her gerçek kanal için bütün satırı bağlantı olan liste (Telefon, WhatsApp, Instagram; e-posta
+// saklanmadığı için yok). (2) "Mesaj bırakın" formu (mevcut iletişim mesajı ucu) + sağda koyu çalışma saatleri kutusu
+// (bugün vurgulu, paket siparişin son saati) ve süs haritalı adres kutusu. Verisi olmayan kutu ya da satır çizilmez.
 
-function mapEmbedUrl(address: string): string {
-    return `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`;
+const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[32px]';
+
+function timeOfDay(iso: string): string {
+    return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
 
-/** Harita + üstünde yüzen adres kartı. */
-function MapCard({ address, name }: { address: string; name: string }) {
+const ICONS = {
+    phone: 'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z',
+    whatsapp: 'M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.4A8.4 8.4 0 1 1 21 11.5z',
+    instagram: 'M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zM16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37zM17.5 6.5h.01',
+};
+
+/** Kanal satırı: 56 px ikon dairesi, küçük etiket, büyük serif değer, (varsa) kısa not ve ok dairesi; bütün satır bağlantı. */
+function ChannelRow({ href, external, label, value, note, icon, main = false }: {
+    href: string; external?: boolean; label: string; value: string; note?: string; icon: string; main?: boolean;
+}) {
     return (
-        <div className="relative h-[300px] min-w-0 overflow-hidden rounded-[20px] border border-[var(--site-line)] bg-[var(--site-raised)] md:h-[440px] md:rounded-[24px] lg:h-auto lg:min-h-[560px]">
-            <iframe
-                src={mapEmbedUrl(address)}
-                title={`${name} konumu, Google Haritalar`}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="absolute inset-0 h-full w-full border-0"
-            />
-            <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2.5 rounded-[14px] bg-[var(--site-card)] px-3.5 py-3 text-[var(--site-text)] shadow-[0_10px_30px_rgba(20,16,12,0.12)] md:inset-x-5 md:bottom-5 md:flex-wrap md:gap-3 md:rounded-[18px] md:px-[18px] md:py-4">
-                <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className={cn(cardLabel, 'hidden md:block')}>Adres</span>
-                    <span className={cn(serif, 'text-[22px] leading-[1.1] md:text-[26px]')}>{address}</span>
-                </div>
-                <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cn(cardButton.dark, 'self-center px-3.5 text-[13px] md:px-[18px] md:text-sm')}>
-                    <DirectionsIcon className="hidden md:block" />
-                    <span>Yol tarifi<span className="hidden md:inline"> al</span></span>
-                </a>
-            </div>
-        </div>
+        <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}
+            className="flex items-center gap-4 border-b border-[var(--site-line)] py-5 text-[var(--site-text)] no-underline transition-opacity hover:opacity-80 sm:gap-5 sm:py-6">
+            <span aria-hidden="true" className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14',
+                main ? 'bg-[var(--site-accent)] text-[var(--site-on-accent)]' : 'bg-[var(--site-bg)] text-[var(--site-text)]')}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={icon} /></svg>
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--site-muted)]">{label}</span>
+                <span className={cn(serif, 'break-words text-[26px] leading-[1.1] sm:text-[clamp(28px,2.6vw,40px)]')}>{value}</span>
+            </span>
+            {note && <span className="hidden max-w-[180px] shrink-0 text-right text-[13px] text-[var(--site-muted)] md:block">{note}</span>}
+            <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[rgba(30,26,22,0.15)] sm:h-12 sm:w-12">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
+            </span>
+        </a>
     );
 }
 
-/** Telefonda kapağın altındaki üç büyük eylem: Ara, Yol tarifi, WhatsApp (verisi olmayan çizilmez) ve bugünün saati. */
-function QuickActions({ site }: { site: PublicSite }) {
-    const x = editExternal(useSiteEdit(), 'actions');
-    const address = fullAddress(site);
-    const whatsapp = site.site.whatsappPhone;
-    const items = [
-        site.phone && { key: 'ara', label: 'Ara', icon: <PhoneIcon className="h-5 w-5" />, href: telHref(site.phone), external: false },
-        address && { key: 'yol', label: 'Yol tarifi', icon: <DirectionsIcon className="h-5 w-5" />, href: directionsUrl(address), external: true },
-        whatsapp && { key: 'wa', label: 'WhatsApp', icon: <WhatsAppIcon className="h-5 w-5" />, href: whatsappHref(whatsapp), external: true },
-    ].filter(Boolean) as { key: string; label: string; icon: ReactNode; href: string; external: boolean }[];
+function Channels({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const c = site.site;
+    const rows: ReactNode[] = [];
+    if (site.phone && !edit) {
+        rows.push(
+            <ExternalHint key="tel" source="restaurant">
+                <ChannelRow href={telHref(site.phone)} label="Telefon" value={site.phone} note="Rezervasyon ve paket sipariş" icon={ICONS.phone} main />
+            </ExternalHint>,
+        );
+    }
+    if (c.whatsappPhone) {
+        rows.push(
+            <EditableBlock key="wa" target="contact" label="WhatsApp">
+                <ChannelRow href={whatsappHref(c.whatsappPhone)} external label="WhatsApp" value={c.whatsappPhone} icon={ICONS.whatsapp} />
+            </EditableBlock>,
+        );
+    } else if (showEmpty) rows.push(<EmptySlot key="wa" target="contact" title="+ WhatsApp ekle" className="my-3 min-h-[64px]" />);
+    if (c.instagramUrl) {
+        rows.push(
+            <EditableBlock key="ig" target="contact" label="Instagram">
+                <ChannelRow href={c.instagramUrl} external label="Instagram" value={instagramHandle(c.instagramUrl)} icon={ICONS.instagram} />
+            </EditableBlock>,
+        );
+    } else if (showEmpty) rows.push(<EmptySlot key="ig" target="contact" title="+ Instagram ekle" className="my-3 min-h-[64px]" />);
+    if (rows.length === 0) return null;
+    return <div className="flex min-w-0 flex-[999_1_560px] flex-col">{rows}</div>;
+}
+
+/** Koyu çalışma saatleri kutusu: gün gün (bugün vurgulu), açık/kapalı rozeti, not ve paket siparişin son saati. */
+function HoursBox({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const ordering = useOnlineOrdering();
     const rows = weekSchedule(site);
-    const today = rows?.find(r => r.isToday);
-    const uniform = rows?.every(r => r.isOpen && r.text === rows[0].text);
-    if (items.length === 0 && !today) return null;
+    if (!rows) return edit?.showEmpty ? <EmptySlot target="hours" title="+ Çalışma saatlerini ekle" /> : null;
+    const lastOrder = ordering?.state === 'open' && ordering.lastOrderAt ? timeOfDay(ordering.lastOrderAt) : null;
     return (
-        <div {...x} className={cn('flex flex-col gap-2.5 md:hidden', x.className)}>
-            {items.length > 0 && (
-                <div className={cn('grid gap-2.5', items.length === 3 ? 'grid-cols-3' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
-                    {items.map((a, i) => (
-                        <a key={a.key} href={a.href} target={a.external ? '_blank' : undefined} rel="noopener noreferrer"
-                            className={cn('flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-2xl text-[15px] font-semibold',
-                                i === 0 ? 'bg-[var(--site-accent)] text-[var(--site-on-accent)]' : cn(siteCard, 'rounded-2xl'))}>
-                            {a.icon}{a.label}
-                        </a>
-                    ))}
+        <EditableBlock target="hours" label="Çalışma saatleri" className="rounded-[24px] md:rounded-[32px]">
+            <section id="saatler" aria-labelledby="ilt-saat" className="flex scroll-mt-24 flex-col gap-4 rounded-[24px] bg-[var(--site-paper)] p-6 text-[var(--site-on-paper)] sm:p-9 md:rounded-[32px]">
+                <div className="flex items-center justify-between gap-3">
+                    <h2 id="ilt-saat" className={cn(serif, 'm-0 text-[32px] leading-none sm:text-[36px]')}>Çalışma saatleri</h2>
+                    {site.isOpenNow !== null && (
+                        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-extrabold">
+                            <span aria-hidden="true" className={cn('h-[7px] w-[7px] rounded-full', site.isOpenNow ? 'bg-[#4ADE80]' : 'bg-[#F87171]')} />
+                            {site.isOpenNow ? 'Açık' : 'Kapalı'}
+                        </span>
+                    )}
                 </div>
-            )}
-            {today && (
-                <a href="#saatler" className={cn(siteCard, 'flex items-center justify-between gap-3 rounded-2xl p-4')}>
-                    <span className="flex flex-col">
-                        <span className={cardLabel}>{uniform ? 'Her gün' : `Bugün · ${today.label}`}</span>
-                        <span className={cn(serif, 'text-[24px] leading-tight tabular-nums')}>{today.text}</span>
-                    </span>
-                    <span className="flex flex-col items-end gap-1">
-                        {site.isOpenNow !== null && <OpenBadge open={site.isOpenNow} />}
-                        {!uniform && <span className="text-sm font-semibold underline underline-offset-4">Tüm hafta →</span>}
-                    </span>
-                </a>
-            )}
-        </div>
+                <dl className="m-0 flex flex-col">
+                    {rows.map(r => (
+                        <div key={r.day} className={cn('-mx-3 flex justify-between gap-4 rounded-[10px] px-3 py-2 text-[15px]',
+                            r.isToday ? 'bg-[rgba(246,241,233,0.1)] font-extrabold' : 'text-[var(--site-on-paper-sub)]')}>
+                            <dt>{r.label}{r.isToday && ' · bugün'}</dt>
+                            <dd className="m-0 tabular-nums">{r.text}</dd>
+                        </div>
+                    ))}
+                </dl>
+                {site.site.hoursNote && <p className="m-0 text-sm text-[var(--site-on-paper-sub)]">{site.site.hoursNote}</p>}
+                {lastOrder && !edit && (
+                    <div className="flex justify-between gap-4 border-t border-dashed border-[rgba(246,241,233,0.2)] pt-3 text-sm">
+                        <span className="text-[var(--site-on-paper-sub)]">Paket sipariş</span>
+                        <span className="font-extrabold">{untilTime(lastOrder)}</span>
+                    </div>
+                )}
+            </section>
+        </EditableBlock>
     );
 }
 
-/** "Bize yazın" kartı: başlık, açıklama ve form. */
-function WriteCard({ branchId, wide }: { branchId: string; wide: boolean }) {
+/** Adres kutusu: süs harita (tıklayınca Google Haritalar), adres, "nasıl gelinir" notu ve Mekân sayfasına bağlantı. */
+function AddressBox({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const address = fullAddress(site);
+    const note = site.site.directionsNote;
+    const showAddress = Boolean(address) && !edit;
+    if (!showAddress && !note && !showEmpty) return null;
     return (
-        <section aria-labelledby="ilt-yazin" className={cn(siteCardLg, 'flex min-w-0 flex-col gap-3.5 p-5 md:gap-[18px] md:p-9')}>
-            <div className={cn('flex flex-col gap-2', wide && 'max-w-[760px]')}>
-                <span className={cn(eyebrow, 'text-[11px] tracking-[0.26em] md:text-xs md:tracking-[0.28em]')}>Bize yazın</span>
-                <h2 id="ilt-yazin" className={cn(serif, 'm-0 text-[34px] leading-[1.05] md:text-[44px]')}>Öneri, şikâyet ya da <span className="italic">bir soru.</span></h2>
-                <p className="m-0 hidden text-[15px] leading-normal text-[var(--site-sub)] md:block">Mesajınızı doğrudan restoran ekibi okur. İletişim bilgisi bırakırsanız size dönüş yaparız.</p>
-            </div>
-            <div className={cn(wide && 'max-w-[760px]')}>
-                <ContactForm branchId={branchId} />
+        <section aria-labelledby="ilt-adres" className={cn(box, 'flex flex-1 flex-col overflow-hidden')}>
+            {showAddress && (
+                <ExternalHint source="restaurant">
+                    <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" aria-label="Haritada aç"
+                        className="relative block min-h-[180px] flex-1 overflow-hidden bg-[#ECE4D7] bg-[linear-gradient(rgba(30,26,22,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(30,26,22,0.05)_1px,transparent_1px)] bg-[length:30px_30px] transition-opacity hover:opacity-90">
+                        <span aria-hidden="true" className="absolute -left-[10%] -right-[10%] top-[46%] h-3 -rotate-[8deg] bg-[#FBF8F3]" />
+                        <span aria-hidden="true" className="absolute -bottom-[10%] -top-[10%] left-[62%] w-[9px] rotate-[14deg] bg-[#FBF8F3]" />
+                        <span aria-hidden="true" className="absolute right-0 top-0 h-1/2 w-[32%] rounded-bl-[90px] bg-[#CBDAD3]" />
+                        <span aria-hidden="true" className="absolute left-[44%] top-[44%] h-[22px] w-[22px] rounded-full border-4 border-white bg-[var(--site-accent)] shadow-[0_4px_12px_rgba(0,0,0,0.25)]" />
+                    </a>
+                </ExternalHint>
+            )}
+            <div className="flex flex-col gap-2.5 px-6 pb-7 pt-6 sm:px-7">
+                <h2 id="ilt-adres" className="m-0 text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--site-muted)]">Adres</h2>
+                {showAddress && (
+                    <p className={cn(serif, 'm-0 break-words text-[26px] leading-[1.15]')}>
+                        {site.openAddress || address}
+                        {site.openAddress && (site.district || site.city) && <><br />{[site.district, site.city].filter(Boolean).join(' / ')}</>}
+                    </p>
+                )}
+                {(note || showEmpty) && (
+                    <EditableText as="p" field="directionsNote" value={note} multiline placeholder="Nasıl gelinir? (kısa tarif)"
+                        className="m-0 whitespace-pre-line text-[15px] leading-relaxed text-[var(--site-sub)]" />
+                )}
+                {!edit && (
+                    <Link to="/mekan" className="inline-flex min-h-11 items-center self-start text-sm font-extrabold text-[var(--site-text)] no-underline hover:underline">Nasıl gelinir? →</Link>
+                )}
             </div>
         </section>
     );
@@ -113,85 +167,46 @@ export default function RestaurantContactPage() {
     const { site, error } = useSite();
     const edit = useSiteEdit();
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
-    const showEmpty = Boolean(edit?.showEmpty);
-
-    // İletişim bilgisi hiç girilmemişse aynı düzen kendiliğinden yalnız formdan (ve varsa rezervasyon kartından) oluşur.
-    const content = site.site;
-    const name = restaurantName(site);
-    const address = fullAddress(site);
-    const hasHours = Boolean(hoursLine(site));
-    const canReserve = canReserveOnline(site);
-    const hasCards = Boolean(site.phone || hasHours || content.instagramUrl || content.whatsappPhone || content.directionsNote || canReserve) || showEmpty;
 
     return (
         <SitePage site={site} current="iletisim">
-            <PageHero site={site} label={name} title="İletişim" compact aside={<HeroStatusPill site={site} />}
-                image={content.contactHeroUrl} imageTarget="photo:hero-iletisim" imageLabel="İletişim kapağı" />
-            <main className="mx-auto flex w-full max-w-[1344px] flex-1 flex-col gap-4 px-5 pb-10 pt-5 md:gap-8 md:px-12 md:pb-16 md:pt-16">
-                <QuickActions site={site} />
-                <div className={cn('grid grid-cols-1 gap-4 md:gap-8', address && 'lg:grid-cols-2')}>
-                    {address && <ExternalHint source="restaurant" className="min-w-0"><MapCard address={address} name={name} /></ExternalHint>}
-                    <ExternalHint source="messages" className="min-w-0">
-                        <WriteCard branchId={site.branchId} wide={!address} />
-                    </ExternalHint>
-                </div>
-
-                {hasCards && (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))]">
-                        {hasHours && (
-                            <div id="saatler" className="scroll-mt-24">
-                                <EditableBlock target="hours" label="Çalışma saatleri" className="h-full rounded-[20px]">
-                                    <InfoCard icon={<ClockIcon />} label="Çalışma saatleri" labelId="ilt-saat" className="h-full"
-                                        action={site.isOpenNow !== null && <OpenBadge open={site.isOpenNow} />}>
-                                        <HoursBlock site={site} />
-                                        {content.hoursNote && <p className="m-0 text-sm text-[var(--site-sub)]">{content.hoursNote}</p>}
-                                    </InfoCard>
-                                </EditableBlock>
-                            </div>
-                        )}
-                        {!hasHours && showEmpty && <EmptySlot target="hours" title="+ Saat ekle" />}
-                        {(content.directionsNote || showEmpty) && (
-                            <InfoCard icon={<DirectionsIcon />} label="Nasıl gelinir" labelId="ilt-yol"
-                                action={address && <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cn(cardButton.outline, 'mt-auto')}>Yol tarifi al</a>}>
-                                <EditableText as="p" field="directionsNote" value={content.directionsNote} multiline placeholder="Nasıl gelinir?"
-                                    className="m-0 whitespace-pre-line text-[15px] leading-relaxed" />
-                            </InfoCard>
-                        )}
-                        {site.phone && (
-                            <ExternalHint source="restaurant" className="hidden md:block">
-                                <InfoCard icon={<PhoneIcon />} label="Telefon" labelId="ilt-tel" className={edit ? 'h-full' : 'hidden md:flex'}
-                                    action={<a href={telHref(site.phone)} className={cn(cardButton.outline, 'mt-auto')}>Ara</a>}>
-                                    <span className={cardValue}>{site.phone}</span>
-                                </InfoCard>
-                            </ExternalHint>
-                        )}
-                        {content.whatsappPhone ? (
-                            <EditableBlock target="contact" label="WhatsApp" className="hidden h-full rounded-[20px] md:block">
-                                <InfoCard icon={<WhatsAppIcon />} label="WhatsApp" labelId="ilt-wa" className={edit ? 'h-full' : 'hidden md:flex'}
-                                    action={<a href={whatsappHref(content.whatsappPhone)} target="_blank" rel="noopener noreferrer" className={cn(cardButton.outline, 'mt-auto')}>Yaz</a>}>
-                                    <span className={cardValue}>{content.whatsappPhone}</span>
-                                </InfoCard>
+            <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
+                {/* 1. Kanallar */}
+                <section aria-labelledby="ilt-baslik" className={cn(box, 'flex flex-wrap gap-x-[72px] gap-y-8 p-6 sm:p-10 md:p-14')}>
+                    <div className="flex min-w-0 flex-[1_1_360px] flex-col justify-between gap-7">
+                        <div className="flex flex-col gap-5">
+                            <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-sub)]">
+                                <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--site-accent)]" />İletişim
+                            </span>
+                            <h1 id="ilt-baslik" className={cn(serif, 'm-0 text-[64px] leading-[0.88] md:text-[clamp(64px,7vw,112px)]')}>Bize<br /><em className="rb-accent italic">ulaşın.</em></h1>
+                            <p className="m-0 max-w-[420px] text-base leading-[1.65] text-[#3E3731] md:text-[17px]">Rezervasyon, paket sipariş, özel gün ya da bir öneri… Size en kolay gelen yoldan yazın, arayın.</p>
+                        </div>
+                        {site.isOpenNow !== null && (
+                            <EditableBlock target="hours" label="Çalışma saatleri" className="self-start rounded-full">
+                                <span className="inline-flex items-center gap-2.5 self-start rounded-full bg-[var(--site-bg)] px-[18px] py-3 text-sm">
+                                    <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', site.isOpenNow ? 'bg-[#22A35A] shadow-[0_0_0_4px_#DDF3E6]' : 'bg-[#C8472C] shadow-[0_0_0_4px_#FBE3DC]')} />
+                                    <strong>{site.isOpenNow ? 'Şu an açığız' : 'Şu an kapalıyız'}</strong>
+                                </span>
                             </EditableBlock>
-                        ) : showEmpty && <EmptySlot target="contact" title="+ WhatsApp ekle" />}
-                        {content.instagramUrl ? (
-                            <EditableBlock target="contact" label="Instagram" className="h-full rounded-[20px]">
-                                <InfoCard icon={<InstagramIcon />} label="Instagram" labelId="ilt-ig" className="h-full"
-                                    action={<a href={content.instagramUrl} target="_blank" rel="noopener noreferrer" className={cn(cardButton.outline, 'mt-auto')}>Takip et</a>}>
-                                    <span className={cn(cardValue, 'break-all')}>{instagramHandle(content.instagramUrl)}</span>
-                                </InfoCard>
-                            </EditableBlock>
-                        ) : showEmpty && <EmptySlot target="contact" title="+ Instagram ekle" />}
-                        {canReserve && (
-                            <ExternalHint source="reservation" className="h-full">
-                                <InfoCard tone="dark" label="Rezervasyon" labelId="ilt-rez" className="h-full"
-                                    action={<Link to={RESERVATION_PATH} className={cn(cardButton.accent, 'mt-auto h-[52px] w-full self-stretch text-base md:h-11 md:w-auto md:self-start md:text-sm')}>Masa ayırt</Link>}>
-                                    <p className={cn(serif, 'm-0 text-[30px] leading-[1.05] md:text-[32px]')}>Masanızı <span className="italic">ayırtın.</span></p>
-                                    <p className="m-0 hidden text-sm text-[var(--site-on-paper-sub)] md:block">Birkaç adımda masanızı seçin, onay bize kalsın.</p>
-                                </InfoCard>
-                            </ExternalHint>
                         )}
                     </div>
-                )}
+                    <Channels site={site} />
+                </section>
+
+                {/* 2. Form + saatler/adres */}
+                <div className="flex flex-wrap items-stretch gap-4">
+                    {!edit && (
+                        <ExternalHint source="messages">
+                            <section aria-label="Mesaj formu" className={cn(box, 'min-w-0 flex-[999_1_620px] p-6 sm:p-10 md:p-12')}>
+                                <ContactForm branchId={site.branchId} phone={site.phone || undefined} />
+                            </section>
+                        </ExternalHint>
+                    )}
+                    <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-4">
+                        <HoursBox site={site} />
+                        <AddressBox site={site} />
+                    </div>
+                </div>
             </main>
         </SitePage>
     );
