@@ -12,7 +12,8 @@ import { cn } from '@/lib/utils';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
 import { SitePage } from './site/SiteFrame';
 import { RESERVATION_PATH, serif } from './site/siteParts';
-import { telHref } from './site/siteTheme';
+import { resolveDesign, telHref } from './site/siteTheme';
+import { EliteHero, EliteKicker } from './site/elite/EliteBits';
 import { rememberReservationToken, restaurantName, useMyReservations, useSite } from './site/useSite';
 import { dateParts, reservationStatusBadge } from './reservationCalendar';
 import { reservationTone } from './reservationTone';
@@ -38,6 +39,7 @@ export default function ReservationLookupPage() {
     const [formError, setFormError] = useState<string | null>(null);
 
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
+    const elit = resolveDesign(site.site.design) === 'elit';
 
     const name = restaurantName(site);
     const phoneDigits = phone.replace(/\D/g, '').length;
@@ -64,20 +66,31 @@ export default function ReservationLookupPage() {
     };
 
     return (
-        <SitePage site={site} current="rezervasyon-sorgula">
-            <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 leading-normal text-[var(--site-text)] sm:px-4">
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+        <SitePage site={site} current="rezervasyon-sorgula" overlayHeader={elit}>
+            {/* Elit: tam genişlik fotoğraf kapağı; sorgu kutusu ara bant renginde, başlığı kapakta. */}
+            {elit && <EliteHero titleId="sorgu-kapak" label="Rezervasyon" title={<>Rezervasyonunuzu <em className="italic">sorgulayın.</em></>}
+                image={site.site.reservationHeroUrl || site.site.coverImageUrl} ownImage imageTarget="photo:hero-rezervasyon" imageLabel="Rezervasyon kapağı" emptyHint="" />}
+            <main className={cn('mx-auto flex w-full flex-1 flex-col gap-4 leading-normal text-[var(--site-text)]', elit ? 'max-w-[1280px] px-4 py-12 sm:px-10 md:py-20' : 'max-w-[1440px] px-2 pb-4 pt-4 sm:px-4')}>
+                <div className={cn('grid grid-cols-1 lg:grid-cols-2 lg:items-stretch', elit ? 'gap-6' : 'gap-4')}>
                     {/* ── Sorgu: kiremit kutu, dama deseni, krem alanlar ── */}
                     <section aria-labelledby="sorgu-baslik"
-                        className="relative flex flex-col justify-between gap-10 overflow-hidden rounded-[24px] bg-[var(--site-terracotta)] px-5 py-9 text-[var(--site-on-terracotta)] sm:px-10 md:rounded-[36px] md:p-14 lg:min-h-[620px] [--site-accent-text:var(--site-on-terracotta-soft)]">
-                        <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(from_45deg,color-mix(in_srgb,currentColor_7%,transparent)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />
+                        className={cn('relative flex flex-col justify-between gap-10 overflow-hidden px-5 py-9 sm:px-10 md:p-14',
+                            elit ? 'bg-[var(--site-alt)] text-[var(--site-text)] [--site-on-terracotta:var(--site-text)] [--site-on-terracotta-soft:var(--site-sub)] [--site-pop:var(--site-paper)] [--site-on-pop:var(--site-on-paper)]'
+                                : 'rounded-[24px] bg-[var(--site-terracotta)] text-[var(--site-on-terracotta)] md:rounded-[36px] lg:min-h-[620px] [--site-accent-text:var(--site-on-terracotta-soft)]')}>
+                        {!elit && <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[repeating-conic-gradient(from_45deg,color-mix(in_srgb,currentColor_7%,transparent)_0_25%,transparent_0_50%)] bg-[length:34px_34px]" />}
                         <div className="relative flex flex-col gap-4">
+                            {elit ? (
+                                <h2 id="sorgu-baslik" className="m-0"><EliteKicker>Sorgula</EliteKicker></h2>
+                            ) : (
+                                <>
                             <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-on-terracotta-soft)]">
                                 <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-current" />{name} · Rezervasyon
                             </span>
                             <h1 id="sorgu-baslik" className={cn(serif, 'm-0 break-words text-[clamp(34px,9.4vw,56px)] font-extrabold leading-[0.92] tracking-[-0.025em] xl:text-[clamp(56px,4.6vw,80px)]')}>
                                 Rezervasyonunuzu<br /><em className="rb-accent font-semibold italic">sorgulayın.</em>
                             </h1>
+                                </>
+                            )}
                             <p className="m-0 max-w-[440px] text-base leading-relaxed">
                                 Bağlantınızı mı kaybettiniz? Rezervasyon kodunuz ve telefon numaranızla rezervasyonunuza ulaşın; durumunu görün ya da iptal edin.
                             </p>

@@ -27,6 +27,7 @@ import { GlassStatusPill } from './site/SiteCards';
 import { FlowSiteHeader } from './site/SiteFrame';
 import { FONTS_HREF, serif, siteCardDark } from './site/siteParts';
 import { SITE_FONTS_HREF, headingFont, resolveDesign, telHref } from './site/siteTheme';
+import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import { normalizeSite } from './site/useSite';
 
 const QUOTE_DEBOUNCE_MS = 400;
@@ -240,7 +241,10 @@ export default function DeliveryOrderPage() {
     // Üst menü koyu kapağın üstünde durur; kapağı olmayan hata ekranında çizilmez (orada "Ana sayfa" bağlantısı var).
     const nav = !siteFailed;
     const root = (children: ReactNode, withNav = true) => (
-        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme, design: site?.design })} className="min-h-screen overflow-x-clip bg-[var(--site-bg)]">
+        // Elit: köşesiz, ince serif giydirme (rb-el-flow); düzen ve mantık aynı.
+        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme, design: site?.design })}
+            className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)]', resolveDesign(site?.design) === 'elit' && 'rb-el-flow')}>
+            <EliteFlowStyle design={site?.design} />
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
             <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
             {withNav && siteData && <FlowSiteHeader site={siteData} current="siparis" />}

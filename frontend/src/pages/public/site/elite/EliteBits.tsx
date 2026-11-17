@@ -70,7 +70,7 @@ export function EliteHero({ label, title, titleId, lead, image, ownImage, imageT
             {!edit && <span aria-hidden="true" className="block h-[84px] shrink-0 lg:h-[108px]" />}
             <div className="rb-el-belir pointer-events-none relative z-[1] flex flex-1 flex-col items-center justify-center gap-5 px-4 pb-12 pt-6 text-center sm:px-8 md:gap-[22px] [&_[data-edit-target]]:pointer-events-auto [&_[data-edit-text]]:pointer-events-auto [&_a]:pointer-events-auto [&_button]:pointer-events-auto">
                 {label && <EliteKicker centered dark>{label}</EliteKicker>}
-                <h1 id={titleId} className={cn(elSerif, 'm-0 max-w-[1100px] break-words text-[52px] leading-[0.98] sm:text-[64px] md:text-[clamp(64px,7vw,112px)]', tall && 'md:text-[clamp(72px,8.6vw,144px)] md:leading-[0.95]')}>
+                <h1 id={titleId} className={cn(elSerif, 'm-0 max-w-[1100px] break-words text-[clamp(32px,10vw,52px)] leading-[0.98] sm:text-[64px] md:text-[clamp(64px,7vw,112px)]', tall && 'md:text-[clamp(72px,8.6vw,144px)] md:leading-[0.95]')}>
                     {title}
                 </h1>
                 {lead}

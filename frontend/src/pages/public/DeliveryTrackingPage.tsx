@@ -13,7 +13,8 @@ import { customerRootStyle } from './customerTheme';
 import { ImageSlot } from './site/SiteChrome';
 import { FlowSiteHeader, SiteFooter } from './site/SiteFrame';
 import { FONTS_HREF, serif } from './site/siteParts';
-import { SITE_FONTS_HREF, telHref } from './site/siteTheme';
+import { SITE_FONTS_HREF, resolveDesign, telHref } from './site/siteTheme';
+import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import { useSite } from './site/useSite';
 
 const POLL_MS = 15_000;
@@ -142,8 +143,11 @@ export default function DeliveryTrackingPage() {
     const reorderHref = `/siparis?tekrar=${encodeURIComponent(token)}`;
     const brand = order?.companyName || order?.branchName || '';
 
+    // Elit: köşesiz, ince serif giydirme (rb-el-flow) ve duruma göre değişmeyen koyu espresso kapak.
+    const elit = resolveDesign(order?.design) === 'elit';
     const root = (children: ReactNode) => (
-        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design })} className="flex min-h-screen flex-col overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]">
+        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design })} className={cn('flex min-h-screen flex-col overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', elit && 'rb-el-flow')}>
+            <EliteFlowStyle design={order?.design} />
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
             <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
             {children}
@@ -183,7 +187,7 @@ export default function DeliveryTrackingPage() {
     const minutesLeft = eta ? Math.max(0, Math.ceil((new Date(eta).getTime() - now) / 60_000)) : null;
     const approx = minutesLeft != null && minutesLeft > 0 ? minutesLeft : order.estimatedMinutes ?? null;
 
-    const tone = heroTone(order.status);
+    const tone = elit && !failed ? ELIT_TONE : heroTone(order.status);
     const title = heroTitle(order.status);
     const reason = failed ? (rejected ? order.rejectReason : order.cancelReason) : '';
 
@@ -215,7 +219,7 @@ export default function DeliveryTrackingPage() {
     return root(
         <>
             {nav && site && <FlowSiteHeader site={site} current="siparis" />}
-            <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
+            <main className={cn('mx-auto flex w-full flex-1 flex-col gap-4', elit ? 'max-w-[1280px] px-4 pb-16 pt-8 sm:px-10 md:gap-6 md:pt-12' : 'max-w-[1440px] px-2 pb-4 pt-4 sm:px-4')}>
                 {/* ── Durum kapağı: rengi duruma göre (alındı hardal, mutfakta kiremit, yolda zeytin, teslim koyu) ── */}
                 <section aria-labelledby="takip-baslik" className={cn('relative flex flex-col gap-8 overflow-hidden rounded-[24px] px-5 py-8 sm:px-10 sm:py-10 md:gap-10 md:rounded-[36px] md:px-14 md:pb-11 md:pt-12', tone.box)}>
                     <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(color-mix(in_srgb,currentColor_15%,transparent)_2px,transparent_2.6px)] bg-[length:22px_22px] [mask-image:linear-gradient(90deg,transparent_40%,#000_100%)]" />
@@ -414,6 +418,13 @@ const STEP_ICONS = [ClipboardCheck, BadgeCheck, Flame, Package, Truck, House] as
  * koyu, iptal/red krem kutu. Sade'de aynı değişkenler açık kum, vurgu ve mürekkep kutularıdır. `--trk-fg/--trk-bg` adım
  * dairelerinin rengidir (dolu daire kutunun yazı rengi, içindeki simge kutunun zemini). Daire (kalan dakika) kutunun tersi.
  */
+/** Elit: her durumda koyu espresso kapak, krem yazı, vurgu (altın) italik ve vurgu zeminli rozet. */
+const ELIT_TONE = {
+    box: 'bg-[var(--site-paper)] text-[var(--site-on-paper)] [--trk-bg:var(--site-paper)] [--trk-fg:var(--site-on-paper)]',
+    em: 'text-[var(--site-accent-on-dark)]',
+    badge: 'bg-[var(--site-pop)] text-[var(--site-on-pop)]',
+};
+
 function heroTone(status: DeliveryTracking['status']): { box: string; em: string; badge: string } {
     switch (status) {
         case DeliveryStatus.Received:

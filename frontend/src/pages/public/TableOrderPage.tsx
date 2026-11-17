@@ -17,7 +17,8 @@ import { customerRootStyle, opensText } from './customerTheme';
 import DeliveryMenu from './delivery/DeliveryMenu';
 import { ImageSlot } from './site/SiteChrome';
 import { FONTS_HREF, serif } from './site/siteParts';
-import { SITE_FONTS_HREF } from './site/siteTheme';
+import { SITE_FONTS_HREF, resolveDesign } from './site/siteTheme';
+import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import {
     accentItalic, closeCircle, creamBox, displayTitle, eyebrowAccent, fieldClass, heroBox, heroEyebrow, heroPattern, pillAccent, pillDark,
     pillOutline, sheetBackdrop, sheetPanel, stepperMinus, stepperPlus, stepperWrap,
@@ -167,7 +168,9 @@ export default function TableOrderPage() {
     };
 
     const root = (children: ReactNode) => (
-        <div style={customerRootStyle(site?.site)} className="min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]">
+        // Elit: köşesiz, ince serif giydirme (rb-el-flow); koyu kapak ve krem kutular temanın değişkenlerinden.
+        <div style={customerRootStyle(site?.site)} className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', resolveDesign(site?.site.design) === 'elit' && 'rb-el-flow')}>
+            <EliteFlowStyle design={site?.site.design} />
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
             <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
             {children}

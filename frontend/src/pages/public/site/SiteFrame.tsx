@@ -20,7 +20,7 @@ import { EditableBlock, EmptySlot, ExternalHint } from './siteEdit';
 import { editExternal, useSiteEdit, useSiteWindow } from './siteEditContext';
 import { useSiteDesign } from './siteDesign';
 import { EliteFooter, EliteHeader } from './elite/EliteFrame';
-import { ELITE_CSS } from './elite/eliteParts';
+import { EliteFlowStyle } from './elite/EliteFlowStyle';
 
 // Restoran sitesinin ortak çerçevesi (tasarım: "Tema 2 · Açık"): ortalı başlık (solda sayfalar, ortada serif ad ve
 // küçük konum satırı, sağda sipariş takibi, Sepet ve "Masa ayırt"), ziyaret
@@ -536,8 +536,8 @@ export function SitePage({ site, current, className, stickyHeader = true, overla
     return (
         <SiteShell accent={site.site.accentColor} theme={site.site.theme} design={site.site.design}>
             <style>{MOTION_CSS}</style>
-            {resolveDesign(site.site.design) === 'elit' && <style>{ELITE_CSS}</style>}
-            <div className={cn('rb-site relative flex min-h-screen flex-col overflow-x-clip', className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
+            <EliteFlowStyle design={site.site.design} />
+            <div className={cn('rb-site relative flex min-h-screen flex-col overflow-x-clip', resolveDesign(site.site.design) === 'elit' && 'rb-el-flow', className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
                 {/* Düzenleyicide yalnız burada değişen bölümler çizilir: başlık, alt bilgi ve alt çubuk yok. */}
                 {!edit && <SiteHeader site={site} current={current} sticky={stickyHeader} overlay={overlayHeader} />}
                 {children}
