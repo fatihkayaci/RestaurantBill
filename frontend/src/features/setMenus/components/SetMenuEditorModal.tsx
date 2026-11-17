@@ -273,15 +273,15 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
     return (
         <>
             <Modal onClose={onClose} closeOnOverlay={false} overlayClassName="bg-black/40 backdrop-blur-sm">
-                <div className="relative mx-4 max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl dark:bg-[#26221e]">
-                    <div className="flex items-center justify-between border-b border-border px-6 pb-4 pt-6">
+                <div className="relative mx-4 flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl sm:max-h-[90dvh] dark:bg-[#26221e]">
+                    <div className="flex shrink-0 items-center justify-between border-b border-border px-6 pb-4 pt-6">
                         <ModalTitle className="text-xl font-bold text-foreground">{menu ? 'Menüyü Düzenle' : 'Menü Ekle'}</ModalTitle>
                         <button type="button" onClick={onClose} aria-label="Kapat" className="text-muted-foreground transition-colors hover:text-foreground">
                             <X className="h-5 w-5" />
                         </button>
                     </div>
 
-                    <div className="space-y-5 px-6 py-5">
+                    <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[180px_1fr]">
                             <div>
                                 <span className={labelClass}>Görsel</span>
@@ -389,19 +389,24 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
                                                             className={cn(
                                                                 'relative overflow-hidden rounded-lg border text-left transition-colors',
                                                                 selected ? 'border-rb-gold ring-2 ring-rb-gold' : 'border-border hover:border-muted-foreground',
-                                                                !p.isActive && 'opacity-60'
+                                                                !p.isActive && 'border-dashed bg-muted/40'
                                                             )}
+                                                            title={p.isActive ? undefined : 'Satış dışı: menüde görünür ama siparişte seçilemez'}
                                                         >
-                                                            <div className="flex aspect-[4/3] items-center justify-center bg-muted/50">
+                                                            {/* Satış dışı ürün: soluk ve gri, üstünde etiket; pasif olduğu ilk bakışta belli olsun. */}
+                                                            <div className={cn('relative flex aspect-[4/3] items-center justify-center bg-muted/50', !p.isActive && 'opacity-45 grayscale')}>
                                                                 {p.imageUrl
                                                                     ? <img src={p.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                                                     : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
                                                             </div>
-                                                            <div className="px-2 py-1.5">
-                                                                <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    ₺{formatPrice(p.price)}{p.isActive ? '' : ' · satış dışı'}
-                                                                </p>
+                                                            {!p.isActive && (
+                                                                <span className="absolute left-1.5 top-1.5 rounded-full bg-foreground/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-background">
+                                                                    Satış dışı
+                                                                </span>
+                                                            )}
+                                                            <div className={cn('px-2 py-1.5', !p.isActive && 'opacity-60')}>
+                                                                <p className={cn('truncate text-sm font-medium text-foreground', !p.isActive && 'line-through decoration-muted-foreground/60')}>{p.name}</p>
+                                                                <p className="text-xs text-muted-foreground">₺{formatPrice(p.price)}</p>
                                                             </div>
                                                             {selected && (
                                                                 <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-rb-gold text-rb-gold-foreground">
@@ -423,9 +428,14 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
                                                     const surcharge = surchargeOf(price, base);
                                                     const discounted = product && price < product.price;
                                                     return (
-                                                        <div key={option.key} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                                        <div key={option.key} className={cn('flex flex-wrap items-center gap-x-3 gap-y-2', product && !product.isActive && 'opacity-55')}>
                                                             <div className="min-w-0 flex-1">
-                                                                <p className="truncate text-sm font-medium text-foreground">{product?.name ?? 'Silinmiş ürün'}</p>
+                                                                <p className="truncate text-sm font-medium text-foreground">
+                                                                    {product?.name ?? 'Silinmiş ürün'}
+                                                                    {product && !product.isActive && (
+                                                                        <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Satış dışı</span>
+                                                                    )}
+                                                                </p>
                                                                 <p className="text-xs text-muted-foreground">
                                                                     {discounted && <span className="mr-1 line-through">₺{formatPrice(product.price)}</span>}
                                                                     <span className="font-semibold text-foreground">₺{formatPrice(price)}</span>
@@ -520,7 +530,7 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+                    <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-4">
                         <button type="button" onClick={onClose} disabled={isSaving}
                             className="rounded-lg border border-border px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50">
                             İptal

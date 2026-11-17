@@ -1,5 +1,9 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { getTenantSlug } from './tenant';
+import { getSession } from './auth';
+
+const COMPANY_CLOSED_CODE = 'company_closed';
+const CLOSING_PATH = '/hesap-kapaniyor';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5077';
 
@@ -77,6 +81,17 @@ api.interceptors.response.use(
     },
     async (error: AxiosError) => {
         const originalRequest = error.config as RetryableRequestConfig | undefined;
+
+        // Sahip hesabı kapattı: sahip "Vazgeç" ekranına, personel girişe gider (oturumları sunucuda kapandı).
+        const data = error.response?.data as { code?: string } | undefined;
+        if (error.response?.status === 403 && data?.code === COMPANY_CLOSED_CODE) {
+            if (getSession()?.role === 'Owner') {
+                if (window.location.pathname !== CLOSING_PATH) window.location.assign(CLOSING_PATH);
+            } else {
+                redirectToLogin();
+            }
+            return Promise.reject(error);
+        }
 
         if (error.response?.status !== 401 || !originalRequest) {
             return Promise.reject(error);

@@ -14,10 +14,11 @@ export const tableService = {
     deleteTable: async (id: string) => {
         await api.delete(`/table/${id}`);
     },
-    createTable: async (name: string, regionId: string) => {
+    createTable: async (name: string, regionId: string, capacity?: number | null) => {
         const response = await api.post(`/table/create`, {
             Name: name,
-            RegionId: regionId
+            RegionId: regionId,
+            Capacity: capacity ?? null
         });
         return response.data;
     },
@@ -30,12 +31,14 @@ export const tableService = {
         });
         return response.data;
     },
-    updateTable: async (id: string, name: string, regionId: string, status?: number) => {
+    /** capacity gönderilmezse (null) masanın kapasitesi temizlenir. */
+    updateTable: async (id: string, name: string, regionId: string, status?: number, capacity?: number | null) => {
         const response = await api.post(`/table/update`, {
             Id: id,
             Name: name,
             Status: status,
-            RegionId: regionId
+            RegionId: regionId,
+            Capacity: capacity ?? null
         });
         return response.data;
     },

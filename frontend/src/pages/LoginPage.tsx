@@ -64,6 +64,11 @@ export default function LoginPage() {
             }
             startSession(response.token);
 
+            if (response.accountClosing) {
+                navigate("/hesap-kapaniyor");
+                return;
+            }
+
             if (response.needsSlugSetup) {
                 navigate("/setup-slug");
                 return;

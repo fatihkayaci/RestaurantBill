@@ -266,8 +266,8 @@ export default function AdminsPage() {
             {/* Modal */}
             {isModalOpen && (
                 <Modal onClose={() => setIsModalOpen(false)} overlayClassName="bg-black/40 backdrop-blur-sm">
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="px-6 pt-6 pb-4 flex items-center justify-between">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 flex flex-col overflow-hidden max-h-[calc(100dvh-2rem)] sm:max-h-[90vh]">
+                        <div className="shrink-0 px-6 pt-6 pb-4 flex items-center justify-between">
                             <ModalTitle className="text-xl font-bold text-foreground">
                                 {editAdmin ? 'Yöneticiyi Düzenle' : 'Yönetici Ekle'}
                             </ModalTitle>
@@ -279,7 +279,7 @@ export default function AdminsPage() {
                             </button>
                         </div>
 
-                        <div className="px-6 pt-4 flex items-center gap-1 border-b border-border">
+                        <div className="shrink-0 px-6 pt-4 flex items-center gap-1 border-b border-border">
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('personal')}
@@ -306,7 +306,7 @@ export default function AdminsPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                        <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
                             {activeTab === 'personal' && (
                                 <>
                                     <div>
@@ -398,7 +398,7 @@ export default function AdminsPage() {
                             )}
                         </form>
 
-                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                        <div className="shrink-0 px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}

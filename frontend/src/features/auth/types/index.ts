@@ -17,6 +17,8 @@ export interface LoginResponse {
     token?: string;
     needsSlugSetup?: boolean;
     needsPhoneVerification?: boolean;
+    // Sahip hesabı kapattı, silinmeyi bekliyor: yalnızca "Vazgeç" ekranı açılır.
+    accountClosing?: boolean;
 }
 export interface RegisterResponse {
     token: string;

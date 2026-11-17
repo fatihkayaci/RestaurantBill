@@ -1,6 +1,8 @@
 export interface Table {
     id: string;
     name: string;
+    /** En fazla kaç kişi (rezervasyonda gösterilir); girilmemişse null. */
+    capacity?: number | null;
     status: number;
     activeOrderTotal: number;
     /** Açık siparişten tutar girerek alınmış ödemeler. */

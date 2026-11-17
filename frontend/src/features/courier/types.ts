@@ -44,6 +44,15 @@ export interface CourierOrder {
     settledAt?: string | null;
     canDispatch: boolean;
     canDeliver: boolean;
+    /** "Teslimi geri al" bu ana kadar basılabilir; süre geçtiyse ya da kasaya teslim edildiyse yok. */
+    undoDeliverUntil?: string | null;
+}
+
+export interface CourierBulkDispatchResult {
+    dispatchedCount: number;
+    dispatchedNumbers: number[];
+    /** İstenip yola çıkarılamayanlar (artık hazır değil, iptal ya da başka kuryeye geçti). */
+    skippedCount: number;
 }
 
 export interface CourierDaySummary {
@@ -64,6 +73,10 @@ export interface CourierOutstandingOrder {
     collectedMethod: DoorPaymentMethod;
     collectedAmount: number;
     deliveredAt?: string | null;
+    /** Kuryenin tahsil ettiği an. */
+    collectedAt?: string | null;
+    /** Önceki iş gününde tahsil edildi, hâlâ kasaya teslim edilmedi. */
+    isFromPreviousDay: boolean;
 }
 
 export interface CourierCashSummary {
@@ -76,6 +89,11 @@ export interface CourierCashSummary {
     outstandingCashOrderCount: number;
     outstandingCard: number;
     outstandingCardOrderCount: number;
+    /** Önceki iş günlerinden kalan, teslim edilmemiş nakit. */
+    previousDayCash: number;
+    /** Önceki iş günlerinden kalan (nakit + kart) sipariş sayısı. */
+    previousDayOrderCount: number;
+    oldestCollectedAt?: string | null;
     outstandingOrders: CourierOutstandingOrder[];
 }
 
@@ -84,6 +102,25 @@ export interface CourierHandoverResult {
     cashAmount: number;
     cardAmount: number;
     total: number;
+    expectedCash: number;
+    /** Sayım girilmediyse ya da nakit yoksa null. */
+    countedCash: number | null;
+    /** Sayılan − beklenen; eksi = eksik. */
+    cashDifference: number | null;
+}
+
+/** "Teslim geçmişi"nde bir teslim. */
+export interface CourierHandoverHistory {
+    settledAt: string;
+    courierUserId: string;
+    courierName: string;
+    settledByName: string;
+    orderCount: number;
+    numbers: number[];
+    expectedCash: number;
+    cardAmount: number;
+    countedCash: number | null;
+    cashDifference: number | null;
 }
 
 export function mapsUrl(query: string): string {

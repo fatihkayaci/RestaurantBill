@@ -84,8 +84,8 @@ export default function BulkTableCreateModal({ tables, regions, defaultRegionId,
 
     return (
         <Modal onClose={onClose} closeOnOverlay={false} overlayClassName="bg-black/55 p-4">
-            <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-card shadow-2xl">
-                <div className="flex items-start justify-between gap-3 border-b border-border p-5">
+            <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl sm:max-h-[90vh] border border-border bg-card shadow-2xl">
+                <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border p-5">
                     <div>
                         <ModalTitle className="font-serif text-2xl font-bold leading-tight text-foreground">Toplu Masa Ekle</ModalTitle>
                         <p className="mt-0.5 text-sm text-rb-text-sub">Bir bölgeye sıralı numaralı masaları tek seferde ekleyin.</p>
@@ -100,7 +100,7 @@ export default function BulkTableCreateModal({ tables, regions, defaultRegionId,
                     </button>
                 </div>
 
-                <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
                     <div>
                         <label className={labelClass}>Bölge</label>
                         <select className={inputClass} value={regionId} onChange={e => changeRegion(e.target.value)}>
@@ -173,7 +173,7 @@ export default function BulkTableCreateModal({ tables, regions, defaultRegionId,
                     )}
                 </div>
 
-                <div className="flex items-center justify-end gap-3 border-t border-border p-5">
+                <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border p-5">
                     <button
                         type="button"
                         onClick={onClose}

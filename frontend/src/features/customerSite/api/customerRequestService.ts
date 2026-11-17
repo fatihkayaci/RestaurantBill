@@ -10,8 +10,9 @@ export const customerRequestService = {
     approveOrderRequest: async (id: string) => {
         await api.post(`/order-request/${id}/approve`);
     },
-    rejectOrderRequest: async (id: string) => {
-        await api.post(`/order-request/${id}/reject`);
+    /** reason: müşteriye "Onaylanmadı" kartında gösterilir (isteğe bağlı, en fazla 300 karakter). */
+    rejectOrderRequest: async (id: string, reason?: string) => {
+        await api.post(`/order-request/${id}/reject`, reason ? { reason } : {});
     },
     getReservations: async () => {
         const response = await api.get<StaffReservation[]>('/reservation');

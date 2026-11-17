@@ -9,6 +9,7 @@ import { PageError, PageLoading } from '@/components/ui/page-state';
 import { DATA_CHANGED_EVENT } from '@/lib/axiosInstance';
 import { OVERDUE_EVENT } from '@/components/layout/OverdueAlerts';
 import { cn } from '@/lib/utils';
+import { SiteBeautifyCard } from '@/pages/admin/site/SiteBeautifyPanel';
 
 /** Canlı kartlar (masa, mutfak, bekleyenler) bu aralıkla yenilenir; masa alanı ayrıca SignalR olaylarıyla yenilenir. */
 const REFRESH_MS = 30_000;
@@ -70,6 +71,9 @@ export default function OverViewPage() {
                     Paneli düzenle
                 </button>
             </div>
+
+            {/* Restoran sitesinin doluluğu: eksik varsa küçük kart (tamamsa ya da yetki yoksa çizilmez). */}
+            <SiteBeautifyCard />
 
             {failed && !stats ? (
                 <PageError onRetry={load} />

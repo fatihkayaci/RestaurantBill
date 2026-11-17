@@ -9,7 +9,9 @@ export interface SentOrderRequest {
     status: number;
     sentAt: number;
     total: number;
-    items: { name: string; quantity: number }[];
+    items: { name: string; quantity: number; productId?: string }[];
+    /** Garson reddettiyse yazdığı neden (boş olabilir). */
+    rejectReason?: string;
 }
 
 const POLL_MS = 5000;
@@ -49,10 +51,10 @@ export function useTableOrderRequests(tableId: string) {
             const results = await Promise.allSettled(pendingIds.split(',').map(id => publicService.getOrderRequestStatus(id)));
             if (cancelled) return;
 
-            const decided = new Map<string, number>();
+            const decided = new Map<string, { status: number; rejectReason: string }>();
             for (const result of results) {
                 if (result.status === 'fulfilled' && result.value.status !== ORDER_REQUEST_PENDING) {
-                    decided.set(result.value.id, result.value.status);
+                    decided.set(result.value.id, { status: result.value.status, rejectReason: result.value.rejectReason ?? '' });
                 }
             }
 
@@ -62,12 +64,17 @@ export function useTableOrderRequests(tableId: string) {
                 return;
             }
 
-            for (const status of decided.values()) {
+            for (const { status, rejectReason } of decided.values()) {
                 if (status === ORDER_REQUEST_APPROVED) toast.success('Siparişiniz onaylandı, mutfağa iletildi.');
-                if (status === ORDER_REQUEST_REJECTED) toast.error('Siparişiniz onaylanmadı. Lütfen garsona danışın.');
+                if (status === ORDER_REQUEST_REJECTED) {
+                    toast.error('Siparişiniz onaylanmadı.', { description: rejectReason || 'Ayrıntı için garsona danışın.' });
+                }
             }
             // Bekleyen listesi değişince bu effect yeniden kurulur; kalan bekleyenler varsa sorgu sürer.
-            setRequests(prev => prev.map(r => decided.has(r.id) ? { ...r, status: decided.get(r.id)! } : r));
+            setRequests(prev => prev.map(r => {
+                const decision = decided.get(r.id);
+                return decision ? { ...r, status: decision.status, rejectReason: decision.rejectReason } : r;
+            }));
         };
         timer = setTimeout(check, POLL_MS);
 

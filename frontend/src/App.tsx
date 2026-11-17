@@ -26,6 +26,9 @@ import OwnerBranchesPage from './pages/owner/BranchesPage';
 import OwnerAdminsPage from './pages/owner/AdminsPage';
 import OwnerAuditLogPage from './pages/owner/AuditLogPage';
 import SlugSetupPage from './pages/owner/SlugSetupPage';
+import DataManagementPage from './pages/owner/data/DataManagementPage';
+import AccountClosingPage from './pages/AccountClosingPage';
+import ClosedRestaurantGate from './pages/public/ClosedRestaurantGate';
 
 import AdminLayout from './pages/admin/Layout';
 import StaffPage from './pages/admin/StaffPage';
@@ -53,7 +56,7 @@ import RestaurantContactPage from './pages/public/RestaurantContactPage';
 import RestaurantReservationPage from './pages/public/RestaurantReservationPage';
 import ReservationDetailPage from './pages/public/ReservationDetailPage';
 import ReservationLookupPage from './pages/public/ReservationLookupPage';
-import SiteSettingsPage from './pages/admin/SiteSettingsPage';
+import SiteEditorPage from './pages/admin/site/editor/SiteEditorPage';
 import TableOrderPage from './pages/public/TableOrderPage';
 import ReservationsPage from './pages/admin/ReservationsPage';
 import SettingsPage, { LegacySettingsRedirect } from './pages/admin/SettingsPage';
@@ -97,7 +100,11 @@ function App() {
                     <Route path="branding" element={<OwnerBrandingPage />} />
                     <Route path="reports" element={<ReportsPage role="owner" />} />
                     <Route path="audit-log" element={<OwnerAuditLogPage />} />
+                    <Route path="data" element={<DataManagementPage />} />
                 </Route>
+
+                {/* Sahip hesabı kapattıysa silinene kadar yalnızca bu ekran */}
+                <Route path="/hesap-kapaniyor" element={<AccountClosingPage />} />
 
                 {/* Admin — Owner bir şube seçtiğinde aynı paneli kullanır; şirket sayfaları ona ek olarak açılır */}
                 <Route path="/admin" element={<PrivateRoute allowedRoles={["Admin", "Owner"]} scope="branch"><AdminLayout /></PrivateRoute>}>
@@ -121,7 +128,7 @@ function App() {
                     <Route path="reports" element={<ReportsPage role="admin" />} />
                     <Route path="restaurant" element={<LegacySettingsRedirect sekme="restoran" />} />
                     <Route path="settings" element={<SettingsPage />} />
-                    <Route path="site" element={<SiteSettingsPage />} />
+                    <Route path="site" element={<SiteEditorPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                 </Route>
 
@@ -136,19 +143,19 @@ function App() {
                 <Route path="/mesafeli-satis-sozlesmesi" element={<DistanceSalesAgreementPage />} />
                 <Route path="/iptal-ve-iade" element={<RefundPolicyPage />} />
                 {/* Restoranın alan adında /iletisim restoranın iletişim sayfasıdır; ana alan adında Sophram'ın. */}
-                <Route path="/iletisim" element={getTenantSlug() ? <RestaurantContactPage /> : <ContactPage />} />
+                <Route path="/iletisim" element={getTenantSlug() ? <ClosedRestaurantGate><RestaurantContactPage /></ClosedRestaurantGate> : <ContactPage />} />
 
                 {/* Restoranın müşteriye açık sitesi: slug'lı alan adının kökü. /menu, slug'sız (yerel) ortamda denemek için. */}
-                <Route path="/" element={getTenantSlug() ? <RestaurantSitePage /> : <LandingPage />} />
-                <Route path="/menu" element={<RestaurantMenuPage />} />
-                <Route path="/hakkimizda" element={<RestaurantAboutPage />} />
-                <Route path="/mekan" element={<RestaurantVenuePage />} />
-                <Route path="/rezervasyon" element={<RestaurantReservationPage />} />
-                <Route path="/rezervasyon/:token" element={<ReservationDetailPage />} />
-                <Route path="/rezervasyon-sorgula" element={<ReservationLookupPage />} />
-                <Route path="/masa/:tableId" element={<TableOrderPage />} />
-                <Route path="/siparis" element={<DeliveryOrderPage />} />
-                <Route path="/siparis/takip/:token" element={<DeliveryTrackingPage />} />
+                <Route path="/" element={getTenantSlug() ? <ClosedRestaurantGate><RestaurantSitePage /></ClosedRestaurantGate> : <LandingPage />} />
+                <Route path="/menu" element={<ClosedRestaurantGate><RestaurantMenuPage /></ClosedRestaurantGate>} />
+                <Route path="/hakkimizda" element={<ClosedRestaurantGate><RestaurantAboutPage /></ClosedRestaurantGate>} />
+                <Route path="/mekan" element={<ClosedRestaurantGate><RestaurantVenuePage /></ClosedRestaurantGate>} />
+                <Route path="/rezervasyon" element={<ClosedRestaurantGate><RestaurantReservationPage /></ClosedRestaurantGate>} />
+                <Route path="/rezervasyon/:token" element={<ClosedRestaurantGate><ReservationDetailPage /></ClosedRestaurantGate>} />
+                <Route path="/rezervasyon-sorgula" element={<ClosedRestaurantGate><ReservationLookupPage /></ClosedRestaurantGate>} />
+                <Route path="/masa/:tableId" element={<ClosedRestaurantGate><TableOrderPage /></ClosedRestaurantGate>} />
+                <Route path="/siparis" element={<ClosedRestaurantGate><DeliveryOrderPage /></ClosedRestaurantGate>} />
+                <Route path="/siparis/takip/:token" element={<ClosedRestaurantGate><DeliveryTrackingPage /></ClosedRestaurantGate>} />
             </Routes>
             <Toaster position="top-right" richColors />
         </>

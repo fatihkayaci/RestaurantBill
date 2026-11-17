@@ -63,7 +63,7 @@ export default function TableTransferModal({ sourceTable, tables, onClose, onDon
 
     return (
         <Modal onClose={onClose} closeOnOverlay={false} overlayClassName="z-80 bg-black/60 backdrop-blur-[3px] p-4">
-            <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6">
+            <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-card border border-border rounded-2xl shadow-2xl p-6">
                 {confirmTarget ? (
                     <>
                         <div className="flex items-start justify-between mb-1">
@@ -120,7 +120,7 @@ export default function TableTransferModal({ sourceTable, tables, onClose, onDon
                             </button>
                         </div>
 
-                        <div className="mt-4 max-h-96 overflow-y-auto space-y-4">
+                        <div className="mt-4 min-h-0 max-h-96 overflow-y-auto space-y-4">
                             {groupedByRegion.map(group => (
                                 <div key={group.regionName}>
                                     <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">

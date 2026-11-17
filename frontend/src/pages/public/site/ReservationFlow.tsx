@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowRight, Check, ChevronLeft, Clock, Copy, MapPin, Minus, Phone, Plus, Users } from 'lucide-react';
+import { ArrowRight, CalendarPlus, Check, ChevronLeft, Clock, Copy, MapPin, Minus, Navigation, Phone, Plus, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { publicService } from '@/features/customerSite/api/publicService';
@@ -13,6 +13,7 @@ import { MyReservations } from './SiteChrome';
 import { serif } from './siteParts';
 import { directionsUrl, formatDay, telHref } from './siteTheme';
 import { fullAddress, hoursText } from './useSite';
+import { downloadIcs } from '../reservationCalendar';
 
 const DAY_CHIPS = 14;
 const DEFAULT_TIME = '19:00';
@@ -197,6 +198,13 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
     const goTop = () => window.scrollTo({ top: 0 });
 
+    // Kişi sayısı değişince seçili masa artık sığmıyorsa seçim kalkar.
+    const changeParty = (next: number) => {
+        setPartySize(next);
+        if (selected?.capacity && selected.capacity < next) setSelected(null);
+    };
+    const scrollToSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
     const back = () => {
         if (step === 'details') { setStep('slot'); goTop(); return; }
         onClose();
@@ -236,6 +244,8 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
         ? `${selected.name} · ${formatDay(date)} · ${time} · ${partySize} kişi`
         : `${formatDay(date)} · ${time} · ${partySize} kişi`;
     const dateInChips = dayChips.some(chip => chip.value === date);
+    // Ana sayfanın hızlı seçicisinden gün ve saat seçili gelindiyse dar ekranda masalar en üstte.
+    const tablesFirst = !!initial && timeReady;
     const Title = embedded ? 'h2' : 'h1';
     const toSlot = () => { setStep('slot'); goTop(); };
 
@@ -289,19 +299,18 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                         </span>
                         <p className={cn(serif, 'm-0 mt-2 text-[40px] leading-[1] tracking-[-0.02em] md:text-[52px]')}>Talebiniz <span className="italic">alındı.</span></p>
                         <p className="m-0 max-w-sm text-[15px] leading-relaxed text-[#4A4640]">
-                            Restoran onayladığında rezervasyonunuz kesinleşir. Durumu rezervasyon sayfanızdan takip edebilirsiniz.
+                            Restoran onaylayınca kesinleşir. Durumu rezervasyon sayfanızdan izleyin.
                         </p>
                     </div>
 
                     {created && <ReservationTicket reservation={created} restaurantName={restaurantName} />}
-                    {created && <ReservationLinkBox token={created.accessToken} />}
+                    {created && (
+                        <ConfirmationActions reservation={created} restaurantName={restaurantName} address={fullAddress(site)} onNewRequest={toSlot} />
+                    )}
 
                     <MyReservations items={mine} className="pt-2" />
 
-                    <div className="flex flex-col gap-2.5 pt-2 sm:flex-row-reverse">
-                        <button type="button" onClick={onClose} className={cn(primaryButton, 'sm:flex-1', focusRing)}>Restoran sayfasına dön</button>
-                        <button type="button" onClick={toSlot} className={cn(secondaryButton, 'h-14 sm:flex-1', focusRing)}>Yeni rezervasyon talebi</button>
-                    </div>
+                    <button type="button" onClick={onClose} className={cn(secondaryButton, 'h-14 w-full', focusRing)}>Restoran sayfasına dön</button>
                 </main>
             </div>
         );
@@ -323,7 +332,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
         <div className="flex min-w-0 flex-col gap-5">
             {mine.length > 0 && <MyReservations items={mine} className={cn(card, 'p-5')} />}
 
-            <FlowSection num="01" title="Hangi gün?" legend="Tarih">
+            <FlowSection id="rez-gun" num="01" title="Hangi gün?" legend="Tarih">
                 <div className="-mx-5 flex snap-x scroll-px-5 gap-2 overflow-x-auto px-5 pb-2 sm:scroll-px-6 [scrollbar-width:thin] sm:-mx-6 sm:px-6">
                     {dayChips.map(chip => {
                         const on = chip.value === date;
@@ -367,7 +376,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             type="button"
                             aria-label="Kişi sayısını azalt"
                             disabled={partySize <= 1}
-                            onClick={() => setPartySize(n => Math.max(1, n - 1))}
+                            onClick={() => changeParty(Math.max(1, partySize - 1))}
                             className={cn('flex h-11 w-11 items-center justify-center rounded-full border border-[#DDD7CE] bg-white text-[#141414] transition-colors hover:border-[#141414] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[#DDD7CE]', focusRing)}
                         >
                             <Minus className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
@@ -379,7 +388,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             type="button"
                             aria-label="Kişi sayısını artır"
                             disabled={partySize >= maxParty}
-                            onClick={() => setPartySize(n => Math.min(maxParty, n + 1))}
+                            onClick={() => changeParty(Math.min(maxParty, partySize + 1))}
                             className={cn('flex h-11 w-11 items-center justify-center rounded-full border border-[#DDD7CE] bg-white text-[#141414] transition-colors hover:border-[#141414] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[#DDD7CE]', focusRing)}
                         >
                             <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
@@ -433,7 +442,17 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                 )}
             </FlowSection>
 
-            <FlowSection num="04" title="Masanızı seçin" legend="Masa" note={timeReady ? `${formatDay(date)}, ${time}` : undefined}>
+            {/* Dar ekranda seçim özeti masaların hemen üstünde; hızlı seçiciden gelindiyse ikisi en üste çıkar. */}
+            <div className={cn(card, 'flex items-center justify-between gap-3 px-4 py-3 lg:hidden', tablesFirst && 'order-first')}>
+                <p className="m-0 min-w-0 truncate text-[15px] font-semibold">
+                    {shortDay(date)} · {timeReady ? time : 'saat seçin'} · {partySize} kişi
+                </p>
+                <button type="button" onClick={() => scrollToSection('rez-gun')} className={cn('flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-[var(--site-accent)] hover:bg-[#F5F2ED]', focusRing)}>
+                    Değiştir
+                </button>
+            </div>
+
+            <FlowSection id="rez-masa" className={cn(tablesFirst && 'max-lg:order-first')} num="04" title="Nerede oturalım?" legend="Masa" note={timeReady ? `${formatDay(date)}, ${time}` : undefined}>
                 {!timeReady ? (
                     <EmptyNote>{daySlots === null && !daySlotsError ? 'Saatler yükleniyor…' : 'Masaları görmek için önce bir gün ve saat seçin.'}</EmptyNote>
                 ) : (
@@ -446,38 +465,48 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             </div>
                         )}
 
-                        {!slotError && unavailable !== null && site.regions.map(region => (
-                            <div key={region.id} className="flex flex-col gap-2.5">
-                                <h3 className={cn(eyebrowClass, 'm-0 flex items-center gap-3')}>
-                                    {region.name}
-                                    <span aria-hidden="true" className="h-px flex-1 bg-[#ECE7DF]" />
-                                </h3>
-                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
-                                    {region.tables.map(table => {
-                                        const busy = unavailable.has(table.id);
-                                        const on = selected?.id === table.id;
-                                        return (
-                                            <button
-                                                key={table.id}
-                                                type="button"
-                                                disabled={busy}
-                                                aria-pressed={on}
-                                                aria-label={busy ? `${table.name}, bu saatte dolu` : table.name}
-                                                onClick={() => { setSelected(on ? null : table); setFormError(null); }}
-                                                className={cn('relative flex min-h-[72px] flex-col items-start justify-center gap-1 rounded-xl border px-3.5 py-2.5 text-left transition-colors', focusRing, busy ? chipDisabled : on ? chipOn : chipOff)}
-                                            >
-                                                <span className="text-[15px] font-semibold leading-tight">{table.name}</span>
-                                                <span className="flex items-center gap-1.5 text-xs font-medium opacity-80">
-                                                    <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', busy ? 'bg-[#CFC8BC]' : on ? 'bg-current' : 'bg-[#2E9E57]')} />
-                                                    {busy ? 'Dolu' : on ? 'Seçili' : 'Boş'}
-                                                </span>
-                                                {on && <Check className="absolute right-3 top-3 h-4 w-4" strokeWidth={2.75} aria-hidden="true" />}
-                                            </button>
-                                        );
-                                    })}
+                        {!slotError && unavailable !== null && site.regions.map(region => {
+                            const freeCount = region.tables.filter(t => !unavailable.has(t.id) && !(t.capacity && t.capacity < partySize)).length;
+                            return (
+                                <div key={region.id} className="flex flex-col gap-2.5">
+                                    <h3 className={cn(eyebrowClass, 'm-0 flex items-center gap-3')}>
+                                        {region.name}
+                                        <span aria-hidden="true" className="h-px flex-1 bg-[#ECE7DF]" />
+                                        <span className="normal-case tracking-normal">{freeCount > 0 ? `${freeCount} masa boş` : 'boş masa yok'}</span>
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+                                        {region.tables.map(table => {
+                                            const busy = unavailable.has(table.id);
+                                            // Kapasitesi girilmiş ve kişi sayısına yetmeyen masa seçilemez; girilmemişse her gruba açık.
+                                            const tooSmall = !busy && !!table.capacity && table.capacity < partySize;
+                                            const on = selected?.id === table.id;
+                                            const capacityText = table.capacity ? `${table.capacity} kişilik` : null;
+                                            return (
+                                                <button
+                                                    key={table.id}
+                                                    type="button"
+                                                    disabled={busy || tooSmall}
+                                                    aria-pressed={on}
+                                                    aria-label={busy ? `${table.name}, bu saatte dolu`
+                                                        : tooSmall ? `${table.name}, ${table.capacity} kişilik, ${partySize} kişiye dar`
+                                                            : capacityText ? `${table.name}, ${capacityText}` : table.name}
+                                                    onClick={() => { setSelected(on ? null : table); setFormError(null); }}
+                                                    className={cn('relative flex min-h-[72px] flex-col items-start justify-center gap-1 rounded-xl border px-3.5 py-2.5 text-left transition-colors', focusRing, busy || tooSmall ? chipDisabled : on ? chipOn : chipOff)}
+                                                >
+                                                    <span className="text-[15px] font-semibold leading-tight">{table.name}</span>
+                                                    {capacityText && <span className="text-xs opacity-80">{capacityText}</span>}
+                                                    <span className="flex items-center gap-1.5 text-xs font-medium opacity-80">
+                                                        <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', busy || tooSmall ? 'bg-[#CFC8BC]' : on ? 'bg-current' : 'bg-[#2E9E57]')} />
+                                                        {busy ? 'Bu saatte dolu' : tooSmall ? 'Size dar' : on ? 'Seçili' : 'Boş'}
+                                                    </span>
+                                                    {on && <Check className="absolute right-3 top-3 h-4 w-4" strokeWidth={2.75} aria-hidden="true" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </FlowSection>
@@ -644,9 +673,11 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     );
 }
 
-function FlowSection({ num, title, legend, note, children }: { num: string; title: string; legend: string; note?: string; children: ReactNode }) {
+function FlowSection({ id, className, num, title, legend, note, children }: {
+    id?: string; className?: string; num: string; title: string; legend: string; note?: string; children: ReactNode;
+}) {
     return (
-        <fieldset className={cn(card, 'm-0 min-w-0 p-5 sm:p-6')}>
+        <fieldset id={id} className={cn(card, 'm-0 min-w-0 scroll-mt-24 p-5 sm:p-6', className)}>
             <legend className="sr-only">{legend}</legend>
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p aria-hidden="true" className="m-0 flex items-baseline gap-3">
@@ -750,9 +781,19 @@ function TicketField({ label, value, wide = false }: { label: string; value: str
     );
 }
 
-// Onay ekranındaki bağlantı: rezervasyonun durumu ve (onaylanınca) ön sipariş bu sayfadan. Bağlantı bu cihazda da saklanır.
-function ReservationLinkBox({ token }: { token: string }) {
-    const path = `/rezervasyon/${token}`;
+// "2026-11-14" → "Cuma 14 Kas" (seçim özeti satırı).
+function shortDay(date: string): string {
+    const [year, month, day] = date.split('-').map(Number);
+    const value = new Date(year, month - 1, day);
+    return `${value.toLocaleDateString('tr-TR', { weekday: 'long' })} ${day} ${value.toLocaleDateString('tr-TR', { month: 'short' })}`;
+}
+
+// Onay ekranının eylemleri: ana eylem rezervasyon sayfası (durum ve ön sipariş orada), yanında takvim dosyası ve yol tarifi;
+// bağlantıyı kopyalamak ve yeni talep ikincil satırda. Bağlantı bu cihazda da saklanır.
+function ConfirmationActions({ reservation, restaurantName, address, onNewRequest }: {
+    reservation: ReservationStatusInfo; restaurantName: string; address: string; onNewRequest: () => void;
+}) {
+    const path = `/rezervasyon/${reservation.accessToken}`;
     const url = `${window.location.origin}${path}`;
 
     const copy = async () => {
@@ -760,27 +801,53 @@ function ReservationLinkBox({ token }: { token: string }) {
             await navigator.clipboard.writeText(url);
             toast.success('Bağlantı kopyalandı');
         } catch {
-            toast.error('Kopyalanamadı; bağlantıyı basılı tutup kopyalayın.');
+            toast.error('Kopyalanamadı; "Rezervasyon sayfamı aç" ile açıp adres çubuğundan kopyalayın.');
         }
     };
 
+    const addToCalendar = () => downloadIcs({
+        uid: reservation.code || reservation.accessToken.slice(0, 12),
+        title: `${restaurantName} · Rezervasyon`,
+        date: reservation.date,
+        time: reservation.time,
+        endTime: reservation.endTime,
+        location: address || undefined,
+        description: [
+            `${reservation.partySize} kişi · ${reservation.tableName}`,
+            reservation.code ? `Rezervasyon kodu: ${reservation.code}` : '',
+            'Restoran onaylayınca kesinleşir.',
+            url,
+        ].filter(Boolean).join('\n'),
+    });
+
+    const textButton = cn('inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 font-semibold text-[#141414] underline-offset-4 hover:underline', focusRing);
+
     return (
-        <div className="flex flex-col gap-3 rounded-[20px] border border-[#DDD7CE] bg-white p-5">
-            <div>
-                <p className="m-0 text-[15px] font-semibold">Rezervasyon sayfanız</p>
-                <p className="m-0 mt-0.5 text-sm text-[#6F6A63]">Durumu ve onaylandıktan sonra ön siparişinizi buradan takip edin.</p>
-            </div>
-            <p className="m-0 break-all rounded-xl bg-[#F5F2ED] px-3.5 py-2.5 font-mono text-[13px] text-[#4A4640]">{url}</p>
-            <div className="grid grid-cols-2 gap-2">
-                <Link to={path} className="flex h-12 items-center justify-center gap-2 rounded-full bg-[#141414] text-[15px] font-semibold text-white no-underline transition-opacity hover:opacity-90">
-                    Sayfayı aç
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-                <button type="button" onClick={copy} className={secondaryButton}>
-                    <Copy className="h-4 w-4" aria-hidden="true" />
-                    Kopyala
+        <div className="flex flex-col gap-2.5">
+            <Link to={path} className={cn(primaryButton, focusRing, 'no-underline')}>
+                Rezervasyon sayfamı aç
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+            <div className={cn('grid gap-2', address ? 'grid-cols-2' : 'grid-cols-1')}>
+                <button type="button" onClick={addToCalendar} className={cn(secondaryButton, focusRing)}>
+                    <CalendarPlus className="h-4 w-4" aria-hidden="true" />
+                    Takvime ekle
                 </button>
+                {address && (
+                    <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cn(secondaryButton, focusRing, 'no-underline')}>
+                        <Navigation className="h-4 w-4" aria-hidden="true" />
+                        Yol tarifi
+                    </a>
+                )}
             </div>
+            <p className="m-0 flex items-center justify-center gap-1 text-sm text-[#6F6A63]">
+                <button type="button" onClick={copy} className={textButton}>
+                    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                    Bağlantıyı kopyala
+                </button>
+                <span aria-hidden="true">·</span>
+                <button type="button" onClick={onNewRequest} className={textButton}>Yeni talep</button>
+            </p>
         </div>
     );
 }

@@ -16,8 +16,9 @@ export const publicApi = axios.create({
 });
 
 publicApi.interceptors.request.use((config) => {
+    // Çağıran slug'ı kendisi verdiyse (admin'deki site önizlemesi) o kalır.
     const slug = getTenantSlug();
-    if (slug) config.headers['X-Restaurant-Slug'] = slug;
+    if (slug && !config.headers['X-Restaurant-Slug']) config.headers['X-Restaurant-Slug'] = slug;
     return config;
 });
 
@@ -38,8 +39,12 @@ export interface ReservationInput {
 }
 
 export const publicService = {
-    getSite: async (branchId?: string) => {
-        const response = await publicApi.get<PublicSite>('/site', { params: branchId ? { branchId } : undefined });
+    /** `slug`: alan adı yerine bu restoranın sitesi (admin'deki düzenleyicinin önizlemesi). */
+    getSite: async (branchId?: string, slug?: string) => {
+        const response = await publicApi.get<PublicSite>('/site', {
+            params: branchId ? { branchId } : undefined,
+            headers: slug ? { 'X-Restaurant-Slug': slug } : undefined,
+        });
         return response.data;
     },
     getTable: async (tableId: string) => {
@@ -89,6 +94,11 @@ export const publicService = {
     /** Ön siparişi ver ya da değiştir; fiyatlar sunucuda hesaplanır. Güncel sayfa verisini döner. */
     savePreOrder: async (token: string, items: OrderRequestItemInput[], note: string) => {
         const response = await publicApi.put<ReservationDetail>(`/reservations/${encodeURIComponent(token)}/pre-order`, { items, note });
+        return response.data;
+    },
+    /** Misafirin kendi iptali: kod + telefon (sorgulamayla aynı). Güncel sayfa verisini döner; eşleşmezse 400 (genel mesaj). */
+    cancelReservation: async (code: string, phone: string) => {
+        const response = await publicApi.post<ReservationDetail>('/reservations/cancel', { code, phone });
         return response.data;
     },
     cancelPreOrder: async (token: string) => {

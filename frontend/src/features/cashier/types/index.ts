@@ -66,6 +66,17 @@ export interface ShiftSummary {
     // Kör sayım: kasiyere null gelir, sadece Admin/Owner görür.
     expectedCashInRegister: number | null;
     openTablesCount: number;
+    /** Kuryelerde kalan, kasaya teslim edilmemiş tahsilat (uyarı içindir, kapatmayı engellemez). */
+    couriersWithUnsettledCash?: ShiftCourierCash[];
+}
+
+export interface ShiftCourierCash {
+    courierUserId: string;
+    fullName: string;
+    cash: number;
+    cashOrderCount: number;
+    card: number;
+    cardOrderCount: number;
 }
 
 export type ShiftStatus = 1 | 2;

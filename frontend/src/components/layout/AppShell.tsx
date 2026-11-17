@@ -2,8 +2,8 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState, type FocusEvent, type MouseEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-    House, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, Settings, Briefcase, Building2,
-    UserCog, Palette, History, CalendarCheck, Globe, Menu, X, PanelLeftClose, PanelLeftOpen, Layers, Bike, MessageSquareText, ChevronDown,
+    House, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, Settings, Briefcase,
+    UserCog, Palette, History, CalendarCheck, Globe, Menu, X, PanelLeftClose, PanelLeftOpen, Layers, Bike, MessageSquareText, ChevronDown, Trash2,
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { userService } from '@/features/users/api/userService';
@@ -22,10 +22,11 @@ import OnlineOrderAlerts from './OnlineOrderAlerts';
 import HeaderThemeToggle from './HeaderThemeToggle';
 import HeaderLogoutButton from './HeaderLogoutButton';
 import { useUnreadContactMessages } from './useUnreadContactMessages';
+import { useSiteHasDraft } from '@/features/customerSite/siteDraftStatus';
 import { useIsDesktop, useSidebarGroups } from './useSidebarGroups';
 
-// badge: menü öğesinin yanında sayaç gösterilecekse hangi sayaç.
-interface NavItem { to: string; icon: LucideIcon; label: string; badge?: 'unreadContactMessages'; }
+// badge: menü öğesinin yanında sayaç gösterilecekse hangi sayaç; dot: turuncu nokta (sitede yayınlanmamış taslak).
+interface NavItem { to: string; icon: LucideIcon; label: string; badge?: 'unreadContactMessages'; dot?: 'siteDraft'; }
 // Başlığı açılır/kapanır bir düğme olan bölüm (akordeon).
 interface NavSection { key: string; label: string; icon: LucideIcon; items: NavItem[]; }
 
@@ -49,7 +50,7 @@ const branchSections: NavSection[] = [
     ] },
     { key: 'musteri', label: 'Müşteri', icon: MessageSquareText, items: [
         { to: '/admin/contact-messages', icon: MessageSquareText, label: 'Şikayet ve Öneriler', badge: 'unreadContactMessages' },
-        { to: '/admin/site', icon: Globe, label: 'Restoran sitesi' },
+        { to: '/admin/site', icon: Globe, label: 'Restoran sitesi', dot: 'siteDraft' },
     ] },
     { key: 'yonetim', label: 'Yönetim', icon: Briefcase, items: [
         { to: '/admin/staff', icon: Users, label: 'Çalışanlar' },
@@ -58,12 +59,6 @@ const branchSections: NavSection[] = [
     ] },
 ];
 
-// Owner'a şube modunda ek olarak açılan şirket sayfaları.
-const ownerSectionInBranch: NavSection = { key: 'sirket', label: 'Şirket', icon: Building2, items: [
-    { to: '/admin/admins', icon: UserCog, label: 'Yöneticiler' },
-    { to: '/admin/branding', icon: Palette, label: 'Marka Ayarları' },
-    { to: '/admin/audit-log', icon: History, label: 'Denetim Kaydı' },
-] };
 
 // "Tümü" modu: yalnızca şirket geneli sayfalar, bölümsüz düz liste; şubeye ait ekranlar saklanır.
 const companyTop: NavItem[] = [
@@ -72,6 +67,7 @@ const companyTop: NavItem[] = [
     { to: '/owner/branding', icon: Palette, label: 'Marka Ayarları' },
     { to: '/owner/reports', icon: BarChart3, label: 'Finansal Rapor' },
     { to: '/owner/audit-log', icon: History, label: 'Denetim Kaydı' },
+    { to: '/owner/data', icon: Trash2, label: 'Verileri sil' },
 ];
 
 const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-rb-gold/70';
@@ -93,6 +89,9 @@ export default function AppShell() {
     // "Tümü" modunda şube menüsü yok; sayaç yalnızca şube modunda çekilir.
     const unreadContactMessages = useUnreadContactMessages(!companyMode);
     const badgeCount = (badge: NavItem['badge']) => (badge === 'unreadContactMessages' ? unreadContactMessages : 0);
+    const siteHasDraft = useSiteHasDraft(!companyMode);
+    const hasDot = (dot: NavItem['dot']) => dot === 'siteDraft' && siteHasDraft;
+    const draftDot = <span aria-label="Yayınlanmamış değişiklik var" title="Yayınlanmamış değişiklik var" className="ml-auto h-2 w-2 shrink-0 rounded-full bg-[#E0952A]" />;
 
     useEffect(() => {
         userService.getCurrentUser().then(setCurrentUser).catch(() => {});
@@ -105,7 +104,8 @@ export default function AppShell() {
     };
 
     const topItems = companyMode ? companyTop : branchTop;
-    const sections: NavSection[] = companyMode ? [] : isOwner ? [...branchSections, ownerSectionInBranch] : branchSections;
+    // Şirket sayfaları (Yöneticiler, Marka Ayarları, Denetim Kaydı) yalnız "Tümü" modunda: şubeye ait değiller.
+    const sections: NavSection[] = companyMode ? [] : branchSections;
 
     // Aktif rotayı içeren bölüm: kullanıcı kapalı bir bölüme girince açılır.
     const isActivePath = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
@@ -148,7 +148,7 @@ export default function AppShell() {
     const unreadDot = <span aria-hidden="true" className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-rb-gold" />;
 
     // Daraltılmış modda tek öğe: ortalı ikon, tooltip, okunmamışsa nokta.
-    const renderIconItem = ({ to, icon: Icon, label, badge }: NavItem) => {
+    const renderIconItem = ({ to, icon: Icon, label, badge, dot }: NavItem) => {
         const count = badgeCount(badge);
         return (
             <NavLink
@@ -164,6 +164,7 @@ export default function AppShell() {
             >
                 <Icon aria-hidden="true" className="h-[18px] w-[18px] transition-transform duration-200 group-hover:scale-110 motion-reduce:transition-none" />
                 {count > 0 && unreadDot}
+                {hasDot(dot) && <span aria-hidden="true" className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-[#E0952A]" />}
             </NavLink>
         );
     };
@@ -275,7 +276,7 @@ export default function AppShell() {
                                         >
                                             <div className="min-h-0 overflow-hidden">
                                                 <div className="mb-2 ml-[25px] mt-0.5 flex flex-col border-l border-[#3A322B] pl-3">
-                                                    {section.items.map(({ to, label, badge }) => {
+                                                    {section.items.map(({ to, label, badge, dot }) => {
                                                         const count = badgeCount(badge);
                                                         return (
                                                             <NavLink
@@ -294,6 +295,7 @@ export default function AppShell() {
                                                                     <>
                                                                         <span className="flex-1 truncate">{label}</span>
                                                                         {count > 0 && countBadge(count, isActive)}
+                                                                        {hasDot(dot) && draftDot}
                                                                     </>
                                                                 )}
                                                             </NavLink>
@@ -421,7 +423,11 @@ export default function AppShell() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-auto p-6 pb-24 md:pb-6">
+                {/* Yeni paket siparişi uyarı şeridinin yeri (OnlineOrderAlerts portal ile yerleştirir). */}
+                <div id="online-order-strip-slot" />
+
+                {/* Restoran sitesi düzenleyicisi ekranın tamamını kullanır (kendi kaydırması var). */}
+                <main className={cn('flex-1', pathname === '/admin/site' ? 'min-h-0 overflow-hidden' : 'overflow-auto p-6 pb-24 md:pb-6')}>
                     <Outlet />
                 </main>
             </div>

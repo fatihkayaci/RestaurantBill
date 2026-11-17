@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    AlertCircle, ArrowLeft, Bike, ChevronRight, Clock, MapPin, Minus, Plus, Receipt, ShoppingBag, Store, Wallet,
+    AlertCircle, ArrowLeft, Bike, ChevronRight, Clock, MapPin, Minus, Phone, Plus, Receipt, Search, ShoppingBag, Store, Wallet,
 } from 'lucide-react';
 import { publicService } from '@/features/customerSite/api/publicService';
 import { publicDeliveryService } from '@/features/delivery/api/publicDeliveryService';
 import {
-    addLine, changeQuantity, clearCart, estimatedSubtotal, itemCount, loadBranchChoice, loadCart, loadRecentOrders,
-    newClientRequestId, productKey, pruneUnavailable, quantityOf, rememberOrder, saveBranchChoice, saveCart, selectionNames,
-    setLineNote, setMenuKey, setMenuUnitPrice, toCartInput, type DeliveryCartLine, type RecentDeliveryOrder,
+    addLine, changeQuantity, clearCart, estimatedSubtotal, itemCount, loadBranchChoice, loadCart, loadOrderSnapshot, loadRecentOrders,
+    newClientRequestId, productKey, pruneUnavailable, quantityOf, rememberOrder, saveBranchChoice, saveCart, saveOrderSnapshot,
+    selectionNames, setLineNote, setMenuKey, setMenuUnitPrice, toCartInput, type DeliveryCartLine, type OrderSnapshot,
+    type RecentDeliveryOrder,
 } from '@/features/delivery/deliveryCart';
 import type {
-    CartLineInput, DeliveryQuote, OnlineMenuProduct, OnlineOrdering, OnlineSetMenu, SubmittedDeliveryOrder,
+    CartLineInput, DeliveryQuote, DeliveryZone, OnlineMenuProduct, OnlineOrdering, OnlineSetMenu, SubmittedDeliveryOrder,
 } from '@/features/delivery/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
@@ -20,8 +21,13 @@ import DeliveryMenu from './delivery/DeliveryMenu';
 import DeliverySetMenuSheet from './delivery/DeliverySetMenuSheet';
 import DeliveryCheckout from './delivery/DeliveryCheckout';
 import Sheet from './delivery/Sheet';
-import { Wordmark } from './site/SiteChrome';
-import { SITE_FONTS_HREF, glass, headingFont, siteRootStyle, telHref } from './site/siteTheme';
+import { customerRootStyle } from './customerTheme';
+import type { PublicSite } from '@/features/customerSite/types';
+import { GlassStatusPill } from './site/SiteCards';
+import { FlowSiteHeader, HeaderSpacer } from './site/SiteFrame';
+import { FONTS_HREF, serif, siteCardDark } from './site/siteParts';
+import { SITE_FONTS_HREF, glass, headingFont, telHref } from './site/siteTheme';
+import { normalizeSite } from './site/useSite';
 
 const QUOTE_DEBOUNCE_MS = 400;
 
@@ -29,25 +35,57 @@ function timeOfDay(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
 
+/** "Bugün 11:00", "Yarın 08:00", "Cuma 11:00" (tarayıcının saatiyle; şube ile aynı saat diliminde kabul edilir). */
+function opensText(iso: string): string {
+    const at = new Date(iso);
+    const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const days = Math.round((startOf(at) - startOf(new Date())) / 86_400_000);
+    const day = days <= 0 ? 'Bugün' : days === 1 ? 'Yarın' : at.toLocaleDateString('tr-TR', { weekday: 'long' });
+    return `${day} ${timeOfDay(iso)}`;
+}
+
+/** Arama için: küçük harf, aksanlar ve Türkçe harfler sadeleşir ("Kadıköy" → "kadikoy"). */
+function fold(text: string): string {
+    return text.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+const MENU_ANCHOR = 'paket-menu';
+
 // Online paket sipariş sayfası (/siparis, restoranın alan adında). Sıra: şube (birden fazlaysa) → mahalle (ücret ve en az
 // tutar) → menü → sepet → teslimat bilgileri. Sepet, mahalle ve gönderim anahtarı (clientRequestId) cihazda şube başına
 // saklanır; gönderim anahtarı sipariş açılana kadar değişmez, bağlantı kopunca yeniden göndermek aynı siparişi döndürür.
 // Gösterilen tutarlar sunucunun teklifidir (quote); kapalı/durdurulmuş restoranda menü görünür ama sipariş gönderilmez.
 export default function DeliveryOrderPage() {
     const navigate = useNavigate();
-    const [params] = useSearchParams();
+    const [params, setParams] = useSearchParams();
+    // ?tekrar=<takip anahtarı>: "Tekrar sipariş ver" / "Sepete dön". Gönderilen sepetin kopyası bir kez yüklenir.
+    const [reorderSnapshot] = useState<OrderSnapshot | null>(() => {
+        const token = params.get('tekrar');
+        return token ? loadOrderSnapshot(token) : null;
+    });
+    const reorder = useRef<OrderSnapshot | null>(reorderSnapshot);
     const [data, setData] = useState<OnlineOrdering | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
     // ?sube=<id>: masa QR'ının "Paket servis" bağlantısı şubeyi verir; yoksa bu cihazda son seçilen şube.
-    const [branchId, setBranchId] = useState<string | null>(() => params.get('sube') || loadBranchChoice());
+    const [branchId, setBranchId] = useState<string | null>(() => params.get('sube') || reorderSnapshot?.branchId || loadBranchChoice());
     const [pickingBranch, setPickingBranch] = useState(false);
-    const [site, setSite] = useState<{ name: string; accent?: string; cover?: string; place?: string } | null>(null);
+    // Sitenin bilgisi: üst menü (FlowSiteHeader), tema, kapak. Alınamazsa menü yerine kapakta geri bağlantısı çizilir.
+    const [siteData, setSiteData] = useState<PublicSite | null>(null);
+    const [siteFailed, setSiteFailed] = useState(false);
+    const site = siteData && {
+        name: siteData.companyName || siteData.branchName,
+        accent: siteData.site.accentColor,
+        theme: siteData.site.theme,
+        cover: siteData.site.coverImageUrl,
+        place: [siteData.district, siteData.city].filter(Boolean).join(', '),
+    };
 
     const [lines, setLines] = useState<DeliveryCartLine[]>([]);
     const [zoneId, setZoneId] = useState<string | null>(null);
     const [clientRequestId, setClientRequestId] = useState<string>(() => newClientRequestId());
     const [cartReady, setCartReady] = useState(false);
-    const [prunedCount, setPrunedCount] = useState(0);
+    const [prunedNames, setPrunedNames] = useState<string[]>([]);
+    const [zonePickerOpen, setZonePickerOpen] = useState(false);
 
     const [quote, setQuote] = useState<{ key: string; value: DeliveryQuote } | null>(null);
     const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -73,27 +111,37 @@ export default function DeliveryOrderPage() {
                 setLoadError(null);
                 if (requestedBranch) saveBranchChoice(result.branchId);
                 const stored = loadCart(result.branchId);
-                const pruned = pruneUnavailable(stored?.lines ?? [], result.categories, result.setMenus);
+                // Tekrar sipariş: gönderilmiş sepetin kopyası mevcut sepete eklenir (sepet boşsa onun yerine geçer).
+                const snapshot = reorder.current && reorder.current.branchId === result.branchId ? reorder.current : null;
+                reorder.current = null;
+                let source = stored?.lines ?? [];
+                if (snapshot) for (const line of snapshot.lines) source = addLine(source, line, line.quantity);
+                const pruned = pruneUnavailable(source, result.categories, result.setMenus);
+                const kept = new Set(pruned.lines.map(l => l.key));
                 setLines(pruned.lines);
-                setPrunedCount(pruned.removed);
+                setPrunedNames([...new Set(source.filter(l => !kept.has(l.key)).map(l => l.name))]);
                 setClientRequestId(stored?.clientRequestId ?? newClientRequestId());
                 const zones = result.zones;
-                setZoneId(stored?.zoneId && zones.some(z => z.id === stored.zoneId) ? stored.zoneId : zones.length === 1 ? zones[0].id : null);
+                const preferred = snapshot?.zoneId ?? stored?.zoneId;
+                setZoneId(preferred && zones.some(z => z.id === preferred) ? preferred : zones.length === 1 ? zones[0].id : null);
                 setQuote(null);
                 setCartReady(true);
             })
             .catch(err => setLoadError(getApiErrorMessage(err, 'Sipariş sayfası yüklenemedi. İnternet bağlantınızı kontrol edip yenileyin.')));
         publicService.getSite(requestedBranch ?? undefined)
-            .then(s => setSite({
-                name: s.companyName || s.branchName,
-                accent: s.site.accentColor,
-                cover: s.site.coverImageUrl,
-                place: [s.district, s.city].filter(Boolean).join(', '),
-            }))
-            .catch(() => {});
+            .then(s => { setSiteData(normalizeSite(s)); setSiteFailed(false); })
+            .catch(() => setSiteFailed(true));
     }, []);
 
     useEffect(() => { load(branchId); }, [branchId, load]);
+
+    // ?tekrar yalnız bir kez işlenir; adres çubuğundan kaldırılır (yenileyince sepet ikinci kez eklenmesin).
+    useEffect(() => {
+        if (!cartReady || !params.has('tekrar')) return;
+        const next = new URLSearchParams(params);
+        next.delete('tekrar');
+        setParams(next, { replace: true });
+    }, [cartReady, params, setParams]);
 
     // Birden fazla şube varken müşteri henüz seçmediyse önce şube seçilir.
     const needsBranchChoice = !!data && data.branches.length > 1 && !branchId;
@@ -157,6 +205,7 @@ export default function DeliveryOrderPage() {
     const onSubmitted = (result: SubmittedDeliveryOrder) => {
         if (!data) return;
         rememberOrder({ token: result.token, number: result.number, createdAt: new Date().toISOString() });
+        saveOrderSnapshot(result.token, data.branchId, lines, zoneId);
         clearCart(data.branchId);
         setLines([]);
         setClientRequestId(newClientRequestId());
@@ -182,9 +231,13 @@ export default function DeliveryOrderPage() {
 
 
     // ── Görünüm ──
-    const root = (children: ReactNode) => (
-        <div style={siteRootStyle(site?.accent)} className="min-h-screen bg-[var(--site-bg)]">
+    // Üst menü koyu kapağın üstünde durur; kapağı olmayan hata ekranında çizilmez (orada "Ana sayfa" bağlantısı var).
+    const nav = !siteFailed;
+    const root = (children: ReactNode, withNav = true) => (
+        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme })} className="min-h-screen overflow-x-clip bg-[var(--site-bg)]">
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
+            <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
+            {withNav && siteData && <FlowSiteHeader site={siteData} current="siparis" />}
             {children}
         </div>
     );
@@ -199,12 +252,13 @@ export default function DeliveryOrderPage() {
                 <p className="mt-2 max-w-sm text-base text-[var(--site-sub)]">{loadError}</p>
                 <button type="button" onClick={() => { resetForLoad(); load(branchId); }} className="mt-6 h-12 rounded-full bg-[var(--site-paper)] px-6 font-semibold text-[var(--site-on-paper)] transition-opacity hover:opacity-90">Tekrar dene</button>
                 <Link to="/" className="mt-3 flex h-11 items-center text-sm font-semibold text-[var(--site-sub)] underline">Ana sayfa</Link>
-            </main>
+            </main>,
+            false,
         );
     }
 
     if (!data) {
-        return root(<LoadingSkeleton />);
+        return root(<LoadingSkeleton nav={nav} />);
     }
 
     const restaurant = site?.name || data.branchName;
@@ -213,7 +267,7 @@ export default function DeliveryOrderPage() {
     if (needsBranchChoice || pickingBranch) {
         return root(
             <main className="min-h-screen pb-12">
-                <Hero restaurant={restaurant} cover={site?.cover} subtitle={site?.place ?? ''} />
+                <Hero nav={nav} restaurant={restaurant} cover={site?.cover} eyebrow={['Paket sipariş', site?.place].filter(Boolean).join(' · ')} />
                 <div className="relative mx-auto -mt-6 max-w-xl px-4">
                     <div className="rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] p-4 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.25)] md:p-5">
                         <h2 className={cn(headingFont, 'text-2xl font-bold')}>Hangi şubeden sipariş vermek istersiniz?</h2>
@@ -254,9 +308,13 @@ export default function DeliveryOrderPage() {
     const amountToMinimum = currentQuote ? currentQuote.amountToMinimum : zone ? Math.max(0, zone.minOrderAmount - estimate) : 0;
     const canCheckout = open && !!zone && !!currentQuote && currentQuote.meetsMinimum && !quoteError;
 
+    // En az tutar kalmışsa metin yerine ilerleme çubuğu gösterilir.
+    const minimum = open && zone && zone.minOrderAmount > 0 && amountToMinimum > 0
+        ? { subtotal: Math.max(0, zone.minOrderAmount - amountToMinimum), target: zone.minOrderAmount, left: amountToMinimum }
+        : null;
     const checkoutHint = !open ? 'Restoran şu an sipariş almıyor.'
         : !zone ? 'Devam etmek için teslimat mahallenizi seçin.'
-            : amountToMinimum > 0 ? `Minimum sepet tutarına ${formatPrice(amountToMinimum)} ₺ kaldı.`
+            : amountToMinimum > 0 ? null
                 : quoteError ?? (quoting || !currentQuote ? 'Tutar hesaplanıyor…' : null);
 
     const goToCheckout = () => { setCartOpen(false); setCheckoutOpen(true); };
@@ -266,88 +324,44 @@ export default function DeliveryOrderPage() {
             onNote={(key, note) => setLines(prev => setLineNote(prev, key, note))} />
     );
     const cartTotals = (
-        <CartTotals subtotal={subtotal} fee={fee} total={total} zoneName={zone?.name ?? null}
+        <CartTotals subtotal={subtotal} fee={fee} total={total} zoneName={zone?.name ?? null} minimum={minimum}
             hint={checkoutHint} hintIsError={!!quoteError} canCheckout={canCheckout} onCheckout={goToCheckout} />
     );
 
-    // Başlıktaki bilgi çipleri: durum, bugünün son sipariş saati, seçili mahallenin ücreti / en az tutarı / süresi.
-    // Mahalle seçilmeden süre aralığı gösterilir.
-    const etas = data.zones.map(z => z.estimatedMinutes).filter(m => m > 0);
-    const etaRange = etas.length === 0 ? null
-        : Math.min(...etas) === Math.max(...etas) ? `~${Math.min(...etas)} dk` : `${Math.min(...etas)}–${Math.max(...etas)} dk`;
-    const chips: { icon: ReactNode; text: string }[] = [];
-    if (open && data.lastOrderAt) chips.push({ icon: <Clock className="h-3.5 w-3.5" aria-hidden="true" />, text: `Son sipariş ${timeOfDay(data.lastOrderAt)}` });
-    if (zone) {
-        chips.push({ icon: <Bike className="h-3.5 w-3.5" aria-hidden="true" />, text: zone.fee > 0 ? `Teslimat ${formatPrice(zone.fee)} ₺` : 'Teslimat ücretsiz' });
-        if (zone.minOrderAmount > 0) chips.push({ icon: <Wallet className="h-3.5 w-3.5" aria-hidden="true" />, text: `En az ${formatPrice(zone.minOrderAmount)} ₺` });
-        if (zone.estimatedMinutes > 0) chips.push({ icon: <Clock className="h-3.5 w-3.5" aria-hidden="true" />, text: `~${zone.estimatedMinutes} dk` });
-    } else if (etaRange && data.state !== 'disabled') {
-        chips.push({ icon: <Clock className="h-3.5 w-3.5" aria-hidden="true" />, text: etaRange });
-    }
+    const pillText = data.state === 'open'
+        ? (data.lastOrderAt ? `Sipariş alıyoruz · ${timeOfDay(data.lastOrderAt)}'a kadar` : 'Sipariş alıyoruz')
+        : STATE_PILL[data.state];
+    const scrollToMenu = () => document.getElementById(MENU_ANCHOR)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     return root(
         <main className={cn('min-h-screen lg:pb-16', count > 0 ? 'pb-40' : 'pb-12')}>
             <Hero
+                nav={nav}
                 restaurant={restaurant}
                 cover={site?.cover}
-                subtitle={[multiBranch ? data.branchName : null, site?.place].filter(Boolean).join(' · ')}
+                eyebrow={['Paket sipariş', zone?.name ?? (multiBranch ? data.branchName : site?.place)].filter(Boolean).join(' · ')}
+                status={<GlassStatusPill open={data.state === 'open'}>{pillText}</GlassStatusPill>}
                 action={multiBranch ? (
                     <button type="button" onClick={() => setPickingBranch(true)}
                         className={cn(glass, 'flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-white transition-colors hover:bg-white/25')}>
                         <Store className="h-4 w-4" aria-hidden="true" />Şube değiştir
                     </button>
                 ) : null}
-            >
-                <ul className="mt-5 flex flex-wrap gap-2" aria-label="Sipariş bilgileri">
-                    <li><StatusChip state={data.state} /></li>
-                    {chips.map(chip => (
-                        <li key={chip.text} className={cn(glass, 'flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-white')}>
-                            {chip.icon}{chip.text}
-                        </li>
-                    ))}
-                </ul>
-            </Hero>
+            />
 
             <div className="relative mx-auto -mt-6 max-w-6xl px-4 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8">
                 <div className="min-w-0">
                     <div className="flex flex-col gap-3">
                         {data.state !== 'disabled' && (
-                            <section aria-label="Teslimat mahallesi"
-                                className="rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] p-4 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.25)]">
-                                <label htmlFor="mahalle" className="flex items-center gap-2 text-sm font-semibold">
-                                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--site-raised)]">
-                                        <MapPin className="h-4 w-4 text-[var(--site-accent)]" aria-hidden="true" />
-                                    </span>
-                                    Nereye gelsin?
-                                </label>
-                                {data.zones.length === 0 ? (
-                                    <p className="mt-2 text-sm text-[var(--site-sub)]">Restoran henüz teslimat bölgesi tanımlamadı.</p>
-                                ) : (
-                                    <>
-                                        <select
-                                            id="mahalle"
-                                            value={zoneId ?? ''}
-                                            onChange={e => setZoneId(e.target.value || null)}
-                                            className="mt-2 h-12 w-full rounded-xl border border-[var(--site-border-strong)] bg-[var(--site-bg)] px-3 text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]"
-                                        >
-                                            <option value="">Mahallenizi seçin</option>
-                                            {data.zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
-                                        </select>
-                                        <p className="mt-2 text-sm text-[var(--site-sub)]">
-                                            {zone
-                                                ? `${zone.name} için teslimat ${zone.fee > 0 ? `${formatPrice(zone.fee)} ₺` : 'ücretsiz'}${zone.minOrderAmount > 0 ? `, en az sepet ${formatPrice(zone.minOrderAmount)} ₺` : ''}.`
-                                                : 'Listede olmayan mahalleye teslimat yapılmıyor.'}
-                                        </p>
-                                    </>
-                                )}
-                            </section>
+                            <ZoneCard zones={data.zones} zone={zone} onPick={() => setZonePickerOpen(true)} />
                         )}
 
-                        {!open && <StateBanner data={data} />}
+                        {!open && <ClosedCard data={data} onBrowse={scrollToMenu} />}
 
-                        {prunedCount > 0 && (
+                        {prunedNames.length > 0 && (
                             <p role="status" className="rounded-2xl bg-[var(--site-raised)] px-4 py-3 text-sm">
-                                Sepetinizdeki {prunedCount} ürün artık sipariş verilemediği için çıkarıldı.
+                                <span className="font-semibold">Sepetinizden {prunedNames.length} ürün çıkardık.</span>{' '}
+                                {listNames(prunedNames)} bugünlük tükendi ya da artık menüde yok.
                             </p>
                         )}
 
@@ -366,6 +380,7 @@ export default function DeliveryOrderPage() {
                     </div>
 
                     {data.state !== 'disabled' && (
+                        <div id={MENU_ANCHOR} className="scroll-mt-4">
                         <DeliveryMenu
                             categories={data.categories}
                             setMenus={data.setMenus}
@@ -376,6 +391,7 @@ export default function DeliveryOrderPage() {
                             onRemoveProduct={removeProduct}
                             onOpenSetMenu={setSetMenuOpen}
                         />
+                        </div>
                     )}
                 </div>
 
@@ -397,6 +413,7 @@ export default function DeliveryOrderPage() {
             {count > 0 && (
                 <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--site-border)] bg-[rgba(255,255,255,0.95)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-[14px] lg:hidden">
                     <div className="mx-auto max-w-3xl">
+                        {minimum && <MinimumProgress {...minimum} className="mb-2.5" />}
                         {checkoutHint && <p className="mb-2 text-center text-[13px] font-medium text-[var(--site-muted)]">{checkoutHint}</p>}
                         <button type="button" onClick={() => setCartOpen(true)}
                             className="flex h-14 w-full items-center justify-between gap-3 rounded-full bg-[var(--site-accent)] pl-2 pr-6 text-[var(--site-on-accent)] shadow-[0_10px_24px_-10px_rgba(0,0,0,0.45)] transition-opacity hover:opacity-90">
@@ -429,6 +446,13 @@ export default function DeliveryOrderPage() {
                 />
             )}
 
+            {zonePickerOpen && (
+                <ZonePicker zones={data.zones} selectedId={zoneId} phone={data.restaurantPhone}
+                    onSelect={id => { setZoneId(id); setZonePickerOpen(false); }}
+                    onBrowse={() => { setZonePickerOpen(false); scrollToMenu(); }}
+                    onClose={() => setZonePickerOpen(false)} />
+            )}
+
             {setMenuOpen && (
                 <DeliverySetMenuSheet
                     menu={setMenuOpen}
@@ -441,49 +465,225 @@ export default function DeliveryOrderPage() {
     );
 }
 
-/** Sayfanın başı: kapak fotoğrafı (yoksa sitenin koyu zemini), geri bağlantısı, restoran adı ve bilgi çipleri. */
-function Hero({ restaurant, subtitle, cover, action, children }: {
-    restaurant: string; subtitle: string; cover?: string; action?: ReactNode; children?: ReactNode;
+/**
+ * Sayfanın başı (sitenin alt sayfalarındaki kapak gibi): kapak fotoğrafı (yoksa sitenin koyu zemini), durum hapı ve sitenin
+ * serif yazısıyla ad. `nav` ise üstte sitenin menüsü (FlowSiteHeader) için boşluk bırakılır; değilse (site bilgisi
+ * alınamadı) solda ana sayfaya geri bağlantısı çizilir.
+ */
+function Hero({ restaurant, eyebrow, cover, action, status, nav }: {
+    restaurant: string; eyebrow: string; cover?: string; action?: ReactNode; status?: ReactNode; nav: boolean;
 }) {
+    const topRow = !nav || !!action;
+    const gap = topRow ? 'mt-6 md:mt-10' : 'mt-4 md:mt-8';
     return (
         <header className="relative overflow-hidden bg-[var(--site-ink)] text-white">
             {cover && <img src={cover} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />}
-            {cover && <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-[rgba(17,17,17,0.55)] via-[rgba(17,17,17,0.6)] to-[rgba(17,17,17,0.85)]" />}
-            <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-4 md:px-6 md:pb-16 md:pt-6">
-                <div className="flex items-center justify-between gap-3">
-                    <Link to="/" aria-label="Restoranın ana sayfası"
-                        className={cn(glass, 'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors hover:bg-white/25')}>
-                        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-                    </Link>
-                    {action}
-                </div>
-                <p className="mt-6 flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-white/75 md:mt-10">
-                    <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />Paket sipariş
+            {cover && <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-[rgba(20,16,12,0.5)] via-[rgba(20,16,12,0.55)] to-[rgba(20,16,12,0.85)]" />}
+            {nav && <HeaderSpacer />}
+            <div className={cn('relative mx-auto max-w-6xl px-4 pb-12 md:px-6 md:pb-16', nav ? 'pt-2' : 'pt-4 md:pt-6')}>
+                {topRow && (
+                    <div className="flex items-center justify-between gap-3">
+                        {!nav && (
+                            <Link to="/" aria-label="Restoranın ana sayfası"
+                                className={cn(glass, 'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors hover:bg-white/25')}>
+                                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                            </Link>
+                        )}
+                        {action && <div className="ml-auto">{action}</div>}
+                    </div>
+                )}
+                {status && <div className={cn('flex', gap)}>{status}</div>}
+                <p className={cn('flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.22em] text-white/80', status ? 'mt-4' : gap)}>
+                    <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />{eyebrow}
                 </p>
-                <h1 className="mt-1.5 text-[40px] font-bold leading-[0.95] tracking-[-0.05em] md:text-[64px]">
-                    <Wordmark name={restaurant} className="font-bold" />
+                <h1 className={cn(serif, 'm-0 mt-1 break-words text-[48px] italic leading-[0.95] tracking-[-0.02em] md:text-[80px]')}>
+                    {restaurant}
                 </h1>
-                {subtitle && <p className="mt-2 text-base text-white/85">{subtitle}</p>}
-                {children}
             </div>
         </header>
     );
 }
 
-const STATE_CHIP: Record<OnlineOrdering['state'], { text: string; dot: string }> = {
-    open: { text: 'Sipariş alıyoruz', dot: 'bg-[#4ADE80]' },
-    paused: { text: 'Siparişe ara verdik', dot: 'bg-[#FBBF24]' },
-    closed: { text: 'Şu an kapalı', dot: 'bg-[#F87171]' },
-    disabled: { text: 'Online sipariş kapalı', dot: 'bg-[#F87171]' },
+const STATE_PILL: Record<OnlineOrdering['state'], string> = {
+    open: 'Sipariş alıyoruz',
+    paused: 'Siparişe ara verdik',
+    closed: 'Şu an kapalı',
+    disabled: 'Online sipariş kapalı',
 };
 
-function StatusChip({ state }: { state: OnlineOrdering['state'] }) {
-    const chip = STATE_CHIP[state];
+/** "Künefe", "Künefe ve Ayran", "Künefe, Ayran ve Sütlaç". */
+function listNames(names: string[]): string {
+    return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} ve ${names[names.length - 1]}`;
+}
+
+function zoneFacts(zone: DeliveryZone) {
+    return {
+        time: zone.estimatedMinutes > 0 ? `~${zone.estimatedMinutes} dk` : '—',
+        fee: zone.fee > 0 ? `${formatPrice(zone.fee)} ₺` : 'Ücretsiz',
+        minimum: zone.minOrderAmount > 0 ? `${formatPrice(zone.minOrderAmount)} ₺` : 'Yok',
+    };
+}
+
+const zoneShell = 'rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] p-4 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.25)] md:p-5';
+
+/** Mahalle kartı: seçimden önce "Mahallenizi seçin", sonra süre, ücret ve en az tutar hep görünür. */
+function ZoneCard({ zones, zone, onPick }: { zones: DeliveryZone[]; zone: DeliveryZone | null; onPick: () => void }) {
+    if (zones.length === 0) {
+        return (
+            <section aria-label="Teslimat mahallesi" className={zoneShell}>
+                <p className="flex items-center gap-2 text-sm font-semibold"><MapPin className="h-4 w-4 text-[var(--site-accent)]" aria-hidden="true" />Teslimat</p>
+                <p className="mt-2 text-sm text-[var(--site-sub)]">Restoran henüz teslimat bölgesi tanımlamadı.</p>
+            </section>
+        );
+    }
+    if (!zone) {
+        return (
+            <section aria-label="Teslimat mahallesi" className={zoneShell}>
+                <button type="button" onClick={onPick}
+                    className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-dashed border-[var(--site-border-strong)] px-4 py-2 text-left transition-colors hover:border-[var(--site-accent)]">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--site-raised)]">
+                        <MapPin className="h-5 w-5 text-[var(--site-accent)]" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-base font-semibold">Nereye gelsin?</span>
+                        <span className="block text-sm text-[var(--site-sub)]">Mahallenizi seçin; ücret, süre ve en az tutarı görün.</span>
+                    </span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
+                </button>
+            </section>
+        );
+    }
+    const facts = zoneFacts(zone);
     return (
-        <span className="flex h-8 items-center gap-2 rounded-full bg-white px-3 text-[13px] font-bold text-[#111111]">
-            <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', chip.dot, state === 'open' && 'shadow-[0_0_0_3px_rgba(74,222,128,0.3)]')} />
-            {chip.text}
-        </span>
+        <section aria-label="Teslimat mahallesi" className={zoneShell}>
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--site-sub)]">Teslimat</p>
+                    <p className={cn(serif, 'm-0 mt-0.5 truncate text-[30px] leading-none md:text-[34px]')}>{zone.name}</p>
+                    <p className="mt-1.5 text-sm text-[var(--site-sub)] md:hidden">
+                        {facts.time} · Teslimat {facts.fee}{zone.minOrderAmount > 0 ? ` · En az ${facts.minimum}` : ''}
+                    </p>
+                </div>
+                {zones.length > 1 && (
+                    <button type="button" onClick={onPick}
+                        className="flex h-11 shrink-0 items-center rounded-full border border-[var(--site-border-strong)] px-4 text-sm font-semibold transition-colors hover:border-[var(--site-text)]">
+                        Değiştir
+                    </button>
+                )}
+            </div>
+            <dl className="mt-4 hidden grid-cols-3 gap-3 border-t border-[var(--site-border)] pt-4 md:grid">
+                {[
+                    { icon: <Clock className="h-4 w-4" aria-hidden="true" />, label: 'Süre', value: facts.time },
+                    { icon: <Bike className="h-4 w-4" aria-hidden="true" />, label: 'Ücret', value: facts.fee },
+                    { icon: <Wallet className="h-4 w-4" aria-hidden="true" />, label: 'En az', value: facts.minimum },
+                ].map(item => (
+                    <div key={item.label} className="min-w-0">
+                        <dt className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--site-sub)]">{item.icon}{item.label}</dt>
+                        <dd className={cn(serif, 'm-0 mt-1 text-[24px] leading-none tabular-nums')}>{item.value}</dd>
+                    </div>
+                ))}
+            </dl>
+        </section>
+    );
+}
+
+/** Mahalle seçimi: arama + karşılaştırmalı liste. Eşleşme yoksa "henüz gelemiyoruz" ve sonraki adımlar. */
+function ZonePicker({ zones, selectedId, phone, onSelect, onBrowse, onClose }: {
+    zones: DeliveryZone[]; selectedId: string | null; phone: string;
+    onSelect: (id: string) => void; onBrowse: () => void; onClose: () => void;
+}) {
+    const [query, setQuery] = useState('');
+    const q = fold(query);
+    const matches = q ? zones.filter(z => fold(z.name).includes(q)) : zones;
+    // Yazım hatası için: ilk üç harfi tutan mahalleler önerilir.
+    const head = q.slice(0, 3);
+    const similar = q && matches.length === 0 ? zones.filter(z => fold(z.name).startsWith(head) || q.startsWith(fold(z.name).slice(0, 3))) : [];
+    const typed = query.trim();
+
+    return (
+        <Sheet title="Nereye gelsin?" onClose={onClose}>
+            <div className="pb-3 pt-1">
+                <label htmlFor="mahalle-ara" className="sr-only">Mahallenizi arayın</label>
+                <div className="relative">
+                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--site-sub)]" aria-hidden="true" />
+                    <input id="mahalle-ara" value={query} onChange={e => setQuery(e.target.value)} placeholder="Mahallenizi arayın"
+                        autoComplete="off" enterKeyHint="search"
+                        className="h-12 w-full rounded-xl border border-[var(--site-border-strong)] bg-[var(--site-bg)] pl-10 pr-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]" />
+                </div>
+            </div>
+
+            {matches.length > 0 ? (
+                <ul className="flex flex-col gap-2 pb-4">
+                    {matches.map(z => {
+                        const facts = zoneFacts(z);
+                        const on = z.id === selectedId;
+                        return (
+                            <li key={z.id}>
+                                <button type="button" onClick={() => onSelect(z.id)} aria-pressed={on}
+                                    className={cn('flex min-h-16 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors hover:border-[var(--site-accent)]',
+                                        on ? 'border-[var(--site-accent)] shadow-[0_0_0_1px_var(--site-accent)]' : 'border-[var(--site-border)]')}>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-base font-semibold">{z.name}</span>
+                                        <span className="block text-sm text-[var(--site-sub)]">En az {facts.minimum}</span>
+                                    </span>
+                                    <span className="shrink-0 text-right">
+                                        <span className="block text-sm font-semibold tabular-nums">{facts.time}</span>
+                                        <span className="block text-sm tabular-nums text-[var(--site-sub)]">{facts.fee}</span>
+                                    </span>
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+            ) : (
+                <div role="status" className="flex flex-col gap-3 pb-5">
+                    <p className={cn(serif, 'm-0 text-[30px] leading-[1.05]')}>{typed}&apos;ya henüz gelemiyoruz.</p>
+                    {similar.length > 0 && (
+                        <div>
+                            <p className="text-sm text-[var(--site-sub)]">Bunu mu demek istediniz?</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                {similar.map(z => (
+                                    <button key={z.id} type="button" onClick={() => onSelect(z.id)}
+                                        className="flex h-11 items-center rounded-full border border-[var(--site-border-strong)] px-4 text-sm font-semibold hover:border-[var(--site-accent)]">
+                                        {z.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <p className="text-[15px] leading-relaxed text-[var(--site-sub)]">
+                        {listNames(zones.map(z => z.name))} mahallelerine teslimat yapıyoruz. Yakınsanız telefonla sorun, belki yolumuzun üstündesiniz.
+                    </p>
+                    {phone && (
+                        <a href={telHref(phone)}
+                            className="flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--site-paper)] text-[15px] font-semibold text-[var(--site-on-paper)] no-underline">
+                            <Phone className="h-4 w-4" aria-hidden="true" />{phone}
+                        </a>
+                    )}
+                    <button type="button" onClick={onBrowse}
+                        className="flex h-12 items-center justify-center rounded-full border border-[var(--site-border-strong)] text-[15px] font-semibold">
+                        Menüye yine de göz at
+                    </button>
+                </div>
+            )}
+        </Sheet>
+    );
+}
+
+/** En az sepet tutarı çubuğu: "En az sepete 80 ₺ kaldı · 220 / 300 ₺". */
+function MinimumProgress({ subtotal, target, left, className }: { subtotal: number; target: number; left: number; className?: string }) {
+    const percent = Math.min(100, Math.max(0, (subtotal / target) * 100));
+    return (
+        <div className={className}>
+            <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                <span className="font-semibold">En az sepete {formatPrice(left)} ₺ kaldı</span>
+                <span className="tabular-nums text-[var(--site-sub)]">{formatPrice(subtotal)} / {formatPrice(target)} ₺</span>
+            </div>
+            <div role="progressbar" aria-label="En az sepet tutarı" aria-valuemin={0} aria-valuemax={target} aria-valuenow={Math.round(subtotal)}
+                className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--site-raised)]">
+                <div className="h-full rounded-full bg-[var(--site-accent)] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${percent}%` }} />
+            </div>
+        </div>
     );
 }
 
@@ -543,8 +743,9 @@ function CartLines({ lines, quote, onChange, onNote }: {
     );
 }
 
-function CartTotals({ subtotal, fee, total, zoneName, hint, hintIsError, canCheckout, onCheckout }: {
+function CartTotals({ subtotal, fee, total, zoneName, minimum, hint, hintIsError, canCheckout, onCheckout }: {
     subtotal: number; fee: number; total: number; zoneName: string | null;
+    minimum: { subtotal: number; target: number; left: number } | null;
     hint: string | null; hintIsError: boolean; canCheckout: boolean; onCheckout: () => void;
 }) {
     return (
@@ -554,6 +755,7 @@ function CartTotals({ subtotal, fee, total, zoneName, hint, hintIsError, canChec
                 <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Teslimat{zoneName ? ` (${zoneName})` : ''}</dt><dd className="tabular-nums">{zoneName ? `${formatPrice(fee)} ₺` : '—'}</dd></div>
                 <div className={cn(headingFont, 'flex justify-between pt-1 text-xl font-bold')}><dt>Toplam</dt><dd className="tabular-nums">{formatPrice(total)} ₺</dd></div>
             </dl>
+            {minimum && <MinimumProgress {...minimum} className="mb-3" />}
             {hint && (
                 <p className={cn('mb-3 rounded-xl px-3 py-2.5 text-sm font-medium',
                     hintIsError ? 'border border-[var(--site-error-line)] bg-[var(--site-error-bg)] text-[var(--site-error)]' : 'bg-[var(--site-raised)]')}>
@@ -569,13 +771,14 @@ function CartTotals({ subtotal, fee, total, zoneName, hint, hintIsError, canChec
 }
 
 /** Yüklenirken sayfanın iskeleti: başlık, mahalle kutusu, kategori şeridi ve ürün kartları (masaüstünde sepet). */
-function LoadingSkeleton() {
+function LoadingSkeleton({ nav }: { nav: boolean }) {
     const block = 'animate-pulse rounded-2xl bg-[var(--site-raised)]';
     return (
         <main className="min-h-screen pb-12" aria-busy="true" aria-label="Sipariş sayfası yükleniyor">
             <div className="bg-[var(--site-ink)]">
-                <div className="mx-auto max-w-6xl px-4 pb-12 pt-4 md:px-6 md:pb-16 md:pt-6">
-                    <div className="h-11 w-11 animate-pulse rounded-full bg-white/15" />
+                {nav && <HeaderSpacer />}
+                <div className={cn('mx-auto max-w-6xl px-4 pb-12 md:px-6 md:pb-16', nav ? 'pt-2' : 'pt-4 md:pt-6')}>
+                    {!nav && <div className="h-11 w-11 animate-pulse rounded-full bg-white/15" />}
                     <div className="mt-6 h-3 w-24 animate-pulse rounded bg-white/15 md:mt-10" />
                     <div className="mt-3 h-10 w-64 max-w-full animate-pulse rounded-xl bg-white/15 md:h-14 md:w-96" />
                     <div className="mt-5 flex gap-2">
@@ -613,22 +816,40 @@ function LoadingSkeleton() {
     );
 }
 
-/** Kapalı / durdurulmuş / online sipariş almıyor. Mesaj sunucudan gelir ve şubenin yerel saatiyle yazılmıştır. */
-function StateBanner({ data }: { data: OnlineOrdering }) {
-    const title = data.state === 'paused' ? 'Şu an sipariş alamıyoruz'
-        : data.state === 'closed' ? 'Şu an kapalıyız'
-            : 'Online sipariş kapalı';
+/**
+ * Kapalı / ara verildi / online sipariş kapalı: hata değil bilgi, sitenin koyu çağrı kartıyla. Açılış saati (nextOpensAt)
+ * biliniyorsa başlıkta; bilinmiyorsa sunucunun mesajı (şubenin yerel saatiyle yazılmış).
+ */
+function ClosedCard({ data, onBrowse }: { data: OnlineOrdering; onBrowse: () => void }) {
+    const opens = data.nextOpensAt ? opensText(data.nextOpensAt) : null;
+    const eyebrow = data.state === 'paused' ? 'Kısa bir ara' : data.state === 'closed' ? 'Mutfak dinleniyor' : 'Online sipariş';
+    const title = data.state === 'disabled' ? 'Online sipariş şu an kapalı.'
+        : opens ? `${opens}'de açılıyoruz.`
+            : data.state === 'paused' ? 'Kısa bir ara verdik.' : 'Şu an kapalıyız.';
     return (
-        <div role="status" className="flex gap-3 rounded-2xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] px-4 py-3 text-[var(--site-error)]">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-            <div className="min-w-0">
-                <p className="font-semibold">{title}</p>
-                {data.message && <p className="mt-0.5 text-sm">{data.message}</p>}
-                {data.state !== 'disabled' && <p className="mt-0.5 text-sm">Menüye göz atabilirsiniz; sipariş açılınca sepetiniz burada bekler.</p>}
+        <section role="status" aria-label="Sipariş durumu" className={cn(siteCardDark, 'flex flex-col gap-3 p-5 md:p-6')}>
+            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--site-on-paper-sub)]">
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />{eyebrow}
+            </p>
+            <p className={cn(serif, 'm-0 text-[32px] leading-[1.02] md:text-[40px]')}>{title}</p>
+            {!opens && data.message && <p className="text-[15px] text-[var(--site-on-paper-sub)]">{data.message}</p>}
+            {data.state !== 'disabled'
+                ? <p className="text-[15px] leading-relaxed text-[var(--site-on-paper-sub)]">Menüye göz atın, sepetiniz burada bekler. Açılınca tek dokunuşla gönderirsiniz.</p>
+                : data.restaurantPhone && <p className="text-[15px] leading-relaxed text-[var(--site-on-paper-sub)]">Telefonla sipariş verebilirsiniz.</p>}
+            <div className="mt-1 flex flex-wrap gap-2.5">
+                {data.state !== 'disabled' && (
+                    <button type="button" onClick={onBrowse}
+                        className="flex h-11 items-center rounded-full bg-[var(--site-on-paper)] px-5 text-sm font-semibold text-[var(--site-paper)] transition-opacity hover:opacity-90">
+                        Menüye göz at
+                    </button>
+                )}
                 {data.restaurantPhone && (
-                    <p className="mt-1 text-sm">Telefonla sipariş: <a className="font-semibold underline" href={telHref(data.restaurantPhone)}>{data.restaurantPhone}</a></p>
+                    <a href={telHref(data.restaurantPhone)}
+                        className="flex h-11 items-center gap-2 rounded-full border border-white/30 px-5 text-sm font-semibold text-[var(--site-on-paper)] no-underline transition-colors hover:bg-white/10">
+                        <Phone className="h-4 w-4" aria-hidden="true" />{data.state === 'disabled' ? data.restaurantPhone : 'Ara'}
+                    </a>
                 )}
             </div>
-        </div>
+        </section>
     );
 }

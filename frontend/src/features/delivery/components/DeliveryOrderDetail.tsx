@@ -9,6 +9,8 @@ import { formatAmount, formatElapsed } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { deliveryService } from '../api/deliveryService';
 import { CANCEL_REASONS, ETA_CHOICES, REJECT_REASONS, countdownText, orderTitle } from '../deliveryStatus';
+import CourierPicker from './CourierPicker';
+import LatenessBadge from './LatenessBadge';
 import { DeliveryStatus, DoorPayment, type DeliveryOrder } from '../types';
 
 interface Props {
@@ -19,6 +21,8 @@ interface Props {
     onClose: () => void;
     /** İşlemden sonra pano yeniden çeker (canlı olay da gelir). */
     onChanged: () => void;
+    /** Panodaki kartın "Reddet"i detayı doğrudan gerekçe adımında açar. */
+    initialStep?: 'main' | 'reject';
 }
 
 type Step = 'main' | 'reject' | 'cancel' | 'block';
@@ -29,8 +33,8 @@ function timeOf(iso?: string | null): string {
 
 // Online siparişin detayı ve işlemleri: kabul (süre seçerek), ret (gerekçe müşteriye gösterilir), kurye atama, iptal ve
 // numarayı engelleme (Owner/Admin). Yola çıkmış siparişe ürün eklenmez; bu ekranda ürün ekleme yoktur.
-export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, now, onClose, onChanged }: Props) {
-    const [step, setStep] = useState<Step>('main');
+export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, now, onClose, onChanged, initialStep = 'main' }: Props) {
+    const [step, setStep] = useState<Step>(initialStep);
     const [busy, setBusy] = useState(false);
     const suggested = order.suggestedEtaMinutes > 0 ? order.suggestedEtaMinutes : 30;
     const [eta, setEta] = useState<number>(suggested);
@@ -180,7 +184,12 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                     {/* Durum bilgisi */}
                     {(order.estimatedMinutes || order.dispatchedAt || order.deliveredAt) && (
                         <section className="space-y-1 text-sm text-muted-foreground">
-                            {order.acceptedAt && order.estimatedMinutes && <p>Kabul {timeOf(order.acceptedAt)} · müşteriye {order.estimatedMinutes} dk söylendi</p>}
+                            {order.acceptedAt && order.estimatedMinutes && (
+                                <p className="flex flex-wrap items-center gap-2">
+                                    Kabul {timeOf(order.acceptedAt)} · müşteriye {order.estimatedMinutes} dk söylendi
+                                    <LatenessBadge order={order} now={now} />
+                                </p>
+                            )}
                             {order.dispatchedAt && <p>Yola çıktı {timeOf(order.dispatchedAt)}</p>}
                             {order.deliveredAt && (
                                 <p>
@@ -195,28 +204,12 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                     {/* Kurye */}
                     {(canAssign || order.courierName) && step === 'main' && (
                         <section className="space-y-1.5">
-                            <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground" htmlFor={`kurye-${order.id}`}>
+                            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                                 <Bike className="h-3.5 w-3.5" aria-hidden="true" />Kurye
-                            </label>
+                                {canAssign && !order.courierUserId && <span className="normal-case tracking-normal text-rb-amber">· atanmadı</span>}
+                            </p>
                             {canAssign ? (
-                                couriers.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground">Şubede kurye yok. Çalışanlar sayfasından Kurye rolüyle ekleyin.</p>
-                                ) : (
-                                    <select
-                                        id={`kurye-${order.id}`}
-                                        value={order.courierUserId ?? ''}
-                                        disabled={busy}
-                                        onChange={e => assign(e.target.value || null)}
-                                        className="h-12 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground"
-                                    >
-                                        <option value="">Kurye seçilmedi</option>
-                                        {couriers.map(c => (
-                                            <option key={c.userId} value={c.userId}>
-                                                {c.fullName} · {c.openOrderCount} açık sipariş
-                                            </option>
-                                        ))}
-                                    </select>
-                                )
+                                <CourierPicker couriers={couriers} selectedId={order.courierUserId} disabled={busy} onPick={assign} />
                             ) : (
                                 <p className="text-sm font-semibold text-foreground">{order.courierName}</p>
                             )}

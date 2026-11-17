@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 function slotSummary(menu: SetMenu): string[] {
     return menu.slots.map(slot => {
         const options = slot.options
-            .map(o => `${o.productName}${o.surcharge > 0 ? ` (+₺${formatPrice(o.surcharge)})` : ''}`)
+            .map(o => `${o.productName}${o.isProductActive ? '' : ' (satış dışı)'}${o.surcharge > 0 ? ` (+₺${formatPrice(o.surcharge)})` : ''}`)
             .join(' / ');
         return slot.isFixed ? options : `${slot.name}: ${options}`;
     });
@@ -147,7 +147,7 @@ export default function SetMenusPage() {
                                     {slotSummary(menu).map(line => <li key={line}>{line}</li>)}
                                 </ul>
                                 {hasInactiveProduct && (
-                                    <p className="text-xs text-destructive">İçindeki bir ürün satış dışı; o seçenek siparişte seçilemez.</p>
+                                    <p className="text-xs text-destructive">"Satış dışı" işaretli ürün siparişte seçilemez.</p>
                                 )}
 
                                 <div className="mt-auto space-y-3">

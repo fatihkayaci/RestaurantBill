@@ -234,3 +234,36 @@ export function formatPhoneInput(raw: string): string {
 export function isCompletePhone(formatted: string): boolean {
     return /^0[1-9]\d{9}$/.test(formatted.replace(/\D/g, ''));
 }
+
+// ── Gönderilen sepetin kopyası ("Tekrar sipariş ver" / reddedilince "Sepete dön") ──────────────
+
+const SNAPSHOT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const snapshotKey = (token: string) => `rb:delivery-order-cart:${getTenantSlug() ?? 'dev'}:${token}`;
+
+export interface OrderSnapshot {
+    branchId: string;
+    lines: DeliveryCartLine[];
+    zoneId: string | null;
+    savedAt: number;
+}
+
+/** Sipariş gönderilince sepet silinmeden önce siparişin anahtarıyla saklanır (7 gün). */
+export function saveOrderSnapshot(token: string, branchId: string, lines: DeliveryCartLine[], zoneId: string | null) {
+    try {
+        localStorage.setItem(snapshotKey(token), JSON.stringify({ branchId, lines, zoneId, savedAt: Date.now() }));
+    } catch { /* özel pencere: tekrar sipariş boş sepetle açılır */ }
+}
+
+export function loadOrderSnapshot(token: string, now = Date.now()): OrderSnapshot | null {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(snapshotKey(token)) ?? 'null') as OrderSnapshot | null;
+        if (!parsed || !Array.isArray(parsed.lines) || typeof parsed.branchId !== 'string') return null;
+        if (now - (parsed.savedAt ?? 0) > SNAPSHOT_TTL_MS) {
+            localStorage.removeItem(snapshotKey(token));
+            return null;
+        }
+        return parsed;
+    } catch {
+        return null;
+    }
+}

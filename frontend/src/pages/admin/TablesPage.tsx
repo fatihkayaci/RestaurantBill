@@ -103,6 +103,8 @@ export default function Tables() {
     const [orderRequests, setOrderRequests] = useState<OrderRequest[]>([]);
     const [newTableName, setNewTableName] = useState('');
     const [newTableRegionId, setNewTableRegionId] = useState<string | null>(null);
+    // Kapasite (kişi): rezervasyon sayfasında masa kartında gösterilir; boş = girilmemiş.
+    const [newTableCapacity, setNewTableCapacity] = useState('');
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const tableNameInputRef = useRef<HTMLInputElement>(null);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -233,6 +235,7 @@ export default function Tables() {
         setEditTable(null);
         setNewTableName('');
         setNewTableRegionId(selectedRegionId === 'all' ? null : selectedRegionId);
+        setNewTableCapacity('');
         setFieldErrors({});
         setIsModalOpen(true);
     };
@@ -241,6 +244,7 @@ export default function Tables() {
         setEditTable(table);
         setNewTableName(table.name);
         setNewTableRegionId(table.regionId);
+        setNewTableCapacity(table.capacity ? String(table.capacity) : '');
         setFieldErrors({});
         setIsModalOpen(true);
     };
@@ -251,14 +255,16 @@ export default function Tables() {
         if (!newTableName.trim()) errors.name = 'Masa adı boş olamaz.';
         else if (newTableName.length > 50) errors.name = 'En fazla 50 karakter.';
         if (!newTableRegionId) errors.regionId = 'Bölge seçilmelidir.';
+        const capacity = newTableCapacity.trim() ? Number(newTableCapacity) : null;
+        if (capacity !== null && (!Number.isInteger(capacity) || capacity < 1 || capacity > 50)) errors.capacity = '1 ile 50 kişi arasında olmalı.';
         if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         setFieldErrors({});
 
         try {
             if (editTable) {
-                await tableService.updateTable(editTable.id, newTableName.trim(), newTableRegionId!);
+                await tableService.updateTable(editTable.id, newTableName.trim(), newTableRegionId!, undefined, capacity);
             } else {
-                await tableService.createTable(newTableName.trim(), newTableRegionId!);
+                await tableService.createTable(newTableName.trim(), newTableRegionId!, capacity);
             }
             await refreshTables();
             if (keepOpen) {
@@ -911,8 +917,8 @@ export default function Tables() {
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 flex flex-col overflow-hidden max-h-[calc(100dvh-2rem)] sm:max-h-[90vh]">
+                        <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <h2 className="text-xl font-bold text-foreground">
                                 {editTable ? 'Masayı Düzenle' : 'Masa Ekle'}
                             </h2>
@@ -920,7 +926,7 @@ export default function Tables() {
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
-                        <div className="px-6 py-5 space-y-4">
+                        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-4">
                             <div>
                                 <label className={labelClass}>Masa Adı</label>
                                 <input
@@ -948,8 +954,26 @@ export default function Tables() {
                                 </select>
                                 {fieldErrors.regionId && <p className="text-xs text-destructive mt-1">{fieldErrors.regionId}</p>}
                             </div>
+                            <div>
+                                <label htmlFor="masa-kapasite" className={labelClass}>Kaç kişilik? <span className="font-normal text-muted-foreground">(isteğe bağlı)</span></label>
+                                <input
+                                    id="masa-kapasite"
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={1}
+                                    max={50}
+                                    className={cn(inputClass, fieldErrors.capacity && "border-destructive")}
+                                    value={newTableCapacity}
+                                    onChange={e => setNewTableCapacity(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleSubmit(!editTable)}
+                                    placeholder="ör. 4"
+                                />
+                                {fieldErrors.capacity
+                                    ? <p className="text-xs text-destructive mt-1">{fieldErrors.capacity}</p>
+                                    : <p className="text-xs text-muted-foreground mt-1">Online rezervasyonda masa kartında görünür; kişi sayısına dar gelen masa seçilemez.</p>}
+                            </div>
                         </div>
-                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                        <div className="shrink-0 px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button
                                 onClick={() => setIsModalOpen(false)}
                                 className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
@@ -979,8 +1003,8 @@ export default function Tables() {
             {isRegionModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsRegionModalOpen(false)} />
-                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                    <div className="relative bg-white dark:bg-[#26221e] rounded-2xl shadow-xl w-full max-w-md mx-4 flex flex-col overflow-hidden max-h-[calc(100dvh-2rem)] sm:max-h-[90vh]">
+                        <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
                             <h2 className="text-xl font-bold text-foreground">
                                 {editRegion ? 'Bölgeyi Düzenle' : 'Bölge Ekle'}
                             </h2>
@@ -988,7 +1012,7 @@ export default function Tables() {
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
-                        <div className="px-6 py-5">
+                        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
                             <div>
                                 <label className={labelClass}>Bölge Adı</label>
                                 <input
@@ -1002,7 +1026,7 @@ export default function Tables() {
                                 {regionFieldError && <p className="text-xs text-destructive mt-1">{regionFieldError}</p>}
                             </div>
                         </div>
-                        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                        <div className="shrink-0 px-6 py-4 border-t border-border flex items-center justify-end gap-3">
                             <button
                                 onClick={() => setIsRegionModalOpen(false)}
                                 className="px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-muted transition-colors"

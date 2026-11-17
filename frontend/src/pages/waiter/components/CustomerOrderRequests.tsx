@@ -23,11 +23,26 @@ function minutesAgo(createdAt: string, now: number): string {
 
 // Müşterilerin masadaki QR'dan gönderdiği, garson onayı bekleyen siparişler.
 // Onaylanan sipariş masanın adisyonuna eklenir ve mutfağa düşer; reddedilen hiçbir yere gitmez.
+// Ret nedeni müşterinin telefonunda "Onaylanmadı" kartında alıntı olarak görünür; hızlı seçim ya da serbest metin.
+const QUICK_REASONS = [
+    'Ürünlerden biri bu akşam bitti.',
+    'Mutfak şu an yoğun, biraz bekletebilir miyiz?',
+    'Siparişinizi masanızda birlikte alalım.',
+] as const;
+const REASON_MAX = 300;
+
 export default function CustomerOrderRequests({ requests, onChanged, canDecide = true }: Props) {
     const [busyId, setBusyId] = useState<string | null>(null);
     const [now] = useState(() => Date.now());
+    const [rejectingId, setRejectingId] = useState<string | null>(null);
+    const [reason, setReason] = useState('');
 
     if (requests.length === 0) return null;
+
+    const startReject = (request: OrderRequest) => {
+        setRejectingId(request.id);
+        setReason('');
+    };
 
     const decide = async (request: OrderRequest, approve: boolean) => {
         if (busyId) return;
@@ -37,8 +52,10 @@ export default function CustomerOrderRequests({ requests, onChanged, canDecide =
                 await customerRequestService.approveOrderRequest(request.id);
                 toast.success(`${request.tableName} siparişi onaylandı, mutfağa gönderildi.`);
             } else {
-                await customerRequestService.rejectOrderRequest(request.id);
+                await customerRequestService.rejectOrderRequest(request.id, reason.trim() || undefined);
                 toast.success(`${request.tableName} siparişi reddedildi.`);
+                setRejectingId(null);
+                setReason('');
             }
         } catch (err) {
             toast.error(getApiErrorMessage(err, 'İşlem yapılamadı. Lütfen tekrar deneyin.'));
@@ -82,11 +99,43 @@ export default function CustomerOrderRequests({ requests, onChanged, canDecide =
 
                         {!canDecide ? (
                             <p className="mt-3 text-sm text-rb-text-sub">Onaylamak için yetkiniz yok; yöneticinize haber verin.</p>
+                        ) : rejectingId === request.id ? (
+                            <div className="mt-3 flex flex-col gap-2.5 rounded-xl bg-card p-3">
+                                <label htmlFor={`ret-${request.id}`} className="text-sm font-semibold text-foreground">Müşteriye neden yazın <span className="font-normal text-rb-text-sub">(isteğe bağlı)</span></label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {QUICK_REASONS.map(text => (
+                                        <button key={text} type="button" onClick={() => setReason(text)}
+                                            className={`min-h-9 rounded-full border px-3 text-left text-[13px] font-medium transition-colors ${reason === text ? 'border-rb-gold bg-rb-gold-bg text-foreground' : 'border-border text-rb-text-sub hover:text-foreground'}`}>
+                                            {text}
+                                        </button>
+                                    ))}
+                                </div>
+                                <textarea
+                                    id={`ret-${request.id}`}
+                                    value={reason}
+                                    onChange={e => setReason(e.target.value.slice(0, REASON_MAX))}
+                                    rows={2}
+                                    maxLength={REASON_MAX}
+                                    placeholder="ör. Künefe bu akşam bitti, katmer önerebiliriz."
+                                    className="w-full rounded-xl border-[1.5px] border-border bg-background px-3 py-2 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-rb-gold"
+                                />
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <button type="button" onClick={() => setRejectingId(null)} disabled={busyId !== null}
+                                        className="flex h-12 items-center justify-center rounded-xl border-[1.5px] border-border bg-card text-base font-semibold text-foreground disabled:opacity-50">
+                                        Vazgeç
+                                    </button>
+                                    <button type="button" onClick={() => decide(request, false)} disabled={busyId !== null}
+                                        className="flex h-12 items-center justify-center gap-2 rounded-xl bg-rb-red text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                                        <X className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
+                                        {busyId === request.id ? 'İşleniyor…' : 'Reddet'}
+                                    </button>
+                                </div>
+                            </div>
                         ) : (
                             <div className="mt-3 grid grid-cols-2 gap-2.5">
                                 <button
                                     type="button"
-                                    onClick={() => decide(request, false)}
+                                    onClick={() => startReject(request)}
                                     disabled={busyId !== null}
                                     className="flex h-12 items-center justify-center gap-2 rounded-xl border-[1.5px] border-border bg-card text-base font-semibold text-foreground transition-colors hover:border-rb-red hover:text-rb-red disabled:opacity-50"
                                 >
