@@ -45,7 +45,8 @@ public class SearchStockImagesQueryHandler(IAppDbContext db, IOptions<BunnyStora
 /// </summary>
 public static class StockImageSearch
 {
-    public const int MaxResults = 48;
+    // Seçicide görseller kaydırdıkça yüklenir (loading="lazy"); tüm kataloğu (mekân + yemek) gösterecek kadar geniş.
+    public const int MaxResults = 300;
     public const int MaxQueryLength = 100;
 
     private const int TitleExact = 0;

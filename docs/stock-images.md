@@ -93,7 +93,7 @@ WebP, 2000 px on the long side (the size site cover and page-hero uploads get; g
 
 | Method | Route | Roles | Body / query | Returns |
 |---|---|---|---|---|
-| GET | `api/stock-images?q=&scope=&group=` | Owner, Admin | all optional | `[{ id, title, group, url }]`, max 48. Empty `q`: default list by `sortOrder`. Ranking: exact title, exact keyword, title/keyword word prefix, contains; multi-word queries (the picker opens with the product name, e.g. "Adana Kebap") fall back to per-word matches, most words first. `scope` and `group`: see below. |
+| GET | `api/stock-images?q=&scope=&group=` | Owner, Admin | all optional | `[{ id, title, group, url }]`, max 300 (thumbnails load lazily). Empty `q`: default list by `sortOrder`. Ranking: exact title, exact keyword, title/keyword word prefix, contains; multi-word queries (the picker opens with the product name, e.g. "Adana Kebap") fall back to per-word matches, most words first. `scope` and `group`: see below. |
 | POST | `api/product/{id}/stock-image` | Owner, Admin | `{ stockImageId }` | full CDN url |
 | POST | `api/set-menu/{id}/stock-image` | Owner, Admin | `{ stockImageId }` | full CDN url |
 
@@ -102,7 +102,7 @@ WebP, 2000 px on the long side (the size site cover and page-hero uploads get; g
 | `scope` | Empty `q` | With `q` | Used by |
 |---|---|---|---|
 | omitted / `all` | All groups by `sortOrder` (as before) | Ranked over all groups | – |
-| `venue` | Venue groups only, by group order (table above), then `sortOrder`, then title | Venue matches first (ranked), then the other matches (ranked); 48 in total | Site editor (`StockGrid`) |
+| `venue` | Venue groups only, by group order (table above), then `sortOrder`, then title | Venue matches first (ranked), then the other matches (ranked); 300 in total | Site editor (`StockGrid`) |
 | `food` | Venue groups excluded | Venue groups excluded | Product and set-menu picker (`StockImagePickerModal`) |
 
 `group` keeps one group only ("Kafe"; case and Turkish letters ignored) and combines with `scope`. The site editor's

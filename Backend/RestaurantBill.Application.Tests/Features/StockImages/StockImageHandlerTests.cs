@@ -178,16 +178,18 @@ public class StockImageHandlerTests
         [Fact]
         public async Task VenueScope_WithQuery_IsCappedAtMaxResults()
         {
-            DbContext.StockImages.AddRange(Enumerable.Range(0, 30)
+            // Sınırdan fazla eşleşme: yarısı mekân, yarısı yemek.
+            int half = StockImageSearch.MaxResults / 2 + 10;
+            DbContext.StockImages.AddRange(Enumerable.Range(0, half)
                 .Select(i => StockImage.Create($"shared/stock/mekan-{i}.webp", $"Salon {i}", null, "Mekân"))
-                .Concat(Enumerable.Range(0, 30).Select(i => StockImage.Create($"shared/stock/s-{i}.webp", $"Salon tabağı {i}", null, "Ana yemek")))
+                .Concat(Enumerable.Range(0, half).Select(i => StockImage.Create($"shared/stock/s-{i}.webp", $"Salon tabağı {i}", null, "Ana yemek")))
                 .ToArray());
             await DbContext.SaveChangesAsync();
 
             List<string> titles = await SearchTitlesAsync("salon", StockImageScope.Venue);
 
             Assert.Equal(StockImageSearch.MaxResults, titles.Count);
-            Assert.All(titles.Take(30), t => Assert.DoesNotContain("tabağı", t));
+            Assert.All(titles.Take(half), t => Assert.DoesNotContain("tabağı", t));
         }
 
         [Fact]
