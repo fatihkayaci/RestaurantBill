@@ -43,7 +43,7 @@ public class GetCustomerReservationsQueryHandler(IAppDbContext db, ICurrentUserS
 
         List<Guid> reservationIds = rows.Select(r => r.Id).ToList();
         Dictionary<Guid, OrderRequest> preOrders = (await db.OrderRequests.AsNoTracking()
-                .Include(o => o.Items).ThenInclude(i => i.Product)
+                .IncludeLines()
                 .Where(o => o.Kind == OrderRequestKind.PreOrder && o.ReservationId != null && reservationIds.Contains(o.ReservationId.Value))
                 .ToListAsync(cancellationToken))
             .GroupBy(o => o.ReservationId!.Value)
@@ -92,15 +92,8 @@ public class GetCustomerReservationsQueryHandler(IAppDbContext db, ICurrentUserS
         Status = (int)preOrder.Status,
         Note = preOrder.Note,
         UpdatedAt = preOrder.UpdatedAt ?? preOrder.CreatedAt,
-        Total = preOrder.Items.Sum(i => (i.UnitPrice ?? i.Product.Price) * i.Quantity),
-        Items = preOrder.Items.Select(i => new OrderRequestItemDto
-        {
-            ProductId = i.ProductId,
-            ProductName = i.Product.Name,
-            Quantity = i.Quantity,
-            UnitPrice = i.UnitPrice ?? i.Product.Price,
-            Note = i.Note
-        }).ToList()
+        Total = OrderRequestLines.TotalOf(preOrder),
+        Items = preOrder.Items.Select(OrderRequestLines.ToDto).ToList()
     };
 }
 

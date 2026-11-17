@@ -1126,11 +1126,20 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid>("OrderRequestId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ProductId")
+                    b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
+
+                    b.Property<string>("SelectionsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("{}");
+
+                    b.Property<Guid?>("SetMenuId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal?>("UnitPrice")
                         .HasPrecision(18, 2)
@@ -1144,6 +1153,8 @@ namespace RestaurantBill.Persistence.Migrations
                     b.HasIndex("OrderRequestId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("SetMenuId");
 
                     b.ToTable("OrderRequestItems");
                 });
@@ -2324,12 +2335,18 @@ namespace RestaurantBill.Persistence.Migrations
                     b.HasOne("RestaurantBill.Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("RestaurantBill.Domain.Entities.SetMenu", "SetMenu")
+                        .WithMany()
+                        .HasForeignKey("SetMenuId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("OrderRequest");
 
                     b.Navigation("Product");
+
+                    b.Navigation("SetMenu");
                 });
 
             modelBuilder.Entity("RestaurantBill.Domain.Entities.Payment", b =>

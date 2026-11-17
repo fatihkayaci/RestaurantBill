@@ -385,8 +385,14 @@ export interface ReservationDetail {
 // ── Personel tarafı ──────────────────────────────────────────────────────────
 
 export interface OrderRequestItem {
-    productId: string;
+    /** "product" ya da "setMenu" (eski sunucu: yok → ürün). */
+    kind?: 'product' | 'setMenu';
+    productId: string | null;
+    setMenuId?: string | null;
+    /** Ürünün ya da menünün adı. */
     productName: string;
+    /** Menü kaleminde seçilen ürünler ("Kola (+₺10)"); üründe boş. */
+    selections?: string[];
     quantity: number;
     unitPrice: number;
     note: string;

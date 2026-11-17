@@ -83,8 +83,14 @@ export default function CustomerOrderRequests({ requests, onChanged, canDecide =
 
                         <ul className="mt-3 flex flex-col gap-1.5">
                             {request.items.map((item, index) => (
-                                <li key={`${item.productId}-${index}`} className="text-base text-foreground">
+                                <li key={`${item.setMenuId ?? item.productId}-${index}`} className="text-base text-foreground">
                                     <span className="font-bold">{item.quantity}×</span> {item.productName}
+                                    {item.kind === 'setMenu' && (
+                                        <span className="ml-1.5 rounded-full bg-card px-2 py-0.5 align-middle text-xs font-semibold text-rb-text-sub">Menü</span>
+                                    )}
+                                    {item.selections && item.selections.length > 0 && (
+                                        <span className="block pl-7 text-sm text-foreground">{item.selections.join(' · ')}</span>
+                                    )}
                                     {item.note && <span className="block pl-7 text-sm text-rb-text-sub">Not: {item.note}</span>}
                                 </li>
                             ))}

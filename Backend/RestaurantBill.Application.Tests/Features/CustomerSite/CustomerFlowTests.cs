@@ -65,7 +65,7 @@ public class CustomerFlowTests : ApplicationTestBase
     }
 
     private Task<Result<OrderRequestStatusDto>> SendOrderRequestAsync(params Product[] products)
-        => new CreateOrderRequestCommandHandler(Db, _tenant, _tableNotifications).Handle(new CreateOrderRequestCommand
+        => new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications).Handle(new CreateOrderRequestCommand
         {
             TableId = _table.Id,
             Items = products.Select(p => new OrderRequestItemInput { ProductId = p.Id, Quantity = 1 }).ToList()

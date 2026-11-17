@@ -65,15 +65,32 @@ namespace RestaurantBill.Domain.Entities
         {
             if (product is null)
                 throw new DomainException("Geçersiz ürün.");
+            EnsureCanAdd(quantity, unitPrice);
+
+            _items.Add(OrderRequestItem.Create(product, quantity, note?.Trim() ?? string.Empty, unitPrice));
+        }
+
+        /// <summary>
+        /// Menü (set) kalemi. <paramref name="selectionsJson"/> varsayılanlar dahil tüm bölümlerin seçimi (bölüm Id → ürün
+        /// Id); doğrulaması fiyatlandırmada (OrderPricingService) yapılır. unitPrice QR talebinde null (onayda güncel fiyat).
+        /// </summary>
+        public void AddSetMenuItem(SetMenu setMenu, int quantity, string selectionsJson, string? note, decimal? unitPrice = null)
+        {
+            if (setMenu is null)
+                throw new DomainException("Geçersiz menü.");
+            EnsureCanAdd(quantity, unitPrice);
+
+            _items.Add(OrderRequestItem.CreateSetMenu(setMenu, quantity, selectionsJson, note?.Trim() ?? string.Empty, unitPrice));
+        }
+
+        private void EnsureCanAdd(int quantity, decimal? unitPrice)
+        {
             if (quantity <= 0 || quantity > MaxQuantity)
                 throw new DomainException($"Adet 1 ile {MaxQuantity} arasında olmalı.");
             if (_items.Count >= MaxItems)
                 throw new DomainException($"Bir talepte en fazla {MaxItems} kalem olabilir.");
-
             if (unitPrice is < 0)
                 throw new DomainException("Birim fiyat negatif olamaz.");
-
-            _items.Add(OrderRequestItem.Create(product, quantity, note?.Trim() ?? string.Empty, unitPrice));
         }
 
         public void Approve()
@@ -135,14 +152,34 @@ namespace RestaurantBill.Domain.Entities
     {
         public Guid OrderRequestId { get; private set; }
         public OrderRequest OrderRequest { get; private set; } = default!;
-        public Guid ProductId { get; private set; }
-        public Product Product { get; private set; } = default!;
+        // Kalem ya ürün (ProductId) ya da menüdür (SetMenuId + SelectionsJson).
+        public Guid? ProductId { get; private set; }
+        public Product? Product { get; private set; }
+        public Guid? SetMenuId { get; private set; }
+        public SetMenu? SetMenu { get; private set; }
+        /// <summary>Menü kaleminde bölüm Id → ürün Id (JSON, varsayılanlar dahil); ürün kaleminde "{}".</summary>
+        public string SelectionsJson { get; private set; } = "{}";
         public int Quantity { get; private set; }
         public string Note { get; private set; } = string.Empty;
         // Ön siparişte fiyat anlık görüntüsü; QR talebinde null.
         public decimal? UnitPrice { get; private set; }
 
+        public bool IsSetMenu => SetMenuId is not null;
+
         protected OrderRequestItem() { }
+
+        internal static OrderRequestItem CreateSetMenu(SetMenu setMenu, int quantity, string selectionsJson, string note, decimal? unitPrice)
+        {
+            return new OrderRequestItem
+            {
+                SetMenu = setMenu,
+                SetMenuId = setMenu.Id,
+                SelectionsJson = string.IsNullOrWhiteSpace(selectionsJson) ? "{}" : selectionsJson,
+                Quantity = quantity,
+                Note = note,
+                UnitPrice = unitPrice
+            };
+        }
 
         internal static OrderRequestItem Create(Product product, int quantity, string note, decimal? unitPrice)
         {

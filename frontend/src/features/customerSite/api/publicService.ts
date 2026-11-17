@@ -23,10 +23,16 @@ publicApi.interceptors.request.use((config) => {
     return config;
 });
 
+/** Masa talebinin kalemi: ürün ya da menü (set); paket siparişin sepet satırıyla (CartLineInput) aynı biçim. */
 export interface OrderRequestItemInput {
-    productId: string;
+    /** Verilmezse ürün (ön sipariş yalnız ürün alır). */
+    kind?: 'product' | 'setMenu';
+    productId?: string;
+    setMenuId?: string;
     quantity: number;
     note: string;
+    /** Menü: bölüm → ürün (varsayılanlar dahil); üründe boş. */
+    selections?: { slotId: string; productId: string }[];
 }
 
 export interface ReservationInput {

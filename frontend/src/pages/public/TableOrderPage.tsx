@@ -6,6 +6,12 @@ import {
     ORDER_REQUEST_APPROVED, ORDER_REQUEST_PENDING, ORDER_REQUEST_REJECTED, canReserveOnline, type PublicProduct, type PublicSite,
     type PublicTableInfo,
 } from '@/features/customerSite/types';
+import {
+    addLine, changeQuantity, defaultSelections, estimatedSubtotal, itemCount as countItems, productKey, pruneUnavailable,
+    quantityOf as sumQuantity, selectionNames, setLineNote as setCartLineNote, setMenuKey, setMenuUnitPrice, toCartInput,
+    type DeliveryCartLine,
+} from '@/features/delivery/deliveryCart';
+import type { OnlineSetMenu } from '@/features/delivery/types';
 import type { TableIbanPayment } from '@/features/customerSite/tableIbanPayment';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
@@ -15,6 +21,7 @@ import MyOrdersSheet from './components/MyOrdersSheet';
 import TableLanding, { TableActionConfirmation, type TableActionKind } from './components/TableLanding';
 import { customerFontsHref, customerRootStyle, opensText } from './customerTheme';
 import DeliveryMenu from './delivery/DeliveryMenu';
+import DeliverySetMenuSheet from './delivery/DeliverySetMenuSheet';
 import { ImageSlot } from './site/SiteChrome';
 import { serif } from './site/siteParts';
 import { resolveDesign } from './site/siteTheme';
@@ -26,16 +33,13 @@ import {
 import { useTableOrderRequests, type SentOrderRequest } from './useTableOrderRequests';
 import { useTableAction } from './useTableAction';
 
-interface CartLine {
-    product: PublicProduct;
-    quantity: number;
-    note: string;
-}
-
-const MAX_QUANTITY = 50;
+/** Seçim yapılacak bölümü yok (tüm bölümler tek seçenekli): pencere açılmadan doğrudan eklenir. */
+const hasChoices = (menu: OnlineSetMenu) => menu.slots.some(slot => !slot.isFixed && slot.options.length > 1);
 
 // Masadaki QR kodun açtığı sayfa (görünüm: "Renkli ve sıcak", sınıflar table/tableUi.ts). İlk ekran karşılama: sitenin kapağı, tek ana eylem (menü), garson + hesap.
-// Menüde (?ekran=menu) paket sipariş menüsünün kartları (DeliveryMenu) kullanılır; sepet garsona gönderilir, garson
+// Menüde (?ekran=menu) paket sipariş menüsünün kartları (DeliveryMenu) kullanılır; menüler (set) de listelenir: seçimi
+// olmayan menü doğrudan eklenir, seçimli menü paket siparişin seçim penceresini (DeliverySetMenuSheet) açar. Sepet satırları
+// paket sepetiyle aynı biçimdedir (deliveryCart). Sepet garsona gönderilir, garson
 // onaylayınca mutfağa gider. Gönderimden sonra tam ekran "Siparişiniz garsonda" onayı açılır ve talebin durumunu
 // (useTableOrderRequests yoklaması) canlı gösterir. Restoran kapalıyken (isOpenNow=false) menü yalnız göz atmalıktır.
 // Telefonun geri tuşu ve menüdeki geri düğmesi karşılamaya döner; sepet korunur.
@@ -47,7 +51,8 @@ export default function TableOrderPage() {
     const [site, setSite] = useState<PublicSite | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [loadTick, setLoadTick] = useState(0);
-    const [cart, setCart] = useState<Record<string, CartLine>>({});
+    const [cart, setCart] = useState<DeliveryCartLine[]>([]);
+    const [setMenuOpen, setSetMenuOpen] = useState<OnlineSetMenu | null>(null);
     const [orderNote, setOrderNote] = useState('');
     const [cartOpen, setCartOpen] = useState(false);
     const [sending, setSending] = useState(false);
@@ -91,45 +96,49 @@ export default function TableOrderPage() {
     const retryLoad = () => { setLoadError(null); setLoadTick(t => t + 1); };
 
     const pendingCount = requests.filter(r => r.status === ORDER_REQUEST_PENDING).length;
-    const lines = useMemo(() => Object.values(cart), [cart]);
-    const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
-    const total = lines.reduce((sum, line) => sum + line.quantity * line.product.price, 0);
+    const lines = cart;
+    const itemCount = countItems(lines);
+    const total = estimatedSubtotal(lines);
+    // Sepet satırlarının küçük görselleri: ürünün ya da menünün görseli.
+    const images = useMemo(() => new Map<string, string>([
+        ...(site?.categories ?? []).flatMap(c => c.products).map(p => [p.id, p.imageUrl] as [string, string]),
+        ...(site?.setMenus ?? []).map(m => [m.id, m.imageUrl] as [string, string]),
+    ]), [site]);
 
     const add = (product: PublicProduct) => {
         if (product.isOutOfStock) return;
-        setCart(prev => {
-            const current = prev[product.id];
-            const quantity = Math.min(MAX_QUANTITY, (current?.quantity ?? 0) + 1);
-            return { ...prev, [product.id]: { product, quantity, note: current?.note ?? '' } };
-        });
+        setCart(prev => addLine(prev, {
+            key: productKey(product.id), kind: 'product', productId: product.id, name: product.name, unitPrice: product.price,
+            note: '', selections: {}, selectionNames: [],
+        }));
     };
 
-    const remove = (product: PublicProduct) => {
-        setCart(prev => {
-            const current = prev[product.id];
-            if (!current) return prev;
-            if (current.quantity <= 1) {
-                const next = { ...prev };
-                delete next[product.id];
-                return next;
-            }
-            return { ...prev, [product.id]: { ...current, quantity: current.quantity - 1 } };
-        });
+    const remove = (product: PublicProduct) => setCart(prev => changeQuantity(prev, productKey(product.id), -1));
+
+    // Paket siparişle aynı: aynı seçim ve notlu menüler tek satırda toplanır.
+    const addSetMenu = (menu: OnlineSetMenu, selections: Record<string, string>, quantity: number, note: string) => {
+        const key = setMenuKey(menu.id, selections) + (note ? `:${note}` : '');
+        setCart(prev => addLine(prev, {
+            key, kind: 'setMenu', setMenuId: menu.id, name: menu.name, unitPrice: setMenuUnitPrice(menu, selections),
+            note, selections, selectionNames: selectionNames(menu, selections),
+        }, quantity));
+        setSetMenuOpen(null);
     };
 
-    const setLineNote = (productId: string, note: string) => {
-        setCart(prev => prev[productId] ? { ...prev, [productId]: { ...prev[productId], note } } : prev);
+    const openSetMenu = (menu: OnlineSetMenu) => {
+        if (!menu.isAvailable) return;
+        if (hasChoices(menu)) setSetMenuOpen(menu);
+        else addSetMenu(menu, defaultSelections(menu), 1, '');
     };
 
-    // Gönderim "tükendi" gibi bir nedenle reddedilirse menü tazelenir; tükenen ürünler sepetten düşer.
+    const setLineNote = (key: string, note: string) => setCart(prev => setCartLineNote(prev, key, note));
+
+    // Gönderim "tükendi" gibi bir nedenle reddedilirse menü tazelenir; tükenen ürünler ve menüler sepetten düşer.
     const refreshMenu = async (branchId: string) => {
         try {
             const fresh = await publicService.getSite(branchId);
             setSite(fresh);
-            const soldOut = new Set(fresh.categories.flatMap(c => c.products).filter(p => p.isOutOfStock).map(p => p.id));
-            if (soldOut.size > 0) {
-                setCart(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => !soldOut.has(id))));
-            }
+            setCart(prev => pruneUnavailable(prev, fresh.categories, fresh.setMenus ?? []).lines);
         } catch { /* eski menüyle devam */ }
     };
 
@@ -140,16 +149,21 @@ export default function TableOrderPage() {
         try {
             const result = await publicService.createOrderRequest(
                 tableId,
-                lines.map(line => ({ productId: line.product.id, quantity: line.quantity, note: line.note.trim() })),
+                toCartInput(lines).map(line => ({ ...line, note: line.note ?? '' })),
                 orderNote.trim()
             );
             addRequest({
                 id: result.id,
                 status: result.status,
                 total,
-                items: lines.map(line => ({ name: line.product.name, quantity: line.quantity, productId: line.product.id })),
+                items: lines.map(line => ({
+                    name: line.selectionNames.length > 0 ? `${line.name} (${line.selectionNames.join(', ')})` : line.name,
+                    quantity: line.quantity,
+                    productId: line.productId,
+                    setMenuId: line.setMenuId,
+                })),
             });
-            setCart({});
+            setCart([]);
             setOrderNote('');
             setCartOpen(false);
             setSentId(result.id);
@@ -290,7 +304,8 @@ export default function TableOrderPage() {
         );
     }
 
-    const quantityOf = (productId: string) => cart[productId]?.quantity ?? 0;
+    const quantityOf = (productId: string) => sumQuantity(cart, l => l.productId === productId);
+    const setMenuQuantity = (setMenuId: string) => sumQuantity(cart, l => l.setMenuId === setMenuId);
     const reopen = opensText(site.site.opensAt);
     const showActionBar = !!(waiterAction || billAction || openIban);
 
@@ -356,10 +371,13 @@ export default function TableOrderPage() {
 
                         <DeliveryMenu
                             categories={site.categories}
+                            setMenus={site.setMenus ?? []}
                             restaurant={restaurant}
                             productQuantity={quantityOf}
+                            setMenuQuantity={setMenuQuantity}
                             onAddProduct={add}
                             onRemoveProduct={remove}
+                            onOpenSetMenu={openSetMenu}
                             featuredSection
                             readOnly={!canOrder}
                             empty={(
@@ -435,16 +453,25 @@ export default function TableOrderPage() {
                 </div>
             )}
 
+            {canOrder && setMenuOpen && (
+                <DeliverySetMenuSheet
+                    menu={setMenuOpen}
+                    restaurant={restaurant}
+                    onClose={() => setSetMenuOpen(null)}
+                    onAdd={(selections, quantity, note) => addSetMenu(setMenuOpen, selections, quantity, note)}
+                />
+            )}
+
             {canOrder && cartOpen && (
                 <CartSheet
                     lines={lines}
                     total={total}
                     restaurant={restaurant}
                     tableName={table.name}
+                    images={images}
                     orderNote={orderNote}
                     onOrderNote={setOrderNote}
-                    onAdd={add}
-                    onRemove={remove}
+                    onChange={(key, delta) => setCart(prev => changeQuantity(prev, key, delta))}
                     onLineNote={setLineNote}
                     onSend={send}
                     sending={sending}
@@ -483,15 +510,16 @@ function MenuActionButton({ label, icon, action, onClick, onReopen, iconOnly = f
     );
 }
 
-function CartSheet({ lines, total, restaurant, tableName, orderNote, onOrderNote, onAdd, onRemove, onLineNote, onSend, sending, sendError, onClose }: {
-    lines: CartLine[]; total: number; restaurant: string; tableName: string;
+function CartSheet({ lines, total, restaurant, tableName, images, orderNote, onOrderNote, onChange, onLineNote, onSend, sending, sendError, onClose }: {
+    lines: DeliveryCartLine[]; total: number; restaurant: string; tableName: string; images: Map<string, string>;
     orderNote: string; onOrderNote: (note: string) => void;
-    onAdd: (product: PublicProduct) => void; onRemove: (product: PublicProduct) => void;
-    onLineNote: (productId: string, note: string) => void;
+    onChange: (key: string, delta: number) => void;
+    onLineNote: (key: string, note: string) => void;
     onSend: () => void; sending: boolean; sendError: string | null; onClose: () => void;
 }) {
-    // Satır notu satır başına değil, istenince açılır (yazılmış not açık kalır).
-    const [openNotes, setOpenNotes] = useState<Set<string>>(() => new Set(lines.filter(l => l.note).map(l => l.product.id)));
+    // Satır notu satır başına değil, istenince açılır (yazılmış not açık kalır). Menü satırının notu seçim penceresinde
+    // yazılır ve satırın anahtarındadır; sepette yalnız gösterilir.
+    const [openNotes, setOpenNotes] = useState<Set<string>>(() => new Set(lines.filter(l => l.kind === 'product' && l.note).map(l => l.key)));
     const [orderNoteOpen, setOrderNoteOpen] = useState(!!orderNote);
 
     return (
@@ -519,39 +547,45 @@ function CartSheet({ lines, total, restaurant, tableName, orderNote, onOrderNote
                     ) : (
                         <ul className="m-0 list-none divide-y divide-[var(--site-border)] p-0">
                             {lines.map(line => {
-                                const noteOpen = openNotes.has(line.product.id);
+                                const isMenu = line.kind === 'setMenu';
+                                const noteOpen = !isMenu && openNotes.has(line.key);
+                                const imageId = (isMenu ? line.setMenuId : line.productId) ?? '';
                                 return (
-                                    <li key={line.product.id} className="py-3.5">
+                                    <li key={line.key} className="py-3.5">
                                         <div className="flex items-center gap-3">
-                                            <ImageSlot src={line.product.imageUrl} alt="" restaurant={restaurant}
+                                            <ImageSlot src={images.get(imageId)} alt="" restaurant={restaurant}
                                                 logoTextClassName="text-[min(10px,12cqw)]" className="h-14 w-14 shrink-0 rounded-full border-2 border-[var(--site-mustard)]" />
                                             <div className="min-w-0 flex-1">
-                                                <p className={cn(serif, 'm-0 break-words text-[18px] leading-tight')}>{line.product.name}</p>
-                                                <p className="m-0 mt-0.5 text-sm font-extrabold tabular-nums text-[var(--site-accent-text)]">{formatPrice(line.product.price * line.quantity)} ₺</p>
-                                                {!noteOpen && (
-                                                    <button type="button" onClick={() => setOpenNotes(prev => new Set(prev).add(line.product.id))}
+                                                <p className={cn(serif, 'm-0 break-words text-[18px] leading-tight')}>{line.name}</p>
+                                                {line.selectionNames.length > 0 && (
+                                                    <p className="m-0 mt-0.5 break-words text-sm leading-snug text-[var(--site-sub)]">{line.selectionNames.join(' · ')}</p>
+                                                )}
+                                                {isMenu && line.note && <p className="m-0 mt-0.5 break-words text-sm text-[var(--site-sub)]">Not: {line.note}</p>}
+                                                <p className="m-0 mt-0.5 text-sm font-extrabold tabular-nums text-[var(--site-accent-text)]">{formatPrice(line.unitPrice * line.quantity)} ₺</p>
+                                                {!isMenu && !noteOpen && (
+                                                    <button type="button" onClick={() => setOpenNotes(prev => new Set(prev).add(line.key))}
                                                         className="min-h-11 text-sm font-bold text-[var(--site-sub)] underline underline-offset-4">
                                                         Not ekle
                                                     </button>
                                                 )}
                                             </div>
                                             <div className={stepperWrap}>
-                                                <button type="button" onClick={() => onRemove(line.product)} aria-label={`${line.product.name} bir azalt`} className={stepperMinus}>
+                                                <button type="button" onClick={() => onChange(line.key, -1)} aria-label={`${line.name} bir azalt`} className={stepperMinus}>
                                                     <Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
                                                 </button>
                                                 <span className="min-w-5 text-center text-base font-extrabold tabular-nums">{line.quantity}</span>
-                                                <button type="button" onClick={() => onAdd(line.product)} aria-label={`${line.product.name} bir artır`} className={stepperPlus}>
+                                                <button type="button" onClick={() => onChange(line.key, 1)} aria-label={`${line.name} bir artır`} className={stepperPlus}>
                                                     <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
                                                 </button>
                                             </div>
                                         </div>
                                         {noteOpen && (
                                             <>
-                                                <label className="sr-only" htmlFor={`not-${line.product.id}`}>{line.product.name} için not</label>
+                                                <label className="sr-only" htmlFor={`not-${line.key}`}>{line.name} için not</label>
                                                 <input
-                                                    id={`not-${line.product.id}`}
+                                                    id={`not-${line.key}`}
                                                     value={line.note}
-                                                    onChange={e => onLineNote(line.product.id, e.target.value)}
+                                                    onChange={e => onLineNote(line.key, e.target.value)}
                                                     maxLength={300}
                                                     autoFocus={!line.note}
                                                     placeholder="ör. az pişmiş, soğansız"
@@ -621,7 +655,10 @@ function SentConfirmation({ request, site, restaurant, tableName, onBackToMenu, 
     const approved = request.status === ORDER_REQUEST_APPROVED;
     const rejected = request.status === ORDER_REQUEST_REJECTED;
     const sentAt = new Date(request.sentAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-    const images = new Map(site.categories.flatMap(c => c.products).map(p => [p.id, p.imageUrl]));
+    const images = new Map<string, string>([
+        ...site.categories.flatMap(c => c.products).map(p => [p.id, p.imageUrl] as [string, string]),
+        ...(site.setMenus ?? []).map(m => [m.id, m.imageUrl] as [string, string]),
+    ]);
 
     return (
         <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-2 px-2 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 sm:gap-3 sm:px-4 sm:pt-4">
@@ -683,7 +720,7 @@ function SentConfirmation({ request, site, restaurant, tableName, onBackToMenu, 
                 <ul className="m-0 flex list-none flex-col gap-3 p-0">
                     {request.items.map((item, i) => (
                         <li key={`${item.productId ?? item.name}-${i}`} className="flex items-center gap-3">
-                            <ImageSlot src={item.productId ? images.get(item.productId) : null} alt="" restaurant={restaurant}
+                            <ImageSlot src={images.get(item.setMenuId ?? item.productId ?? '') ?? null} alt="" restaurant={restaurant}
                                 logoTextClassName="text-[min(9px,12cqw)]" className="h-11 w-11 shrink-0 rounded-full border-2 border-[var(--site-mustard)]" />
                             <span className={cn(serif, 'min-w-0 flex-1 break-words text-[18px] leading-tight')}>
                                 <span className="font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)] text-[15px] font-extrabold tabular-nums tracking-normal text-[var(--site-accent-text)]">{item.quantity}×</span> {item.name}

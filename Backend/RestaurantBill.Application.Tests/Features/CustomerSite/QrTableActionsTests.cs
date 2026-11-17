@@ -146,7 +146,7 @@ public class QrTableActionsTests : ApplicationTestBase
         DbContext.Products.Add(product);
         await DbContext.SaveChangesAsync();
 
-        var result = await new CreateOrderRequestCommandHandler(Db, _tenant, _tableNotifications).Handle(new CreateOrderRequestCommand
+        var result = await new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications).Handle(new CreateOrderRequestCommand
         {
             TableId = table.Id,
             Items = [new OrderRequestItemInput { ProductId = product.Id, Quantity = 1 }]

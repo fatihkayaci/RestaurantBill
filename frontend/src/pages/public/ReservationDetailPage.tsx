@@ -160,7 +160,7 @@ export default function ReservationDetailPage() {
         const next: Record<string, CartLine> = {};
         let dropped = false;
         for (const item of detail.preOrder.items) {
-            const product = products.get(item.productId);
+            const product = products.get(item.productId ?? '');
             if (!product) { dropped = true; continue; }
             const current = next[product.id];
             next[product.id] = {
@@ -804,7 +804,7 @@ function PreOrderSummary({ detail, productsById, restaurant, onEdit, onCancel, c
                 <>
                     <ul className="flex flex-col divide-y divide-[var(--site-line)] text-[15px]">
                         {preOrder.items.map((item, i) => {
-                            const product = productsById.get(item.productId);
+                            const product = productsById.get(item.productId ?? '');
                             return (
                                 <li key={`${item.productId}-${i}`} className="flex items-center gap-3 py-2.5">
                                     <ImageSlot src={product?.imageUrl} alt="" restaurant={restaurant} logoTextClassName="text-[9px]" className="h-12 w-12 shrink-0 rounded-xl" />

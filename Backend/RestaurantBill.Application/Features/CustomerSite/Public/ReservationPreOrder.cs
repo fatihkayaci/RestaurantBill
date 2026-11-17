@@ -46,7 +46,7 @@ internal static class ReservationLink
         DateTime end = CustomerSiteScope.EndOf(reservation);
 
         OrderRequest? preOrder = await db.OrderRequests.AsNoTracking()
-            .Include(r => r.Items).ThenInclude(i => i.Product)
+            .IncludeLines()
             .Where(r => r.ReservationId == reservation.Id && r.Kind == OrderRequestKind.PreOrder)
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
@@ -88,15 +88,8 @@ internal static class ReservationLink
             {
                 Status = (int)preOrder.Status,
                 Note = preOrder.Note,
-                Total = preOrder.Items.Sum(i => (i.UnitPrice ?? i.Product.Price) * i.Quantity),
-                Items = preOrder.Items.Select(i => new OrderRequestItemDto
-                {
-                    ProductId = i.ProductId,
-                    ProductName = i.Product.Name,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice ?? i.Product.Price,
-                    Note = i.Note
-                }).ToList(),
+                Total = OrderRequestLines.TotalOf(preOrder),
+                Items = preOrder.Items.Select(OrderRequestLines.ToDto).ToList(),
                 CanEdit = pending && window.CanPreOrder,
                 CanCancel = pending && reservation.Status == ReservationStatus.Confirmed
             },
@@ -146,8 +139,11 @@ public class UpsertPreOrderCommandValidator : AbstractValidator<UpsertPreOrderCo
             .MaximumLength(500).WithMessage("Not en fazla 500 karakter olabilir.");
         RuleForEach(x => x.Items).ChildRules(item =>
         {
+            // Ön sipariş şimdilik yalnız ürün alır; menü (set) kalemi masa QR siparişinde.
+            item.RuleFor(i => i.IsSetMenu)
+                .Equal(false).WithMessage("Ön siparişe menü eklenemez; menüleri masada sipariş edebilirsiniz.");
             item.RuleFor(i => i.ProductId)
-                .NotEqual(Guid.Empty).WithMessage("Geçerli bir ürün seçilmelidir.");
+                .Must(id => id is Guid g && g != Guid.Empty).WithMessage("Geçerli bir ürün seçilmelidir.");
             item.RuleFor(i => i.Quantity)
                 .InclusiveBetween(1, OrderRequest.MaxQuantity).WithMessage($"Adet 1 ile {OrderRequest.MaxQuantity} arasında olmalı.");
             item.RuleFor(i => i.Note)

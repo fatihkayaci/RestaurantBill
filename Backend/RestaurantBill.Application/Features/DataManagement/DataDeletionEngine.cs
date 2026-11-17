@@ -233,7 +233,9 @@ internal sealed class DataDeletionEngine(IAppDbContext db)
 
             if (!requestsAll)
             {
-                IQueryable<OrderRequestItem> requested = db.OrderRequestItems.Where(ri => productIds.Contains(ri.ProductId));
+                IQueryable<OrderRequestItem> requested = db.OrderRequestItems.Where(ri =>
+                    (ri.ProductId != null && productIds.Contains(ri.ProductId.Value))
+                    || (ri.SetMenuId != null && setMenuIds.Contains(ri.SetMenuId.Value)));
                 if (reservationsSelected)
                     requested = requested.Where(ri => ri.OrderRequest.ReservationId == null || !deletedReservationIds.Contains(ri.OrderRequest.ReservationId.Value));
                 if (await requested.AnyAsync(ct))

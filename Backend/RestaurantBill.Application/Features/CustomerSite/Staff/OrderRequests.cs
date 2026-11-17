@@ -27,7 +27,7 @@ public class GetPendingOrderRequestsQueryHandler(IAppDbContext db, ICurrentUserS
 
         List<OrderRequest> requests = await db.OrderRequests.AsNoTracking()
             .InStaffRegions(access)
-            .Include(r => r.Items).ThenInclude(i => i.Product)
+            .IncludeLines()
             .Include(r => r.Table).ThenInclude(t => t.Region)
             .Where(r => r.Status == OrderRequestStatus.Pending && r.Kind != OrderRequestKind.PreOrder && branchIds.Contains(r.Table.Region.BranchId))
             .OrderBy(r => r.CreatedAt)
@@ -41,15 +41,8 @@ public class GetPendingOrderRequestsQueryHandler(IAppDbContext db, ICurrentUserS
             RegionName = r.Table.Region.Name,
             Note = r.Note,
             CreatedAt = r.CreatedAt,
-            Total = r.Items.Sum(i => i.Product.Price * i.Quantity),
-            Items = r.Items.Select(i => new OrderRequestItemDto
-            {
-                ProductId = i.ProductId,
-                ProductName = i.Product.Name,
-                Quantity = i.Quantity,
-                UnitPrice = i.Product.Price,
-                Note = i.Note
-            }).ToList()
+            Total = OrderRequestLines.TotalOf(r),
+            Items = r.Items.Select(OrderRequestLines.ToDto).ToList()
         }).ToList();
 
         return Result<List<OrderRequestDto>>.Success(result);

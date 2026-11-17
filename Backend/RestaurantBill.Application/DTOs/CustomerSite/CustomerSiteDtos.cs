@@ -251,8 +251,14 @@ public class OrderRequestDto
 
 public class OrderRequestItemDto
 {
-    public Guid ProductId { get; set; }
+    /// <summary>"product" ya da "setMenu" (CartLineInput.ProductKind / SetMenuKind).</summary>
+    public string Kind { get; set; } = "product";
+    public Guid? ProductId { get; set; }
+    public Guid? SetMenuId { get; set; }
+    /// <summary>Ürünün ya da menünün adı.</summary>
     public string ProductName { get; set; } = string.Empty;
+    /// <summary>Menü kaleminde seçilen ürünlerin adları (seçimli bölümler; ek ücret varsa "(+₺10)"); ürün kaleminde boş.</summary>
+    public List<string> Selections { get; set; } = [];
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public string Note { get; set; } = string.Empty;

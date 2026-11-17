@@ -12,7 +12,7 @@ export type MenuCardProduct = OnlineMenuProduct & { prepMinutes?: number | null 
 
 interface Props<P extends MenuCardProduct> {
     categories: (Omit<OnlineMenuCategory, 'products'> & { products: P[] })[];
-    /** Paket menüler (set); masa menüsünde yok. */
+    /** Paket menüler (set); `readOnly` iken "Seç" düğmesi çizilmez. */
     setMenus?: OnlineSetMenu[];
     /** Görseli olmayan ürünün yer tutucusunda restoranın yazı logosu çizilir. */
     restaurant: string;
@@ -161,7 +161,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                 <ul className="-mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
                                     {section.menus.map(menu => (
                                         <li key={menu.id} className={cn('shrink-0 snap-start md:w-auto', section.menus.length > 1 ? 'w-[84%]' : 'w-full')}>
-                                            <FeaturedSetMenuCard menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} onOpen={() => onOpenSetMenu(menu)} />
+                                            <FeaturedSetMenuCard menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly} onOpen={() => onOpenSetMenu(menu)} />
                                         </li>
                                     ))}
                                 </ul>
@@ -169,7 +169,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                 <ul className="mt-4 grid gap-3 md:grid-cols-2">
                                     {section.menus.map(menu => (
                                         <li key={menu.id}>
-                                            <SetMenuRow menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} onOpen={() => onOpenSetMenu(menu)} />
+                                            <SetMenuRow menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly} onOpen={() => onOpenSetMenu(menu)} />
                                         </li>
                                     ))}
                                     {section.products.map(product => (
@@ -313,7 +313,7 @@ function InCartBadge({ quantity }: { quantity: number }) {
 }
 
 /** Kategorisi olan menü: ürün kartıyla aynı yatay kart, açıklama yerine içerik özeti. */
-function SetMenuRow({ menu, restaurant, quantity, onOpen }: { menu: OnlineSetMenu; restaurant: string; quantity: number; onOpen: () => void }) {
+function SetMenuRow({ menu, restaurant, quantity, readOnly, onOpen }: { menu: OnlineSetMenu; restaurant: string; quantity: number; readOnly: boolean; onOpen: () => void }) {
     const soldOut = !menu.isAvailable;
     return (
         <article className={cardClass(quantity > 0, soldOut)}>
@@ -326,7 +326,7 @@ function SetMenuRow({ menu, restaurant, quantity, onOpen }: { menu: OnlineSetMen
                 <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-[var(--site-sub)]">{menuContents(menu)}</p>
                 <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
                     <SetMenuPrice menu={menu} muted={soldOut} />
-                    {soldOut ? <span className="text-sm font-semibold text-[var(--site-sub)]">Şu an yok</span> : (
+                    {soldOut ? <span className="text-sm font-semibold text-[var(--site-sub)]">Şu an yok</span> : readOnly ? null : (
                         <button type="button" onClick={onOpen} aria-label={`${menu.name} seç`}
                             className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-[var(--site-paper)] px-4 text-sm font-semibold text-[var(--site-on-paper)] transition-opacity hover:opacity-90">
                             <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />Seç
@@ -340,7 +340,7 @@ function SetMenuRow({ menu, restaurant, quantity, onOpen }: { menu: OnlineSetMen
 }
 
 /** Öne çıkan "Menüler" bölümünün büyük kartı: üstte geniş görsel, altında içerik özeti ve "Seç". */
-function FeaturedSetMenuCard({ menu, restaurant, quantity, onOpen }: { menu: OnlineSetMenu; restaurant: string; quantity: number; onOpen: () => void }) {
+function FeaturedSetMenuCard({ menu, restaurant, quantity, readOnly, onOpen }: { menu: OnlineSetMenu; restaurant: string; quantity: number; readOnly: boolean; onOpen: () => void }) {
     const soldOut = !menu.isAvailable;
     const description = menu.description?.trim();
     return (
@@ -363,7 +363,7 @@ function FeaturedSetMenuCard({ menu, restaurant, quantity, onOpen }: { menu: Onl
             </div>
             <div className="mt-auto flex items-center justify-between gap-3 px-1.5 pb-1">
                 <SetMenuPrice menu={menu} muted={soldOut} />
-                {soldOut ? <span className="text-sm font-semibold text-[var(--site-sub)]">Şu an yok</span> : (
+                {soldOut ? <span className="text-sm font-semibold text-[var(--site-sub)]">Şu an yok</span> : readOnly ? null : (
                     <button type="button" onClick={onOpen} aria-label={`${menu.name} seç`}
                         className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-[var(--site-accent)] px-5 text-sm font-semibold text-[var(--site-on-accent)] transition-opacity hover:opacity-90">
                         <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />Menüyü seç
