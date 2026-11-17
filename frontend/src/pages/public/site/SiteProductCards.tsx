@@ -1,10 +1,10 @@
-import type { PublicCategory, PublicProduct } from '@/features/customerSite/types';
+import type { PublicProduct } from '@/features/customerSite/types';
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from '../components/StockImageLabel';
-import { serif, siteCard } from './siteParts';
+import { siteCard } from './siteParts';
 import { formatSitePrice } from './siteTheme';
 
-// Sitenin ürün kartları (menü sayfası, ana sayfa "Menüden seçmeler", Hakkımızda "İmza tabaklar").
+// Sitenin ürün kartları (Hakkımızda "İmza tabaklar"; menü satırları SiteMenuBoard.tsx).
 // Fotoğraflı ürün: yatay kart, sağda kare fotoğraf. Fotoğrafsız ürün: bej kutu yerine metin kartı (ad ve fiyat arasında
 // noktalı çizgi, altında açıklama ve hazırlık süresi rozeti). Fotoğrafı hiç olmayan kategori: klasik menü kâğıdı listesi.
 
@@ -89,56 +89,5 @@ export function PriceLine({ name, price, as: Tag = 'span', className }: { name: 
             <span aria-hidden="true" className="mb-1 min-w-4 flex-1 border-b border-dotted border-[var(--site-border-strong)]" />
             <span className="shrink-0 whitespace-nowrap text-[17px] font-bold">{formatSitePrice(price)}</span>
         </div>
-    );
-}
-
-/**
- * Klasik menü kâğıdı (fotoğrafı hiç olmayan kategori): tek kartta satır satır "Ad ···· fiyat" ve altında açıklama.
- * Kısa adlı kategoriler (İçecekler) tek kartta liste olur; tekrar eden boş kutu yok.
- */
-export function ClassicMenuList({ category, items, className }: { category: PublicCategory; items: PublicProduct[]; className?: string }) {
-    return (
-        <div className={cn(siteCard, 'p-5 md:p-7', className)}>
-            <ul aria-label={category.name} className="m-0 grid list-none grid-cols-1 gap-x-10 p-0 md:grid-cols-2">
-                {items.map(p => (
-                    <li key={p.id} className="flex flex-col gap-1 border-t border-[var(--site-border)] py-3.5 first:border-t-0 md:[&:nth-child(2)]:border-t-0">
-                        <PriceLine name={p.name} price={p.price} />
-                        {(p.description?.trim() || p.prepMinutes || p.isFeatured || p.isOutOfStock) && (
-                            <div className="flex flex-wrap items-center gap-2">
-                                {p.isFeatured && <FeaturedBadge />}
-                                <SoldOutBadge product={p} />
-                                {p.description?.trim() && <span className="text-sm text-[var(--site-sub)]">{p.description}</span>}
-                                <PrepBadge minutes={p.prepMinutes} />
-                            </div>
-                        )}
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-/** Menü sayfası "Ustanın seçimi" şeridinin kartı: fotoğraf üstte (yoksa ad büyük serif), ad, süre, fiyat. */
-export function FeaturedTile({ product }: { product: PublicProduct }) {
-    return (
-        <article className={cn(siteCard, 'flex w-[220px] shrink-0 snap-start flex-col gap-2.5 overflow-hidden p-2.5 md:w-[250px]')}>
-            <div className="relative">
-                {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} loading="lazy" className="block aspect-[4/3] w-full rounded-[14px] bg-[var(--site-placeholder)] object-cover" />
-                ) : (
-                    <div aria-hidden="true" className="flex aspect-[4/3] w-full items-center justify-center rounded-[14px] bg-[var(--site-placeholder)] px-4 text-center">
-                        <span className={cn(serif, 'line-clamp-3 break-words text-[30px] italic leading-[0.95]')}>{product.name}</span>
-                    </div>
-                )}
-                {product.isStockImage && <StockImageLabel />}
-            </div>
-            <div className="flex min-w-0 flex-col gap-1 px-1.5 pb-1.5">
-                <h3 className="m-0 truncate text-base font-bold">{product.name}</h3>
-                <div className="flex items-center justify-between gap-2">
-                    <span className="whitespace-nowrap font-bold">{formatSitePrice(product.price)}</span>
-                    <PrepBadge minutes={product.prepMinutes} />
-                </div>
-            </div>
-        </article>
     );
 }

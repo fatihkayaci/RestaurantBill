@@ -191,7 +191,7 @@ export function MobileActionBar({ actions }: { actions: MobileAction[] }) {
             className={cn(x.className, "fixed inset-x-0 bottom-0 z-40 border-t border-[var(--site-line)] bg-[color-mix(in_srgb,var(--site-bg)_94%,transparent)] px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_24px_rgba(30,26,22,0.08)] backdrop-blur-[14px] md:hidden")}>
             <ul className="m-0 flex list-none gap-2 p-0">
                 {actions.map(a => {
-                    const cls = cn('flex h-12 w-full items-center justify-center gap-2 rounded-full px-3 text-[15px] font-bold no-underline',
+                    const cls = cn('flex h-12 w-full items-center justify-center gap-1.5 rounded-full px-2 text-sm font-bold no-underline',
                         a.primary ? 'bg-[var(--site-accent)] font-extrabold text-[var(--site-on-accent)]' : 'border border-[var(--site-border-strong)] text-[var(--site-text)]');
                     return (
                         <li key={a.key} className={cn('min-w-0', a.primary ? 'flex-[1.4]' : 'flex-1')}>

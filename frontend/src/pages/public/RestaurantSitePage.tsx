@@ -64,7 +64,7 @@ export default function RestaurantSitePage() {
                 <HomeStory site={site} />
                 <PhotoStrip site={site} />
                 <HomeReviews site={site} />
-                <VisitSection site={site} className="border-t border-[var(--site-line)]" />
+                <div className="border-t border-[var(--site-line)]"><VisitSection site={site} /></div>
             </main>
         </SitePage>
     );

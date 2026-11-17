@@ -162,39 +162,6 @@ export function formatRating(value: number): string {
     return value.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
-/** 12 sütunlu ızgarada genişlik sınıfları (lg). Tailwind sınıfları sabit yazılmalı. */
-export const LG_SPAN: Record<number, string> = {
-    3: 'lg:col-span-3', 4: 'lg:col-span-4', 5: 'lg:col-span-5', 6: 'lg:col-span-6',
-    7: 'lg:col-span-7', 8: 'lg:col-span-8', 9: 'lg:col-span-9', 12: 'lg:col-span-12',
-};
-
-/**
- * Bento yerleşimi: istenen genişlikleri (12'lik) satırlara dizer; satırı dolduramayan son kart kalan genişliği alır.
- * Böylece az veride boşluk değil, daha az ama daha geniş kart görünür.
- */
-export function packRow<T extends { span: number }>(items: T[]): (T & { width: number })[] {
-    const out: (T & { width: number })[] = [];
-    let row: (T & { width: number })[] = [];
-    let used = 0;
-    const close = () => {
-        if (row.length === 0) return;
-        const last = row[row.length - 1];
-        last.width += 12 - used;
-        out.push(...row);
-        row = [];
-        used = 0;
-    };
-    for (const item of items) {
-        const span = Math.min(12, item.span);
-        if (used + span > 12) close();
-        row.push({ ...item, width: span });
-        used += span;
-        if (used === 12) close();
-    }
-    close();
-    return out;
-}
-
 /** Arama için: küçük harf, aksanlar ve Türkçe harfler sadeleşir ("Köfte" → "kofte"). */
 export function foldText(text: string): string {
     return text.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').normalize('NFD').replace(/[̀-ͯ]/g, '').trim();

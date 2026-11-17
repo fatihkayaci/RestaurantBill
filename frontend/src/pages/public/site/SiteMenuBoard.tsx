@@ -181,6 +181,8 @@ function SetMenuAction({ menu, cart }: { menu: OnlineSetMenu; cart: SiteCart }) 
 export function SetMenuSection({ site, cart, menus = site.setMenus ?? [] }: { site: PublicSite; cart: SiteCart; menus?: OnlineSetMenu[] }) {
     if (menus.length === 0) return null;
     const photoOf = productPhotos(site.categories.flatMap(c => c.products));
+    // Tek menü: geniş ekranda görsel solda, yazı sağda (kart bütün genişliği kaplamasın diye).
+    const single = menus.length === 1;
     return (
         <section id="menuler" aria-labelledby="ev-hazir" className="border-y border-[var(--site-line)] bg-[var(--site-alt)]">
             <div className={cn(sectionWrap, 'flex flex-col gap-8 py-16 md:gap-9 md:py-[88px]')}>
@@ -191,23 +193,26 @@ export function SetMenuSection({ site, cart, menus = site.setMenus ?? [] }: { si
                         const saving = savingLabel(menu);
                         const kicker = [saving, menu.slots.length > 0 ? `${menu.slots.length} kalem` : null].filter(Boolean).join(' · ');
                         return (
-                            <article key={menu.id} className="flex min-w-0 flex-col gap-3.5 bg-[var(--site-alt)] p-6 [box-shadow:1px_0_0_0_var(--site-border),0_1px_0_0_var(--site-border)] md:p-7">
+                            <article key={menu.id} className={cn('flex min-w-0 flex-col gap-5 bg-[var(--site-alt)] p-6 [box-shadow:1px_0_0_0_var(--site-border),0_1px_0_0_var(--site-border)] md:p-7',
+                                single && image && 'md:flex-row md:items-stretch md:gap-8')}>
                                 {image && (
-                                    <span className="relative block">
-                                        <img src={image.url} alt="" loading="lazy" className="block aspect-[16/10] w-full rounded-[16px] object-cover" />
+                                    <span className={cn('relative block shrink-0', single && 'md:w-[44%]')}>
+                                        <img src={image.url} alt="" loading="lazy" className={cn('block h-[200px] w-full rounded-[16px] object-cover md:h-[220px]', single && 'md:h-full md:min-h-[260px]')} />
                                         {image.isStock && <StockImageLabel />}
                                     </span>
                                 )}
-                                {kicker && <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--site-accent-text)]">{kicker}</span>}
-                                <h3 className={cn(serif, 'm-0 break-words text-[32px] leading-[1.05]')}>{menu.name}</h3>
-                                {menu.description && <p className="m-0 line-clamp-3 text-sm leading-relaxed text-[var(--site-sub)]">{menu.description}</p>}
-                                <SlotsSummary menu={menu} className="text-sm leading-relaxed text-[var(--site-sub)]" />
-                                <div className="mt-auto flex items-end justify-between gap-3 pt-3.5">
-                                    <span className="flex flex-col">
-                                        {saving && <s className="text-sm text-[var(--site-muted)]"><span className="sr-only">Normal fiyatı </span>{formatSitePrice(menu.regularPrice)}</s>}
-                                        <span className={cn(serif, 'text-[40px] leading-none')}>{saving && <span className="sr-only">Menü fiyatı </span>}{formatSitePrice(menu.price)}</span>
-                                    </span>
-                                    <SetMenuAction menu={menu} cart={cart} />
+                                <div className="flex min-w-0 flex-1 flex-col gap-3.5">
+                                    {kicker && <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--site-accent-text)]">{kicker}</span>}
+                                    <h3 className={cn(serif, 'm-0 break-words text-[32px] leading-[1.05]')}>{menu.name}</h3>
+                                    {menu.description && <p className="m-0 line-clamp-3 text-sm leading-relaxed text-[var(--site-sub)]">{menu.description}</p>}
+                                    <SlotsSummary menu={menu} className="text-sm leading-relaxed text-[var(--site-sub)]" />
+                                    <div className="mt-auto flex items-end justify-between gap-3 pt-3.5">
+                                        <span className="flex flex-col">
+                                            {saving && <s className="text-sm text-[var(--site-muted)]"><span className="sr-only">Normal fiyatı </span>{formatSitePrice(menu.regularPrice)}</s>}
+                                            <span className={cn(serif, 'text-[40px] leading-none')}>{saving && <span className="sr-only">Menü fiyatı </span>}{formatSitePrice(menu.price)}</span>
+                                        </span>
+                                        <SetMenuAction menu={menu} cart={cart} />
+                                    </div>
                                 </div>
                             </article>
                         );
