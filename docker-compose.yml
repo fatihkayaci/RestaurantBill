@@ -2,6 +2,9 @@ version: '3.8'
 
 services:
   api:
+    # Production: deploy.yml imajı GitHub'da derleyip ghcr.io'ya koyar, sunucu `pull` ile alır (APP_TAG = commit).
+    # Yerelde `docker compose build` hâlâ çalışır.
+    image: ghcr.io/fatihkayaci/restaurantbill-api:${APP_TAG:-latest}
     build:
       context: ./Backend
       dockerfile: DockerFile
@@ -36,6 +39,7 @@ services:
       start_period: 60s
 
   frontend:
+    image: ghcr.io/fatihkayaci/restaurantbill-frontend:${APP_TAG:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
