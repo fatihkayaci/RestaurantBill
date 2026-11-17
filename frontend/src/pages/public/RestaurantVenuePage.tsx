@@ -1,29 +1,38 @@
-import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
+import { canReserveOnline, type PublicSite, type PublicTable } from '@/features/customerSite/types';
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from './components/StockImageLabel';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
-import { AccentTitle, PageEmpty, PageHero, SitePage } from './site/SiteFrame';
-import { ClockIcon, DirectionsIcon, HeroStatusPill, HoursBlock, InfoCard, InstagramIcon, MapStub, OpenBadge } from './site/SiteCards';
-import {
-    RESERVATION_PATH, amenityLabel, cardButton, cardLabel, eyebrow, hasVenuePage, instagramHandle, serif, siteCard, siteCardDark, siteCardLg,
-} from './site/siteParts';
-import { directionsUrl } from './site/siteTheme';
-import { fullAddress, restaurantName, useSite } from './site/useSite';
+import { PageEmpty, SitePage } from './site/SiteFrame';
+import { DirectionsIcon, PhoneIcon, WhatsAppIcon } from './site/SiteCards';
+import { AmenityIcon, MapPanel, TablePlan, VenueGallery, WayIcon } from './site/VenueParts';
+import { RESERVATION_PATH, SITE_AMENITIES, hasVenuePage, serif } from './site/siteParts';
+import { directionsUrl, splitAccent, telHref, whatsappHref } from './site/siteTheme';
+import { fullAddress, hoursLine, restaurantName, useSite } from './site/useSite';
 import { EditableBlock, EditableText, EmptySlot, ExternalHint } from './site/siteEdit';
-import { SITE_LIMITS, editTarget, useSiteEdit } from './site/siteEditContext';
+import { editTarget, useSiteEdit } from './site/siteEditContext';
 
-// /mekan (Öneri A; mekân fotoğrafı yoksa kendiliğinden C). Fotoğraf sırası: mekân fotoğrafları → hikâye ve kapak
-// fotoğrafı → menü fotoğrafları ("Menümüzden" başlığıyla, ayrı). Galeri büyük + küçük karelerden mozaik; bölümler
-// fotoğraf, masa sayısı ve açıklamasıyla ayrı kartlar; olanaklar çip. Hiç mekân fotoğrafı yoksa harita, restoranın
-// kendi sözü ve "Nasıl gelinir" ile anlatılır. Girilmemiş bilgi gösterilmez.
+// /mekan (tasarım: "Tema 2 · Açık — Mekân"). Krem sayfada beyaz, yuvarlak köşeli kutular: (1) kapak: mekân fotoğrafı
+// soldan beyaz geçişle (yoksa sağda süs masa planı), "Mekân", dev serif başlık, kısa tarif, "Masa ayırt" ve
+// "Nasıl gelinir?" düğmeleri. (2) "Nerede oturmak istersiniz?": Masalar'daki bölümler sütun sütun (fotoğraf, kişi ya
+// da masa sayısı, açıklama). (3) Galeri: büyük kare + küçük kareler. (4) Olanaklar (ikonlu) + vurgu renginde
+// "Özel günler" (WhatsApp / telefon). (5) "Nasıl gelinir?": süs harita, adres, ulaşım notu, otopark, saatler ve
+// yol tarifi. Fotoğraflı ya da fotoğrafsız görünüm veriden kendiliğinden seçilir; girilmemiş bilgi gösterilmez.
 
-const MOSAIC_SMALL = 4;
+const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[32px]';
+const LOCATION_ID = 'konum';
 
+/** Mekân fotoğrafları: galeri → hikâye → kapak (tekrarsız). */
 function venuePhotos(site: PublicSite): string[] {
     const c = site.site;
     return [...new Set([...c.galleryImageUrls, c.aboutImageUrl, c.coverImageUrl].filter(Boolean))];
+}
+
+/** Kapak: Mekân'ın kendi kapağı → galerinin ilk fotoğrafı → hikâye → sitenin kapağı. */
+function heroPhoto(site: PublicSite): string {
+    const c = site.site;
+    return c.venueHeroUrl || c.galleryImageUrls[0] || c.aboutImageUrl || c.coverImageUrl;
 }
 
 /** Türkçe bulunma eki: "salon" → "salonda", "teras" → "terasta", "bahçe" → "bahçede" (son ünlü ve sert ünsüz uyumu). */
@@ -36,79 +45,17 @@ function locative(word: string): string {
 }
 
 /** "Salonda, avluda" + "ya da terasta." (en çok üç bölüm); tek bölümde null. */
-function regionPhrase(names: string[]): { head: string; tail: string } | null {
+function regionPhrase(names: string[]): [string, string] | null {
     if (names.length < 2) return null;
     const locs = names.slice(0, 3).map(locative);
     const head = locs.slice(0, -1).join(', ');
-    return { head: head.charAt(0).toLocaleUpperCase('tr-TR') + head.slice(1), tail: `ya da ${locs[locs.length - 1]}.` };
+    return [head.charAt(0).toLocaleUpperCase('tr-TR') + head.slice(1), `ya da ${locs[locs.length - 1]}.`];
 }
 
-/** "Salonda mı, avluda mı?" */
-function choiceQuestion(a: string, b: string): string {
-    const q = (loc: string) => `${loc} ${loc.endsWith('e') ? 'mi' : 'mı'}`;
-    const first = q(locative(a));
-    return `${first.charAt(0).toLocaleUpperCase('tr-TR') + first.slice(1)}, ${q(locative(b))}?`;
-}
-
-/** Galerideki bir fotoğrafın düzenleyicideki hedefi: galeri karesi, hikâye fotoğrafı ya da kapak. */
-function photoTarget(site: PublicSite, src: string): { target: string; label: string } {
-    const c = site.site;
-    const i = c.galleryImageUrls.indexOf(src);
-    if (i >= 0) return { target: `gallery:${i}`, label: `Mekân fotoğrafı ${i + 1}` };
-    if (src === c.aboutImageUrl) return { target: 'photo:about', label: 'Hikâye fotoğrafı' };
-    return { target: 'photo:cover', label: 'Kapak fotoğrafı' };
-}
-
-/**
- * Mozaik galeri: ilk fotoğraf büyük, yanında en çok dört kare; fazlası "+N fotoğraf" ile açılır. Düzenleyicide hep açık
- * ızgara: her kare tıklanınca fotoğraf menüsü açılır, sonda "+ Fotoğraf ekle" karesi (en çok 12).
- */
-function Gallery({ site, photos, title }: { site: PublicSite; photos: string[]; title: string }) {
-    const edit = useSiteEdit();
-    const [expanded, setExpanded] = useState(false);
-    const shot = (src: string, i: number, className: string, lazy = true) => {
-        const { target, label } = photoTarget(site, src);
-        const t = editTarget(edit, target, label);
-        return <img key={src} src={src} alt={`${title}, fotoğraf ${i + 1}`} loading={lazy ? 'lazy' : undefined} {...t} className={cn(className, t.className)} />;
-    };
-    if (edit || expanded || photos.length <= 2) {
-        const canAdd = Boolean(edit) && site.site.galleryImageUrls.length < SITE_LIMITS.gallery;
-        const cells = photos.length + (canAdd ? 1 : 0);
-        return (
-            <div className={cn('grid gap-2.5 md:gap-3', cells === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3')}>
-                {photos.map((src, i) => shot(src, i, cn('block w-full rounded-[14px] object-cover md:rounded-[18px]', cells === 1 ? 'aspect-[16/9]' : 'aspect-square')))}
-                {canAdd && (
-                    <div data-edit-target="gallery:add"
-                        className="flex aspect-square cursor-pointer items-center justify-center rounded-[14px] border border-dashed border-[#CFC5B4] font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[#8A7D6E] hover:border-[#2B7FFF] hover:text-[#1E4FA0] md:rounded-[18px]">
-                        + Fotoğraf ekle
-                    </div>
-                )}
-            </div>
-        );
-    }
-    const [big, ...rest] = photos;
-    const small = rest.slice(0, MOSAIC_SMALL);
-    const hidden = photos.length - 1 - small.length;
-    const fourGrid = small.length >= 3;
-    return (
-        <div className={cn('grid grid-cols-2 gap-2.5 md:gap-3', fourGrid ? 'md:grid-cols-4 md:grid-rows-2' : 'md:grid-cols-3 md:grid-rows-2')}>
-            {shot(big, 0, 'col-span-2 row-span-2 block aspect-[4/3] h-full w-full rounded-[14px] object-cover md:aspect-auto md:min-h-[440px] md:rounded-[18px]', false)}
-            {small.map((src, i) => {
-                const last = i === small.length - 1 && hidden > 0;
-                return (
-                    <div key={src} className={cn('relative overflow-hidden rounded-[14px] md:rounded-[18px]', !fourGrid && small.length === 1 && 'col-span-2 md:col-span-1 md:row-span-2')}>
-                        {shot(src, i + 1, 'block aspect-square h-full w-full object-cover')}
-                        {last && (
-                            <button type="button" onClick={() => setExpanded(true)}
-                                className="absolute inset-0 flex items-center justify-center bg-[rgba(20,16,12,0.55)] text-lg font-semibold text-white">
-                                +{hidden} fotoğraf
-                            </button>
-                        )}
-                    </div>
-                );
-            })}
-        </div>
-    );
+/** Masaların toplam kişi sayısı; yalnız her masanın kapasitesi girildiyse (yoksa null, uydurulmaz). */
+function seatCount(tables: PublicTable[]): number | null {
+    if (tables.length === 0 || !tables.every(t => t.capacity && t.capacity > 0)) return null;
+    return tables.reduce((sum, t) => sum + (t.capacity ?? 0), 0);
 }
 
 export default function RestaurantVenuePage() {
@@ -116,183 +63,287 @@ export default function RestaurantVenuePage() {
     const edit = useSiteEdit();
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
 
-    const content = site.site;
-    const name = restaurantName(site);
     const showEmpty = Boolean(edit?.showEmpty);
-    const igT = editTarget(edit, 'contact', 'Instagram');
 
     if (!hasVenuePage(site) && !showEmpty) {
         return (
             <SitePage site={site} current="mekan">
-                <PageHero site={site} label={name} title="Mekân" image={content.venueHeroUrl} imageTarget="photo:hero-mekan" imageLabel="Mekân kapağı" />
-                <PageEmpty text="Mekân bilgileri henüz eklenmedi." />
+                <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
+                    <VenueHero site={site} hasLocation={false} />
+                    <div className={box}><PageEmpty text="Mekân bilgileri henüz eklenmedi." /></div>
+                </main>
             </SitePage>
         );
     }
 
-    const photos = venuePhotos(site);
-    const hasPhotos = photos.length > 0;
-    const menuPhotos = site.categories.flatMap(c => c.products).filter(p => p.imageUrl).slice(0, 6);
-    const address = fullAddress(site);
-    const canReserve = canReserveOnline(site);
-    const hasHours = Boolean(content.weeklyHours.length || (content.opensAt && content.closesAt));
-    const phrase = regionPhrase(site.regions.map(r => r.name));
-    const amenities = content.amenities.map(amenityLabel).filter((a): a is string => !!a);
-    const regionCols = site.regions.length + (canReserve && !edit ? 1 : 0);
+    const hasLocation = Boolean(fullAddress(site) || site.site.directionsNote);
 
     return (
-        <SitePage site={site} current="mekan">
-            <PageHero site={site} label={`Mekân · ${name}`} image={content.venueHeroUrl || content.galleryImageUrls[0] || content.aboutImageUrl || undefined}
-                imageTarget="photo:hero-mekan" imageLabel="Mekân kapağı" 
-                title={edit ? <EditableText field="headline" value={content.headline} fallback="Mekân" placeholder="Büyük başlık" /> : <AccentTitle text={content.headline || 'Mekân'} />}
-                compact titleClassName="text-[48px] leading-[0.98] md:text-[80px]" aside={<HeroStatusPill site={site} />}>
-                {(content.tagline || showEmpty) && (
-                    <EditableText as="p" field="tagline" value={content.tagline} placeholder="Alt başlık"
-                        className="m-0 max-w-[60ch] text-base leading-normal text-[var(--site-sub)] md:text-[17px]" />
-                )}
-            </PageHero>
-            <main className="mx-auto flex w-full max-w-[1344px] flex-1 flex-col gap-4 px-5 pb-10 pt-5 md:gap-6 md:px-12 md:pb-16 md:pt-14">
-                {!hasPhotos && showEmpty && (
-                    <EmptySlot target="gallery:add" title="+ Fotoğraf ekle" />
-                )}
-                {hasPhotos ? (
-                    <section aria-labelledby="mk-galeri" className={cn(siteCardLg, 'flex min-w-0 flex-col gap-5 p-4 md:gap-6 md:rounded-[28px] md:p-9')}>
-                        <div className="flex flex-wrap items-end justify-between gap-4 px-1 pt-1 md:p-0">
-                            <div className="flex min-w-0 flex-col gap-2">
-                                <span className={eyebrow}>Mekânımız</span>
-                                {!edit && (
-                                    <h2 id="mk-galeri" className={cn(serif, 'm-0 text-[34px] leading-[1.05] md:text-[44px]')}>
-                                        {phrase ? <>{phrase.head} <span className="italic">{phrase.tail}</span></> : <>Masamızdan <span className="italic">birkaç an.</span></>}
-                                    </h2>
-                                )}
-                            </div>
-                            {content.instagramUrl && (
-                                <a href={content.instagramUrl} target="_blank" rel="noopener noreferrer" {...igT} className={cn(cardButton.outline, 'self-auto [&>svg]:h-4 [&>svg]:w-4', igT.className)}>
-                                    <InstagramIcon />
-                                    {instagramHandle(content.instagramUrl)}
-                                </a>
-                            )}
-                        </div>
-                        <Gallery site={site} photos={photos} title={name} />
-                    </section>
-                ) : (
-                    // Öneri C: fotoğrafsız mekân — harita, restoranın sözü ve nasıl gelinir.
-                    <div className={cn('grid grid-cols-1 gap-4', address && content.tagline && !edit && 'lg:grid-cols-[1.2fr_1fr]')}>
-                        {address && !edit && (
-                            <section aria-labelledby="mk-adres" className={cn(siteCard, 'flex min-w-0 flex-col overflow-hidden')}>
-                                <MapStub className="h-[160px] md:h-[220px]" />
-                                <div className="flex flex-col gap-2.5 p-5 md:p-7">
-                                    <h2 id="mk-adres" className={cn(cardLabel, 'm-0')}>Adres</h2>
-                                    <span className={cn(serif, 'break-words text-[28px] leading-[1.05] md:text-[34px]')}>{address}</span>
-                                    <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cardButton.dark}>
-                                        <DirectionsIcon />Yol tarifi al
-                                    </a>
-                                </div>
-                            </section>
-                        )}
-                        {content.tagline && (
-                            <figure className={cn(siteCard, 'm-0 flex flex-col justify-center gap-3 p-6 md:p-10')}>
-                                <blockquote className={cn(serif, 'm-0 text-[36px] italic leading-[1.05] md:text-[52px]')}>
-                                    {edit ? <EditableText field="tagline" value={content.tagline} placeholder="Alt başlık" /> : <>“{content.tagline}”</>}
-                                </blockquote>
-                                <figcaption className="text-[15px] text-[var(--site-sub)]">{name}, kendini böyle anlatıyor.</figcaption>
-                            </figure>
-                        )}
-                    </div>
-                )}
-
-                {/* Bölümler: fotoğraf, masa sayısı, açıklama; sonunda rezervasyon kartı */}
-                {regionCols > 0 && site.regions.length > 0 && (
-                    // Düzenleyicide bölümün adı yalnız tanımak için yazılır (Masalar'dan gelir); masa sayısı ve rezervasyon kartı yok.
-                    <section aria-label="Oturma bölümleri" data-edit-reveal={edit ? 'list:regions' : undefined} className={cn('grid grid-cols-1 gap-4', regionCols >= 2 && 'md:grid-cols-2', regionCols >= 3 && 'lg:grid-cols-3')}>
-                        {site.regions.map(region => {
-                            const t = editTarget(edit, `region:${region.id}`, `Bölüm · ${region.name}`);
-                            return (
-                            <article key={region.id} {...t} className={cn(siteCard, 'flex min-w-0 flex-col overflow-hidden', t.className, t.className && 'outline-offset-4')}>
-                                {region.photoUrl && <img src={region.photoUrl} alt={region.name} loading="lazy" className="block aspect-[16/10] w-full object-cover" />}
-                                {!region.photoUrl && showEmpty && (
-                                    <div className="flex aspect-[16/10] items-center justify-center border-b border-dashed border-[#CFC5B4] font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[#8A7D6E]">
-                                        + Fotoğraf ekle
-                                    </div>
-                                )}
-                                <div className="flex flex-1 flex-col gap-2 p-5 md:p-6">
-                                    <div className="flex items-baseline justify-between gap-3">
-                                        <h2 className={cn(serif, 'm-0 min-w-0 break-words text-[30px] leading-none md:text-[36px]')}>{region.name}</h2>
-                                        {region.tables.length > 0 && !edit && <span className="shrink-0 text-sm font-semibold text-[var(--site-sub)]">{region.tables.length} masa</span>}
-                                    </div>
-                                    {(region.description || showEmpty) && (
-                                        <EditableText as="p" field={`region:${region.id}`} value={region.description ?? ''} placeholder="Kısa açıklama"
-                                            className="m-0 text-[15px] text-[var(--site-sub)]" />
-                                    )}
-                                </div>
-                            </article>
-                            );
-                        })}
-                        {canReserve && !edit && (
-                            <section aria-labelledby="mk-rez" className={cn(siteCardDark, 'flex flex-col justify-between gap-5 p-6 md:p-7')}>
-                                <h2 id="mk-rez" className={cn(serif, 'm-0 text-[30px] leading-[1.05] md:text-[36px]')}>
-                                    {site.regions.length >= 2 ? <>{choiceQuestion(site.regions[0].name, site.regions[1].name)} <span className="italic">Siz seçin.</span></> : <>Masanızı <span className="italic">siz seçin.</span></>}
-                                </h2>
-                                <Link to={RESERVATION_PATH} className={cn(cardButton.accent, 'h-12 w-full px-[22px] text-[15px] sm:w-auto')}>Masa ayırt</Link>
-                            </section>
-                        )}
-                    </section>
-                )}
-
-                {(amenities.length > 0 || content.directionsNote || hasHours || showEmpty) && (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))]">
-                        {amenities.length === 0 && showEmpty && <EmptySlot target="amenities" title="+ Olanak ekle" />}
-                        {amenities.length > 0 && (
-                            <section aria-labelledby="mk-olanak" {...editTarget(edit, 'amenities', 'Olanaklar')}
-                                className={cn(siteCard, 'flex flex-col gap-3.5 p-5 md:p-6', editTarget(edit, 'amenities', 'Olanaklar').className)}>
-                                <h2 id="mk-olanak" className={cn(cardLabel, 'm-0')}>Olanaklar</h2>
-                                <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-                                    {amenities.map(a => (
-                                        <li key={a} className="rounded-full border border-[var(--site-line)] px-3.5 py-2 text-sm font-semibold">{a}</li>
-                                    ))}
-                                </ul>
-                            </section>
-                        )}
-                        {(content.directionsNote || showEmpty) && (
-                            <InfoCard icon={<DirectionsIcon />} label="Nasıl gelinir" labelId="mk-yol"
-                                action={address && <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cardButton.outline}>Yol tarifi al</a>}>
-                                <EditableText as="p" field="directionsNote" value={content.directionsNote} multiline placeholder="Nasıl gelinir?"
-                                    className="m-0 whitespace-pre-line text-[15px] leading-relaxed" />
-                            </InfoCard>
-                        )}
-                        {!hasHours && showEmpty && <EmptySlot target="hours" title="+ Saat ekle" />}
-                        {hasHours && (
-                            <EditableBlock target="hours" label="Çalışma saatleri" className="h-full rounded-[20px]">
-                            <InfoCard icon={<ClockIcon />} label="Çalışma saatleri" labelId="mk-saat" className="h-full"
-                                action={site.isOpenNow !== null && <OpenBadge open={site.isOpenNow} />}>
-                                <HoursBlock site={site} compact weekHref="/iletisim#saatler" />
-                                {content.hoursNote && <p className="m-0 text-sm text-[var(--site-sub)]">{content.hoursNote}</p>}
-                            </InfoCard>
-                            </EditableBlock>
-                        )}
-                    </div>
-                )}
-
-                {/* Menü fotoğrafları ayrı ve adıyla: mekân fotoğrafı azsa */}
-                {photos.length < 3 && menuPhotos.length >= 3 && (
-                    <ExternalHint source="menu">
-                    <section aria-labelledby="mk-menuden" className={cn(siteCard, 'flex flex-col gap-4 p-4 md:p-7')}>
-                        <div className="flex flex-wrap items-end justify-between gap-3 px-1 pt-1 md:p-0">
-                            <h2 id="mk-menuden" className={cn(serif, 'm-0 text-[30px] leading-none md:text-[36px]')}>Menümüzden</h2>
-                            <Link to="/menu" className="text-sm font-semibold underline underline-offset-4">Menüyü gör →</Link>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 md:grid-cols-6 md:gap-3">
-                            {menuPhotos.slice(0, menuPhotos.length >= 6 ? 6 : 3).map(p => (
-                                <Link key={p.id} to="/menu" className="relative block overflow-hidden rounded-[12px]">
-                                    <img src={p.imageUrl} alt={p.name} loading="lazy" className="block aspect-square w-full object-cover" />
-                                    {p.isStockImage && <StockImageLabel />}
-                                </Link>
-                            ))}
-                        </div>
-                    </section>
-                    </ExternalHint>
-                )}
+        <SitePage site={site} current="mekan" lastCall={false}>
+            <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
+                <VenueHero site={site} hasLocation={hasLocation} />
+                <Areas site={site} />
+                <Gallery site={site} />
+                <AmenitiesRow site={site} />
+                <Location site={site} />
             </main>
         </SitePage>
+    );
+}
+
+// ── 1. Kapak ─────────────────────────────────────────────────────────────────────────────────────
+
+function VenueHero({ site, hasLocation }: { site: PublicSite; hasLocation: boolean }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const c = site.site;
+    const photo = heroPhoto(site);
+    const canReserve = canReserveOnline(site);
+    // Başlık: restoranın yazdığı büyük başlık; yoksa bölümlerden ("Salonda, terasta / ya da bahçede."), o da yoksa ad.
+    const [main, accent] = c.headline ? splitAccent(c.headline) : regionPhrase(site.regions.map(r => r.name)) ?? splitAccent(restaurantName(site));
+    const titleClass = cn(serif, 'm-0 break-words text-[52px] leading-[0.92] tracking-[-0.015em] md:text-[clamp(60px,7vw,108px)]');
+    const actionClass = 'inline-flex h-[54px] flex-1 items-center justify-center whitespace-nowrap rounded-full px-7 text-base no-underline transition-opacity hover:opacity-90 sm:flex-none';
+
+    return (
+        <section aria-labelledby="mk-baslik" className={cn(box, 'relative flex min-h-[460px] overflow-hidden md:min-h-[540px]')}>
+            <EditableBlock target="photo:hero-mekan" label="Mekân kapağı" chip="Fotoğrafı değiştir" className="absolute inset-0">
+                {photo ? (
+                    <>
+                        <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover object-[60%_40%]" />
+                        {/* Telefonda yazının arkası aşağı doğru koyulaşan beyaz perde; geniş ekranda soldan beyaz geçiş. */}
+                        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.55)_0%,rgba(255,255,255,0.9)_50%,rgba(255,255,255,0.97)_100%)] md:bg-[linear-gradient(90deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.88)_30%,rgba(255,255,255,0.45)_48%,rgba(255,255,255,0)_64%)]" />
+                        {photo.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
+                    </>
+                ) : (
+                    <TablePlan className="absolute right-14 top-1/2 hidden -translate-y-1/2 lg:grid" />
+                )}
+                {edit && !c.venueHeroUrl && (
+                    <span className="absolute right-6 top-6 whitespace-nowrap rounded-full border border-dashed border-[var(--site-border-strong)] bg-[var(--site-card)] px-4 py-2 font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold">
+                        + Mekân kapağı seç
+                    </span>
+                )}
+            </EditableBlock>
+            <div className="pointer-events-none relative z-[1] flex max-w-[720px] flex-col justify-end gap-[22px] px-5 py-10 sm:px-10 md:px-14 md:py-16 [&_[data-edit-text]]:pointer-events-auto [&_a]:pointer-events-auto">
+                <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-sub)]">
+                    <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--site-accent)]" />Mekân
+                </span>
+                {edit ? (
+                    <EditableText as="h1" id="mk-baslik" field="headline" value={c.headline} fallback={[main, accent].filter(Boolean).join(' ')}
+                        placeholder="Büyük başlık" className={titleClass} />
+                ) : (
+                    <h1 id="mk-baslik" className={titleClass}>
+                        {main && <>{main}<br /></>}<em className="rb-accent italic">{accent}</em>
+                    </h1>
+                )}
+                {(c.tagline || showEmpty) && (
+                    <EditableText as="p" field="tagline" value={c.tagline} placeholder="Alt başlık"
+                        className="m-0 max-w-[500px] text-base leading-[1.65] text-[#3E3731] md:text-lg" />
+                )}
+                {!edit && (canReserve || hasLocation) && (
+                    <div className="flex flex-wrap gap-2.5">
+                        {canReserve && <Link to={RESERVATION_PATH} className={cn(actionClass, 'bg-[var(--site-paper)] font-extrabold text-[var(--site-on-paper)]')}>Masa ayırt</Link>}
+                        {hasLocation && (
+                            <a href={`#${LOCATION_ID}`} className={cn(actionClass, 'border border-[var(--site-border-strong)] bg-white/70 font-bold text-[var(--site-text)]')}>Nasıl gelinir?</a>
+                        )}
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+}
+
+// ── 2. Oturma bölümleri ──────────────────────────────────────────────────────────────────────────
+
+function Areas({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const regions = site.regions;
+    if (regions.length === 0) return null;
+    const total = seatCount(regions.flatMap(r => r.tables));
+    // En çok üç bölüm yan yana, aralarında ince çizgi; daha fazlası satır satır (üstte çizgi). Telefonda hep satır.
+    const inRow = regions.length <= 3;
+    const cols = ({ 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3' } as Record<number, string>)[regions.length] ?? 'md:grid-cols-2 lg:grid-cols-3';
+
+    return (
+        // Düzenleyicide bölümün adı yalnız tanımak için yazılır (Masalar'dan gelir); kişi / masa sayısı yok.
+        <section aria-labelledby="mk-alanlar" data-edit-reveal={edit ? 'list:regions' : undefined} className={cn(box, 'px-5 py-9 sm:px-10 md:p-14')}>
+            <div className="mb-7 flex flex-wrap items-baseline justify-between gap-3 md:mb-9">
+                <h2 id="mk-alanlar" className={cn(serif, 'm-0 text-[40px] leading-none md:text-[54px]')}>Nerede <em className="rb-accent italic">oturmak</em> istersiniz?</h2>
+                {total !== null && !edit && <span className="text-sm text-[var(--site-muted)]">Toplam {total} kişilik</span>}
+            </div>
+            <div className={cn('grid grid-cols-1', cols, !inRow && 'md:gap-x-8')}>
+                {regions.map((region, i) => {
+                    const t = editTarget(edit, `region:${region.id}`, `Bölüm · ${region.name}`);
+                    const seats = seatCount(region.tables);
+                    const count = seats !== null ? `${seats} kişi` : region.tables.length > 0 ? `${region.tables.length} masa` : null;
+                    return (
+                        <article key={region.id} {...t}
+                            className={cn('flex min-w-0 flex-col gap-3 border-[var(--site-line)] py-6 first:pt-0 last:pb-0',
+                                i > 0 && 'border-t',
+                                inRow ? 'md:border-t-0 md:px-8 md:py-0 md:first:pl-0 md:last:pr-0' : 'md:border-t md:pt-6 md:[&:nth-child(-n+2)]:border-t-0 md:[&:nth-child(-n+2)]:pt-0 lg:[&:nth-child(3)]:border-t-0 lg:[&:nth-child(3)]:pt-0',
+                                inRow && i > 0 && 'md:border-l', t.className)}>
+                            {region.photoUrl && <img src={region.photoUrl} alt={region.name} loading="lazy" className="mb-1.5 block h-[200px] w-full rounded-[20px] object-cover md:h-[220px]" />}
+                            {!region.photoUrl && showEmpty && (
+                                <div className="mb-1.5 flex h-[200px] items-center justify-center rounded-[20px] border border-dashed border-[#CFC5B4] font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[#8A7D6E] md:h-[220px]">
+                                    + Fotoğraf ekle
+                                </div>
+                            )}
+                            <div className="flex items-baseline justify-between gap-3">
+                                <h3 className={cn(serif, 'm-0 min-w-0 break-words text-[32px] leading-none md:text-[36px]')}>{region.name}</h3>
+                                {count && !edit && <span className={cn(serif, 'shrink-0 text-2xl italic text-[var(--site-accent-text)]')}>{count}</span>}
+                            </div>
+                            {(region.description || showEmpty) && (
+                                <EditableText as="p" field={`region:${region.id}`} value={region.description ?? ''} placeholder="Kısa açıklama"
+                                    className="m-0 text-[15px] leading-[1.65] text-[var(--site-sub)]" />
+                            )}
+                        </article>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+// ── 3. Galeri ────────────────────────────────────────────────────────────────────────────────────
+
+function Gallery({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const photos = venuePhotos(site);
+    if (edit) {
+        // Düzenleyicide bütün mekân fotoğrafları (kapakla aynı olan da) tıklanabilir kalır.
+        return photos.length > 0 ? <VenueGallery site={site} photos={photos} title={restaurantName(site)} /> : <EmptySlot target="gallery:add" title="+ Fotoğraf ekle" />;
+    }
+    // Yalnız mekân fotoğrafı varsa; kapakta görünen fotoğraf galeride tekrarlanmaz.
+    const hero = heroPhoto(site);
+    const shown = photos.filter(p => p !== hero);
+    if (site.site.galleryImageUrls.length === 0 || shown.length === 0) return null;
+    return <VenueGallery site={site} photos={shown} title={restaurantName(site)} />;
+}
+
+// ── 4. Olanaklar + Özel günler ───────────────────────────────────────────────────────────────────
+
+function AmenitiesRow({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const c = site.site;
+    // Admin'deki sırayla, yalnız seçili olanlar.
+    const amenities = SITE_AMENITIES.filter(a => c.amenities.includes(a.key));
+    const amenT = editTarget(edit, 'amenities', 'Olanaklar');
+    const whatsapp = c.whatsappPhone;
+    const phone = site.phone;
+    const showSpecial = edit ? Boolean(whatsapp) : Boolean(whatsapp || phone);
+    const maxParty = canReserveOnline(site) && site.reservation.maxPartySize > 0 ? site.reservation.maxPartySize : null;
+    const waT = editTarget(edit, 'contact', 'WhatsApp');
+    const bigButton = 'flex h-[54px] items-center justify-center gap-2 rounded-full px-5 text-base font-extrabold no-underline transition-opacity hover:opacity-90 [&>svg]:h-[18px] [&>svg]:w-[18px]';
+
+    if (amenities.length === 0 && !showSpecial && !showEmpty) return null;
+
+    return (
+        <div className="flex flex-wrap gap-4">
+            {amenities.length > 0 ? (
+                <section aria-labelledby="mk-olanak" {...amenT} className={cn(box, 'min-w-0 flex-[999_1_640px] px-5 py-9 sm:p-10 md:p-12', amenT.className)}>
+                    <h2 id="mk-olanak" className={cn(serif, 'm-0 mb-6 text-[40px] leading-none md:mb-7 md:text-[46px]')}>Olanaklar</h2>
+                    <ul className="m-0 grid list-none grid-cols-2 gap-2.5 p-0 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))]">
+                        {amenities.map(a => (
+                            <li key={a.key} className="flex min-w-0 flex-col gap-2.5 rounded-[22px] bg-[var(--site-bg)] p-4 sm:p-5">
+                                <AmenityIcon amenity={a.key} />
+                                <span className="break-words text-[15px] font-bold leading-snug">{a.label}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            ) : showEmpty && (
+                <div className="min-w-0 flex-[999_1_640px]"><EmptySlot target="amenities" title="+ Olanak ekle" className="min-h-[160px]" /></div>
+            )}
+            {showSpecial ? (
+                <section aria-labelledby="mk-ozel"
+                    className={cn(box, 'flex min-w-0 flex-[1_1_360px] flex-col justify-between gap-7 bg-[var(--site-accent)] px-5 py-9 text-[var(--site-on-accent)] [--site-accent-text:currentColor] sm:p-10 md:p-11')}>
+                    <div className="flex flex-col gap-3.5">
+                        <span className="text-xs font-extrabold uppercase tracking-[0.24em]">Özel günler</span>
+                        <h2 id="mk-ozel" className={cn(serif, 'm-0 text-[40px] leading-none md:text-[46px]')}>Doğum günü, nişan, iş yemeği…</h2>
+                        <p className="m-0 text-base leading-[1.65]">
+                            {maxParty ? `Online rezervasyon ${maxParty} kişiye kadar; daha kalabalık gruplar ve özel günler için bize yazın ya da arayın.` : 'Kalabalık gruplar ve özel günler için bize yazın ya da arayın.'}
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {whatsapp && (
+                            <a href={whatsappHref(whatsapp)} target="_blank" rel="noopener noreferrer" {...waT}
+                                className={cn(bigButton, 'bg-[var(--site-paper)] text-[var(--site-on-paper)]', waT.className)}>
+                                <WhatsAppIcon />WhatsApp'tan yazın
+                            </a>
+                        )}
+                        {phone && (
+                            <ExternalHint source="restaurant">
+                                <a href={telHref(phone)} aria-label={`Telefonla arayın: ${phone}`} className={cn(bigButton, 'bg-[var(--site-card)] text-[var(--site-text)]')}>
+                                    <PhoneIcon />{phone}
+                                </a>
+                            </ExternalHint>
+                        )}
+                    </div>
+                </section>
+            ) : showEmpty && (
+                <div className="min-w-0 flex-[1_1_360px]"><EmptySlot target="contact" title="+ WhatsApp numarası ekle" className="min-h-[160px]" /></div>
+            )}
+        </div>
+    );
+}
+
+// ── 5. Nasıl gelinir? ────────────────────────────────────────────────────────────────────────────
+
+function Way({ icon, title, children }: { icon: Parameters<typeof WayIcon>[0]['kind']; title: string; children: ReactNode }) {
+    return (
+        <div className="flex gap-4">
+            <span className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-[var(--site-bg)]">
+                <WayIcon kind={icon} />
+            </span>
+            <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--site-muted)]">{title}</span>
+                {children}
+            </div>
+        </div>
+    );
+}
+
+function Location({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    const showEmpty = Boolean(edit?.showEmpty);
+    const c = site.site;
+    const name = restaurantName(site);
+    // Adres Ayarlar'dan gelir: düzenleyicide (harita, adres ve yol tarifi düğmesiyle) çizilmez.
+    const address = edit ? '' : fullAddress(site);
+    const hours = hoursLine(site);
+    const parking = [c.amenities.includes('otopark') && 'otopark', c.amenities.includes('vale') && 'vale hizmeti'].filter(Boolean).join(' ve ');
+    const showParking = Boolean(parking) && !edit;
+    const showNote = Boolean(c.directionsNote) || showEmpty;
+    // Kutu yalnız adres ya da yol notu varsa (sayfanın asıl bilgisi); saat ve otopark tek başına kutu açmaz.
+    if (!(address || showNote || (edit && hours))) return null;
+    const text = 'text-base leading-normal';
+
+    return (
+        <section id={LOCATION_ID} aria-labelledby="mk-yol" className={cn(box, 'flex scroll-mt-24 flex-wrap overflow-hidden')}>
+            {address && <MapPanel name={name} className="min-h-[260px] min-w-0 flex-[999_1_600px] md:min-h-[460px]" />}
+            <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-6 px-5 py-9 sm:p-10 md:gap-[26px] md:p-12">
+                <h2 id="mk-yol" className={cn(serif, 'm-0 text-[40px] leading-none md:text-[46px]')}>Nasıl <em className="rb-accent italic">gelinir?</em></h2>
+                {address && <Way icon="address" title="Adres"><span className={cn(text, 'break-words')}>{address}</span></Way>}
+                {showNote && (
+                    <Way icon="route" title="Ulaşım">
+                        <EditableText as="p" field="directionsNote" value={c.directionsNote} multiline placeholder="Nasıl gelinir? (durak, hat, yürüme mesafesi)"
+                            className={cn(text, 'm-0 whitespace-pre-line break-words')} />
+                    </Way>
+                )}
+                {showParking && <Way icon="parking" title="Otopark"><span className={text}>{parking.charAt(0).toLocaleUpperCase('tr-TR') + parking.slice(1)} var</span></Way>}
+                {hours ? (
+                    <EditableBlock target="hours" label="Çalışma saatleri" className="rounded-[20px]">
+                        <Way icon="clock" title="Çalışma saatleri"><span className={text}>{hours}{c.hoursNote && <span className="block text-sm text-[var(--site-sub)]">{c.hoursNote}</span>}</span></Way>
+                    </EditableBlock>
+                ) : <EmptySlot target="hours" title="+ Saat ekle" />}
+                {address && (
+                    <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer"
+                        className="mt-auto flex h-14 items-center justify-center gap-2 rounded-full bg-[var(--site-paper)] text-base font-extrabold text-[var(--site-on-paper)] no-underline transition-opacity hover:opacity-90">
+                        <DirectionsIcon className="h-[18px] w-[18px]" />Yol tarifi al
+                    </a>
+                )}
+            </div>
+        </section>
     );
 }
