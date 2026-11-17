@@ -11,7 +11,8 @@ import { hoursLine, restaurantName, useSite } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
 import { SITE_LIMITS, editTarget, useSiteEdit } from './site/siteEditContext';
 
-// /hakkimizda (tasarım: "Hakkımızda A · Dergi"). Krem sayfada beyaz yuvarlak kutular: (1) kapak: "Hikâyemiz", dev
+// /hakkimizda (tasarım: "Renkli · Hakkımızda", Dergi düzeni). Kapak kapak renginde (krem yazı, hardal italik), hikâye
+// kâğıdı krem (hardal alıntı kutusu), usta kutusu zeytin, davet koyu kiremit. Krem sayfada beyaz yuvarlak kutular: (1) kapak: "Hikâyemiz", dev
 // serif başlık (slogan; yoksa ad ve kuruluş yılı), kısa giriş; fotoğraf varsa soldan beyaz geçiş, yoksa dev soluk tırnak
 // ve halkalar. (2) Hikâye "kâğıdı": solda etiket ve ad, sağda büyük ilk harfle başlayan hikâye; altında ustanın sözü ve
 // yalnız gerçek verili rakamlar (yıl, ürün sayısı, salon kapasitesi, Google puanı). (3) Koyu "Mutfağın başında" kutusu
@@ -19,6 +20,8 @@ import { SITE_LIMITS, editTarget, useSiteEdit } from './site/siteEditContext';
 // Verisi olmayan kutu çizilmez; restoranın girmediği bilgi uydurulmaz.
 
 const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[32px]';
+/** Koyu zeminlerde üst satır: açık hardal (koyu kiremit ve zeytin üstünde 4.5:1). */
+const darkLabel = 'text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-mustard-text)]';
 const label = 'text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-accent-text)]';
 
 interface Stat { key: string; value: string; label: string; wrap?: (node: ReactNode) => ReactNode }
@@ -83,18 +86,19 @@ function AboutHero({ site }: { site: PublicSite }) {
     const fallback: [string, string] = c.foundedYear ? [`${name},`, `${sinceYear(c.foundedYear)}.`] : splitAccent(name);
     const [main, accent] = c.storyTitle ? splitAccent(c.storyTitle) : fallback;
     return (
-        <section aria-labelledby="hk-baslik" className={cn(box, 'relative flex min-h-[440px] overflow-hidden md:min-h-[560px]')}>
+        <section aria-labelledby="hk-baslik"
+            className="relative flex min-h-[440px] overflow-hidden rounded-[24px] bg-[var(--site-hero-bg)] text-[var(--site-on-paper)] md:min-h-[560px] md:rounded-[32px]">
             <EditableBlock target="photo:hero-hakkimizda" label="Hakkımızda kapağı" chip="Fotoğrafı değiştir" className="absolute inset-0">
                 {photo ? (
                     <>
                         <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_45%]" />
-                        <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.7)_0%,rgba(255,255,255,0.92)_55%,rgba(255,255,255,0.97)_100%)] md:bg-[linear-gradient(90deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.9)_32%,rgba(255,255,255,0.5)_50%,rgba(255,255,255,0)_68%)]" />
+                        <span aria-hidden="true" className="absolute inset-0 bg-[color-mix(in_srgb,var(--site-hero-bg)_86%,transparent)] md:bg-transparent md:bg-[linear-gradient(90deg,color-mix(in_srgb,var(--site-hero-bg)_97%,transparent)_0%,color-mix(in_srgb,var(--site-hero-bg)_90%,transparent)_32%,color-mix(in_srgb,var(--site-hero-bg)_50%,transparent)_50%,transparent_68%)]" />
                         {photo.includes('/shared/stock/') && <StockImageLabel className="bottom-auto right-3 top-3" />}
                     </>
                 ) : (
                     <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-                        <span className={cn(serif, 'absolute right-[8%] top-1/2 -translate-y-1/2 text-[260px] italic leading-[0.7] text-[var(--site-accent-soft)] md:text-[520px]')}>“</span>
-                        <span className="absolute -right-40 top-1/2 h-[700px] w-[700px] -translate-y-1/2 rounded-full border border-[rgba(30,26,22,0.07)]" />
+                        <span className={cn(serif, 'absolute right-[8%] top-1/2 -translate-y-1/2 text-[260px] font-semibold italic leading-[0.7] text-[color-mix(in_srgb,var(--site-mustard)_22%,transparent)] md:text-[520px]')}>“</span>
+                        <span className="absolute -right-40 top-1/2 h-[700px] w-[700px] -translate-y-1/2 rounded-full border border-[rgba(251,244,232,0.12)]" />
                         <span className="absolute -right-10 top-1/2 h-[460px] w-[460px] -translate-y-1/2 rounded-full border border-[var(--site-accent-line)]" />
                     </span>
                 )}
@@ -104,9 +108,9 @@ function AboutHero({ site }: { site: PublicSite }) {
                     </span>
                 )}
             </EditableBlock>
-            <div className="pointer-events-none relative z-[1] flex max-w-[760px] flex-col justify-end gap-[22px] px-5 py-10 sm:px-10 md:px-14 md:py-16 [&_[data-edit-text]]:pointer-events-auto">
-                <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-sub)]">
-                    <span aria-hidden="true" className="h-px w-7 shrink-0 bg-[var(--site-accent)]" />Hikâyemiz
+            <div className="pointer-events-none relative z-[1] flex max-w-[760px] flex-col justify-end gap-[22px] px-5 py-10 sm:px-10 md:px-14 md:py-16 [--site-accent-text:var(--site-mustard-text)] [&_[data-edit-text]]:pointer-events-auto">
+                <span className={cn('inline-flex items-center gap-2.5', darkLabel)}>
+                    <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-mustard-text)]" />Hikâyemiz
                 </span>
                 {edit ? (
                     <EditableText as="h1" id="hk-baslik" field="storyTitle" value={c.storyTitle} fallback={[main, accent].filter(Boolean).join(' ')} placeholder="Slogan yazın"
@@ -118,7 +122,7 @@ function AboutHero({ site }: { site: PublicSite }) {
                 )}
                 {(c.tagline || showEmpty) && (
                     <EditableText as="p" field="tagline" value={c.tagline} placeholder="Kısa giriş yazın"
-                        className="m-0 max-w-[520px] text-base leading-[1.65] text-[#3E3731] md:text-lg" />
+                        className="m-0 max-w-[520px] text-base leading-[1.65] text-[rgba(251,244,232,0.9)] md:text-lg" />
                 )}
             </div>
         </section>
@@ -150,7 +154,7 @@ function StoryPaper({ site }: { site: PublicSite }) {
                         {hasStory ? name : <>Bizi <span className="italic">menümüzden</span> tanıyın.</>}
                     </h2>
                 </div>
-                <div className="flex min-w-0 flex-[999_1_480px] flex-col gap-5 text-base leading-[1.8] text-[#3E3731] md:text-lg">
+                <div className="flex min-w-0 flex-[999_1_480px] flex-col gap-5 text-base leading-[1.8] text-[#4A3A2C] md:text-lg">
                     {hasStory ? (
                         <EditableText as="p" field="about" value={c.about} multiline placeholder="Hikâyenizi yazın: nasıl başladınız, neyi farklı yapıyorsunuz."
                             className={cn('m-0 whitespace-pre-line',
@@ -165,14 +169,14 @@ function StoryPaper({ site }: { site: PublicSite }) {
             </div>
 
             {hasQuote && (
-                <figure className="mx-auto mb-0 mt-12 flex max-w-[980px] flex-col gap-[18px] border-y border-[var(--site-border)] py-10 text-center md:mt-[72px] md:py-14">
+                <figure className="mx-auto mb-0 mt-12 flex max-w-[1120px] flex-col gap-[18px] rounded-[24px] bg-[var(--site-mustard)] px-6 py-10 text-center text-[var(--site-text)] [--site-accent-text:var(--site-story)] md:mt-[72px] md:rounded-[28px] md:px-12 md:py-14">
                     <blockquote className={cn(serif, 'm-0 break-words text-[32px] leading-[1.1] md:text-[clamp(36px,4vw,58px)]')}>
                         {edit ? (
                             <EditableText field="founderQuote" value={c.founderQuote} multiline placeholder="Ustanın tek cümlelik sözü" />
                         ) : <QuoteText text={c.founderQuote} />}
                     </blockquote>
                     {(c.founderName || c.founderTitle || edit) && (
-                        <figcaption className="flex flex-wrap justify-center gap-x-1.5 text-[15px] text-[var(--site-muted)]">
+                        <figcaption className="flex flex-wrap justify-center gap-x-1.5 text-[15px] font-bold">
                             —{' '}
                             {edit ? (
                                 <>
@@ -191,7 +195,7 @@ function StoryPaper({ site }: { site: PublicSite }) {
                         const cell = (
                             <div className="flex h-full flex-col items-center gap-2 px-3 pb-2 pt-8 text-center md:px-7 md:pt-10">
                                 <dt className="order-2 text-sm text-[var(--site-muted)]">{f.label}</dt>
-                                <dd className={cn(serif, 'order-1 m-0 text-[52px] leading-none md:text-[64px]')}>{f.value}</dd>
+                                <dd className={cn(serif, 'order-1 m-0 text-[52px] font-semibold leading-none md:text-[64px]')}>{f.value}</dd>
                             </div>
                         );
                         return (
@@ -226,25 +230,25 @@ function FounderAndValues({ site }: { site: PublicSite }) {
         <div className="flex flex-wrap gap-4">
             {showFounder && (
                 <section aria-labelledby="hk-usta"
-                    className="relative flex min-h-[420px] min-w-0 flex-[1_1_460px] flex-col justify-end gap-4 overflow-hidden rounded-[24px] bg-[var(--site-paper)] p-6 text-[var(--site-on-paper)] sm:p-10 md:min-h-[520px] md:rounded-[32px] [--site-accent-text:var(--site-accent-on-dark)]">
+                    className="relative flex min-h-[420px] min-w-0 flex-[1_1_460px] flex-col justify-end gap-4 overflow-hidden rounded-[24px] bg-[var(--site-menu-box)] p-6 text-[var(--site-on-paper)] sm:p-10 md:min-h-[520px] md:rounded-[32px] [--site-accent-text:var(--site-mustard-text)]">
                     {c.founderPhotoUrl ? (
                         <>
                             <img src={c.founderPhotoUrl} alt={c.founderName} {...photoT} className={cn('absolute inset-0 h-full w-full object-cover', photoT.className)} />
-                            <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(30,26,22,0)_30%,rgba(30,26,22,0.88)_85%)]" />
+                            <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(36,24,15,0)_30%,color-mix(in_srgb,var(--site-menu-box)_94%,transparent)_85%)]" />
                         </>
                     ) : edit ? (
                         <div className="absolute left-6 top-6 w-[180px] sm:left-10 sm:top-10"><EmptySlot target="photo:founder" title="+ Portre ekle" className="bg-[var(--site-card)]" /></div>
                     ) : c.founderName && (
-                        <span aria-hidden="true" className={cn(serif, 'absolute left-6 top-6 flex h-[120px] w-[120px] items-center justify-center rounded-full border border-[rgba(246,241,233,0.25)] text-[56px] text-[var(--site-accent-on-dark)] sm:left-10 sm:top-10 sm:h-[150px] sm:w-[150px] sm:text-[64px]')}>
+                        <span aria-hidden="true" className={cn(serif, 'absolute left-6 top-6 flex h-[120px] w-[120px] items-center justify-center rounded-full border border-[rgba(246,241,233,0.25)] text-[56px] font-semibold text-[var(--site-mustard-text)] sm:left-10 sm:top-10 sm:h-[150px] sm:w-[150px] sm:text-[64px]')}>
                             {initials(c.founderName)}
                         </span>
                     )}
-                    <span className={cn(label, 'relative')}>Mutfağın başında</span>
+                    <span className={cn(darkLabel, 'relative')}>Mutfağın başında</span>
                     <EditableText as="h2" id="hk-usta" field="founderName" value={c.founderName} placeholder="Ustanın adı"
                         className={cn(serif, 'relative m-0 break-words text-[44px] leading-none md:text-[52px]')} />
                     {(c.founderTitle || showEmpty) && (
                         <EditableText as="p" field="founderTitle" value={c.founderTitle} placeholder="Unvanı"
-                            className="relative m-0 max-w-[440px] text-base leading-[1.7] text-[#D9CFC3]" />
+                            className="relative m-0 max-w-[440px] text-base leading-[1.7] text-[#E3D8C8]" />
                     )}
                 </section>
             )}
@@ -259,7 +263,7 @@ function FounderAndValues({ site }: { site: PublicSite }) {
                                         <span aria-hidden="true" className={cn(serif, 'w-11 shrink-0 text-[36px] italic leading-none text-[var(--site-accent-text)] sm:w-[52px] sm:text-[40px]')}>{String(i + 1).padStart(2, '0')}</span>
                                         <div className="flex min-w-0 flex-col gap-1.5">
                                             <EditableText as="h3" field={`value:${i}:title`} value={v.title} placeholder="Başlık"
-                                                className={cn(serif, 'm-0 break-words text-[28px] leading-[1.05] md:text-[32px]')} />
+                                                className={cn(serif, 'm-0 break-words text-[28px] font-semibold leading-[1.05] md:text-[32px]')} />
                                             {(v.text || edit) && (
                                                 <EditableText as="p" field={`value:${i}:text`} value={v.text} placeholder="Tek cümle"
                                                     className="m-0 text-[15px] leading-[1.65] text-[var(--site-sub)]" />
@@ -301,7 +305,7 @@ function Journey({ site }: { site: PublicSite }) {
                                 <div aria-hidden="true" className="flex items-center">
                                     <span className={cn('h-3.5 w-3.5 shrink-0 rounded-full shadow-[0_0_0_5px_var(--site-accent-soft)]',
                                         i === milestones.length - 1 ? 'bg-[var(--site-accent)]' : 'bg-[var(--site-paper)]')} />
-                                    <span className="h-px flex-1 bg-[rgba(30,26,22,0.18)]" />
+                                    <span className="h-px flex-1 bg-[rgba(36,24,15,0.18)]" />
                                 </div>
                                 <EditableText field={`milestone:${i}:year`} value={m.year ? String(m.year) : ''} placeholder="Yıl"
                                     className={cn(serif, 'text-[40px] leading-none tabular-nums')} />
@@ -328,12 +332,12 @@ function Invitation({ site }: { site: PublicSite }) {
     return (
         <ExternalHint source="reservation">
             <section aria-labelledby="hk-davet"
-                className="flex flex-wrap items-center justify-between gap-6 rounded-[24px] bg-[var(--site-accent)] p-6 text-[var(--site-on-accent)] sm:p-10 md:rounded-[32px] md:p-14 [--site-accent-text:currentColor]">
+                className="flex flex-wrap items-center justify-between gap-6 rounded-[24px] bg-[var(--site-story)] p-6 text-[var(--site-on-paper)] sm:p-10 md:rounded-[32px] md:p-14 [--site-accent-text:var(--site-mustard-text)]">
                 <h2 id="hk-davet" className={cn(serif, 'm-0 text-[40px] leading-[0.95] md:text-[clamp(42px,4.6vw,68px)]')}>
                     Hikâyemizin bir parçası olun,<br /><em className="italic">bir akşam bekleriz.</em>
                 </h2>
                 <div className="flex flex-wrap gap-2.5">
-                    {canReserve && <Link to={RESERVATION_PATH} className="inline-flex h-14 items-center rounded-full bg-[var(--site-paper)] px-7 font-extrabold text-[var(--site-on-paper)] no-underline transition-opacity hover:opacity-90">Masa ayırt</Link>}
+                    {canReserve && <Link to={RESERVATION_PATH} className="inline-flex h-14 items-center rounded-full bg-[var(--site-mustard)] px-7 font-extrabold text-[var(--site-text)] no-underline transition-opacity hover:opacity-90">Masa ayırt</Link>}
                     <Link to="/menu" className="inline-flex h-14 items-center rounded-full bg-[var(--site-card)] px-7 font-extrabold text-[var(--site-text)] no-underline transition-opacity hover:opacity-90">Menüyü gör</Link>
                 </div>
             </section>

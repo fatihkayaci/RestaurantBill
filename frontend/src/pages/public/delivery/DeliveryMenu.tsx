@@ -130,7 +130,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                     onClick={e => goTo(e, section.id)}
                                     aria-current={selected ? 'true' : undefined}
                                     className={cn(
-                                        'flex h-10 shrink-0 items-center rounded-full border px-4 text-[15px] font-semibold no-underline transition-colors',
+                                        'flex h-11 shrink-0 items-center rounded-full border px-4 text-[15px] font-semibold no-underline transition-colors',
                                         selected
                                             ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]'
                                             : 'border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-text)]',
@@ -351,7 +351,7 @@ function FeaturedSetMenuCard({ menu, restaurant, quantity, onOpen }: { menu: Onl
                 {menu.isStockImage && menu.imageUrl && <StockImageLabel className="bottom-2.5 right-2.5" />}
                 <span className="absolute left-2.5 top-2.5 flex items-center gap-1.5">
                     {soldOut ? <SoldOutBadge /> : (
-                        <span className="rounded-full border border-[var(--site-border)] bg-white px-2.5 py-1 text-xs font-bold text-[#111111]">Menü</span>
+                        <span className="rounded-full bg-[var(--site-mustard)] px-2.5 py-1 text-xs font-extrabold text-[#24180F]">Menü</span>
                     )}
                     {quantity > 0 && <InCartBadge quantity={quantity} />}
                 </span>
