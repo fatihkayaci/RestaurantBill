@@ -379,7 +379,7 @@ function useScrollOnEnter() {
  * sarmalayıcısının görünümünü değiştirir; `stickyHeader={false}` başlığı sayfayla kayan hâle getirir.
  * `lastCall={false}` son çağrı kartını gizler (sayfanın kendi çağrı kartı varsa). `mobileActions` alt çubuğun
  * düğmelerini değiştirir (boş dizi: çubuk yok); verilmezse Ara · Yol tarifi · Masa ayırt. Alt bilginin ziyaret sütunları
- * ana sayfa (kendi içinde çizer) ve İletişim'de (aynı bilgiler sayfada) yoktur.
+ * İletişim'de (aynı bilgiler sayfada) yoktur.
  */
 export function SitePage({ site, current, className, stickyHeader = true, lastCall = true, mobileActions, children }: {
     site: PublicSite; current: SitePageKey; className?: string; stickyHeader?: boolean; lastCall?: boolean;
@@ -393,7 +393,8 @@ export function SitePage({ site, current, className, stickyHeader = true, lastCa
     const inFlow = current === 'rezervasyon';
     const actions = inFlow ? [] : mobileActions ?? defaults;
     const showLastCall = lastCall && !inFlow && current !== 'rezervasyon-sorgula' && current !== 'home';
-    const footerVisit = current !== 'home' && current !== 'iletisim';
+    // Adres · saatler · iletişim her sayfanın alt bilgisinde; İletişim sayfası aynı bilgileri zaten gösterir.
+    const footerVisit = current !== 'iletisim';
     return (
         <SiteShell accent={site.site.accentColor} theme={site.site.theme}>
             <link rel="stylesheet" href={FONTS_HREF} precedence="default" />

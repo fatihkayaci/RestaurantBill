@@ -64,10 +64,18 @@ export default function RestaurantSitePage() {
                 <HomeStory site={site} />
                 <PhotoStrip site={site} />
                 <HomeReviews site={site} />
-                <div className="border-t border-[var(--site-line)]"><VisitSection site={site} /></div>
+                <EditorVisit site={site} />
             </main>
         </SitePage>
     );
+}
+
+// Adres · saatler · iletişim her sayfada alt bilgide durur. Düzenleyicide alt bilgi çizilmez; saatler ve iletişim
+// orada da değiştirilebilsin diye yalnız düzenleme görünümünde sayfanın sonunda gösterilir.
+function EditorVisit({ site }: { site: PublicSite }) {
+    const edit = useSiteEdit();
+    if (!edit) return null;
+    return <div className="border-t border-[var(--site-line)]"><VisitSection site={site} /></div>;
 }
 
 // ── Kapak ────────────────────────────────────────────────────────────────────────────────────────
