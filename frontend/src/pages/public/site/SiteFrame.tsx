@@ -335,38 +335,143 @@ export function VisitSection({ site, className, compact = false }: { site: Publi
     );
 }
 
-// ── Alt bilgi ────────────────────────────────────────────────────────────────────────────────────
+// ── Alt bilgi (Footer B · koyu blok) ─────────────────────────────────────────────────────────────
 
-/** Tema 2 alt bilgisi: (isteğe bağlı) ziyaret sütunları, dev soluk ad, telif ve bağlantılar. */
+/** Süs amaçlı mini harita (gerçek harita değil): tıklayınca Google Haritalar'da yol tarifi açılır. */
+function MapThumb({ href }: { href: string }) {
+    return (
+        <a href={href} target="_blank" rel="noopener noreferrer" aria-label="Haritada aç"
+            className="relative block h-[150px] overflow-hidden rounded-2xl bg-[#2B2621] bg-[linear-gradient(rgba(246,241,233,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(246,241,233,0.05)_1px,transparent_1px)] bg-[length:24px_24px] transition-opacity hover:opacity-90">
+            <span aria-hidden="true" className="absolute -left-[10%] -right-[10%] top-[46%] h-[9px] -rotate-[9deg] bg-[#3A332C]" />
+            <span aria-hidden="true" className="absolute -bottom-[10%] -top-[10%] left-[60%] w-[7px] rotate-[14deg] bg-[#3A332C]" />
+            <span aria-hidden="true" className="absolute right-0 top-0 h-1/2 w-[34%] rounded-bl-[60px] bg-[#24343A]" />
+            <span aria-hidden="true" className="absolute left-[46%] top-[42%] h-[18px] w-[18px] rounded-full border-[3px] border-[#1E1A16] bg-[var(--site-accent)] shadow-[0_0_0_6px_rgba(246,241,233,0.12)]" />
+        </a>
+    );
+}
+
+function WhatsAppIcon() {
+    return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.4A8.4 8.4 0 1 1 21 11.5z" /></svg>;
+}
+
+function InstagramIcon() {
+    return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /></svg>;
+}
+
+/**
+ * Tema 2 alt bilgisi (Footer B): krem zemin üstünde yuvarlak köşeli koyu blok. Üstte "bugün" şeridi (açık/kapalı,
+ * bugünün saatleri, paket siparişin son saati, Sipariş ver · Masa ayırt), altında adres (mini harita) · çalışma saatleri
+ * (bugün vurgulu) · iletişim · sayfalar sütunları, en altta telif ve KVKK. Verisi olmayan parça çizilmez.
+ * `visit={false}`: adres/saat/iletişim sütunları yok (İletişim sayfası bunları zaten gösterir).
+ */
 export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite; bottomBar: boolean; visit?: boolean }) {
     const edit = useSiteEdit();
     const fixedX = editExternal(edit, 'fixed');
+    const ordering = useOnlineOrdering();
+    const canOrder = useOnlineOrderingAvailable();
+    const [trackPath] = useState(lastOrderTrackingPath);
     const name = restaurantName(site);
     const nav = siteNav(site);
     const canReserve = canReserveOnline(site);
-    const link = 'inline-flex min-h-11 items-center text-[var(--site-sub)] underline-offset-4 hover:text-[var(--site-text)] hover:underline';
+    const content = site.site;
+    const address = fullAddress(site);
+    const rows = weekSchedule(site);
+    const today = rows?.find(r => r.isToday) ?? null;
+    const lastOrder = ordering?.state === 'open' && ordering.lastOrderAt ? timeOfDay(ordering.lastOrderAt) : null;
+    const hasSocial = Boolean(content.whatsappPhone || content.instagramUrl);
+
+    const label = 'm-0 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--site-accent-on-dark)]';
+    const muted = 'text-[#B8AEA2]';
+    const link = 'inline-flex min-h-11 items-center self-start text-[15px] no-underline hover:opacity-75';
+    const roundIcon = 'flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(246,241,233,0.25)] text-[#F6F1E9] transition-colors hover:border-[#F6F1E9]';
+
+    const todayText = [
+        today ? `Bugün ${today.text}` : null,
+        lastOrder ? `Paket sipariş ${untilTime(lastOrder)}` : null,
+    ].filter(Boolean).join(' · ');
+    const showToday = site.isOpenNow !== null || Boolean(todayText) || canOrder || canReserve;
+    const showAddress = visit && Boolean(address);
+    const showHours = visit && rows !== null;
+    const showContact = visit && (Boolean(site.phone) || hasSocial);
 
     return (
-        <footer className={cn(sans, 'mt-auto text-[var(--site-text)]')}>
-            <div className="border-t border-[var(--site-line)]">
-                <div className={cn(sectionWrap, 'flex flex-col gap-10 pt-14', bottomBar ? 'pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-8' : 'pb-8')}>
-                    {/* Üst sıra: ad + yer, sonra adres · saatler · iletişim sütunları (verisi olmayan sütun çizilmez). */}
-                    <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_repeat(3,minmax(0,1fr))]">
-                        <div className="flex min-w-0 flex-col gap-2">
-                            <span className={cn(serif, 'break-words text-[36px] leading-none')}>{name}</span>
-                            {placeLine(site) && <span className="text-sm text-[var(--site-muted)]">{placeLine(site)}</span>}
+        <footer className={cn(sans, 'mt-auto bg-[var(--site-bg)] px-2 pb-2 sm:px-4 sm:pb-4', bottomBar && 'pb-[calc(88px+env(safe-area-inset-bottom))] sm:pb-[calc(88px+env(safe-area-inset-bottom))] md:pb-4')}>
+            <div className="mx-auto max-w-[1408px] overflow-hidden rounded-[24px] bg-[#1E1A16] text-[#F6F1E9] md:rounded-[32px]">
+                <div className={cn(sectionWrap, 'flex flex-col gap-10 pt-10 md:pt-14')}>
+                    {showToday && (
+                        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-[rgba(246,241,233,0.1)] bg-[rgba(246,241,233,0.06)] px-5 py-4">
+                            <div className="flex flex-wrap items-center gap-x-[18px] gap-y-2.5">
+                                {site.isOpenNow !== null && (
+                                    <span className="inline-flex items-center gap-2 font-extrabold">
+                                        <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', site.isOpenNow ? 'bg-[#4ADE80]' : 'bg-[#F87171]')} />
+                                        {site.isOpenNow ? 'Şu an açık' : 'Şu an kapalı'}
+                                    </span>
+                                )}
+                                {todayText && <span className={muted}>{todayText}</span>}
+                            </div>
+                            {(canOrder || canReserve) && (
+                                <div className="flex flex-wrap gap-2">
+                                    {canOrder && <Link to="/siparis" className="inline-flex h-[46px] items-center rounded-full bg-[var(--site-accent)] px-5 text-sm font-extrabold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90">Sipariş ver</Link>}
+                                    {canReserve && <Link to={RESERVATION_PATH} className="inline-flex h-[46px] items-center rounded-full border border-[rgba(246,241,233,0.3)] px-5 text-sm font-bold no-underline transition-colors hover:border-[#F6F1E9]">Masa ayırt</Link>}
+                                </div>
+                            )}
                         </div>
-                        {visit && <VisitSection site={site} compact />}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-[13px] text-[var(--site-muted)]">
-                        <span {...fixedX} className={fixedX.className}>© {new Date().getFullYear()} {name} · <strong className="font-bold text-[var(--site-text)]">Sophram</strong> ile hazırlandı</span>
-                        <nav aria-label="Alt menü" className="flex flex-wrap gap-x-5">
+                    )}
+
+                    <div className="grid grid-cols-1 gap-9 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+                        {showAddress && (
+                            <div className="flex min-w-0 flex-col gap-3">
+                                <h2 className={label}>Adres</h2>
+                                <MapThumb href={directionsUrl(address)} />
+                                <p className={cn(serif, 'm-0 break-words text-2xl leading-[1.15]')}>
+                                    {site.openAddress || address}
+                                    {site.openAddress && (site.district || site.city) && <><br />{[site.district, site.city].filter(Boolean).join(' / ')}</>}
+                                </p>
+                                {content.directionsNote && <p className={cn('m-0 text-sm', muted)}>{content.directionsNote}</p>}
+                                <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cn(link, 'text-sm font-bold')}>Yol tarifi al →</a>
+                            </div>
+                        )}
+                        {showHours && rows && (
+                            <div className="flex min-w-0 flex-col gap-3">
+                                <h2 className={label}>Çalışma saatleri</h2>
+                                <dl className="m-0 flex flex-col">
+                                    {rows.map(r => (
+                                        <div key={r.day} className={cn('-mx-2.5 flex justify-between gap-4 rounded-[10px] px-2.5 py-[7px] text-sm',
+                                            r.isToday ? 'bg-[rgba(246,241,233,0.1)] font-extrabold text-[#F6F1E9]' : muted)}>
+                                            <dt>{r.label}{r.isToday && ' · bugün'}</dt>
+                                            <dd className="m-0 tabular-nums">{r.text}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                                {content.hoursNote && <p className={cn('m-0 text-sm', muted)}>{content.hoursNote}</p>}
+                            </div>
+                        )}
+                        {showContact && (
+                            <div className="flex min-w-0 flex-col gap-3">
+                                <h2 className={label}>İletişim</h2>
+                                {site.phone && <a href={telHref(site.phone)} className={cn(serif, 'self-start text-[32px] leading-none no-underline')}>{site.phone}</a>}
+                                <div className="mt-1 flex gap-2">
+                                    {site.phone && <a href={telHref(site.phone)} aria-label="Ara" className={roundIcon}><PhoneIcon className="h-[18px] w-[18px]" /></a>}
+                                    {content.whatsappPhone && <a href={whatsappHref(content.whatsappPhone)} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className={roundIcon}><WhatsAppIcon /></a>}
+                                    {content.instagramUrl && <a href={content.instagramUrl} target="_blank" rel="noopener noreferrer" aria-label={`Instagram: ${instagramHandle(content.instagramUrl)}`} className={roundIcon}><InstagramIcon /></a>}
+                                </div>
+                            </div>
+                        )}
+                        <nav aria-label="Alt menü" className="flex min-w-0 flex-col">
+                            <h2 className={cn(label, 'mb-1')}>Sayfalar</h2>
                             {nav.map(item => <Link key={item.key} to={item.to} className={link}>{item.label}</Link>)}
-                            {canReserve && <Link to={RESERVATION_PATH} className={link}>Rezervasyon</Link>}
+                            {canOrder && <Link to="/siparis" className={link}>Paket sipariş</Link>}
+                            {trackPath && <Link to={trackPath} className={link}>Siparişim nerede?</Link>}
                             {canReserve && <Link to={RESERVATION_LOOKUP_PATH} className={link}>Rezervasyon sorgula</Link>}
-                            <Link to="/gizlilik-politikasi" {...fixedX} className={cn(link, fixedX.className)}>KVKK</Link>
-                            <Link to="/login" {...fixedX} className={cn(link, fixedX.className)}>Personel girişi</Link>
                         </nav>
+                    </div>
+                </div>
+
+                <div className={cn(sectionWrap, 'mt-12 flex flex-wrap justify-between gap-x-6 border-t border-[rgba(246,241,233,0.1)] pb-3 pt-2 text-[13px]', muted)}>
+                    <span {...fixedX} className={cn('inline-flex min-h-11 items-center', fixedX.className)}>© {new Date().getFullYear()} {name} ·&nbsp;<strong className="font-bold text-[#F6F1E9]">Sophram</strong>&nbsp;ile hazırlandı</span>
+                    <div className="flex flex-wrap gap-x-5">
+                        <Link to="/gizlilik-politikasi" {...fixedX} className={cn('inline-flex min-h-11 items-center hover:text-[#F6F1E9]', fixedX.className)}>KVKK</Link>
+                        <Link to="/login" {...fixedX} className={cn('inline-flex min-h-11 items-center hover:text-[#F6F1E9]', fixedX.className)}>Personel girişi</Link>
                     </div>
                 </div>
             </div>
