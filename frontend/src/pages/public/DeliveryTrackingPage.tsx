@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronDown, Phone, RotateCcw } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, ClipboardCheck, Flame, House, MapPin, Package, Phone, RotateCcw, Truck } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { publicDeliveryService } from '@/features/delivery/api/publicDeliveryService';
 import { forgetOrder, rememberOrder } from '@/features/delivery/deliveryCart';
 import { TRACKING_STEPS, isFinalStatus, trackingStepIndex } from '@/features/delivery/deliveryStatus';
-import { DeliveryStatus, DoorPayment, type DeliveryLine, type DeliveryTracking } from '@/features/delivery/types';
+import { DeliveryStatus, DoorPayment, type DeliveryTracking } from '@/features/delivery/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { customerRootStyle } from './customerTheme';
 import { ImageSlot } from './site/SiteChrome';
-import { FlowSiteHeader, HeaderSpacer } from './site/SiteFrame';
+import { FlowSiteHeader, SiteFooter } from './site/SiteFrame';
 import { FONTS_HREF, serif } from './site/siteParts';
-import { SITE_FONTS_HREF, glass, telHref } from './site/siteTheme';
+import { SITE_FONTS_HREF, telHref } from './site/siteTheme';
 import { useSite } from './site/useSite';
 
 const POLL_MS = 15_000;
@@ -40,15 +40,11 @@ function paymentText(order: DeliveryTracking): string {
     return `Kapıda ${order.paymentPreference === DoorPayment.Nakit ? 'nakit' : 'kart'}`;
 }
 
-/** "2 Adana, 1 Ayran" — teslim ekranının kısa özeti. */
-function linesSummary(lines: DeliveryLine[]): string {
-    return lines.map(line => `${line.quantity} ${line.name}`).join(', ');
-}
-
 // Paket siparişin takip sayfası (/siparis/takip/:token). Anahtar siparişte verilen rastgele token'dır; sayfa açılınca
 // sipariş bu cihazın "siparişlerim" listesine eklenir. Sayfa görünürken 15 sn'de bir yenilenir, son durumda durur.
-// İlk bakışta misafirin asıl sorusu cevaplanır: "ne zaman gelir?" (büyük saat), altında 6 adımlı çubuk. Restoranın adı,
-// rengi ve kapağı takip yanıtından gelir. Restoran onaylamadan müşteri iptal edebilir (onay sayfanın içinde açılır).
+// Tasarım "Renkli · Siparişim": durum rengindeki kapakta başlık, kalan dakika dairesi ve 6 adım; altında krem sipariş
+// kâğıdı (satırlar, tutarlar, iptal) ve sağda zeytin yardım/kurye kutusu, teslim ya da iptalde hardal "tekrar" kutusu.
+// Restoranın rengi ve tasarımı takip yanıtından gelir; renkler yalnız site değişkenleridir (Sade'de de çalışır). Restoran onaylamadan müşteri iptal edebilir (onay sayfanın içinde açılır).
 // "Tekrar sipariş ver" / "Sepete dön", gönderilen sepetin bu cihazdaki kopyasıyla /siparis?tekrar=<token> açar.
 export default function DeliveryTrackingPage() {
     const { token = '' } = useParams();
@@ -147,7 +143,7 @@ export default function DeliveryTrackingPage() {
     const brand = order?.companyName || order?.branchName || '';
 
     const root = (children: ReactNode) => (
-        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design })} className="min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]">
+        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design })} className="flex min-h-screen flex-col overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]">
             <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
             <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
             {children}
@@ -156,21 +152,21 @@ export default function DeliveryTrackingPage() {
 
     if (!order) {
         return root(
-            <main className="mx-auto min-h-screen max-w-xl px-4 pb-16 pt-4">
+            <main className="mx-auto min-h-screen w-full max-w-xl px-4 pb-16 pt-4">
                 <Link to="/siparis" className="-ml-2 inline-flex h-11 items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-[var(--site-text)] no-underline hover:bg-[var(--site-raised)]">
                     <ArrowLeft className="h-4 w-4" aria-hidden="true" />Sipariş sayfası
                 </Link>
                 {error ? (
                     <div className="mt-10 text-center">
-                        <h1 className={cn(serif, 'm-0 text-[40px] leading-none')}>{notFound ? <>Sipariş <span className="italic">bulunamadı.</span></> : <>Durum <span className="italic">alınamadı.</span></>}</h1>
+                        <h1 className={cn(serif, 'm-0 text-[40px] font-extrabold leading-none')}>{notFound ? <>Sipariş <em className="font-semibold italic text-[var(--site-terracotta-text)]">bulunamadı.</em></> : <>Durum <em className="font-semibold italic text-[var(--site-terracotta-text)]">alınamadı.</em></>}</h1>
                         <p className="mt-3 text-base text-[var(--site-sub)]">{error}</p>
-                        {!notFound && <button type="button" onClick={load} className="mt-6 h-12 rounded-full bg-[var(--site-paper)] px-6 font-semibold text-[var(--site-on-paper)]">Tekrar dene</button>}
+                        {!notFound && <button type="button" onClick={load} className="mt-6 h-12 rounded-full bg-[var(--site-paper)] px-6 font-extrabold text-[var(--site-on-paper)]">Tekrar dene</button>}
                     </div>
                 ) : (
                     <div className="mt-4 space-y-3" aria-busy="true" aria-label="Sipariş durumu yükleniyor">
-                        <div className="h-40 animate-pulse rounded-[22px] bg-[var(--site-ink)]" />
-                        <div className="h-48 animate-pulse rounded-[22px] bg-[var(--site-raised)]" />
-                        <div className="h-16 animate-pulse rounded-[22px] bg-[var(--site-raised)]" />
+                        <div className="h-64 animate-pulse rounded-[24px] bg-[var(--site-mustard)]" />
+                        <div className="h-48 animate-pulse rounded-[24px] bg-[var(--site-card)]" />
+                        <div className="h-24 animate-pulse rounded-[24px] bg-[var(--site-card)]" />
                     </div>
                 )}
             </main>
@@ -179,259 +175,292 @@ export default function DeliveryTrackingPage() {
 
     const step = trackingStepIndex(order.status);
     const failed = order.status === DeliveryStatus.Rejected || order.status === DeliveryStatus.Cancelled;
+    const rejected = order.status === DeliveryStatus.Rejected;
     const delivered = order.status === DeliveryStatus.Delivered;
-    const itemCount = order.lines.reduce((sum, l) => sum + l.quantity, 0);
+    const onTheWay = order.status === DeliveryStatus.OnTheWay;
 
-    // Kapak: üstte sitenin menüsü (yer tutucu boşlukla), altında sipariş sayfasına dönüş, ad ve sipariş numarası.
-    const header = (
-        <header className="relative overflow-hidden bg-[var(--site-ink)] text-white">
-            {order.coverImageUrl && (
-                <>
-                    <img src={order.coverImageUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
-                    <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,16,12,0.5),rgba(20,16,12,0.85))]" />
-                </>
-            )}
-            {nav && <HeaderSpacer />}
-            <div className={cn('relative mx-auto max-w-xl px-4 pb-6', nav ? 'pt-1' : 'pt-4')}>
-                <Link to="/siparis" aria-label="Sipariş sayfasına dön"
-                    className={cn(glass, 'flex h-11 w-11 items-center justify-center rounded-full text-white no-underline transition-colors hover:bg-white/25')}>
-                    <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-                </Link>
-                <p className={cn(serif, 'm-0 mt-5 truncate text-[34px] italic leading-none')}>{brand}</p>
-                <p className="m-0 mt-2 text-xs font-medium uppercase tracking-[0.22em] text-white/80">
-                    Sipariş #{order.number}{order.zoneName ? ` · ${order.zoneName}` : ''}
-                    {failed ? ' · alınamadı' : ''}
-                </p>
-            </div>
-        </header>
-    );
-
-    const callButton = order.restaurantPhone && (
-        <a href={telHref(order.restaurantPhone)}
-            className="flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--site-border-strong)] bg-[var(--site-card)] text-[15px] font-semibold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)]">
-            <Phone className="h-4 w-4" aria-hidden="true" />Restoranı ara · {order.restaurantPhone}
-        </a>
-    );
-
-    const card = 'rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)]';
-
-    // ── Teslim edildi ──
-    if (delivered) {
-        return root(
-            <>
-                {nav && site && <FlowSiteHeader site={site} current="siparis" />}
-                {header}
-                <main className="mx-auto flex max-w-xl flex-col gap-4 px-4 pb-16 pt-6">
-                    <section role="status" className={cn(card, 'flex flex-col items-center gap-2 px-5 py-8 text-center')}>
-                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-ok-bg)] text-[var(--site-ok)] ring-8 ring-[var(--site-ok-bg)]/50">
-                            <Check className="h-7 w-7" strokeWidth={2.5} aria-hidden="true" />
-                        </span>
-                        <h1 className={cn(serif, 'm-0 mt-3 text-[52px] italic leading-none')}>Afiyet olsun.</h1>
-                        <p className="m-0 text-[15px] text-[var(--site-sub)]">
-                            #{order.number}
-                            {order.deliveredAt && <> · {timeOfDay(order.deliveredAt)}&apos;de teslim edildi · {minutesBetween(order.createdAt, order.deliveredAt)} dk</>}
-                        </p>
-                        <p className="m-0 mt-3 max-w-sm text-[15px]">{linesSummary(order.lines)}</p>
-                        <p className="m-0 text-sm text-[var(--site-sub)]">{formatPrice(order.total)} ₺ · {paymentText(order).toLocaleLowerCase('tr-TR')}</p>
-                    </section>
-                    <Link to={reorderHref}
-                        className="flex h-14 items-center justify-center gap-2 rounded-full bg-[var(--site-accent)] text-base font-semibold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90">
-                        <RotateCcw className="h-4 w-4" aria-hidden="true" />Tekrar sipariş ver
-                    </Link>
-                    {callButton}
-                </main>
-            </>
-        );
-    }
-
-    // ── Reddedildi / iptal edildi ──
-    if (failed) {
-        const rejected = order.status === DeliveryStatus.Rejected;
-        const reason = rejected ? order.rejectReason : order.cancelReason;
-        return root(
-            <>
-                {nav && site && <FlowSiteHeader site={site} current="siparis" />}
-                {header}
-                <main className="mx-auto flex max-w-xl flex-col gap-4 px-4 pb-16 pt-6">
-                    <section role="status" className={cn(card, 'flex flex-col gap-3 p-5')}>
-                        <h1 className={cn(serif, 'm-0 text-[40px] leading-[1.02]')}>
-                            {rejected ? <>Bu sefer <span className="italic">yetişemedik.</span></> : <>Siparişiniz <span className="italic">iptal edildi.</span></>}
-                        </h1>
-                        {reason && (
-                            <blockquote className="m-0 border-l-2 border-[var(--site-accent)] pl-3 text-[16px] italic leading-relaxed">“{reason}”</blockquote>
-                        )}
-                        <p className="m-0 text-[15px] leading-relaxed text-[var(--site-sub)]">
-                            Ödeme alınmadı. Sepetiniz duruyor, {rejected ? 'biraz sonra yeniden deneyebilirsiniz.' : 'dilediğinizde yeniden gönderebilirsiniz.'}
-                        </p>
-                    </section>
-                    <Link to={reorderHref}
-                        className="flex h-14 items-center justify-center rounded-full bg-[var(--site-accent)] text-base font-semibold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90">
-                        Sepete dön
-                    </Link>
-                    {callButton}
-                </main>
-            </>
-        );
-    }
-
-    // ── Açık sipariş: büyük saat + 6 adımlı çubuk ──
     const eta = order.estimatedDeliveryAt;
     const minutesLeft = eta ? Math.max(0, Math.ceil((new Date(eta).getTime() - now) / 60_000)) : null;
     const approx = minutesLeft != null && minutesLeft > 0 ? minutesLeft : order.estimatedMinutes ?? null;
-    const onTheWay = order.status === DeliveryStatus.OnTheWay;
 
-    const stamps = [
-        { label: 'Alındı', at: order.createdAt },
-        { label: 'Onaylandı', at: order.acceptedAt },
-        { label: 'Yola çıktı', at: order.dispatchedAt },
-    ].filter((s): s is { label: string; at: string } => !!s.at);
+    const tone = heroTone(order.status);
+    const title = heroTitle(order.status);
+    const reason = failed ? (rejected ? order.rejectReason : order.cancelReason) : '';
+
+    // Kapağın açıklaması: sunucunun durum açıklaması; teslimde süre, olmayınca kısa bir yedek cümle.
+    const desc = delivered
+        ? <>#{order.number}{order.deliveredAt && <> · {timeOfDay(order.deliveredAt)}&apos;de teslim edildi · {minutesBetween(order.createdAt, order.deliveredAt)} dk</>}. Bizi tercih ettiğiniz için teşekkürler.</>
+        : failed
+            ? <>Ödeme alınmadı. Sepetiniz duruyor, {rejected ? 'biraz sonra yeniden deneyebilirsiniz.' : 'dilediğinizde yeniden gönderebilirsiniz.'}</>
+            : order.statusDescription || (eta ? `${timeOfDay(eta)} civarında kapınızda.` : 'Restoran birazdan onaylayıp teslim saatini yazacak.');
+
+    // Sağdaki daire: kalan dakika (yoksa tahmini saat); teslimde teslim saati.
+    const badge: { label: string; value: string; sub: string } | null = delivered
+        ? (order.deliveredAt ? { label: 'Teslim', value: timeOfDay(order.deliveredAt), sub: 'bugün' } : null)
+        : failed ? null
+            : approx ? { label: onTheWay ? 'Varış' : 'Kalan', value: String(approx), sub: eta ? `dakika · ${timeOfDay(eta)}` : 'dakika' }
+                : eta ? { label: 'Tahmini', value: timeOfDay(eta), sub: 'civarında' } : null;
+
+    const stampOf = (i: number): string => {
+        const at = [order.createdAt, order.acceptedAt, null, null, order.dispatchedAt, order.deliveredAt][i];
+        if (at) return timeOfDay(at);
+        if (i === step && !delivered) return 'Şimdi';
+        if (i === TRACKING_STEPS.length - 1 && eta) return `~${timeOfDay(eta)}`;
+        return '';
+    };
+
+    const reorder = delivered || failed;
+    const phone = order.restaurantPhone;
 
     return root(
         <>
             {nav && site && <FlowSiteHeader site={site} current="siparis" />}
-            {header}
-            <main className="mx-auto flex max-w-xl flex-col gap-4 px-4 pb-16 pt-6">
-                <section aria-labelledby="takip-baslik" aria-live="polite" className={cn(card, 'p-5')}>
-                    {eta ? (
-                        <>
-                            <h1 id="takip-baslik" className="m-0">
-                                <span className="sr-only">Tahmini teslim </span>
-                                <span className={cn(serif, 'block text-[76px] leading-[0.9] tabular-nums tracking-[-0.02em]')}>{timeOfDay(eta)}</span>
-                                <span className={cn(serif, 'block text-[26px] italic leading-tight text-[var(--site-sub)]')}>civarında kapınızda.</span>
+            <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
+                {/* ── Durum kapağı: rengi duruma göre (alındı hardal, mutfakta kiremit, yolda zeytin, teslim koyu) ── */}
+                <section aria-labelledby="takip-baslik" className={cn('relative flex flex-col gap-8 overflow-hidden rounded-[24px] px-5 py-8 sm:px-10 sm:py-10 md:gap-10 md:rounded-[36px] md:px-14 md:pb-11 md:pt-12', tone.box)}>
+                    <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(color-mix(in_srgb,currentColor_15%,transparent)_2px,transparent_2.6px)] bg-[length:22px_22px] [mask-image:linear-gradient(90deg,transparent_40%,#000_100%)]" />
+                    <div className="relative flex flex-wrap items-end justify-between gap-7">
+                        <div role="status" aria-live="polite" className="flex min-w-0 max-w-[720px] flex-col gap-3.5">
+                            {!nav && (
+                                <Link to="/siparis" className="-ml-2 inline-flex h-11 items-center gap-1.5 self-start rounded-full px-2 text-sm font-bold text-current no-underline">
+                                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />{brand || 'Sipariş sayfası'}
+                                </Link>
+                            )}
+                            <span className="text-xs font-extrabold uppercase tracking-[0.24em]">
+                                Sipariş #{order.number} · {order.zoneName || 'Paket servis'}
+                            </span>
+                            <h1 id="takip-baslik" className={cn(serif, 'm-0 break-words text-[44px] font-extrabold leading-[0.92] tracking-[-0.025em] sm:text-[56px] md:text-[clamp(56px,6.4vw,100px)]')}>
+                                {title.lead}<br /><em className={cn('font-semibold italic', tone.em)}>{title.accent}</em>
                             </h1>
-                        </>
-                    ) : (
-                        <>
-                            <h1 id="takip-baslik" className={cn(serif, 'm-0 text-[40px] leading-[1.02]')}>Siparişiniz <span className="italic">restoranda.</span></h1>
-                            <p className="m-0 mt-2 text-[15px] text-[var(--site-sub)]">Restoran birazdan onaylayıp teslim saatini yazacak.</p>
-                        </>
+                            {reason && (
+                                <blockquote className="m-0 max-w-[520px] border-l-[3px] border-current pl-3 text-[17px] italic leading-relaxed">“{reason}”</blockquote>
+                            )}
+                            <p className="m-0 max-w-[520px] text-base leading-relaxed md:text-[17px]">{desc}</p>
+                        </div>
+                        {badge && (
+                            <div className={cn('flex h-[150px] w-[150px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full text-center md:h-[210px] md:w-[210px]', tone.badge)}>
+                                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] md:text-xs">{badge.label}</span>
+                                <span className={cn(serif, 'font-extrabold leading-none tabular-nums', badge.value.length > 3 ? 'text-[38px] md:text-[52px]' : 'text-[48px] md:text-[64px]')}>{badge.value}</span>
+                                <span className="text-xs font-bold md:text-[13px]">{badge.sub}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {step >= 0 && (
+                        <div className="relative flex flex-col gap-3">
+                            <ol aria-label="Sipariş adımları" className="m-0 grid list-none grid-cols-6 p-0">
+                                {TRACKING_STEPS.map((label, i) => {
+                                    const done = i < step;
+                                    const current = i === step;
+                                    const Icon = STEP_ICONS[i];
+                                    return (
+                                        <li key={label} aria-current={current ? 'step' : undefined} className="flex min-w-0 flex-col gap-2 sm:gap-3">
+                                            <div className="flex items-center">
+                                                <span aria-hidden="true" className={cn('relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full sm:h-[54px] sm:w-[54px]',
+                                                    current ? 'bg-[var(--trk-fg)] text-[var(--trk-bg)]'
+                                                        : done ? 'bg-[color-mix(in_srgb,var(--trk-fg)_85%,transparent)] text-[var(--trk-bg)]'
+                                                            : 'border-2 border-dashed border-[color-mix(in_srgb,var(--trk-fg)_45%,transparent)] text-[color-mix(in_srgb,var(--trk-fg)_65%,transparent)]')}>
+                                                    {current && !delivered && <span className="absolute inset-0 rounded-full bg-[var(--trk-fg)] opacity-25 motion-safe:animate-ping" />}
+                                                    <Icon className="relative h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" strokeWidth={2} />
+                                                </span>
+                                                <span aria-hidden="true" className={cn('mx-1 h-[3px] min-w-0 flex-1 rounded-sm sm:mx-2.5',
+                                                    i === TRACKING_STEPS.length - 1 ? 'opacity-0' : done ? 'bg-[var(--trk-fg)]' : 'bg-[color-mix(in_srgb,var(--trk-fg)_25%,transparent)]')} />
+                                            </div>
+                                            <span className="pr-1 text-[15px] font-extrabold leading-tight max-sm:sr-only md:text-base">
+                                                {label}{done && <span className="sr-only"> (tamamlandı)</span>}
+                                            </span>
+                                            <span aria-hidden="true" className="min-h-[1lh] text-[13px] font-semibold tabular-nums max-sm:hidden">{stampOf(i)}</span>
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+                            <p className="m-0 text-sm font-bold sm:hidden">
+                                Adım {step + 1}/{TRACKING_STEPS.length} · {STEP_HEADLINE[order.status] ?? order.statusLabel}
+                                {stampOf(step) && stampOf(step) !== 'Şimdi' ? ` · ${stampOf(step)}` : ''}
+                            </p>
+                        </div>
                     )}
-
-                    <p className="m-0 mt-5 text-[15px] font-semibold">{STEP_HEADLINE[order.status] ?? order.statusLabel}</p>
-                    <p className="m-0 text-sm text-[var(--site-sub)]">
-                        Adım {step + 1}/{TRACKING_STEPS.length}{approx ? ` · yaklaşık ${approx} dk` : ''}
-                    </p>
-
-                    <ol aria-label="Sipariş adımları" className="m-0 mt-3 grid list-none grid-cols-6 gap-1.5 p-0">
-                        {TRACKING_STEPS.map((label, i) => (
-                            <li key={label} aria-current={i === step ? 'step' : undefined} className="min-w-0">
-                                <span aria-hidden="true" className={cn('block h-1.5 rounded-full',
-                                    i < step ? 'bg-[var(--site-text)]' : i === step ? 'bg-[var(--site-accent)] motion-safe:animate-pulse' : 'bg-[var(--site-raised)]')} />
-                                <span className={cn('mt-1.5 block truncate text-[10px] font-medium', i === step ? 'text-[var(--site-text)]' : 'text-[var(--site-sub)]', i !== step && 'max-sm:sr-only')}>
-                                    {label}{i < step && <span className="sr-only"> (tamamlandı)</span>}
-                                </span>
-                            </li>
-                        ))}
-                    </ol>
-
-                    {stamps.length > 0 && (
-                        <p className="m-0 mt-3 text-xs tabular-nums text-[var(--site-sub)]">
-                            {stamps.map(s => `${s.label} ${timeOfDay(s.at)}`).join(' · ')}
-                        </p>
-                    )}
-                    {order.statusDescription && !onTheWay && <p className="m-0 mt-2 text-sm text-[var(--site-sub)]">{order.statusDescription}</p>}
                 </section>
 
-                {onTheWay && (
-                    <section aria-label="Kuryeniz" className={cn(card, 'flex items-center gap-4 p-5')}>
-                        <span aria-hidden="true" className={cn(serif, 'flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--site-paper)] text-[28px] text-[var(--site-on-paper)]')}>
-                            {(order.courierFirstName || 'K').charAt(0).toLocaleUpperCase('tr-TR')}
-                        </span>
-                        <div className="min-w-0">
-                            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--site-sub)]">Kuryeniz</p>
-                            <p className={cn(serif, 'm-0 text-[28px] leading-none')}>{order.courierFirstName || 'Yolda'}</p>
-                            <p className="m-0 mt-1 text-sm text-[var(--site-sub)]">
-                                {order.zoneName ? `${order.zoneName}'ya doğru yolda` : 'Size doğru yolda'}
-                                {order.dispatchedAt && ` · ${timeOfDay(order.dispatchedAt)}'de yola çıktı`}
-                            </p>
-                            <p className="m-0 mt-1 text-sm font-semibold">{paymentText(order)} ile ödeyeceksiniz · {formatPrice(order.total)} ₺</p>
+                <div className="flex flex-wrap items-start gap-4">
+                    {/* ── Sipariş detayı ── */}
+                    <section aria-labelledby="takip-siparis" className="flex min-w-0 flex-[999_1_620px] flex-col gap-5 rounded-[24px] bg-[var(--site-card)] p-5 sm:p-8 md:rounded-[36px] md:p-11">
+                        <div className="flex flex-wrap items-baseline justify-between gap-3">
+                            <h2 id="takip-siparis" className={cn(serif, 'm-0 text-[32px] leading-none md:text-[40px]')}>Siparişiniz</h2>
+                            <span className="text-sm text-[var(--site-muted)]">{timeOfDay(order.createdAt)} · {paymentText(order)}</span>
                         </div>
-                    </section>
-                )}
-
-                {order.canCancel && (
-                    <section aria-label="Siparişi iptal et" className={cn(card, 'p-4')}>
-                        {confirmCancel ? (
-                            <div role="alertdialog" aria-labelledby="iptal-soru" className="flex flex-col gap-3">
-                                <p id="iptal-soru" className="m-0 text-[15px] font-semibold">Siparişiniz iptal edilsin mi?</p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button type="button" onClick={() => setConfirmCancel(false)} disabled={cancelling}
-                                        className="h-12 rounded-full border border-[var(--site-border-strong)] text-[15px] font-semibold disabled:opacity-50">
-                                        Vazgeç
-                                    </button>
-                                    <button type="button" onClick={cancel} disabled={cancelling}
-                                        className="h-12 rounded-full bg-[var(--site-error)] text-[15px] font-semibold text-white disabled:opacity-50">
-                                        {cancelling ? 'İptal ediliyor…' : 'Evet, iptal et'}
-                                    </button>
-                                </div>
+                        <ul className="m-0 flex list-none flex-col p-0">
+                            {order.lines.map((line, i) => {
+                                const image = (line.productId && images.get(line.productId)) || (line.setMenuId && images.get(line.setMenuId)) || '';
+                                return (
+                                    <li key={i} className="flex items-center gap-3 border-b border-[var(--site-line)] py-4 sm:gap-3.5">
+                                        <span className="flex h-[34px] min-w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[var(--site-bg)] px-2 font-extrabold tabular-nums">{line.quantity}×</span>
+                                        <div className="hidden h-12 w-12 shrink-0 sm:block">
+                                            <ImageSlot src={image} alt="" restaurant={brand} className="h-full rounded-xl" logoTextClassName="text-[9px]" />
+                                        </div>
+                                        <span className="min-w-0 flex-1">
+                                            <span className={cn(serif, 'block break-words text-[19px] leading-tight md:text-[22px]')}>{line.name}</span>
+                                            {line.selections.length > 0 && <span className="block text-sm text-[var(--site-sub)]">{line.selections.join(', ')}</span>}
+                                            {line.note && <span className="block text-sm italic text-[var(--site-sub)]">Not: {line.note}</span>}
+                                        </span>
+                                        <span className="shrink-0 text-base font-extrabold tabular-nums">{formatPrice(line.lineTotal)} ₺</span>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                        <dl className="m-0 flex flex-col gap-2 text-[15px]">
+                            <div className="flex justify-between gap-3"><dt className="text-[var(--site-muted)]">Ara toplam</dt><dd className="m-0 font-bold tabular-nums">{formatPrice(order.subtotal)} ₺</dd></div>
+                            <div className="flex justify-between gap-3"><dt className="text-[var(--site-muted)]">Teslimat{order.zoneName ? ` · ${order.zoneName}` : ''}</dt><dd className="m-0 font-bold tabular-nums">{order.deliveryFee > 0 ? `${formatPrice(order.deliveryFee)} ₺` : 'Ücretsiz'}</dd></div>
+                            <div className="flex items-baseline justify-between gap-3 border-t border-dashed border-[var(--site-border-mid)] pt-3">
+                                <dt className="font-extrabold">Toplam</dt>
+                                <dd className={cn(serif, 'm-0 text-[34px] font-extrabold leading-none tabular-nums text-[var(--site-terracotta-text)] md:text-[40px]')}>{formatPrice(order.total)} ₺</dd>
                             </div>
-                        ) : (
-                            <button type="button" onClick={() => { setConfirmCancel(true); setCancelError(null); }}
-                                className="h-12 w-full rounded-full border border-[var(--site-border-strong)] text-[15px] font-semibold">
-                                Siparişi iptal et
-                            </button>
+                        </dl>
+                        <div className="flex items-start gap-3.5 rounded-[20px] bg-[var(--site-bg)] px-5 py-[18px]">
+                            <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[var(--site-terracotta-text)]" aria-hidden="true" />
+                            <div className="flex min-w-0 flex-col gap-0.5">
+                                <span className="font-extrabold">Teslimat{order.zoneName ? ` · ${order.zoneName}` : ''}</span>
+                                <span className="text-sm text-[var(--site-sub)]">{order.customerName} · {paymentText(order).toLocaleLowerCase('tr-TR')} ödeme</span>
+                            </div>
+                        </div>
+
+                        {order.canCancel && (
+                            <div aria-label="Siparişi iptal et" role="group">
+                                {confirmCancel ? (
+                                    <div role="alertdialog" aria-labelledby="iptal-soru" className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border-2 border-[var(--site-terracotta-text)] px-5 py-4">
+                                        <p id="iptal-soru" className="m-0 font-bold">Siparişiniz iptal edilsin mi?</p>
+                                        <div className="flex gap-2">
+                                            <button type="button" onClick={() => setConfirmCancel(false)} disabled={cancelling}
+                                                className="h-12 rounded-full border border-[var(--site-border-strong)] bg-transparent px-5 font-bold disabled:opacity-50">
+                                                Vazgeç
+                                            </button>
+                                            <button type="button" onClick={cancel} disabled={cancelling}
+                                                className="h-12 rounded-full bg-[var(--site-error)] px-5 font-extrabold text-white disabled:opacity-50">
+                                                {cancelling ? 'İptal ediliyor…' : 'Evet, iptal et'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm text-[var(--site-muted)]">
+                                        Restoran onaylayana kadar iptal edebilirsiniz.
+                                        <button type="button" onClick={() => { setConfirmCancel(true); setCancelError(null); }}
+                                            className="inline-flex min-h-11 items-center bg-transparent p-0 font-extrabold text-[var(--site-terracotta-text)] underline underline-offset-4">
+                                            Siparişi iptal et
+                                        </button>
+                                    </p>
+                                )}
+                                {cancelError && <p role="alert" className="m-0 mt-2 text-sm font-semibold text-[var(--site-error)]">{cancelError}</p>}
+                            </div>
                         )}
-                        <p className="m-0 mt-2 text-center text-xs text-[var(--site-muted)]">Restoran onaylayana kadar iptal edebilirsiniz.</p>
-                        {cancelError && <p role="alert" className="m-0 mt-2 text-sm text-[var(--site-error)]">{cancelError}</p>}
+
+                        {!final && <p className="m-0 text-xs text-[var(--site-muted)]">Bu sayfa kendiliğinden yenilenir.</p>}
+                        {error && <p className="m-0 text-xs font-semibold text-[var(--site-error)]">Son yenileme başarısız: {error}</p>}
                     </section>
-                )}
 
-                <OrderSummary order={order} images={images} restaurant={brand} itemCount={itemCount} />
+                    {/* ── Sağ sütun: yardım / kurye, tekrar sipariş ── */}
+                    <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-4">
+                        <section aria-labelledby="takip-yardim" className="flex flex-col gap-4 rounded-[24px] bg-[var(--site-olive)] p-6 text-[var(--site-on-paper)] sm:p-8 md:rounded-[36px]">
+                            <span className="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--site-mustard-text)]">{onTheWay ? 'Kuryeniz yolda' : 'Yardım'}</span>
+                            <h2 id="takip-yardim" className={cn(serif, 'm-0 text-[26px] leading-[1.1] md:text-[30px]')}>
+                                {onTheWay
+                                    ? <>{order.courierFirstName || 'Kuryemiz'} {order.zoneName ? `${order.zoneName}'ya doğru` : 'size doğru'} yolda.</>
+                                    : 'Siparişinizle ilgili bir sorun mu var?'}
+                            </h2>
+                            {onTheWay && (
+                                <p className="m-0 text-[15px] leading-relaxed text-[var(--site-on-paper-sub)]">
+                                    {order.dispatchedAt && <>{timeOfDay(order.dispatchedAt)}&apos;de yola çıktı. </>}
+                                    {paymentText(order)} ile ödeyeceksiniz · <span className="font-bold text-[var(--site-on-paper)]">{formatPrice(order.total)} ₺</span>
+                                </p>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                                {phone && (
+                                    <a href={telHref(phone)} aria-label={`Restoranı ara: ${phone}`}
+                                        className="flex h-[52px] min-w-[150px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[var(--site-mustard)] px-4 font-extrabold text-[var(--site-text)] no-underline transition-opacity hover:opacity-90">
+                                        <Phone className="h-[17px] w-[17px]" aria-hidden="true" />Restoranı ara
+                                    </a>
+                                )}
+                                <Link to="/siparis"
+                                    className="flex h-[52px] min-w-[150px] flex-1 items-center justify-center whitespace-nowrap rounded-full border-2 border-[var(--site-paper-line-strong)] px-4 font-extrabold text-[var(--site-on-paper)] no-underline transition-colors hover:border-[var(--site-on-paper)]">
+                                    Sipariş sayfası
+                                </Link>
+                            </div>
+                            {phone && <p className="m-0 text-sm tabular-nums text-[var(--site-on-paper-sub)]">{phone}</p>}
+                        </section>
 
-                {callButton}
-
-                <p className="m-0 text-center text-xs text-[var(--site-muted)]">Bu sayfa kendiliğinden yenilenir.</p>
-                {error && <p className="m-0 text-center text-xs text-[var(--site-error)]">Son yenileme başarısız: {error}</p>}
+                        {reorder && (
+                            <section aria-labelledby="takip-tekrar" className="flex flex-col gap-3.5 rounded-[24px] bg-[var(--site-mustard)] p-6 text-[var(--site-text)] sm:p-8 md:rounded-[36px]">
+                                <h2 id="takip-tekrar" className={cn(serif, 'm-0 text-[28px] font-extrabold leading-[1.05] md:text-[32px]')}>
+                                    {delivered ? 'Afiyet olsun! Bir daha?' : 'Sepetiniz duruyor.'}
+                                </h2>
+                                <p className="m-0 text-sm font-semibold">{delivered ? 'Aynı siparişi tek dokunuşla yeniden verin.' : 'Ürünleriniz sepette; dilediğinizde yeniden gönderin.'}</p>
+                                <Link to={reorderHref}
+                                    className="flex h-[52px] items-center justify-center gap-2 rounded-full bg-[var(--site-paper)] px-5 font-extrabold text-[var(--site-on-paper)] no-underline transition-opacity hover:opacity-90">
+                                    {delivered && <RotateCcw className="h-4 w-4" aria-hidden="true" />}{delivered ? 'Tekrar sipariş ver' : 'Sepete dön'}
+                                </Link>
+                            </section>
+                        )}
+                    </div>
+                </div>
             </main>
+            {nav && site && <SiteFooter site={site} bottomBar={false} />}
         </>
     );
 }
 
-/** Açılır sipariş kartı: "Siparişiniz · 3 ürün · 505 ₺"; içinde küçük resimli satırlar ve tutarlar. */
-function OrderSummary({ order, images, restaurant, itemCount }: {
-    order: DeliveryTracking; images: Map<string, string>; restaurant: string; itemCount: number;
-}) {
-    const [open, setOpen] = useState(false);
-    return (
-        <section aria-label="Siparişiniz" className="rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)]">
-            <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls="takip-siparis"
-                className="flex min-h-14 w-full items-center justify-between gap-3 px-5 py-3 text-left">
-                <span className="text-[15px] font-semibold">Siparişiniz</span>
-                <span className="flex items-center gap-2 text-sm tabular-nums text-[var(--site-sub)]">
-                    {itemCount} ürün · {formatPrice(order.total)} ₺
-                    <ChevronDown className={cn('h-4 w-4 transition-transform motion-reduce:transition-none', open && 'rotate-180')} aria-hidden="true" />
-                </span>
-            </button>
-            {open && (
-                <div id="takip-siparis" className="border-t border-[var(--site-border)] px-5 pb-4">
-                    <ul className="m-0 list-none divide-y divide-[var(--site-border)] p-0">
-                        {order.lines.map((line, i) => {
-                            const image = (line.productId && images.get(line.productId)) || (line.setMenuId && images.get(line.setMenuId)) || '';
-                            return (
-                                <li key={i} className="flex items-center gap-3 py-3 text-[15px]">
-                                    <div className="h-12 w-12 shrink-0">
-                                        <ImageSlot src={image} alt="" restaurant={restaurant} className="h-full rounded-xl" logoTextClassName="text-[9px]" />
-                                    </div>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="font-semibold tabular-nums">{line.quantity}×</span> {line.name}
-                                        {line.selections.length > 0 && <span className="block text-sm text-[var(--site-sub)]">{line.selections.join(', ')}</span>}
-                                        {line.note && <span className="block text-sm text-[var(--site-sub)]">Not: {line.note}</span>}
-                                    </span>
-                                    <span className="shrink-0 tabular-nums">{formatPrice(line.lineTotal)} ₺</span>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                    <dl className="m-0 space-y-1 border-t border-[var(--site-border)] pt-2 text-[15px]">
-                        <div className="flex justify-between text-[var(--site-sub)]"><dt>Ara toplam</dt><dd className="m-0 tabular-nums">{formatPrice(order.subtotal)} ₺</dd></div>
-                        <div className="flex justify-between text-[var(--site-sub)]"><dt>Teslimat{order.zoneName ? ` (${order.zoneName})` : ''}</dt><dd className="m-0 tabular-nums">{formatPrice(order.deliveryFee)} ₺</dd></div>
-                        <div className="flex justify-between text-lg font-bold"><dt>Toplam</dt><dd className="m-0 tabular-nums">{formatPrice(order.total)} ₺</dd></div>
-                    </dl>
-                </div>
-            )}
-            <p className="m-0 border-t border-[var(--site-border)] px-5 py-3 text-sm text-[var(--site-sub)]">
-                {paymentText(order)} · {order.customerName}{order.zoneName ? ` · ${order.zoneName}` : ''}
-            </p>
-        </section>
-    );
+const STEP_ICONS = [ClipboardCheck, BadgeCheck, Flame, Package, Truck, House] as const;
+
+/**
+ * Kapağın tonu (tasarım: "Renkli · Siparişim"): alındı/onaylandı hardal, mutfakta/hazır kiremit, yolda zeytin, teslim
+ * koyu, iptal/red krem kutu. Sade'de aynı değişkenler açık kum, vurgu ve mürekkep kutularıdır. `--trk-fg/--trk-bg` adım
+ * dairelerinin rengidir (dolu daire kutunun yazı rengi, içindeki simge kutunun zemini). Daire (kalan dakika) kutunun tersi.
+ */
+function heroTone(status: DeliveryTracking['status']): { box: string; em: string; badge: string } {
+    switch (status) {
+        case DeliveryStatus.Received:
+        case DeliveryStatus.Accepted:
+            return {
+                box: 'bg-[var(--site-mustard)] text-[var(--site-text)] [--trk-bg:var(--site-mustard)] [--trk-fg:var(--site-text)]',
+                em: 'text-[var(--site-story)]',
+                badge: 'bg-[var(--site-paper)] text-[var(--site-on-paper)]',
+            };
+        case DeliveryStatus.Preparing:
+        case DeliveryStatus.Ready:
+            return {
+                box: 'bg-[var(--site-terracotta)] text-[var(--site-on-terracotta)] [--trk-bg:var(--site-terracotta)] [--trk-fg:var(--site-on-terracotta)]',
+                em: 'text-[var(--site-on-terracotta-soft)]',
+                badge: 'bg-[var(--site-paper)] text-[var(--site-on-paper)]',
+            };
+        case DeliveryStatus.OnTheWay:
+            return {
+                box: 'bg-[var(--site-olive)] text-[var(--site-on-paper)] [--trk-bg:var(--site-olive)] [--trk-fg:var(--site-on-paper)]',
+                em: 'text-[var(--site-mustard-text)]',
+                badge: 'bg-[var(--site-mustard)] text-[var(--site-text)]',
+            };
+        case DeliveryStatus.Delivered:
+            return {
+                box: 'bg-[var(--site-paper)] text-[var(--site-on-paper)] [--trk-bg:var(--site-paper)] [--trk-fg:var(--site-on-paper)]',
+                em: 'text-[var(--site-mustard-text)]',
+                badge: 'bg-[var(--site-mustard)] text-[var(--site-text)]',
+            };
+        default:
+            return {
+                box: 'bg-[var(--site-card)] text-[var(--site-text)] [--trk-bg:var(--site-card)] [--trk-fg:var(--site-text)]',
+                em: 'text-[var(--site-terracotta-text)]',
+                badge: '',
+            };
+    }
+}
+
+/** Kapak başlığı: ilk satır + italik vurgu satırı. */
+function heroTitle(status: DeliveryTracking['status']): { lead: string; accent: string } {
+    switch (status) {
+        case DeliveryStatus.Received: return { lead: 'Siparişiniz', accent: 'restoranda.' };
+        case DeliveryStatus.Accepted: return { lead: 'Siparişiniz', accent: 'onaylandı.' };
+        case DeliveryStatus.Preparing: return { lead: 'Siparişiniz', accent: 'hazırlanıyor.' };
+        case DeliveryStatus.Ready: return { lead: 'Siparişiniz', accent: 'hazır.' };
+        case DeliveryStatus.OnTheWay: return { lead: 'Siparişiniz', accent: 'yolda.' };
+        case DeliveryStatus.Delivered: return { lead: 'Afiyet', accent: 'olsun!' };
+        case DeliveryStatus.Rejected: return { lead: 'Bu sefer', accent: 'yetişemedik.' };
+        default: return { lead: 'Siparişiniz', accent: 'iptal edildi.' };
+    }
 }
