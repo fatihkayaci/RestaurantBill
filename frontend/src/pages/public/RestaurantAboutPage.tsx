@@ -61,7 +61,7 @@ export default function RestaurantAboutPage() {
     }
 
     return (
-        <SitePage site={site} current="hakkimizda" lastCall={false}>
+        <SitePage site={site} current="hakkimizda">
             <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
                 <AboutHero site={site} />
                 <StoryPaper site={site} />

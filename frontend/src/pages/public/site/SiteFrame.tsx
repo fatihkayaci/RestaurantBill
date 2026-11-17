@@ -9,18 +9,18 @@ import { StockImageLabel } from '../components/StockImageLabel';
 import { SiteShell } from './SiteChrome';
 import {
     FONTS_HREF, MOTION_CSS, RESERVATION_PATH, cardButton, eyebrow, headerAccentPill, heroAccentButton, heroOutlineButton,
-    iconCircle, instagramHandle, sans, sectionWrap, serif, siteCardDark, siteNav, untilTime, type SitePageKey,
+    iconCircle, instagramHandle, sans, sectionWrap, serif, siteNav, untilTime, type SitePageKey,
 } from './siteParts';
 import { PhoneIcon } from './SiteCards';
 import type { MobileAction } from './siteActions';
 import { useMobileActions } from './siteActions';
 import { directionsUrl, splitAccent, telHref, whatsappHref } from './siteTheme';
-import { fullAddress, hoursLine, restaurantName, useSiteDocumentTitle, weekSchedule } from './useSite';
+import { fullAddress, restaurantName, useSiteDocumentTitle, weekSchedule } from './useSite';
 import { EditableBlock, EmptySlot, ExternalHint } from './siteEdit';
 import { editExternal, useSiteEdit, useSiteWindow } from './siteEditContext';
 
 // Restoran sitesinin ortak çerçevesi (tasarım: "Tema 2 · Açık"): ortalı başlık (solda sayfalar, ortada serif ad ve
-// küçük konum satırı, sağda sipariş takibi, Sepet ve "Masa ayırt"), footer'ın üstünde "Acıktınız mı?" kartı, ziyaret
+// küçük konum satırı, sağda sipariş takibi, Sepet ve "Masa ayırt"), ziyaret
 // bilgileri (adres · saatler · iletişim), dev soluk adlı alt bilgi ve telefonda her sayfada yapışkan alt eylem çubuğu.
 // Başlık sayfanın akışında durur ve üstte yapışık kalır (içeriğin üstüne binmez).
 
@@ -222,39 +222,6 @@ export function MobileActionBar({ actions }: { actions: MobileAction[] }) {
                 })}
             </ul>
         </nav>
-    );
-}
-
-// ── Son çağrı (footer'ın üstünde tek kart) ───────────────────────────────────────────────────────
-
-/** "Acıktınız mı?" kartı: saat ve semt, telefon ve tek ana eylem (Paket sipariş → Masa ayırt → Menüyü gör). */
-export function LastCallCard({ site }: { site: PublicSite }) {
-    const canOrder = useOnlineOrderingAvailable();
-    const canReserve = canReserveOnline(site);
-    const hours = hoursLine(site);
-    const place = site.district || site.city;
-    const meta = [hours, place].filter(Boolean).join(' · ');
-    const primary = canOrder
-        ? { to: '/siparis', label: 'Paket sipariş' }
-        : canReserve ? { to: RESERVATION_PATH, label: 'Masa ayırt' } : { to: '/menu', label: 'Menüyü gör' };
-    const x = editExternal(useSiteEdit(), 'lastCall');
-    return (
-        <section aria-labelledby="son-cagri" className={cn(sectionWrap, 'pb-10 md:pb-16')}>
-            <div {...x} className={cn(siteCardDark, 'flex flex-wrap items-center justify-between gap-5 p-6 md:px-10 md:py-9', x.className)}>
-                <div className="flex min-w-0 flex-col gap-1.5">
-                    <h2 id="son-cagri" className={cn(serif, 'm-0 text-[38px] leading-none md:text-[52px]')}>Acıktınız <span className="italic">mı?</span></h2>
-                    {meta && <p className="m-0 text-[15px] text-[var(--site-on-paper-sub)]">{meta}</p>}
-                </div>
-                <div className="flex w-full flex-wrap gap-2.5 sm:w-auto">
-                    {site.phone && (
-                        <a href={telHref(site.phone)} className={cn(cardButton.ghost, 'h-[52px] flex-1 px-6 text-[15px] sm:flex-none')}>
-                            <PhoneIcon className="h-4 w-4" />{site.phone}
-                        </a>
-                    )}
-                    <Link to={primary.to} className={cn(cardButton.accent, 'h-[52px] flex-1 px-7 text-[15px] sm:flex-none')}>{primary.label}</Link>
-                </div>
-            </div>
-        </section>
     );
 }
 
@@ -507,24 +474,23 @@ function useScrollOnEnter() {
 }
 
 /**
- * Sitenin bir sayfası: ortak başlık + içerik + son çağrı kartı + alt bilgi + telefon alt çubuğu. `className` içerik
+ * Sitenin bir sayfası: ortak başlık + içerik + alt bilgi + telefon alt çubuğu. `className` içerik
  * sarmalayıcısının görünümünü değiştirir; `stickyHeader={false}` başlığı sayfayla kayan hâle getirir.
- * `lastCall={false}` son çağrı kartını gizler (sayfanın kendi çağrı kartı varsa). `mobileActions` alt çubuğun
+ * `mobileActions` alt çubuğun
  * düğmelerini değiştirir (boş dizi: çubuk yok); verilmezse Ara · Yol tarifi · Masa ayırt. Alt bilginin ziyaret sütunları
  * İletişim'de (aynı bilgiler sayfada) yoktur.
  */
-export function SitePage({ site, current, className, stickyHeader = true, lastCall = true, mobileActions, children }: {
-    site: PublicSite; current: SitePageKey; className?: string; stickyHeader?: boolean; lastCall?: boolean;
+export function SitePage({ site, current, className, stickyHeader = true, mobileActions, children }: {
+    site: PublicSite; current: SitePageKey; className?: string; stickyHeader?: boolean;
     mobileActions?: MobileAction[]; children: ReactNode;
 }) {
     useScrollOnEnter();
     useSiteDocumentTitle(site, current);
     const defaults = useMobileActions(site, current);
     const edit = useSiteEdit();
-    // Rezervasyon akışı kendi "Devam et" düğmesini taşır: orada çubuk ve son çağrı yok.
+    // Rezervasyon akışı kendi "Devam et" düğmesini taşır: orada alt çubuk yok.
     const inFlow = current === 'rezervasyon';
     const actions = inFlow ? [] : mobileActions ?? defaults;
-    const showLastCall = lastCall && !inFlow && current !== 'rezervasyon-sorgula' && current !== 'home';
     // Adres · saatler · iletişim her sayfanın alt bilgisinde; İletişim sayfası aynı bilgileri zaten gösterir.
     const footerVisit = current !== 'iletisim';
     return (
@@ -532,10 +498,9 @@ export function SitePage({ site, current, className, stickyHeader = true, lastCa
             <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
             <style>{MOTION_CSS}</style>
             <div className={cn('rb-site flex min-h-screen flex-col overflow-x-clip', className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
-                {/* Düzenleyicide yalnız burada değişen bölümler çizilir: başlık, son çağrı, alt bilgi ve alt çubuk yok. */}
+                {/* Düzenleyicide yalnız burada değişen bölümler çizilir: başlık, alt bilgi ve alt çubuk yok. */}
                 {!edit && <SiteHeader site={site} current={current} sticky={stickyHeader} />}
                 {children}
-                {!edit && showLastCall && <LastCallCard site={site} />}
                 {!edit && <SiteFooter site={site} bottomBar={actions.length > 0} visit={footerVisit} />}
                 {!edit && <MobileActionBar actions={actions} />}
             </div>

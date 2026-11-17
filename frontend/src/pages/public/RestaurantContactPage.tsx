@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import type { PublicSite } from '@/features/customerSite/types';
-import { useOnlineOrdering } from '@/features/delivery/useOnlineOrderingAvailable';
+import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
+import { isOnlineOrderingAvailable, useOnlineOrdering } from '@/features/delivery/useOnlineOrderingAvailable';
+import { DoorPayment } from '@/features/courier/types';
+import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
 import { SitePage } from './site/SiteFrame';
@@ -164,6 +166,89 @@ function AddressBox({ site }: { site: PublicSite }) {
     );
 }
 
+// ── Sık sorulanlar ───────────────────────────────────────────────────────────────────────────────
+// Sorular ve cevaplar restoranın gerçek ayarlarından oluşur (rezervasyon kuralları, teslimat mahalleleri, ödeme yolları);
+// ayarı olmayan soru çizilmez. Hiç soru yoksa bölüm yok.
+
+interface Faq { q: string; a: string }
+
+function useFaqs(site: PublicSite): Faq[] {
+    const ordering = useOnlineOrdering();
+    const faqs: Faq[] = [];
+    if (canReserveOnline(site)) {
+        const r = site.reservation;
+        const limits = [
+            r.maxPartySize > 0 ? `en fazla ${r.maxPartySize} kişilik` : null,
+            r.maxDaysAhead > 0 ? `${r.maxDaysAhead} gün sonrasına kadar` : null,
+        ].filter(Boolean).join(', ');
+        faqs.push({
+            q: 'Rezervasyon nasıl yapılır?',
+            a: `Üst menüdeki “Masa ayırt”tan gün, saat ve kişi sayısını seçmeniz yeterli.${limits ? ` Online olarak ${limits} rezervasyon alıyoruz.` : ''}${site.phone ? ` Daha kalabalık gruplar için ${site.phone} numarasından bize ulaşın.` : ''}`,
+        });
+        faqs.push({
+            q: 'Rezervasyonumu nasıl sorgularım?',
+            a: 'Size verilen kısa kod ve telefon numaranızla “Rezervasyon sorgula” sayfasından durumunu görebilirsiniz. Rezervasyonunuzu saatinden 2 saat öncesine kadar oradan iptal edebilirsiniz.',
+        });
+    }
+    if (isOnlineOrderingAvailable(ordering) && ordering) {
+        const zones = ordering.zones.filter(z => z.isActive);
+        if (zones.length > 0) {
+            const list = zones.map(z => {
+                const parts = [
+                    z.fee > 0 ? `${formatPrice(z.fee)} ₺ teslimat` : 'ücretsiz teslimat',
+                    z.minOrderAmount > 0 ? `en az ${formatPrice(z.minOrderAmount)} ₺` : null,
+                    z.estimatedMinutes > 0 ? `~${z.estimatedMinutes} dk` : null,
+                ].filter(Boolean).join(', ');
+                return `${z.name} (${parts})`;
+            }).join('; ');
+            faqs.push({ q: 'Paket servis hangi bölgelere var?', a: `${list}. Sipariş sırasında mahallenizi seçince ücret ve süre kendiliğinden görünür.` });
+        }
+        faqs.push({
+            q: 'Siparişimi nasıl takip ederim?',
+            a: 'Siparişinizi verdiğinizde açılan takip sayfasında durumunu canlı görebilirsiniz. Aynı cihazdan üst menüdeki “Siparişim”e dokunarak da bu sayfaya dönebilirsiniz.',
+        });
+        const methods = [
+            ordering.paymentMethods.includes(DoorPayment.Nakit) ? 'nakit' : null,
+            ordering.paymentMethods.includes(DoorPayment.Kart) ? 'kartla' : null,
+        ].filter(Boolean);
+        if (methods.length > 0) {
+            faqs.push({ q: 'Ödemeyi nasıl yapabilirim?', a: `Paket siparişlerde ödemeyi kapıda ${methods.join(' veya ')} yapabilirsiniz.` });
+        }
+    }
+    return faqs;
+}
+
+function FaqSection({ site }: { site: PublicSite }) {
+    const faqs = useFaqs(site);
+    const [open, setOpen] = useState(0);
+    if (faqs.length === 0) return null;
+    return (
+        <section aria-labelledby="ilt-sss" className={cn(box, 'flex flex-wrap gap-x-[72px] gap-y-8 p-6 sm:p-10 md:p-14')}>
+            <div className="flex min-w-0 max-w-[360px] flex-[1_1_280px] flex-col gap-3">
+                <span className="text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-accent-text)]">Sık sorulanlar</span>
+                <h2 id="ilt-sss" className={cn(serif, 'm-0 text-[40px] font-bold leading-[0.98] md:text-[52px]')}>Aklınıza takılan bir şey mi var?</h2>
+            </div>
+            <div className="flex min-w-0 flex-[999_1_520px] flex-col">
+                {faqs.map((f, i) => {
+                    const isOpen = open === i;
+                    const id = `sss-${i}`;
+                    return (
+                        <div key={f.q} className="border-b border-[rgba(36,24,15,0.12)]">
+                            <button type="button" aria-expanded={isOpen} aria-controls={id} onClick={() => setOpen(isOpen ? -1 : i)}
+                                className="flex w-full items-center justify-between gap-4 bg-transparent py-5 text-left text-[var(--site-text)] md:py-6">
+                                <span className={cn(serif, 'text-[22px] font-semibold leading-[1.15] md:text-[28px]')}>{f.q}</span>
+                                <span aria-hidden="true" className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-2xl transition-transform duration-200 motion-reduce:transition-none',
+                                    isOpen ? 'rotate-45 bg-[var(--site-terracotta,#A9401F)] text-[#FBF4E8]' : 'border border-[rgba(36,24,15,0.18)]')}>+</span>
+                            </button>
+                            {isOpen && <p id={id} className="m-0 pb-6 pr-0 text-base leading-[1.7] text-[#5A4A3C] md:pr-16">{f.a}</p>}
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
 export default function RestaurantContactPage() {
     const { site, error } = useSite();
     const edit = useSiteEdit();
@@ -208,6 +293,9 @@ export default function RestaurantContactPage() {
                         <AddressBox site={site} />
                     </div>
                 </div>
+
+                {/* 3. Sık sorulanlar (ayarlardan oluşur; düzenleyicide çizilmez) */}
+                {!edit && <FaqSection site={site} />}
             </main>
         </SitePage>
     );

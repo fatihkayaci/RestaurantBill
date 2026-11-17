@@ -80,7 +80,7 @@ export default function RestaurantVenuePage() {
     const hasLocation = Boolean(fullAddress(site) || site.site.directionsNote);
 
     return (
-        <SitePage site={site} current="mekan" lastCall={false}>
+        <SitePage site={site} current="mekan">
             <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
                 <VenueHero site={site} hasLocation={hasLocation} />
                 <Areas site={site} />

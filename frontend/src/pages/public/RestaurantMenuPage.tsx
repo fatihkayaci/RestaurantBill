@@ -140,7 +140,7 @@ export default function RestaurantMenuPage() {
 
     return (
         // Başlık sayfayla kayar (stickyHeader={false}); üstte yapışık kalan yalnız kategori şeridi.
-        <SitePage site={site} current="menu" stickyHeader={false} lastCall={false} mobileActions={mobileActions}>
+        <SitePage site={site} current="menu" stickyHeader={false} mobileActions={mobileActions}>
             <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 sm:px-4">
                 <section aria-labelledby="mn-baslik" className="rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[36px]">
                     {/* Kapak bloğu: temanın kapak renginde, damalı desen; ad, dev "Menü", alt başlık, arama ve süzgeçler. */}
