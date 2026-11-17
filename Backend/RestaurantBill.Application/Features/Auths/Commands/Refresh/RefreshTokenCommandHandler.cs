@@ -89,7 +89,6 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         else
         {
             UserBranch? membership = await _db.UserBranches
-                .Include(ub => ub.Branch)
                 .FirstOrDefaultAsync(ub => ub.UserId == stored.UserId && ub.BranchId == stored.BranchId && !ub.IsDeleted, cancellationToken);
 
             if (membership is null || !membership.IsActive)
@@ -101,7 +100,13 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
 
             userName = membership.UserName;
             currentRole = membership.Role;
-            companyId = membership.Branch.CompanyId;
+            // Yalnız şirket kimliği gerekir: şubenin tamamı (site içeriği jsonb'si dahil) yüklenmez; site verisindeki bir
+            // okuma sorunu oturum yenilemeyi (ve "Beni hatırla"yı) bozmasın.
+            companyId = await _db.Branches
+                .AsNoTracking()
+                .Where(b => b.Id == stored.BranchId)
+                .Select(b => b.CompanyId)
+                .FirstAsync(cancellationToken);
 
             // Sahip hesabı kapattıysa personelin oturumu sürmez.
             Guid membershipCompanyId = companyId;
