@@ -1,5 +1,9 @@
 name: Deploy to Production Server
 
+# Akış: CI (testler) yeşil → imajlar GitHub'ın makinesinde derlenir ve ghcr.io'ya gönderilir → sunucu yalnız hazır imajı
+# indirip başlatır. Sunucu (1.8 GB RAM) artık derleme yapmaz; ön yüz derlemesi orada bellek yetmediği için düşüyordu.
+# Geri dönüş: sunucuda `APP_TAG=<eski commit> docker compose up -d --no-build` (imajlar commit'le etiketli).
+
 on:
   workflow_run:
     workflows: [ ".NET Backend CI" ]
@@ -7,39 +11,84 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/fatihkayaci/restaurantbill-api
+  FRONTEND_IMAGE: ghcr.io/fatihkayaci/restaurantbill-frontend
+  APP_TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
+
 jobs:
-  build:
+  images:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+        ref: ${{ env.APP_TAG }}
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+    - uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
       with:
-        dotnet-version: '9.0.x'
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Restore dependencies
-      run: dotnet restore Backend/RestaurantBill.sln
+    - name: Build and push API image
+      uses: docker/build-push-action@v6
+      with:
+        context: ./Backend
+        file: ./Backend/DockerFile
+        push: true
+        tags: |
+          ${{ env.API_IMAGE }}:${{ env.APP_TAG }}
+          ${{ env.API_IMAGE }}:latest
+        labels: org.opencontainers.image.source=https://github.com/fatihkayaci/RestaurantBill
+        cache-from: type=gha,scope=api
+        cache-to: type=gha,mode=max,scope=api
 
-    - name: Build
-      run: dotnet build Backend/RestaurantBill.sln --no-restore --configuration Release
+    - name: Build and push frontend image
+      uses: docker/build-push-action@v6
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: true
+        build-args: |
+          VITE_API_URL=${{ vars.VITE_API_URL || 'https://sophram.com' }}
+          NODE_HEAP_MB=4096
+        tags: |
+          ${{ env.FRONTEND_IMAGE }}:${{ env.APP_TAG }}
+          ${{ env.FRONTEND_IMAGE }}:latest
+        labels: org.opencontainers.image.source=https://github.com/fatihkayaci/RestaurantBill
+        cache-from: type=gha,scope=frontend
+        cache-to: type=gha,mode=max,scope=frontend
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build
+    needs: images
+    permissions:
+      contents: read
+      packages: read
 
     steps:
-    - name: Deploy to Droplet
+    - name: Deploy to server
       uses: appleboy/ssh-action@v1.0.3
+      env:
+        APP_TAG: ${{ env.APP_TAG }}
+        GHCR_USER: ${{ github.actor }}
+        # Bu işin süresince geçerli, kısa ömürlü token: sunucuda kalıcı bir anahtar gerekmez.
+        GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         host: ${{ secrets.DO_HOST }}
         username: ${{ secrets.DO_USER }}
         key: ${{ secrets.DO_SSH_KEY }}
+        envs: APP_TAG,GHCR_USER,GHCR_TOKEN
         script: |
           set -e
           cd /root/RestaurantBill
@@ -55,12 +104,17 @@ jobs:
           # Disk dolmasın: 14 günden eski otomatik deploy yedeklerini sil (elle alınan yedeklere dokunulmaz).
           find /root/backups -name 'restaurant-*-pre-deploy.sql.gz' -mtime +14 -delete
 
-          # 2) Kodu al ve imajları ESKİ sürüm çalışırken derle (sunucu yavaş; derleme dakikalar sürer, site bu sırada açık).
+          # 2) docker-compose.yml ve diğer dosyalar için kodu al (derleme YOK).
           git fetch origin main
-          git reset --hard origin/main
-          docker compose build api
-          docker compose build frontend
+          git reset --hard "$APP_TAG"
 
-          # 3) Yalnız değişen konteynerler yeniden başlar: kesinti birkaç saniye.
-          docker compose up -d
+          # 3) Hazır imajları indir. Eski sürüm bu sırada çalışmaya devam eder.
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          export APP_TAG
+          docker compose pull api frontend
+          docker logout ghcr.io
+
+          # 4) Yalnız değişen konteynerler yeniden başlar: kesinti birkaç saniye.
+          docker compose up -d --no-build
+          echo "Yayında: $APP_TAG"
           docker image prune -f
