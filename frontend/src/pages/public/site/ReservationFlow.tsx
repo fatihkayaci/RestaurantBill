@@ -397,7 +397,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             <Minus className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
                         </button>
                         <output id="rez-kisi" aria-live="polite" aria-label={`${partySize} kişi`} className={cn(serif, 'min-w-[100px] whitespace-nowrap text-center text-[34px] font-extrabold leading-none tabular-nums')}>
-                            {partySize} <span className="font-[family-name:Manrope,system-ui,sans-serif] text-[15px] font-bold tracking-normal">kişi</span>
+                            {partySize} <span className="font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)] text-[15px] font-bold tracking-normal">kişi</span>
                         </output>
                         <button
                             type="button"

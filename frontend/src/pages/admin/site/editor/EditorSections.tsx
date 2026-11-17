@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { EXTERNAL_SOURCES, SITE_LIMITS, type SiteEditTarget } from '@/pages/public/site/siteEditContext';
 import { SITE_AMENITIES } from '@/pages/public/site/siteParts';
 import { restaurantName } from '@/pages/public/site/useSite';
-import { DesignPicker, ThemePicker, WeeklyHoursEditor } from '../SiteSettingsEditors';
+import { DesignPicker, FontPicker, ThemePicker, WeeklyHoursEditor } from '../SiteSettingsEditors';
 import { photoTarget, type EditorCtx } from './editorActions';
 import { isStockUrl, tooBig } from './editorModel';
 import { ed } from './editorStyles';
@@ -249,6 +249,12 @@ export function DesignFields({ ctx }: { ctx: EditorCtx }) {
         <DesignPicker design={t.design ?? ''} theme={t.theme} accent={t.accentColor}
             onDesign={design => ctx.state.updateTexts(x => ({ ...x, design }))} />
     );
+}
+
+/** "Yazı tipi": tasarımın kendi çifti ya da hazır bir başlık + gövde çifti; önizlemeye hemen gider. */
+export function FontFields({ ctx }: { ctx: EditorCtx }) {
+    const t = ctx.texts;
+    return <FontPicker design={t.design ?? ''} font={t.font ?? ''} onFont={font => ctx.state.updateTexts(x => ({ ...x, font }))} />;
 }
 
 export function ThemeFields({ ctx }: { ctx: EditorCtx }) {

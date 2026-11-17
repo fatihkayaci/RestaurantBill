@@ -250,7 +250,7 @@ function ActionTile({ action, icon, title, busyTitle, waitingText, onClick, onRe
                     {waiting ? <Check className="h-5 w-5" strokeWidth={2.5} /> : icon}
                 </span>
                 <span className={cn(serif, 'text-[21px] leading-[1.05]')}>
-                    {state.status === 'sending' ? busyTitle : waiting ? <>{title.split(' ')[0]} {waitingText}<span className="mt-1 block font-[family-name:Manrope,system-ui,sans-serif] text-sm font-bold tabular-nums tracking-normal">{formatClock(remainingSeconds)}</span></> : title}
+                    {state.status === 'sending' ? busyTitle : waiting ? <>{title.split(' ')[0]} {waitingText}<span className="mt-1 block font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)] text-sm font-bold tabular-nums tracking-normal">{formatClock(remainingSeconds)}</span></> : title}
                 </span>
             </button>
             {state.status === 'error' && <p role="alert" className="m-0 mt-1.5 rounded-2xl bg-[var(--site-error-bg)] px-3 py-2 text-sm font-semibold text-[var(--site-error)]">{state.message}</p>}

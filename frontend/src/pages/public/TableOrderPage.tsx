@@ -13,11 +13,11 @@ import { cn } from '@/lib/utils';
 import IbanPaySheet from './components/IbanPaySheet';
 import MyOrdersSheet from './components/MyOrdersSheet';
 import TableLanding, { TableActionConfirmation, type TableActionKind } from './components/TableLanding';
-import { customerRootStyle, opensText } from './customerTheme';
+import { customerFontsHref, customerRootStyle, opensText } from './customerTheme';
 import DeliveryMenu from './delivery/DeliveryMenu';
 import { ImageSlot } from './site/SiteChrome';
-import { FONTS_HREF, serif } from './site/siteParts';
-import { SITE_FONTS_HREF, resolveDesign } from './site/siteTheme';
+import { serif } from './site/siteParts';
+import { resolveDesign } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import {
     accentItalic, closeCircle, creamBox, displayTitle, eyebrowAccent, fieldClass, heroBox, heroEyebrow, heroPattern, pillAccent, pillDark,
@@ -171,8 +171,7 @@ export default function TableOrderPage() {
         // Elit: köşesiz, ince serif giydirme (rb-el-flow); koyu kapak ve krem kutular temanın değişkenlerinden.
         <div style={customerRootStyle(site?.site)} className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', resolveDesign(site?.site.design) === 'elit' && 'rb-el-flow')}>
             <EliteFlowStyle design={site?.site.design} />
-            <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
-            <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
+            <link rel="stylesheet" href={customerFontsHref(site?.site)} precedence="default" />
             {children}
         </div>
     );
@@ -687,7 +686,7 @@ function SentConfirmation({ request, site, restaurant, tableName, onBackToMenu, 
                             <ImageSlot src={item.productId ? images.get(item.productId) : null} alt="" restaurant={restaurant}
                                 logoTextClassName="text-[min(9px,12cqw)]" className="h-11 w-11 shrink-0 rounded-full border-2 border-[var(--site-mustard)]" />
                             <span className={cn(serif, 'min-w-0 flex-1 break-words text-[18px] leading-tight')}>
-                                <span className="font-[family-name:Manrope,system-ui,sans-serif] text-[15px] font-extrabold tabular-nums tracking-normal text-[var(--site-accent-text)]">{item.quantity}×</span> {item.name}
+                                <span className="font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)] text-[15px] font-extrabold tabular-nums tracking-normal text-[var(--site-accent-text)]">{item.quantity}×</span> {item.name}
                             </span>
                         </li>
                     ))}

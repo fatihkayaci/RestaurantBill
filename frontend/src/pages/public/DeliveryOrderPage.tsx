@@ -21,12 +21,12 @@ import DeliveryMenu from './delivery/DeliveryMenu';
 import DeliverySetMenuSheet from './delivery/DeliverySetMenuSheet';
 import DeliveryCheckout from './delivery/DeliveryCheckout';
 import Sheet from './delivery/Sheet';
-import { customerRootStyle } from './customerTheme';
+import { customerFontsHref, customerRootStyle } from './customerTheme';
 import type { PublicSite } from '@/features/customerSite/types';
 import { GlassStatusPill } from './site/SiteCards';
 import { FlowSiteHeader } from './site/SiteFrame';
-import { FONTS_HREF, serif, siteCardDark } from './site/siteParts';
-import { SITE_FONTS_HREF, headingFont, resolveDesign, telHref } from './site/siteTheme';
+import { serif, siteCardDark } from './site/siteParts';
+import { headingFont, resolveDesign, telHref } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import { normalizeSite } from './site/useSite';
 
@@ -83,6 +83,7 @@ export default function DeliveryOrderPage() {
         accent: siteData.site.accentColor,
         theme: siteData.site.theme,
         design: siteData.site.design,
+        font: siteData.site.font,
         cover: siteData.site.coverImageUrl,
         place: [siteData.district, siteData.city].filter(Boolean).join(', '),
     };
@@ -242,11 +243,10 @@ export default function DeliveryOrderPage() {
     const nav = !siteFailed;
     const root = (children: ReactNode, withNav = true) => (
         // Elit: köşesiz, ince serif giydirme (rb-el-flow); düzen ve mantık aynı.
-        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme, design: site?.design })}
+        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme, design: site?.design, font: site?.font })}
             className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)]', resolveDesign(site?.design) === 'elit' && 'rb-el-flow')}>
             <EliteFlowStyle design={site?.design} />
-            <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
-            <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
+            <link rel="stylesheet" href={customerFontsHref(site)} precedence="default" />
             {withNav && siteData && <FlowSiteHeader site={siteData} current="siparis" />}
             {children}
         </div>

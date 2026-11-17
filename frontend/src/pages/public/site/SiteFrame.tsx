@@ -534,7 +534,7 @@ export function SitePage({ site, current, className, stickyHeader = true, overla
     // Adres · saatler · iletişim her sayfanın alt bilgisinde; İletişim sayfası aynı bilgileri zaten gösterir.
     const footerVisit = current !== 'iletisim';
     return (
-        <SiteShell accent={site.site.accentColor} theme={site.site.theme} design={site.site.design}>
+        <SiteShell accent={site.site.accentColor} theme={site.site.theme} design={site.site.design} font={site.site.font}>
             <style>{MOTION_CSS}</style>
             <EliteFlowStyle design={site.site.design} />
             <div className={cn('rb-site relative flex min-h-screen flex-col overflow-x-clip', resolveDesign(site.site.design) === 'elit' && 'rb-el-flow', className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>

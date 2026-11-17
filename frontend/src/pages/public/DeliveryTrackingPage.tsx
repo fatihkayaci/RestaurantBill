@@ -9,11 +9,11 @@ import { DeliveryStatus, DoorPayment, type DeliveryTracking } from '@/features/d
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { customerRootStyle } from './customerTheme';
+import { customerFontsHref, customerRootStyle } from './customerTheme';
 import { ImageSlot } from './site/SiteChrome';
 import { FlowSiteHeader, SiteFooter } from './site/SiteFrame';
-import { FONTS_HREF, serif } from './site/siteParts';
-import { SITE_FONTS_HREF, resolveDesign, telHref } from './site/siteTheme';
+import { serif } from './site/siteParts';
+import { resolveDesign, telHref } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import { useSite } from './site/useSite';
 
@@ -146,10 +146,9 @@ export default function DeliveryTrackingPage() {
     // Elit: köşesiz, ince serif giydirme (rb-el-flow) ve duruma göre değişmeyen koyu espresso kapak.
     const elit = resolveDesign(order?.design) === 'elit';
     const root = (children: ReactNode) => (
-        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design })} className={cn('flex min-h-screen flex-col overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', elit && 'rb-el-flow')}>
+        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design, font: order?.font })} className={cn('flex min-h-screen flex-col overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', elit && 'rb-el-flow')}>
             <EliteFlowStyle design={order?.design} />
-            <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
-            <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
+            <link rel="stylesheet" href={customerFontsHref(order)} precedence="default" />
             {children}
         </div>
     );

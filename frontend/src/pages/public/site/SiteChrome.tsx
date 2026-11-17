@@ -7,7 +7,7 @@ import {
 import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { cn } from '@/lib/utils';
 import {
-    container, formatDay, formatSitePrice, headingFont, resolveDesign, siteFontsHref, siteRootStyle, wordmarkParts,
+    container, formatDay, formatSitePrice, headingFont, resolveDesign, resolveFont, siteFontsHref, siteRootStyle, wordmarkParts,
 } from './siteTheme';
 import { SiteDesignContext } from './siteDesign';
 
@@ -15,19 +15,27 @@ import { SiteDesignContext } from './siteDesign';
 
 /** Sitenin kökü: tasarımın ve temanın renk değişkenleri (`design` "renkli" | "sade", `theme` hazır tema anahtarı,
  *  `accent` özel vurgu rengi; boşsa varsayılanlar), tasarımın yazı tipleri ve tasarım bağlamı (useSiteDesign). */
-export function SiteShell({ accent, theme, design, children }: { accent?: string; theme?: string; design?: string; children: ReactNode }) {
+export function SiteShell({ accent, theme, design, font, children }: {
+    accent?: string; theme?: string; design?: string; font?: string; children: ReactNode;
+}) {
     const key = resolveDesign(design);
-    // Site açıkken sayfanın tamamı (zemin, bildirimler, pencereler) Manrope; personel ekranına dönünce kalkar.
-    // Sınıf sitenin çizildiği belgeye eklenir (admin'deki önizleme çerçevesinde çerçevenin belgesi, admin değil).
+    const body = resolveFont(font, key).body;
+    // Site açıkken sayfanın tamamı (zemin, bildirimler, pencereler) sitenin gövde yazı tipi; personel ekranına dönünce
+    // kalkar. Sınıf sitenin çizildiği belgeye eklenir (admin'deki önizleme çerçevesinde çerçevenin belgesi, admin değil).
     const ref = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const root = (ref.current?.ownerDocument ?? document).documentElement;
         root.classList.add('restaurant-site');
         return () => root.classList.remove('restaurant-site');
     }, []);
+    useEffect(() => {
+        const root = (ref.current?.ownerDocument ?? document).documentElement;
+        root.style.setProperty('--site-root-sans', body);
+        return () => { root.style.removeProperty('--site-root-sans'); };
+    }, [body]);
     return (
-        <div ref={ref} style={siteRootStyle(accent, theme, key)} data-site-design={key} className="flex min-h-screen flex-col text-base leading-normal">
-            <link rel="stylesheet" href={siteFontsHref(key)} precedence="default" />
+        <div ref={ref} style={siteRootStyle(accent, theme, key, font)} data-site-design={key} className="flex min-h-screen flex-col text-base leading-normal">
+            <link rel="stylesheet" href={siteFontsHref(key, font)} precedence="default" />
             <SiteDesignContext.Provider value={key}>{children}</SiteDesignContext.Provider>
         </div>
     );

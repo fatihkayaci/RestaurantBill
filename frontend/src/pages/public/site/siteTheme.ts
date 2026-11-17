@@ -30,23 +30,99 @@ export function resolveDesign(key?: string | null): SiteDesignKey {
     return (SITE_DESIGN_KEYS as readonly string[]).includes(key ?? '') ? key as SiteDesignKey : DEFAULT_DESIGN;
 }
 
+// ── Yazı tipi çiftleri ──
+// Başlık (`--site-serif`) + gövde (`--site-sans`). Restoran "Yazı tipi"nde birini seçer; boş = tasarımın kendi çifti
+// (Renkli: Fraunces + Manrope; Sade: Instrument Serif + Manrope; Elit: Bodoni Moda + Montserrat). Hepsi Google Fonts,
+// hepsinde Türkçe harfler (latin-ext: ğ ş ı İ ç ö ü) var. Backend: SiteContent.FontKeys (aynı anahtarlar).
+
 const MANROPE = 'family=Manrope:wght@400;500;600;700;800';
 const FRAUNCES = 'family=Fraunces:ital,opsz,wght@0,9..144,500..900;1,9..144,500..900';
 const INSTRUMENT = 'family=Instrument+Serif:ital@0;1';
 const BODONI = 'family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..700';
-const MONTSERRAT = 'family=Montserrat:wght@300;400;500;600';
+const MONTSERRAT = 'family=Montserrat:wght@300;400;500;600;700;800';
+const PLAYFAIR = 'family=Playfair+Display:ital,wght@0,400..900;1,400..900';
+const INTER = 'family=Inter:wght@300;400;500;600;700;800';
+const DM_SERIF = 'family=DM+Serif+Display:ital@0;1';
+const DM_SANS = 'family=DM+Sans:wght@300;400;500;600;700;800';
+const CORMORANT = 'family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700';
+const LATO = 'family=Lato:wght@300;400;700;900';
+const GROTESK = 'family=Space+Grotesk:wght@300..700';
 const fontsUrl = (...families: string[]) => `https://fonts.googleapis.com/css2?${families.join('&')}&display=swap`;
 
-/** Tasarımın yazı tipleri (Renkli: Fraunces + Manrope; Sade: Instrument Serif + Manrope; Elit: Bodoni Moda + Montserrat). */
-export function siteFontsHref(design?: string | null): string {
-    const d = resolveDesign(design);
-    if (d === 'sade') return fontsUrl(INSTRUMENT, MANROPE);
-    if (d === 'elit') return fontsUrl(BODONI, MONTSERRAT);
-    return fontsUrl(FRAUNCES, MANROPE);
+export const SITE_FONT_KEYS = [
+    'fraunces-manrope', 'instrument-manrope', 'bodoni-montserrat', 'playfair-inter', 'dmserif-dmsans', 'cormorant-lato', 'grotesk-inter',
+] as const;
+export type SiteFontKey = (typeof SITE_FONT_KEYS)[number];
+
+export interface SiteFontPair {
+    key: SiteFontKey;
+    /** Admin'deki ad ("Fraunces + Manrope"). */
+    label: string;
+    /** Başlık yazı tipi (CSS font-family yığını) ve harf aralığı. */
+    heading: string;
+    tracking: string;
+    /** Gövde yazı tipi ve ağırlığı (boş = 400). */
+    body: string;
+    bodyWeight?: number;
+    /** Başlık yazı tipinin tek ağırlığı var (Instrument Serif, DM Serif Display): sahte kalın çizilmesin. */
+    singleWeight?: boolean;
+    /** Başlıkta harf başına ortalama genişlik (em; ince 400 ve kalın 700), ana sayfadaki dev adın sığması için. Tarayıcıda
+     *  ölçüldü (canvas measureText, Türkçe örnek ad) ve Fraunces kalının eski 0,6 katsayısına göre ölçeklendi. */
+    charWidth: { regular: number; bold: number };
+    /** Gereken Google Fonts css2 adresi (ağırlıklar ve italikler). */
+    href: string;
 }
 
-/** Tasarımı bilmeyen sayfalar için bütün tasarımların yazı tipleri birlikte (tarayıcı yalnız kullanılan dosyayı indirir). */
+const fontPair = (p: Omit<SiteFontPair, 'href'>, ...families: string[]): SiteFontPair => ({ ...p, href: fontsUrl(...families) });
+const MANROPE_STACK = 'Manrope, system-ui, sans-serif';
+const INTER_STACK = 'Inter, system-ui, sans-serif';
+
+export const SITE_FONTS: Record<SiteFontKey, SiteFontPair> = {
+    'fraunces-manrope': fontPair({
+        key: 'fraunces-manrope', label: 'Fraunces + Manrope', heading: 'Fraunces, Georgia, serif', tracking: '-0.02em',
+        body: MANROPE_STACK, charWidth: { regular: 0.56, bold: 0.6 },
+    }, FRAUNCES, MANROPE),
+    'instrument-manrope': fontPair({
+        key: 'instrument-manrope', label: 'Instrument Serif + Manrope', heading: "'Instrument Serif', Georgia, serif", tracking: '-0.01em',
+        body: MANROPE_STACK, singleWeight: true, charWidth: { regular: 0.46, bold: 0.46 },
+    }, INSTRUMENT, MANROPE),
+    'bodoni-montserrat': fontPair({
+        key: 'bodoni-montserrat', label: 'Bodoni Moda + Montserrat', heading: "'Bodoni Moda', Didot, Georgia, serif", tracking: '-0.01em',
+        body: 'Montserrat, system-ui, sans-serif', bodyWeight: 300, charWidth: { regular: 0.645, bold: 0.68 },
+    }, BODONI, MONTSERRAT),
+    'playfair-inter': fontPair({
+        key: 'playfair-inter', label: 'Playfair Display + Inter', heading: "'Playfair Display', Georgia, serif", tracking: '-0.01em',
+        body: INTER_STACK, charWidth: { regular: 0.64, bold: 0.66 },
+    }, PLAYFAIR, INTER),
+    'dmserif-dmsans': fontPair({
+        key: 'dmserif-dmsans', label: 'DM Serif Display + DM Sans', heading: "'DM Serif Display', Georgia, serif", tracking: '-0.01em',
+        body: "'DM Sans', system-ui, sans-serif", singleWeight: true, charWidth: { regular: 0.62, bold: 0.62 },
+    }, DM_SERIF, DM_SANS),
+    'cormorant-lato': fontPair({
+        key: 'cormorant-lato', label: 'Cormorant Garamond + Lato', heading: "'Cormorant Garamond', Garamond, Georgia, serif", tracking: '0em',
+        body: 'Lato, system-ui, sans-serif', charWidth: { regular: 0.565, bold: 0.57 },
+    }, CORMORANT, LATO),
+    'grotesk-inter': fontPair({
+        key: 'grotesk-inter', label: 'Space Grotesk + Inter', heading: "'Space Grotesk', system-ui, sans-serif", tracking: '-0.03em',
+        body: INTER_STACK, charWidth: { regular: 0.66, bold: 0.66 },
+    }, GROTESK, INTER),
+};
+
+/** Seçilen yazı tipi çifti; boş/bilinmeyen = tasarımın kendi çifti. */
+export function resolveFont(font?: string | null, design?: string | null): SiteFontPair {
+    const key = (SITE_FONT_KEYS as readonly string[]).includes(font ?? '') ? font as SiteFontKey : designFontKey(design);
+    return SITE_FONTS[key];
+}
+
+/** Sitenin yazı tiplerinin css2 adresi: yalnız seçilen çift (boş = tasarımın çifti). */
+export function siteFontsHref(design?: string | null, font?: string | null): string {
+    return resolveFont(font, design).href;
+}
+
+/** Tasarımı bilmeyen sayfalar için tasarımların kendi yazı tipleri birlikte (tarayıcı yalnız kullanılan dosyayı indirir). */
 export const SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT);
+/** Bütün çiftler birlikte (yalnız admin'deki yazı tipi seçici). */
+export const ALL_SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, PLAYFAIR, INTER, DM_SERIF, DM_SANS, CORMORANT, LATO, GROTESK);
 
 export interface SiteThemePreset {
     key: string;
@@ -104,12 +180,11 @@ export interface SitePalette {
     onTerracottaSoft: string | null;
     footer: string; onFooter: string; footerMuted: string; footerLabel: string | null;
     footerMap: string; footerRoad: string; footerWater: string;
-    serif: string; serifTracking: string;
-    /** Gövde yazı tipi (`--site-sans`) ve ağırlığı (Elit: Montserrat 300). */
-    sans: string; bodyWeight?: number;
+    /** Tasarımın kendi yazı tipi çifti (restoran "Yazı tipi"nde başka çift seçebilir). */
+    font: SiteFontKey;
+    /** Başlıkların ağırlığı (`--site-serif-weight`; Renkli kalın, Sade ve Elit ince). */
+    headingWeight: number;
 }
-
-const MANROPE_STACK = 'Manrope, system-ui, sans-serif';
 
 const RENKLI: SitePalette = {
     bg: '#EFE2CC',
@@ -152,9 +227,8 @@ const RENKLI: SitePalette = {
     footerMap: '#34402B',
     footerRoad: '#4C5A40',
     footerWater: '#2E4744',
-    serif: 'Fraunces, Georgia, serif',
-    serifTracking: '-0.02em',
-    sans: MANROPE_STACK,
+    font: 'fraunces-manrope',
+    headingWeight: 700,
 };
 
 /** Sade ("Tema 2 · Açık", d439b68) paleti. */
@@ -199,9 +273,8 @@ const SADE: SitePalette = {
     footerMap: '#D6C8B2',
     footerRoad: '#EFE7DA',
     footerWater: '#BFD0CC',
-    serif: "'Instrument Serif', Georgia, serif",
-    serifTracking: '-0.01em',
-    sans: MANROPE_STACK,
+    font: 'instrument-manrope',
+    headingWeight: 400,
 };
 
 /** Elit paleti. Kapak, menü kutusu, hikâye ve alt bilgi koyu espresso; vurgu türevleri (düğme, koyu zemindeki çizgi
@@ -246,10 +319,8 @@ const ELIT: SitePalette = {
     footerMap: '#382B21',
     footerRoad: '#46372B',
     footerWater: '#2A3440',
-    serif: "'Bodoni Moda', Didot, Georgia, serif",
-    serifTracking: '-0.01em',
-    sans: 'Montserrat, system-ui, sans-serif',
-    bodyWeight: 300,
+    font: 'bodoni-montserrat',
+    headingWeight: 400,
 };
 
 type PresetInput = Omit<SiteThemePreset, 'bg' | 'card' | 'border' | 'text' | 'muted'>;
@@ -304,6 +375,11 @@ export interface SiteDesignInfo {
     description: string;
     palette: SitePalette;
     themes: Record<string, SiteThemePreset>;
+}
+
+/** Tasarımın kendi yazı tipi çifti. */
+export function designFontKey(design?: string | null): SiteFontKey {
+    return SITE_DESIGNS[resolveDesign(design)].palette.font;
 }
 
 export const SITE_DESIGNS: Record<SiteDesignKey, SiteDesignInfo> = {
@@ -434,16 +510,19 @@ export function resolveSiteColors(accentColor?: string | null, theme?: string | 
 
 /**
  * Sitenin kök stili. `theme`: hazır tema anahtarı (boş/bilinmeyen = tasarımın varsayılanı). `accentColor`: restoranın
- * özel vurgu rengi (boşsa temanınki). `design`: "renkli" | "sade" | "elit" (boş = renkli). Parametresiz çağrı varsayılanı verir.
+ * özel vurgu rengi (boşsa temanınki). `design`: "renkli" | "sade" | "elit" (boş = renkli). `font`: yazı tipi çifti
+ * (SITE_FONTS anahtarı; boş = tasarımın çifti). Parametresiz çağrı varsayılanı verir.
  */
-export function siteRootStyle(accentColor?: string | null, theme?: string | null, design?: string | null): CSSProperties {
+export function siteRootStyle(accentColor?: string | null, theme?: string | null, design?: string | null, font?: string | null): CSSProperties {
     const c = resolveSiteColors(accentColor, theme, design);
     const { palette: P, theme: t } = c;
+    const f = resolveFont(font, c.design);
     const line = (a: number) => `rgba(${P.rgb},${a})`;
     return {
-        '--site-sans': P.sans,
-        '--site-serif': P.serif,
-        '--site-serif-tracking': P.serifTracking,
+        '--site-sans': f.body,
+        '--site-serif': f.heading,
+        '--site-serif-tracking': f.tracking,
+        '--site-serif-weight': P.headingWeight,
         '--site-accent': c.accent,
         '--site-on-accent': c.onAccent,
         '--site-accent-text': c.accentText,
@@ -512,17 +591,17 @@ export function siteRootStyle(accentColor?: string | null, theme?: string | null
         '--site-error-line': '#F0B4A3',
         '--site-error': '#A3301A',
         colorScheme: 'light',
-        fontFamily: P.sans,
-        fontWeight: P.bodyWeight,
-        // Sade'nin serif'i (Instrument Serif) tek ağırlıklı: kalın sınıflar sahte kalın çizmesin.
-        fontSynthesisWeight: c.design === 'sade' ? 'none' : undefined,
+        fontFamily: f.body,
+        fontWeight: f.bodyWeight,
+        // Tek ağırlıklı başlık yazı tipi (Instrument Serif, DM Serif Display): kalın sınıflar sahte kalın çizmesin.
+        fontSynthesisWeight: f.singleWeight ? 'none' : undefined,
         backgroundColor: 'var(--site-bg)',
         color: 'var(--site-text)',
     } as CSSProperties;
 }
 
 /** Başlıklar ve büyük fiyatlar: tasarımın serif'i (Renkli: Fraunces kalın, sıkı aralık; Sade: Instrument Serif). */
-export const headingFont = 'font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] font-bold! tracking-[var(--site-serif-tracking,-0.02em)]';
+export const headingFont = 'font-[family-name:var(--site-serif,Fraunces,Georgia,serif)] font-(--site-serif-weight,700)! tracking-[var(--site-serif-tracking,-0.02em)]';
 
 /** Başlığı iki parçaya böler: ikinci parça italik vurgu yazısıyla yazılır (Tema 2 başlık dili).
  *  "Közün başında, ustanın elinden." → ["Közün başında,", "ustanın elinden."]; virgül yoksa son kelime vurgulanır. */

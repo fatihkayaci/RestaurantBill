@@ -4,8 +4,8 @@ import type { SiteDayHours, SiteMilestone, SiteReview, SiteValue } from '@/featu
 import { inputClass, labelClass } from '@/lib/formStyles';
 import { cn } from '@/lib/utils';
 import {
-    DEFAULT_DESIGN, DEFAULT_THEME, SITE_DESIGNS, SITE_DESIGN_KEYS, SITE_FONTS_HREF, designThemes, resolveDesign, resolveSiteColors, resolveTheme,
-    type SiteDesignKey,
+    ALL_SITE_FONTS_HREF, DEFAULT_DESIGN, DEFAULT_THEME, SITE_DESIGNS, SITE_DESIGN_KEYS, SITE_FONTS, SITE_FONTS_HREF, SITE_FONT_KEYS,
+    designFontKey, designThemes, resolveDesign, resolveSiteColors, resolveTheme, type SiteDesignKey, type SiteFontPair,
 } from '@/pages/public/site/siteTheme';
 
 // "Restoran sitesi" ayar sayfasının düzenleyicileri: tasarım, tema, haftalık saat, mekân galerisi ve kısa liste alanları.
@@ -74,7 +74,7 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
                             <span className="flex min-h-0 flex-1 gap-1.5">
                                 <span className="flex flex-[3] flex-col justify-between rounded-md p-2"
                                     style={{ background: t.cover ?? t.hero, color: P.onHero, border: sade ? `1px solid ${t.border}` : undefined }}>
-                                    <span className="text-[22px] leading-[0.95]" style={{ fontFamily: P.serif, fontWeight: sade ? 400 : 800, letterSpacing: P.serifTracking }}>
+                                    <span className="text-[22px] leading-[0.95]" style={{ fontFamily: SITE_FONTS[P.font].heading, fontWeight: sade ? 400 : 800, letterSpacing: SITE_FONTS[P.font].tracking }}>
                                         Ocak<br /><em style={{ color: c.heroAccent, fontWeight: sade ? 400 : 600 }}>Kadıköy</em>
                                     </span>
                                     <span className="h-3.5 w-14 rounded-full" style={{ background: c.pop }} />
@@ -115,10 +115,10 @@ function EliteMock({ accent, accentText }: { accent: string; accentText: string 
                 <span className="absolute inset-0 opacity-60" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.25), transparent 40%, rgba(0,0,0,0.3))' }} />
                 <span className="relative flex items-center gap-1.5">
                     <span className="h-px w-4" style={{ background: accent }} />
-                    <span className="text-[6px] uppercase tracking-[0.3em]" style={{ color: accent, fontFamily: P.sans }}>Kadıköy</span>
+                    <span className="text-[6px] uppercase tracking-[0.3em]" style={{ color: accent, fontFamily: SITE_FONTS[P.font].body }}>Kadıköy</span>
                     <span className="h-px w-4" style={{ background: accent }} />
                 </span>
-                <span className="relative text-center text-[19px] leading-[0.95]" style={{ fontFamily: P.serif, fontWeight: 400 }}>
+                <span className="relative text-center text-[19px] leading-[0.95]" style={{ fontFamily: SITE_FONTS[P.font].heading, fontWeight: 400 }}>
                     Ocak<br /><em>Kadıköy</em>
                 </span>
                 <span className="relative mt-1 h-2.5 w-12" style={{ background: accent }} />
@@ -134,6 +134,47 @@ function EliteMock({ accent, accentText }: { accent: string; accentText: string 
             </span>
             <span className="h-3 shrink-0" style={{ background: P.footer, borderTop: `1px solid ${accent}` }} />
         </span>
+    );
+}
+
+/**
+ * Sitenin yazı tipi: ilk seçenek "Tasarımın yazı tipi" ("" kaydedilir; tasarım değişince onun çiftine geçer), altında hazır
+ * başlık + gövde çiftleri. Her kart "Aa" ve kısa bir Türkçe örneği o çiftle çizer. Admin olduğu için bütün çiftler yüklenir.
+ */
+export function FontPicker({ design, font, onFont }: { design: string; font: string; onFont: (key: string) => void }) {
+    const own = SITE_FONTS[designFontKey(design)];
+    const selected = (SITE_FONT_KEYS as readonly string[]).includes(font) ? font : '';
+    return (
+        <div role="radiogroup" aria-label="Yazı tipi" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <link rel="stylesheet" href={ALL_SITE_FONTS_HREF} precedence="default" />
+            <FontCard pair={own} label={`Tasarımın yazı tipi (${own.label})`} on={selected === ''} onClick={() => onFont('')} />
+            {SITE_FONT_KEYS.map(key => (
+                <FontCard key={key} pair={SITE_FONTS[key]} label={SITE_FONTS[key].label} on={selected === key} onClick={() => onFont(key)} />
+            ))}
+        </div>
+    );
+}
+
+function FontCard({ pair, label, on, onClick }: { pair: SiteFontPair; label: string; on: boolean; onClick: () => void }) {
+    return (
+        <button type="button" role="radio" aria-checked={on} onClick={onClick}
+            className={cn('flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors',
+                on ? 'border-foreground' : 'border-border hover:border-foreground/40')}>
+            <span aria-hidden="true" className="w-12 shrink-0 text-center text-[34px] leading-none text-foreground"
+                style={{ fontFamily: pair.heading, letterSpacing: pair.tracking }}>Aa</span>
+            <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span aria-hidden="true" className="truncate text-[17px] leading-tight text-foreground" style={{ fontFamily: pair.heading, letterSpacing: pair.tracking }}>
+                    Közde pişen lezzetler
+                </span>
+                <span aria-hidden="true" className="truncate text-[13px] text-muted-foreground" style={{ fontFamily: pair.body, fontWeight: pair.bodyWeight }}>
+                    Ğğ Şş İı Çç Öö Üü · gövde yazısı
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                    {label}
+                    {on && <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+                </span>
+            </span>
+        </button>
     );
 }
 

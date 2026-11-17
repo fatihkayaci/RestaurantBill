@@ -15,13 +15,13 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import MenuBrowser from './components/MenuBrowser';
-import { customerRootStyle } from './customerTheme';
+import { customerFontsHref, customerRootStyle } from './customerTheme';
 import { countdownText, dateParts, dayWord, downloadIcs, reservationStatusBadge } from './reservationCalendar';
 import { reservationTone } from './reservationTone';
 import { SitePage } from './site/SiteFrame';
 import { ImageSlot } from './site/SiteChrome';
-import { FONTS_HREF, reservationHref, serif } from './site/siteParts';
-import { SITE_FONTS_HREF, directionsUrl, headingFont, telHref } from './site/siteTheme';
+import { reservationHref, serif } from './site/siteParts';
+import { directionsUrl, headingFont, telHref } from './site/siteTheme';
 import { fullAddress, rememberReservationToken } from './site/useSite';
 
 interface CartLine {
@@ -217,8 +217,7 @@ export default function ReservationDetailPage() {
 
     const root = (children: ReactNode) => (
         <div style={customerRootStyle(site?.site)} className="min-h-screen text-[var(--site-text)]">
-            <link rel="stylesheet" href={SITE_FONTS_HREF} precedence="default" />
-            <link rel="stylesheet" href={FONTS_HREF} precedence="default" />
+            <link rel="stylesheet" href={customerFontsHref(site?.site)} precedence="default" />
             {children}
         </div>
     );
@@ -504,7 +503,7 @@ function ReservationCard({ detail, now, address, onCalendar, children }: {
                 <div className={cn('flex min-w-0 flex-[1_1_240px] flex-col gap-1.5 px-6 py-6 md:px-[30px] md:py-7', tone.ticket)}>
                     {detail.code && <span className="font-mono text-xs font-extrabold uppercase tracking-[0.2em]">{detail.code}</span>}
                     <span className={cn(serif, 'text-[44px] font-extrabold leading-none md:text-[54px]')}>{parts.day} {parts.month}</span>
-                    <span className={cn(serif, 'text-[20px] font-semibold italic md:text-[22px]')}>{parts.weekday}{countdown && <span className="not-italic font-sans text-sm font-bold"> · {countdown}</span>}</span>
+                    <span className={cn(serif, 'text-[20px] font-semibold italic md:text-[22px]')}>{parts.weekday}{countdown && <span className="not-italic font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)] text-sm font-bold"> · {countdown}</span>}</span>
                 </div>
                 <div aria-hidden="true" className="hidden w-0 border-l-[3px] border-dashed border-[var(--site-card)] sm:block" />
                 <dl className="m-0 grid min-w-0 flex-[1_1_240px] grid-cols-2 gap-[18px] px-6 py-6 md:px-[30px] md:py-7">

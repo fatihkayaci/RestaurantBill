@@ -42,7 +42,7 @@ export function toTexts(d: BranchSite): SiteDraftTexts {
     return {
         headline: d.headline ?? '', tagline: d.tagline ?? '', storyTitle: d.storyTitle ?? '', about: d.about ?? '',
         opensAt: d.opensAt, closesAt: d.closesAt, hoursNote: d.hoursNote ?? '', instagramUrl: d.instagramUrl ?? '',
-        accentColor: d.accentColor ?? '', theme: d.theme ?? '', design: d.design ?? '', weeklyHours: d.weeklyHours ?? [],
+        accentColor: d.accentColor ?? '', theme: d.theme ?? '', design: d.design ?? '', font: d.font ?? '', weeklyHours: d.weeklyHours ?? [],
         directionsNote: d.directionsNote ?? '', whatsappPhone: d.whatsappPhone ?? '', amenities: d.amenities ?? [],
         hiddenFaqs: d.hiddenFaqs ?? [],
         rating: d.rating ?? null, reviewCount: d.reviewCount ?? null, reviewsUrl: d.reviewsUrl ?? '',

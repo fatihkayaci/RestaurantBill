@@ -80,7 +80,7 @@ export const ELITE_FLOW_CSS = `
 .rb-el-flow [class*="rounded"]{border-radius:0}
 .rb-el-flow [class~="rounded-full"]:not([class*="px-"]):not([class*="pl-"]):not([class*="pr-"]){border-radius:9999px}
 .rb-el-flow :is(.font-bold,.font-extrabold,.font-black,.font-semibold){font-weight:500}
-.rb-el-flow [class*="site-serif"]{font-weight:400;letter-spacing:-0.01em}
+.rb-el-flow [class*="site-serif"]{font-weight:400;letter-spacing:var(--site-serif-tracking,-0.01em)}
 .rb-el-flow :is(a,button,label)[class~="rounded-full"]:is([class*="px-"],[class*="pl-"]):not(:has(> span + span)){text-transform:uppercase;letter-spacing:.14em;font-size:12px;font-weight:500}
 .rb-el-flow [class*="repeating-conic-gradient"]{background-image:repeating-linear-gradient(45deg,color-mix(in srgb,var(--site-accent-on-dark) 10%,transparent) 0 1px,transparent 1px 24px),repeating-linear-gradient(-45deg,color-mix(in srgb,var(--site-accent-on-dark) 6%,transparent) 0 1px,transparent 1px 24px);background-size:auto}
 .rb-el-flow [class*="shadow-["]{box-shadow:0 18px 40px -24px rgba(43,33,25,.45)}

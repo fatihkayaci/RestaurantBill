@@ -16,7 +16,7 @@ import {
     RESERVATION_PATH, averagePrepMinutes, cardButton, dativeSuffix, foldText, formatRating, hasAboutPage, productCount,
     serif, sinceYear, untilTime,
 } from './site/siteParts';
-import { formatSitePrice, resolveDesign, splitAccent, telHref } from './site/siteTheme';
+import { formatSitePrice, resolveDesign, resolveFont, splitAccent, telHref } from './site/siteTheme';
 import EliteHome from './site/elite/EliteHome';
 import { useSiteDesign } from './site/siteDesign';
 import { restaurantName, useMyReservations, useSite, weekSchedule } from './site/useSite';
@@ -79,13 +79,13 @@ export default function RestaurantSitePage() {
 
 // ── 1. Birleşik kapak ────────────────────────────────────────────────────────────────────────────
 
-// Dev ad: uzun adlar kutuya sığsın diye en uzun satırın harf sayısına göre küçülür (Renkli: Fraunces kalın ≈ 0,6em/harf;
-// Sade: Instrument Serif ≈ 0,46em/harf).
-function heroNameStyle(lines: string[], sade: boolean): CSSProperties {
+// Dev ad: uzun adlar kutuya sığsın diye en uzun satırın harf sayısına göre küçülür. Harf genişliği yazı tipi çiftinden
+// (`charWidth`; Renkli kalın, Sade ince: Fraunces kalını ≈ 0,6em/harf, Instrument Serif ≈ 0,46em/harf).
+function heroNameStyle(lines: string[], sade: boolean, charWidth: number): CSSProperties {
     const longest = Math.max(4, ...lines.map(l => l.length));
     return sade
-        ? { fontSize: `min(100px, max(6.4vw, 52px), ${(80 / (longest * 0.46)).toFixed(2)}vw)` }
-        : { fontSize: `min(104px, max(6.6vw, 48px), ${(82 / (longest * 0.6)).toFixed(2)}vw)` };
+        ? { fontSize: `min(100px, max(6.4vw, 52px), ${(80 / (longest * charWidth)).toFixed(2)}vw)` }
+        : { fontSize: `min(104px, max(6.6vw, 48px), ${(82 / (longest * charWidth)).toFixed(2)}vw)` };
 }
 
 interface StripCell { key: string; node: ReactNode; wrap?: (node: ReactNode) => ReactNode }
@@ -209,7 +209,7 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                             </span>
                         )}
                         {/* Ad Ayarlar'dan gelir; kapak adsız boş görünmesin diye düzenleyicide de yazılır (tıklanmaz). */}
-                        <h1 id="ev-ad" className={cn(serif, 'm-0 max-w-full break-words', sade ? 'leading-[0.92] tracking-[-0.015em]' : 'leading-[0.95] tracking-[-0.025em]')} style={heroNameStyle([first, accent], sade)}>
+                        <h1 id="ev-ad" className={cn(serif, 'm-0 max-w-full break-words', sade ? 'leading-[0.92] tracking-[-0.015em]' : 'leading-[0.95] tracking-[-0.025em]')} style={heroNameStyle([first, accent], sade, resolveFont(content.font, sade ? 'sade' : 'renkli').charWidth[sade ? 'regular' : 'bold'])}>
                             {first && <>{first}<br /></>}<em className="rb-accent italic">{accent}</em>
                         </h1>
                         {(lead || showEmpty) && (

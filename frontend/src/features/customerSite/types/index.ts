@@ -35,6 +35,8 @@ export interface BranchSite {
     theme: string;
     /** Sitenin tasarımı ("renkli" | "sade"); boş = renkli. Eski API yanıtında yoksa da renkli. */
     design?: string;
+    /** Yazı tipi çifti (SITE_FONTS anahtarı, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi. */
+    font?: string;
     /** Mekân fotoğrafları, sitedeki sırayla (en çok 12). */
     galleryImageUrls: string[];
     /** Boş: "her gün aynı" (opensAt/closesAt). Doluysa Pazartesi → Pazar 7 gün. */
