@@ -38,11 +38,19 @@ export function IconTile({ children, className }: { children: ReactNode; classNa
     );
 }
 
-/** Kapaktaki cam hap: "● Şu an açık · Her gün 08:00 – 23:00". `open` null ise nokta çizilmez. */
-export function GlassStatusPill({ open, children, className, ...rest }: { open: boolean | null; children: ReactNode; className?: string; 'data-edit-target'?: string; 'data-edit-label'?: string }) {
+/**
+ * Kapaktaki hap: "● Şu an açık · Her gün 08:00 – 23:00". `open` null ise nokta çizilmez. `tone="glass"` koyu kapak
+ * (paket sipariş, takip), `tone="light"` Tema 2'nin açık kapağı (site sayfaları).
+ */
+export function GlassStatusPill({ open, children, className, tone = 'glass', ...rest }: {
+    open: boolean | null; children: ReactNode; className?: string; tone?: 'glass' | 'light'; 'data-edit-target'?: string; 'data-edit-label'?: string;
+}) {
+    const light = tone === 'light';
     return (
-        <span {...rest} className={cn('inline-flex items-center gap-2 self-start rounded-full border border-white/30 bg-white/15 px-3.5 py-2 text-[13px] text-white backdrop-blur-[10px] md:gap-2.5 md:px-[18px] md:self-auto md:py-2.5 md:text-sm', className)}>
-            {open !== null && <span aria-hidden="true" className={cn('h-[7px] w-[7px] shrink-0 rounded-full md:h-2 md:w-2', open ? 'bg-[#5EE08F]' : 'bg-[#F4A28C]')} />}
+        <span {...rest} className={cn('inline-flex items-center gap-2 self-start rounded-full border px-3.5 py-2 text-[13px] font-semibold md:gap-2.5 md:px-[18px] md:self-auto md:py-2.5 md:text-sm',
+            light ? 'border-[var(--site-border-mid)] bg-[var(--site-card)] text-[var(--site-text)]' : 'border-white/30 bg-white/15 text-white backdrop-blur-[10px]', className)}>
+            {open !== null && <span aria-hidden="true" className={cn('h-[7px] w-[7px] shrink-0 rounded-full md:h-2 md:w-2',
+                open ? (light ? 'bg-[#2FA866]' : 'bg-[#5EE08F]') : (light ? 'bg-[#C8472C]' : 'bg-[#F4A28C]'))} />}
             <span>{children}</span>
         </span>
     );
@@ -59,10 +67,10 @@ export function HeroStatusPill({ site, className }: { site: PublicSite; classNam
     const target = editTarget(edit, 'hours', 'Çalışma saatleri');
     if (!line) {
         if (!edit?.showEmpty) return null;
-        return <GlassStatusPill open={null} {...target} className={cn(className, target.className, 'border-dashed')}>+ Saat ekle</GlassStatusPill>;
+        return <GlassStatusPill tone="light" open={null} {...target} className={cn(className, target.className, 'border-dashed')}>+ Saat ekle</GlassStatusPill>;
     }
     return (
-        <GlassStatusPill open={site.isOpenNow} {...target} className={cn(className, target.className)}>
+        <GlassStatusPill tone="light" open={site.isOpenNow} {...target} className={cn(className, target.className)}>
             {site.isOpenNow !== null && <>{site.isOpenNow ? 'Şu an açık' : 'Şu an kapalı'} · </>}
             {line}
         </GlassStatusPill>
@@ -100,7 +108,7 @@ export function HoursBlock({ site, compact = false, weekHref, valueClassName }: 
                     <span className="text-[15px] font-semibold">{uniform ? 'Her gün' : `Bugün · ${row.label}`}</span>
                     <span className={value}>{row.text}</span>
                 </div>
-                {!uniform && weekHref && <a href={weekHref} className="self-start text-sm font-semibold underline underline-offset-4">Tüm hafta →</a>}
+                {!uniform && weekHref && <a href={weekHref} className="inline-flex min-h-11 items-center self-start text-sm font-bold underline underline-offset-4">Tüm hafta →</a>}
             </div>
         );
     }
@@ -142,7 +150,7 @@ export function MapStub({ className }: { className?: string }) {
 export function Stars({ value, className }: { value: number; className?: string }) {
     const full = Math.round(value);
     return (
-        <span aria-hidden="true" className={cn('tracking-[0.12em] text-[#E8A33D]', className)}>
+        <span aria-hidden="true" className={cn('tracking-[0.12em] text-[var(--site-accent-text)]', className)}>
             {'★★★★★'.slice(0, full)}<span className="opacity-30">{'★★★★★'.slice(full)}</span>
         </span>
     );

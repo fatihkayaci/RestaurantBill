@@ -1,99 +1,89 @@
 import type { CSSProperties } from 'react';
 
-// Restoranın müşteri sitesinin görünümü. Renkler tek yerde CSS değişkeni olarak tanımlı; site sayfaları, rezervasyon
-// akışı, masa QR sayfası ve paket sipariş sayfaları bu değişkenleri kullanır.
-// Varsayılan tema sıcak "Terracotta / krem": krem zemin (#F6F1EA), koyu sıcak yazı (#1D1A16), terracotta vurgu.
-// Admin "Restoran sitesi" ayarından 6 hazır temadan birini seçer; isterse vurgu rengini ayrıca değiştirir (accentColor).
-// Özel vurgu renginde düğme yazısı ve açık zemindeki vurgu yazısı okunurluk (WCAG AA) için otomatik ayarlanır.
+// Restoranın müşteri sitesinin görünümü (tasarım: "Tema 2 · Açık"). Renkler tek yerde CSS değişkeni olarak tanımlı;
+// site sayfaları, rezervasyon akışı, masa QR sayfası ve paket sipariş sayfaları bu değişkenleri kullanır.
+// Zemin her temada aynı sıcak krem (#F6F1E9), yazı koyu sıcak (#1E1A16), koyu panel (sepet, çağrı kartı) mürekkep rengi.
+// Admin "Restoran sitesi" ayarında seçilen tema yalnız VURGU rengini belirler (düğme, çizgi, italik vurgu yazısı);
+// boş tema = tasarımın altın rengi. İsterse vurgu rengini ayrıca değiştirir (accentColor): düğme yazısı ve açık zemindeki
+// vurgu yazısı okunurluk (WCAG AA, 4.5:1) için otomatik ayarlanır.
 
 export const SITE_FONTS_HREF =
-    'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap';
+    'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap';
 
 export interface SiteThemePreset {
     key: string;
     label: string;
     /** Admin'deki tek satırlık tarif. */
     description: string;
-    dark: boolean;
-    /** Sayfa zemini */
+    /** Sayfa zemini (her temada aynı) */
     bg: string;
     /** Kart yüzeyi */
     card: string;
-    /** Hafif yükseltilmiş zemin (sayaç, iskelet, şerit) */
-    raised: string;
-    /** Fotoğrafsız görsel yuvası, bej panel */
-    placeholder: string;
-    text: string;
-    sub: string;
-    muted: string;
     border: string;
-    /** Bölüm ayırıcı ince çizgi */
-    line: string;
-    borderStrong: string;
-    /** Fotoğrafsız kapağın koyu zemini */
-    hero: string;
-    /** Koyu çağrı kartı (rezervasyon, son çağrı) */
-    paper: string;
-    onPaper: string;
-    onPaperSub: string;
+    text: string;
+    muted: string;
     /** Düğme zemini (yazısı onAccent) */
     accent: string;
     onAccent: string;
-    /** Açık zeminde vurgu yazısı (bağlantı, rozet) */
+    /** Açık zeminde vurgu yazısı (italik başlık parçası, bağlantı, rozet); #F6F1E9 ve #EEE7DC üstünde en az 4.5:1 */
     accentText: string;
-    /** Koyu zemindeki süs (✦, nokta) */
-    accentBright: string;
-    /** Hazırlık süresi rozeti gibi küçük çiplerin zemini */
-    chip: string;
-    okBg: string;
-    ok: string;
-    errorBg: string;
-    error: string;
 }
 
-const LIGHT_STATUS = { okBg: '#E3F1E6', ok: '#1B6A43', errorBg: '#FDECE7', error: '#A3301A' };
+/** Tema 2 · Açık paleti (bütün temalarda ortak). */
+export const SITE_PALETTE = {
+    bg: '#F6F1E9',
+    fg: '#1E1A16',
+    alt: '#EEE7DC',
+    card: '#FFFFFF',
+    text2: '#4F473F',
+    muted: '#6B6259',
+    wordmark: '#E3D8C8',
+    placeholder: '#E9E1D5',
+    rgb: '30,26,22',
+    heroOverlay: 'rgba(246,241,233,0.80)',
+    // Koyu panel (sepet, çağrı kartı)
+    paper: '#1E1A16',
+    onPaper: '#F6F1E9',
+    onPaperSub: '#B8AEA2',
+} as const;
+
+const P = SITE_PALETTE;
+const INK = P.fg;
+const base = { bg: P.bg, card: P.card, border: `rgba(${P.rgb},0.12)`, text: P.fg, muted: P.muted };
 
 export const SITE_THEMES: Record<string, SiteThemePreset> = {
+    altin: {
+        key: 'altin', label: 'Altın', description: 'Sıcak krem zemin, altın vurgu. Varsayılan.', ...base,
+        accent: '#E8B04B', onAccent: INK, accentText: '#8A5D0B',
+    },
     terracotta: {
-        key: 'terracotta', label: 'Terracotta', description: 'Krem zemin, sıcak koyu yazı, kiremit vurgu. Varsayılan.', dark: false,
-        bg: '#F6F1EA', card: '#FFFCF7', raised: '#EFEAE3', placeholder: '#EDE6DC', text: '#1D1A16', sub: '#5E5850', muted: '#6F6A63',
-        border: '#E6DED3', line: '#DDD5C9', borderStrong: '#CFC6B8', hero: '#2A2622', paper: '#1D1A16', onPaper: '#FFFFFF', onPaperSub: '#C9C1B6',
-        accent: '#B4532F', onAccent: '#FFFFFF', accentText: '#A0452A', accentBright: '#F08A5D', chip: '#F1EAE0', ...LIGHT_STATUS,
+        key: 'terracotta', label: 'Terracotta', description: 'Kiremit turuncusu vurgu. Ocakbaşı, ızgara, pide.', ...base,
+        accent: '#E2683C', onAccent: INK, accentText: '#A63F17',
     },
     zeytin: {
-        key: 'zeytin', label: 'Zeytin', description: 'Açık keten zemin, zeytin yeşili vurgu. Ege, meyhane, kahvaltı.', dark: false,
-        bg: '#F3F1E8', card: '#FFFEF8', raised: '#EAE8DC', placeholder: '#E6E3D4', text: '#1E2118', sub: '#56594A', muted: '#666A58',
-        border: '#DFDDCC', line: '#D6D3C0', borderStrong: '#C6C3AE', hero: '#24271D', paper: '#1E2118', onPaper: '#FFFFFF', onPaperSub: '#C4C6B4',
-        accent: '#55652B', onAccent: '#FFFFFF', accentText: '#4D5C27', accentBright: '#B9C77A', chip: '#ECEADD', ...LIGHT_STATUS,
+        key: 'zeytin', label: 'Zeytin', description: 'Adaçayı yeşili vurgu. Ege, meyhane, kahvaltı.', ...base,
+        accent: '#9DBF8E', onAccent: INK, accentText: '#3F6B34',
     },
     lacivert: {
-        key: 'lacivert', label: 'Lacivert', description: 'Serin açık zemin, lacivert vurgu. Balık, deniz kenarı.', dark: false,
-        bg: '#F1F3F7', card: '#FFFFFF', raised: '#E7EAF0', placeholder: '#E2E6EE', text: '#131A2C', sub: '#505971', muted: '#5F6880',
-        border: '#DCE0E8', line: '#D2D7E1', borderStrong: '#C1C7D4', hero: '#151C2E', paper: '#131A2C', onPaper: '#FFFFFF', onPaperSub: '#BAC1D1',
-        accent: '#1F3A8A', onAccent: '#FFFFFF', accentText: '#1F3A8A', accentBright: '#8FA8F0', chip: '#E9ECF3', ...LIGHT_STATUS,
+        key: 'lacivert', label: 'Lacivert', description: 'Koyu lacivert vurgu. Balık, deniz kenarı.', ...base,
+        accent: '#2F4F8F', onAccent: '#FFFFFF', accentText: '#2F4F8F',
     },
     bordo: {
-        key: 'bordo', label: 'Bordo', description: 'Pembemsi krem zemin, şarap rengi vurgu. Akşam yemeği, steakhouse.', dark: false,
-        bg: '#F7F0EE', card: '#FFFBFA', raised: '#EFE5E2', placeholder: '#EBDFDB', text: '#241415', sub: '#654F4E', muted: '#75605F',
-        border: '#E8D9D6', line: '#DFCDC9', borderStrong: '#D0BAB5', hero: '#2A1618', paper: '#241415', onPaper: '#FFFFFF', onPaperSub: '#D2BFBC',
-        accent: '#8E2433', onAccent: '#FFFFFF', accentText: '#8E2433', accentBright: '#E58A96', chip: '#F1E6E3', ...LIGHT_STATUS,
+        key: 'bordo', label: 'Bordo', description: 'Şarap rengi vurgu. Akşam yemeği, steakhouse.', ...base,
+        accent: '#A8354A', onAccent: '#FFFFFF', accentText: '#8E2433',
     },
     komur: {
-        key: 'komur', label: 'Kömür', description: 'Koyu zemin, köz turuncusu vurgu. Ocakbaşı, bar, gece mekânı.', dark: true,
-        bg: '#161412', card: '#211E1B', raised: '#2A2622', placeholder: '#2F2A25', text: '#F3EEE7', sub: '#BDB4A8', muted: '#A39A8E',
-        border: '#3A342E', line: '#342F29', borderStrong: '#4A433B', hero: '#0E0C0B', paper: '#2E2621', onPaper: '#F3EEE7', onPaperSub: '#BDB4A8',
-        accent: '#F08A5D', onAccent: '#1D1A16', accentText: '#F4A27D', accentBright: '#F08A5D', chip: '#2F2A25',
-        okBg: '#1E3A2A', ok: '#8FD9A8', errorBg: '#3D2420', error: '#F4A28C',
+        key: 'komur', label: 'Kömür', description: 'Kömür siyahı vurgu. Bar, gece mekânı; sade ve güçlü.', ...base,
+        accent: '#2A2622', onAccent: P.bg, accentText: '#2A2622',
     },
     beyaz: {
-        key: 'beyaz', label: 'Klasik beyaz', description: 'Beyaz zemin, nötr gri, turuncu vurgu. Sade ve modern.', dark: false,
-        bg: '#FFFFFF', card: '#FFFFFF', raised: '#F7F7F5', placeholder: '#F2F2F0', text: '#111111', sub: '#5F5F5F', muted: '#6B6B6B',
-        border: '#EAEAEA', line: '#E2E2E2', borderStrong: '#D6D6D6', hero: '#1A1A1A', paper: '#111111', onPaper: '#FFFFFF', onPaperSub: '#BDBDBD',
-        accent: '#C2410C', onAccent: '#FFFFFF', accentText: '#C2410C', accentBright: '#FB923C', chip: '#F2F2F0', ...LIGHT_STATUS,
+        key: 'beyaz', label: 'Sade gri', description: 'Serin gri vurgu. Sade ve modern.', ...base,
+        accent: '#9AA5B1', onAccent: INK, accentText: '#4A5563',
     },
 };
 
-export const DEFAULT_THEME = 'terracotta';
+/** Boş tema anahtarı bu temayı verir (backend'de anahtarı yok; admin'de seçilince "" kaydedilir). */
+export const DEFAULT_THEME = 'altin';
 export const SITE_THEME_KEYS = Object.keys(SITE_THEMES);
 
 /** Varsayılan temanın vurgu rengi (admin'de "tema rengi" seçeneği). */
@@ -103,8 +93,8 @@ export function resolveTheme(key?: string | null): SiteThemePreset {
     return (key && SITE_THEMES[key]) || SITE_THEMES[DEFAULT_THEME];
 }
 
-/** Fotoğrafsız kapak ve alt bilginin koyu zemini (varsayılan tema). */
-export const SITE_INK = SITE_THEMES[DEFAULT_THEME].hero;
+/** Koyu bant ve panellerin zemini (sepet paneli, akış sayfalarının kapağı). */
+export const SITE_INK = P.paper;
 
 // ── Renk hesapları (özel vurgu rengi için) ───────────────────────────────────────────────────────
 function isHex(value: string | undefined | null): value is string {
@@ -136,7 +126,7 @@ export function contrastRatio(a: string, b: string): number {
 export function ensureContrast(color: string, bg: string, min = 4.5): string {
     let current = color;
     const towardsWhite = luminance(bg) < 0.2;
-    for (let i = 0; i < 20 && contrastRatio(current, bg) < min; i++) {
+    for (let i = 0; i < 30 && contrastRatio(current, bg) < min; i++) {
         const [r, g, b] = rgb(current);
         current = towardsWhite
             ? toHex([r + (255 - r) * 0.12, g + (255 - g) * 0.12, b + (255 - b) * 0.12])
@@ -145,64 +135,87 @@ export function ensureContrast(color: string, bg: string, min = 4.5): string {
     return current;
 }
 
-/** Düğme zemini ve yazısı: beyaz ya da koyu yazıdan okunanı; ikisi de yetmiyorsa zemin koyulaştırılır. */
-function accentPair(accent: string, darkText: string): { accent: string; onAccent: string } {
+/** Düğme zemini ve yazısı: koyu ya da beyaz yazıdan okunanı; ikisi de yetmiyorsa zemin koyulaştırılır. */
+function accentPair(accent: string): { accent: string; onAccent: string } {
+    const dark = contrastRatio(INK, accent);
     const white = contrastRatio('#FFFFFF', accent);
-    const dark = contrastRatio(darkText, accent);
+    if (dark >= 4.5 && dark >= white) return { accent, onAccent: INK };
     if (white >= 4.5) return { accent, onAccent: '#FFFFFF' };
-    if (dark >= 4.5) return { accent, onAccent: darkText };
+    if (dark >= 4.5) return { accent, onAccent: INK };
     return { accent: ensureContrast(accent, '#FFFFFF'), onAccent: '#FFFFFF' };
 }
 
 /**
- * Sitenin kök stili. `theme`: hazır tema anahtarı (boş/bilinmeyen = terracotta). `accentColor`: restoranın özel vurgu
- * rengi (boşsa temanınki). Parametresiz çağrı varsayılan sıcak temayı verir.
+ * Sitenin kök stili. `theme`: hazır tema anahtarı (boş/bilinmeyen = altın). `accentColor`: restoranın özel vurgu
+ * rengi (boşsa temanınki). Parametresiz çağrı varsayılan temayı verir.
  */
 export function siteRootStyle(accentColor?: string | null, theme?: string | null): CSSProperties {
     const t = resolveTheme(theme);
     const custom = isHex(accentColor) && accentColor.toUpperCase() !== t.accent.toUpperCase();
-    const pair = custom ? accentPair(accentColor, '#1D1A16') : { accent: t.accent, onAccent: t.onAccent };
-    const accentText = custom ? ensureContrast(accentColor, t.card) : t.accentText;
-    const accentBright = custom ? accentColor : t.accentBright;
+    const pair = custom ? accentPair(accentColor) : { accent: t.accent, onAccent: t.onAccent };
+    // Vurgu yazısı hem zeminde hem ara bantta (#EEE7DC) okunmalı.
+    const accentText = custom ? ensureContrast(accentColor, P.alt) : t.accentText;
+    // Koyu panelde (sepet, çağrı kartı) vurgu: koyu vurgular açılır.
+    const onDark = ensureContrast(pair.accent, P.paper);
+    const line = (a: number) => `rgba(${P.rgb},${a})`;
     return {
         '--site-accent': pair.accent,
         '--site-on-accent': pair.onAccent,
         '--site-accent-text': accentText,
-        '--site-accent-bright': accentBright,
-        '--site-accent-soft': `color-mix(in srgb, ${accentText} 14%, ${t.card})`,
-        '--site-ink': t.hero,
-        '--site-hero': t.hero,
-        '--site-bg': t.bg,
-        '--site-band': t.card,
-        '--site-card': t.card,
-        '--site-raised': t.raised,
-        '--site-placeholder': t.placeholder,
-        '--site-chip': t.chip,
-        '--site-text': t.text,
-        '--site-sub': t.sub,
-        '--site-muted': t.muted,
-        '--site-border': t.border,
-        '--site-line': t.line,
-        '--site-border-strong': t.borderStrong,
-        '--site-disabled': t.dark ? '#6F675D' : '#B0A89C',
-        '--site-paper': t.paper,
-        '--site-on-paper': t.onPaper,
-        '--site-on-paper-sub': t.onPaperSub,
-        '--site-ok-bg': t.okBg,
-        '--site-ok-line': t.dark ? '#3C6B4F' : '#9CCBA9',
-        '--site-ok': t.ok,
-        '--site-error-bg': t.errorBg,
-        '--site-error-line': t.dark ? '#7A3C30' : '#F0B4A3',
-        '--site-error': t.error,
-        colorScheme: t.dark ? 'dark' : 'light',
-        fontFamily: "'Inter Tight', system-ui, sans-serif",
+        '--site-accent-bright': onDark,
+        '--site-accent-on-dark': onDark,
+        '--site-accent-line': `${pair.accent}AA`,
+        '--site-accent-soft': `color-mix(in srgb, ${pair.accent} 22%, ${P.card})`,
+        '--site-ink': P.paper,
+        '--site-hero': P.paper,
+        '--site-overlay': P.heroOverlay,
+        '--site-bg': P.bg,
+        '--site-alt': P.alt,
+        '--site-band': P.alt,
+        '--site-card': P.card,
+        '--site-raised': P.alt,
+        '--site-placeholder': P.placeholder,
+        '--site-chip': P.alt,
+        '--site-text': P.fg,
+        '--site-sub': P.text2,
+        '--site-muted': P.muted,
+        '--site-wordmark': P.wordmark,
+        '--site-border': line(0.12),
+        '--site-line': line(0.1),
+        '--site-border-mid': line(0.2),
+        '--site-border-strong': line(0.3),
+        '--site-disabled': '#A79D90',
+        '--site-paper': P.paper,
+        '--site-on-paper': P.onPaper,
+        '--site-on-paper-sub': P.onPaperSub,
+        '--site-paper-line': 'rgba(246,241,233,0.14)',
+        '--site-paper-line-strong': 'rgba(246,241,233,0.28)',
+        '--site-ok-bg': '#E3F1E6',
+        '--site-ok-line': '#9CCBA9',
+        '--site-ok': '#1B6A43',
+        '--site-error-bg': '#FDECE7',
+        '--site-error-line': '#F0B4A3',
+        '--site-error': '#A3301A',
+        colorScheme: 'light',
+        fontFamily: 'Manrope, system-ui, sans-serif',
         backgroundColor: 'var(--site-bg)',
         color: 'var(--site-text)',
     } as CSSProperties;
 }
 
-/** Başlıklar ve fiyatlar: Inter Tight, sıkı aralık. */
-export const headingFont = "font-[family-name:'Inter_Tight',system-ui,sans-serif] tracking-[-0.04em]";
+/** Başlıklar ve büyük fiyatlar: Instrument Serif (tek ağırlık; kalın yazılmaz). */
+export const headingFont = "font-[family-name:'Instrument_Serif',serif] font-normal! tracking-[-0.01em]";
+
+/** Başlığı iki parçaya böler: ikinci parça italik vurgu yazısıyla yazılır (Tema 2 başlık dili).
+ *  "Közün başında, ustanın elinden." → ["Közün başında,", "ustanın elinden."]; virgül yoksa son kelime vurgulanır. */
+export function splitAccent(text: string): [string, string] {
+    const value = text.trim();
+    const comma = value.indexOf(', ');
+    if (comma > 0 && comma < value.length - 2) return [value.slice(0, comma + 1), value.slice(comma + 2)];
+    const words = value.split(/\s+/).filter(Boolean);
+    if (words.length < 2) return ['', value];
+    return [words.slice(0, -1).join(' '), words[words.length - 1]];
+}
 
 // "Dost Kafe" → "Dost Kafe" (aradaki boşluk vurgu noktasına döner; tek kelimede nokta sona gelir).
 export function wordmarkParts(name: string): { first: string; rest: string } {
@@ -249,5 +262,5 @@ export function formatSitePrice(value: number): string {
 
 // ── Ortak sınıf dizileri (site, menü, alt bilgi) ─────────────────────────────────────────────────
 export const glass = 'border border-white/25 bg-white/15 backdrop-blur-[14px]';
-export const container = 'mx-auto w-full max-w-[1312px] px-5 md:px-16';
+export const container = 'mx-auto w-full max-w-[1320px] px-4 md:px-8';
 export const pill = 'inline-flex items-center justify-center rounded-full font-bold no-underline transition-opacity hover:opacity-90';

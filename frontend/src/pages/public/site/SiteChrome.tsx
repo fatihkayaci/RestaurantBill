@@ -14,7 +14,7 @@ import {
 
 /** Sitenin kökü: temanın renk değişkenleri (`theme` hazır tema anahtarı, `accent` özel vurgu rengi; ikisi de boşsa terracotta). */
 export function SiteShell({ accent, theme, children }: { accent?: string; theme?: string; children: ReactNode }) {
-    // Site açıkken sayfanın tamamı (zemin, bildirimler, pencereler) Inter Tight; personel ekranına dönünce kalkar.
+    // Site açıkken sayfanın tamamı (zemin, bildirimler, pencereler) Manrope; personel ekranına dönünce kalkar.
     // Sınıf sitenin çizildiği belgeye eklenir (admin'deki önizleme çerçevesinde çerçevenin belgesi, admin değil).
     const ref = useRef<HTMLDivElement>(null);
     useEffect(() => {
@@ -180,7 +180,8 @@ export function SiteStatus({ error }: { error: string | null }) {
     }
     return (
         <main className="flex-1" aria-busy="true">
-            <div className="h-[440px] animate-pulse bg-[var(--site-hero)] md:h-[560px]" />
+            <div className="h-[68px] border-b border-[var(--site-line)]" />
+            <div className="mx-auto mt-16 h-[260px] w-[min(900px,90%)] animate-pulse rounded-[28px] bg-[var(--site-placeholder)] md:h-[360px]" />
             <div className={cn(container, 'grid grid-cols-2 gap-4 py-12 md:grid-cols-4')}>
                 {[...Array(4)].map((_, i) => <div key={i} className="aspect-square animate-pulse rounded-[22px] bg-[var(--site-raised)]" />)}
             </div>

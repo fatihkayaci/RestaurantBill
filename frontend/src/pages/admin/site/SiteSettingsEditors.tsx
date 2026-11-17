@@ -36,9 +36,10 @@ export function Panel({ id, title, description, children }: { id?: string; title
 
 // ── Tema ─────────────────────────────────────────────────────────────────────────────────────────
 
-const ACCENT_OPTIONS = ['#B4532F', '#C2410C', '#2F55D4', '#1F7A4D', '#7A3FD1', '#8E2433', '#B8860B', '#111111'];
+// Tema 2'nin vurgu seçenekleri (zemin her temada aynı krem; seçilen renk düğme, çizgi ve italik vurgu yazısında kullanılır).
+const ACCENT_OPTIONS = ['#E8B04B', '#E2683C', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#2A2622', '#9AA5B1'];
 
-/** Hazır temalar (zemin, yüzey, yazı, vurgu) ve isteğe bağlı özel vurgu rengi. */
+/** Hazır temalar (Tema 2: zemin ortak, tema vurgu rengini seçer) ve isteğe bağlı özel vurgu rengi. */
 export function ThemePicker({ theme, accent, onTheme, onAccent }: {
     theme: string; accent: string; onTheme: (key: string) => void; onAccent: (hex: string) => void;
 }) {
