@@ -158,7 +158,7 @@ Gövde, eski `PUT api/branch/site` ile aynı alanları ve üç ek alanı taşır
   "opensAt": "12:00", "closesAt": "23:00",              // ya da null; haftalık saat varsa yok sayılır (en sık aralık yazılır)
   "hoursNote": "", "instagramUrl": "https://…", "accentColor": "#A3301A",
   "theme": "terracotta",
-  "design": "sade",                              // "renkli" | "sade" | "" (= renkli); null/eksik = değiştirme
+  "design": "sade",                              // "renkli" | "sade" | "elit" | "" (= renkli); null/eksik = değiştirme
   "weeklyHours": [{ "day": 1, "isOpen": true, "opens": "12:00", "closes": "23:00" } /* … 7 gün ya da [] */],
   "directionsNote": "", "whatsappPhone": "", "amenities": ["avlu"],
   "hiddenFaqs": ["odeme"],                       // gizlenen hazır sorular; null/eksik = değiştirme
@@ -251,12 +251,17 @@ Restoran önce sitenin **tasarımını**, sonra o tasarımın içinde **rengini*
 
 | Alan | Değerler | Anlamı |
 |---|---|---|
-| `design` | `renkli` · `sade` · `""` | Sayfa düzeni, yazı tipi ve kutu renkleri. `""` = varsayılan (`renkli`). |
+| `design` | `renkli` · `sade` · `elit` · `""` | Sayfa düzeni, yazı tipi ve kutu renkleri. `""` = varsayılan (`renkli`). |
 | `theme` | `terracotta` … `beyaz` · `""` | Tasarımın içindeki renk (vurgu; Renkli'de ayrıca kapak zemini). |
 | `accentColor` | `#RRGGBB` · `""` | Özel vurgu rengi; iki tasarımda da okunurluğa göre ayarlanır. |
 
 - **Renkli ve sıcak** (`renkli`): kum zemin, krem kutular, Fraunces, renkli kapak, zeytin/hardal/kiremit kutular, zeytin alt bilgi.
 - **Sade** (`sade`): krem zemin (#F6F1E9), beyaz kutular, Instrument Serif, beyaz kapak kutusu, açık kum alt bilgi.
+- **Elit** (`elit`): krem zemin (#F4EEE3) ve ara bantlar (#EAE2D4), koyu espresso bantlar (#2B2119), Bodoni Moda +
+  Montserrat (300), köşesiz düğmeler, ince altın çizgiler; sayfa başında tam genişlik fotoğraf kapağı (koyu perde, yavaş
+  yakınlaşma; fotoğraf yoksa koyu desenli bant), üst menü kapağın üstünde saydam. Tema yalnız vurgu ailesini seçer:
+  Altın (varsayılan), Bordo, Zeytin, Lacivert, Kömür (`terracotta`/`beyaz` anahtarları Elit'te Altın'a düşer).
+  Bileşenler `pages/public/site/elite/` altında; sayfalar `site.site.design` ile dallanır.
 - Saklama: `SiteContent.Design` (jsonb içerik; yeni sütun/migration yok, eski kayıtlarda anahtar yok = boş = renkli).
   `SiteContent.DesignKeys` ön yüzdeki `SITE_DESIGNS` ile aynıdır.
 - Doğrulama: kırpılır, küçük harfe çevrilir; bilinmeyen anahtar `400 "Geçersiz site tasarımı."`.

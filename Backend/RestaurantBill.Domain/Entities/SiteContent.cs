@@ -47,7 +47,7 @@ namespace RestaurantBill.Domain.Entities
         public string? SeoDescription { get; init; }
         /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları; null: değiştirme (eski form bu alanı göndermez).</summary>
         public IReadOnlyList<string>? HiddenFaqs { get; init; }
-        /// <summary>Sitenin tasarımı ("renkli", "sade"); boş = varsayılan (renkli). null: değiştirme (eski form göndermez).</summary>
+        /// <summary>Sitenin tasarımı ("renkli", "sade", "elit"); boş = varsayılan (renkli). null: değiştirme (eski form göndermez).</summary>
         public string? Design { get; init; }
     }
 
@@ -91,7 +91,7 @@ namespace RestaurantBill.Domain.Entities
 
         /// <summary>Sitenin tasarımları; boş = varsayılan ("renkli"). Ön yüzdeki SITE_DESIGNS ile aynı anahtarlar.
         /// Tasarım ve renk teması ayrıdır: her tasarım bütün temaları (ve özel vurgu rengini) kendi paletiyle çizer.</summary>
-        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade"];
+        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade", "elit"];
 
         /// <summary>Mekânın olanakları: yalnız bu hazır listeden seçilir (uydurma beyan olmasın). Sırası sitedeki sıradır.</summary>
         public static readonly IReadOnlyList<string> AmenityKeys =

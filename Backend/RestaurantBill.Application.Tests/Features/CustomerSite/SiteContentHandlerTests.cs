@@ -181,6 +181,8 @@ public class SiteContentHandlerTests : ApplicationTestBase
     [InlineData("renkli")]
     [InlineData("sade")]
     [InlineData(" Sade ")]
+    [InlineData("elit")]
+    [InlineData(" ELIT ")]
     public void Validator_Design_AcceptsKnownEmptyAndNull(string? design)
         => new UpdateBranchSiteCommandValidator()
             .TestValidate(new UpdateBranchSiteCommand { Design = design })

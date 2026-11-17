@@ -111,7 +111,7 @@ public abstract class SiteTextsInput
 
     // Ek içerik (fotoğraflar ayrı uçlardan değişir).
     public string Theme { get; set; } = string.Empty;
-    /// <summary>Sitenin tasarımı ("renkli", "sade"; boş = renkli). null (eski form göndermez): değiştirme.</summary>
+    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit"; boş = renkli). null (eski form göndermez): değiştirme.</summary>
     public string? Design { get; set; }
     /// <summary>Boş: "her gün aynı". Doluysa 7 gün.</summary>
     public List<SiteDayHoursDto> WeeklyHours { get; set; } = [];

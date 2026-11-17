@@ -60,6 +60,17 @@ public class SiteContentTests
     public void UnknownDesign_Throws(string design)
         => Assert.Throws<DomainException>(() => NewBranch().UpdateSiteContent(new SiteContentTexts { Design = design }, Year));
 
+    [Theory]
+    [InlineData("renkli", "renkli")]
+    [InlineData("sade", "sade")]
+    [InlineData(" Elit ", "elit")]
+    public void KnownDesign_IsNormalized(string design, string expected)
+    {
+        Branch branch = NewBranch();
+        branch.UpdateSiteContent(new SiteContentTexts { Design = design }, Year);
+        Assert.Equal(expected, branch.GetSiteContent().Design);
+    }
+
     [Fact]
     public void UnknownAmenity_Throws()
         => Assert.Throws<DomainException>(() => NewBranch().UpdateSiteContent(new SiteContentTexts { Amenities = ["havuz"] }, Year));
