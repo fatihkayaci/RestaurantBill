@@ -156,7 +156,7 @@ function AddressBox({ site }: { site: PublicSite }) {
                         className="m-0 whitespace-pre-line text-[15px] leading-relaxed text-[var(--site-sub)]" />
                 )}
                 {!edit && (
-                    <Link to="/mekan" className="inline-flex min-h-11 items-center self-start text-sm font-extrabold text-[var(--site-text)] no-underline hover:underline">Nasıl gelinir? →</Link>
+                    <Link to="/mekan#konum" className="inline-flex min-h-11 items-center self-start text-sm font-extrabold text-[var(--site-text)] no-underline hover:underline">Nasıl gelinir? →</Link>
                 )}
             </div>
         </section>
