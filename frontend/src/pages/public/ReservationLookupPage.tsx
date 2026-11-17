@@ -10,7 +10,8 @@ import { canReserveOnline } from '@/features/customerSite/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
-import { PageHero, SitePage } from './site/SiteFrame';
+import { SitePage } from './site/SiteFrame';
+import { ReservationHero } from './site/ReservationHero';
 import { RESERVATION_PATH, serif } from './site/siteParts';
 import { telHref } from './site/siteTheme';
 import { rememberReservationToken, restaurantName, useMyReservations, useSite } from './site/useSite';
@@ -65,17 +66,16 @@ export default function ReservationLookupPage() {
 
     return (
         <SitePage site={site} current="rezervasyon-sorgula">
-            <PageHero site={site} label={`${name} · Rezervasyon`} compact title="Rezervasyon sorgula.">
-                <p className="m-0 max-w-[46ch] text-base leading-relaxed text-[var(--site-sub)] md:text-[17px]">
-                    Bağlantınızı mı kaybettiniz? Kodunuz ve telefon numaranızla rezervasyonunuza ulaşın.
-                </p>
-            </PageHero>
-
-            <div className="flex flex-1 flex-col bg-[var(--site-bg)] leading-normal text-[var(--site-text)]">
-                <main className="relative mx-auto flex w-full max-w-[560px] flex-col gap-5 px-4 pb-16 pt-10 sm:px-5 md:pt-14">
+            <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 px-2 pb-4 pt-4 leading-normal text-[var(--site-text)] sm:px-4">
+                <ReservationHero site={site} kicker={`${name} · Rezervasyon`} title="Rezervasyon" accent="sorgula." withCover={false}>
+                    <p className="m-0 max-w-[520px] text-base leading-relaxed text-[rgba(251,244,232,0.85)] md:text-[17px]">
+                        Bağlantınızı mı kaybettiniz? Kodunuz ve telefon numaranızla rezervasyonunuza ulaşın.
+                    </p>
+                </ReservationHero>
+                <main className="relative mx-auto flex w-full max-w-[560px] flex-col gap-5 pb-12 pt-6 md:pt-10">
                     {mine.length > 0 && <SavedReservations items={mine} />}
 
-                    <div className={cn('rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)] p-5 sm:p-8', mine.length === 0 && 'shadow-[0_24px_48px_-28px_rgba(20,16,12,0.45)]')}>
+                    <div className="rounded-[24px] bg-[var(--site-card)] p-5 sm:p-8 md:rounded-[32px]">
                         {mine.length > 0 ? (
                             <div className="mb-5">
                                 <h2 className={cn(serif, 'm-0 text-[28px] leading-[1.05] tracking-[-0.01em]')}>ya da <span className="italic">kodla bulun.</span></h2>
@@ -180,7 +180,7 @@ export default function ReservationLookupPage() {
                                     <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--site-bg)]"><CalendarPlus className="h-4 w-4" /></span>
                                     <span className="min-w-0">
                                         <span className="block text-[13px] text-[var(--site-sub)]">Rezervasyonunuz yok mu?</span>
-                                        <span className="block font-semibold text-[var(--site-accent)]">Masa ayırtın →</span>
+                                        <span className="block font-bold text-[var(--site-accent-text)]">Masa ayırtın →</span>
                                     </span>
                                 </Link>
                             )}

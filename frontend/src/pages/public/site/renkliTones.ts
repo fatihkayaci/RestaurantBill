@@ -11,3 +11,6 @@ export const TERRACOTTA = '#A9401F';
 /** Tailwind sınıfları (renkler sabit; JIT tam dizeyi görmeli). */
 export const oliveBg = 'bg-[#3E4A33]';
 export const terracottaBg = 'bg-[#A9401F]';
+
+/** Koyu (rezervasyon) kapağın sağ altındaki krem çizgili hap bağlantı sınıfı. */
+export const heroOutlineLink = 'inline-flex h-[50px] items-center gap-2 whitespace-nowrap rounded-full border-2 border-[rgba(251,244,232,0.4)] px-[22px] text-sm font-extrabold text-[var(--site-on-paper)] no-underline transition-colors hover:border-[var(--site-on-paper)]';

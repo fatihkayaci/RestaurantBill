@@ -10,6 +10,7 @@ import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode
 import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
 import { MyReservations } from './SiteChrome';
+import { oliveBg, terracottaBg } from './renkliTones';
 import { serif } from './siteParts';
 import { directionsUrl, formatDay, telHref } from './siteTheme';
 import { fullAddress, hoursText } from './useSite';
@@ -55,18 +56,30 @@ function groupSlots(slots: DaySlot[]): { name: string; slots: DaySlot[] }[] {
     })).filter(g => g.slots.length > 0);
 }
 
-// Sitenin sıcak, editoryal paleti (SiteFrame ile aynı tonlar); vurgu rengi restoranın ayarından.
-const card = 'rounded-[20px] border border-[var(--site-border-mid)] bg-white';
-const chipOn = 'border-[var(--site-accent)] bg-[var(--site-accent)] text-[var(--site-on-accent)] shadow-[0_6px_16px_-8px_var(--site-accent)]';
-const chipOff = 'border-[var(--site-border-mid)] bg-white text-[var(--site-text)] hover:border-[var(--site-text)]';
-const chipDisabled = 'cursor-not-allowed border-dashed border-[var(--site-border-strong)] bg-transparent text-[var(--site-border-strong)]';
-const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-white';
-const inputClass = 'h-[52px] w-full rounded-xl border border-[var(--site-border-mid)] bg-white px-4 text-base text-[var(--site-text)] transition-colors placeholder:text-[var(--site-disabled)] hover:border-[var(--site-border-strong)] focus:border-[var(--site-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]/25';
-const labelClass = 'mb-1.5 block text-sm font-medium text-[var(--site-text)]';
-const primaryButton = 'flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[var(--site-accent)] text-base font-semibold text-[var(--site-on-accent)] transition-[opacity,transform] hover:-translate-y-px hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 motion-reduce:transition-none';
-const secondaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--site-border-mid)] bg-white px-5 text-[15px] font-semibold text-[var(--site-text)] transition-colors hover:border-[var(--site-text)]';
-const alertClass = 'rounded-xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3.5 text-sm font-medium text-[var(--site-error)]';
-const eyebrowClass = 'text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--site-muted)]';
+// "Renkli ve sıcak" paleti (tasarım: "Renkli · Masa ayırt"): kum sayfada krem kutular, kiremit seçili gün ve masa, koyu
+// seçili saat, vurgu renginde ana düğme; vurgu rengi restoranın ayarından.
+const card = 'rounded-[24px] bg-[var(--site-card)] md:rounded-[32px]';
+const chipOff = 'border-[rgba(36,24,15,0.18)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-text)]';
+const chipDisabled = 'cursor-not-allowed border-transparent bg-[rgba(36,24,15,0.08)] text-[rgba(36,24,15,0.4)]';
+/** Seçili gün: kiremit zemin, krem yazı (5.6:1). */
+const dayOn = cn('border-[#A9401F] text-[var(--site-on-paper)]', terracottaBg);
+const dayOff = 'border-transparent bg-[var(--site-bg)] text-[var(--site-text)] hover:border-[var(--site-text)]';
+/** Seçili saat: koyu kahve zemin, krem yazı. */
+const slotOn = 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]';
+/** Masa kartı: kum zemin; seçili kiremit çerçeve. */
+const tableOff = 'border-transparent bg-[var(--site-bg)] text-[var(--site-text)] hover:border-[rgba(36,24,15,0.3)]';
+const tableOn = 'border-[#A9401F] bg-[var(--site-card)] text-[var(--site-text)] shadow-[inset_0_0_0_1px_#A9401F]';
+const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-text)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--site-card)]';
+const inputClass = 'h-14 w-full rounded-2xl border border-[rgba(36,24,15,0.15)] bg-[var(--site-bg)] px-[18px] text-base font-medium text-[var(--site-text)] transition-colors placeholder:font-normal placeholder:text-[var(--site-muted)] hover:border-[var(--site-border-strong)] focus:border-[var(--site-text)] focus:bg-[var(--site-card)] focus:outline-none focus:ring-2 focus:ring-[var(--site-text)]/15';
+const labelClass = 'mb-2 block text-[13px] font-extrabold text-[var(--site-text)]';
+const primaryButton = 'flex h-[60px] w-full items-center justify-center gap-2 rounded-full bg-[var(--site-accent)] text-base font-extrabold text-[var(--site-on-accent)] no-underline transition-[opacity,transform] hover:-translate-y-px hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 motion-reduce:transition-none';
+const secondaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(36,24,15,0.25)] bg-transparent px-5 text-[15px] font-bold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)]';
+const alertClass = 'rounded-2xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3.5 text-sm font-semibold text-[var(--site-error)]';
+const eyebrowClass = 'text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--site-muted)]';
+/** Saat grubu ve bölüm adı: italik Fraunces, zeytin (krem üstünde ~9:1). */
+const groupLabel = cn(serif, 'text-xl font-semibold italic text-[#3E4A33]');
+/** Hızlı kişi seçimi. */
+const QUICK_PARTY = [2, 4, 6, 8];
 
 type Step = 'slot' | 'details' | 'done';
 
@@ -250,14 +263,14 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     const toSlot = () => { setStep('slot'); goTop(); };
 
     const stepBar = (
-        <div className="border-b border-[var(--site-border-mid)] bg-white">
-            <div className="mx-auto flex max-w-[1180px] items-center gap-2 px-3 py-3 md:px-12 md:py-4">
+        <div className={card}>
+            <div className="flex items-center gap-2 px-3 py-3 md:px-6 md:py-4">
                 {step !== 'done' && (
                     <button
                         type="button"
                         onClick={back}
                         aria-label={step === 'details' ? 'Önceki adım' : 'Restoran sayfasına dön'}
-                        className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--site-text)] transition-colors hover:bg-[var(--site-bg)]', focusRing)}
+                        className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--site-bg)] text-[var(--site-text)] transition-colors hover:bg-[var(--site-alt)]', focusRing)}
                     >
                         <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                     </button>
@@ -271,11 +284,11 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             <li key={item.key} aria-current={state === 'current' ? 'step' : undefined} className={cn('flex min-w-0 items-center gap-2 sm:gap-3', i < STEPS.length - 1 && 'flex-1')}>
                                 <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums transition-colors',
                                     state === 'current' ? 'border-[var(--site-accent)] bg-[var(--site-accent)] text-[var(--site-on-accent)]'
-                                        : state === 'past' ? 'border-[var(--site-text)] bg-[var(--site-text)] text-white' : 'border-[var(--site-border-mid)] bg-white text-[var(--site-disabled)]')}>
+                                        : state === 'past' ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]' : 'border-[var(--site-border-mid)] bg-[var(--site-card)] text-[var(--site-muted)]')}>
                                     {state === 'past' ? <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" /> : i + 1}
                                 </span>
                                 <span className={cn('whitespace-nowrap text-[13px] font-medium',
-                                    state === 'current' ? 'text-[var(--site-text)]' : 'text-[var(--site-disabled)]',
+                                    state === 'current' ? 'font-bold text-[var(--site-text)]' : 'text-[var(--site-muted)]',
                                     state !== 'current' && 'hidden sm:inline')}>
                                     {item.label}
                                 </span>
@@ -290,18 +303,21 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
     if (step === 'done') {
         return (
-            <div className="flex flex-col bg-[var(--site-bg)] text-[var(--site-text)]">
+            <div className="flex flex-col gap-4 text-[var(--site-text)]">
                 {stepBar}
-                <main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-5 pb-16 pt-10 md:pt-14">
-                    <div role="status" className="flex flex-col items-center gap-3 text-center">
-                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-ok-bg)] text-[var(--site-ok)] ring-8 ring-[var(--site-ok-bg)]/50">
-                            <Check className="h-7 w-7" strokeWidth={2.5} aria-hidden="true" />
-                        </span>
-                        <p className={cn(serif, 'm-0 mt-2 text-[40px] leading-[1] tracking-[-0.02em] md:text-[52px]')}>Talebiniz <span className="italic">alındı.</span></p>
-                        <p className="m-0 max-w-sm text-[15px] leading-relaxed text-[var(--site-sub)]">
-                            Restoran onaylayınca kesinleşir. Durumu rezervasyon sayfanızdan izleyin.
-                        </p>
-                    </div>
+                {/* Zeytin onay kutusu: krem noktalı desen, hardal onay dairesi, kısa kod ve "Talebiniz alındı." */}
+                <div role="status" className={cn(oliveBg, 'relative flex flex-col items-center gap-5 overflow-hidden rounded-[24px] px-5 py-14 text-center text-[var(--site-on-paper)] md:rounded-[36px] md:px-12 md:py-[88px]')}>
+                    <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(rgba(251,244,232,0.12)_2px,transparent_2.6px)] bg-[length:22px_22px]" />
+                    <span className="relative flex h-24 w-24 items-center justify-center rounded-full bg-[var(--site-mustard)] text-[var(--site-text)]">
+                        <Check className="h-10 w-10" strokeWidth={2.4} aria-hidden="true" />
+                    </span>
+                    {created?.code && <span className="relative text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--site-mustard-text)]">Rezervasyon kodu · {created.code}</span>}
+                    <p className={cn(serif, 'relative m-0 text-[48px] font-extrabold leading-[0.92] md:text-[clamp(52px,6vw,92px)]')}>Talebiniz <span className="font-semibold italic text-[var(--site-mustard-text)]">alındı.</span></p>
+                    <p className="relative m-0 max-w-[520px] text-base leading-relaxed text-[rgba(251,244,232,0.88)] md:text-[17px]">
+                        Restoran onaylayınca kesinleşir. Durumu rezervasyon sayfanızdan izleyin.
+                    </p>
+                </div>
+                <main className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-6">
 
                     {created && <ReservationTicket reservation={created} restaurantName={restaurantName} />}
                     {created && (
@@ -329,8 +345,8 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     );
 
     const slotColumn = (
-        <div className="flex min-w-0 flex-col gap-5">
-            {mine.length > 0 && <MyReservations items={mine} className={cn(card, 'p-5')} />}
+        <div className="flex min-w-0 flex-col gap-4">
+            {mine.length > 0 && <MyReservations items={mine} className={cn(card, 'p-5 sm:p-8')} />}
 
             <FlowSection id="rez-gun" num="01" title="Hangi gün?" legend="Tarih">
                 <div className="-mx-5 flex snap-x scroll-px-5 gap-2 overflow-x-auto px-5 pb-2 sm:scroll-px-6 [scrollbar-width:thin] sm:-mx-6 sm:px-6">
@@ -344,17 +360,17 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                 disabled={!chip.open}
                                 aria-label={chip.open ? formatDay(chip.value) : `${formatDay(chip.value)}, rezervasyon alınmıyor`}
                                 onClick={() => changeSlot(chip.value, time)}
-                                className={cn('flex h-[84px] w-[66px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-[14px] border transition-colors', focusRing,
-                                    !chip.open ? chipDisabled : on ? 'border-[var(--site-text)] bg-[var(--site-text)] text-white' : chipOff)}
+                                className={cn('flex h-[96px] w-[76px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-[20px] border-2 transition-colors', focusRing,
+                                    !chip.open ? chipDisabled : on ? dayOn : dayOff)}
                             >
-                                <span className="text-[10px] font-medium uppercase tracking-[0.12em] opacity-75">{chip.top}</span>
-                                <span className={cn(serif, 'text-[28px] leading-none tabular-nums', !chip.open && 'line-through decoration-1')}>{chip.num}</span>
-                                <span className="text-[10px] opacity-70">{chip.month}</span>
+                                <span className="text-[11px] font-extrabold uppercase tracking-[0.1em]">{chip.top}</span>
+                                <span className={cn(serif, 'text-[30px] font-extrabold leading-none tabular-nums', !chip.open && 'line-through decoration-1')}>{chip.num}</span>
+                                <span className="text-xs font-bold">{chip.month}</span>
                             </button>
                         );
                     })}
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[var(--site-alt)] pt-4">
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[var(--site-line)] pt-4">
                     <label htmlFor="rez-tarih" className="shrink-0 text-sm text-[var(--site-muted)]">Başka bir tarih</label>
                     <input
                         id="rez-tarih"
@@ -369,31 +385,42 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
             </FlowSection>
 
             <FlowSection num="02" title="Kaç kişisiniz?" legend="Kişi sayısı">
-                <div className="flex items-center justify-between gap-4">
-                    <p className="m-0 text-sm text-[var(--site-muted)]">Online en fazla {maxParty} kişi</p>
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-1.5 rounded-full bg-[var(--site-bg)] p-1.5">
                         <button
                             type="button"
                             aria-label="Kişi sayısını azalt"
                             disabled={partySize <= 1}
                             onClick={() => changeParty(Math.max(1, partySize - 1))}
-                            className={cn('flex h-11 w-11 items-center justify-center rounded-full border border-[var(--site-border-mid)] bg-white text-[var(--site-text)] transition-colors hover:border-[var(--site-text)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[var(--site-border-mid)]', focusRing)}
+                            className={cn('flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[var(--site-card)] text-[var(--site-text)] transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-35', focusRing)}
                         >
                             <Minus className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
                         </button>
-                        <output id="rez-kisi" aria-live="polite" aria-label={`${partySize} kişi`} className={cn(serif, 'min-w-[84px] text-center text-[30px] leading-none tabular-nums')}>
-                            {partySize} <span className="text-lg italic text-[var(--site-muted)]">kişi</span>
+                        <output id="rez-kisi" aria-live="polite" aria-label={`${partySize} kişi`} className={cn(serif, 'min-w-[100px] whitespace-nowrap text-center text-[34px] font-extrabold leading-none tabular-nums')}>
+                            {partySize} <span className="font-[family-name:Manrope,system-ui,sans-serif] text-[15px] font-bold tracking-normal">kişi</span>
                         </output>
                         <button
                             type="button"
                             aria-label="Kişi sayısını artır"
                             disabled={partySize >= maxParty}
                             onClick={() => changeParty(Math.min(maxParty, partySize + 1))}
-                            className={cn('flex h-11 w-11 items-center justify-center rounded-full border border-[var(--site-border-mid)] bg-white text-[var(--site-text)] transition-colors hover:border-[var(--site-text)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-[var(--site-border-mid)]', focusRing)}
+                            className={cn('flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[var(--site-paper)] text-[var(--site-on-paper)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-35', focusRing)}
                         >
                             <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
                         </button>
                     </div>
+                    {QUICK_PARTY.filter(n => n <= maxParty).length > 1 && (
+                        <div role="group" aria-label="Hızlı kişi seçimi" className="flex flex-wrap gap-2">
+                            {QUICK_PARTY.filter(n => n <= maxParty).map(n => (
+                                <button key={n} type="button" aria-pressed={partySize === n} onClick={() => changeParty(n)}
+                                    className={cn('h-11 rounded-full border px-4 text-sm font-bold transition-colors', focusRing,
+                                        partySize === n ? cn('border-[#3E4A33] text-[var(--site-on-paper)]', oliveBg) : 'border-[rgba(36,24,15,0.2)] text-[var(--site-text)] hover:border-[var(--site-text)]')}>
+                                    {n} kişi
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    <p className="m-0 text-[13px] text-[var(--site-muted)]">Online en fazla {maxParty} kişi</p>
                 </div>
             </FlowSection>
 
@@ -415,8 +442,8 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                 ) : (
                     <div className="flex flex-col gap-4">
                         {groupSlots(daySlots).map(group => (
-                            <div key={group.name} className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-4">
-                                <span className={cn(eyebrowClass, 'sm:pt-[22px]')}>{group.name}</span>
+                            <div key={group.name} className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[80px_minmax(0,1fr)] sm:gap-4">
+                                <span className={cn(groupLabel, 'sm:pt-4')}>{group.name}</span>
                                 <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
                                     {group.slots.map(option => {
                                         const on = option.time === time;
@@ -428,10 +455,10 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                                 disabled={option.full}
                                                 aria-label={option.full ? `${option.time}, dolu` : option.time}
                                                 onClick={() => changeSlot(date, option.time)}
-                                                className={cn('flex h-[60px] flex-col items-center justify-center gap-0.5 rounded-xl border transition-colors', focusRing, option.full ? chipDisabled : on ? chipOn : chipOff)}
+                                                className={cn('flex h-16 flex-col items-center justify-center gap-0.5 rounded-2xl border-[1.5px] transition-colors', focusRing, option.full ? chipDisabled : on ? slotOn : chipOff)}
                                             >
-                                                <span className={cn(serif, 'text-[22px] leading-none tabular-nums', option.full && 'line-through decoration-1')}>{option.time}</span>
-                                                <span className="text-[10px] font-medium uppercase tracking-[0.1em] opacity-75">{option.full ? 'dolu' : on ? 'seçili' : 'müsait'}</span>
+                                                <span className={cn('text-base font-extrabold leading-none tabular-nums', option.full && 'line-through decoration-1')}>{option.time}</span>
+                                                <span className="text-[11px] font-bold opacity-80">{option.full ? 'dolu' : on ? 'seçili' : 'müsait'}</span>
                                             </button>
                                         );
                                     })}
@@ -444,10 +471,10 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
             {/* Dar ekranda seçim özeti masaların hemen üstünde; hızlı seçiciden gelindiyse ikisi en üste çıkar. */}
             <div className={cn(card, 'flex items-center justify-between gap-3 px-4 py-3 lg:hidden', tablesFirst && 'order-first')}>
-                <p className="m-0 min-w-0 truncate text-[15px] font-semibold">
+                <p className="m-0 min-w-0 truncate text-[15px] font-bold">
                     {shortDay(date)} · {timeReady ? time : 'saat seçin'} · {partySize} kişi
                 </p>
-                <button type="button" onClick={() => scrollToSection('rez-gun')} className={cn('flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-[var(--site-accent)] hover:bg-[var(--site-bg)]', focusRing)}>
+                <button type="button" onClick={() => scrollToSection('rez-gun')} className={cn('flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-bold text-[var(--site-accent-text)] underline-offset-4 hover:underline', focusRing)}>
                     Değiştir
                 </button>
             </div>
@@ -469,10 +496,10 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                             const freeCount = region.tables.filter(t => !unavailable.has(t.id) && !(t.capacity && t.capacity < partySize)).length;
                             return (
                                 <div key={region.id} className="flex flex-col gap-2.5">
-                                    <h3 className={cn(eyebrowClass, 'm-0 flex items-center gap-3')}>
-                                        {region.name}
-                                        <span aria-hidden="true" className="h-px flex-1 bg-[var(--site-alt)]" />
-                                        <span className="normal-case tracking-normal">{freeCount > 0 ? `${freeCount} masa boş` : 'boş masa yok'}</span>
+                                    <h3 className="m-0 flex items-center gap-3">
+                                        <span className={groupLabel}>{region.name}</span>
+                                        <span aria-hidden="true" className="h-px flex-1 bg-[var(--site-line)]" />
+                                        <span className="text-xs font-bold text-[var(--site-muted)]">{freeCount > 0 ? `${freeCount} masa boş` : 'boş masa yok'}</span>
                                     </h3>
                                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
                                         {region.tables.map(table => {
@@ -491,15 +518,15 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                                         : tooSmall ? `${table.name}, ${table.capacity} kişilik, ${partySize} kişiye dar`
                                                             : capacityText ? `${table.name}, ${capacityText}` : table.name}
                                                     onClick={() => { setSelected(on ? null : table); setFormError(null); }}
-                                                    className={cn('relative flex min-h-[72px] flex-col items-start justify-center gap-1 rounded-xl border px-3.5 py-2.5 text-left transition-colors', focusRing, busy || tooSmall ? chipDisabled : on ? chipOn : chipOff)}
+                                                    className={cn('relative flex min-h-[84px] flex-col items-start justify-center gap-1 rounded-[20px] border-2 px-4 py-3 text-left transition-colors', focusRing, busy || tooSmall ? chipDisabled : on ? tableOn : tableOff)}
                                                 >
-                                                    <span className="text-[15px] font-semibold leading-tight">{table.name}</span>
+                                                    <span className={cn(serif, 'text-[20px] leading-tight')}>{table.name}</span>
                                                     {capacityText && <span className="text-xs opacity-80">{capacityText}</span>}
                                                     <span className="flex items-center gap-1.5 text-xs font-medium opacity-80">
-                                                        <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', busy || tooSmall ? 'bg-[var(--site-border-strong)]' : on ? 'bg-current' : 'bg-[#2E9E57]')} />
+                                                        <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', busy || tooSmall ? 'bg-[var(--site-border-strong)]' : on ? 'bg-[#A9401F]' : 'bg-[#2E9E57]')} />
                                                         {busy ? 'Bu saatte dolu' : tooSmall ? 'Size dar' : on ? 'Seçili' : 'Boş'}
                                                     </span>
-                                                    {on && <Check className="absolute right-3 top-3 h-4 w-4" strokeWidth={2.75} aria-hidden="true" />}
+                                                    {on && <Check className="absolute right-3 top-3 h-4 w-4 text-[#A9401F]" strokeWidth={2.75} aria-hidden="true" />}
                                                 </button>
                                             );
                                         })}
@@ -514,14 +541,14 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     );
 
     const detailsColumn = (
-        <div className="flex min-w-0 flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-4">
             {/* Dar ekranda seçim özeti formun üstünde; geniş ekranda sağdaki özet kartında. */}
             <div className={cn(card, 'flex items-center justify-between gap-3 p-4 lg:hidden')}>
                 <div className="min-w-0">
                     <p className={cn(serif, 'm-0 text-[26px] leading-tight')}>{selected?.name}</p>
                     <p className="m-0 text-sm text-[var(--site-muted)]">{formatDay(date)} · {time} · {partySize} kişi</p>
                 </div>
-                <button type="button" onClick={toSlot} className={cn('flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-[var(--site-accent)] hover:bg-[var(--site-bg)]', focusRing)}>
+                <button type="button" onClick={toSlot} className={cn('flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-bold text-[var(--site-accent-text)] underline-offset-4 hover:underline', focusRing)}>
                     Değiştir
                 </button>
             </div>
@@ -550,7 +577,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                         </div>
                     </div>
                     <div>
-                        <label htmlFor="rez-not" className={labelClass}>Not <span className="font-normal text-[var(--site-disabled)]">(isteğe bağlı)</span></label>
+                        <label htmlFor="rez-not" className={labelClass}>Not <span className="font-medium text-[var(--site-muted)]">(isteğe bağlı)</span></label>
                         <textarea
                             id="rez-not"
                             value={note}
@@ -574,32 +601,33 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     const hours = hoursText(site);
 
     const summaryCard = (
-        <div className={cn(card, 'hidden overflow-hidden lg:block')}>
-            <div className="relative flex min-h-[132px] flex-col justify-end overflow-hidden bg-[var(--site-paper)] px-6 pb-5 pt-8 text-white">
-                {site.site.coverImageUrl && (
-                    <>
-                        <img src={site.site.coverImageUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
-                        <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,16,12,0.25),rgba(20,16,12,0.78))]" />
-                    </>
-                )}
-                <span className="relative text-[11px] font-medium uppercase tracking-[0.22em] text-white/75">Rezervasyonunuz</span>
-                <span className={cn(serif, 'relative mt-1 text-[32px] italic leading-none')}>{restaurantName}</span>
+        // Bilet biçiminde "Rezervasyon kartınız": kiremit üst (gün, ay, italik hafta günü), kesik çizgi, krem alt (saat · kişi · masa).
+        <div className="hidden flex-col lg:flex">
+            <div className={cn(terracottaBg, 'flex flex-col gap-1.5 rounded-t-[32px] px-8 pb-6 pt-8 text-[var(--site-on-paper)]')}>
+                {/* Hardal yazı kiremitte 4.5:1'i tutmuyor: etiket krem, hardal yalnız yanındaki çizgide. */}
+                <span className="inline-flex items-center gap-2.5 text-xs font-extrabold uppercase tracking-[0.2em]">
+                    <span aria-hidden="true" className="h-0.5 w-6 shrink-0 bg-[var(--site-mustard)]" />Rezervasyon kartınız
+                </span>
+                <span className={cn(serif, 'text-[46px] font-extrabold leading-none')}>{dayMonth(date)}</span>
+                <span className={cn(serif, 'text-[22px] font-semibold italic text-[#F8E3B6]')}>{weekday(date)}</span>
             </div>
-            <dl className="m-0 flex flex-col divide-y divide-[var(--site-alt)] px-6 py-2">
-                <SummaryRow label="Tarih" value={formatDay(date)} />
-                <SummaryRow label="Saat" value={timeReady ? time : '—'} />
-                <SummaryRow label="Kişi" value={`${partySize} kişi`} />
-                <SummaryRow label="Masa" value={selected?.name ?? 'Seçilmedi'} muted={!selected} />
-            </dl>
-            <div className="flex flex-col gap-2.5 px-6 pb-6 pt-2">
+            <div aria-hidden="true" className="relative z-[1] mx-6 -my-px h-0 border-t-[3px] border-dashed border-[var(--site-bg)]" />
+            <div className="flex flex-col gap-4 rounded-b-[32px] bg-[var(--site-card)] px-8 pb-8 pt-6">
+                <dl className="m-0 grid grid-cols-3 gap-2.5">
+                    <SummaryRow label="Saat" value={timeReady ? time : '—'} />
+                    <SummaryRow label="Kişi" value={String(partySize)} />
+                    <SummaryRow label="Masa" value={selected?.name ?? 'Seçilmedi'} muted={!selected} small />
+                </dl>
+            <div className="flex flex-col gap-2.5">
                 {cta()}
                 {step === 'details' ? (
-                    <button type="button" onClick={toSlot} className="self-center text-sm font-medium text-[var(--site-muted)] underline-offset-4 hover:text-[var(--site-text)] hover:underline">
+                    <button type="button" onClick={toSlot} className="inline-flex min-h-11 items-center self-center text-sm font-semibold text-[var(--site-muted)] underline-offset-4 hover:text-[var(--site-text)] hover:underline">
                         Tarih ya da masayı değiştir
                     </button>
                 ) : (
                     <p className="m-0 text-center text-xs text-[var(--site-muted)]">{selected ? 'Sonraki adımda adınızı ve telefonunuzu alacağız.' : 'Devam etmek için bir masa seçin.'}</p>
                 )}
+            </div>
             </div>
         </div>
     );
@@ -613,16 +641,16 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                 <InfoItem icon={<Users className="h-4 w-4" aria-hidden="true" />}>Online en fazla {maxParty} kişilik rezervasyon yapılabilir.</InfoItem>
             </ul>
             {(address || site.phone || hours) && (
-                <div className="flex flex-col gap-3 border-t border-[var(--site-alt)] pt-4 text-sm">
+                <div className="flex flex-col gap-3 border-t border-[var(--site-line)] pt-4 text-sm">
                     {address && (
                         <InfoItem icon={<MapPin className="h-4 w-4" aria-hidden="true" />}>
                             <span className="block text-[var(--site-text)]">{address}</span>
-                            <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className="font-semibold text-[var(--site-text)] underline decoration-[var(--site-border-mid)] underline-offset-4 hover:decoration-[var(--site-text)]">Yol tarifi al</a>
+                            <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center font-semibold text-[var(--site-text)] underline decoration-[var(--site-border-mid)] underline-offset-4 hover:decoration-[var(--site-text)]">Yol tarifi al</a>
                         </InfoItem>
                     )}
                     {site.phone && (
                         <InfoItem icon={<Phone className="h-4 w-4" aria-hidden="true" />}>
-                            <a href={telHref(site.phone)} className="font-semibold tabular-nums text-[var(--site-text)] no-underline hover:underline">{site.phone}</a>
+                            <a href={telHref(site.phone)} className="inline-flex min-h-11 items-center font-semibold tabular-nums text-[var(--site-text)] no-underline hover:underline">{site.phone}</a>
                         </InfoItem>
                     )}
                     {hours && (
@@ -634,9 +662,9 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                 </div>
             )}
             {mine.length === 0 && (
-                <p className="m-0 border-t border-[var(--site-alt)] pt-4 text-sm text-[var(--site-muted)]">
+                <p className="m-0 border-t border-[var(--site-line)] pt-4 text-sm text-[var(--site-muted)]">
                     Rezervasyonunuz var mı?{' '}
-                    <Link to={RESERVATION_LOOKUP_PATH} className="font-semibold text-[var(--site-accent)] underline-offset-4 hover:underline">Kodla sorgulayın</Link>
+                    <Link to={RESERVATION_LOOKUP_PATH} className="inline-flex min-h-11 items-center font-bold text-[var(--site-accent-text)] underline-offset-4 hover:underline">Kodla sorgulayın</Link>
                 </p>
             )}
         </div>
@@ -644,16 +672,16 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
 
     const layout = (
         <>
-            <div className="mx-auto grid w-full max-w-[1180px] flex-1 grid-cols-1 items-start gap-5 px-4 pb-10 pt-6 sm:px-5 md:px-12 md:pt-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8 lg:pb-16">
+            <div className="grid w-full flex-1 grid-cols-1 items-start gap-4 pb-4 lg:grid-cols-[minmax(0,1fr)_380px]">
                 {step === 'slot' ? slotColumn : detailsColumn}
-                <aside className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-28">
+                <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-28">
                     {summaryCard}
                     {infoCard}
                 </aside>
             </div>
 
             {/* Dar ekranda yapışkan onay çubuğu */}
-            <div className="sticky bottom-0 z-10 border-t border-[var(--site-border-mid)] bg-white/95 backdrop-blur-md lg:hidden">
+            <div className="sticky bottom-0 z-10 -mx-2 rounded-t-[24px] border-t border-[var(--site-border-mid)] bg-[var(--site-card)]/95 backdrop-blur-md sm:-mx-4 lg:hidden">
                 <div className="mx-auto flex max-w-2xl flex-col gap-2.5 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
                     {step === 'slot' ? (
                         <p className="m-0 truncate text-center text-sm text-[var(--site-sub)]">{selected ? summary : 'Bir masa seçin'}</p>
@@ -666,7 +694,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
     );
 
     return (
-        <div className={cn('flex flex-col bg-[var(--site-bg)] text-[var(--site-text)]', embedded ? 'min-h-[70vh]' : 'min-h-screen')}>
+        <div className={cn('flex flex-col gap-4 text-[var(--site-text)]', embedded ? 'min-h-[70vh]' : 'min-h-screen')}>
             {stepBar}
             {step === 'details' ? <form onSubmit={submit} className="flex flex-1 flex-col">{layout}</form> : layout}
         </div>
@@ -677,12 +705,12 @@ function FlowSection({ id, className, num, title, legend, note, children }: {
     id?: string; className?: string; num: string; title: string; legend: string; note?: string; children: ReactNode;
 }) {
     return (
-        <fieldset id={id} className={cn(card, 'm-0 min-w-0 scroll-mt-24 p-5 sm:p-6', className)}>
+        <fieldset id={id} className={cn(card, 'm-0 min-w-0 scroll-mt-24 border-0 p-5 sm:p-8 md:p-10', className)}>
             <legend className="sr-only">{legend}</legend>
-            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <p aria-hidden="true" className="m-0 flex items-baseline gap-3">
-                    <span className="text-[11px] font-medium tracking-[0.2em] text-[var(--site-accent)]">{num}</span>
-                    <span className={cn(serif, 'text-[28px] leading-none tracking-[-0.01em] md:text-[32px]')}>{title}</span>
+            <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <p aria-hidden="true" className="m-0 flex items-baseline gap-3.5">
+                    <span className={cn(serif, 'text-[32px] italic text-[#A9401F] md:text-[40px]')}>{num}</span>
+                    <span className={cn(serif, 'text-[30px] leading-none md:text-[38px]')}>{title}</span>
                 </p>
                 {note && <span className="text-sm text-[var(--site-muted)]">{note}</span>}
             </div>
@@ -693,17 +721,28 @@ function FlowSection({ id, className, num, title, legend, note, children }: {
 
 function EmptyNote({ children }: { children: ReactNode }) {
     return (
-        <p className="m-0 rounded-xl border border-dashed border-[var(--site-border-mid)] bg-[var(--site-bg)] px-4 py-5 text-center text-sm text-[var(--site-muted)]">{children}</p>
+        <p className="m-0 rounded-2xl border border-dashed border-[var(--site-border-mid)] bg-[var(--site-bg)] px-4 py-5 text-center text-sm text-[var(--site-muted)]">{children}</p>
     );
 }
 
-function SummaryRow({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
+function SummaryRow({ label, value, muted = false, small = false }: { label: string; value: string; muted?: boolean; small?: boolean }) {
     return (
-        <div className="flex items-baseline justify-between gap-4 py-3">
-            <dt className="text-xs font-medium uppercase tracking-[0.16em] text-[var(--site-muted)]">{label}</dt>
-            <dd className={cn('m-0 text-right text-[15px] font-semibold', muted && 'font-normal text-[var(--site-disabled)]')}>{value}</dd>
+        <div className="flex min-w-0 flex-col gap-0.5">
+            <dt className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--site-muted)]">{label}</dt>
+            <dd className={cn(serif, 'm-0 break-words font-extrabold tabular-nums', small ? 'text-xl leading-snug' : 'text-[28px] leading-tight', muted && 'text-base font-semibold text-[var(--site-muted)]')}>{value}</dd>
         </div>
     );
+}
+
+// "2026-11-14" → "14 Kasım" ve "Cuma" (bilet kartı).
+function dayMonth(date: string): string {
+    const [year, month, day] = date.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+}
+
+function weekday(date: string): string {
+    const [year, month, day] = date.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('tr-TR', { weekday: 'long' });
 }
 
 function InfoItem({ icon, children }: { icon: ReactNode; children: ReactNode }) {
@@ -728,8 +767,8 @@ function ReservationTicket({ reservation, restaurantName }: { reservation: Reser
     };
 
     return (
-        <section aria-label="Rezervasyon özeti" className="relative overflow-hidden rounded-[22px] border border-[var(--site-border-mid)] bg-white shadow-[0_18px_40px_-24px_rgba(20,16,12,0.35)]">
-            <div className="flex flex-col items-center gap-2 bg-[var(--site-text)] px-6 pb-7 pt-6 text-center text-white">
+        <section aria-label="Rezervasyon özeti" className="relative overflow-hidden rounded-[24px] bg-[var(--site-card)] md:rounded-[32px]">
+            <div className="flex flex-col items-center gap-2 bg-[var(--site-paper)] px-6 pb-7 pt-6 text-center text-[var(--site-on-paper)]">
                 <span className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/60">{restaurantName}</span>
                 {code ? (
                     <>
@@ -751,8 +790,8 @@ function ReservationTicket({ reservation, restaurantName }: { reservation: Reser
 
             {/* Bilet kesiği */}
             <div aria-hidden="true" className="relative h-0">
-                <span className="absolute -left-3 -top-3 h-6 w-6 rounded-full border border-[var(--site-border-mid)] bg-[var(--site-bg)]" />
-                <span className="absolute -right-3 -top-3 h-6 w-6 rounded-full border border-[var(--site-border-mid)] bg-[var(--site-bg)]" />
+                <span className="absolute -left-3 -top-3 h-6 w-6 rounded-full bg-[var(--site-bg)]" />
+                <span className="absolute -right-3 -top-3 h-6 w-6 rounded-full bg-[var(--site-bg)]" />
             </div>
 
             <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-dashed border-[var(--site-border-mid)] px-6 pb-5 pt-6">
@@ -775,7 +814,7 @@ function ReservationTicket({ reservation, restaurantName }: { reservation: Reser
 function TicketField({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
     return (
         <div className={cn('min-w-0', wide && 'col-span-2')}>
-            <dt className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--site-muted)]">{label}</dt>
+            <dt className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--site-muted)]">{label}</dt>
             <dd className={cn(serif, 'm-0 mt-1 break-words text-[24px] leading-tight tabular-nums')}>{value}</dd>
         </div>
     );

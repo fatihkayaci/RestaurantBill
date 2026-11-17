@@ -34,7 +34,7 @@ const REFRESH_MS = 60_000;
 // Geri sayım dakikada bir ilerler.
 const TICK_MS = 30_000;
 
-const card = 'rounded-[22px] border border-[var(--site-border)] bg-[var(--site-card)]';
+const card = 'rounded-[24px] bg-[var(--site-card)] md:rounded-[32px]';
 const eyebrowClass = 'text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--site-sub)]';
 const primaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--site-accent)] px-6 text-[15px] font-semibold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90 disabled:opacity-50';
 const secondaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--site-border)] bg-[var(--site-card)] px-5 text-[15px] font-semibold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)] disabled:opacity-50';
@@ -488,7 +488,7 @@ function StatusHero({ detail, site, now }: { detail: ReservationDetail; site: Pu
     const closed = detail.status === RESERVATION_CANCELLED || detail.status === RESERVATION_NO_SHOW || detail.status === RESERVATION_REJECTED;
 
     return (
-        <section aria-labelledby="rez-baslik" className={cn(card, 'overflow-hidden shadow-[0_18px_40px_-28px_rgba(20,16,12,0.35)]')}>
+        <section aria-labelledby="rez-baslik" className={cn(card, 'overflow-hidden')}>
             <div className="relative overflow-hidden bg-[var(--site-hero)] px-5 pb-6 pt-7 text-white sm:px-7 sm:pt-9">
                 {site.site.coverImageUrl && (
                     <>
@@ -498,7 +498,7 @@ function StatusHero({ detail, site, now }: { detail: ReservationDetail; site: Pu
                 )}
                 <div className="relative flex flex-col gap-2" role="status" aria-live="polite">
                     <span className="text-[13px] text-white/80">{headline.lead}</span>
-                    <h1 id="rez-baslik" className={cn(serif, 'm-0 text-[40px] leading-[0.98] tracking-[-0.02em] sm:text-[52px]')}>{headline.title}</h1>
+                    <h1 id="rez-baslik" className={cn(serif, 'm-0 text-[40px] font-extrabold leading-[0.98] tracking-[-0.02em] sm:text-[52px] [&_.italic]:font-semibold [&_.italic]:text-[var(--site-mustard-text)]')}>{headline.title}</h1>
                     {headline.text && <p className="m-0 max-w-[44ch] text-[15px] leading-relaxed text-white/85">{headline.text}</p>}
                     {countdown && (
                         <span className="mt-2 inline-flex items-center gap-2 self-start rounded-full border border-white/30 bg-white/15 px-3.5 py-2 text-[13px] font-semibold backdrop-blur-[10px]">
@@ -542,7 +542,7 @@ function PendingSteps({ detail }: { detail: ReservationDetail }) {
                 <li key={step.label} aria-current={step.state === 'current' ? 'step' : undefined} className="flex items-center gap-3 text-[15px]">
                     <span aria-hidden="true" className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full border',
                         step.state === 'done' ? 'border-[var(--site-text)] bg-[var(--site-paper)] text-[var(--site-on-paper)]'
-                            : step.state === 'current' ? 'border-[var(--site-accent)] text-[var(--site-accent)]' : 'border-[var(--site-border)] text-[var(--site-muted)]')}>
+                            : step.state === 'current' ? 'border-[var(--site-accent)] text-[var(--site-accent-text)]' : 'border-[var(--site-border)] text-[var(--site-muted)]')}>
                         {step.state === 'done' ? <Check className="h-3.5 w-3.5" strokeWidth={3} />
                             : step.state === 'current' ? <span className="h-2 w-2 animate-pulse rounded-full bg-current motion-reduce:animate-none" />
                                 : <span className="h-1.5 w-1.5 rounded-full bg-current" />}

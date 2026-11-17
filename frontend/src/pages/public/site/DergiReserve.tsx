@@ -33,7 +33,7 @@ function groupSlots(slots: DaySlot[]): { name: string; slots: DaySlot[] }[] {
 }
 
 const serif = 'font-[family-name:Fraunces,Georgia,serif] font-bold tracking-[-0.02em]';
-const roundButton = 'h-11 w-11 rounded-full border border-[var(--site-border-mid)] bg-white text-xl text-[var(--site-text)] disabled:opacity-35';
+const roundButton = 'h-11 w-11 rounded-full border border-[var(--site-border-mid)] bg-[var(--site-card)] text-xl text-[var(--site-text)] disabled:opacity-35';
 
 // Ana sayfanın rezervasyon kartı (tasarım: "Birleşik · açık" · saat tablosu): 7 günlük şerit, kişi sayısı,
 // sabah/öğle/akşam saat düğmeleri → "Devam et" tam akışı bu seçimle açar.
@@ -80,7 +80,7 @@ export default function DergiReserve({ branchId, rules, onContinue }: {
     return (
         <form
             onSubmit={e => { e.preventDefault(); if (time) onContinue({ date: day, time, partySize: people }); }}
-            className="flex w-full min-w-0 flex-col gap-7 rounded-[20px] border border-[var(--site-border-mid)] bg-white p-4 sm:p-8"
+            className="flex w-full min-w-0 flex-col gap-7 rounded-[24px] bg-[var(--site-card)] p-4 sm:p-8 md:rounded-[32px]"
         >
             <div role="group" aria-label="Gün" className="-mx-1 overflow-x-auto px-1">
                 <div className={cn('grid gap-1.5', days.length > 4 && 'min-w-[480px]')}
@@ -93,7 +93,7 @@ export default function DergiReserve({ branchId, rules, onContinue }: {
                                 onClick={() => { if (!on) { setSlots(null); setDay(d.value); } }}
                                 className={cn('flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-[14px] border',
                                     !d.open ? 'cursor-not-allowed border-dashed border-[var(--site-border-strong)] bg-transparent text-[var(--site-border-strong)]'
-                                        : on ? 'border-[var(--site-text)] bg-[var(--site-text)] text-white' : 'border-[var(--site-border)] bg-white text-[var(--site-text)]')}>
+                                        : on ? 'border-[#A9401F] bg-[#A9401F] text-[var(--site-on-paper)]' : 'border-transparent bg-[var(--site-bg)] text-[var(--site-text)]')}>
                                 <span className="text-[11px] font-medium uppercase tracking-[0.12em] opacity-75">{d.top}</span>
                                 <span className={cn(serif, 'text-[30px] leading-none')}>{d.num}</span>
                                 <span className="text-[11px] opacity-70">{d.month}</span>
@@ -131,8 +131,8 @@ export default function DergiReserve({ branchId, rules, onContinue }: {
                                     <button key={s.time} type="button" disabled={s.full} aria-pressed={on} onClick={() => setPicked(s.time)}
                                         className={cn('flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border',
                                             s.full ? 'cursor-not-allowed border-dashed border-[var(--site-border-strong)] bg-transparent text-[var(--site-border-strong)] line-through'
-                                                : on ? 'border-[var(--site-accent)] bg-[var(--site-accent)] text-[var(--site-on-accent)]'
-                                                    : 'border-[var(--site-border-mid)] bg-white text-[var(--site-text)]')}>
+                                                : on ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]'
+                                                    : 'border-[rgba(36,24,15,0.18)] bg-[var(--site-card)] text-[var(--site-text)]')}>
                                         <span className={cn(serif, 'text-[22px] leading-none sm:text-2xl')}>{s.time}</span>
                                         <span className="text-[11px] opacity-75">{s.full ? 'dolu' : 'müsait'}</span>
                                     </button>
@@ -146,7 +146,7 @@ export default function DergiReserve({ branchId, rules, onContinue }: {
             <button
                 type="submit"
                 disabled={!time}
-                className="min-h-[60px] rounded-full bg-[var(--site-accent)] px-6 text-base font-semibold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+                className="min-h-[60px] rounded-full bg-[var(--site-accent)] px-6 text-base font-extrabold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
             >
                 Devam et{time && ` · ${dayInfo.top} ${time} · ${people} kişi`}
             </button>
