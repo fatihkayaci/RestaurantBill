@@ -8,7 +8,7 @@ import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode
 import { StockImageLabel } from '../components/StockImageLabel';
 import { SiteShell } from './SiteChrome';
 import {
-    FONTS_HREF, MOTION_CSS, RESERVATION_PATH, cardButton, eyebrow, headerAccentPill, headerPill, heroAccentButton, heroOutlineButton,
+    FONTS_HREF, MOTION_CSS, RESERVATION_PATH, cardButton, eyebrow, footLabel, headerAccentPill, headerPill, heroAccentButton, heroOutlineButton,
     iconCircle, instagramHandle, sans, sectionWrap, serif, siteCardDark, siteNav, untilTime, type SitePageKey,
 } from './siteParts';
 import { PhoneIcon } from './SiteCards';
@@ -250,7 +250,7 @@ function timeOfDay(iso: string): string {
  * paket siparişin son saati), telefon ve WhatsApp/Instagram. Verisi olmayan sütun çizilmez. Düzenleyicide adres ve
  * telefon (Ayarlar'dan gelir) çizilmez; saat ve iletişim burada değişir.
  */
-export function VisitSection({ site, className }: { site: PublicSite; className?: string }) {
+export function VisitSection({ site, className, compact = false }: { site: PublicSite; className?: string; compact?: boolean }) {
     const edit = useSiteEdit();
     const showEmpty = Boolean(edit?.showEmpty);
     const ordering = useOnlineOrdering();
@@ -265,16 +265,23 @@ export function VisitSection({ site, className }: { site: PublicSite; className?
     const showHours = Boolean(rows) || showEmpty;
     const showContact = showPhone || hasSocial || showEmpty;
     if (!showAddress && !showHours && !showContact) return null;
-    const label = cn(eyebrow, 'm-0');
-    const row = 'flex justify-between gap-4 border-b border-[var(--site-line)] pb-2 text-base last:border-b-0';
+    // compact: alt bilgi sütunları (küçük yazı, ince satırlar); değilse sayfa bölümü (düzenleyicide).
+    const label = cn(compact ? footLabel : eyebrow, 'm-0');
+    const row = cn('flex justify-between gap-4 border-b border-[var(--site-line)] last:border-b-0', compact ? 'pb-1.5 text-sm' : 'pb-2 text-base');
+    const big = compact ? 'text-[17px] font-semibold leading-snug' : cn(serif, 'text-[30px] leading-[1.15]');
+    const btn = compact ? 'h-11' : 'h-[46px]';
+    const Wrap = compact ? 'div' : 'section';
 
     return (
-        <section aria-label="Ziyaret ve iletişim" className={cn(sectionWrap, 'grid grid-cols-1 gap-10 py-16 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] md:py-[88px]', className)}>
+        <Wrap aria-label="Ziyaret ve iletişim" className={cn(
+            compact ? 'contents' : cn(sectionWrap, 'grid grid-cols-1 gap-10 py-16 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] md:py-[88px]'),
+            className,
+        )}>
             {showAddress && (
                 <ExternalHint source="restaurant">
                     <div className="flex min-w-0 flex-col gap-3">
                         <h2 className={label}>Adres</h2>
-                        <p className={cn(serif, 'm-0 break-words text-[30px] leading-[1.15]')}>
+                        <p className={cn(big, 'm-0 break-words')}>
                             {site.openAddress || address}
                             {site.openAddress && (site.district || site.city) && <><br />{[site.district, site.city].filter(Boolean).join(', ')}</>}
                         </p>
@@ -307,16 +314,16 @@ export function VisitSection({ site, className }: { site: PublicSite; className?
             {showContact && (
                 <div className="flex min-w-0 flex-col gap-3">
                     <h2 className={label}>İletişim</h2>
-                    {showPhone && <a href={telHref(site.phone)} className={cn(serif, 'self-start text-[30px] leading-[1.15] no-underline')}>{site.phone}</a>}
+                    {showPhone && <a href={telHref(site.phone)} className={cn(big, 'self-start no-underline')}>{site.phone}</a>}
                     {(showPhone || hasSocial) && (
                         <EditableBlock target="contact" label="WhatsApp ve Instagram" className="self-start rounded-full">
                             <div className="flex flex-wrap gap-2.5">
-                                {showPhone && <a href={telHref(site.phone)} className={cn(cardButton.accent, 'h-[46px]')}>Hemen ara</a>}
+                                {showPhone && <a href={telHref(site.phone)} className={cn(cardButton.accent, btn)}>Hemen ara</a>}
                                 {content.whatsappPhone && (
-                                    <a href={whatsappHref(content.whatsappPhone)} target="_blank" rel="noopener noreferrer" className={cn(cardButton.outline, 'h-[46px]')}>WhatsApp</a>
+                                    <a href={whatsappHref(content.whatsappPhone)} target="_blank" rel="noopener noreferrer" className={cn(cardButton.outline, btn)}>WhatsApp</a>
                                 )}
                                 {content.instagramUrl && (
-                                    <a href={content.instagramUrl} target="_blank" rel="noopener noreferrer" className={cn(cardButton.outline, 'h-[46px]')}>{instagramHandle(content.instagramUrl)}</a>
+                                    <a href={content.instagramUrl} target="_blank" rel="noopener noreferrer" className={cn(cardButton.outline, btn)}>{instagramHandle(content.instagramUrl)}</a>
                                 )}
                             </div>
                         </EditableBlock>
@@ -324,7 +331,7 @@ export function VisitSection({ site, className }: { site: PublicSite; className?
                     {!showPhone && !hasSocial && <EmptySlot target="contact" title="+ WhatsApp ya da Instagram ekle" />}
                 </div>
             )}
-        </section>
+        </Wrap>
     );
 }
 
@@ -341,10 +348,16 @@ export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite
 
     return (
         <footer className={cn(sans, 'mt-auto text-[var(--site-text)]')}>
-            {visit && <div className="border-t border-[var(--site-line)]"><VisitSection site={site} /></div>}
             <div className="border-t border-[var(--site-line)]">
-                <div className={cn(sectionWrap, 'flex flex-col gap-8 pt-14 md:gap-10', bottomBar ? 'pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-8' : 'pb-8')}>
-                    <span aria-hidden="true" className={cn(serif, 'break-words text-[clamp(48px,9vw,140px)] leading-[0.9] tracking-[-0.02em] text-[var(--site-wordmark)]')}>{name}</span>
+                <div className={cn(sectionWrap, 'flex flex-col gap-10 pt-14', bottomBar ? 'pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-8' : 'pb-8')}>
+                    {/* Üst sıra: ad + yer, sonra adres · saatler · iletişim sütunları (verisi olmayan sütun çizilmez). */}
+                    <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_repeat(3,minmax(0,1fr))]">
+                        <div className="flex min-w-0 flex-col gap-2">
+                            <span className={cn(serif, 'break-words text-[36px] leading-none')}>{name}</span>
+                            {placeLine(site) && <span className="text-sm text-[var(--site-muted)]">{placeLine(site)}</span>}
+                        </div>
+                        {visit && <VisitSection site={site} compact />}
+                    </div>
                     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-[13px] text-[var(--site-muted)]">
                         <span {...fixedX} className={fixedX.className}>© {new Date().getFullYear()} {name} · <strong className="font-bold text-[var(--site-text)]">Sophram</strong> ile hazırlandı</span>
                         <nav aria-label="Alt menü" className="flex flex-wrap gap-x-5">
