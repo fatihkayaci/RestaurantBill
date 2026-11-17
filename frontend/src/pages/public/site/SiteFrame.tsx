@@ -112,7 +112,7 @@ export function SiteHeader({ site, current, sticky = true }: { site: PublicSite;
                 scrolled ? 'shadow-[0_14px_36px_-18px_rgba(30,26,22,0.35)]' : 'shadow-[0_1px_0_rgba(30,26,22,0.04)]')}>
                 <nav aria-label="Ana menü" className="flex items-center justify-between gap-3 py-2 pl-4 pr-2 sm:py-3 sm:pl-6 sm:pr-3">
                     <Link to="/" onClick={toTop} {...nameX}
-                        className={cn('flex min-w-0 items-baseline gap-3 leading-none no-underline', nameX.className)}>
+                        className={cn('flex min-h-11 min-w-0 items-center gap-3 leading-none no-underline', nameX.className)}>
                         <span className={cn(serif, 'min-w-0 truncate text-[26px] tracking-[-0.01em] sm:text-[30px]')}>{name}</span>
                         {place && <span className="hidden shrink-0 whitespace-nowrap text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--site-accent-text)] xl:inline">{place}</span>}
                     </Link>
@@ -452,7 +452,7 @@ export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite
                         {showContact && (
                             <div className="flex min-w-0 flex-col gap-3">
                                 <h2 className={label}>İletişim</h2>
-                                {site.phone && <a href={telHref(site.phone)} className={cn(serif, 'self-start text-[32px] leading-none no-underline')}>{site.phone}</a>}
+                                {site.phone && <a href={telHref(site.phone)} className={cn(serif, 'inline-flex min-h-11 items-center self-start text-[32px] leading-none no-underline')}>{site.phone}</a>}
                                 <div className="mt-1 flex gap-2">
                                     {site.phone && <a href={telHref(site.phone)} aria-label="Ara" className={roundIcon}><PhoneIcon className="h-[18px] w-[18px]" /></a>}
                                     {content.whatsappPhone && <a href={whatsappHref(content.whatsappPhone)} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className={roundIcon}><WhatsAppIcon /></a>}
