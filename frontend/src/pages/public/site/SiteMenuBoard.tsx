@@ -10,7 +10,7 @@ export function PlusIcon({ size = 18 }: { size?: number }) {
 }
 
 /** Ürün satırının sağındaki + düğmesi: yalnız online sipariş açıkken ve ürün paket menüsündeyse. Sepetteyse adet yazar. */
-export function AddButton({ product, cart, onAdded, variant = 'line' }: { product: PublicProduct; cart: SiteCart; onAdded: (name: string) => void; variant?: 'line' | 'card' }) {
+export function AddButton({ product, cart, onAdded, variant = 'line' }: { product: PublicProduct; cart: SiteCart; onAdded: (name: string) => void; variant?: 'line' | 'card' | 'accent' }) {
     if (!cart.enabled) return null;
     const delivery = cart.productFor(product.id);
     if (!delivery || delivery.isOutOfStock || product.isOutOfStock) return <span aria-hidden="true" className="w-11 shrink-0" />;
@@ -20,7 +20,9 @@ export function AddButton({ product, cart, onAdded, variant = 'line' }: { produc
             aria-label={qty > 0 ? `${product.name} sepete bir tane daha ekle (sepette ${qty})` : `${product.name} sepete ekle`}
             className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-[var(--site-text)] transition-colors',
                 variant === 'card' && 'h-[46px] w-[46px] border-transparent',
+                variant === 'accent' && 'h-12 w-12 border-transparent',
                 qty > 0 ? 'border-[var(--site-text)] bg-[var(--site-text)] text-[var(--site-bg)]'
+                    : variant === 'accent' ? 'bg-[var(--site-accent)] text-[var(--site-on-accent)] hover:opacity-90'
                     : variant === 'card' ? 'bg-[var(--site-card)] hover:border-[var(--site-text)]' : 'border-[var(--site-border-strong)] hover:border-[var(--site-text)]')}>
             {qty > 0 ? <span className="text-sm font-extrabold tabular-nums">{qty}</span> : <PlusIcon />}
         </button>

@@ -5,13 +5,14 @@ import { fullAddress, hoursText } from './useSite';
 // Restoran sitesinin ortak parçaları: yazı tipleri, sınıf dizileri, hareket CSS'i ve hangi sayfanın gösterileceği
 // (restoranın girmediği veri uydurulmaz). Bütün renkler temanın CSS değişkenlerinden (siteTheme.ts → siteRootStyle).
 
-export const FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap';
-export const serif = "font-[family-name:'Instrument_Serif',serif] font-normal";
+export const FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500..900;1,9..144,500..900&family=Manrope:wght@400;500;600;700;800&display=swap';
+/** Başlık yazı tipi (Renkli: Fraunces, kalın, sıkı aralık). Adı geçmişten kalma: artık serif ama "ince" değil. */
+export const serif = 'font-[family-name:Fraunces,Georgia,serif] font-bold tracking-[-0.02em]';
 export const sans = "font-[family-name:Manrope,system-ui,sans-serif]";
 /** Bölüm üst satırı (Tema 2): küçük, aralıklı büyük harf, vurgu yazısı renginde. */
 export const eyebrow = 'text-xs font-bold uppercase tracking-[0.28em] text-[var(--site-accent-text)]';
 /** Tema 2 bölüm başlığı (serif, büyük); italik parça vurgu yazısı renginde (.rb-site kuralı). */
-export const sectionTitle = "font-[family-name:'Instrument_Serif',serif] font-normal m-0 text-[48px] leading-[0.95] md:text-[clamp(48px,5.4vw,80px)]";
+export const sectionTitle = "font-[family-name:Fraunces,Georgia,serif] font-bold tracking-[-0.02em] m-0 text-[48px] leading-[0.95] md:text-[clamp(48px,5.4vw,80px)]";
 /** Bölümlerin ortak genişliği ve kenar boşluğu (tasarım: 1320 px, 32 px; telefonda 16 px). */
 export const sectionWrap = 'mx-auto w-full max-w-[1320px] px-4 sm:px-8';
 export const line = 'border-[var(--site-line)]';
@@ -67,7 +68,7 @@ export const MOTION_CSS = `
 .rb-kay-yavas{animation:rb-kay 70s linear infinite}
 .rb-don{animation:rb-don 18s linear infinite}
 @media (prefers-reduced-motion: reduce){.rb-kay,.rb-kay-yavas,.rb-don{animation:none}}
-.rb-site :is(h1,h2,h3,blockquote) .italic,.rb-site em.rb-accent{color:var(--site-accent-text)}
+.rb-site :is(h1,h2,h3,blockquote) .italic,.rb-site em.rb-accent{color:var(--site-accent-text);font-weight:600}
 `;
 
 /** `siparis`: paket sipariş akışı (/siparis ve sipariş takibi); menü listesinde değil, başlığın "Paket sipariş" düğmesi. */

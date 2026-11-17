@@ -154,7 +154,7 @@ function StoryPaper({ site }: { site: PublicSite }) {
                     {hasStory ? (
                         <EditableText as="p" field="about" value={c.about} multiline placeholder="Hikâyenizi yazın: nasıl başladınız, neyi farklı yapıyorsunuz."
                             className={cn('m-0 whitespace-pre-line',
-                                c.about && "first-letter:float-left first-letter:pr-3 first-letter:pt-1.5 first-letter:font-[family-name:'Instrument_Serif',serif] first-letter:text-[80px] first-letter:leading-[0.78] first-letter:text-[var(--site-accent-text)] md:first-letter:text-[96px]")} />
+                                c.about && "first-letter:float-left first-letter:pr-3 first-letter:pt-1.5 first-letter:font-[family-name:Fraunces,Georgia,serif] first-letter:font-bold first-letter:text-[80px] first-letter:leading-[0.78] first-letter:text-[var(--site-accent-text)] md:first-letter:text-[96px]")} />
                     ) : (
                         <>
                             {place && <p className="m-0">{place}.</p>}

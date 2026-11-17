@@ -32,7 +32,7 @@ function groupSlots(slots: DaySlot[]): { name: string; slots: DaySlot[] }[] {
     })).filter(g => g.slots.length > 0);
 }
 
-const serif = "font-[family-name:'Instrument_Serif',serif] font-normal";
+const serif = 'font-[family-name:Fraunces,Georgia,serif] font-bold tracking-[-0.02em]';
 const roundButton = 'h-11 w-11 rounded-full border border-[var(--site-border-mid)] bg-white text-xl text-[var(--site-text)] disabled:opacity-35';
 
 // Ana sayfanın rezervasyon kartı (tasarım: "Birleşik · açık" · saat tablosu): 7 günlük şerit, kişi sayısı,

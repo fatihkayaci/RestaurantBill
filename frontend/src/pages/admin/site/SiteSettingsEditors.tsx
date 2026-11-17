@@ -36,10 +36,10 @@ export function Panel({ id, title, description, children }: { id?: string; title
 
 // ── Tema ─────────────────────────────────────────────────────────────────────────────────────────
 
-// Tema 2'nin vurgu seçenekleri (zemin her temada aynı krem; seçilen renk düğme, çizgi ve italik vurgu yazısında kullanılır).
-const ACCENT_OPTIONS = ['#E8B04B', '#E2683C', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#2A2622', '#9AA5B1'];
+// Vurgu seçenekleri (zemin her temada aynı kum; tema kapak rengini ve vurguyu seçer, özel renk yalnız vurguyu değiştirir).
+const ACCENT_OPTIONS = ['#DC5B2F', '#EBB03F', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#24180F', '#9AA5B1'];
 
-/** Hazır temalar (Tema 2: zemin ortak, tema vurgu rengini seçer) ve isteğe bağlı özel vurgu rengi. */
+/** Hazır temalar (zemin ortak; tema ana sayfa kapağının rengini ve vurguyu seçer) ve isteğe bağlı özel vurgu rengi. */
 export function ThemePicker({ theme, accent, onTheme, onAccent }: {
     theme: string; accent: string; onTheme: (key: string) => void; onAccent: (hex: string) => void;
 }) {
@@ -56,9 +56,9 @@ export function ThemePicker({ theme, accent, onTheme, onAccent }: {
                             className={cn('flex flex-col gap-2 rounded-xl border-2 p-2.5 text-left transition-colors', on ? 'border-foreground' : 'border-border hover:border-foreground/40')}>
                             {/* Küçük önizleme: zemin, kart, yazı, düğme */}
                             <span aria-hidden="true" className="flex h-16 items-end gap-1.5 rounded-lg p-2" style={{ background: t.bg }}>
-                                <span className="flex h-full flex-1 flex-col justify-center gap-1 rounded-md px-2" style={{ background: t.card, border: `1px solid ${t.border}` }}>
-                                    <span className="h-1.5 w-3/4 rounded-full" style={{ background: t.text }} />
-                                    <span className="h-1.5 w-1/2 rounded-full" style={{ background: t.muted }} />
+                                <span className="flex h-full flex-1 flex-col justify-center gap-1 rounded-md px-2" style={{ background: t.hero }}>
+                                    <span className="h-1.5 w-3/4 rounded-full" style={{ background: t.card }} />
+                                    <span className="h-1.5 w-1/2 rounded-full bg-[#F2C25E]" />
                                 </span>
                                 <span className="h-6 w-12 rounded-full" style={{ background: t.accent }} />
                             </span>
