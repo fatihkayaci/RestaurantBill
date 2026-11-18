@@ -9,7 +9,7 @@ import { RESERVATION_PATH, instagramHandle, siteNav, untilTime, type SitePageKey
 import { directionsUrl, telHref, whatsappHref, wordmarkParts } from '../siteTheme';
 import { fullAddress, restaurantName, weekSchedule } from '../useSite';
 import { editExternal, useSiteEdit, useSiteWindow } from '../siteEditContext';
-import { useScrolled } from '../useScrolled';
+import { useHideOnScroll, useScrolled } from '../useScrolled';
 import { elButton, elLabel, elSerif } from './eliteParts';
 
 // Elit üst menü ve alt bilgi (tasarım: EliteHeader, EliteFooter). Üst menü koyu zeminde açık yazılıdır: fotoğraflı kapağı
@@ -52,6 +52,8 @@ export function EliteHeader({ site, current, overlay, sticky }: { site: PublicSi
     // Kapak üstünde saydam başlık yapışıksa: kaydırınca (ya da telefon menüsü açıkken) koyu zemin.
     const scrolled = useScrolled(overlay && sticky);
     const solid = !overlay || scrolled || open;
+    // Aşağı kaydırınca gizlenir, yukarı kaydırınca geri gelir (telefon menüsü açıkken hep görünür).
+    const hidden = useHideOnScroll(sticky) && !open;
 
     useEffect(() => {
         if (!open) return;
@@ -69,7 +71,8 @@ export function EliteHeader({ site, current, overlay, sticky }: { site: PublicSi
     // Kapak üstündeki yapışkan başlık sıfır yükseklikli bir tutucuda durur: kapak yine en üstten başlar, başlık onun
     // üstüne biner ve kaydırınca ekranın üstünde kalır. Zemin ve çizgi içteki kutuda (tutucunun yüksekliği yok).
     const bar = (
-        <div className={cn('text-[var(--site-on-paper)] transition-[background-color,border-color] duration-200',
+        <div className={cn('text-[var(--site-on-paper)] transition-[background-color,border-color,translate] duration-[600ms] ease-in-out motion-reduce:transition-none',
+            hidden && '-translate-y-full',
             solid ? 'border-b border-[color-mix(in_srgb,var(--site-accent-on-dark)_30%,transparent)] bg-[var(--site-paper)]' : 'border-b border-transparent')}>
             <header className="mx-auto grid max-w-[1440px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:px-14 lg:py-[30px]">
                 <nav aria-label="Ana menü" className="hidden flex-wrap gap-x-8 gap-y-1 lg:flex">

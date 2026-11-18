@@ -21,7 +21,7 @@ import { editExternal, useSiteEdit, useSiteWindow } from './siteEditContext';
 import { useSiteDesign } from './siteDesign';
 import { EliteFooter, EliteHeader } from './elite/EliteFrame';
 import { EliteFlowStyle } from './elite/EliteFlowStyle';
-import { useScrolled } from './useScrolled';
+import { useHideOnScroll, useScrolled } from './useScrolled';
 
 // Restoran sitesinin ortak çerçevesi (tasarım: "Tema 2 · Açık"): ortalı başlık (solda sayfalar, ortada serif ad ve
 // küçük konum satırı, sağda sipariş takibi, Sepet ve "Masa ayırt"), ziyaret
@@ -90,6 +90,8 @@ function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: S
     const place = placeLine(site);
     // Site verisinden (SiteShell dışındaki akış sayfalarında da doğru tasarım).
     const sade = resolveDesign(site.site.design) === 'sade';
+    // Aşağı kaydırınca gizlenir, yukarı kaydırınca geri gelir (telefon menüsü açıkken hep görünür).
+    const hidden = useHideOnScroll(sticky) && !open;
 
     useEffect(() => {
         if (!open) return;
@@ -106,9 +108,10 @@ function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: S
     const menuLink = cn('flex min-h-12 items-center rounded-2xl px-4 text-[17px] text-[var(--site-text)] no-underline hover:bg-[var(--site-bg)]', sade ? 'font-semibold' : 'font-bold');
 
     return (
-        <div className={cn(sans, sticky ? 'sticky' : 'relative', 'top-0 z-50 px-2 pt-2',
+        <div className={cn(sans, sticky ? 'sticky' : 'relative', 'top-0 z-50 px-2 pt-2 transition-transform duration-[600ms] ease-in-out motion-reduce:transition-none',
+            hidden && '-translate-y-full',
             sade ? 'sm:px-4 sm:pt-4'
-                : cn('transition-[background-color,box-shadow] sm:px-4 sm:pt-3.5',
+                : cn('transition-[background-color,box-shadow,translate] sm:px-4 sm:pt-3.5',
                     scrolled ? 'bg-[color-mix(in_srgb,var(--site-bg)_90%,transparent)] pb-2 shadow-[0_10px_30px_-20px_rgba(36,24,15,0.45)] backdrop-blur-[12px]' : 'bg-transparent'))}>
             <header className={cn('mx-auto max-w-[1408px] text-[var(--site-text)]',
                 sade && cn('rounded-[24px] bg-[var(--site-card)] transition-shadow', scrolled ? 'shadow-[0_14px_36px_-18px_rgba(30,26,22,0.35)]' : 'shadow-[0_1px_0_rgba(30,26,22,0.04)]'))}>
