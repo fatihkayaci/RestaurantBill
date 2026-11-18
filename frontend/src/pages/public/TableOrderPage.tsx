@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import IbanPaySheet from './components/IbanPaySheet';
 import MyOrdersSheet from './components/MyOrdersSheet';
 import TableLanding, { TableActionConfirmation, type TableActionKind } from './components/TableLanding';
+import { TableBadge } from './components/TableBadge';
 import { customerFontsHref, customerRootStyle, opensText } from './customerTheme';
 import DeliveryMenu from './delivery/DeliveryMenu';
 import DeliverySetMenuSheet from './delivery/DeliverySetMenuSheet';
@@ -345,11 +346,7 @@ export default function TableOrderPage() {
                 <section aria-labelledby="masa-menu-baslik" className={creamBox}>
                     <div className="relative flex flex-col items-center gap-3 overflow-hidden rounded-t-[24px] bg-[var(--site-hero-bg)] px-5 pb-9 pt-9 text-center text-[var(--site-on-paper)] md:rounded-t-[32px] md:pb-12 md:pt-12">
                         <span aria-hidden="true" className={heroPattern} />
-                        <p className={cn(heroEyebrow, 'relative m-0 justify-center')}>
-                            <span aria-hidden="true" className="h-0.5 w-6 shrink-0 bg-[var(--site-mustard)]" />
-                            <span className="min-w-0 break-words"><span className="sr-only">Masa: </span>{table.name}{table.regionName && <> · {table.regionName}</>}</span>
-                            <span aria-hidden="true" className="h-0.5 w-6 shrink-0 bg-[var(--site-mustard)]" />
-                        </p>
+                        <TableBadge tableName={table.name} regionName={table.regionName} className="relative" />
                         <h1 id="masa-menu-baslik" className={cn(displayTitle, 'relative text-[80px] leading-[0.85] tracking-[-0.03em] md:text-[112px]')}>Menü</h1>
                         {canOrder && (
                             <p className="relative m-0 max-w-[340px] text-[15px] font-semibold leading-snug text-[rgba(251,244,232,0.92)]">

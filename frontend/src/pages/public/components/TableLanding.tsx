@@ -10,10 +10,11 @@ import { ImageSlot } from '../site/SiteChrome';
 import { serif } from '../site/siteParts';
 import { opensText } from '../customerTheme';
 import {
-    accentItalic, creamBox, displayTitle, eyebrowAccent, heroBox, heroEyebrow, heroPattern, pillDark, pillOutline, sheetBackdrop, sheetPanel,
+    accentItalic, creamBox, displayTitle, eyebrowAccent, heroBox, heroPattern, pillDark, pillOutline, sheetBackdrop, sheetPanel,
 } from '../table/tableUi';
 import { formatClock, type TableActionState } from '../useTableAction';
 import { StockImageLabel } from './StockImageLabel';
+import { TableBadge } from './TableBadge';
 
 export interface TableAction {
     state: TableActionState;
@@ -97,10 +98,7 @@ export default function TableLanding({
                         )}
                     </div>
                     <div className="mt-auto flex flex-col gap-3 pt-12">
-                        <p className={cn(heroEyebrow, 'm-0')}>
-                            <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-mustard)]" />
-                            <span className="min-w-0 break-words"><span className="sr-only">Masa: </span>{tableName}{regionName && <> · {regionName}</>}</span>
-                        </p>
+                        <TableBadge tableName={tableName} regionName={regionName} className="self-start" />
                         <h1 className={cn(displayTitle, 'text-[56px] sm:text-[68px]')}>
                             {closed ? <>Şu an <em className="font-semibold italic">kapalıyız.</em></> : <>Hoş <em className="font-semibold italic">geldiniz.</em></>}
                         </h1>
