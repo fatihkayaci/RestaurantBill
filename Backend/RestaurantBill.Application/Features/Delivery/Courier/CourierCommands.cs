@@ -33,7 +33,7 @@ public class UndoDeliverDeliveryOrderCommandHandler(
             {
                 if (CourierOwnership.Check(currentUser, order) is { } denied)
                     return denied;
-                collected = $"{(order.CollectedMethod == PaymentMethod.Nakit ? "nakit" : "kart")} ₺{order.CollectedAmount:0.##}";
+                collected = $"{DeliveryScope.PaymentWord(order.CollectedMethod)} ₺{order.CollectedAmount:0.##}";
                 order.UndoDeliver(clock.GetUtcNow().UtcDateTime);
                 branch = order.BranchId;
                 courierId = order.CourierUserId;

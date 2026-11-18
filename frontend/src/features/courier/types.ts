@@ -1,10 +1,20 @@
 /** Backend DeliveryOrderStatus: 1 Yeni, 2 Kabul, 3 Hazırlanıyor, 4 Hazır, 5 Yolda, 6 Teslim edildi, 7 Reddedildi, 8 İptal. */
 export type DeliveryOrderStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
-/** Kapıda ödeme: 1 Kart, 2 Nakit (backend PaymentMethod). */
-export type DoorPaymentMethod = 1 | 2;
+/** Paket ödeme: 1 Kart, 2 Nakit (kapıda), 4 IBAN (havale/EFT; kurye para almaz). Backend PaymentMethod. */
+export type DoorPaymentMethod = 1 | 2 | 4;
 
-export const DoorPayment = { Kart: 1, Nakit: 2 } as const satisfies Record<string, DoorPaymentMethod>;
+export const DoorPayment = { Kart: 1, Nakit: 2, Iban: 4 } as const satisfies Record<string, DoorPaymentMethod>;
+
+/** Küçük harfli kısa ad: "nakit", "kart", "IBAN". */
+export function doorPaymentWord(method: DoorPaymentMethod | null | undefined): string {
+    return method === DoorPayment.Nakit ? 'nakit' : method === DoorPayment.Iban ? 'IBAN' : 'kart';
+}
+
+/** Personel ekranlarındaki etiket: "Nakit", "Kart", "IBAN (havale)". */
+export function doorPaymentLabel(method: DoorPaymentMethod | null | undefined): string {
+    return method === DoorPayment.Nakit ? 'Nakit' : method === DoorPayment.Iban ? 'IBAN (havale)' : 'Kart';
+}
 
 export interface CourierOrderLine {
     kind: number;

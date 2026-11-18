@@ -11,7 +11,7 @@ import { deliveryService } from '../api/deliveryService';
 import { CANCEL_REASONS, ETA_CHOICES, REJECT_REASONS, countdownText, orderTitle } from '../deliveryStatus';
 import CourierPicker from './CourierPicker';
 import LatenessBadge from './LatenessBadge';
-import { DeliveryStatus, DoorPayment, type DeliveryOrder } from '../types';
+import { DeliveryStatus, DoorPayment, doorPaymentWord, type DeliveryOrder } from '../types';
 
 interface Props {
     order: DeliveryOrder;
@@ -48,6 +48,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
     const canAssign = order.status === DeliveryStatus.Accepted || order.status === DeliveryStatus.Preparing || order.status === DeliveryStatus.Ready;
     const canCancel = canAssign || order.status === DeliveryStatus.OnTheWay;
     const cash = order.paymentPreference === DoorPayment.Nakit;
+    const iban = order.paymentPreference === DoorPayment.Iban;
 
     const run = async (action: () => Promise<void>, success: string, fallback: string, close = false) => {
         setBusy(true);
@@ -176,8 +177,9 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                             <div className="flex justify-between text-muted-foreground"><dt>Teslimat</dt><dd className="tabular-nums">₺{formatAmount(order.deliveryFee)}</dd></div>
                             <div className="flex justify-between font-serif text-lg font-bold text-foreground"><dt>Toplam</dt><dd className="tabular-nums">₺{formatAmount(order.total)}</dd></div>
                         </dl>
-                        <p className={cn('mt-1 inline-flex rounded px-2 py-0.5 text-xs font-bold', cash ? 'bg-rb-green-bg text-rb-green' : 'bg-rb-accent-bg text-rb-accent')}>
-                            Kapıda {cash ? 'nakit' : 'kart'}
+                        <p className={cn('mt-1 inline-flex rounded px-2 py-0.5 text-xs font-bold',
+                            cash ? 'bg-rb-green-bg text-rb-green' : iban ? 'bg-rb-purple-bg text-rb-purple' : 'bg-rb-accent-bg text-rb-accent')}>
+                            {iban ? 'IBAN (havale) · kurye para almaz' : `Kapıda ${cash ? 'nakit' : 'kart'}`}
                         </p>
                     </section>
 
@@ -194,7 +196,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                             {order.deliveredAt && (
                                 <p>
                                     Teslim {timeOf(order.deliveredAt)}
-                                    {order.collectedMethod && ` · ${order.collectedMethod === DoorPayment.Nakit ? 'nakit' : 'kart'} ₺${formatAmount(order.collectedAmount ?? 0)}`}
+                                    {order.collectedMethod && ` · ${doorPaymentWord(order.collectedMethod)} ₺${formatAmount(order.collectedAmount ?? 0)}`}
                                     {order.settledAt ? ' · kasaya alındı' : ' · kurye kasaya teslim etmedi'}
                                 </p>
                             )}

@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.DTOs.Delivery;
 using RestaurantBill.Application.Features.CustomerSite;
 using RestaurantBill.Application.Features.SetMenus;
@@ -60,7 +61,8 @@ public class GetOnlineOrderingQueryHandler(
             Message = availability.Message,
             NextOpensAt = availability.NextOpensAt,
             LastOrderAt = availability.LastOrderAt,
-            PaymentMethods = DeliveryScope.PaymentMethodsOf(settings),
+            PaymentMethods = DeliveryScope.PaymentMethodsOf(branch),
+            IbanPayment = branch.AcceptsIbanForDelivery ? TableIbanPaymentDto.ForPayment(branch) : null,
             RequiresPhoneVerification = PublicDeliveryContext.RequiresPhoneVerification(settings, sms),
             Branches = enabledBranches.Select(b => new OnlineBranchDto { Id = b.Id, Name = b.BranchName, District = b.District }).ToList()
         };

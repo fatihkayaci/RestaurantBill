@@ -246,13 +246,14 @@ internal static class ReservationSettingsJson
     }
 }
 
-// Saklanan şekil alan adlarıyla sabittir; alan adları domain'den bağımsız tutulur.
+// Saklanan şekil alan adlarıyla sabittir; alan adları domain'den bağımsız tutulur. Iban sonradan eklendi: eski kayıtta yok, kapalı sayılır.
 internal static class OnlineOrderSettingsJson
 {
     private sealed record StoredDay(int Day, bool Open, string Opens, string Closes);
 
     private sealed record Stored(bool Enabled, List<StoredDay> Days, int LastOrderMinutes, int EtaMinutes, int AutoRejectMinutes,
-        int MaxOpenPerPhone, int MaxPerPhonePerDay, bool Cash, bool Card, bool RequirePhoneVerification, bool PreOrder, int PreOrderLeadMinutes);
+        int MaxOpenPerPhone, int MaxPerPhonePerDay, bool Cash, bool Card, bool RequirePhoneVerification, bool PreOrder, int PreOrderLeadMinutes,
+        bool Iban = false);
 
     private const string TimeFormat = "HH:mm";
 
@@ -266,7 +267,7 @@ internal static class OnlineOrderSettingsJson
                 d.Closes.ToString(TimeFormat, CultureInfo.InvariantCulture))).ToList(),
             settings.LastOrderMinutesBeforeClose, settings.DefaultEtaMinutes, settings.AutoRejectAfterMinutes,
             settings.MaxOpenOrdersPerPhone, settings.MaxOrdersPerPhonePerDay, settings.AcceptCash, settings.AcceptCard,
-            settings.RequirePhoneVerification, settings.PreOrderEnabled, settings.PreOrderLeadMinutes));
+            settings.RequirePhoneVerification, settings.PreOrderEnabled, settings.PreOrderLeadMinutes, settings.AcceptIban));
 
     public static OnlineOrderSettings Deserialize(string json)
     {
@@ -278,7 +279,7 @@ internal static class OnlineOrderSettingsJson
                 TimeOnly.ParseExact(d.Closes, TimeFormat, CultureInfo.InvariantCulture))),
             stored.LastOrderMinutes, stored.EtaMinutes, stored.AutoRejectMinutes,
             stored.MaxOpenPerPhone, stored.MaxPerPhonePerDay, stored.Cash, stored.Card,
-            stored.RequirePhoneVerification, stored.PreOrder, stored.PreOrderLeadMinutes);
+            stored.RequirePhoneVerification, stored.PreOrder, stored.PreOrderLeadMinutes, stored.Iban);
     }
 }
 

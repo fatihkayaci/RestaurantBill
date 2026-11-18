@@ -58,7 +58,7 @@ function daySummary(d: OnlineOrderDay, lastOrderMinutes: number): string {
 /** Kaydetmeden önce alanların sunucu kurallarına uygunluğu (aynı kurallar sunucuda da var). */
 function validate(s: OnlineOrderSettings): string | null {
     const between = (v: number, min: number, max: number) => Number.isInteger(v) && v >= min && v <= max;
-    if (!s.acceptCash && !s.acceptCard) return 'Kapıda en az bir ödeme yöntemi (nakit ya da kart) açık olmalı.';
+    if (!s.acceptCash && !s.acceptCard && !(s.acceptIban && s.hasIban)) return 'En az bir ödeme yöntemi (nakit, kart ya da IBAN) açık olmalı.';
     if (!between(s.defaultEtaMinutes, 10, 180)) return 'Varsayılan teslim süresi 10–180 dakika arasında olmalı.';
     if (!between(s.autoRejectAfterMinutes, 3, 60)) return 'Otomatik ret süresi 3–60 dakika arasında olmalı.';
     if (!between(s.maxOpenOrdersPerPhone, 1, 10)) return 'Bir numaranın açık sipariş sınırı 1–10 arasında olmalı.';
@@ -129,6 +129,8 @@ export default function OnlineOrderingSettingsTab() {
                 maxOrdersPerPhonePerDay: draft.maxOrdersPerPhonePerDay,
                 acceptCash: draft.acceptCash,
                 acceptCard: draft.acceptCard,
+                // IBAN yoksa anahtar kapalı görünür; eski açık kayıt gönderilmez (sunucu reddeder).
+                acceptIban: draft.acceptIban && draft.hasIban,
                 requirePhoneVerification: draft.requirePhoneVerification,
                 preOrderEnabled: latest.preOrderEnabled,
                 preOrderLeadMinutes: latest.preOrderLeadMinutes,
@@ -242,10 +244,27 @@ export default function OnlineOrderingSettingsTab() {
                                             aria-label="Şu an sipariş alınıyor"
                                             label={<span className="w-20 text-xs text-muted-foreground">{draft.paused ? 'Durduruldu' : 'Açık'}</span>} />
                                     </Row>
-                                    <Row label="Kapıda ödeme" hint="Online ödeme yok; müşteri teslimatta öder.">
+                                    <Row label="Kapıda ödeme" hint="Kart ile online ödeme yok; müşteri teslimatta öder.">
                                         <div className="flex flex-wrap gap-3">
                                             <Switch checked={draft.acceptCash} onCheckedChange={acceptCash => update({ acceptCash })} label={<span className="text-xs">Nakit</span>} />
                                             <Switch checked={draft.acceptCard} onCheckedChange={acceptCard => update({ acceptCard })} label={<span className="text-xs">Kart</span>} />
+                                        </div>
+                                    </Row>
+                                    <Row
+                                        label="IBAN ile ödeme (havale/EFT)"
+                                        hint={draft.hasIban
+                                            ? "Müşteri ödeme adımında IBAN'ı kopyalayıp parayı gönderir; açıklamaya sipariş numarasını yazar. Kurye para almaz; kasada \"Teslim al\"da paranın hesaba geçtiğini kontrol edin."
+                                            : "Açmak için önce şubenin IBAN'ını ve hesap sahibini Ayarlar → Ödeme'den girin."}
+                                    >
+                                        <div className="flex flex-col items-end gap-1">
+                                            <Switch checked={draft.acceptIban && draft.hasIban} disabled={!draft.hasIban}
+                                                onCheckedChange={acceptIban => update({ acceptIban })} aria-label="IBAN ile ödeme"
+                                                label={<span className="text-xs">IBAN</span>} />
+                                            {!draft.hasIban && (
+                                                <Link to={settingsPath('odeme')} className="text-xs font-semibold text-rb-accent hover:underline">
+                                                    Ayarlar → Ödeme
+                                                </Link>
+                                            )}
                                         </div>
                                     </Row>
                                 </Card>

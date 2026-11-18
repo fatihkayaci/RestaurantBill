@@ -45,7 +45,7 @@ namespace RestaurantBill.Domain.Entities
         public decimal Subtotal { get; private set; }
         public decimal DeliveryFee { get; private set; }
         public decimal Total { get; private set; }
-        /// <summary>Müşterinin kapıda ödeme tercihi: Nakit ya da Kart.</summary>
+        /// <summary>Müşterinin ödeme tercihi: kapıda Nakit ya da Kart, ya da Iban (havale/EFT; kurye para almaz).</summary>
         public PaymentMethod PaymentPreference { get; private set; }
 
         public Guid? OrderId { get; private set; }
@@ -97,8 +97,8 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException("Geçersiz teslimat bölgesi.");
             if (!zone.IsActive)
                 throw new DomainException($"{zone.Name} bölgesine şu an teslimat yapılmıyor.");
-            if (paymentPreference is not (PaymentMethod.Nakit or PaymentMethod.Kart))
-                throw new DomainException("Kapıda ödeme nakit ya da kart olabilir.");
+            if (paymentPreference is not (PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban))
+                throw new DomainException("Ödeme kapıda nakit, kapıda kart ya da IBAN olabilir.");
 
             string name = Required(customerName, NameMaxLength, "Ad soyad");
             string phone = TurkishPhone.Normalize(customerPhone);
@@ -277,11 +277,16 @@ namespace RestaurantBill.Domain.Entities
             Status = DeliveryOrderStatus.OnTheWay;
         }
 
-        /// <summary>OnTheWay → Delivered. Kurye tahsilatı (nakit/kart) kaydeder; tutar siparişin toplamıdır.</summary>
+        /// <summary>
+        /// OnTheWay → Delivered. Kurye tahsilatı (nakit/kart) kaydeder; tutar siparişin toplamıdır. IBAN tercihli siparişte
+        /// "IBAN ile ödendi" de seçilebilir: kurye para almaz, havalenin hesaba geçtiğine kasiyer "Teslim al"da bakar.
+        /// </summary>
         public void Deliver(PaymentMethod collectedMethod, DateTime utcNow)
         {
             EnsureStatus("Yalnızca yoldaki sipariş teslim edilebilir.", DeliveryOrderStatus.OnTheWay);
-            if (collectedMethod is not (PaymentMethod.Nakit or PaymentMethod.Kart))
+            if (collectedMethod == PaymentMethod.Iban && PaymentPreference != PaymentMethod.Iban)
+                throw new DomainException("IBAN yalnızca müşteri IBAN ile ödemeyi seçtiyse kaydedilebilir.");
+            if (collectedMethod is not (PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban))
                 throw new DomainException("Tahsilat nakit ya da kart olabilir.");
 
             DeliveredAt = utcNow;

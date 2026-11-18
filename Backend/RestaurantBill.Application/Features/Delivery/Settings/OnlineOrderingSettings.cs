@@ -35,6 +35,8 @@ internal static class OnlineOrderSettingsMapping
             MaxOrdersPerPhonePerDay = s.MaxOrdersPerPhonePerDay,
             AcceptCash = s.AcceptCash,
             AcceptCard = s.AcceptCard,
+            AcceptIban = s.AcceptIban,
+            HasIban = branch.HasPayableIban,
             RequirePhoneVerification = s.RequirePhoneVerification,
             SmsConfigured = smsConfigured,
             PreOrderEnabled = s.PreOrderEnabled,
@@ -74,6 +76,8 @@ public class UpdateOnlineOrderSettingsCommand : IRequest<Result<OnlineOrderSetti
     public int MaxOrdersPerPhonePerDay { get; set; }
     public bool AcceptCash { get; set; }
     public bool AcceptCard { get; set; }
+    /// <summary>IBAN ile ödeme (havale/EFT); açmak için şubede geçerli IBAN ve hesap sahibi kayıtlı olmalı.</summary>
+    public bool AcceptIban { get; set; }
     public bool RequirePhoneVerification { get; set; }
     public bool PreOrderEnabled { get; set; }
     public int PreOrderLeadMinutes { get; set; }
@@ -108,6 +112,8 @@ public class UpdateOnlineOrderSettingsCommandValidator : AbstractValidator<Updat
 public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentUserService currentUser, ISmsSender sms)
     : IRequestHandler<UpdateOnlineOrderSettingsCommand, Result<OnlineOrderSettingsDto>>
 {
+    public const string IbanMissingMessage = "IBAN ile ödemeyi açmak için önce Ayarlar → Ödeme'den IBAN ve hesap sahibini girin.";
+
     public async Task<Result<OnlineOrderSettingsDto>> Handle(UpdateOnlineOrderSettingsCommand request, CancellationToken cancellationToken)
     {
         Branch? branch = await db.Branches
@@ -120,6 +126,9 @@ public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentU
         }
         else
         {
+            if (request.AcceptIban && !branch.HasPayableIban)
+                return Result<OnlineOrderSettingsDto>.Failure(IbanMissingMessage);
+
             try
             {
                 branch.SetOnlineOrderSettings(OnlineOrderSettings.Create(
@@ -138,7 +147,8 @@ public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentU
                     request.AcceptCard,
                     request.RequirePhoneVerification,
                     request.PreOrderEnabled,
-                    request.PreOrderLeadMinutes));
+                    request.PreOrderLeadMinutes,
+                    request.AcceptIban));
             }
             catch (DomainException ex)
             {

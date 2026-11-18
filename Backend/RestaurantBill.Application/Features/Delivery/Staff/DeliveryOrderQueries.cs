@@ -223,7 +223,8 @@ public class GetCouriersQueryHandler(IAppDbContext db, ICurrentUserService curre
         {
             var mine = orders.Where(o => o.CourierId == c.UserId).ToList();
             var cash = mine.Where(o => o.Status == DeliveryOrderStatus.Delivered && o.CollectedMethod == PaymentMethod.Nakit).ToList();
-            var card = mine.Where(o => o.Status == DeliveryOrderStatus.Delivered && o.CollectedMethod == PaymentMethod.Kart).ToList();
+            // Kart ve IBAN birlikte: nakitsiz tahsilat (kuryede para yok).
+            var card = mine.Where(o => o.Status == DeliveryOrderStatus.Delivered && o.CollectedMethod is PaymentMethod.Kart or PaymentMethod.Iban).ToList();
             return new CourierSummaryDto
             {
                 UserId = c.UserId,

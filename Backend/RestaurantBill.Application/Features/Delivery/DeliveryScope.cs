@@ -167,13 +167,24 @@ public static class DeliveryScope
         }
     }
 
-    public static List<PaymentMethod> PaymentMethodsOf(OnlineOrderSettings settings)
+    /// <summary>Müşterinin seçebileceği ödeme yöntemleri; IBAN yalnızca ayarda açık ve şubede geçerli IBAN varken.</summary>
+    public static List<PaymentMethod> PaymentMethodsOf(Branch branch)
     {
+        OnlineOrderSettings settings = branch.GetOnlineOrderSettings();
         List<PaymentMethod> methods = [];
         if (settings.AcceptCash) methods.Add(PaymentMethod.Nakit);
         if (settings.AcceptCard) methods.Add(PaymentMethod.Kart);
+        if (branch.AcceptsIbanForDelivery) methods.Add(PaymentMethod.Iban);
         return methods;
     }
+
+    /// <summary>Personel ve denetim kaydı için kısa ad: "nakit", "kart", "IBAN".</summary>
+    public static string PaymentWord(PaymentMethod? method) => method switch
+    {
+        PaymentMethod.Nakit => "nakit",
+        PaymentMethod.Iban => "IBAN",
+        _ => "kart"
+    };
 
     // ── Durum adları ────────────────────────────────────────────────────────────────────────────────
 

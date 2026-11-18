@@ -86,8 +86,14 @@ namespace RestaurantBill.Domain.Entities
 
         public bool HasIban => Iban.Length > 0;
 
+        /// <summary>Müşteriye gösterilebilecek IBAN var mı: geçerli TR IBAN ve hesap sahibi dolu (masa QR'ı ve online paket sipariş).</summary>
+        public bool HasPayableIban => TurkishIban.IsValid(Iban) && IbanHolderName.Length > 0;
+
         /// <summary>Masa QR sayfasında "IBAN ile öde" gerçekten gösterilir mi: anahtar açık, IBAN geçerli ve hesap sahibi dolu.</summary>
-        public bool ShowsIbanOnTable => ShowIbanOnTable && TurkishIban.IsValid(Iban) && IbanHolderName.Length > 0;
+        public bool ShowsIbanOnTable => ShowIbanOnTable && HasPayableIban;
+
+        /// <summary>Online paket siparişte "IBAN ile öde" seçilebilir mi: ayarda açık ve gösterilebilecek IBAN var.</summary>
+        public bool AcceptsIbanForDelivery => GetOnlineOrderSettings().AcceptIban && HasPayableIban;
 
         /// <summary>
         /// IBAN ve hesap sahibi ikisi de boş: IBAN'ı kaldırır (banka adı ve QR gösterimi de kapanır). Aksi halde geçerli bir
@@ -101,6 +107,10 @@ namespace RestaurantBill.Domain.Entities
 
             if (normalized.Length == 0 && holder.Length == 0)
             {
+                // Online siparişin tek ödeme yöntemi IBAN ise müşteri ödeme seçemez hale gelirdi.
+                if (OnlineOrderSettings is { AcceptIban: true, AcceptCash: false, AcceptCard: false })
+                    throw new DomainException("Online paket siparişte tek ödeme yöntemi IBAN. Önce Online sipariş ayarlarından nakit ya da kartı açın.");
+
                 Iban = string.Empty;
                 IbanHolderName = string.Empty;
                 PaymentBankName = string.Empty;
@@ -125,7 +135,7 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Masa QR sayfasındaki "IBAN ile öde" anahtarı; açmak için önce geçerli IBAN ve hesap sahibi kaydedilmiş olmalı.</summary>
         public void SetShowIbanOnTable(bool show)
         {
-            if (show && !(TurkishIban.IsValid(Iban) && IbanHolderName.Length > 0))
+            if (show && !HasPayableIban)
                 throw new DomainException("QR menüde göstermek için önce geçerli bir IBAN ve hesap sahibi girin.");
             ShowIbanOnTable = show;
         }

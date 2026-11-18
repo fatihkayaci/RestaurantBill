@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.DTOs.Delivery;
 using RestaurantBill.Application.Features.CustomerSite;
 using RestaurantBill.Application.Interfaces;
@@ -93,6 +94,11 @@ public class GetDeliveryTrackingQueryHandler(IAppDbContext db, ITenantResolver t
             CustomerPhone = DeliveryScope.MaskPhone(order.CustomerPhone),
             ZoneName = order.ZoneName,
             PaymentPreference = order.PaymentPreference,
+            // Ayar sonradan kapatılsa da müşterinin seçtiği IBAN'a ödeyebilmesi için şubenin IBAN'ı gösterilir.
+            IbanPayment = order.PaymentPreference == PaymentMethod.Iban
+                && order.Status is not (DeliveryOrderStatus.Rejected or DeliveryOrderStatus.Cancelled)
+                    ? TableIbanPaymentDto.ForPayment(branch)
+                    : null,
             Lines = DeliveryScope.ToLineDtos(order, names),
             Subtotal = order.Subtotal,
             DeliveryFee = order.DeliveryFee,

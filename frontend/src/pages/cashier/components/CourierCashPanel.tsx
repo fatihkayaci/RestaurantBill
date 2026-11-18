@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Banknote, Check, CheckCircle2, ChevronDown, Clock, CreditCard } from 'lucide-react';
+import { Banknote, Check, CheckCircle2, ChevronDown, Clock, CreditCard, Landmark } from 'lucide-react';
 import { courierCashService } from '@/features/courier/api/courierService';
-import { DoorPayment, type CourierCashSummary, type CourierHandoverHistory } from '@/features/courier/types';
+import { DoorPayment, doorPaymentWord, type CourierCashSummary, type CourierHandoverHistory } from '@/features/courier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import type { OpenRegister } from '@/features/cashier/types';
@@ -301,13 +301,15 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
         [orders, selected],
     );
     const totals = useMemo(() => {
-        let cash = 0, card = 0;
+        // IBAN (havale) ayrı sayılır: kuryede para yok, banka hesabından kontrol edilir.
+        let cash = 0, card = 0, iban = 0;
         for (const o of orders) {
             if (!selected.has(o.deliveryOrderId)) continue;
             if (o.collectedMethod === DoorPayment.Nakit) cash += o.collectedAmount;
+            else if (o.collectedMethod === DoorPayment.Iban) iban += o.collectedAmount;
             else card += o.collectedAmount;
         }
-        return { cash, card };
+        return { cash, card, iban };
     }, [orders, selected]);
     const cashCount = orders.filter(o => selected.has(o.deliveryOrderId) && o.collectedMethod === DoorPayment.Nakit).length;
 
@@ -339,7 +341,7 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
             const result = await courierCashService.handover(courier.userId, cashRegisterId, selectedIds, hasCash ? countedValue : null);
             const parts = [
                 result.cashAmount > 0 ? `nakit ₺${formatAmount(result.cashAmount)}` : null,
-                result.cardAmount > 0 ? `kart ₺${formatAmount(result.cardAmount)}` : null,
+                result.cardAmount > 0 ? `${totals.iban > 0 ? 'kart/IBAN' : 'kart'} ₺${formatAmount(result.cardAmount)}` : null,
             ].filter(Boolean).join(', ');
             const diffNote = result.cashDifference ? ` Sayım farkı: ${differenceText(result.cashDifference)}.` : '';
             const message = `${courier.fullName}: ${result.settledCount} sipariş teslim alındı${parts ? ` (${parts})` : ''}.${diffNote}`;
@@ -358,6 +360,7 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
         : [
             totals.cash > 0 ? `₺${formatAmount(countedValid && hasCash ? countedValue : totals.cash)} nakit` : null,
             totals.card > 0 ? `₺${formatAmount(totals.card)} kart` : null,
+            totals.iban > 0 ? `₺${formatAmount(totals.iban)} IBAN` : null,
         ].filter(Boolean).join(' + ') + ' teslim al' + (difference ? ' · fark kaydedilir' : '');
 
     return (
@@ -404,7 +407,6 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
             <ul className="divide-y divide-border rounded-xl border border-border">
                 {orders.map(order => {
                     const checked = selected.has(order.deliveryOrderId);
-                    const cash = order.collectedMethod === DoorPayment.Nakit;
                     return (
                         <li key={order.deliveryOrderId}>
                             <button
@@ -423,7 +425,7 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
                                 </span>
                                 <span className="min-w-0 flex-1">
                                     <span className="block truncate text-sm font-semibold text-foreground">
-                                        #{order.number}{order.zoneName ? ` ${order.zoneName}` : ''} · {cash ? 'nakit' : 'kart'}
+                                        #{order.number}{order.zoneName ? ` ${order.zoneName}` : ''} · {doorPaymentWord(order.collectedMethod)}
                                     </span>
                                     <span className="block truncate text-xs text-muted-foreground">
                                         {[
@@ -438,9 +440,11 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
                                     )}
                                 </span>
                                 <span className="flex shrink-0 items-center gap-1.5">
-                                    {cash
+                                    {order.collectedMethod === DoorPayment.Nakit
                                         ? <Banknote className="h-4 w-4 text-rb-green" aria-hidden="true" />
-                                        : <CreditCard className="h-4 w-4 text-rb-accent" aria-hidden="true" />}
+                                        : order.collectedMethod === DoorPayment.Iban
+                                            ? <Landmark className="h-4 w-4 text-rb-purple" aria-hidden="true" />
+                                            : <CreditCard className="h-4 w-4 text-rb-accent" aria-hidden="true" />}
                                     <span className="font-serif text-base font-bold tabular-nums text-foreground">₺{formatAmount(order.collectedAmount)}</span>
                                 </span>
                             </button>
@@ -498,6 +502,11 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
                     Yalnızca kart: ₺{formatAmount(totals.card)}. POS slipleriyle karşılaştırın.
                 </p>
             ) : null}
+            {totals.iban > 0 && (
+                <p className="rounded-xl bg-rb-purple-bg px-3 py-2 text-sm text-rb-purple">
+                    IBAN (havale): ₺{formatAmount(totals.iban)}. Kuryede para yok; paranın banka hesabına geçtiğini kontrol edin.
+                </p>
+            )}
 
             <button
                 type="button"
