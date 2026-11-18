@@ -122,7 +122,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
             {sections.length > 1 && (
                 <nav aria-label="Menü kategorileri"
                     className={cn('sticky z-20 -mx-4 border-b border-[var(--site-border)] bg-[color-mix(in_srgb,var(--site-bg)_92%,transparent)] backdrop-blur-[14px] md:-mx-6 lg:mx-0', stickyTopClass)}>
-                    <div ref={stripRef} className="flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] md:px-6 lg:px-0 [&::-webkit-scrollbar]:hidden">
+                    <div ref={stripRef} className="relative flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] md:px-6 lg:px-0 [&::-webkit-scrollbar]:hidden">
                         {sections.map(section => {
                             const selected = section.id === current;
                             return (
@@ -158,7 +158,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                             {chefPicks && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Mutfağın bugün önerdikleri.</p>}
 
                             {featured ? (
-                                <ul className="-mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
+                                <ul className="relative -mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
                                     {section.menus.map(menu => (
                                         <li key={menu.id} className={cn('shrink-0 snap-start md:w-auto', section.menus.length > 1 ? 'w-[84%]' : 'w-full')}>
                                             <FeaturedSetMenuCard menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly} onOpen={() => onOpenSetMenu(menu)} />
