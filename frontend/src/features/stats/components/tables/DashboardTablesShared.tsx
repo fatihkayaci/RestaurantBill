@@ -81,7 +81,7 @@ export function TableFlags({ table, now }: { table: LiveTable; now: number }) {
     if (table.billRequestedAt) {
         flags.push({ key: 'bill', icon: Receipt, text: `Hesap istendi · ${formatElapsed(table.billRequestedAt, now)}`, cls: 'bg-rb-gold-bg text-rb-amber' });
     }
-    if (table.qrRequest) flags.push({ key: 'qr', icon: QrCode, text: 'QR isteği', cls: 'bg-rb-purple-bg text-rb-purple' });
+    if (table.qrRequest) flags.push({ key: 'qr', icon: QrCode, text: 'Yeni QR sipariş · onay bekliyor', cls: 'bg-rb-gold text-rb-gold-foreground' });
     if (table.longOpen && table.overdue.length === 0) {
         flags.push({ key: 'long', icon: Clock, text: 'Uzun açık', cls: 'bg-rb-orange-bg text-rb-orange' });
     }

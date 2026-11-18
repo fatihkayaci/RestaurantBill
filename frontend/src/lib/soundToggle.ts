@@ -19,6 +19,8 @@ interface Options {
     toggleAttribute: string;
     /** Ses açılırken çalan onay tonu (kullanıcı sesin çalıştığını duysun). */
     confirmTones: Tone[];
+    /** Tercih hiç kaydedilmemişse ses açık sayılır (personel bildirimleri); yoksa kapalı başlar. */
+    defaultOn?: boolean;
 }
 
 export interface SoundToggle {
@@ -30,16 +32,17 @@ export interface SoundToggle {
     play: (tones: Tone[], force?: boolean) => void;
 }
 
-export function createSoundToggle({ storageKey, toggleAttribute, confirmTones }: Options): SoundToggle {
+export function createSoundToggle({ storageKey, toggleAttribute, confirmTones, defaultOn = false }: Options): SoundToggle {
     let enabled = readPreference();
     let ctx: AudioContext | null = null;
     const listeners = new Set<() => void>();
 
     function readPreference(): boolean {
         try {
-            return localStorage.getItem(storageKey) === 'on';
+            const stored = localStorage.getItem(storageKey);
+            return stored === null ? defaultOn : stored === 'on';
         } catch {
-            return false;
+            return defaultOn;
         }
     }
 

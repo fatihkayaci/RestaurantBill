@@ -8,6 +8,7 @@ import EndShiftModal from './components/EndShiftModal';
 import RoleShell from '@/components/layout/RoleShell';
 import BillRequestAlerts from '@/components/layout/BillRequestAlerts';
 import OnlineOrderAlerts from '@/components/layout/OnlineOrderAlerts';
+import StaffSoundToggle from '@/components/layout/StaffSoundToggle';
 import { ActiveShiftProvider } from '@/features/cashier/context/ActiveShiftContext';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 
@@ -66,6 +67,8 @@ function CashierLayoutContent() {
                 <>
                     {/* Yeni online paket siparişi: kalıcı uyarı, tekrar eden ses ve rozet; pano kasiyer ekranının "Paket" sekmesi. */}
                     <OnlineOrderAlerts boardPath="/cashier?sekme=paket" />
+                    {/* Hesap isteği bildiriminin sesi. */}
+                    <StaffSoundToggle />
                     {endShiftButton}
                 </>
             )}

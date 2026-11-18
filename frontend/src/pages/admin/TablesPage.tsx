@@ -29,6 +29,8 @@ import { SuggestedChips } from '@/components/ui/suggested-chips';
 import CustomerOrderRequests from '../waiter/components/CustomerOrderRequests';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import type { OrderRequest } from '@/features/customerSite/types';
+import { countRequestsByTable, useOrderRequestSignals } from '@/features/customerSite/useOrderRequestSignals';
+import { TABLE_ALERT_EVENT, type TableAlertDetail, type TableAlertKind } from '../waiter/waiterEvents';
 import { formatPrice, formatElapsed } from '@/lib/format';
 import { inputClass, labelClass } from '@/lib/formStyles';
 
@@ -101,6 +103,8 @@ export default function Tables() {
     const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
     // Masa QR'ından gelen, onay bekleyen müşteri siparişleri (garsonu olmayan işletmede sahibi onaylar).
     const [orderRequests, setOrderRequests] = useState<OrderRequest[]>([]);
+    // QR'dan garson çağıran / hesap isteyen masalar (kart masa açılana ya da 10 dk geçene kadar yanar).
+    const [tableAlerts, setTableAlerts] = useState<Map<string, { kind: TableAlertKind; at: number }>>(() => new Map());
     const [newTableName, setNewTableName] = useState('');
     const [newTableRegionId, setNewTableRegionId] = useState<string | null>(null);
     // Kapasite (kişi): rezervasyon sayfasında masa kartında gösterilir; boş = girilmemiş.
@@ -123,6 +127,14 @@ export default function Tables() {
 
     const [searchParams, setSearchParams] = useSearchParams();
     const [selectedTableId, setSelectedTableId] = useState<string | null>(() => searchParams.get('table'));
+    // Bildirimdeki "Siparişi gör / Masaya git" sayfa zaten açıkken de ?table=<id> ile gelir: masa seçilir
+    // (render sırasında; aşağıdaki effect adresi temizler).
+    const tableParam = searchParams.get('table');
+    const [handledTableParam, setHandledTableParam] = useState<string | null>(tableParam);
+    if (tableParam !== handledTableParam) {
+        setHandledTableParam(tableParam);
+        if (tableParam) setSelectedTableId(tableParam);
+    }
     const selectedTable = tables.find(t => t.id === selectedTableId) ?? null;
     const selectedTableIdRef = useRef<string | null>(null);
     useEffect(() => { selectedTableIdRef.current = selectedTableId; }, [selectedTableId]);
@@ -205,6 +217,24 @@ export default function Tables() {
         const interval = setInterval(() => setNow(Date.now()), 30000);
         return () => clearInterval(interval);
     }, []);
+
+    // Başlıktaki bildirim bileşenleri (WaiterCallAlerts, BillRequestAlerts) masayı bildirir; kart yanar.
+    useEffect(() => {
+        const onTableAlert = (e: Event) => {
+            const { tableId, kind } = (e as CustomEvent<TableAlertDetail>).detail;
+            setTableAlerts(prev => new Map(prev).set(tableId, { kind, at: Date.now() }));
+        };
+        window.addEventListener(TABLE_ALERT_EVENT, onTableAlert);
+        return () => window.removeEventListener(TABLE_ALERT_EVENT, onTableAlert);
+    }, []);
+
+    const qrByTable = countRequestsByTable(orderRequests);
+    // Onaylanan/reddedilen masanın bildirimi kendiliğinden kapanır.
+    useOrderRequestSignals(orderRequests);
+    const tableAlertOf = (tableId: string): TableAlertKind | null => {
+        const alert = tableAlerts.get(tableId);
+        return alert && now - alert.at < 10 * 60 * 1000 ? alert.kind : null;
+    };
 
     useEffect(() => {
         const { connection, stop } = createHubConnection('/table-hub');
@@ -604,6 +634,12 @@ export default function Tables() {
 
     const handleTableClick = (table: Table) => {
         if (table.status === 1 || table.status === 2 || table.status === 3) setSelectedTableId(table.id);
+        setTableAlerts(prev => {
+            if (!prev.has(table.id)) return prev;
+            const next = new Map(prev);
+            next.delete(table.id);
+            return next;
+        });
     };
 
     const filteredProducts = selectedCategoryId ? products.filter(p => p.categoryId === selectedCategoryId) : products;
@@ -664,7 +700,7 @@ export default function Tables() {
                 </div>
             </div>
 
-            <CustomerOrderRequests requests={orderRequests} onChanged={loadOrderRequests} />
+            <CustomerOrderRequests requests={orderRequests} onChanged={() => { loadOrderRequests(); void refreshTables(); }} />
 
             {/* Bölge Sekmeleri */}
             <div className="flex gap-2 flex-wrap items-center">
@@ -815,15 +851,21 @@ export default function Tables() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {group.tables.map(table => {
                             const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
+                            const qrCount = qrByTable.get(table.id) ?? 0;
+                            const alertKind = tableAlertOf(table.id);
+                            // Kartın "yanması" (index.css: .table-alert-glow): QR sipariş altın, çağrı kırmızı, hesap mavi.
+                            const glow = qrCount > 0 ? 'qr' : alertKind;
                             return (
                                 <div
                                     key={table.id}
                                     onClick={() => handleTableClick(table)}
+                                    data-glow={glow ?? undefined}
                                     className={cn(
                                         "rounded-2xl border py-4 px-4 flex flex-col gap-1.5 cursor-pointer min-h-27",
                                         "transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]",
                                         "dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]",
-                                        cfg.bg, cfg.border
+                                        cfg.bg, cfg.border,
+                                        glow && 'table-alert-glow'
                                     )}
                                 >
                                     <div className="flex items-start justify-between gap-1.5">
@@ -862,6 +904,22 @@ export default function Tables() {
                                     <span className="self-start text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
                                         {table.regionName}
                                     </span>
+
+                                    {(qrCount > 0 || alertKind) && (
+                                        <div className="flex flex-wrap gap-1">
+                                            {qrCount > 0 && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-rb-gold px-2 py-0.5 text-xs font-bold text-rb-gold-foreground shadow-sm">
+                                                    <QrCode className="h-3.5 w-3.5" aria-hidden="true" />
+                                                    {qrCount > 1 ? `${qrCount} yeni sipariş` : 'Yeni sipariş'}
+                                                </span>
+                                            )}
+                                            {alertKind === 'call' && (
+                                                <span className="inline-flex items-center rounded-full bg-rb-red px-2 py-0.5 text-xs font-bold text-rb-red-foreground">
+                                                    Garson çağırıyor
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="flex-1 flex flex-col justify-end gap-1">
                                         {table.status === 1 && (
@@ -1117,6 +1175,24 @@ export default function Tables() {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Bu masanın onay bekleyen QR siparişleri: panelin en üstünde Onayla/Reddet. */}
+                        {(qrByTable.get(selectedTable.id) ?? 0) > 0 && (
+                            <div className="shrink-0 max-h-[45vh] overflow-y-auto border-b px-6 py-4">
+                                <CustomerOrderRequests
+                                    requests={orderRequests.filter(r => r.tableId === selectedTable.id)}
+                                    title="Onay bekleyen QR sipariş"
+                                    compact
+                                    onChanged={() => {
+                                        loadOrderRequests();
+                                        void refreshTables();
+                                        orderService.getOrderByTableId(selectedTable.id)
+                                            .then(data => { if (data) { setTableOrder(data); setActiveTab('orders'); } })
+                                            .catch(() => {});
+                                    }}
+                                />
+                            </div>
+                        )}
 
                         {/* Tabs */}
                         <div className="flex border-b shrink-0">

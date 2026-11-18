@@ -4,6 +4,8 @@ import { Volume2, VolumeX } from 'lucide-react';
 import RoleShell from '@/components/layout/RoleShell';
 import ItemReadyAlerts from '@/components/layout/ItemReadyAlerts';
 import WaiterCallAlerts from '@/components/layout/WaiterCallAlerts';
+import OrderRequestAlerts from '@/components/layout/OrderRequestAlerts';
+import CustomerActivityAlerts from '@/components/layout/CustomerActivityAlerts';
 import { cn } from '@/lib/utils';
 import { waiterSound } from './waiterSound';
 
@@ -20,7 +22,7 @@ function WaiterSoundToggle() {
             data-waiter-sound-toggle
             onClick={waiterSound.toggle}
             aria-pressed={on}
-            aria-label="Uyarı sesi (ürün hazır, garson çağrısı)"
+            aria-label="Uyarı sesi (QR sipariş, garson çağrısı, hesap isteği, ürün hazır)"
             title={state === 'locked' ? 'Tarayıcı sesi bekletiyor; açmak için dokunun' : on ? 'Sesi kapat' : 'Sesi aç'}
             className={cn(
                 'flex min-h-11 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-semibold transition-colors sm:px-3',
@@ -47,6 +49,8 @@ export default function WaiterLayout() {
         >
             <ItemReadyAlerts />
             <WaiterCallAlerts variant="waiter" />
+            <OrderRequestAlerts variant="waiter" />
+            <CustomerActivityAlerts variant="waiter" />
             <Outlet />
         </RoleShell>
     );

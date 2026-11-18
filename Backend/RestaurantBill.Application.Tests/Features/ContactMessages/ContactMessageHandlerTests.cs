@@ -37,7 +37,9 @@ public class ContactMessageHandlerTests : ApplicationTestBase
         return (main, other);
     }
 
-    private SubmitContactMessageCommandHandler SubmitHandler() => new(Db, _tenant);
+    private readonly FakeTableNotificationService _tableNotifications = new();
+
+    private SubmitContactMessageCommandHandler SubmitHandler() => new(Db, _tenant, _tableNotifications);
 
     private static SubmitContactMessageCommand Command(Guid? branchId = null) => new()
     {
@@ -72,6 +74,12 @@ public class ContactMessageHandlerTests : ApplicationTestBase
         Assert.Equal("ayse@example.com", saved.Contact);
         Assert.Equal(ContactMessageType.Sikayet, saved.Type);
         Assert.False(saved.IsRead);
+
+        var (branchId, activity) = Assert.Single(_tableNotifications.CustomerActivities);
+        Assert.Equal(other.Id, branchId);
+        Assert.Equal(RestaurantBill.Application.DTOs.CustomerActivityDto.ContactMessage, activity.Kind);
+        Assert.Equal("Ayşe Kaya", activity.GuestName);
+        Assert.Null(activity.TableId);
     }
 
     [Fact]
@@ -117,7 +125,7 @@ public class ContactMessageHandlerTests : ApplicationTestBase
     public async Task Submit_UnknownSlug_IsRejected()
     {
         await SeedRestaurantAsync();
-        var handler = new SubmitContactMessageCommandHandler(Db, new FakeTenantResolver { Slug = "yok" });
+        var handler = new SubmitContactMessageCommandHandler(Db, new FakeTenantResolver { Slug = "yok" }, _tableNotifications);
 
         var result = await handler.Handle(Command(), CancellationToken.None);
 

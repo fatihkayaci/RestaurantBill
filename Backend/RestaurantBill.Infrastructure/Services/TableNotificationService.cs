@@ -64,5 +64,33 @@ namespace RestaurantBill.Infrastructure.Services
             await _hubContext.Clients.Groups(groups).SendAsync("WaiterCalled", payload);
             await _cashierHubContext.Clients.Group(HubGroups.BranchManagers(restaurantId)).SendAsync("WaiterCalled", payload);
         }
+
+        // Same audience as a waiter call: the table's waiters on the table hub and the branch managers on the cashier hub.
+        // Every staff screen still refreshes its pending list through "CustomerRequestsChanged"; this event only drives
+        // the toast and sound, so it never reaches another branch or the cashier/kitchen screens.
+        public async Task SendOrderRequestCreatedAsync(Guid restaurantId, OrderRequestCreatedDto payload)
+        {
+            string[] groups = HubGroups.OrderRequestTargets(restaurantId, payload.RegionId, payload.TableId);
+            await _hubContext.Clients.Groups(groups).SendAsync("OrderRequestCreated", payload);
+            await _cashierHubContext.Clients.Group(HubGroups.BranchManagers(restaurantId)).SendAsync("OrderRequestCreated", payload);
+        }
+
+        // Only the table's waiters: cashier and manager screens already get "BillRequested" on the cashier hub.
+        public async Task SendCustomerBillRequestedAsync(Guid restaurantId, WaiterCalledDto payload)
+        {
+            string[] groups = HubGroups.WaiterCallTargets(restaurantId, payload.RegionId, payload.TableId);
+            await _hubContext.Clients.Groups(groups).SendAsync("CustomerBillRequested", payload);
+        }
+
+        // Branch managers always; the table's waiters too when the event is about a table (reservations).
+        public async Task SendCustomerActivityAsync(Guid restaurantId, CustomerActivityDto payload)
+        {
+            if (payload.TableId is Guid tableId && payload.RegionId is Guid regionId)
+            {
+                string[] groups = HubGroups.WaiterCallTargets(restaurantId, regionId, tableId);
+                await _hubContext.Clients.Groups(groups).SendAsync("CustomerActivity", payload);
+            }
+            await _cashierHubContext.Clients.Group(HubGroups.BranchManagers(restaurantId)).SendAsync("CustomerActivity", payload);
+        }
     }
 }

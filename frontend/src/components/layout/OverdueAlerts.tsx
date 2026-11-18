@@ -1,15 +1,15 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { AlarmClock } from 'lucide-react';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { formatMinutes } from '@/lib/format';
 import type { OverdueOrderItem } from '@/features/stats/types';
-import { playAlertSound } from '@/lib/alertSound';
+import { notifyStaff, playStaffTone } from '@/lib/staffAlerts';
 
 /** Genel Bakış bu olayı dinleyip "Geciken siparişler" kartını beklemeden yeniler. */
 export const OVERDUE_EVENT = 'rb:order-items-overdue';
 
-// Yönetici paneli açıkken, hazırlanma süresini aşan ürünler için canlı uyarı (toast + kısa ses).
+// Yönetici paneli açıkken, hazırlanma süresini aşan ürünler için canlı uyarı (turuncu şeritli bildirim + kısa ses).
 // Sunucu her kalem için bir kez gönderir; kalıcı bir bildirim kutusu yoktur.
 export default function OverdueAlerts() {
     const navigate = useNavigate();
@@ -19,7 +19,6 @@ export default function OverdueAlerts() {
 
         connection.on('OrderItemsOverdue', (items: OverdueOrderItem[]) => {
             if (!items?.length) return;
-            playAlertSound();
             window.dispatchEvent(new Event(OVERDUE_EVENT));
 
             const first = items[0];
@@ -32,9 +31,15 @@ export default function OverdueAlerts() {
                 : items.slice(0, 3).map(i => `${i.tableName}: ${i.quantity}× ${i.productName}`).join(', ')
                     + (items.length > 3 ? ` ve ${items.length - 3} ürün daha` : '');
 
-            toast.warning(title, {
+            notifyStaff({
+                id: `overdue-${items.map(i => i.orderItemId).join('-')}`,
+                title,
                 description,
-                duration: 15000,
+                tone: 'orange',
+                icon: <AlarmClock aria-hidden="true" />,
+                // Bilgi amaçlı: Genel Bakış'taki "Geciken siparişler" kartı kalıcı listeyi tutar.
+                durationMs: 30_000,
+                sound: () => playStaffTone('info'),
                 action: { label: 'Gör', onClick: () => navigate('/admin/overview') },
             });
         });

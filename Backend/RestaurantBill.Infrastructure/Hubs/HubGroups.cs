@@ -74,4 +74,8 @@ public static class HubGroups
     // Müşterinin QR'dan "Garson çağır"ı: "ürün hazır" ile aynı garsonlara, aynı kuralla (her garsona en fazla bir kez).
     public static string[] WaiterCallTargets(Guid restaurantId, Guid regionId, Guid tableId) =>
         ItemsReadyTargets(restaurantId, regionId, tableId);
+
+    // A new table QR order request: the same waiters as "items ready", each at most once.
+    public static string[] OrderRequestTargets(Guid restaurantId, Guid regionId, Guid tableId) =>
+        ItemsReadyTargets(restaurantId, regionId, tableId);
 }

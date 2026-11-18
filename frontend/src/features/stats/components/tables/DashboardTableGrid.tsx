@@ -24,7 +24,7 @@ export default function DashboardTableGrid({ regions, now }: { regions: LiveRegi
                             <Link
                                 key={t.id}
                                 to={tableHref(t.id)}
-                                className={cn('flex min-h-24 min-w-0 flex-col gap-1.5 rounded-xl border p-2.5 transition-colors hover:border-rb-gold', tableTone(t))}
+                                className={cn('flex min-h-24 min-w-0 flex-col gap-1.5 rounded-xl border p-2.5 transition-colors hover:border-rb-gold', tableTone(t), t.qrRequest && 'table-alert-glow')}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <span className="min-w-0 truncate text-base font-bold text-foreground">{t.name}</span>

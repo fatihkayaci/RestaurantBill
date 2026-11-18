@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -92,6 +93,8 @@ public class CancelReservationByGuestCommandHandler(
         await db.SaveChangesAsync(cancellationToken);
         // Personelin rezervasyon listesi diğer rezervasyon değişikliklerinde olduğu gibi canlı yenilenir.
         await tableNotifications.SendCustomerRequestsChangedAsync(branchId);
+        await tableNotifications.SendCustomerActivityAsync(branchId, CustomerActivity.ForReservation(
+            CustomerActivityDto.ReservationCancelled, reservation, reservation.Table, zone));
 
         return Result<ReservationDetailDto>.Success(await ReservationLink.BuildAsync(db, reservation, now, cancellationToken));
     }

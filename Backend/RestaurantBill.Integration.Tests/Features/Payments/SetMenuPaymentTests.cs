@@ -171,6 +171,9 @@ public class SetMenuPaymentTests : IntegrationTestBase
         public Task SendOrderUpdatedAsync(Guid restaurantId, Guid tableId, decimal totalPrice, string createdByUserName) => Task.CompletedTask;
         public Task SendOrderClosedAsync(Guid restaurantId, Guid tableId, Guid orderId) => Task.CompletedTask;
         public Task SendCustomerRequestsChangedAsync(Guid restaurantId) => Task.CompletedTask;
+        public Task SendOrderRequestCreatedAsync(Guid restaurantId, OrderRequestCreatedDto payload) => Task.CompletedTask;
+        public Task SendCustomerBillRequestedAsync(Guid restaurantId, WaiterCalledDto payload) => Task.CompletedTask;
+        public Task SendCustomerActivityAsync(Guid restaurantId, CustomerActivityDto payload) => Task.CompletedTask;
         public Task SendBillRequestChangedAsync(Guid restaurantId, Guid tableId, DateTime? billRequestedAt) => Task.CompletedTask;
         public Task SendItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload) => Task.CompletedTask;
         public Task SendDeliveryItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload) => Task.CompletedTask;

@@ -12,6 +12,7 @@ import { boardOrderPath, countdownText, orderTitle } from '@/features/delivery/d
 import { DeliveryStatus, type DeliveryOrder } from '@/features/delivery/types';
 import { formatAmount } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { setStaffAlertCount } from '@/lib/staffAlerts';
 
 const REPEAT_MS = 10_000;
 
@@ -91,6 +92,12 @@ export default function OnlineOrderAlerts({ boardPath }: Props) {
         announceArrivals();
         return subscribeNewOnlineOrders(announceArrivals);
     }, [announceArrivals]);
+
+    // Onay bekleyen paket siparişler sekme başlığındaki bildirim sayısına katılır: "(2) …".
+    useEffect(() => {
+        setStaffAlertCount('online-orders', pending.length);
+        return () => setStaffAlertCount('online-orders', 0);
+    }, [pending.length]);
 
     // Görülmemiş yeni sipariş kaldıkça ses tekrar eder.
     useEffect(() => {
