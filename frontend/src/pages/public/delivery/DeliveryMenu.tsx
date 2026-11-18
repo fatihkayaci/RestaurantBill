@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { StockImageLabel } from '../components/StockImageLabel';
 import { ImageSlot } from '../site/SiteChrome';
 import { headingFont } from '../site/siteTheme';
+import { scCard } from '../site/sicak/sicakParts';
 
 /** Kartın ürünü: paket menüsünün ürünü; masa menüsü hazırlanma süresini de verir. */
 export type MenuCardProduct = OnlineMenuProduct & { prepMinutes?: number | null };
@@ -21,20 +22,28 @@ interface Props<P extends MenuCardProduct> {
     onAddProduct: (product: P) => void;
     onRemoveProduct: (product: P) => void;
     onOpenSetMenu?: (menu: OnlineSetMenu) => void;
+    /** Sepetteki menüyü bir azaltır (son eklenen satır); verilmezse menü kartında − çizilmez. */
+    onRemoveSetMenu?: (menu: OnlineSetMenu) => void;
     /** Yapışkan kategori şeridinin üstten boşluğu (sayfanın yapışkan başlığı varsa). */
     stickyTopClass?: string;
     /** true: öne çıkan ürünler ve menüler en üstte "Şefin önerileri" bölümünde de gösterilir (masa menüsü). */
     featuredSection?: boolean;
     /** true: yalnız göz atma; ekleme düğmeleri çizilmez (sipariş kapalı). */
     readOnly?: boolean;
+    /** false dönen ürün/menü eklenemez, düğmesi çizilmez (ör. site menüsünde olup paket menüsünde olmayan). Varsayılan: hepsi. */
+    canAddProduct?: (product: P) => boolean;
+    canAddSetMenu?: (menu: OnlineSetMenu) => boolean;
     /** Menü boşken gösterilecek içerik (varsayılan: "Menü henüz hazırlanmadı"). */
     empty?: ReactNode;
+    /** "sicak": Sıcak tasarımın kartları (üstten taşan yuvarlak tabak fotoğrafı, ortalı ad, küçük turuncu düğme). */
+    variant?: 'default' | 'sicak';
 }
 
 const SET_MENU_SECTION = 'menuler';
 const FEATURED_SECTION = 'oneriler';
 const noQuantity = () => 0;
 const noop = () => {};
+const always = () => true;
 const sectionDomId = (id: string) => `paket-${id}`;
 
 /** "Adana + İçecek seçimi + Patates": tek seçenekli bölüm ürün adıyla, seçimli bölüm "<bölüm> seçimi" olarak yazılır. */
@@ -53,7 +62,8 @@ function menuContents(menu: OnlineSetMenu): string {
 // eklemesiz göz atmadır; ürünün hazırlanma süresi (prepMinutes) varsa kartta görünür.
 export default function DeliveryMenu<P extends MenuCardProduct>({
     categories, setMenus = [], restaurant, productQuantity, setMenuQuantity = noQuantity, onAddProduct, onRemoveProduct,
-    onOpenSetMenu = noop, stickyTopClass = 'top-0', featuredSection = false, readOnly = false, empty,
+    onOpenSetMenu = noop, onRemoveSetMenu, stickyTopClass = 'top-0', featuredSection = false, readOnly = false, empty,
+    canAddProduct = always, canAddSetMenu = always, variant = 'default',
 }: Props<P>) {
     // Bütün hazır menüler (kategorisi olsun olmasın) tek "Menüler" bölümünde; kategoriler yalnız ürünleri gösterir.
     const featuredProducts = featuredSection ? categories.flatMap(c => c.products).filter(p => p.isFeatured && !p.isOutOfStock) : [];
@@ -116,12 +126,14 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
     };
 
     const current = active ?? sections[0].id;
+    const sicak = variant === 'sicak';
 
     return (
         <div>
             {sections.length > 1 && (
                 <nav aria-label="Menü kategorileri"
-                    className={cn('sticky z-20 -mx-4 border-b border-[var(--site-border)] bg-[color-mix(in_srgb,var(--site-bg)_92%,transparent)] backdrop-blur-[14px] md:-mx-6 lg:mx-0', stickyTopClass)}>
+                    className={cn('sticky z-20 -mx-4 border-b backdrop-blur-[14px] md:-mx-6 lg:mx-0', stickyTopClass,
+                        sicak ? 'border-[color-mix(in_srgb,var(--site-accent)_25%,transparent)] bg-[color-mix(in_srgb,#FFF6EC_88%,transparent)]' : 'border-[var(--site-border)] bg-[color-mix(in_srgb,var(--site-bg)_92%,transparent)]')}>
                     <div ref={stripRef} className="relative flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] md:px-6 lg:px-0 [&::-webkit-scrollbar]:hidden">
                         {sections.map(section => {
                             const selected = section.id === current;
@@ -130,10 +142,14 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                     onClick={e => goTo(e, section.id)}
                                     aria-current={selected ? 'true' : undefined}
                                     className={cn(
-                                        'flex h-11 shrink-0 items-center rounded-full border px-4 text-[15px] font-semibold no-underline transition-colors',
-                                        selected
-                                            ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]'
-                                            : 'border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-text)]',
+                                        sicak
+                                            ? 'flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-semibold no-underline transition-colors'
+                                            : 'flex h-11 shrink-0 items-center rounded-full border px-4 text-[15px] font-semibold no-underline transition-colors',
+                                        sicak
+                                            ? (selected ? 'bg-[var(--site-accent)] text-[var(--site-on-accent)]' : 'text-[var(--site-sub)] hover:bg-[color-mix(in_srgb,var(--site-accent)_12%,transparent)] hover:text-[var(--site-text)]')
+                                            : selected
+                                                ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]'
+                                                : 'border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-text)]',
                                     )}>
                                     {section.name}
                                 </a>
@@ -157,11 +173,41 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                             {featured && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Birkaç lezzet bir arada, seçimi size kalsın.</p>}
                             {chefPicks && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Mutfağın bugün önerdikleri.</p>}
 
-                            {featured ? (
+                            {sicak ? (
+                                <ul className="mt-4 grid list-none gap-x-4 gap-y-[72px] p-0 pt-14 sm:grid-cols-2 xl:grid-cols-3">
+                                    {section.menus.map(menu => (
+                                        <li key={menu.id}>
+                                            <PlateCard
+                                                name={menu.name} image={menu.imageUrl} stock={menu.isStockImage} restaurant={restaurant}
+                                                description={menuContents(menu)} soldOut={!menu.isAvailable} featured={menu.isFeatured}
+                                                kind="Menü" quantity={setMenuQuantity(menu.id)} readOnly={readOnly || !canAddSetMenu(menu)}
+                                                price={<SetMenuPrice menu={menu} muted={!menu.isAvailable} className="justify-start" />}
+                                                addLabel="Menüyü seç" onAdd={() => onOpenSetMenu(menu)}
+                                                onRemove={onRemoveSetMenu ? () => onRemoveSetMenu(menu) : undefined}
+                                                addMoreLabel={`${menu.name} bir tane daha seç`} />
+                                        </li>
+                                    ))}
+                                    {section.products.map(product => {
+                                        const qty = productQuantity(product.id);
+                                        const prep = product.prepMinutes && product.prepMinutes > 0 ? product.prepMinutes : null;
+                                        return (
+                                            <li key={product.id}>
+                                                <PlateCard
+                                                    name={product.name} image={product.imageUrl} stock={product.isStockImage} restaurant={restaurant}
+                                                    description={product.description?.trim() ?? ''} soldOut={product.isOutOfStock} featured={product.isFeatured}
+                                                    prep={prep} quantity={qty} readOnly={readOnly || (qty === 0 && !canAddProduct(product))}
+                                                    price={<Price value={product.price} muted={product.isOutOfStock} />}
+                                                    addLabel="Sepete ekle" onAdd={() => onAddProduct(product)} onRemove={() => onRemoveProduct(product)} />
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            ) : featured ? (
                                 <ul className="relative -mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
                                     {section.menus.map(menu => (
                                         <li key={menu.id} className={cn('shrink-0 snap-start md:w-auto', section.menus.length > 1 ? 'w-[84%]' : 'w-full')}>
-                                            <FeaturedSetMenuCard menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly} onOpen={() => onOpenSetMenu(menu)} />
+                                            <FeaturedSetMenuCard menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly || !canAddSetMenu(menu)} onOpen={() => onOpenSetMenu(menu)}
+                                                onRemove={onRemoveSetMenu && !readOnly ? () => onRemoveSetMenu(menu) : undefined} />
                                         </li>
                                     ))}
                                 </ul>
@@ -169,12 +215,13 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                 <ul className="mt-4 grid gap-3 md:grid-cols-2">
                                     {section.menus.map(menu => (
                                         <li key={menu.id}>
-                                            <SetMenuRow menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly} onOpen={() => onOpenSetMenu(menu)} />
+                                            <SetMenuRow menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly || !canAddSetMenu(menu)} onOpen={() => onOpenSetMenu(menu)}
+                                                onRemove={onRemoveSetMenu && !readOnly ? () => onRemoveSetMenu(menu) : undefined} />
                                         </li>
                                     ))}
                                     {section.products.map(product => (
                                         <li key={product.id}>
-                                            <ProductCard product={product} restaurant={restaurant} quantity={productQuantity(product.id)} readOnly={readOnly}
+                                            <ProductCard product={product} restaurant={restaurant} quantity={productQuantity(product.id)} readOnly={readOnly || (productQuantity(product.id) === 0 && !canAddProduct(product))}
                                                 onAdd={() => onAddProduct(product)} onRemove={() => onRemoveProduct(product)} />
                                         </li>
                                     ))}
@@ -189,6 +236,67 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
 }
 
 // ── Kartlar ──────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Sıcak tasarımın kartı (ürün ve menü): üstten taşan yuvarlak "tabak" fotoğrafı (koyu kenarlı), ortalı kalın ad, iki
+ * satır açıklama; altta solda fiyat, sağda küçük köşeli turuncu düğme. Sepetteyse turuncu çerçeve ve −/+ adet.
+ */
+function PlateCard({ name, image, stock, restaurant, description, soldOut, featured, kind, prep, quantity, readOnly, price, addLabel, onAdd, onRemove, addMoreLabel }: {
+    name: string; image: string; stock: boolean; restaurant: string; description: string; soldOut: boolean; featured: boolean;
+    kind?: string; prep?: number | null; quantity: number; readOnly: boolean; price: ReactNode; addLabel: string;
+    onAdd: () => void; onRemove?: () => void; addMoreLabel?: string;
+}) {
+    const inCart = quantity > 0;
+    return (
+        <article className={cn(scCard, 'relative flex h-full flex-col px-4 pb-4 pt-[78px] text-center transition-shadow',
+            inCart ? 'border-[var(--site-accent)] shadow-[0_0_0_1px_var(--site-accent)]' : 'hover:shadow-[0_14px_30px_-18px_rgba(120,60,10,0.45)]')}>
+            <div className="absolute -top-14 left-1/2 h-[124px] w-[124px] -translate-x-1/2 rounded-full bg-[#1E1915] p-[5px] shadow-[0_12px_24px_-10px_rgba(30,25,21,0.55)]"
+                title={image && stock ? 'Temsili görsel' : undefined}>
+                <ImageSlot src={image} alt={name} restaurant={restaurant} logoTextClassName="text-[min(13px,13cqw)]"
+                    className={cn('h-full rounded-full', soldOut && 'opacity-60 grayscale')} />
+                {image && stock && <span className="sr-only"> (temsili görsel)</span>}
+            </div>
+            {(kind || featured || inCart || soldOut) && (
+                <span className="mb-1.5 flex flex-wrap items-center justify-center gap-1">
+                    {soldOut ? <span className="rounded-md bg-[#1E1915] px-2 py-0.5 text-[11px] font-semibold text-[#FFF3E6]">Tükendi</span> : (
+                        <>
+                            {kind && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-[11px] font-semibold text-[var(--site-accent-text)]">{kind}</span>}
+                            {featured && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-[11px] font-semibold text-[var(--site-accent-text)]"><span aria-hidden="true">★ </span>Ustanın seçimi</span>}
+                            {inCart && <span className="rounded-md bg-[var(--site-accent)] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--site-on-accent)]">Sepette {quantity}</span>}
+                        </>
+                    )}
+                </span>
+            )}
+            <h3 className={cn(headingFont, 'text-base leading-snug', soldOut && 'text-[var(--site-sub)]')}>{name}</h3>
+            {description && <p className="mx-auto mt-1 line-clamp-2 max-w-[30ch] text-[13px] leading-snug text-[var(--site-sub)]">{description}</p>}
+            {prep && !soldOut && (
+                <p className="mt-1 flex items-center justify-center gap-1 text-xs text-[var(--site-sub)]">
+                    <Clock className="h-3.5 w-3.5" aria-hidden="true" />~{prep} dk<span className="sr-only"> hazırlanma süresi</span>
+                </p>
+            )}
+            <div className="mt-auto flex items-center justify-between gap-2 pt-4 text-left">
+                {price}
+                {inCart && onRemove ? (
+                    <div className="flex shrink-0 items-center rounded-lg bg-[var(--site-accent)] text-[var(--site-on-accent)]">
+                        <button type="button" onClick={onRemove} aria-label={`${name} bir azalt`} className="flex h-10 w-9 items-center justify-center">
+                            <Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                        </button>
+                        <span className="min-w-5 text-center text-sm font-bold tabular-nums" aria-live="polite">{quantity}</span>
+                        <button type="button" onClick={onAdd} disabled={soldOut || readOnly} aria-label={addMoreLabel ?? `${name} bir artır`}
+                            className="flex h-10 w-9 items-center justify-center disabled:opacity-40">
+                            <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                        </button>
+                    </div>
+                ) : soldOut ? <span className="text-[13px] font-semibold text-[var(--site-sub)]">Şu an yok</span> : readOnly ? null : (
+                    <button type="button" onClick={onAdd} aria-label={`${name}: ${addLabel.toLowerCase()}`}
+                        className="flex h-10 shrink-0 items-center rounded-lg bg-[var(--site-accent)] px-3.5 text-[13px] font-semibold text-[var(--site-on-accent)] transition-[transform,opacity] hover:opacity-90 active:scale-95">
+                        {addLabel}
+                    </button>
+                )}
+            </div>
+        </article>
+    );
+}
 
 function cardClass(inCart: boolean, soldOut: boolean) {
     return cn(
@@ -230,6 +338,25 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
     );
 }
 
+/** Sepetteki ürün/menünün −/+ adet düğmesi. Menüde + seçim penceresini açar (etiketi `addLabel`). */
+function QuantityStepper({ name, quantity, onRemove, onAdd, addDisabled, addLabel }: {
+    name: string; quantity: number; onRemove: () => void; onAdd: () => void; addDisabled?: boolean; addLabel?: string;
+}) {
+    return (
+        <div className="flex shrink-0 items-center rounded-full bg-[var(--site-accent)] text-[var(--site-on-accent)]">
+            <button type="button" onClick={onRemove} aria-label={`${name} bir azalt`}
+                className="flex h-11 w-10 items-center justify-center rounded-full">
+                <Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+            </button>
+            <span className="min-w-5 text-center text-base font-bold tabular-nums" aria-live="polite">{quantity}</span>
+            <button type="button" onClick={onAdd} disabled={addDisabled} aria-label={addLabel ?? `${name} bir artır`}
+                className="flex h-11 w-10 items-center justify-center rounded-full disabled:opacity-40">
+                <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+            </button>
+        </div>
+    );
+}
+
 function ProductCard({ product, restaurant, quantity, readOnly, onAdd, onRemove }: {
     product: MenuCardProduct; restaurant: string; quantity: number; readOnly: boolean; onAdd: () => void; onRemove: () => void;
 }) {
@@ -264,17 +391,7 @@ function ProductCard({ product, restaurant, quantity, readOnly, onAdd, onRemove 
                     ) : quantity === 0 ? (
                         <AddButton label={`${product.name} sepete ekle`} onClick={onAdd} />
                     ) : (
-                        <div className="flex shrink-0 items-center rounded-full bg-[var(--site-accent)] text-[var(--site-on-accent)]">
-                            <button type="button" onClick={onRemove} aria-label={`${product.name} bir azalt`}
-                                className="flex h-11 w-10 items-center justify-center rounded-full">
-                                <Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
-                            </button>
-                            <span className="min-w-5 text-center text-base font-bold tabular-nums" aria-live="polite">{quantity}</span>
-                            <button type="button" onClick={onAdd} disabled={soldOut} aria-label={`${product.name} bir artır`}
-                                className="flex h-11 w-10 items-center justify-center rounded-full disabled:opacity-40">
-                                <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
-                            </button>
-                        </div>
+                        <QuantityStepper name={product.name} quantity={quantity} onRemove={onRemove} onAdd={onAdd} addDisabled={soldOut} />
                     )}
                 </div>
             </div>
@@ -313,7 +430,7 @@ function InCartBadge({ quantity }: { quantity: number }) {
 }
 
 /** Kategorisi olan menü: ürün kartıyla aynı yatay kart, açıklama yerine içerik özeti. */
-function SetMenuRow({ menu, restaurant, quantity, readOnly, onOpen }: { menu: OnlineSetMenu; restaurant: string; quantity: number; readOnly: boolean; onOpen: () => void }) {
+function SetMenuRow({ menu, restaurant, quantity, readOnly, onOpen, onRemove }: { menu: OnlineSetMenu; restaurant: string; quantity: number; readOnly: boolean; onOpen: () => void; onRemove?: () => void }) {
     const soldOut = !menu.isAvailable;
     return (
         <article className={cardClass(quantity > 0, soldOut)}>
@@ -329,7 +446,7 @@ function SetMenuRow({ menu, restaurant, quantity, readOnly, onOpen }: { menu: On
                 <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-[var(--site-sub)]">{menuContents(menu)}</p>
                 <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
                     <SetMenuPrice menu={menu} muted={soldOut} />
-                    {soldOut ? <span className="text-sm font-semibold text-[var(--site-sub)]">Şu an yok</span> : readOnly ? null : (
+                    {quantity > 0 && onRemove ? <QuantityStepper name={menu.name} quantity={quantity} onRemove={onRemove} onAdd={onOpen} addDisabled={soldOut || readOnly} addLabel={`${menu.name} bir tane daha seç`} /> : soldOut ? <span className="text-sm font-semibold text-[var(--site-sub)]">Şu an yok</span> : readOnly ? null : (
                         <button type="button" onClick={onOpen} aria-label={`${menu.name} seç`}
                             className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-[var(--site-paper)] px-4 text-sm font-semibold text-[var(--site-on-paper)] transition-opacity hover:opacity-90">
                             <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />Seç
@@ -343,7 +460,7 @@ function SetMenuRow({ menu, restaurant, quantity, readOnly, onOpen }: { menu: On
 }
 
 /** Öne çıkan "Menüler" bölümünün büyük kartı: üstte geniş görsel, altında içerik özeti ve "Seç". */
-function FeaturedSetMenuCard({ menu, restaurant, quantity, readOnly, onOpen }: { menu: OnlineSetMenu; restaurant: string; quantity: number; readOnly: boolean; onOpen: () => void }) {
+function FeaturedSetMenuCard({ menu, restaurant, quantity, readOnly, onOpen, onRemove }: { menu: OnlineSetMenu; restaurant: string; quantity: number; readOnly: boolean; onOpen: () => void; onRemove?: () => void }) {
     const soldOut = !menu.isAvailable;
     const description = menu.description?.trim();
     return (
@@ -369,7 +486,7 @@ function FeaturedSetMenuCard({ menu, restaurant, quantity, readOnly, onOpen }: {
             </div>
             <div className="mt-auto flex items-center justify-between gap-3 px-1.5 pb-1">
                 <SetMenuPrice menu={menu} muted={soldOut} />
-                {soldOut ? <span className="text-sm font-semibold text-[var(--site-sub)]">Şu an yok</span> : readOnly ? null : (
+                {quantity > 0 && onRemove ? <QuantityStepper name={menu.name} quantity={quantity} onRemove={onRemove} onAdd={onOpen} addDisabled={soldOut || readOnly} addLabel={`${menu.name} bir tane daha seç`} /> : soldOut ? <span className="text-sm font-semibold text-[var(--site-sub)]">Şu an yok</span> : readOnly ? null : (
                     <button type="button" onClick={onOpen} aria-label={`${menu.name} seç`}
                         className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-[var(--site-accent)] px-5 text-sm font-semibold text-[var(--site-on-accent)] transition-opacity hover:opacity-90">
                         <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />Menüyü seç

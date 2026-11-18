@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { publicDeliveryService } from './api/publicDeliveryService';
 import {
     addLine, changeQuantity, defaultSelections, estimatedSubtotal, itemCount, loadCart, loadRecentOrders, newClientRequestId,
-    productKey, pruneUnavailable, saveBranchChoice, saveCart, selectionNames, setMenuKey, setMenuUnitPrice, type DeliveryCartLine,
+    moveLineToEnd, productKey, pruneUnavailable, removeOneSetMenu, saveBranchChoice, saveCart, selectionNames, setMenuKey, setMenuUnitPrice, type DeliveryCartLine,
 } from './deliveryCart';
 import { isFinalStatus } from './deliveryStatus';
 import type { DeliveryTracking, OnlineMenuProduct, OnlineOrdering, OnlineSetMenu } from './types';
@@ -46,6 +46,12 @@ export interface SiteCart {
     /** Hazır menü seçimsiz eklenebiliyorsa (bütün bölümler sabit) menü; seçim gerekiyorsa sipariş sayfasında seçilir. */
     setMenuFor: (setMenuId: string) => { menu: OnlineSetMenu; needsChoice: boolean } | undefined;
     addSetMenu: (setMenuId: string) => void;
+    /** Seçim penceresinden (DeliverySetMenuSheet): seçimli, adetli, notlu menü; /siparis sayfasıyla aynı satır anahtarı. */
+    addSetMenuWith: (setMenuId: string, selections: Record<string, string>, quantity: number, note: string) => void;
+    /** Ürünün sepet satırını bir azaltır (0'da satır silinir). */
+    removeProduct: (productId: string) => void;
+    /** Menünün son eklenen satırını bir azaltır. */
+    removeSetMenu: (setMenuId: string) => void;
     changeLine: (key: string, delta: number) => void;
 }
 
@@ -93,10 +99,10 @@ export function useSiteCart(): SiteCart {
         addProduct: id => {
             const product = products.get(id);
             if (!product || product.isOutOfStock) return;
-            write(addLine(currentLines(), {
+            write(moveLineToEnd(addLine(currentLines(), {
                 key: productKey(product.id), kind: 'product', productId: product.id, name: product.name, unitPrice: product.price,
                 note: '', selections: {}, selectionNames: [],
-            }));
+            }), productKey(product.id)));
         },
         setMenuFor: id => {
             const menu = menus.get(id);
@@ -107,11 +113,22 @@ export function useSiteCart(): SiteCart {
             const menu = menus.get(id);
             if (!menu || !menu.isAvailable) return;
             const selections = defaultSelections(menu);
-            write(addLine(currentLines(), {
+            write(moveLineToEnd(addLine(currentLines(), {
                 key: setMenuKey(menu.id, selections), kind: 'setMenu', setMenuId: menu.id, name: menu.name,
                 unitPrice: setMenuUnitPrice(menu, selections), note: '', selections, selectionNames: selectionNames(menu, selections),
-            }));
+            }), setMenuKey(menu.id, selections)));
         },
+        addSetMenuWith: (id, selections, quantity, note) => {
+            const menu = menus.get(id);
+            if (!menu || !menu.isAvailable) return;
+            const key = setMenuKey(menu.id, selections) + (note ? `:${note}` : '');
+            write(moveLineToEnd(addLine(currentLines(), {
+                key, kind: 'setMenu', setMenuId: menu.id, name: menu.name,
+                unitPrice: setMenuUnitPrice(menu, selections), note, selections, selectionNames: selectionNames(menu, selections),
+            }, quantity), key));
+        },
+        removeProduct: id => write(changeQuantity(currentLines(), productKey(id), -1)),
+        removeSetMenu: id => write(removeOneSetMenu(currentLines(), id)),
         changeLine: (key, delta) => write(changeQuantity(currentLines(), key, delta)),
     };
 }

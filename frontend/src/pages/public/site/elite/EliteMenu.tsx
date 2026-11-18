@@ -1,35 +1,37 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { canReserveOnline, type PublicProduct, type PublicSite } from '@/features/customerSite/types';
+import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
 import type { OnlineSetMenu } from '@/features/delivery/types';
-import { useSiteCart, type SiteCart } from '@/features/delivery/useSiteCart';
+import { useSiteCart } from '@/features/delivery/useSiteCart';
+import DeliveryMenu from '../../delivery/DeliveryMenu';
+import DeliverySetMenuSheet from '../../delivery/DeliverySetMenuSheet';
 import { cn } from '@/lib/utils';
 import { SitePage } from '../SiteFrame';
 import type { MobileAction } from '../siteActions';
 import { BagIcon, CalendarIcon, DirectionsIcon, PhoneIcon } from '../SiteCards';
-import { SlotsSummary } from '../SiteSetMenus';
-import { savingLabel } from '../setMenuParts';
 import { RESERVATION_PATH } from '../siteParts';
 import { directionsUrl, formatSitePrice, telHref } from '../siteTheme';
-import { fullAddress } from '../useSite';
+import { fullAddress, restaurantName } from '../useSite';
 import { EditableText, ExternalHint } from '../siteEdit';
 import { useSiteEdit } from '../siteEditContext';
-import { FAST_MINUTES, SET_MENUS_ID, useMenuView } from '../useMenuView';
-import { EliteAddButton, EliteDishLine, EliteHero, EliteRoundButton } from './EliteBits';
-import { elButton, elItalic, elLabel, elSerif, heroLead, roman } from './eliteParts';
+import { FAST_MINUTES, useMenuView } from '../useMenuView';
+import { EliteHero } from './EliteBits';
+import { EliteFlowStyle } from './EliteFlowStyle';
+import { elItalic, elLabel, elSerif, heroLead } from './eliteParts';
 
 // /menu, Elit (tasarım: EliteMenu). Tam genişlik kapak (Menü kapağı, yoksa sitenin kapağı; o da yoksa desenli koyu
-// bant), krem sayfada yapışkan kategori şeridi (görünen bölüm altın alt çizgili), ince çizgili arama ve verisi varsa
-// "Ustanın seçimi" / "10 dk ve altı" süzgeçleri; bölümler roma rakamı, serif başlık ve "Ad ······ fiyat" satırları.
-// Online sipariş açıkken yuvarlak + düğmeleri ve sepette ürün varken altta koyu sepet çubuğu. Sıra admin'deki sıradır.
+// bant), krem sayfada ince çizgili arama ve verisi varsa "Ustanın seçimi" / "10 dk ve altı" süzgeçleri; altında paket
+// sipariş sayfasının (/siparis) AYNI menüsü (DeliveryMenu, Elit akış giydirmesiyle `rb-el-flow`): kategori şeridi,
+// "Menüler", fotoğraflı kartlar, −/+ adet ve hazır menü seçim penceresi. Sepet /siparis ile ortaktır. Sepette ürün
+// varken altta koyu sepet çubuğu. Sıra admin'deki sıradır.
 
 export default function EliteMenu({ site }: { site: PublicSite }) {
     const edit = useSiteEdit();
     const cart = useSiteCart();
     const canOrder = cart.enabled;
-    const [announce, setAnnounce] = useState('');
+    const [setMenuOpen, setSetMenuOpen] = useState<OnlineSetMenu | null>(null);
     const {
-        query, setQuery, onlyFeatured, setOnlyFeatured, onlyFast, setOnlyFast, products, groups, setMenus, nav, active, strip,
+        query, setQuery, onlyFeatured, setOnlyFeatured, onlyFast, setOnlyFast, products, groups, setMenus,
     } = useMenuView(site);
 
     const c = site.site;
@@ -39,7 +41,11 @@ export default function EliteMenu({ site }: { site: PublicSite }) {
     const hasFast = products.some(p => !!p.prepMinutes && p.prepMinutes <= FAST_MINUTES);
     const nothingFound = groups.length === 0 && setMenus.length === 0;
     const menuEmpty = site.categories.length === 0 && (site.setMenus ?? []).length === 0;
-    const onAdded = (product: string) => setAnnounce(`${product} sepete eklendi.`);
+    const categories = groups.map(g => ({ ...g.category, products: g.items }));
+    const productQty = (id: string) => cart.lines.filter(l => l.kind === 'product' && l.productId === id).reduce((s, l) => s + l.quantity, 0);
+    const setMenuQty = (id: string) => cart.lines.filter(l => l.kind === 'setMenu' && l.setMenuId === id).reduce((s, l) => s + l.quantity, 0);
+    // Pencere paket menüsündeki karşılığıyla açılır (fiyat ve seçenek stoğu oradan).
+    const sheetMenu = setMenuOpen ? cart.setMenuFor(setMenuOpen.id)?.menu : undefined;
     const showCartBar = canOrder && cart.count > 0 && !edit;
 
     // Telefonun alt çubuğu: sepette ürün varken yerini sepet çubuğu alır; yoksa Ara · (Paket sipariş | Masa ayırt | Yol tarifi).
@@ -66,25 +72,6 @@ export default function EliteMenu({ site }: { site: PublicSite }) {
                     imageTarget="photo:hero-menu" imageLabel="Menü kapağı" emptyHint="+ Menü kapağı seç" />
 
                 <ExternalHint source="menu">
-                    {nav.length > 1 && (
-                        <nav aria-label="Kategoriler" className="sticky top-0 z-[4] border-b border-[color-mix(in_srgb,var(--site-text)_12%,transparent)] bg-[var(--site-bg)]">
-                            <div ref={strip} className="overflow-x-auto px-4 [scrollbar-width:none] sm:px-10">
-                                <div className="mx-auto flex w-max gap-7 md:gap-10">
-                                    {nav.map(n => {
-                                        const on = active === n.id;
-                                        return (
-                                            <a key={n.id} href={`#${n.id}`} data-nav={n.id} aria-current={on ? 'location' : undefined}
-                                                className={cn('inline-flex min-h-[60px] shrink-0 items-center whitespace-nowrap border-b-2 pt-0.5 text-[11px] font-medium uppercase tracking-[0.26em] no-underline transition-colors',
-                                                    on ? 'border-[var(--site-accent-text)] text-[var(--site-text)]' : 'border-transparent text-[var(--site-muted)] hover:text-[var(--site-text)]')}>
-                                                {n.label}
-                                            </a>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </nav>
-                    )}
-
                     <div className="mx-auto w-full max-w-[1200px] px-4 pb-24 pt-10 sm:px-10 md:pb-[140px]">
                         {!menuEmpty && (
                             <div className="flex flex-col items-center gap-4">
@@ -105,33 +92,31 @@ export default function EliteMenu({ site }: { site: PublicSite }) {
 
                         {menuEmpty ? (
                             <p className={cn(elItalic, 'm-0 pt-20 text-center text-[30px]')}>Menü henüz hazırlanıyor.</p>
-                        ) : nothingFound && (
-                            <div className="flex flex-col items-center gap-3 pt-20 text-center" aria-live="polite">
-                                <p className={cn(elItalic, 'm-0 text-[30px] leading-tight')}>{query.trim() ? `“${query.trim()}” menümüzde yok.` : 'Sonuç yok.'}</p>
-                                <p className="m-0 text-sm text-[var(--site-sub)]">Farklı bir kelime deneyin ya da süzgeçleri kaldırın.</p>
+                        ) : (
+                            <div className="rb-el-flow pt-6">
+                                <EliteFlowStyle design="elit" />
+                                <DeliveryMenu
+                                    categories={categories}
+                                    setMenus={setMenus}
+                                    restaurant={restaurantName(site)}
+                                    productQuantity={productQty}
+                                    setMenuQuantity={setMenuQty}
+                                    onAddProduct={p => cart.addProduct(p.id)}
+                                    onRemoveProduct={p => cart.removeProduct(p.id)}
+                                    onOpenSetMenu={setSetMenuOpen}
+                                    onRemoveSetMenu={m => cart.removeSetMenu(m.id)}
+                                    readOnly={!canOrder || !!edit}
+                                    canAddProduct={p => { const d = cart.productFor(p.id); return !!d && !d.isOutOfStock; }}
+                                    canAddSetMenu={m => !!cart.setMenuFor(m.id)?.menu.isAvailable}
+                                    empty={nothingFound && (
+                                        <div className="flex flex-col items-center gap-3 pt-14 text-center" aria-live="polite">
+                                            <p className={cn(elItalic, 'm-0 text-[30px] leading-tight')}>{query.trim() ? `“${query.trim()}” menümüzde yok.` : 'Sonuç yok.'}</p>
+                                            <p className="m-0 text-sm text-[var(--site-sub)]">Farklı bir kelime deneyin ya da süzgeçleri kaldırın.</p>
+                                        </div>
+                                    )}
+                                />
                             </div>
                         )}
-
-                        {setMenus.length > 0 && (
-                            <ExternalHint source="setMenus">
-                                <section id={SET_MENUS_ID} aria-labelledby="mn-hazir" className="flex scroll-mt-16 flex-col gap-10 pt-20 md:pt-24">
-                                    <SectionHead id="mn-hazir" num={roman(1)} title="Hazır menüler" note={`${setMenus.length} menü`} />
-                                    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,420px),1fr))] gap-x-20 gap-y-8 p-0">
-                                        {setMenus.map(menu => <li key={menu.id} className="min-w-0"><SetMenuLine menu={menu} cart={cart} /></li>)}
-                                    </ul>
-                                </section>
-                            </ExternalHint>
-                        )}
-
-                        {groups.map((g, i) => (
-                            <section key={g.id} id={g.id} aria-labelledby={`${g.id}-baslik`} className="flex scroll-mt-16 flex-col gap-10 pt-20 md:pt-24">
-                                <SectionHead id={`${g.id}-baslik`} num={roman(i + 1 + (setMenus.length > 0 ? 1 : 0))} title={g.category.name} note={`${g.items.length} ürün`} />
-                                <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,420px),1fr))] gap-x-20 gap-y-[30px] p-0">
-                                    {g.items.map(p => <li key={p.id} className="min-w-0"><ProductLine product={p} cart={cart} onAdded={onAdded} /></li>)}
-                                </ul>
-                            </section>
-                        ))}
-                        <p className="sr-only" aria-live="polite">{announce}</p>
                     </div>
                 </ExternalHint>
 
@@ -147,68 +132,17 @@ export default function EliteMenu({ site }: { site: PublicSite }) {
                     </div>
                 )}
             </main>
-        </SitePage>
-    );
-}
 
-/** Bölüm başlığı: italik roma rakamı, serif ad, altında iki yanı ince çizgili kısa not (ürün sayısı). */
-function SectionHead({ id, num, title, note }: { id: string; num: string; title: string; note: string }) {
-    return (
-        <div className="flex flex-col items-center gap-3 text-center">
-            <span aria-hidden="true" className={cn(elItalic, 'text-xl text-[var(--site-accent-text)]')}>{num}</span>
-            <h2 id={id} className={cn(elSerif, 'm-0 max-w-full break-words text-[40px] leading-none md:text-[52px]')}>{title}</h2>
-            <span className={cn('flex items-center gap-3.5 text-xs uppercase tracking-[0.28em] text-[var(--site-muted)]')}>
-                <span aria-hidden="true" className="h-px w-8 bg-[var(--site-accent)]" />{note}<span aria-hidden="true" className="h-px w-8 bg-[var(--site-accent)]" />
-            </span>
-        </div>
-    );
-}
-
-function ProductLine({ product, cart, onAdded }: { product: PublicProduct; cart: SiteCart; onAdded: (name: string) => void }) {
-    const meta = [product.description?.trim(), product.prepMinutes ? `~${product.prepMinutes} dk` : null].filter(Boolean).join(' · ');
-    const tag = product.isOutOfStock ? 'şu an tükendi' : product.isFeatured ? 'ustanın seçimi' : null;
-    return (
-        <div className="flex min-w-0 items-center gap-4">
-            {product.imageUrl && (
-                <span className="relative shrink-0">
-                    <img src={product.imageUrl} alt={product.name} title={product.isStockImage ? 'Temsili görsel' : undefined} loading="lazy"
-                        className="block h-14 w-14 bg-[var(--site-placeholder)] object-cover md:h-16 md:w-16" />
-                    {product.isStockImage && <span className="sr-only"> (temsili görsel)</span>}
-                </span>
+            {sheetMenu && (
+                <div className="rb-el-flow">
+                    <DeliverySetMenuSheet
+                        menu={sheetMenu}
+                        restaurant={restaurantName(site)}
+                        onClose={() => setSetMenuOpen(null)}
+                        onAdd={(selections, quantity, note) => { cart.addSetMenuWith(sheetMenu.id, selections, quantity, note); setSetMenuOpen(null); }}
+                    />
+                </div>
             )}
-            <div className="min-w-0 flex-1">
-                <EliteDishLine name={product.name} price={formatSitePrice(product.price)} meta={meta} tag={tag} out={product.isOutOfStock}
-                    action={<EliteAddButton product={product} cart={cart} onAdded={onAdded} />} />
-            </div>
-        </div>
-    );
-}
-
-function SetMenuLine({ menu, cart }: { menu: OnlineSetMenu; cart: SiteCart }) {
-    const saving = savingLabel(menu);
-    const found = cart.enabled ? cart.setMenuFor(menu.id) : undefined;
-    const qty = cart.lines.filter(l => l.kind === 'setMenu' && l.setMenuId === menu.id).reduce((s, l) => s + l.quantity, 0);
-    let action: ReactNode = null;
-    if (!menu.isAvailable) action = <span className="shrink-0 text-[11px] uppercase tracking-[0.22em] text-[var(--site-muted)]">Tükendi</span>;
-    else if (found?.menu.isAvailable) {
-        action = found.needsChoice
-            ? <Link to="/siparis" aria-label={`${menu.name}: seçerek sepete ekle`} className={cn(elButton.line, 'min-h-11 shrink-0 px-4 md:min-h-11')}>Seç</Link>
-            : <EliteRoundButton qty={qty} label={qty > 0 ? `${menu.name} sepete bir tane daha ekle (sepette ${qty})` : `${menu.name} sepete ekle`} onClick={() => cart.addSetMenu(menu.id)} />;
-    }
-    const price = (
-        <>
-            {saving && <s className="mr-2 text-base font-normal text-[var(--site-muted)]"><span className="sr-only">Normal fiyatı </span>{formatSitePrice(menu.regularPrice)}</s>}
-            {saving && <span className="sr-only">Menü fiyatı </span>}{formatSitePrice(menu.price)}
-        </>
-    );
-    return (
-        <div className="flex flex-col gap-2">
-            <EliteDishLine name={menu.name} price={price} size="lg" tag={menu.isFeatured && menu.isAvailable ? 'ustanın seçimi' : null} action={action} />
-            <div className="text-[13px] leading-relaxed tracking-[0.03em] text-[var(--site-muted)]">
-                {saving && <span className={cn(elLabel, 'mr-2 text-[10px] tracking-[0.22em] text-[var(--site-accent-text)]')}>{saving}</span>}
-                {menu.description && <span>{menu.description} · </span>}
-                <SlotsSummary menu={menu} className="inline" />
-            </div>
-        </div>
+        </SitePage>
     );
 }
