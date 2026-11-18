@@ -59,8 +59,8 @@ export default function SettingsPage() {
                     </div>
 
                     <TabsContent value="restoran" className="mt-3"><RestaurantInfoTab /></TabsContent>
-                    <TabsContent value="odeme" className="mt-3 max-w-3xl"><IbanSettingsCard /></TabsContent>
-                    <TabsContent value="qr" className="mt-3 max-w-3xl"><QrFeaturesCard /></TabsContent>
+                    <TabsContent value="odeme" className="mt-3"><IbanSettingsCard /></TabsContent>
+                    <TabsContent value="qr" className="mt-3"><QrFeaturesCard /></TabsContent>
                     <TabsContent value="online" className="mt-3"><OnlineOrderingSettingsTab /></TabsContent>
                     <TabsContent value="rezervasyon" className="mt-3"><ReservationSettingsTab /></TabsContent>
                 </Tabs>

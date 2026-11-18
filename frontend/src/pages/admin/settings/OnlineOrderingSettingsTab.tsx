@@ -230,7 +230,7 @@ export default function OnlineOrderingSettingsTab() {
 
                     <TabsContent value="genel" className="mt-3">
                         {!draft ? <Skeleton /> : (
-                            <div className="grid max-w-3xl gap-4">
+                            <div className="grid items-start gap-4 xl:grid-cols-2">
                                 <Card title="Sipariş alma">
                                     <Row label="Online sipariş" hint="Kapalıyken sitede paket sipariş bölümü ve bağlantıları görünmez.">
                                         <Switch checked={draft.enabled} onCheckedChange={enabled => update({ enabled })} aria-label="Online sipariş açık"
@@ -285,7 +285,7 @@ export default function OnlineOrderingSettingsTab() {
 
                     <TabsContent value="saatler" className="mt-3">
                         {!draft ? <Skeleton /> : (
-                            <div className="grid max-w-3xl gap-4">
+                            <div className="grid gap-4">
                                 <Card title="Haftalık sipariş saatleri">
                                     <p className="text-xs text-muted-foreground">
                                         Kapanış açılıştan önceyse gece yarısını aşar (ör. 18:00–02:00). "24 saat" günlerde son sipariş kesintisi uygulanmaz.
