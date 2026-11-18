@@ -152,19 +152,10 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         }, {} as Record<number, { rate: number; total: number; categories: Set<string> }>)
     ).sort((a, b) => a.rate - b.rate);
 
-    useEffect(() => {
-        if (cashRegisterMode !== 'manual') return;
-        shiftService.getStartCandidates()
-            .then(setCashRegisters)
-            .catch(() => {})
-            .finally(() => setLoadingCashRegisters(false));
-    }, [cashRegisterMode]);
-
     const activeShift = cashRegisterMode === 'shift' ? cashierActiveShift : manualShift;
 
-    const handleSelectRegister = async (register: ShiftStartCandidate) => {
-        setSelectedCashRegisterId(register.cashRegisterId);
-        setManualShift(null);
+    /** Kasada açık vardiyayı getirir; yoksa yöneticinin adına açar (uyarı toast'ı ile). */
+    const ensureRegisterShift = async (register: ShiftStartCandidate): Promise<Shift | null> => {
         if (!register.hasOpenShift) {
             toast.warning(`${register.cashRegisterName} kasasında açık vardiya yok, bu ödemeyle birlikte sizin adınıza açılacak.`);
         }
@@ -172,19 +163,71 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         try {
             const shift = await shiftService.ensureOpen(register.cashRegisterId);
             setManualShift(shift);
+            return shift;
         } catch (err) {
             toast.error(getApiErrorMessage(err, 'Bu kasada vardiya açılamadı.'));
+            return null;
         } finally {
             setEnsuringShift(false);
         }
     };
 
+    const handleSelectRegister = async (register: ShiftStartCandidate) => {
+        setSelectedCashRegisterId(register.cashRegisterId);
+        setManualShift(null);
+        await ensureRegisterShift(register);
+    };
+
+    useEffect(() => {
+        if (cashRegisterMode !== 'manual') return;
+        let cancelled = false;
+        shiftService.getStartCandidates()
+            .then(registers => {
+                if (cancelled) return;
+                setCashRegisters(registers);
+                // Varsayılan olarak ilk kasa seçili gelir. Açık vardiyası varsa hemen hazırlanır;
+                // yoksa vardiya panel açılır açılmaz değil, ödeme tamamlanırken açılır.
+                const first = registers[0];
+                if (!first) return;
+                setSelectedCashRegisterId(prev => prev || first.cashRegisterId);
+                if (first.hasOpenShift) {
+                    setEnsuringShift(true);
+                    shiftService.ensureOpen(first.cashRegisterId)
+                        .then(shift => {
+                            if (cancelled) return;
+                            // Bu arada başka kasa seçildiyse onun vardiyasını ezme.
+                            setManualShift(prev => prev ?? shift);
+                        })
+                        .catch(err => {
+                            if (!cancelled) toast.error(getApiErrorMessage(err, 'Bu kasada vardiya açılamadı.'));
+                        })
+                        .finally(() => {
+                            if (!cancelled) setEnsuringShift(false);
+                        });
+                }
+            })
+            .catch(() => {})
+            .finally(() => {
+                if (!cancelled) setLoadingCashRegisters(false);
+            });
+        return () => { cancelled = true; };
+    }, [cashRegisterMode]);
+
+    const selectedRegister = cashRegisters.find(r => r.cashRegisterId === selectedCashRegisterId);
     const cashRegisterId = activeShift?.cashRegisterId;
+    // Manuel modda kasa seçili ama vardiyası henüz açılmamışsa, vardiya ödeme tamamlanırken açılır.
+    const hasPaymentRegister = !!cashRegisterId || (cashRegisterMode === 'manual' && !!selectedRegister);
     const splitReady = split === 'items' ? hasSelection : split === 'amount' ? amountValue > 0 && !amountTooHigh : true;
-    const canComplete = !submitting && !ensuringShift && !!cashRegisterId && splitReady && !discountOverLimit && (paymentMethod !== 'iban' || hasIban);
+    const canComplete = !submitting && !ensuringShift && hasPaymentRegister && splitReady && !discountOverLimit && (paymentMethod !== 'iban' || hasIban);
 
     const handleComplete = async () => {
-        if (!cashRegisterId) {
+        let paymentRegisterId = cashRegisterId;
+        if (!paymentRegisterId && cashRegisterMode === 'manual' && selectedRegister) {
+            const shift = await ensureRegisterShift(selectedRegister);
+            if (!shift) return;
+            paymentRegisterId = shift.cashRegisterId;
+        }
+        if (!paymentRegisterId) {
             toast.error(cashRegisterMode === 'shift' ? 'Ödeme almak için açık bir vardiyanız olmalı.' : 'Ödeme almak için bir kasa seçmelisiniz.');
             return;
         }
@@ -206,7 +249,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
 
         try {
             setSubmitting(true);
-            const fullyPaid: boolean = await paymentService.createPayment(displayOrder.id, cashRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay, discount,
+            const fullyPaid: boolean = await paymentService.createPayment(displayOrder.id, paymentRegisterId, PAYMENT_METHOD_VALUES[paymentMethod], itemsToPay, discount,
                 split === 'amount' ? amountValue : undefined);
             const remainingAfter = round2(due - chargeBase);
             setSelectedQuantities({});
