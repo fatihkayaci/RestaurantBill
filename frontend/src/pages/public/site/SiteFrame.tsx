@@ -21,36 +21,12 @@ import { editExternal, useSiteEdit, useSiteWindow } from './siteEditContext';
 import { useSiteDesign } from './siteDesign';
 import { EliteFooter, EliteHeader } from './elite/EliteFrame';
 import { EliteFlowStyle } from './elite/EliteFlowStyle';
+import { useScrolled } from './useScrolled';
 
 // Restoran sitesinin ortak çerçevesi (tasarım: "Tema 2 · Açık"): ortalı başlık (solda sayfalar, ortada serif ad ve
 // küçük konum satırı, sağda sipariş takibi, Sepet ve "Masa ayırt"), ziyaret
 // bilgileri (adres · saatler · iletişim), dev soluk adlı alt bilgi ve telefonda her sayfada yapışkan alt eylem çubuğu.
 // Başlık sayfanın akışında durur ve üstte yapışık kalır (içeriğin üstüne binmez).
-
-const SCROLL_THRESHOLD = 8;
-
-function useScrolled(enabled = true): boolean {
-    const win = useSiteWindow();
-    const [scrolled, setScrolled] = useState(() => enabled && win.scrollY > SCROLL_THRESHOLD);
-    useEffect(() => {
-        if (!enabled) return;
-        let frame = 0;
-        const onScroll = () => {
-            if (frame) return;
-            frame = win.requestAnimationFrame(() => {
-                frame = 0;
-                setScrolled(win.scrollY > SCROLL_THRESHOLD);
-            });
-        };
-        win.addEventListener('scroll', onScroll, { passive: true });
-        onScroll();
-        return () => {
-            win.removeEventListener('scroll', onScroll);
-            if (frame) win.cancelAnimationFrame(frame);
-        };
-    }, [enabled, win]);
-    return enabled && scrolled;
-}
 
 /**
  * Eski koyu kapakların başlık boşluğu. Tema 2'de başlık sayfanın akışında durduğundan boşluk gerekmez; akış sayfaları
@@ -218,14 +194,15 @@ function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: S
 }
 
 /**
- * Sitenin çerçevesi dışındaki müşteri sayfalarının (paket sipariş, sipariş takibi) üst menüsü: sayfayla birlikte kayar
- * (bu sayfaların kendi yapışkan kategori çubuğu ve sepeti var). Alttan açılan pencerelerin (z-40) altında kalsın diye z-30.
+ * Sitenin çerçevesi dışındaki müşteri sayfalarının (paket sipariş, sipariş takibi) üst menüsü. Paket siparişte sayfayla
+ * birlikte kayar (orası menü gibidir: kendi yapışkan kategori çubuğu ve sepeti var); `sticky` verilirse (sipariş takibi)
+ * üstte yapışık kalır. Alttan açılan pencerelerin (z-40) altında kalsın diye z-30.
  */
-export function FlowSiteHeader({ site, current }: { site: PublicSite; current: SitePageKey }) {
+export function FlowSiteHeader({ site, current, sticky = false }: { site: PublicSite; current: SitePageKey; sticky?: boolean }) {
     useSiteDocumentTitle(site, current);
     return (
-        <div className="relative z-30">
-            <SiteHeader site={site} current={current} sticky={false} />
+        <div className={cn(sticky ? 'sticky top-0' : 'relative', 'z-30')}>
+            <SiteHeader site={site} current={current} sticky={sticky} />
         </div>
     );
 }
@@ -514,11 +491,12 @@ function useScrollOnEnter() {
 
 /**
  * Sitenin bir sayfası: ortak başlık + içerik + alt bilgi + telefon alt çubuğu. `className` içerik
- * sarmalayıcısının görünümünü değiştirir; `stickyHeader={false}` başlığı sayfayla kayan hâle getirir.
+ * sarmalayıcısının görünümünü değiştirir. Başlık her sayfada üstte yapışık kalır; `stickyHeader={false}` (yalnız Menü
+ * sayfası) başlığı sayfayla kayan hâle getirir.
  * `mobileActions` alt çubuğun
  * düğmelerini değiştirir (boş dizi: çubuk yok); verilmezse Ara · Yol tarifi · Masa ayırt. Alt bilginin ziyaret sütunları
  * İletişim'de (aynı bilgiler sayfada) yoktur. `overlayHeader`: Elit'te üst menü sayfanın tam genişlik kapağının üstünde
- * saydam durur (kapak onun yerini bırakır); diğer tasarımlarda etkisi yok.
+ * saydam durur (kapak onun yerini bırakır; yapışıksa kaydırınca koyu zemin alır); diğer tasarımlarda etkisi yok.
  */
 export function SitePage({ site, current, className, stickyHeader = true, overlayHeader = false, mobileActions, children }: {
     site: PublicSite; current: SitePageKey; className?: string; stickyHeader?: boolean; overlayHeader?: boolean;

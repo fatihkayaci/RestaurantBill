@@ -9,10 +9,12 @@ import { RESERVATION_PATH, instagramHandle, siteNav, untilTime, type SitePageKey
 import { directionsUrl, telHref, whatsappHref, wordmarkParts } from '../siteTheme';
 import { fullAddress, restaurantName, weekSchedule } from '../useSite';
 import { editExternal, useSiteEdit, useSiteWindow } from '../siteEditContext';
+import { useScrolled } from '../useScrolled';
 import { elButton, elLabel, elSerif } from './eliteParts';
 
 // Elit üst menü ve alt bilgi (tasarım: EliteHeader, EliteFooter). Üst menü koyu zeminde açık yazılıdır: fotoğraflı kapağı
-// olan sayfalarda kapağın üstünde saydam (`overlay`), diğer sayfalarda (akış sayfaları) koyu espresso şerit.
+// olan sayfalarda kapağın üstünde saydam (`overlay`), diğer sayfalarda (akış sayfaları) koyu espresso şerit. Yapışkan
+// (`sticky`) üst menü kaydırınca üstte kalır; kapak üstündeyken sayfa kaydırılınca koyu zemin alır.
 
 function timeOfDay(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -47,6 +49,9 @@ export function EliteHeader({ site, current, overlay, sticky }: { site: PublicSi
     const cart = useSiteCart();
     const canOrder = cart.enabled;
     const [trackPath] = useState(lastOrderTrackingPath);
+    // Kapak üstünde saydam başlık yapışıksa: kaydırınca (ya da telefon menüsü açıkken) koyu zemin.
+    const scrolled = useScrolled(overlay && sticky);
+    const solid = !overlay || scrolled || open;
 
     useEffect(() => {
         if (!open) return;
@@ -61,10 +66,11 @@ export function EliteHeader({ site, current, overlay, sticky }: { site: PublicSi
         on ? 'border-[var(--site-accent-on-dark)]' : 'border-transparent hover:border-[color-mix(in_srgb,var(--site-on-paper)_40%,transparent)]');
     const menuLink = 'flex min-h-12 items-center border-b border-[color-mix(in_srgb,var(--site-accent-on-dark)_18%,transparent)] text-sm uppercase tracking-[0.24em] text-[var(--site-on-paper)] no-underline';
 
-    return (
-        <div className={cn('top-0 z-50 text-[var(--site-on-paper)]',
-            overlay ? 'absolute inset-x-0' : cn(sticky ? 'sticky' : 'relative', 'border-b border-[color-mix(in_srgb,var(--site-accent-on-dark)_30%,transparent)] bg-[var(--site-paper)]'),
-            open && overlay && 'bg-[var(--site-paper)]')}>
+    // Kapak üstündeki yapışkan başlık sıfır yükseklikli bir tutucuda durur: kapak yine en üstten başlar, başlık onun
+    // üstüne biner ve kaydırınca ekranın üstünde kalır. Zemin ve çizgi içteki kutuda (tutucunun yüksekliği yok).
+    const bar = (
+        <div className={cn('text-[var(--site-on-paper)] transition-[background-color,border-color] duration-200',
+            solid ? 'border-b border-[color-mix(in_srgb,var(--site-accent-on-dark)_30%,transparent)] bg-[var(--site-paper)]' : 'border-b border-transparent')}>
             <header className="mx-auto grid max-w-[1440px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:px-14 lg:py-[30px]">
                 <nav aria-label="Ana menü" className="hidden flex-wrap gap-x-8 gap-y-1 lg:flex">
                     {nav.map(item => (
@@ -119,6 +125,9 @@ export function EliteHeader({ site, current, overlay, sticky }: { site: PublicSi
             )}
         </div>
     );
+
+    if (overlay) return <div className={cn('top-0 z-50', sticky ? 'sticky h-0' : 'absolute inset-x-0')}>{bar}</div>;
+    return <div className={cn('top-0 z-50', sticky ? 'sticky' : 'relative')}>{bar}</div>;
 }
 
 // ── Alt bilgi ────────────────────────────────────────────────────────────────────────────────────

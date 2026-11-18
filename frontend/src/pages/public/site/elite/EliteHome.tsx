@@ -36,13 +36,13 @@ export default function EliteHome({ site, mine }: { site: PublicSite; mine: Rese
     const cart = useSiteCart();
     const edit = useSiteEdit();
     return (
-        <SitePage site={site} current="home" overlayHeader stickyHeader={false}>
+        <SitePage site={site} current="home" overlayHeader>
             <main className="flex flex-1 flex-col bg-[var(--site-bg)] text-[var(--site-text)]">
                 <HomeHero site={site} cart={cart} />
                 {mine.length > 0 && (
                     <section className={cn(elWrap, 'py-14')}><MyReservations items={mine} /></section>
                 )}
-                <div id="kesfet" className="scroll-mt-4">
+                <div id="kesfet" className="scroll-mt-24 lg:scroll-mt-28">
                     <StorySummary site={site} />
                 </div>
                 <ExternalHint source="menu"><Signature site={site} cart={cart} /></ExternalHint>
@@ -327,7 +327,7 @@ function MenuTabs({ site, cart }: { site: PublicSite; cart: SiteCart }) {
     const onAdded = (name: string) => setAnnounce(`${name} sepete eklendi.`);
 
     return (
-        <section id="menu" aria-labelledby="ev-menu" className="scroll-mt-4 bg-[var(--site-alt)] text-[var(--site-text)]">
+        <section id="menu" aria-labelledby="ev-menu" className="scroll-mt-24 bg-[var(--site-alt)] text-[var(--site-text)] lg:scroll-mt-28">
             <div className={cn(elWrap, 'flex max-w-[1240px] flex-col items-center gap-12 py-20 md:py-[130px]')}>
                 <div className="flex flex-col items-center gap-5 text-center">
                     <EliteKicker centered>Menü</EliteKicker>
@@ -545,7 +545,7 @@ function ReserveSection({ site }: { site: PublicSite }) {
     const c = site.site;
     const photo = c.reservationHeroUrl || c.coverImageUrl;
     return (
-        <section id="rezervasyon" aria-labelledby="ev-rez" className="flex scroll-mt-4 flex-wrap bg-[var(--site-alt)] text-[var(--site-text)] md:min-h-[820px]">
+        <section id="rezervasyon" aria-labelledby="ev-rez" className="flex scroll-mt-24 flex-wrap bg-[var(--site-alt)] text-[var(--site-text)] md:min-h-[820px] lg:scroll-mt-28">
             <div className={cn('rb-el-zoom relative min-h-[420px] min-w-0 flex-[1_1_520px] overflow-hidden md:min-h-[520px]', onDark)}>
                 {photo
                     ? <img src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />

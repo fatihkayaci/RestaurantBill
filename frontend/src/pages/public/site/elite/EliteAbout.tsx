@@ -23,7 +23,7 @@ export default function EliteAbout({ site }: { site: PublicSite }) {
     const showEmpty = Boolean(edit?.showEmpty);
     const empty = !hasAboutPage(site) && !showEmpty;
     return (
-        <SitePage site={site} current="hakkimizda" overlayHeader stickyHeader={false}>
+        <SitePage site={site} current="hakkimizda" overlayHeader>
             <main className="flex flex-1 flex-col bg-[var(--site-bg)] text-[var(--site-text)]">
                 <AboutHero site={site} />
                 {empty ? <EliteEmpty text="Hakkımızda yazısı henüz eklenmedi." /> : (
