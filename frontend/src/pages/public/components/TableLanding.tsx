@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BellRing, CalendarDays, Check, ChevronRight, ClipboardList, Landmark, Moon, Receipt, ShoppingBag } from 'lucide-react';
 import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
-import type { PublicProduct, PublicSite } from '@/features/customerSite/types';
+import type { PublicSite } from '@/features/customerSite/types';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { GlassStatusPill } from '../site/SiteCards';
@@ -52,11 +52,30 @@ export type TableActionKind = 'waiter' | 'bill';
 
 const MAX_PICKS = 6;
 
-/** Karşılamadaki öneri şeridi: öne çıkanlar (görseli olanlar önce), yoksa görselli ilk ürünler. Tükenenler yok. */
-function chefPicks(site: PublicSite): PublicProduct[] {
+/** Öneri şeridinin kartı: ürün ya da hazır menü (set). */
+interface ChefPick {
+    key: string;
+    name: string;
+    imageUrl: string;
+    price: number;
+    isSetMenu: boolean;
+}
+
+/**
+ * Karşılamadaki öneri şeridi: öne çıkan menüler ve ürünler (görseli olanlar önce), hiçbiri yoksa görselli ilk ürünler.
+ * Tükenenler yok.
+ */
+function chefPicks(site: PublicSite): ChefPick[] {
     const all = site.categories.flatMap(c => c.products).filter(p => !p.isOutOfStock);
-    const featured = all.filter(p => p.isFeatured).sort((a, b) => Number(!!b.imageUrl) - Number(!!a.imageUrl));
-    return (featured.length > 0 ? featured : all.filter(p => p.imageUrl)).slice(0, MAX_PICKS);
+    const menus: ChefPick[] = (site.setMenus ?? [])
+        .filter(m => m.isFeatured && m.isAvailable)
+        .map(m => ({ key: `menu-${m.id}`, name: m.name, imageUrl: m.imageUrl, price: m.price, isSetMenu: true }));
+    const products: ChefPick[] = all.filter(p => p.isFeatured)
+        .map(p => ({ key: p.id, name: p.name, imageUrl: p.imageUrl, price: p.price, isSetMenu: false }));
+    const featured = [...menus, ...products].sort((a, b) => Number(!!b.imageUrl) - Number(!!a.imageUrl));
+    const fallback: ChefPick[] = all.filter(p => p.imageUrl)
+        .map(p => ({ key: p.id, name: p.name, imageUrl: p.imageUrl, price: p.price, isSetMenu: false }));
+    return (featured.length > 0 ? featured : fallback).slice(0, MAX_PICKS);
 }
 
 // Masadaki QR'ın açtığı ilk ekran ("Renkli ve sıcak"): kum sayfada kapak renginde kutu (ad, açık/kapalı hapı, masa, selam
@@ -191,13 +210,18 @@ export default function TableLanding({
                         </button>
                     </div>
                     <ul className="m-0 mt-4 flex list-none snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] sm:scroll-px-7 sm:px-7 [&::-webkit-scrollbar]:hidden">
-                        {picks.map(product => (
-                            <li key={product.id} className="w-[138px] shrink-0 snap-start">
+                        {picks.map(pick => (
+                            <li key={pick.key} className="w-[138px] shrink-0 snap-start">
                                 <button type="button" onClick={onOpenMenu} className="flex w-full flex-col gap-2 rounded-[20px] text-left">
-                                    <ImageSlot src={product.imageUrl} alt={product.name} restaurant={restaurantName}
-                                        logoTextClassName="text-[min(15px,13cqw)]" className="aspect-square rounded-[20px] border-[3px] border-[var(--site-mustard)]" />
-                                    <span className={cn(serif, 'line-clamp-2 text-[17px] leading-snug')}>{product.name}</span>
-                                    <span className="text-[15px] font-extrabold tabular-nums text-[var(--site-accent-text)]">{formatPrice(product.price)} ₺</span>
+                                    <span className="relative block">
+                                        <ImageSlot src={pick.imageUrl} alt={pick.name} restaurant={restaurantName}
+                                            logoTextClassName="text-[min(15px,13cqw)]" className="aspect-square rounded-[20px] border-[3px] border-[var(--site-mustard)]" />
+                                        {pick.isSetMenu && (
+                                            <span className="absolute left-2 top-2 rounded-full bg-[var(--site-mustard)] px-2 py-0.5 text-[11px] font-extrabold text-[#24180F]">Menü</span>
+                                        )}
+                                    </span>
+                                    <span className={cn(serif, 'line-clamp-2 text-[17px] leading-snug')}>{pick.name}</span>
+                                    <span className="text-[15px] font-extrabold tabular-nums text-[var(--site-accent-text)]">{formatPrice(pick.price)} ₺</span>
                                 </button>
                             </li>
                         ))}

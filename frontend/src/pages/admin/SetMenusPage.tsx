@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Image as ImageIcon, Layers, Pencil } from 'lucide-react';
+import { Image as ImageIcon, Layers, Pencil, Star } from 'lucide-react';
 import { setMenuService } from '@/features/setMenus/api/setMenuService';
 import { toSetMenuInput, type SetMenu } from '@/features/setMenus/types';
 import { marginText } from '@/features/setMenus/setMenuCost';
@@ -52,6 +52,15 @@ export default function SetMenusPage() {
         try {
             await setMenuService.updateSetMenu(menu.id, { ...toSetMenuInput(menu), isActive: !menu.isActive });
             setMenus(prev => prev.map(m => m.id === menu.id ? { ...m, isActive: !m.isActive } : m));
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Menü güncellenemedi.'));
+        }
+    };
+
+    const handleToggleFeatured = async (menu: SetMenu) => {
+        try {
+            await setMenuService.updateSetMenu(menu.id, { ...toSetMenuInput(menu), isFeatured: !menu.isFeatured });
+            setMenus(prev => prev.map(m => m.id === menu.id ? { ...m, isFeatured: !m.isFeatured } : m));
         } catch (err) {
             toast.error(getApiErrorMessage(err, 'Menü güncellenemedi.'));
         }
@@ -132,6 +141,19 @@ export default function SetMenusPage() {
                                         )}>
                                             {menu.isActive ? 'Aktif' : 'Pasif'}
                                         </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleToggleFeatured(menu)}
+                                            aria-pressed={menu.isFeatured}
+                                            aria-label={menu.isFeatured ? `${menu.name} menüsünü şefin tavsiyesinden çıkar` : `${menu.name} menüsünü şefin tavsiyesine koy`}
+                                            title={menu.isFeatured ? 'Şefin tavsiyesinde (çıkarmak için tıkla)' : 'Şefin tavsiyesine koy'}
+                                            className={cn(
+                                                'flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted',
+                                                menu.isFeatured ? 'text-rb-gold' : 'text-muted-foreground hover:text-foreground'
+                                            )}
+                                        >
+                                            <Star className={cn('h-3.5 w-3.5', menu.isFeatured && 'fill-current')} />
+                                        </button>
                                         <button
                                             type="button"
                                             onClick={() => setEditing(menu)}

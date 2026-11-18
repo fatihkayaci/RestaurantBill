@@ -50,6 +50,7 @@ public class GetSetMenusQueryHandler(IAppDbContext db, ICurrentUserService curre
         DiscountValue = s.DiscountValue,
         ImageUrl = string.IsNullOrWhiteSpace(s.ImageUrl) ? string.Empty : $"{cdnBaseUrl}/{s.ImageUrl}",
         IsActive = s.IsActive,
+        IsFeatured = s.IsFeatured,
         SortOrder = s.SortOrder,
         CategoryId = s.CategoryId,
         CategoryName = s.Category?.Name,

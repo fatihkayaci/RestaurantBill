@@ -43,7 +43,7 @@ export default function RestaurantMenuPage() {
     const name = restaurantName(site);
     const canReserve = canReserveOnline(site);
     const address = fullAddress(site);
-    const hasFeatured = products.some(p => p.isFeatured);
+    const hasFeatured = products.some(p => p.isFeatured) || (site.setMenus ?? []).some(m => m.isFeatured);
     const hasFast = products.some(p => !!p.prepMinutes && p.prepMinutes <= FAST_MINUTES);
     const nothingFound = groups.length === 0 && setMenus.length === 0;
     const menuEmpty = site.categories.length === 0 && (site.setMenus ?? []).length === 0;
@@ -260,6 +260,9 @@ function SetMenuLine({ menu, cart }: { menu: OnlineSetMenu; cart: SiteCart }) {
                     </span>
                 </div>
                 <div className="text-[13px] leading-[1.55] text-[#3A2A1C] [--site-muted:#3A2A1C]">
+                    {menu.isFeatured && menu.isAvailable && (
+                        <span className="mr-1.5 inline-block rounded-full bg-[var(--site-paper)] px-2 py-px font-extrabold text-[var(--site-mustard)]"><span aria-hidden="true">★ </span>ustanın seçimi</span>
+                    )}
                     {saving && <span className="mr-1.5 inline-block rounded-full bg-[var(--site-paper)] px-2 py-px font-extrabold text-[var(--site-mustard)]">{saving}</span>}
                     {menu.description && <span>{menu.description} · </span>}
                     <SlotsSummary menu={menu} className="inline" />

@@ -52,6 +52,8 @@ public class UpdateSetMenuCommandHandler(IAppDbContext db, ICurrentUserService c
         {
             setMenu.Update(name, request.Description, request.IsActive, request.SortOrder, request.CategoryId);
             setMenu.SetContents(slots.Value!, request.DiscountType, request.DiscountValue);
+            if (request.IsFeatured is bool isFeatured)
+                setMenu.SetFeatured(isFeatured);
         }
         catch (DomainException ex)
         {

@@ -35,7 +35,7 @@ export default function EliteMenu({ site }: { site: PublicSite }) {
     const c = site.site;
     const canReserve = canReserveOnline(site);
     const address = fullAddress(site);
-    const hasFeatured = products.some(p => p.isFeatured);
+    const hasFeatured = products.some(p => p.isFeatured) || (site.setMenus ?? []).some(m => m.isFeatured);
     const hasFast = products.some(p => !!p.prepMinutes && p.prepMinutes <= FAST_MINUTES);
     const nothingFound = groups.length === 0 && setMenus.length === 0;
     const menuEmpty = site.categories.length === 0 && (site.setMenus ?? []).length === 0;
@@ -203,7 +203,7 @@ function SetMenuLine({ menu, cart }: { menu: OnlineSetMenu; cart: SiteCart }) {
     );
     return (
         <div className="flex flex-col gap-2">
-            <EliteDishLine name={menu.name} price={price} size="lg" action={action} />
+            <EliteDishLine name={menu.name} price={price} size="lg" tag={menu.isFeatured && menu.isAvailable ? 'ustanın seçimi' : null} action={action} />
             <div className="text-[13px] leading-relaxed tracking-[0.03em] text-[var(--site-muted)]">
                 {saving && <span className={cn(elLabel, 'mr-2 text-[10px] tracking-[0.22em] text-[var(--site-accent-text)]')}>{saving}</span>}
                 {menu.description && <span>{menu.description} · </span>}
