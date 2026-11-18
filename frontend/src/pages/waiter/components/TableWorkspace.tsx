@@ -13,6 +13,7 @@ import { tableService } from '@/features/tables/api/tableService';
 import type { Order, OrderItem } from '@/features/orders/types';
 import type { Reservation, Table } from '@/features/tables/types';
 import type { WaiterPermissions } from '@/features/users/types';
+import type { OrderRequest } from '@/features/customerSite/types';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatMinutes, formatPrice, prepCountdown } from '@/lib/format';
@@ -21,6 +22,7 @@ import AddItemsView from './AddItemsView';
 import PaymentView, { type PaymentMode } from './PaymentView';
 import MoveTableView from './MoveTableView';
 import BottomSheet, { SheetItem } from './BottomSheet';
+import CustomerOrderRequests from './CustomerOrderRequests';
 import { STATE_STYLE, clockTime, minutesSince, tableState } from '../waiterUi';
 
 export type WorkspaceView = 'detail' | 'add' | 'pay' | 'move' | 'reserve';
@@ -36,6 +38,10 @@ interface Props {
     onClose: () => void;
     onTablePatch: (tableId: string, patch: Partial<Table>) => void;
     onRefreshTables: () => void;
+    /** Bu masanın onay bekleyen QR siparişleri: detayın en üstünde Onayla/Reddet ile durur. */
+    orderRequests?: OrderRequest[];
+    /** Onay/red sonrası talepler ve masalar yeniden çekilsin. */
+    onOrderRequestsChanged?: () => void;
 }
 
 const GROUPS: { status: number; title: string; dot: string }[] = [
@@ -74,6 +80,7 @@ function itemSubline(item: OrderItem, now: number): { text: string; late: boolea
 // tablette sağ panelde açılır. Yetkisi olmayan işlem hiç çizilmez.
 export default function TableWorkspace({
     table, tables, permissions, variant, initialView = 'detail', now, onClose, onTablePatch, onRefreshTables,
+    orderRequests = [], onOrderRequestsChanged,
 }: Props) {
     const { canTakeOrders, canTakePayment, canCancelAndDiscount, canTransferAndReserve } = permissions;
     const [view, setView] = useState<WorkspaceView>(initialView);
@@ -348,6 +355,15 @@ export default function TableWorkspace({
             </header>
 
             <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pt-1 pb-4 *:shrink-0">
+                {view === 'detail' && orderRequests.length > 0 && (
+                    <CustomerOrderRequests
+                        requests={orderRequests}
+                        title="Onay bekleyen QR sipariş"
+                        compact
+                        onChanged={() => { onOrderRequestsChanged?.(); void loadOrder(); }}
+                        canDecide={canTransferAndReserve}
+                    />
+                )}
                 {loading ? (
                     <div className="flex flex-col gap-2">{[...Array(4)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted" />)}</div>
                 ) : view === 'reserve' ? (

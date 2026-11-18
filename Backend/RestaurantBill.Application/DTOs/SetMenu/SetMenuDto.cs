@@ -19,6 +19,8 @@ public class SetMenuDto
     public decimal DiscountValue { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+    /// <summary>Shown in the public "Chef's recommendation" section.</summary>
+    public bool IsFeatured { get; set; }
     public int SortOrder { get; set; }
     public Guid? CategoryId { get; set; }
     public string? CategoryName { get; set; }

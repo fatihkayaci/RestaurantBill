@@ -322,3 +322,49 @@ html.theme-transition *::after {
 @media (prefers-reduced-motion: reduce) {
   .kitchen-ticket-in { animation: none; }
 }
+
+/* Personelin hemen görmesi gereken masa (QR sipariş, garson çağrısı, hazır ürün): kart renkli halkayla "yanar" ve
+   yavaşça nefes alır. Renk --glow ile verilir (varsayılan altın, QR sipariş). Halka kutu gölgesinde olduğu için kartın
+   kendi kenarlığıyla çakışmaz; durum kalkınca (onay, ret, masa açıldı) sınıf da kalkar. */
+@keyframes table-alert-glow {
+  0%, 100% { box-shadow: 0 0 0 3px var(--glow), 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 3px var(--glow), 0 0 24px 6px color-mix(in srgb, var(--glow) 60%, transparent); }
+}
+.table-alert-glow {
+  --glow: var(--rb-gold);
+  border-style: solid !important;
+  border-color: var(--glow) !important;
+  background-color: color-mix(in srgb, var(--glow) 10%, var(--card));
+  animation: table-alert-glow 1.6s ease-in-out infinite;
+}
+.table-alert-glow[data-glow="call"] { --glow: var(--rb-red); }
+.table-alert-glow[data-glow="ready"] { --glow: var(--rb-green); }
+.table-alert-glow[data-glow="bill"] { --glow: var(--rb-accent); }
+@media (prefers-reduced-motion: reduce) {
+  /* Hareket yok; halka ve parıltı sabit kalır, vurgu kaybolmaz. */
+  .table-alert-glow {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--glow), 0 0 16px 4px color-mix(in srgb, var(--glow) 45%, transparent);
+  }
+}
+
+/* Personel bildirimi (lib/staffAlerts): normal toast'tan büyük, solda kalın renkli şerit. Sonner'ın kendi
+   stillerinin önüne geçmek için !important. Renk --alert ile türlere göre değişir. */
+[data-sonner-toast].staff-alert {
+  --alert: var(--rb-gold);
+  padding: 16px 18px !important;
+  border-left: 6px solid var(--alert) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22) !important;
+}
+[data-sonner-toast].staff-alert [data-title] { font-size: 16px; font-weight: 700; line-height: 1.3; }
+[data-sonner-toast].staff-alert [data-description] { font-size: 14px; }
+[data-sonner-toast].staff-alert [data-icon] { color: var(--alert); width: 22px; height: 22px; }
+[data-sonner-toast].staff-alert [data-icon] svg { width: 22px; height: 22px; }
+[data-sonner-toast].staff-alert [data-button] { height: 34px; padding: 0 14px; font-size: 14px; font-weight: 700; background: var(--alert); color: #1C1510; }
+[data-sonner-toast].staff-alert--red { --alert: var(--rb-red); }
+[data-sonner-toast].staff-alert--red [data-button] { color: #fff; }
+[data-sonner-toast].staff-alert--green { --alert: var(--rb-green); }
+[data-sonner-toast].staff-alert--accent { --alert: var(--rb-accent); }
+[data-sonner-toast].staff-alert--accent [data-button] { color: #fff; }
+[data-sonner-toast].staff-alert--orange { --alert: var(--rb-orange); }
+

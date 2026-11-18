@@ -38,6 +38,24 @@ public class FakeTableNotificationService : ITableNotificationService
         WaiterCallsSent.Add((restaurantId, payload));
         return Task.CompletedTask;
     }
+    public List<(Guid BranchId, OrderRequestCreatedDto Payload)> OrderRequestsCreated { get; } = [];
+    public Task SendOrderRequestCreatedAsync(Guid restaurantId, OrderRequestCreatedDto payload)
+    {
+        OrderRequestsCreated.Add((restaurantId, payload));
+        return Task.CompletedTask;
+    }
+    public List<(Guid BranchId, WaiterCalledDto Payload)> CustomerBillRequestsSent { get; } = [];
+    public Task SendCustomerBillRequestedAsync(Guid restaurantId, WaiterCalledDto payload)
+    {
+        CustomerBillRequestsSent.Add((restaurantId, payload));
+        return Task.CompletedTask;
+    }
+    public List<(Guid BranchId, CustomerActivityDto Payload)> CustomerActivities { get; } = [];
+    public Task SendCustomerActivityAsync(Guid restaurantId, CustomerActivityDto payload)
+    {
+        CustomerActivities.Add((restaurantId, payload));
+        return Task.CompletedTask;
+    }
 }
 
 public class FakeCashierNotificationService : ICashierNotificationService

@@ -36,13 +36,13 @@ export default function EliteHome({ site, mine }: { site: PublicSite; mine: Rese
     const cart = useSiteCart();
     const edit = useSiteEdit();
     return (
-        <SitePage site={site} current="home" overlayHeader stickyHeader={false}>
+        <SitePage site={site} current="home" overlayHeader>
             <main className="flex flex-1 flex-col bg-[var(--site-bg)] text-[var(--site-text)]">
                 <HomeHero site={site} cart={cart} />
                 {mine.length > 0 && (
                     <section className={cn(elWrap, 'py-14')}><MyReservations items={mine} /></section>
                 )}
-                <div id="kesfet" className="scroll-mt-4">
+                <div id="kesfet" className="scroll-mt-24 lg:scroll-mt-28">
                     <StorySummary site={site} />
                 </div>
                 <ExternalHint source="menu"><Signature site={site} cart={cart} /></ExternalHint>
@@ -234,8 +234,35 @@ function StorySummary({ site }: { site: PublicSite }) {
 
 // ── 3. Şefin imzası (ustanın seçtikleri) ─────────────────────────────────────────────────────────
 
+/** "Ustanın seçtikleri" satırı: öne çıkan ürün ya da hazır menü (set). */
+interface SignatureDish {
+    id: string;
+    name: string;
+    price: number;
+    imageUrl: string;
+    isStockImage: boolean;
+    description: string;
+    product?: PublicProduct;
+    menu?: OnlineSetMenu;
+}
+
+const MAX_SIGNATURE = 5;
+
+// Öne çıkan menüler önce (tükenenler yok), ardından öne çıkan ürünler; toplam beş satır.
+function signatureDishes(site: PublicSite): SignatureDish[] {
+    const menus: SignatureDish[] = (site.setMenus ?? []).filter(m => m.isFeatured && m.isAvailable).map(m => ({
+        id: `menu-${m.id}`, name: m.name, price: m.price, imageUrl: m.imageUrl, isStockImage: m.isStockImage,
+        description: m.description?.trim() ?? '', menu: m,
+    }));
+    const products: SignatureDish[] = site.categories.flatMap(c => c.products).filter(p => p.isFeatured).map(p => ({
+        id: p.id, name: p.name, price: p.price, imageUrl: p.imageUrl, isStockImage: p.isStockImage,
+        description: p.description?.trim() ?? '', product: p,
+    }));
+    return [...menus, ...products].slice(0, MAX_SIGNATURE);
+}
+
 function Signature({ site, cart }: { site: PublicSite; cart: SiteCart }) {
-    const dishes = useMemo(() => site.categories.flatMap(c => c.products).filter(p => p.isFeatured).slice(0, 5), [site]);
+    const dishes = useMemo(() => signatureDishes(site), [site]);
     const [sel, setSel] = useState(0);
     const [announce, setAnnounce] = useState('');
     if (dishes.length === 0) return null;
@@ -266,10 +293,17 @@ function Signature({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                                             on ? 'text-[34px] italic md:text-[46px]' : 'text-[26px] text-[var(--site-on-paper-sub)] md:text-[30px]')}>{d.name}</span>
                                         <span className={cn(elSerif, 'shrink-0 whitespace-nowrap text-[22px] md:text-[26px]', on ? 'text-[var(--site-accent-on-dark)]' : 'text-[var(--site-on-paper-sub)]')}>{formatSitePrice(d.price)}</span>
                                     </button>
-                                    {on && (d.description?.trim() || cart.enabled) && (
+                                    {on && (d.description || d.menu || cart.enabled) && (
                                         <div className="rb-el-belir-hizli -mt-2 flex flex-wrap items-center justify-between gap-4 pb-7 pl-[60px] md:pl-[66px]">
-                                            {d.description?.trim() && <p className="m-0 max-w-[46ch] text-[15px] leading-[1.7] text-[var(--site-on-paper-sub)]">{d.description}</p>}
-                                            <SignatureAdd product={d} cart={cart} onAdded={n => setAnnounce(`${n} sepete eklendi.`)} />
+                                            {(d.description || d.menu) && (
+                                                <div className="flex max-w-[46ch] flex-col gap-1.5 text-[15px] leading-[1.7] text-[var(--site-on-paper-sub)] [--site-muted:var(--site-on-paper-sub)] [--site-accent-text:var(--site-accent-on-dark)]">
+                                                    {d.menu && <span className={cn(elLabel, 'text-[10px] tracking-[0.22em] text-[var(--site-accent-on-dark)]')}>Hazır menü</span>}
+                                                    {d.description && <p className="m-0">{d.description}</p>}
+                                                    {d.menu && <SlotsSummary menu={d.menu} />}
+                                                </div>
+                                            )}
+                                            {d.product && <SignatureAdd product={d.product} cart={cart} onAdded={n => setAnnounce(`${n} sepete eklendi.`)} />}
+                                            {d.menu && <SignatureMenuAdd menu={d.menu} cart={cart} onAdded={n => setAnnounce(`${n} sepete eklendi.`)} />}
                                         </div>
                                     )}
                                 </li>
@@ -313,6 +347,23 @@ function SignatureAdd({ product, cart, onAdded }: { product: PublicProduct; cart
     );
 }
 
+// Öne çıkan hazır menü: seçimi olan menü paket sipariş sayfasında seçilir, seçimsiz menü doğrudan sepete girer.
+function SignatureMenuAdd({ menu, cart, onAdded }: { menu: OnlineSetMenu; cart: SiteCart; onAdded: (name: string) => void }) {
+    if (!cart.enabled) return null;
+    const found = cart.setMenuFor(menu.id);
+    if (!found?.menu.isAvailable || !menu.isAvailable) return null;
+    if (found.needsChoice) {
+        return <Link to="/siparis" aria-label={`${menu.name}: seçerek sepete ekle`} className={cn(elButton.goldLine, 'min-h-11 px-5 md:min-h-11')}>Menüyü seç</Link>;
+    }
+    const qty = cart.lines.filter(l => l.kind === 'setMenu' && l.setMenuId === menu.id).reduce((s, l) => s + l.quantity, 0);
+    return (
+        <button type="button" onClick={() => { cart.addSetMenu(menu.id); onAdded(menu.name); }}
+            className={cn(elButton.goldLine, 'min-h-11 px-5 md:min-h-11')}>
+            {qty > 0 ? `Sepette ${qty} · bir tane daha` : 'Sepete ekle'}
+        </button>
+    );
+}
+
 // ── 4. Menü (sekmeli) ────────────────────────────────────────────────────────────────────────────
 
 function MenuTabs({ site, cart }: { site: PublicSite; cart: SiteCart }) {
@@ -327,7 +378,7 @@ function MenuTabs({ site, cart }: { site: PublicSite; cart: SiteCart }) {
     const onAdded = (name: string) => setAnnounce(`${name} sepete eklendi.`);
 
     return (
-        <section id="menu" aria-labelledby="ev-menu" className="scroll-mt-4 bg-[var(--site-alt)] text-[var(--site-text)]">
+        <section id="menu" aria-labelledby="ev-menu" className="scroll-mt-24 bg-[var(--site-alt)] text-[var(--site-text)] lg:scroll-mt-28">
             <div className={cn(elWrap, 'flex max-w-[1240px] flex-col items-center gap-12 py-20 md:py-[130px]')}>
                 <div className="flex flex-col items-center gap-5 text-center">
                     <EliteKicker centered>Menü</EliteKicker>
@@ -545,7 +596,7 @@ function ReserveSection({ site }: { site: PublicSite }) {
     const c = site.site;
     const photo = c.reservationHeroUrl || c.coverImageUrl;
     return (
-        <section id="rezervasyon" aria-labelledby="ev-rez" className="flex scroll-mt-4 flex-wrap bg-[var(--site-alt)] text-[var(--site-text)] md:min-h-[820px]">
+        <section id="rezervasyon" aria-labelledby="ev-rez" className="flex scroll-mt-24 flex-wrap bg-[var(--site-alt)] text-[var(--site-text)] md:min-h-[820px] lg:scroll-mt-28">
             <div className={cn('rb-el-zoom relative min-h-[420px] min-w-0 flex-[1_1_520px] overflow-hidden md:min-h-[520px]', onDark)}>
                 {photo
                     ? <img src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />

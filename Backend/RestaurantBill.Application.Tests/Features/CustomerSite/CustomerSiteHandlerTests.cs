@@ -86,6 +86,38 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
     }
 
     [Fact]
+    public async Task CreateOrderRequest_NotifiesTheBranchStaffWithTableAndItemCount()
+    {
+        var (table, product) = await SeedRestaurantAsync();
+
+        Guid id = await SendOrderRequestAsync(table, product, quantity: 3);
+
+        var (branchId, payload) = Assert.Single(_tableNotifications.OrderRequestsCreated);
+        Assert.Equal(CurrentUser.BranchId, branchId);
+        Assert.Equal(id, payload.RequestId);
+        Assert.Equal(table.Id, payload.TableId);
+        Assert.Equal(table.Name, payload.TableName);
+        Assert.Equal(table.RegionId, payload.RegionId);
+        Assert.Equal(3, payload.ItemCount);
+    }
+
+    [Fact]
+    public async Task CreateOrderRequest_WhenRejected_DoesNotNotifyStaff()
+    {
+        var (table, _) = await SeedRestaurantAsync();
+
+        var handler = new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications);
+        var result = await handler.Handle(new CreateOrderRequestCommand
+        {
+            TableId = table.Id,
+            Items = [new OrderRequestItemInput { ProductId = Guid.NewGuid(), Quantity = 1 }]
+        }, CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Empty(_tableNotifications.OrderRequestsCreated);
+    }
+
+    [Fact]
     public async Task CreateOrderRequest_WithProductFromAnotherBranch_Fails()
     {
         var (table, _) = await SeedRestaurantAsync();
@@ -202,6 +234,15 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
         // İstanbul UTC+3: 19:00 yerel = 16:00 UTC.
         Assert.Equal(16, saved.ReservationTime.Hour);
         Assert.Equal(TableStatus.Available, table.Status);
+
+        // Staff get a live alert with the branch-local slot.
+        var (branchId, activity) = Assert.Single(_tableNotifications.CustomerActivities);
+        Assert.Equal(CurrentUser.BranchId, branchId);
+        Assert.Equal(RestaurantBill.Application.DTOs.CustomerActivityDto.ReservationRequested, activity.Kind);
+        Assert.Equal(table.Id, activity.TableId);
+        Assert.Equal(table.RegionId, activity.RegionId);
+        Assert.Equal("19:00", activity.Time);
+        Assert.Equal(4, activity.PartySize);
     }
 
     [Fact]

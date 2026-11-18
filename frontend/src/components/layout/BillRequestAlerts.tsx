@@ -1,32 +1,54 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { Receipt } from 'lucide-react';
 import { createHubConnection } from '@/lib/signalrConnection';
-import { playAlertSound } from '@/lib/alertSound';
+import { dismissStaffAlert, notifyStaff, playStaffTone } from '@/lib/staffAlerts';
+import { emitTableAlert } from '@/pages/waiter/waiterEvents';
 
 interface Props {
-    /** Toast'taki "Gör" butonunun gideceği sayfa; verilmezse buton çıkmaz (kasiyer zaten listede görür). */
+    /** Toast'taki "Masayı aç" düğmesinin gideceği masalar sayfası (?table=<id> eklenir); verilmezse düğme çıkmaz. */
     actionPath?: string;
 }
 
-// Garson "Hesap iste" dediğinde kasiyer ve yönetici ekranlarında canlı uyarı (toast + kısa ses).
-// Olay yalnızca kasiyer hub'ına gider; garsonlar bu hub'a bağlanmaz.
+function billAlertId(tableId: string): string {
+    return `bill-request-${tableId}`;
+}
+
+// "Hesap iste" (garsondan ya da masadaki QR'dan) kasiyer ve yönetici ekranlarında: ses + mavi şeritli, hesap
+// kapanana ya da kapatılana kadar kalan bildirim. Masanın hesabı ödenince/istek geri alınınca kendiliğinden kalkar.
 export default function BillRequestAlerts({ actionPath }: Props) {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const { connection, stop } = createHubConnection('/cashier-hub');
-        connection.on('BillRequested', (_tableId: string, tableName: string, requestedByName: string) => {
-            playAlertSound();
-            toast.info(`${tableName}: hesap istendi`, {
-                description: requestedByName ? `${requestedByName} kasaya bildirdi.` : undefined,
-                duration: 15000,
-                action: actionPath ? { label: 'Gör', onClick: () => navigate(actionPath) } : undefined,
+        const cashierHub = createHubConnection('/cashier-hub');
+        cashierHub.connection.on('BillRequested', (tableId: string, tableName: string, requestedByName: string) => {
+            emitTableAlert(tableId, 'bill');
+            notifyStaff({
+                id: billAlertId(tableId),
+                title: `${tableName} · hesap istendi`,
+                description: requestedByName ? `${requestedByName} istedi` : undefined,
+                tone: 'accent',
+                icon: <Receipt aria-hidden="true" />,
+                persistent: true,
+                sound: () => playStaffTone('info'),
+                action: actionPath ? { label: 'Masayı aç', onClick: () => navigate(`${actionPath}?table=${tableId}`) } : undefined,
             });
         });
+
+        // Hesap ödendi, masa kapandı ya da istek geri alındı: bildirim kendiliğinden kalkar.
+        const tableHub = createHubConnection('/table-hub');
+        tableHub.connection.on('BillRequestChanged', (tableId: string, billRequestedAt: string | null) => {
+            if (!billRequestedAt) dismissStaffAlert(billAlertId(tableId));
+        });
+        tableHub.connection.on('TableStatusChanged', (tableId: string, status: number) => {
+            if (status !== 2) dismissStaffAlert(billAlertId(tableId));
+        });
+        tableHub.connection.on('OrderClosed', (tableId: string) => dismissStaffAlert(billAlertId(tableId)));
+
         let cancelled = false;
-        connection.start().catch(err => { if (!cancelled) console.error('BillRequest SignalR:', err); });
-        return () => { cancelled = true; stop(); };
+        cashierHub.connection.start().catch(err => { if (!cancelled) console.error('BillRequest SignalR:', err); });
+        tableHub.connection.start().catch(err => { if (!cancelled) console.error('BillRequest table-hub:', err); });
+        return () => { cancelled = true; cashierHub.stop(); tableHub.stop(); };
     }, [actionPath, navigate]);
 
     return null;

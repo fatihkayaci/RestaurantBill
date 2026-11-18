@@ -4,7 +4,8 @@ import { foldText } from './siteParts';
 import { useSiteWindow } from './siteEditContext';
 
 // Menü sayfasının arama, süzgeç ve kategori şeridi durumu (Renkli/Sade ve Elit menüsü birlikte kullanır). Sıra
-// admin'deki sıradır; hazır menüler aramaya girer, ürün süzgeci açıkken gösterilmez.
+// admin'deki sıradır; hazır menüler aramaya girer. "Ustanın seçimi" süzgecinde yalnız öne çıkan menüler kalır, "hızlı"
+// süzgecinde menü gösterilmez.
 
 export const SET_MENUS_ID = 'kat-hazir';
 export const FAST_MINUTES = 10;
@@ -47,7 +48,6 @@ export function useMenuView(site: PublicSite | null) {
     const [onlyFast, setOnlyFast] = useState(false);
     const strip = useRef<HTMLDivElement>(null);
     const products = useMemo(() => site?.categories.flatMap(c => c.products) ?? [], [site]);
-    const filtering = onlyFeatured || onlyFast;
 
     const groups = useMemo(() => {
         if (!site) return [];
@@ -64,14 +64,15 @@ export function useMenuView(site: PublicSite | null) {
             .filter(g => g.items.length > 0);
     }, [site, query, onlyFeatured, onlyFast]);
 
-    // Hazır menüler de aramaya girer (ad, açıklama, içindeki ürünler); ürün süzgeci açıkken gösterilmez.
+    // Hazır menüler de aramaya girer (ad, açıklama, içindeki ürünler). "Ustanın seçimi"nde öne çıkanlar kalır; "hızlı"
+    // süzgecinde (hazırlanma süresi ürünün) menü gösterilmez.
     const setMenus = useMemo(() => {
-        if (filtering) return [];
-        const menus = site?.setMenus ?? [];
+        if (onlyFast) return [];
+        const menus = (site?.setMenus ?? []).filter(m => !onlyFeatured || m.isFeatured);
         const q = foldText(query);
         if (!q) return menus;
         return menus.filter(m => foldText([m.name, m.description, ...m.slots.flatMap(s => [s.name, ...s.options.map(o => o.productName)])].join(' ')).includes(q));
-    }, [site, query, filtering]);
+    }, [site, query, onlyFeatured, onlyFast]);
 
     const nav = useMemo(() => [
         ...(setMenus.length > 0 ? [{ id: SET_MENUS_ID, label: 'Hazır menüler' }] : []),

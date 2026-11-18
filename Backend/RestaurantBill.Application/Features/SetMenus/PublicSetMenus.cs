@@ -62,6 +62,7 @@ internal static class PublicSetMenus
             IsStockImage = StorageKeys.IsShared(s.ImageUrl),
             CategoryId = s.CategoryId,
             IsAvailable = slots.Count > 0 && slots.All(slot => slot.Options.Any(o => o.IsAvailable)),
+            IsFeatured = s.IsFeatured,
             Slots = slots
         };
     }

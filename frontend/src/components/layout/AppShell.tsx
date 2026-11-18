@@ -18,6 +18,9 @@ import QuickAccessPanel from './QuickAccessPanel';
 import OverdueAlerts from './OverdueAlerts';
 import BillRequestAlerts from './BillRequestAlerts';
 import WaiterCallAlerts from './WaiterCallAlerts';
+import OrderRequestAlerts from './OrderRequestAlerts';
+import CustomerActivityAlerts from './CustomerActivityAlerts';
+import StaffSoundToggle from './StaffSoundToggle';
 import OnlineOrderAlerts from './OnlineOrderAlerts';
 import HeaderThemeToggle from './HeaderThemeToggle';
 import HeaderLogoutButton from './HeaderLogoutButton';
@@ -395,6 +398,7 @@ export default function AppShell() {
 
                     <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
                         {!companyMode && <OnlineOrderAlerts boardPath="/admin/online-orders" />}
+                        {!companyMode && <StaffSoundToggle />}
                         <HeaderThemeToggle />
 
                         <div className="hidden sm:block w-px h-6.5 bg-white/10 shrink-0" />
@@ -436,6 +440,8 @@ export default function AppShell() {
             {!companyMode && <OverdueAlerts />}
             {!companyMode && <BillRequestAlerts actionPath="/admin/tables" />}
             {!companyMode && <WaiterCallAlerts variant="manager" />}
+            {!companyMode && <OrderRequestAlerts variant="manager" />}
+            {!companyMode && <CustomerActivityAlerts variant="manager" />}
         </div>
     );
 }

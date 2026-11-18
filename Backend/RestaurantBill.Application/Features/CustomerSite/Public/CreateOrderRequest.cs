@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.DTOs.Delivery;
 using RestaurantBill.Application.Features.Delivery;
@@ -163,6 +164,16 @@ public class CreateOrderRequestCommandHandler(
         await db.SaveChangesAsync(cancellationToken);
 
         await tableNotifications.SendCustomerRequestsChangedAsync(branchId);
+        await tableNotifications.SendOrderRequestCreatedAsync(branchId, new OrderRequestCreatedDto
+        {
+            RequestId = orderRequest.Id,
+            TableId = table.Id,
+            TableName = table.Name,
+            RegionId = table.RegionId,
+            RegionName = table.Region.Name,
+            ItemCount = orderRequest.Items.Sum(i => i.Quantity),
+            CreatedAt = orderRequest.CreatedAt,
+        });
 
         return Result<OrderRequestStatusDto>.Success(new OrderRequestStatusDto { Id = orderRequest.Id, Status = (int)orderRequest.Status });
     }

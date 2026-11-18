@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.DTOs.Delivery;
 using RestaurantBill.Application.Features.Delivery;
@@ -210,6 +211,9 @@ public class UpsertPreOrderCommandHandler(
 
         await db.SaveChangesAsync(cancellationToken);
         await tableNotifications.SendCustomerRequestsChangedAsync(branch.Id);
+        await tableNotifications.SendCustomerActivityAsync(branch.Id, CustomerActivity.ForReservation(
+            isNew ? CustomerActivityDto.PreOrderPlaced : CustomerActivityDto.PreOrderUpdated,
+            reservation, reservation.Table, CustomerSiteScope.ZoneOf(branch.TimeZoneId)));
 
         return Result<ReservationDetailDto>.Success(await ReservationLink.BuildAsync(db, reservation, now, cancellationToken));
     }

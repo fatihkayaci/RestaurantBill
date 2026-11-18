@@ -12,6 +12,10 @@ interface Props {
     onChanged: () => void;
     /** Garsonun "Masa taşı ve rezervasyon" yetkisi yoksa talepler yalnızca görüntülenir. */
     canDecide?: boolean;
+    /** Bölüm başlığı (masa panelinde "Onay bekleyen QR sipariş"). */
+    title?: string;
+    /** Masa paneli gibi dar yerler: küçük başlık, tek sütun. */
+    compact?: boolean;
 }
 
 function minutesAgo(createdAt: string, now: number): string {
@@ -31,7 +35,7 @@ const QUICK_REASONS = [
 ] as const;
 const REASON_MAX = 300;
 
-export default function CustomerOrderRequests({ requests, onChanged, canDecide = true }: Props) {
+export default function CustomerOrderRequests({ requests, onChanged, canDecide = true, title = 'Müşteri siparişleri', compact = false }: Props) {
     const [busyId, setBusyId] = useState<string | null>(null);
     const [now] = useState(() => Date.now());
     const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -69,10 +73,10 @@ export default function CustomerOrderRequests({ requests, onChanged, canDecide =
         <section aria-label="Onay bekleyen müşteri siparişleri" className="flex flex-col gap-2.5 sm:gap-3.5">
             <div className="flex items-center gap-2.5">
                 <BellRing className="h-6 w-6 text-rb-amber" aria-hidden="true" />
-                <h2 className="font-serif text-[26px] sm:text-[30px] font-bold leading-tight text-foreground">Müşteri siparişleri</h2>
+                <h2 className={compact ? 'font-serif text-[20px] font-bold leading-tight text-foreground' : 'font-serif text-[26px] sm:text-[30px] font-bold leading-tight text-foreground'}>{title}</h2>
                 <span className="rounded-full bg-rb-gold px-2.5 py-0.5 text-sm font-bold text-rb-gold-foreground">{requests.length}</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2.5 sm:gap-4">
+            <div className={compact ? 'grid grid-cols-1 gap-2.5' : 'grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2.5 sm:gap-4'}>
                 {requests.map(request => (
                     <article key={request.id} className="flex flex-col rounded-[20px] border-[1.5px] border-rb-gold bg-rb-gold-bg p-4">
                         <div className="flex items-baseline justify-between gap-3">

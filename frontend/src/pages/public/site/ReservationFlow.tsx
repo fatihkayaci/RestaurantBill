@@ -705,7 +705,7 @@ function FlowSection({ id, className, num, title, legend, note, children }: {
     id?: string; className?: string; num: string; title: string; legend: string; note?: string; children: ReactNode;
 }) {
     return (
-        <fieldset id={id} className={cn(card, 'm-0 min-w-0 scroll-mt-24 border-0 p-5 sm:p-8 md:p-10', className)}>
+        <fieldset id={id} className={cn(card, 'm-0 min-w-0 scroll-mt-24 border-0 p-5 sm:p-8 md:p-10 lg:scroll-mt-28', className)}>
             <legend className="sr-only">{legend}</legend>
             <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p aria-hidden="true" className="m-0 flex items-baseline gap-3.5">

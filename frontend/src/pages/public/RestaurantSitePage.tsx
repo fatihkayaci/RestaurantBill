@@ -418,7 +418,8 @@ function ArrowIcon({ dir }: { dir: 'left' | 'right' }) {
 
 /** Başlık kutusu + kaydırılan menü kartları (geniş ekranda 3 kart ve oklar; telefonda parmakla kaydırma). */
 function SetMenusRow({ site, cart }: { site: PublicSite; cart: SiteCart }) {
-    const menus = site.setMenus ?? [];
+    // Şefin tavsiyesi işaretli menüler önde (sıralama kararlı: admin'deki sıra korunur).
+    const menus = useMemo(() => [...(site.setMenus ?? [])].sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured)), [site]);
     const track = useRef<HTMLDivElement>(null);
     const win = useSiteWindow();
     const [pos, setPos] = useState({ index: 0, count: 1, canPrev: false, canNext: false });
@@ -490,7 +491,14 @@ function SetMenusRow({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                         return (
                             <article key={menu.id}
                                 className="flex min-h-[300px] shrink-0 basis-[86%] snap-start flex-col gap-3 rounded-[24px] bg-[var(--site-card)] p-6 sm:basis-[calc((100%-16px)/2)] md:min-h-[340px] md:rounded-[36px] md:p-7 xl:basis-[calc((100%-32px)/3)]">
-                                {saving && <span className="self-start rounded-full bg-[var(--site-accent-text)] px-[13px] py-[7px] text-xs font-extrabold text-[var(--site-card)]">{saving}</span>}
+                                {(saving || (menu.isFeatured && menu.isAvailable)) && (
+                                    <span className="flex flex-wrap gap-2">
+                                        {menu.isFeatured && menu.isAvailable && (
+                                            <span className="rounded-full bg-[var(--site-mustard)] px-[13px] py-[7px] text-xs font-extrabold text-[#24180F]"><span aria-hidden="true">★ </span>Ustanın seçimi</span>
+                                        )}
+                                        {saving && <span className="rounded-full bg-[var(--site-accent-text)] px-[13px] py-[7px] text-xs font-extrabold text-[var(--site-card)]">{saving}</span>}
+                                    </span>
+                                )}
                                 <h3 className={cn(serif, 'm-0 break-words text-[28px] leading-[1.08]')}>{menu.name}</h3>
                                 {menu.description && <p className="m-0 line-clamp-2 text-sm leading-relaxed text-[var(--site-sub)]">{menu.description}</p>}
                                 <SlotsSummary menu={menu} className="line-clamp-4 text-sm leading-relaxed text-[var(--site-sub)]" />

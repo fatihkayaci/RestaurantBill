@@ -298,6 +298,31 @@ public class SetMenuOrderTests : ApplicationTestBase
     }
 
     [Fact]
+    public async Task UpdateSetMenu_SetsFeatured_AndKeepsItWhenFlagIsOmitted()
+    {
+        var (_, _, menu) = await SeedAsync();
+
+        UpdateSetMenuCommand feature = await UpdateCommandFromAsync(menu.Id);
+        feature.IsFeatured = true;
+        Assert.True((await UpdateAsync(feature)).IsSuccess);
+        DbContext.ChangeTracker.Clear();
+        Assert.True((await DbContext.SetMenus.SingleAsync(s => s.Id == menu.Id)).IsFeatured);
+
+        // Older clients do not send the flag: the current value must be kept.
+        UpdateSetMenuCommand withoutFlag = await UpdateCommandFromAsync(menu.Id);
+        Assert.Null(withoutFlag.IsFeatured);
+        Assert.True((await UpdateAsync(withoutFlag)).IsSuccess);
+        DbContext.ChangeTracker.Clear();
+        Assert.True((await DbContext.SetMenus.SingleAsync(s => s.Id == menu.Id)).IsFeatured);
+
+        UpdateSetMenuCommand unfeature = await UpdateCommandFromAsync(menu.Id);
+        unfeature.IsFeatured = false;
+        Assert.True((await UpdateAsync(unfeature)).IsSuccess);
+        DbContext.ChangeTracker.Clear();
+        Assert.False((await DbContext.SetMenus.SingleAsync(s => s.Id == menu.Id)).IsFeatured);
+    }
+
+    [Fact]
     public async Task UpdateSetMenu_RemovingSlot_DeletesItAndItsOptions()
     {
         var (_, _, menu) = await SeedAsync();

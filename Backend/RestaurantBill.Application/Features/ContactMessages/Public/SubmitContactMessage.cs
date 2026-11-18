@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Features.CustomerSite;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -43,7 +44,7 @@ public class SubmitContactMessageCommandValidator : AbstractValidator<SubmitCont
     }
 }
 
-public class SubmitContactMessageCommandHandler(IAppDbContext db, ITenantResolver tenant)
+public class SubmitContactMessageCommandHandler(IAppDbContext db, ITenantResolver tenant, ITableNotificationService tableNotifications)
     : IRequestHandler<SubmitContactMessageCommand, Result>
 {
     public const string HoneypotMessage = "Mesajınız gönderilemedi. Lütfen sayfayı yenileyip tekrar deneyin.";
@@ -75,6 +76,14 @@ public class SubmitContactMessageCommandHandler(IAppDbContext db, ITenantResolve
 
         db.ContactMessages.Add(message);
         await db.SaveChangesAsync(cancellationToken);
+
+        // Managers get a toast on any admin screen; the message itself is read on the contact messages page.
+        await tableNotifications.SendCustomerActivityAsync(branch.Id, new CustomerActivityDto
+        {
+            Kind = CustomerActivityDto.ContactMessage,
+            GuestName = message.Name,
+            OccurredAt = message.CreatedAt,
+        });
         return Result.Success();
     }
 }

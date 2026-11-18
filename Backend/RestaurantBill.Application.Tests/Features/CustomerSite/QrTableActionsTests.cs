@@ -251,6 +251,11 @@ public class QrTableActionsTests : ApplicationTestBase
         Assert.Equal((table.Id, (DateTime?)_clock.Now.UtcDateTime), Assert.Single(_tableNotifications.BillRequestChanges));
         var sent = Assert.Single(_cashierNotifications.BillRequestsSent);
         Assert.Equal((branch.Id, table.Id, table.Name, RequestTableBillCommandHandler.RequestedByName), sent);
+        // The table's waiters get their own alert (they are not on the cashier hub).
+        var waiterAlert = Assert.Single(_tableNotifications.CustomerBillRequestsSent);
+        Assert.Equal(branch.Id, waiterAlert.BranchId);
+        Assert.Equal(table.Id, waiterAlert.Payload.TableId);
+        Assert.Equal(table.RegionId, waiterAlert.Payload.RegionId);
         Assert.Contains(DbContext.AuditLogs, a => a.Action == "BillRequested" && a.ActorName == RequestTableBillCommandHandler.RequestedByName);
     }
 

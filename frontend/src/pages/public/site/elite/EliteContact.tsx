@@ -32,7 +32,7 @@ export default function EliteContact({ site }: { site: PublicSite }) {
     const c = site.site;
     const lead = <p className={heroLead}>Rezervasyon, özel gün ya da bir öneri; size en kolay gelen yoldan.</p>;
     return (
-        <SitePage site={site} current="iletisim" overlayHeader stickyHeader={false}>
+        <SitePage site={site} current="iletisim" overlayHeader>
             <main className="flex flex-1 flex-col bg-[var(--site-bg)] text-[var(--site-text)]">
                 <EliteHero titleId="ilt-baslik" label="İletişim" title={<>Bize <em className="italic">ulaşın.</em></>} lead={lead}
                     image={c.contactHeroUrl || c.coverImageUrl} ownImage={Boolean(c.contactHeroUrl)}
@@ -119,7 +119,7 @@ function Hours({ site }: { site: PublicSite }) {
     const row = 'flex justify-between gap-4 border-b border-[color-mix(in_srgb,var(--site-text)_12%,transparent)] py-2.5 text-sm tracking-[0.03em]';
     return (
         <EditableBlock target="hours" label="Çalışma saatleri">
-            <section id="saatler" aria-labelledby="ilt-saat" className="flex scroll-mt-4 flex-col gap-5">
+            <section id="saatler" aria-labelledby="ilt-saat" className="flex scroll-mt-24 flex-col gap-5 lg:scroll-mt-28">
                 <h2 id="ilt-saat" className="m-0"><EliteKicker>Saatler</EliteKicker></h2>
                 <dl className="m-0 flex flex-col">
                     {rows.map(r => (

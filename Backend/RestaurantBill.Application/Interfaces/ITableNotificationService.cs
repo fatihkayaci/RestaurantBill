@@ -16,4 +16,11 @@ public interface ITableNotificationService
     Task SendDeliveryItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload);
     // Müşteri QR'dan garson çağırdı; "ürün hazır" ile aynı garsonlara, ayrıca şube yöneticilerine gider.
     Task SendWaiterCalledAsync(Guid restaurantId, WaiterCalledDto payload);
+    // A customer sent an order from the table QR menu; same recipients as a waiter call (table's waiters + branch managers).
+    Task SendOrderRequestCreatedAsync(Guid restaurantId, OrderRequestCreatedDto payload);
+    // A customer asked for the bill from the table QR menu; goes to the table's waiters (cashiers and managers get "BillRequested").
+    Task SendCustomerBillRequestedAsync(Guid restaurantId, WaiterCalledDto payload);
+    // Reservation request/cancel/pre-order or contact message from the public site; branch managers, plus the
+    // table's waiters when a table is involved.
+    Task SendCustomerActivityAsync(Guid restaurantId, CustomerActivityDto payload);
 }

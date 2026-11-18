@@ -111,6 +111,7 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
     const [name, setName] = useState(menu?.name ?? '');
     const [description, setDescription] = useState(menu?.description ?? '');
     const [isActive, setIsActive] = useState(menu?.isActive ?? true);
+    const [isFeatured, setIsFeatured] = useState(menu?.isFeatured ?? false);
     const [categoryId, setCategoryId] = useState(menu?.categoryId ?? '');
     const [menuDiscountType, setMenuDiscountType] = useState<DiscountType>(menu?.discountType ?? DiscountType.None);
     const [menuDiscountValue, setMenuDiscountValue] = useState(
@@ -227,6 +228,7 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
             discountType: menuDiscountType,
             discountValue: menuDiscount,
             isActive,
+            isFeatured,
             sortOrder: menu?.sortOrder ?? 0,
             categoryId: categoryId || null,
             slots: slots.map(slot => ({
@@ -527,6 +529,18 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
                                     label={<span className="text-sm text-muted-foreground">{isActive ? 'Satışta' : 'Satış dışı'}</span>}
                                 />
                             </div>
+                            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border px-3 py-2.5">
+                                <input
+                                    type="checkbox"
+                                    className="mt-0.5 h-4 w-4 accent-[var(--rb-gold)]"
+                                    checked={isFeatured}
+                                    onChange={e => setIsFeatured(e.target.checked)}
+                                />
+                                <span className="flex flex-col">
+                                    <span className="text-sm font-medium text-foreground">Şefin tavsiyesine koy</span>
+                                    <span className="text-xs text-muted-foreground">Restoran sitesinde, QR masa menüsünde ve paket siparişte öne çıkan ürünlerin yanında gösterilir.</span>
+                                </span>
+                            </label>
                         </div>
                     </div>
 

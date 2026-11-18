@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { BellRing } from 'lucide-react';
 import { createHubConnection } from '@/lib/signalrConnection';
+import { notifyStaff } from '@/lib/staffAlerts';
 import type { ItemsReadyEvent } from '@/features/orders/types';
 import { playItemReadySound } from '@/pages/waiter/waiterSound';
 import { emitItemsReady, emitOpenTable } from '@/pages/waiter/waiterEvents';
 
-// Mutfak ürünleri pasaya koyunca garson ekranında canlı uyarı (ses + kapatılana kadar kalan toast).
-// Sunucu olayı yalnızca masanın bölgesine bakan garsonlara gönderir; burada ayrıca süzme yapılmaz.
+// Mutfak ürünleri pasaya koyunca garson ekranında canlı uyarı: ses + yeşil şeritli, kapatılana ya da masaya gidilene
+// kadar kalan bildirim; masanın kartı yeşil yanar. Sunucu olayı yalnızca masanın bölgesine bakan garsonlara gönderir.
 export default function ItemReadyAlerts() {
     const navigate = useNavigate();
 
@@ -16,10 +17,11 @@ export default function ItemReadyAlerts() {
 
         connection.on('ItemsReady', (event: ItemsReadyEvent) => {
             if (!event?.items?.length) return;
-            playItemReadySound();
             emitItemsReady(event);
 
-            toast.success(`${event.tableName} – ürün hazır`, {
+            notifyStaff({
+                id: `items-ready-${event.tableId}-${event.items.map(i => i.orderItemId).join('-')}`,
+                title: `${event.tableName} · ürün hazır`,
                 description: (
                     <ul>
                         {event.items.map(item => (
@@ -30,9 +32,11 @@ export default function ItemReadyAlerts() {
                         ))}
                     </ul>
                 ),
+                tone: 'green',
+                icon: <BellRing aria-hidden="true" />,
                 // Garson ürünü alana kadar ekranda kalsın; kapatma düğmesiyle ya da "Masaya git" ile kalkar.
-                duration: Infinity,
-                closeButton: true,
+                persistent: true,
+                sound: playItemReadySound,
                 action: {
                     label: 'Masaya git',
                     onClick: () => {

@@ -34,6 +34,8 @@ public class SetMenu : BaseEntity
     public decimal DiscountValue { get; private set; }
     public string ImageUrl { get; private set; } = string.Empty;
     public bool IsActive { get; private set; }
+    /// <summary>Shown in the public "Chef's recommendation" section next to featured products.</summary>
+    public bool IsFeatured { get; private set; }
     public int SortOrder { get; private set; }
 
     private readonly List<SetMenuSlot> _slots = new();
@@ -72,6 +74,8 @@ public class SetMenu : BaseEntity
         SortOrder = sortOrder;
         CategoryId = categoryId;
     }
+
+    public void SetFeatured(bool isFeatured) => IsFeatured = isFeatured;
 
     public void UpdateImage(string imageUrl)
     {

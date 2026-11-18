@@ -409,6 +409,40 @@ export interface OrderRequest {
     items: OrderRequestItem[];
 }
 
+/** Sunucunun "OrderRequestCreated" olayı: müşteri masadaki QR menüden sipariş gönderdi, onay bekliyor. */
+export interface OrderRequestCreatedEvent {
+    requestId: string;
+    tableId: string;
+    tableName: string;
+    regionId: string;
+    regionName: string;
+    /** Taleplerdeki toplam adet (2× çay + 1× menü = 3). */
+    itemCount: number;
+    createdAt: string;
+}
+
+export type CustomerActivityKind =
+    | 'reservationRequested'
+    | 'reservationCancelled'
+    | 'preOrderPlaced'
+    | 'preOrderUpdated'
+    | 'contactMessage';
+
+/** Sunucunun "CustomerActivity" olayı: müşteri sitede personelin hemen görmesi gereken bir şey yaptı. */
+export interface CustomerActivityEvent {
+    kind: CustomerActivityKind;
+    /** Rezervasyon olaylarında dolu; iletişim mesajında null. */
+    tableId: string | null;
+    tableName: string | null;
+    regionId: string | null;
+    guestName: string | null;
+    partySize: number | null;
+    /** Şube saatine göre "yyyy-MM-dd" ve "HH:mm". */
+    date: string | null;
+    time: string | null;
+    occurredAt: string;
+}
+
 export interface StaffReservation {
     id: string;
     /** Kısa kod, "K7M-2QP": telefonda müşteriye okunur. */

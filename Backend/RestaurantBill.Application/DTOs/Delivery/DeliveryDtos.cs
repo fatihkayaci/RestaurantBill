@@ -158,6 +158,8 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public Guid? CategoryId { get; set; }
         /// <summary>Her bölümde seçilebilir en az bir seçenek var mı (yoksa "Tükendi").</summary>
         public bool IsAvailable { get; set; }
+        /// <summary>Listed under "Chef's recommendation" alongside featured products.</summary>
+        public bool IsFeatured { get; set; }
         public List<OnlineSetMenuSlotDto> Slots { get; set; } = [];
     }
 

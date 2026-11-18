@@ -78,6 +78,8 @@ export interface OnlineSetMenu {
     categoryId?: string | null;
     /** Her bölümde seçilebilir en az bir seçenek var mı (yoksa "Tükendi"). */
     isAvailable: boolean;
+    /** "Şefin tavsiyesi" bölümünde öne çıkan ürünlerin yanında gösterilir. */
+    isFeatured: boolean;
     slots: OnlineSetMenuSlot[];
 }
 

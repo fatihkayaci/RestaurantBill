@@ -12,6 +12,9 @@ export const waiterSound = createSoundToggle({
     storageKey: 'waiter-sound',
     toggleAttribute: 'data-waiter-sound-toggle',
     confirmTones: READY_TONES,
+    // Bildirimler (QR sipariş, garson çağrısı, hesap, ürün hazır) kaçmasın: tercih kaydedilmemişse açık başlar.
+    // Bilerek kapatan garsonun "off" tercihi korunur.
+    defaultOn: true,
 });
 
 export function playItemReadySound() {
@@ -28,4 +31,15 @@ const CALL_TONES: Tone[] = [
 
 export function playWaiterCallSound() {
     waiterSound.play(CALL_TONES);
+}
+
+// Masadan QR sipariş geldi: çağrıdan da hazırdan da ayrılsın diye yükselen üç tonlu kısa bir "do-mi-sol".
+const ORDER_REQUEST_TONES: Tone[] = [
+    { at: 0, frequency: 784, duration: 0.1 },
+    { at: 0.12, frequency: 987.8, duration: 0.1 },
+    { at: 0.24, frequency: 1174.7, duration: 0.22 },
+];
+
+export function playOrderRequestSound() {
+    waiterSound.play(ORDER_REQUEST_TONES);
 }

@@ -27,7 +27,7 @@ export default function EliteVenue({ site }: { site: PublicSite }) {
     const empty = !hasVenuePage(site) && !showEmpty;
     const hasLocation = !empty && Boolean(fullAddress(site) || site.site.directionsNote);
     return (
-        <SitePage site={site} current="mekan" overlayHeader stickyHeader={false}>
+        <SitePage site={site} current="mekan" overlayHeader>
             <main className="flex flex-1 flex-col bg-[var(--site-bg)] text-[var(--site-text)]">
                 <VenueHero site={site} hasLocation={hasLocation} />
                 {empty ? <EliteEmpty text="Mekân bilgileri henüz eklenmedi." /> : (
@@ -283,7 +283,7 @@ function Location({ site }: { site: PublicSite }) {
     const wayText = cn(elSerif, 'm-0 break-words text-[21px] leading-[1.35] md:text-[22px]');
 
     return (
-        <section id={LOCATION_ID} aria-labelledby="mk-yol" className="scroll-mt-4 bg-[var(--site-bg)]">
+        <section id={LOCATION_ID} aria-labelledby="mk-yol" className="scroll-mt-24 bg-[var(--site-bg)] lg:scroll-mt-28">
             <div className={cn(elWrap, 'flex max-w-[1320px] flex-wrap pb-20 pt-20 md:pb-[140px] md:pt-[120px]')}>
                 {address && (
                     <div aria-hidden="true"

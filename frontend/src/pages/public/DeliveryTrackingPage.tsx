@@ -217,7 +217,7 @@ export default function DeliveryTrackingPage() {
 
     return root(
         <>
-            {nav && site && <FlowSiteHeader site={site} current="siparis" />}
+            {nav && site && <FlowSiteHeader site={site} current="siparis" sticky />}
             <main className={cn('mx-auto flex w-full flex-1 flex-col gap-4', elit ? 'max-w-[1280px] px-4 pb-16 pt-8 sm:px-10 md:gap-6 md:pt-12' : 'max-w-[1440px] px-2 pb-4 pt-4 sm:px-4')}>
                 {/* ── Durum kapağı: rengi duruma göre (alındı hardal, mutfakta kiremit, yolda zeytin, teslim koyu) ── */}
                 <section aria-labelledby="takip-baslik" className={cn('relative flex flex-col gap-8 overflow-hidden rounded-[24px] px-5 py-8 sm:px-10 sm:py-10 md:gap-10 md:rounded-[36px] md:px-14 md:pb-11 md:pt-12', tone.box)}>

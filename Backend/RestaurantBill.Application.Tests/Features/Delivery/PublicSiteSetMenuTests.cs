@@ -38,6 +38,18 @@ public class PublicSiteSetMenuTests : DeliveryTestBase
     }
 
     [Fact]
+    public async Task Site_ExposesFeaturedFlag_ForChefsRecommendation()
+    {
+        await SeedAsync();
+        Assert.False(Assert.Single((await GetSiteAsync()).Value!.SetMenus).IsFeatured);
+
+        AdanaMenu.SetFeatured(true);
+        await DbContext.SaveChangesAsync();
+
+        Assert.True(Assert.Single((await GetSiteAsync()).Value!.SetMenus).IsFeatured);
+    }
+
+    [Fact]
     public async Task Site_HidesInactiveMenus_AndOptionsOfInactiveProducts()
     {
         await SeedAsync();

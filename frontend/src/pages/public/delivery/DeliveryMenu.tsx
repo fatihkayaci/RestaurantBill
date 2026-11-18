@@ -23,7 +23,7 @@ interface Props<P extends MenuCardProduct> {
     onOpenSetMenu?: (menu: OnlineSetMenu) => void;
     /** Yapışkan kategori şeridinin üstten boşluğu (sayfanın yapışkan başlığı varsa). */
     stickyTopClass?: string;
-    /** true: öne çıkan ürünler en üstte "Şefin önerileri" bölümünde de gösterilir (masa menüsü). */
+    /** true: öne çıkan ürünler ve menüler en üstte "Şefin önerileri" bölümünde de gösterilir (masa menüsü). */
     featuredSection?: boolean;
     /** true: yalnız göz atma; ekleme düğmeleri çizilmez (sipariş kapalı). */
     readOnly?: boolean;
@@ -57,8 +57,9 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
 }: Props<P>) {
     // Bütün hazır menüler (kategorisi olsun olmasın) tek "Menüler" bölümünde; kategoriler yalnız ürünleri gösterir.
     const featuredProducts = featuredSection ? categories.flatMap(c => c.products).filter(p => p.isFeatured && !p.isOutOfStock) : [];
+    const featuredMenus = featuredSection ? setMenus.filter(m => m.isFeatured && m.isAvailable) : [];
     const sections = [
-        ...(featuredProducts.length > 0 ? [{ id: FEATURED_SECTION, name: 'Şefin önerileri', menus: [] as OnlineSetMenu[], products: featuredProducts }] : []),
+        ...(featuredProducts.length + featuredMenus.length > 0 ? [{ id: FEATURED_SECTION, name: 'Şefin önerileri', menus: featuredMenus, products: featuredProducts }] : []),
         ...(setMenus.length > 0 ? [{ id: SET_MENU_SECTION, name: 'Menüler', menus: setMenus, products: [] as P[] }] : []),
         ...categories.map(c => ({ id: c.id, name: c.name, menus: [] as OnlineSetMenu[], products: c.products })),
     ].filter(s => s.menus.length + s.products.length > 0);
@@ -121,7 +122,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
             {sections.length > 1 && (
                 <nav aria-label="Menü kategorileri"
                     className={cn('sticky z-20 -mx-4 border-b border-[var(--site-border)] bg-[color-mix(in_srgb,var(--site-bg)_92%,transparent)] backdrop-blur-[14px] md:-mx-6 lg:mx-0', stickyTopClass)}>
-                    <div ref={stripRef} className="flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] md:px-6 lg:px-0 [&::-webkit-scrollbar]:hidden">
+                    <div ref={stripRef} className="relative flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] md:px-6 lg:px-0 [&::-webkit-scrollbar]:hidden">
                         {sections.map(section => {
                             const selected = section.id === current;
                             return (
@@ -157,7 +158,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                             {chefPicks && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Mutfağın bugün önerdikleri.</p>}
 
                             {featured ? (
-                                <ul className="-mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
+                                <ul className="relative -mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
                                     {section.menus.map(menu => (
                                         <li key={menu.id} className={cn('shrink-0 snap-start md:w-auto', section.menus.length > 1 ? 'w-[84%]' : 'w-full')}>
                                             <FeaturedSetMenuCard menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly} onOpen={() => onOpenSetMenu(menu)} />
@@ -319,6 +320,9 @@ function SetMenuRow({ menu, restaurant, quantity, readOnly, onOpen }: { menu: On
             <div className="flex min-w-0 flex-1 flex-col">
                 <span className="mb-1 flex items-center gap-1.5">
                     <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Menü</span>
+                    {menu.isFeatured && !soldOut && (
+                        <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Ustanın seçimi</span>
+                    )}
                     {quantity > 0 && <InCartBadge quantity={quantity} />}
                 </span>
                 <h3 className={cn('text-base font-bold leading-snug', soldOut && 'text-[var(--site-sub)]')}>{menu.name}</h3>
@@ -351,6 +355,9 @@ function FeaturedSetMenuCard({ menu, restaurant, quantity, readOnly, onOpen }: {
                 <span className="absolute left-2.5 top-2.5 flex items-center gap-1.5">
                     {soldOut ? <SoldOutBadge /> : (
                         <span className="rounded-full bg-[var(--site-mustard)] px-2.5 py-1 text-xs font-extrabold text-[#24180F]">Menü</span>
+                    )}
+                    {menu.isFeatured && !soldOut && (
+                        <span className="rounded-full bg-[var(--site-card)] px-2.5 py-1 text-xs font-bold text-[var(--site-text)]">Ustanın seçimi</span>
                     )}
                     {quantity > 0 && <InCartBadge quantity={quantity} />}
                 </span>

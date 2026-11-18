@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -89,6 +90,8 @@ public class CreateReservationRequestCommandHandler(IAppDbContext db, ITenantRes
         await tableNotifications.SendCustomerRequestsChangedAsync(branch.Id);
 
         TimeZoneInfo zone = CustomerSiteScope.ZoneOf(branch.TimeZoneId);
+        await tableNotifications.SendCustomerActivityAsync(branch.Id, CustomerActivity.ForReservation(
+            CustomerActivityDto.ReservationRequested, reservation, table, zone));
         return Result<ReservationCreatedDto>.Success(new ReservationCreatedDto
         {
             AccessToken = reservation.AccessToken,

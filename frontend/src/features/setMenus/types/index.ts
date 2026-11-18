@@ -45,6 +45,8 @@ export interface SetMenu {
     discountValue: number;
     imageUrl: string;
     isActive: boolean;
+    /** Sitede, QR masada ve paket siparişte "Şefin tavsiyesi" bölümünde gösterilir. */
+    isFeatured: boolean;
     sortOrder: number;
     categoryId: string | null;
     categoryName: string | null;
@@ -64,6 +66,8 @@ export interface SetMenuInput {
     discountType: DiscountType;
     discountValue: number;
     isActive: boolean;
+    /** Gönderilmezse sunucu mevcut değeri korur. */
+    isFeatured?: boolean;
     sortOrder: number;
     categoryId: string | null;
     slots: {
@@ -93,6 +97,7 @@ export function toSetMenuInput(menu: SetMenu): SetMenuInput {
         discountType: menu.discountType,
         discountValue: menu.discountValue,
         isActive: menu.isActive,
+        isFeatured: menu.isFeatured,
         sortOrder: menu.sortOrder,
         categoryId: menu.categoryId,
         slots: menu.slots.map(slot => ({

@@ -6,6 +6,7 @@ import type { Table } from '@/features/tables/types';
 import type { ItemsReadyEvent } from '@/features/orders/types';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import { RESERVATION_CONFIRMED, RESERVATION_PENDING, type OrderRequest, type StaffReservation } from '@/features/customerSite/types';
+import { countRequestsByTable, useOrderRequestSignals } from '@/features/customerSite/useOrderRequestSignals';
 import { userService } from '@/features/users/api/userService';
 import { ALL_WAITER_PERMISSIONS, waiterPermissionsOf, type User, type WaiterPermissions } from '@/features/users/types';
 import { prefetchWaiterMenu } from '@/features/products/api/waiterMenuCache';
@@ -18,7 +19,7 @@ import WaiterTableCard from './components/WaiterTableCard';
 import WaiterReservations from './components/WaiterReservations';
 import WaiterAccount from './components/WaiterAccount';
 import { STATE_STYLE, tableState, useSplitLayout, type TableState } from './waiterUi';
-import { ITEMS_READY_EVENT, OPEN_TABLE_EVENT } from './waiterEvents';
+import { ITEMS_READY_EVENT, OPEN_TABLE_EVENT, TABLE_ALERT_EVENT, type TableAlertDetail, type TableAlertKind } from './waiterEvents';
 import { hasDraft } from './orderDraft';
 
 type Tab = 'tables' | 'qr' | 'reservations' | 'account';
@@ -27,6 +28,8 @@ type Filter = 'all' | TableState;
 
 // Mutfaktan "ürün hazır" gelen masanın kartı bu süre boyunca (ya da masa açılana kadar) vurgulanır.
 const READY_HIGHLIGHT_MS = 3 * 60 * 1000;
+// QR'dan garson çağrısı / hesap isteği gelen masanın kartı bu süre boyunca (ya da masa açılana kadar) yanar.
+const TABLE_ALERT_MS = 10 * 60 * 1000;
 
 const FILTERS: { key: Filter; label: string }[] = [
     { key: 'all', label: 'Hepsi' },
@@ -64,6 +67,8 @@ export default function WaiterTablesPage() {
     const [now, setNow] = useState(() => Date.now());
     // Hazır ürünü olan masalar: tableId → bildirimin geldiği an.
     const [readyAt, setReadyAt] = useState<Map<string, number>>(() => new Map());
+    // QR'dan garson çağıran / hesap isteyen masalar: tableId → tür ve an.
+    const [tableAlerts, setTableAlerts] = useState<Map<string, { kind: TableAlertKind; at: number }>>(() => new Map());
 
     const loadTables = useCallback(() => {
         tableService.getTables()
@@ -151,6 +156,12 @@ export default function WaiterTablesPage() {
             next.delete(tableId);
             return next;
         });
+        setTableAlerts(prev => {
+            if (!prev.has(tableId)) return prev;
+            const next = new Map(prev);
+            next.delete(tableId);
+            return next;
+        });
     }, []);
 
     // Başlıktaki ItemReadyAlerts: bildirim gelince kartı vurgula, toast'taki "Masaya git" ile masayı aç.
@@ -159,6 +170,10 @@ export default function WaiterTablesPage() {
             const { tableId } = (e as CustomEvent<ItemsReadyEvent>).detail;
             setReadyAt(prev => new Map(prev).set(tableId, Date.now()));
         };
+        const onTableAlert = (e: Event) => {
+            const { tableId, kind } = (e as CustomEvent<TableAlertDetail>).detail;
+            setTableAlerts(prev => new Map(prev).set(tableId, { kind, at: Date.now() }));
+        };
         const onOpenTable = (e: Event) => {
             const tableId = (e as CustomEvent<string>).detail;
             setSelected({ id: tableId, view: 'detail' });
@@ -166,9 +181,11 @@ export default function WaiterTablesPage() {
         };
         window.addEventListener(ITEMS_READY_EVENT, onItemsReady);
         window.addEventListener(OPEN_TABLE_EVENT, onOpenTable);
+        window.addEventListener(TABLE_ALERT_EVENT, onTableAlert);
         return () => {
             window.removeEventListener(ITEMS_READY_EVENT, onItemsReady);
             window.removeEventListener(OPEN_TABLE_EVENT, onOpenTable);
+            window.removeEventListener(TABLE_ALERT_EVENT, onTableAlert);
         };
     }, [clearReady]);
 
@@ -190,11 +207,9 @@ export default function WaiterTablesPage() {
     const occupied = tables.filter(t => t.status === 2).length;
     const overdueCount = tables.reduce((sum, t) => sum + (t.overdueItemCount ?? 0), 0);
 
-    const qrByTable = useMemo(() => {
-        const map = new Map<string, number>();
-        for (const r of orderRequests) map.set(r.tableId, (map.get(r.tableId) ?? 0) + 1);
-        return map;
-    }, [orderRequests]);
+    const qrByTable = useMemo(() => countRequestsByTable(orderRequests), [orderRequests]);
+    // Onaylanan/reddedilen masanın bildirimi kendiliğinden kapanır.
+    useOrderRequestSignals(orderRequests);
 
     const reservationLabel = useMemo(() => {
         const map = new Map<string, string>();
@@ -214,14 +229,21 @@ export default function WaiterTablesPage() {
         return at !== undefined && now - at < READY_HIGHLIGHT_MS;
     };
 
+    const tableAlertOf = (tableId: string): TableAlertKind | null => {
+        const alert = tableAlerts.get(tableId);
+        return alert && now - alert.at < TABLE_ALERT_MS ? alert.kind : null;
+    };
+
     // Masaya dokununca hangi ekran açılır? En sık iş "ürün eklemek" olduğu için boş ve dolu masa
     // doğrudan ürün eklemeyi açar (oradan "Masa detayı · Hesap" tek dokunuş). Detay açılan durumlar:
     //   - mutfaktan hazır ürün gelmiş: garson önce neyi götüreceğini görsün,
     //   - hesap istenmiş: sıradaki iş ödeme,
     //   - rezerve masa (status 3): "Müşteri geldi" / rezervasyon iptali detayda,
     //   - sipariş alma yetkisi yok.
+    //   - onay bekleyen QR sipariş ya da QR'dan çağrı/hesap isteği var: talep ve masa durumu detayda,
     const initialViewFor = (table: Table): WorkspaceView => {
         if (!permissions.canTakeOrders || hasReadyItems(table.id)) return 'detail';
+        if ((qrByTable.get(table.id) ?? 0) > 0 || tableAlertOf(table.id)) return 'detail';
         if (table.status === 1) return 'add';
         if (table.status === 2 && !table.billRequestedAt) return 'add';
         return 'detail';
@@ -322,6 +344,8 @@ export default function WaiterTablesPage() {
             qrCount={qrByTable.get(t.id) ?? 0}
             reservationLabel={reservationLabel.get(t.id)}
             ready={hasReadyItems(t.id)}
+            called={tableAlertOf(t.id) === 'call'}
+            billAlert={tableAlertOf(t.id) === 'bill'}
             draft={hasDraft(t.id)}
             onClick={() => openTable(t)}
         />
@@ -434,6 +458,8 @@ export default function WaiterTablesPage() {
                                     onClose={() => setSelected(null)}
                                     onTablePatch={patchTable}
                                     onRefreshTables={loadTables}
+                                    orderRequests={orderRequests.filter(r => r.tableId === selectedTable.id)}
+                                    onOrderRequestsChanged={() => { loadRequests(); loadTables(); }}
                                 />
                             ) : (
                                 <div className="flex flex-1 flex-col items-center justify-center gap-2 px-10 text-center">
@@ -501,6 +527,8 @@ export default function WaiterTablesPage() {
                         onClose={() => setSelected(null)}
                         onTablePatch={patchTable}
                         onRefreshTables={loadTables}
+                        orderRequests={orderRequests.filter(r => r.tableId === selectedTable.id)}
+                        onOrderRequestsChanged={() => { loadRequests(); loadTables(); }}
                     />
                 </div>
             )}
