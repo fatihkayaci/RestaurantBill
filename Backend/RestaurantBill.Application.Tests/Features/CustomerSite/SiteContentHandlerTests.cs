@@ -183,6 +183,8 @@ public class SiteContentHandlerTests : ApplicationTestBase
     [InlineData(" Sade ")]
     [InlineData("elit")]
     [InlineData(" ELIT ")]
+    [InlineData("sicak")]
+    [InlineData(" SICAK ")]
     public void Validator_Design_AcceptsKnownEmptyAndNull(string? design)
         => new UpdateBranchSiteCommandValidator()
             .TestValidate(new UpdateBranchSiteCommand { Design = design })
@@ -234,6 +236,7 @@ public class SiteContentHandlerTests : ApplicationTestBase
     [InlineData("dmserif-dmsans")]
     [InlineData("cormorant-lato")]
     [InlineData(" Grotesk-Inter ")]
+    [InlineData("montserrat-poppins")]
     public void Validator_Font_AcceptsKnownEmptyAndNull(string? font)
         => new UpdateBranchSiteCommandValidator()
             .TestValidate(new UpdateBranchSiteCommand { Font = font })

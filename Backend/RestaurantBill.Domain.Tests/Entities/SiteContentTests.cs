@@ -64,6 +64,7 @@ public class SiteContentTests
     [InlineData("renkli", "renkli")]
     [InlineData("sade", "sade")]
     [InlineData(" Elit ", "elit")]
+    [InlineData(" Sicak ", "sicak")]
     public void KnownDesign_IsNormalized(string design, string expected)
     {
         Branch branch = NewBranch();

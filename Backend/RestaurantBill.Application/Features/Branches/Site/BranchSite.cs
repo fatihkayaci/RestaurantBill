@@ -111,7 +111,7 @@ public abstract class SiteTextsInput
 
     // Ek içerik (fotoğraflar ayrı uçlardan değişir).
     public string Theme { get; set; } = string.Empty;
-    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit"; boş = renkli). null (eski form göndermez): değiştirme.</summary>
+    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak"; boş = renkli). null (eski form göndermez): değiştirme.</summary>
     public string? Design { get; set; }
     /// <summary>Yazı tipi çifti (SiteContent.FontKeys; boş = tasarımın kendi yazı tipi). null: değiştirme.</summary>
     public string? Font { get; set; }

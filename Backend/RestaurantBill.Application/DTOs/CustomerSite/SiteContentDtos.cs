@@ -22,7 +22,7 @@ public class BranchSiteDto
 
     /// <summary>Hazır renk teması ("terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"); boş = terracotta.</summary>
     public string Theme { get; set; } = string.Empty;
-    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit"); boş = renkli. Renk teması her tasarımda ayrı çizilir.</summary>
+    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak"); boş = renkli. Renk teması her tasarımda ayrı çizilir.</summary>
     public string Design { get; set; } = string.Empty;
     /// <summary>Yazı tipi çifti (SiteContent.FontKeys, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi.</summary>
     public string Font { get; set; } = string.Empty;
