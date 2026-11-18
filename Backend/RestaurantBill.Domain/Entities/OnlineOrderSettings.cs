@@ -5,6 +5,9 @@ namespace RestaurantBill.Domain.Entities
     /// <summary>Bir gün için online sipariş saatleri: açılış ve kapanış (şubenin saat diliminde).</summary>
     public sealed class OnlineOrderDayHours
     {
+        /// <summary>"24 saat" gününün kapanışı: 00:00–23:59 kaydı gün boyu açık demektir (bkz. <see cref="IsAllDay"/>).</summary>
+        public static readonly TimeOnly AllDayCloses = new(23, 59);
+
         public DayOfWeek Day { get; }
         public bool IsOpen { get; }
         public TimeOnly Opens { get; }
@@ -18,6 +21,12 @@ namespace RestaurantBill.Domain.Entities
             Opens = opens;
             Closes = closes;
         }
+
+        /// <summary>
+        /// Gün boyu açık mı: 00:00–23:59. Böyle bir gün ertesi gece yarısına kadar sürer ve son sipariş kesintisi uygulanmaz;
+        /// ertesi gün de açıksa sipariş alma kesintisiz devam eder.
+        /// </summary>
+        public bool IsAllDay => IsOpen && Opens == TimeOnly.MinValue && Closes == AllDayCloses;
     }
 
     /// <summary>

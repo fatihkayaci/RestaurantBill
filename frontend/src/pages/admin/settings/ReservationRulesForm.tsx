@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { reservationSettingsService } from '@/features/customerSite/api/reservationSettingsService';
@@ -7,6 +6,8 @@ import { formatDuration, type ReservationDay, type ReservationRules } from '@/fe
 import { getApiErrorMessage } from '@/lib/apiError';
 import { inputClass, labelClass } from '@/lib/formStyles';
 import { cn } from '@/lib/utils';
+import { AllDayPill, CopyToAllButton, TimeSelect } from './HoursFields';
+import { DAY_MINUTES, timeOptions, toMinutes, toTime } from './hoursTime';
 import { useSettingsDirty } from './settingsTabs';
 
 const DAY_NAMES = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
@@ -14,6 +15,10 @@ const INTERVALS = [15, 30, 60];
 const DURATIONS = [60, 90, 120, 150, 180, 210, 240];
 const DAYS_AHEAD = { min: 1, max: 90 };
 const PARTY = { min: 1, max: 50 };
+// "24 saat" günün kaydı: 00:00'dan 23:45'e. 23:45 her aralıkta (15/30/60) günün son başlangıcını kapsar,
+// böylece aralık değişse de gün boyu açık kalır; arka uçta ayrı bir alan gerekmez.
+const ALL_DAY = { firstStart: '00:00', lastStart: '23:45' };
+const FALLBACK_HOURS = { firstStart: '09:00', lastStart: '21:00' };
 
 interface Props {
     rules: ReservationRules;
@@ -21,6 +26,23 @@ interface Props {
 }
 
 type Errors = Partial<Record<'maxDaysAhead' | 'maxPartySize' | `day${number}`, string>>;
+
+// Gün boyu mu: 00:00'da başlıyor ve seçili aralığa göre günün son başlangıcına kadar gidiyor.
+function isAllDay(d: ReservationDay, interval: number): boolean {
+    return d.firstStart === '00:00' && toMinutes(d.lastStart) + interval >= DAY_MINUTES;
+}
+
+// Satırın altındaki özet: müşterinin gerçekte göreceği ilk/son saat ve seçenek sayısı.
+function daySummary(d: ReservationDay, interval: number): string {
+    if (!d.isOpen) return 'Bu gün rezervasyon alınmaz.';
+    const first = toMinutes(d.firstStart);
+    const last = toMinutes(d.lastStart);
+    if (Number.isNaN(first) || Number.isNaN(last) || last < first) return '';
+    const count = Math.floor((last - first) / interval) + 1;
+    const realLast = toTime(first + (count - 1) * interval);
+    const range = `${d.firstStart} – ${realLast} arası, ${interval} dakikada bir (${count} saat seçeneği).`;
+    return isAllDay(d, interval) ? `Gün boyu: ${range}` : range;
+}
 
 function parseWhole(value: string): number | null {
     return /^\d+$/.test(value.trim()) ? Number(value.trim()) : null;
@@ -52,6 +74,25 @@ export default function ReservationRulesForm({ rules, onSaved }: Props) {
         setErrors(e => ({ ...e, [`day${index}`]: undefined }));
     };
 
+    // İlk saat son saatin ötesine geçerse son saat de onunla birlikte ilerler.
+    const changeFirstStart = (index: number, firstStart: string) => {
+        const lastStart = days[index].lastStart;
+        updateDay(index, toMinutes(lastStart) < toMinutes(firstStart) ? { firstStart, lastStart: firstStart } : { firstStart });
+    };
+
+    // 24 saat kapatılınca günün kayıtlı saatlerine (o da gün boyuysa 09:00–21:00'a) dönülür.
+    const toggleAllDay = (index: number, on: boolean) => {
+        if (on) {
+            updateDay(index, ALL_DAY);
+            return;
+        }
+        const saved = rules.days.find(x => x.day === days[index].day);
+        const back = saved && !isAllDay(saved, slotInterval)
+            ? { firstStart: saved.firstStart, lastStart: saved.lastStart }
+            : FALLBACK_HOURS;
+        updateDay(index, back);
+    };
+
     const copyToAll = (index: number) => {
         const source = days[index];
         setDays(list => list.map(d => ({ ...d, isOpen: source.isOpen, firstStart: source.firstStart, lastStart: source.lastStart })));
@@ -69,8 +110,8 @@ export default function ReservationRulesForm({ rules, onSaved }: Props) {
             next.maxPartySize = `${PARTY.min} ile ${PARTY.max} arasında bir kişi sayısı girin.`;
         days.forEach((d, i) => {
             if (!d.isOpen) return;
-            if (!d.firstStart || !d.lastStart) next[`day${i}`] = 'İlk ve son başlangıç saatini girin.';
-            else if (d.lastStart < d.firstStart) next[`day${i}`] = 'Son başlangıç, ilk başlangıçtan önce olamaz.';
+            if (!d.firstStart || !d.lastStart) next[`day${i}`] = 'İlk ve son rezervasyon saatini seçin.';
+            else if (toMinutes(d.lastStart) < toMinutes(d.firstStart)) next[`day${i}`] = 'Son rezervasyon saati, ilk rezervasyon saatinden önce olamaz.';
         });
         return next;
     };
@@ -148,51 +189,57 @@ export default function ReservationRulesForm({ rules, onSaved }: Props) {
 
                 <fieldset className={cn('space-y-2', !enabled && 'opacity-60')}>
                     <legend className={labelClass}>Haftalık rezervasyon saatleri</legend>
-                    <p className="text-xs text-muted-foreground">Müşteri, ilk ve son başlangıç saati arasındaki saatleri seçebilir (ikisi de dahil).</p>
+                    <p className="text-xs text-muted-foreground">
+                        Müşteri, ilk ve son rezervasyon saati arasındaki saatleri seçebilir (ikisi de dahil). Saatler, seçili saat aralığına göre listelenir.
+                    </p>
                     <div className="divide-y divide-border rounded-lg border border-border">
                         {days.map((d, i) => {
                             const error = errors[`day${i}`];
+                            const name = DAY_NAMES[d.day];
+                            const allDay = d.isOpen && isAllDay(d, slotInterval);
+                            const options = timeOptions(slotInterval, d.firstStart, d.lastStart);
+                            const summary = daySummary(d, slotInterval);
+                            const errorId = `rez-gun-${d.day}-hata`;
                             return (
                                 <div key={d.day} className="px-3 py-2.5">
                                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                                        <span className="w-24 text-sm font-semibold text-foreground">{DAY_NAMES[d.day]}</span>
+                                        <span className="w-24 text-sm font-semibold text-foreground">{name}</span>
                                         <Switch
                                             checked={d.isOpen}
                                             onCheckedChange={isOpen => updateDay(i, { isOpen })}
-                                            aria-label={`${DAY_NAMES[d.day]} rezervasyon alınsın`}
+                                            aria-label={`${name} rezervasyon alınsın`}
                                             label={<span className="w-11 text-xs text-muted-foreground">{d.isOpen ? 'Açık' : 'Kapalı'}</span>}
                                         />
                                         {d.isOpen && (
-                                            <span className="flex items-center gap-1.5">
-                                                <input
-                                                    type="time"
-                                                    step={900}
-                                                    aria-label={`${DAY_NAMES[d.day]} ilk başlangıç`}
-                                                    value={d.firstStart}
-                                                    onChange={e => updateDay(i, { firstStart: e.target.value })}
-                                                    className={cn(inputClass, 'w-[132px] py-1.5', error && 'border-destructive')}
-                                                />
-                                                <span className="text-muted-foreground">–</span>
-                                                <input
-                                                    type="time"
-                                                    step={900}
-                                                    aria-label={`${DAY_NAMES[d.day]} son başlangıç`}
-                                                    value={d.lastStart}
-                                                    onChange={e => updateDay(i, { lastStart: e.target.value })}
-                                                    className={cn(inputClass, 'w-[132px] py-1.5', error && 'border-destructive')}
-                                                />
-                                            </span>
+                                            <AllDayPill on={allDay} onToggle={on => toggleAllDay(i, on)} ariaLabel={`${name} 24 saat rezervasyon`} />
                                         )}
-                                        <button
-                                            type="button"
-                                            onClick={() => copyToAll(i)}
-                                            className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-rb-accent transition-opacity hover:opacity-80"
-                                        >
-                                            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                                            Tüm günlere kopyala
-                                        </button>
+                                        <CopyToAllButton onClick={() => copyToAll(i)} />
                                     </div>
-                                    {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+                                    {d.isOpen && !allDay && (
+                                        <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+                                            <TimeSelect
+                                                label="İlk rezervasyon"
+                                                ariaLabel={`${name} ilk rezervasyon saati`}
+                                                value={d.firstStart}
+                                                options={options}
+                                                onChange={t => changeFirstStart(i, t)}
+                                                error={!!error}
+                                                errorId={errorId}
+                                            />
+                                            <TimeSelect
+                                                label="Son rezervasyon"
+                                                ariaLabel={`${name} son rezervasyon saati`}
+                                                value={d.lastStart}
+                                                options={options}
+                                                onChange={t => updateDay(i, { lastStart: t })}
+                                                isDisabled={t => toMinutes(t) < toMinutes(d.firstStart)}
+                                                error={!!error}
+                                                errorId={errorId}
+                                            />
+                                        </div>
+                                    )}
+                                    {summary && !error && <p className="mt-1.5 text-xs text-muted-foreground">{summary}</p>}
+                                    {error && <p id={errorId} className="mt-1.5 text-xs text-destructive">{error}</p>}
                                 </div>
                             );
                         })}

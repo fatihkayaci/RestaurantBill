@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Copy, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import {
     AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -11,11 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { deliveryService, onlineOrderingSettingsService } from '@/features/delivery/api/deliveryService';
 import type { OnlineOrderDay, OnlineOrderSettings } from '@/features/delivery/types';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { inputClass } from '@/lib/formStyles';
-import { cn } from '@/lib/utils';
 import DeliveryZonesTab from '../components/DeliveryZonesTab';
 import BlockedPhonesTab from '../components/BlockedPhonesTab';
 import { NumberField, SettingsCard as Card, SettingsRow as Row, SettingsSkeleton as Skeleton } from './SettingsFields';
+import { AllDayPill, CopyToAllButton, TimeSelect } from './HoursFields';
+import { DAY_MINUTES, timeOptions, toMinutes, toTime } from './hoursTime';
 import { settingsPath, useSettingsDirty } from './settingsTabs';
 
 const DAY_NAMES = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
@@ -24,10 +24,35 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const TABS = ['genel', 'saatler', 'bolgeler', 'engelli'] as const;
 type TabKey = typeof TABS[number];
 
-/** "23:00" → dakika. */
-function minutesOf(hhmm: string): number {
-    const [h, m] = hhmm.split(':').map(Number);
-    return h * 60 + m;
+const TIME_STEP = 15;
+// "24 saat" günün kaydı: 00:00–23:59. Sunucu bunu gün boyu açık sayar: son sipariş kesintisi uygulanmaz,
+// ertesi gün de 24 saatse gece yarısında kapanmaz (DeliveryScope.EvaluateHours, OnlineOrderDayHours.IsAllDay).
+const ALL_DAY = { opens: '00:00', closes: '23:59' };
+const FALLBACK_HOURS = { opens: '11:00', closes: '22:00' };
+
+const isAllDay = (d: OnlineOrderDay) => d.isOpen && d.opens === ALL_DAY.opens && d.closes === ALL_DAY.closes;
+
+/** Günün kural hatası; seçiciler biçimi garantiler, burada asıl anlamsız aralık yakalanır. */
+function dayError(d: OnlineOrderDay): string | null {
+    if (!d.isOpen) return null;
+    if (!/^\d{2}:\d{2}$/.test(d.opens) || !/^\d{2}:\d{2}$/.test(d.closes)) return 'Saatleri SS:DD biçiminde seçin.';
+    if (d.opens === d.closes) return 'Açılış ve kapanış saati aynı olamaz.';
+    return null;
+}
+
+/** Satırın altındaki özet: açık saatler ve son siparişin gerçekte ne zaman biteceği. */
+function daySummary(d: OnlineOrderDay, lastOrderMinutes: number): string {
+    if (!d.isOpen) return 'Bu gün online sipariş alınmaz.';
+    if (isAllDay(d)) return 'Gün boyu açık (00:00 – 24:00), son sipariş kesintisi yok.';
+    const opens = toMinutes(d.opens);
+    let closes = toMinutes(d.closes);
+    if (Number.isNaN(opens) || Number.isNaN(closes) || opens === closes) return '';
+    if (closes < opens) closes += DAY_MINUTES;
+    const lastOrder = closes - lastOrderMinutes;
+    if (lastOrder <= opens) return 'Son sipariş süresi bu aralıktan uzun: bu gün sipariş alınmaz.';
+    const nextDay = (m: number) => (m >= DAY_MINUTES ? ' (ertesi gün)' : '');
+    const range = `${d.opens} – ${d.closes}${nextDay(closes)}`;
+    return lastOrderMinutes > 0 ? `${range} · son sipariş ${toTime(lastOrder)}${nextDay(lastOrder)}` : range;
 }
 
 /** Kaydetmeden önce alanların sunucu kurallarına uygunluğu (aynı kurallar sunucuda da var). */
@@ -41,8 +66,8 @@ function validate(s: OnlineOrderSettings): string | null {
     if (s.maxOrdersPerPhonePerDay < s.maxOpenOrdersPerPhone) return 'Günlük sipariş sınırı açık sipariş sınırından küçük olamaz.';
     if (!between(s.lastOrderMinutesBeforeClose, 0, 120)) return 'Son sipariş süresi 0–120 dakika arasında olmalı.';
     for (const d of s.days) {
-        if (!/^\d{2}:\d{2}$/.test(d.opens) || !/^\d{2}:\d{2}$/.test(d.closes)) return `${DAY_NAMES[d.day]}: saatleri SS:DD biçiminde girin.`;
-        if (d.isOpen && d.opens === d.closes) return `${DAY_NAMES[d.day]}: açılış ve kapanış saati aynı olamaz.`;
+        const error = dayError(d);
+        if (error) return `${DAY_NAMES[d.day]}: ${error.charAt(0).toLocaleLowerCase('tr-TR')}${error.slice(1)}`;
     }
     return null;
 }
@@ -130,6 +155,18 @@ export default function OnlineOrderingSettingsTab() {
         } finally {
             setPausing(false);
         }
+    };
+
+    // 24 saat kapatılınca günün kayıtlı saatlerine (o da gün boyuysa 11:00–22:00'a) dönülür.
+    const toggleAllDay = (day: number, on: boolean) => {
+        if (on) {
+            updateDay(day, ALL_DAY);
+            return;
+        }
+        const before = saved?.days.find(x => x.day === day);
+        updateDay(day, before && !isAllDay(before) && before.opens !== before.closes
+            ? { opens: before.opens, closes: before.closes }
+            : FALLBACK_HOURS);
     };
 
     const copyToAll = (source: OnlineOrderDay) => {
@@ -251,33 +288,44 @@ export default function OnlineOrderingSettingsTab() {
                             <div className="grid max-w-3xl gap-4">
                                 <Card title="Haftalık sipariş saatleri">
                                     <p className="text-xs text-muted-foreground">
-                                        Kapanış açılıştan önceyse gece yarısını aşar (ör. 18:00–02:00). Saatler şubenin saat dilimindedir.
+                                        Kapanış açılıştan önceyse gece yarısını aşar (ör. 18:00–02:00). "24 saat" günlerde son sipariş kesintisi uygulanmaz.
+                                        Saatler şubenin saat dilimindedir.
                                     </p>
                                     <div className="divide-y divide-border rounded-lg border border-border">
                                         {DAY_ORDER.map(dayNumber => {
                                             const d = draft.days.find(x => x.day === dayNumber);
                                             if (!d) return null;
-                                            const overnight = d.isOpen && minutesOf(d.closes) < minutesOf(d.opens);
+                                            const name = DAY_NAMES[d.day];
+                                            const allDay = isAllDay(d);
+                                            const overnight = d.isOpen && !allDay && toMinutes(d.closes) < toMinutes(d.opens);
+                                            const error = dayError(d);
+                                            const errorId = `siparis-gun-${d.day}-hata`;
+                                            const options = timeOptions(TIME_STEP, d.opens, d.closes);
+                                            const summary = daySummary(d, draft.lastOrderMinutesBeforeClose);
                                             return (
-                                                <div key={d.day} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
-                                                    <span className="w-24 text-sm font-semibold text-foreground">{DAY_NAMES[d.day]}</span>
-                                                    <Switch checked={d.isOpen} onCheckedChange={isOpen => updateDay(d.day, { isOpen })}
-                                                        aria-label={`${DAY_NAMES[d.day]} sipariş alınsın`}
-                                                        label={<span className="w-11 text-xs text-muted-foreground">{d.isOpen ? 'Açık' : 'Kapalı'}</span>} />
-                                                    {d.isOpen && (
-                                                        <span className="flex items-center gap-1.5">
-                                                            <input type="time" step={900} aria-label={`${DAY_NAMES[d.day]} açılış`} value={d.opens}
-                                                                onChange={e => updateDay(d.day, { opens: e.target.value })} className={cn(inputClass, 'w-[132px] py-1.5')} />
-                                                            <span className="text-muted-foreground">–</span>
-                                                            <input type="time" step={900} aria-label={`${DAY_NAMES[d.day]} kapanış`} value={d.closes}
-                                                                onChange={e => updateDay(d.day, { closes: e.target.value })} className={cn(inputClass, 'w-[132px] py-1.5')} />
-                                                            {overnight && <span className="rounded bg-rb-purple-bg px-1.5 py-0.5 text-[10px] font-bold text-rb-purple">ertesi gün</span>}
-                                                        </span>
+                                                <div key={d.day} className="px-3 py-2.5">
+                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                                        <span className="w-24 text-sm font-semibold text-foreground">{name}</span>
+                                                        <Switch checked={d.isOpen} onCheckedChange={isOpen => updateDay(d.day, { isOpen })}
+                                                            aria-label={`${name} sipariş alınsın`}
+                                                            label={<span className="w-11 text-xs text-muted-foreground">{d.isOpen ? 'Açık' : 'Kapalı'}</span>} />
+                                                        {d.isOpen && (
+                                                            <AllDayPill on={allDay} onToggle={on => toggleAllDay(d.day, on)} ariaLabel={`${name} 24 saat sipariş`} />
+                                                        )}
+                                                        {overnight && <span className="rounded bg-rb-purple-bg px-1.5 py-0.5 text-[10px] font-bold text-rb-purple">ertesi gün</span>}
+                                                        <CopyToAllButton onClick={() => copyToAll(d)} />
+                                                    </div>
+                                                    {d.isOpen && !allDay && (
+                                                        <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+                                                            <TimeSelect label="Açılış" ariaLabel={`${name} açılış`} value={d.opens} options={options}
+                                                                onChange={opens => updateDay(d.day, { opens })} error={!!error} errorId={errorId} />
+                                                            <TimeSelect label="Kapanış" ariaLabel={`${name} kapanış`} value={d.closes} options={options}
+                                                                onChange={closes => updateDay(d.day, { closes })} isDisabled={t => t === d.opens}
+                                                                error={!!error} errorId={errorId} />
+                                                        </div>
                                                     )}
-                                                    <button type="button" onClick={() => copyToAll(d)}
-                                                        className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-rb-accent hover:opacity-80">
-                                                        <Copy className="h-3.5 w-3.5" aria-hidden="true" />Tüm günlere kopyala
-                                                    </button>
+                                                    {summary && !error && <p className="mt-1.5 text-xs text-muted-foreground">{summary}</p>}
+                                                    {error && <p id={errorId} className="mt-1.5 text-xs text-destructive">{error}</p>}
                                                 </div>
                                             );
                                         })}
