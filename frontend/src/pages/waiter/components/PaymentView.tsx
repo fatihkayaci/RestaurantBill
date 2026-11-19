@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import { paymentService } from '@/features/cashier/api/paymentService';
+import { buildPayItems, groupBillLines, lineDiscountAmount, round2, type BillLine, type LineDiscount } from '@/features/cashier/billLines';
 import { paymentSettingsService, type BranchPaymentSettings } from '@/features/branches/api/paymentSettingsService';
 import { orderService } from '@/features/orders/api/orderService';
 import type { OpenRegister } from '@/features/cashier/types';
@@ -25,7 +26,9 @@ const METHOD_VALUE: Record<Method, number> = { card: 1, cash: 2, iban: 4 };
 type Split = 'full' | 'items' | 'amount';
 const SPLITS: [Split, string][] = [['full', 'Tamamı'], ['items', 'Ürün seç'], ['amount', 'Tutar gir']];
 const AMOUNT_CHIPS: [string, number][] = [['½', 2], ['⅓', 3], ['¼', 4], ['Kalan', 1]];
-const round2 = (value: number) => Math.round(value * 100) / 100;
+/** İndirim kapsamı: hesabın tamamına ya da yalnızca bazı ürünlere (kalanı tam fiyat). */
+type DiscountScope = 'bill' | 'items';
+type LineDiscountInput = { type: 'percent' | 'amount'; input: string };
 
 interface Props {
     table: Table;
@@ -55,7 +58,8 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
 
     // Tutar girerek ödeme alınmış hesapta ürün seçilemez; ikram da kalan hesabın tamamına uygulanır.
     const [split, setSplit] = useState<Split>(mode === 'ikram' && !(order.paidAmount ?? 0) ? 'items' : 'full');
-    const [selected, setSelected] = useState<Record<number, number>>({});
+    // Ürün seç: birleşmiş satırın anahtarına göre bu ödemede ödenecek adet.
+    const [selected, setSelected] = useState<Record<string, number>>({});
     const [amountInput, setAmountInput] = useState('');
     const [method, setMethod] = useState<Method>('cash');
     const [received, setReceived] = useState<number | 'exact'>('exact');
@@ -64,6 +68,8 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
     const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent');
     const [discountInput, setDiscountInput] = useState(mode === 'ikram' ? '100' : '');
     const [discountNote, setDiscountNote] = useState(mode === 'ikram' ? 'İkram' : '');
+    const [discountScope, setDiscountScope] = useState<DiscountScope>('bill');
+    const [lineDiscountInputs, setLineDiscountInputs] = useState<Record<string, LineDiscountInput>>({});
     const [submitting, setSubmitting] = useState(false);
 
     const loadRegisters = useCallback(() => {
@@ -110,27 +116,46 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
     const ikram = mode === 'ikram';
 
     const items = current.orderItems;
+    // Aynı ürünün ayrı turlarda gelen kalemleri tek satırda; ödeme sunucuya kalem kalem dağıtılarak gider.
+    const lines = useMemo(() => groupBillLines(items), [items]);
     const paid = current.paidAmount ?? 0;
     const due = current.remainingAmount ?? current.totalPrice;
     const itemsLocked = paid > 0;
-    const selectedTotal = items.reduce((sum, i) => sum + (selected[i.id] ?? 0) * i.unitPrice, 0);
+    const selectedTotal = lines.reduce((sum, line) => sum + (selected[line.key] ?? 0) * line.unitPrice, 0);
     const amountValue = round2(parseFloat(amountInput.replace(',', '.')) || 0);
     const amountTooHigh = split === 'amount' && amountValue > due;
     const base = split === 'full' ? due : split === 'items' ? selectedTotal : Math.min(amountValue, due);
     // İndirim/ikram yalnızca ürünlerle kapanan ödemede: tutar girilen ödeme olduğu gibi tahsil edilir.
     const discountAllowed = canDiscount && split !== 'amount';
     const discountRaw = parseFloat(discountInput.replace(',', '.')) || 0;
-    const discount = discountAllowed && discountOpen
+    const itemScope = discountAllowed && discountOpen && discountScope === 'items';
+    const lineDiscounts: Record<string, LineDiscount> = {};
+    if (itemScope) {
+        for (const [key, value] of Object.entries(lineDiscountInputs)) {
+            const parsed = parseFloat(value.input.replace(',', '.')) || 0;
+            if (parsed > 0) lineDiscounts[key] = { type: value.type, value: parsed };
+        }
+    }
+    const quantityOf = (line: BillLine) =>
+        split === 'full' ? line.quantity : split === 'items' ? selected[line.key] ?? 0 : 0;
+    const plan = buildPayItems(lines, quantityOf, lineDiscounts);
+    const itemDiscount = Math.min(plan.itemDiscount, base);
+    const billDiscount = discountAllowed && discountOpen && discountScope === 'bill'
         ? Math.min(discountType === 'percent' ? base * Math.min(discountRaw, 100) / 100 : discountRaw, base)
         : 0;
+    const discount = round2(itemDiscount + billDiscount);
     const net = Math.max(0, Math.round((base - discount) * 100) / 100);
+    const paidLines = lines.filter(line => quantityOf(line) > 0);
+    const updateLineDiscount = (key: string, next: Partial<LineDiscountInput>) => {
+        setLineDiscountInputs(prev => ({ ...prev, [key]: { ...(prev[key] ?? { type: 'percent', input: '' }), ...next } }));
+    };
     const remaining = Math.max(0, round2(due - base));
 
-    const toggleItem = (id: number, quantity: number) => {
-        setSelected(prev => ({ ...prev, [id]: prev[id] ? 0 : quantity }));
+    const toggleItem = (key: string, quantity: number) => {
+        setSelected(prev => ({ ...prev, [key]: prev[key] ? 0 : quantity }));
     };
-    const stepItem = (id: number, quantity: number, delta: number) => {
-        setSelected(prev => ({ ...prev, [id]: Math.min(quantity, Math.max(0, (prev[id] ?? 0) + delta)) }));
+    const stepItem = (key: string, quantity: number, delta: number) => {
+        setSelected(prev => ({ ...prev, [key]: Math.min(quantity, Math.max(0, (prev[key] ?? 0) + delta)) }));
     };
 
     const cashOptions = useMemo(() => {
@@ -159,12 +184,9 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
 
     const confirm = async () => {
         if (!register || !canConfirm) return;
-        const payItems = split === 'amount'
-            ? []
-            : split === 'full'
-                ? items.map(i => ({ orderItemId: i.id, quantity: i.quantity }))
-                : items.filter(i => (selected[i.id] ?? 0) > 0).map(i => ({ orderItemId: i.id, quantity: selected[i.id] }));
-        const hasDiscount = discountAllowed && discountOpen && discount > 0;
+        // Birleşmiş satırın adetleri ve ürün indirimi, satırın sipariş kalemlerine dağıtılır.
+        const payItems = split === 'amount' ? [] : plan.items;
+        const hasDiscount = billDiscount > 0;
         try {
             setSubmitting(true);
             const fullyPaid: boolean = await paymentService.createPayment(
@@ -175,7 +197,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                 hasDiscount
                     ? {
                         percent: discountType === 'percent' ? Math.min(discountRaw, 100) : undefined,
-                        amount: discountType === 'amount' ? discount : undefined,
+                        amount: discountType === 'amount' ? billDiscount : undefined,
                         note: discountNote || undefined,
                     }
                     : undefined,
@@ -193,6 +215,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
             const refreshed = await orderService.getOrderByTableId(String(table.id));
             if (refreshed) setCurrent(refreshed);
             setSelected({});
+            setLineDiscountInputs({});
             setAmountInput('');
             setCustomReceived('');
             setReceived('exact');
@@ -394,15 +417,15 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
 
                 {split === 'items' && (
                     <ul className="overflow-hidden rounded-2xl border border-border bg-card">
-                        {items.map((item, idx) => {
-                            const qty = selected[item.id] ?? 0;
+                        {lines.map((item, idx) => {
+                            const qty = selected[item.key] ?? 0;
                             return (
-                                <li key={item.id} className={cn('flex items-center gap-2 pr-2', idx > 0 && 'border-t border-border')}>
+                                <li key={item.key} className={cn('flex items-center gap-2 pr-2', idx > 0 && 'border-t border-border')}>
                                     <button
                                         type="button"
                                         role="checkbox"
                                         aria-checked={qty > 0}
-                                        onClick={() => toggleItem(item.id, item.quantity)}
+                                        onClick={() => toggleItem(item.key, item.quantity)}
                                         className="flex min-h-13 min-w-0 flex-1 items-center gap-3 px-3.5 py-2 text-left"
                                     >
                                         <span
@@ -419,9 +442,9 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                     </button>
                                     {qty > 0 && item.quantity > 1 && (
                                         <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-muted p-0.5">
-                                            <button type="button" onClick={() => stepItem(item.id, item.quantity, -1)} aria-label={`${item.productName}: bu ödemede bir adet az`} className="flex size-9 items-center justify-center rounded-full text-lg font-bold">−</button>
+                                            <button type="button" onClick={() => stepItem(item.key, item.quantity, -1)} aria-label={`${item.productName}: bu ödemede bir adet az`} className="flex size-9 items-center justify-center rounded-full text-lg font-bold">−</button>
                                             <span className="w-5 text-center text-sm font-bold tabular-nums">{qty}</span>
-                                            <button type="button" onClick={() => stepItem(item.id, item.quantity, 1)} aria-label={`${item.productName}: bu ödemede bir adet fazla`} className="flex size-9 items-center justify-center rounded-full text-lg font-bold">+</button>
+                                            <button type="button" onClick={() => stepItem(item.key, item.quantity, 1)} aria-label={`${item.productName}: bu ödemede bir adet fazla`} className="flex size-9 items-center justify-center rounded-full text-lg font-bold">+</button>
                                         </div>
                                     )}
                                 </li>
@@ -436,8 +459,73 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                         <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-3.5">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-bold text-foreground">{ikram ? 'İkram' : 'İndirim'}</span>
-                                <button type="button" onClick={() => { setDiscountOpen(false); setDiscountInput(''); }} className="min-h-9 px-2 text-[13px] font-semibold text-rb-text-sub">Kaldır</button>
+                                <button type="button" onClick={() => { setDiscountOpen(false); setDiscountInput(''); setLineDiscountInputs({}); }} className="min-h-9 px-2 text-[13px] font-semibold text-rb-text-sub">Kaldır</button>
                             </div>
+                            {!ikram && (
+                                <div role="tablist" aria-label="İndirim kapsamı" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+                                    {([['bill', 'Tüm hesaba'], ['items', 'Ürüne']] as const).map(([key, label]) => (
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={discountScope === key}
+                                            onClick={() => setDiscountScope(key)}
+                                            className={cn('min-h-10 rounded-lg text-sm font-semibold', discountScope === key ? 'bg-card text-foreground' : 'text-rb-text-sub')}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {itemScope ? (
+                                paidLines.length === 0 ? (
+                                    <p className="text-[13px] text-rb-text-sub">Önce bu ödemede ödenecek ürünleri seçin.</p>
+                                ) : (
+                                    <ul className="flex flex-col gap-2">
+                                        {paidLines.map(line => {
+                                            const qty = quantityOf(line);
+                                            const input = lineDiscountInputs[line.key];
+                                            const type = input?.type ?? 'percent';
+                                            const off = lineDiscountAmount(round2(line.unitPrice * qty), lineDiscounts[line.key]);
+                                            return (
+                                                <li key={line.key} className="flex flex-col gap-1.5">
+                                                    <div className="flex items-baseline justify-between gap-2 text-[15px]">
+                                                        <span className="min-w-0 truncate text-foreground">{qty}× {line.productName}</span>
+                                                        <span className="shrink-0 font-semibold tabular-nums">
+                                                            {off > 0 && <span className="mr-1.5 text-[13px] font-medium text-rb-text-sub line-through">₺{formatPrice(line.unitPrice * qty)}</span>}
+                                                            ₺{formatPrice(line.unitPrice * qty - off)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+                                                            {([['percent', '%'], ['amount', '₺']] as const).map(([key, label]) => (
+                                                                <button
+                                                                    key={key}
+                                                                    type="button"
+                                                                    aria-pressed={type === key}
+                                                                    onClick={() => updateLineDiscount(line.key, { type: key, input: '' })}
+                                                                    className={cn('h-9 w-10 rounded-lg text-sm font-bold', type === key ? 'bg-card text-foreground' : 'text-rb-text-sub')}
+                                                                >
+                                                                    {label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                        <input
+                                                            inputMode="decimal"
+                                                            value={input?.input ?? ''}
+                                                            onChange={e => updateLineDiscount(line.key, { input: e.target.value.replace(/[^\d.,]/g, '') })}
+                                                            placeholder={type === 'percent' ? 'Yüzde' : 'Tutar'}
+                                                            aria-label={`${line.productName}: indirim ${type === 'percent' ? 'yüzdesi' : 'tutarı'}`}
+                                                            className="h-11 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-rb-gold"
+                                                        />
+                                                    </div>
+                                                </li>
+                                            );
+                                        })}
+                                        <li className="text-[13px] text-rb-text-sub">İndirim yazılmayan ürünler tam fiyattan alınır.</li>
+                                    </ul>
+                                )
+                            ) : (
                             <div className="flex gap-2">
                                 <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
                                     {([['percent', '%'], ['amount', '₺']] as const).map(([key, label]) => (
@@ -461,6 +549,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                     className="h-12 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-rb-gold"
                                 />
                             </div>
+                            )}
                             <input
                                 value={discountNote}
                                 onChange={e => setDiscountNote(e.target.value)}

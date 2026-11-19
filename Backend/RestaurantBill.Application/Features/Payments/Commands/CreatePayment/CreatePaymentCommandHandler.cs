@@ -62,7 +62,8 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
         // Garson ödeme alabiliyorsa bile indirim/ikram ayrı yetkidir; kasiyerde de indirim/ikram ayrı yetkidir.
         StaffAccess access = await _db.GetStaffAccessAsync(_currentUserService, cancellationToken);
-        bool hasDiscount = (request.DiscountPercent ?? 0m) > 0m || (request.DiscountAmount ?? 0m) > 0m;
+        bool hasItemDiscount = request.Items.Any(i => (i.DiscountPercent ?? 0m) > 0m || (i.DiscountAmount ?? 0m) > 0m);
+        bool hasDiscount = (request.DiscountPercent ?? 0m) > 0m || (request.DiscountAmount ?? 0m) > 0m || hasItemDiscount;
         string? accessError = await _db.CheckTableAccessAsync(access, table.Id, WaiterPermission.TakePayment, cancellationToken)
             ?? (hasDiscount ? access.Check(WaiterPermission.CancelAndDiscount) ?? access.Check(CashierPermission.ApplyDiscount) : null);
         if (accessError is not null)
@@ -93,6 +94,9 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
         // Ödenecek kalemler: tutar girilen ödemede kalanı kapatıyorsa tüm ürünler, değilse hiçbiri (hesaba ödeme).
         var paidItems = new List<(OrderItem Item, int Quantity)>();
+        // Ürün indirimleri: aynı ödemede bazı kalemlere indirim, kalanı tam fiyat (hesabın tamamı tek seferde kapanabilir).
+        var itemDiscounts = new Dictionary<Guid, ItemDiscount>();
+        var itemDiscountLabels = new List<string>();
         bool onAccount = false;
         if (request.Amount is decimal amount)
         {
@@ -126,6 +130,13 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
                     return Result<bool>.Failure($"{LineName(item)} için ödenmek istenen miktar siparişteki miktardan fazla.");
 
                 paidItems.Add((item, requested.Quantity));
+                if ((requested.DiscountPercent ?? 0m) > 0m || (requested.DiscountAmount ?? 0m) > 0m)
+                {
+                    itemDiscounts[item.Id] = new ItemDiscount(requested.DiscountPercent, requested.DiscountAmount);
+                    itemDiscountLabels.Add(requested.DiscountPercent is decimal p
+                        ? $"{LineName(item)} ×{requested.Quantity} %{p:0.##}"
+                        : $"{LineName(item)} ×{requested.Quantity} ₺{requested.DiscountAmount:0.##}");
+                }
             }
 
             bool coversAllItems = BillLines(order).All(i => paidItems.Any(p => p.Item.Id == i.Id && p.Quantity == i.Quantity));
@@ -157,7 +168,8 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         else
         {
             var recorded = _recorder.RecordItems(order, paidItems, target, paidOnAccountByRate,
-                new PaymentDiscount(request.DiscountPercent, request.DiscountAmount, request.DiscountNote, access.MaxDiscountPercent));
+                new PaymentDiscount(request.DiscountPercent, request.DiscountAmount, request.DiscountNote, access.MaxDiscountPercent),
+                itemDiscounts);
             if (recorded.IsFailure)
                 return Result<bool>.Failure(recorded.Error!);
             (netTotal, discountAmount) = recorded.Value;
@@ -174,7 +186,11 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         }
 
         User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUserService.UserId, cancellationToken);
-        string discountLogFragment = discountAmount > 0 ? $" (₺{discountAmount} iskonto uygulandı)" : string.Empty;
+        string discountLogFragment = discountAmount > 0
+            ? itemDiscountLabels.Count > 0
+                ? $" (₺{discountAmount} iskonto uygulandı; ürün indirimi: {string.Join(", ", itemDiscountLabels)})"
+                : $" (₺{discountAmount} iskonto uygulandı)"
+            : string.Empty;
         string message = fullyPaid
             ? $"{actor?.FullName} {table.Name} siparişini {MethodLabel(request.PaymentMethod)} ile kapattı (₺{netTotal}).{discountLogFragment}"
             : onAccount
