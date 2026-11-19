@@ -368,3 +368,14 @@ html.theme-transition *::after {
 [data-sonner-toast].staff-alert--accent [data-button] { color: #fff; }
 [data-sonner-toast].staff-alert--orange { --alert: var(--rb-orange); }
 
+/* Online siparişler gelen kutusu: sırada bekleyen yeni sipariş altın halkayla nabız gibi atar. */
+@keyframes online-order-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rb-gold) 55%, transparent); }
+  70% { box-shadow: 0 0 0 12px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.online-order-pulse { animation: online-order-pulse 2.4s infinite; }
+.online-order-pulse-fast { animation-duration: 1.6s; }
+@media (prefers-reduced-motion: reduce) {
+  .online-order-pulse { animation: none; }
+}

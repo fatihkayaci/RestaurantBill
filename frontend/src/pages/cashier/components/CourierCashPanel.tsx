@@ -58,13 +58,14 @@ function loadText(c: CourierCashSummary): string {
 // tutarı gösterir, açılınca siparişler, sayım ve "Teslim al" yerinde yapılır (modal yok). Önceki günden kalan para
 // kırmızıyla en üstte. Teslim alınan siparişler kasiyerin açık vardiyasındaki kasaya yazılır; yönetici/sahip açık günü olan
 // kasalardan birini seçer. Canlı olayları online sipariş panosu ve uyarılarla aynı bağlantıdan dinler.
-export default function CourierCashPanel() {
+/** initialCourierId: panodaki kurye kutusundan açılınca o kurye açık gelir. */
+export default function CourierCashPanel({ initialCourierId }: { initialCourierId?: string } = {}) {
     const { shift } = useActiveShift();
     const [couriers, setCouriers] = useState<CourierCashSummary[]>([]);
     const [history, setHistory] = useState<CourierHandoverHistory[]>([]);
     const [loaded, setLoaded] = useState(false);
     /** undefined: kendiliğinden (tek kurye varsa açık); null: hepsi kapalı. */
-    const [expandedId, setExpandedId] = useState<string | null | undefined>(undefined);
+    const [expandedId, setExpandedId] = useState<string | null | undefined>(initialCourierId);
     const [historyOpen, setHistoryOpen] = useState(false);
     const [now, setNow] = useState(() => Date.now());
 
