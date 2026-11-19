@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { SwitchTrack } from '@/components/ui/switch';
 import { paymentSettingsService, type BranchPaymentSettings } from '@/features/branches/api/paymentSettingsService';
+import { onlineOrderingSettingsService } from '@/features/delivery/api/deliveryService';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatIban, isValidTrIban, normalizeIban, TR_IBAN_LENGTH } from '@/lib/iban';
 import { inputClass, labelClass } from '@/lib/formStyles';
@@ -40,6 +41,8 @@ function ibanProblem(value: string, touched: boolean): string | null {
 
 // Şubenin IBAN'ı. Kasada "IBAN" ile ödeme alınırken QR koda yazılır; restoran isterse masa QR sayfasında "IBAN ile öde"
 // olarak da gösterilir (varsayılan kapalı). Boşsa kasiyer IBAN seçeneğini kullanamaz ve QR'da hiçbir şey görünmez.
+// Online paket siparişte IBAN ile ödeme de buradan açılır: Online sipariş → Genel'deki anahtarla aynı ayardır
+// (OnlineOrderSettings.AcceptIban), formun Kaydet'ine bağlı değildir, hemen kaydedilir; kayıtlı geçerli IBAN ister.
 export default function IbanSettingsCard() {
     const [loaded, setLoaded] = useState(false);
     const [form, setForm] = useState<Form>({ iban: '', holder: '', bank: '', showOnTable: false });
@@ -47,7 +50,18 @@ export default function IbanSettingsCard() {
     const [ibanTouched, setIbanTouched] = useState(false);
     const [errors, setErrors] = useState<{ iban?: string; holder?: string; show?: string }>({});
     const [saving, setSaving] = useState(false);
+    // Paket sipariş anahtarı: null = online sipariş ayarı okunamadı (anahtar gösterilmez).
+    const [delivery, setDelivery] = useState<{ acceptIban: boolean; hasIban: boolean } | null>(null);
+    const [deliverySaving, setDeliverySaving] = useState(false);
     const ibanInput = useRef<HTMLInputElement>(null);
+
+    const loadDelivery = useCallback(() => {
+        onlineOrderingSettingsService.getSettings()
+            .then(s => setDelivery({ acceptIban: s.acceptIban, hasIban: s.hasIban }))
+            .catch(() => setDelivery(null));
+    }, []);
+
+    useEffect(() => { loadDelivery(); }, [loadDelivery]);
 
     useEffect(() => {
         paymentSettingsService.get()
@@ -102,6 +116,8 @@ export default function IbanSettingsCard() {
             setForm(fresh);
             setSaved(fresh);
             setIbanTouched(false);
+            // IBAN değişince paket siparişte gösterilip gösterilemeyeceği de değişir.
+            loadDelivery();
             toast.success(!result.iban ? 'IBAN kaldırıldı.'
                 : result.showIbanOnTable ? 'IBAN kaydedildi. Kasada ve masa QR\'ında IBAN ile ödeme açık.'
                     : 'IBAN kaydedildi. Kasada IBAN ile ödeme alınabilir.');
@@ -126,7 +142,21 @@ export default function IbanSettingsCard() {
         save(form);
     };
 
+    const toggleDelivery = async (acceptIban: boolean) => {
+        setDeliverySaving(true);
+        try {
+            const result = await onlineOrderingSettingsService.setAcceptIban(acceptIban);
+            setDelivery({ acceptIban: result.acceptIban, hasIban: result.hasIban });
+            toast.success(result.acceptIban ? 'Paket siparişte IBAN ile ödeme açıldı.' : 'Paket siparişte IBAN ile ödeme kapatıldı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Paket sipariş IBAN ayarı kaydedilemedi.'));
+        } finally {
+            setDeliverySaving(false);
+        }
+    };
+
     const ibanError = errors.iban ?? liveIbanProblem;
+    const deliveryOn = !!delivery && delivery.acceptIban && delivery.hasIban;
 
     return (
         <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-5" noValidate>
@@ -213,6 +243,31 @@ export default function IbanSettingsCard() {
                         )}
                         {errors.show && <p className="text-xs text-destructive mt-1">{errors.show}</p>}
                     </div>
+
+                    {/* Online paket sipariş: Online sipariş → Genel'deki "IBAN ile ödeme" ile aynı ayar; hemen kaydedilir. */}
+                    {delivery && (
+                        <div className="md:col-span-2 rounded-lg border border-border p-4">
+                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">IBAN ile ödeme (paket sipariş)</h3>
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={deliveryOn}
+                                aria-describedby="iban-delivery-help"
+                                disabled={deliverySaving || (!deliveryOn && !delivery.hasIban)}
+                                onClick={() => toggleDelivery(!deliveryOn)}
+                                className="mt-2 flex min-h-11 w-full items-center justify-between gap-4 text-left disabled:opacity-60"
+                            >
+                                <span className="block text-sm font-semibold text-foreground">Paket siparişte IBAN ile ödeme</span>
+                                <SwitchTrack checked={deliveryOn} />
+                            </button>
+                            <p id="iban-delivery-help" className="text-xs text-muted-foreground mt-1">
+                                Online paket siparişin ödeme adımında IBAN gösterilir; müşteri havale/EFT ile öder, açıklamaya sipariş numarasını yazar. Kurye para almaz. Hemen uygulanır; Online sipariş → Genel'deki anahtarla aynıdır.
+                            </p>
+                            {!delivery.hasIban && (
+                                <p className="text-xs text-muted-foreground mt-1">Açmak için önce geçerli bir IBAN ve hesap sahibi girip kaydedin.</p>
+                            )}
+                        </div>
+                    )}
 
                     <div className="md:col-span-2 flex flex-wrap items-center justify-end gap-2">
                         {saved.iban && (

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ExternalLink } from 'lucide-react';
 import {
@@ -87,11 +87,11 @@ export default function OnlineOrderingSettingsTab() {
     const [loadError, setLoadError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [pausing, setPausing] = useState(false);
+    const [ibanSaving, setIbanSaving] = useState(false);
     // Bölgeler sekmesi kapanınca içeriği silinir: kaydedilmemiş değişiklik varken sekme değişimi onay ister.
     const [zonesDirty, setZonesDirty] = useState(false);
-    // Onay bekleyen gidiş: alt sekme anahtarı ya da "/" ile başlayan sayfa adresi.
+    // Onay bekleyen alt sekme. Sayfadan çıkışı (bağlantı, menü) Ayarlar sayfasının ortak onayı yakalar.
     const [pendingTab, setPendingTab] = useState<string | null>(null);
-    const navigate = useNavigate();
 
     const load = useCallback(() => {
         onlineOrderingSettingsService.getSettings()
@@ -129,8 +129,9 @@ export default function OnlineOrderingSettingsTab() {
                 maxOrdersPerPhonePerDay: draft.maxOrdersPerPhonePerDay,
                 acceptCash: draft.acceptCash,
                 acceptCard: draft.acceptCard,
-                // IBAN yoksa anahtar kapalı görünür; eski açık kayıt gönderilmez (sunucu reddeder).
-                acceptIban: draft.acceptIban && draft.hasIban,
+                // IBAN anahtarı ayrı ve hemen kaydedilir (Ayarlar → Ödeme'de de var): sunucudaki son hâli korunur.
+                // IBAN sonradan kaldırıldıysa eski açık kayıt gönderilmez (sunucu reddeder).
+                acceptIban: latest.acceptIban && latest.hasIban,
                 requirePhoneVerification: draft.requirePhoneVerification,
                 preOrderEnabled: latest.preOrderEnabled,
                 preOrderLeadMinutes: latest.preOrderLeadMinutes,
@@ -156,6 +157,22 @@ export default function OnlineOrderingSettingsTab() {
             toast.error(getApiErrorMessage(err, 'Durum değiştirilemedi.'));
         } finally {
             setPausing(false);
+        }
+    };
+
+    // IBAN anahtarı taslağa yazılmaz, hemen kaydedilir: Kaydet'e basılmadan açık görünüp kaydedilmemiş kalmasın.
+    const toggleIban = async (acceptIban: boolean) => {
+        setIbanSaving(true);
+        try {
+            const result = await onlineOrderingSettingsService.setAcceptIban(acceptIban);
+            const patch = { acceptIban: result.acceptIban, hasIban: result.hasIban, isCustomized: result.isCustomized };
+            setSaved(prev => prev ? { ...prev, ...patch } : prev);
+            setDraft(prev => prev ? { ...prev, ...patch } : prev);
+            toast.success(result.acceptIban ? 'Paket siparişte IBAN ile ödeme açıldı.' : 'Paket siparişte IBAN ile ödeme kapatıldı.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'IBAN ile ödeme ayarı kaydedilemedi.'));
+        } finally {
+            setIbanSaving(false);
         }
     };
 
@@ -205,9 +222,7 @@ export default function OnlineOrderingSettingsTab() {
                     )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <Link to="/admin/online-orders" onClick={e => {
-                        if (tab === 'bolgeler' && zonesDirty) { e.preventDefault(); setPendingTab('/admin/online-orders'); }
-                    }} className="flex h-10 items-center rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground hover:border-rb-gold">
+                    <Link to="/admin/online-orders" className="flex h-10 items-center rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground hover:border-rb-gold">
                         Siparişler panosu
                     </Link>
                     <a href="/siparis" target="_blank" rel="noreferrer" className="flex h-10 items-center gap-1.5 rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground hover:border-rb-gold">
@@ -253,12 +268,12 @@ export default function OnlineOrderingSettingsTab() {
                                     <Row
                                         label="IBAN ile ödeme (havale/EFT)"
                                         hint={draft.hasIban
-                                            ? "Müşteri ödeme adımında IBAN'ı kopyalayıp parayı gönderir; açıklamaya sipariş numarasını yazar. Kurye para almaz; kasada \"Teslim al\"da paranın hesaba geçtiğini kontrol edin."
+                                            ? "Müşteri ödeme adımında IBAN'ı kopyalayıp parayı gönderir; açıklamaya sipariş numarasını yazar. Kurye para almaz; kasada \"Teslim al\"da paranın hesaba geçtiğini kontrol edin. Hemen uygulanır."
                                             : "Açmak için önce şubenin IBAN'ını ve hesap sahibini Ayarlar → Ödeme'den girin."}
                                     >
                                         <div className="flex flex-col items-end gap-1">
-                                            <Switch checked={draft.acceptIban && draft.hasIban} disabled={!draft.hasIban}
-                                                onCheckedChange={acceptIban => update({ acceptIban })} aria-label="IBAN ile ödeme"
+                                            <Switch checked={draft.acceptIban && draft.hasIban} disabled={!draft.hasIban || ibanSaving}
+                                                onCheckedChange={toggleIban} aria-label="IBAN ile ödeme"
                                                 label={<span className="text-xs">IBAN</span>} />
                                             {!draft.hasIban && (
                                                 <Link to={settingsPath('odeme')} className="text-xs font-semibold text-rb-accent hover:underline">
@@ -383,8 +398,7 @@ export default function OnlineOrderingSettingsTab() {
                             const target = pendingTab;
                             setPendingTab(null);
                             setZonesDirty(false);
-                            if (target?.startsWith('/')) navigate(target);
-                            else if (target) goToTab(target);
+                            if (target) goToTab(target);
                         }}>Değişiklikleri at</Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>

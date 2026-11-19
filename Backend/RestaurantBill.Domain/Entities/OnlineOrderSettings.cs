@@ -159,6 +159,19 @@ namespace RestaurantBill.Domain.Entities
                 requirePhoneVerification: false, preOrderEnabled: false, DefaultPreOrderLeadMinutes);
         }
 
+        /// <summary>
+        /// Yalnızca IBAN ile ödeme anahtarı değişmiş kopya (Ayarlar → Ödeme ve Online sipariş'teki anahtar). Diğer alanlar
+        /// olduğu gibi kalır; kapatınca hiç ödeme yöntemi kalmıyorsa DomainException.
+        /// </summary>
+        public OnlineOrderSettings WithAcceptIban(bool acceptIban)
+        {
+            if (!acceptIban && !AcceptCash && !AcceptCard)
+                throw new DomainException("Online paket siparişte tek ödeme yöntemi IBAN. Kapatmak için önce Online sipariş ayarlarından nakit ya da kartı açın.");
+            return new OnlineOrderSettings(Enabled, Days, LastOrderMinutesBeforeClose, DefaultEtaMinutes, AutoRejectAfterMinutes,
+                MaxOpenOrdersPerPhone, MaxOrdersPerPhonePerDay, AcceptCash, AcceptCard, acceptIban, RequirePhoneVerification,
+                PreOrderEnabled, PreOrderLeadMinutes);
+        }
+
         public OnlineOrderDayHours For(DayOfWeek day) => Days.First(d => d.Day == day);
 
         private static List<OnlineOrderDayHours> Ordered(List<OnlineOrderDayHours> days)

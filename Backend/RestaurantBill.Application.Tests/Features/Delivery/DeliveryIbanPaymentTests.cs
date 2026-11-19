@@ -161,6 +161,51 @@ public class DeliveryIbanPaymentTests : DeliveryTestBase
     }
 
     [Fact]
+    public async Task SetIban_PersistsOnlyIbanFlag_AndKeepsOtherSettings()
+    {
+        await SeedWithIbanAsync(Settings(autoRejectMinutes: 15));
+        var handler = new SetOnlineOrderIbanCommandHandler(Db, CurrentUser, Sms);
+
+        var on = await handler.Handle(new SetOnlineOrderIbanCommand { AcceptIban = true }, CancellationToken.None);
+
+        Assert.True(on.IsSuccess, on.Error);
+        Assert.True(on.Value!.AcceptIban);
+        Assert.Equal(15, on.Value.AutoRejectAfterMinutes);
+        Assert.True(Branch.AcceptsIbanForDelivery);
+        Assert.Contains(DbContext.AuditLogs, a => a.Action == "BranchOnlineOrderIbanUpdated");
+
+        var off = await handler.Handle(new SetOnlineOrderIbanCommand { AcceptIban = false }, CancellationToken.None);
+        Assert.True(off.IsSuccess, off.Error);
+        Assert.False(Branch.GetOnlineOrderSettings().AcceptIban);
+        Assert.Equal(15, Branch.GetOnlineOrderSettings().AutoRejectAfterMinutes);
+    }
+
+    [Fact]
+    public async Task SetIban_WithoutBranchIban_IsRejected()
+    {
+        await SeedWithIbanAsync(Settings(), withIban: false);
+
+        var result = await new SetOnlineOrderIbanCommandHandler(Db, CurrentUser, Sms)
+            .Handle(new SetOnlineOrderIbanCommand { AcceptIban = true }, CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(UpdateOnlineOrderSettingsCommandHandler.IbanMissingMessage, result.Error);
+        Assert.False(Branch.GetOnlineOrderSettings().AcceptIban);
+    }
+
+    [Fact]
+    public async Task SetIban_Off_WhenItIsTheOnlyPaymentMethod_IsRejected()
+    {
+        await SeedWithIbanAsync(Settings(acceptCash: false, acceptCard: false, acceptIban: true));
+
+        var result = await new SetOnlineOrderIbanCommandHandler(Db, CurrentUser, Sms)
+            .Handle(new SetOnlineOrderIbanCommand { AcceptIban = false }, CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.True(Branch.GetOnlineOrderSettings().AcceptIban);
+    }
+
+    [Fact]
     public void RemovingIban_WhenItIsTheOnlyOnlinePaymentMethod_IsBlocked()
     {
         Branch branch = Branch.Create(Guid.NewGuid(), "Kadıköy", "", "", "", "İstanbul", "Kadıköy", "", 10m);

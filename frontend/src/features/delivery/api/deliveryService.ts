@@ -63,6 +63,11 @@ export const onlineOrderingSettingsService = {
         const response = await api.put<OnlineOrderSettings>('/online-ordering/settings', { ...input, resetToDefaults: false });
         return response.data;
     },
+    /** Yalnızca "IBAN ile ödeme" anahtarı; hemen kaydedilir (Ayarlar → Ödeme ve Online sipariş → Genel). */
+    setAcceptIban: async (acceptIban: boolean) => {
+        const response = await api.put<OnlineOrderSettings>('/online-ordering/settings/iban', { acceptIban });
+        return response.data;
+    },
     getZones: async () => {
         const response = await api.get<DeliveryZone[]>('/delivery-zones');
         return response.data;

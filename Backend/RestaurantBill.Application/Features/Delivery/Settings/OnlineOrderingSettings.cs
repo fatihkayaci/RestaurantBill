@@ -175,3 +175,51 @@ public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentU
         return Result<OnlineOrderSettingsDto>.Success(OnlineOrderSettingsMapping.ToDto(branch, sms.IsConfigured));
     }
 }
+
+// ── Yalnızca "IBAN ile ödeme" anahtarı ─────────────────────────────────────────────────────────────
+// Ayarlar → Ödeme ve Online sipariş → Genel'deki anahtar: hemen kaydedilir, diğer online sipariş alanlarına dokunmaz.
+public class SetOnlineOrderIbanCommand : IRequest<Result<OnlineOrderSettingsDto>>
+{
+    public bool AcceptIban { get; set; }
+}
+
+public class SetOnlineOrderIbanCommandHandler(IAppDbContext db, ICurrentUserService currentUser, ISmsSender sms)
+    : IRequestHandler<SetOnlineOrderIbanCommand, Result<OnlineOrderSettingsDto>>
+{
+    public async Task<Result<OnlineOrderSettingsDto>> Handle(SetOnlineOrderIbanCommand request, CancellationToken cancellationToken)
+    {
+        Branch? branch = await db.Branches
+            .FirstOrDefaultAsync(b => b.Id == currentUser.BranchId && !b.IsDeleted, cancellationToken);
+        if (branch is null) return Result<OnlineOrderSettingsDto>.Failure("Şube bulunamadı.");
+
+        if (request.AcceptIban && !branch.HasPayableIban)
+            return Result<OnlineOrderSettingsDto>.Failure(UpdateOnlineOrderSettingsCommandHandler.IbanMissingMessage);
+
+        OnlineOrderSettings current = branch.GetOnlineOrderSettings();
+        if (current.AcceptIban == request.AcceptIban)
+            return Result<OnlineOrderSettingsDto>.Success(OnlineOrderSettingsMapping.ToDto(branch, sms.IsConfigured));
+
+        try
+        {
+            branch.SetOnlineOrderSettings(current.WithAcceptIban(request.AcceptIban));
+        }
+        catch (DomainException ex)
+        {
+            return Result<OnlineOrderSettingsDto>.Failure(ex.Message);
+        }
+
+        string actor = await db.ActorNameAsync(currentUser, cancellationToken);
+        db.AuditLogs.Add(AuditLog.Create(
+            branch.Id,
+            actor,
+            AuditLogCategory.System,
+            AuditLogSeverity.Info,
+            "BranchOnlineOrderIbanUpdated",
+            $"{actor} {branch.BranchName} şubesinde online paket siparişte IBAN ile ödemeyi {(request.AcceptIban ? "açtı" : "kapattı")}.",
+            nameof(Branch),
+            branch.Id));
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Result<OnlineOrderSettingsDto>.Success(OnlineOrderSettingsMapping.ToDto(branch, sms.IsConfigured));
+    }
+}
