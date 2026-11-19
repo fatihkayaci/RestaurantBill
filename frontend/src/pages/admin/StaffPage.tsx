@@ -45,15 +45,16 @@ const DEFAULT_WAITER_PERMISSIONS: Record<PermissionKey, boolean> = {
     canTakeOrders: true, canTakePayment: false, canCancelAndDiscount: false, canTransferAndReserve: false,
 };
 
-type CashierPermissionKey = 'canApplyDiscount' | 'canTransferTables';
+type CashierPermissionKey = 'canApplyDiscount' | 'canTransferTables' | 'canViewDelivery';
 
 const CASHIER_PERMISSIONS: { key: CashierPermissionKey; label: string; short: string; hint: string }[] = [
     { key: 'canApplyDiscount', label: 'İndirim ve ikram', short: 'İndirim', hint: 'Ödeme alırken yüzde ya da tutar olarak indirim, tamamı ikram uygular.' },
     { key: 'canTransferTables', label: 'Masa taşı / birleştir', short: 'Taşıma', hint: 'Açık hesabı başka masaya taşır ya da iki masayı birleştirir.' },
+    { key: 'canViewDelivery', label: 'Paket siparişler', short: 'Paket', hint: 'Online paket siparişleri görür, onaylar ve hesabını alır. Kapalıysa "Paket siparişler" sekmesi görünmez.' },
 ];
 
 // Kasiyer bugüne kadar hepsini yapabiliyordu; yeni kasiyer de aynı yetkilerle başlar, indirim sınırı yoktur (%100).
-const DEFAULT_CASHIER_PERMISSIONS = { canApplyDiscount: true, maxDiscountPercent: 100, canTransferTables: true };
+const DEFAULT_CASHIER_PERMISSIONS = { canApplyDiscount: true, maxDiscountPercent: 100, canTransferTables: true, canViewDelivery: true };
 
 const byTableName = (a: Table, b: Table) => a.name.localeCompare(b.name, 'tr', { numeric: true });
 
@@ -209,6 +210,7 @@ export default function StaffPage() {
                 canApplyDiscount: user.canApplyDiscount ?? true,
                 maxDiscountPercent: user.maxDiscountPercent ?? 100,
                 canTransferTables: user.canTransferTables ?? true,
+                canViewDelivery: user.canViewDelivery ?? true,
             }
             : DEFAULT_CASHIER_PERMISSIONS;
         setForm({
@@ -304,6 +306,7 @@ export default function StaffPage() {
             canApplyDiscount: isCashier ? form.canApplyDiscount : undefined,
             maxDiscountPercent: limitsDiscount ? maxDiscountPercent : undefined,
             canTransferTables: isCashier ? form.canTransferTables : undefined,
+            canViewDelivery: isCashier ? form.canViewDelivery : undefined,
         };
         try {
             if (editUser) {
@@ -765,7 +768,7 @@ export default function StaffPage() {
                                         )}
                                         <p className="text-xs text-muted-foreground mt-1.5">
                                             Boş bırakılırsa tüm bölgeler. {scopedRoleNoun(form.role)} yalnızca seçili bölgelerin masalarını görür
-                                            {form.role === CASHIER && '; paket siparişler her zaman görünür'}.
+                                            {form.role === CASHIER && '; paket siparişler "Paket siparişler" yetkisine bağlıdır'}.
                                         </p>
                                     </div>
 

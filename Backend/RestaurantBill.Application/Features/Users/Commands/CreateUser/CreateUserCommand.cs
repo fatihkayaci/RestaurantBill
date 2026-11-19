@@ -34,6 +34,7 @@ namespace RestaurantBill.Application.Features.Users.Commands.CreateUser
         public bool? CanApplyDiscount { get; set; }
         public int? MaxDiscountPercent { get; set; }
         public bool? CanTransferTables { get; set; }
+        public bool? CanViewDelivery { get; set; }
 
         public string[] CacheKeysToInvalidate => ["stuff:all"];
         public string IdempotencyKey => $"create-user:{UserName}";

@@ -35,6 +35,8 @@ export interface User {
     canApplyDiscount?: boolean;
     maxDiscountPercent?: number;
     canTransferTables?: boolean;
+    /** Kasiyer paket siparişleri görür mü; garson hiç görmez, diğer roller hep görür. */
+    canViewDelivery?: boolean;
 }
 
 /** Garson ve kasiyer yetkileri, bölgeler, mutfak kategorileri (Kullanıcılar formu). */
@@ -50,6 +52,8 @@ export interface StaffAssignment {
     canApplyDiscount?: boolean;
     maxDiscountPercent?: number;
     canTransferTables?: boolean;
+    /** Kasiyer paket siparişleri görür mü; garson hiç görmez, diğer roller hep görür. */
+    canViewDelivery?: boolean;
 }
 
 export interface CreateUser extends StaffAssignment {
@@ -108,10 +112,11 @@ export interface CashierPermissions {
     /** Bir ödemede uygulanabilecek en yüksek indirim yüzdesi; 100 = sınırsız. */
     maxDiscountPercent: number;
     canTransferTables: boolean;
+    canViewDelivery: boolean;
 }
 
 export const ALL_CASHIER_PERMISSIONS: CashierPermissions = {
-    canApplyDiscount: true, maxDiscountPercent: 100, canTransferTables: true,
+    canApplyDiscount: true, maxDiscountPercent: 100, canTransferTables: true, canViewDelivery: true,
 };
 
 export function cashierPermissionsOf(user: User): CashierPermissions {
@@ -119,5 +124,6 @@ export function cashierPermissionsOf(user: User): CashierPermissions {
         canApplyDiscount: user.canApplyDiscount ?? true,
         maxDiscountPercent: user.maxDiscountPercent ?? 100,
         canTransferTables: user.canTransferTables ?? true,
+        canViewDelivery: user.canViewDelivery ?? true,
     };
 }

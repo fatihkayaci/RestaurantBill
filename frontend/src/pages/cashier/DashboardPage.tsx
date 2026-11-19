@@ -42,7 +42,6 @@ const DELIVERY_TAB = 'paket';
 export default function CashierDashboardPage() {
     const { shift } = useActiveShift();
     const [params, setParams] = useSearchParams();
-    const deliveryTab = params.get('sekme') === DELIVERY_TAB;
     const { newCount: newDeliveryCount } = useNewOnlineOrderCounts();
     const [servedOrders, setServedOrders] = useState<Order[]>([]);
     const [tables, setTables] = useState<Table[]>([]);
@@ -55,6 +54,8 @@ export default function CashierDashboardPage() {
     const [loadFailed, setLoadFailed] = useState(false);
     // Yöneticinin verdiği kasiyer yetkileri; yetkisiz işlemin düğmesi gizlenir, sunucu da aynı kuralı uygular.
     const [permissions, setPermissions] = useState<CashierPermissions>(ALL_CASHIER_PERMISSIONS);
+    // Paket yetkisi olmayan kasiyerde "Paket siparişler" sekmesi yoktur; adres ?sekme=paket olsa da masalar açılır.
+    const deliveryTab = permissions.canViewDelivery && params.get('sekme') === DELIVERY_TAB;
 
     useEffect(() => {
         userService.getCurrentUser()
@@ -183,7 +184,7 @@ export default function CashierDashboardPage() {
 
             {/* Sekmeler: masalar / online paket siparişler */}
             <div className="flex shrink-0 gap-1 border-b border-border px-4 pt-2 sm:px-6" role="tablist" aria-label="Kasa ekranı">
-                {([[false, 'Masalar'], [true, 'Paket siparişler']] as const).map(([isDelivery, label]) => (
+                {([[false, 'Masalar'], [true, 'Paket siparişler']] as const).filter(([isDelivery]) => !isDelivery || permissions.canViewDelivery).map(([isDelivery, label]) => (
                     <button
                         key={label}
                         type="button"

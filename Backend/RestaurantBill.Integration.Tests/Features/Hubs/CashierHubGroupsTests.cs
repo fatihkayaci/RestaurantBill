@@ -32,6 +32,15 @@ public class CashierHubGroupsTests
         Assert.DoesNotContain(HubGroups.CashiersAll(Branch), groups);
     }
 
+    // "Paket siparişler" yetkisi olmayan kasiyer online sipariş olaylarını almaz; bölge kapsamından bağımsızdır.
+    [Fact]
+    public void CashierWithoutDeliveryPermission_DoesNotJoinOnlineOrders()
+    {
+        Assert.DoesNotContain(HubGroups.OnlineOrders(Branch), HubGroups.ForCashierHub(Branch, Role("Cashier"), null, canViewDelivery: false));
+        Assert.DoesNotContain(HubGroups.OnlineOrders(Branch), HubGroups.ForCashierHub(Branch, Role("Cashier"), Restricted, canViewDelivery: false));
+        Assert.Contains(HubGroups.OnlineOrders(Branch), HubGroups.ForCashierHub(Branch, Role("Admin"), null, canViewDelivery: false));
+    }
+
     [Fact]
     public void ManagerAndUnscopedCashier_JoinCashiersAll()
     {

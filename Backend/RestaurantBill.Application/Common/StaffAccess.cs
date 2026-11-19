@@ -26,11 +26,12 @@ public sealed class StaffAccess
     public const string RegionDeniedMessage = "Bu masa size atanan bölge ve masaların dışında.";
     public const string CategoryDeniedMessage = "Bu ürün size atanan kategorilerin dışında.";
     public const string DeliveryDeniedMessage = "Paket siparişler garson ekranından yönetilemez.";
+    public const string CashierDeliveryDeniedMessage = "Paket siparişleri görme yetkiniz yok. Yöneticinizden yetki isteyin.";
 
     public static readonly StaffAccess Unrestricted = new(null, null, isWaiter: false, true, true, true, true, cashier: null);
 
     // Kasiyer yetkileri; kasiyer olmayan rollerde null.
-    private sealed record CashierRights(bool CanApplyDiscount, int MaxDiscountPercent, bool CanTransferTables);
+    private sealed record CashierRights(bool CanApplyDiscount, int MaxDiscountPercent, bool CanTransferTables, bool CanViewDelivery);
 
     private readonly WaiterScope? _waiterScope;
     private readonly HashSet<Guid>? _categoryIds;
@@ -61,6 +62,13 @@ public sealed class StaffAccess
     // Garson yalnızca masa siparişleriyle çalışır; paket siparişler kapsamı ne olursa olsun dışındadır.
     // Kasiyerde bu kural yok: kapsamı kısıtlı kasiyer de paket siparişleri görür ve tahsil eder.
     public bool IsWaiter => _isWaiter;
+
+    // Paket (masasız) siparişler: garson hiç göremez; kasiyer yöneticinin işaretlediği "Paket siparişler" yetkisine göre
+    // (bölge/masa kapsamından bağımsız); yöneticiler görür.
+    public bool CanAccessDelivery => !_isWaiter && (_cashier is null || _cashier.CanViewDelivery);
+
+    // Paket siparişe erişemeyen kullanıcıya gösterilecek mesaj, erişebiliyorsa null.
+    public string? DeliveryDeniedReason => CanAccessDelivery ? null : _isWaiter ? DeliveryDeniedMessage : CashierDeliveryDeniedMessage;
 
     public bool CanAccessTable(Guid tableId, Guid regionId) => _waiterScope is null || _waiterScope.Covers(tableId, regionId);
 
@@ -123,11 +131,11 @@ public sealed class StaffAccess
         membership.CanTakePayment,
         membership.CanCancelAndDiscount,
         membership.CanTransferAndReserve,
-        isCashier ? new CashierRights(membership.CanApplyDiscount, membership.MaxDiscountPercent, membership.CanTransferTables) : null);
+        isCashier ? new CashierRights(membership.CanApplyDiscount, membership.MaxDiscountPercent, membership.CanTransferTables, membership.CanViewDelivery) : null);
 
     // Üyelik bulunamazsa (silinmiş/taşınmış kullanıcı) hiçbir masaya ve ürüne erişemez.
     public static StaffAccess Denied(bool isWaiter, bool isCashier) =>
-        new(WaiterScope.Empty, [], isWaiter, false, false, false, false, isCashier ? new CashierRights(false, 100, false) : null);
+        new(WaiterScope.Empty, [], isWaiter, false, false, false, false, isCashier ? new CashierRights(false, 100, false, false) : null);
 }
 
 public static class StaffAccessExtensions
@@ -186,7 +194,7 @@ public static class StaffAccessExtensions
     }
 
     // Siparişe dokunan işlemlerin ortak kontrolü. Masa siparişinde CheckTableAccessAsync; masasız (paket) siparişte
-    // yetki kontrolü yapılır, garson ise hiç erişemez.
+    // yetki kontrolü yapılır; garson ve paket yetkisi olmayan kasiyer erişemez.
     public static async Task<string?> CheckOrderAccessAsync(
         this IAppDbContext db, ICurrentUserService currentUser, Order order, WaiterPermission? permission, CancellationToken cancellationToken)
     {
@@ -203,7 +211,7 @@ public static class StaffAccessExtensions
         if (permission.HasValue && access.Check(permission.Value) is { } denied)
             return denied;
 
-        return access.IsWaiter ? StaffAccess.DeliveryDeniedMessage : null;
+        return access.DeliveryDeniedReason;
     }
 
     // Aşağıdaki süzgeçler garsonun/kasiyerin kapsamını uygular: tamamına bakılan bölgelerin masaları + seçili masalar.
@@ -216,15 +224,16 @@ public static class StaffAccessExtensions
         return query.Where(t => regionIds.Contains(t.RegionId) || tableIds.Contains(t.Id));
     }
 
-    // Garsona paket (masasız) sipariş hiç gelmez; kapsamı boş (tüm masalar) olan garsona da. Kasiyer kapsamı ne olursa
-    // olsun paket siparişleri görür; kapsam yalnızca masa siparişlerini süzer.
+    // Garsona paket (masasız) sipariş hiç gelmez; kapsamı boş (tüm masalar) olan garsona da. Kasiyer paket siparişleri
+    // "Paket siparişler" yetkisi varsa görür (CanAccessDelivery).
     public static IQueryable<Order> InStaffRegions(this IQueryable<Order> query, StaffAccess access)
     {
-        if (access.IsWaiter)
+        if (!access.CanAccessDelivery)
             query = query.Where(o => o.TableId != null);
         if (access.WaiterScope is not { } scope) return query;
         List<Guid> regionIds = scope.WholeRegionIds.ToList();
         List<Guid> tableIds = scope.TableIds.ToList();
+        // Paket siparişler buraya yalnızca yetkili kullanıcıda gelir (yukarıda süzülür); kapsam yalnızca masa siparişlerini daraltır.
         return query.Where(o => o.TableId == null || regionIds.Contains(o.Table!.RegionId) || tableIds.Contains(o.TableId!.Value));
     }
 

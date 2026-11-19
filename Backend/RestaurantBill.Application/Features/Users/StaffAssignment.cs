@@ -19,6 +19,7 @@ public interface IStaffAssignmentRequest
     bool? CanApplyDiscount { get; }
     int? MaxDiscountPercent { get; }
     bool? CanTransferTables { get; }
+    bool? CanViewDelivery { get; }
 }
 
 public static class StaffAssignment
@@ -89,7 +90,8 @@ public static class StaffAssignment
             membership.SetCashierPermissions(
                 request.CanApplyDiscount ?? membership.CanApplyDiscount,
                 maxDiscountPercent,
-                request.CanTransferTables ?? membership.CanTransferTables);
+                request.CanTransferTables ?? membership.CanTransferTables,
+                request.CanViewDelivery ?? membership.CanViewDelivery);
         }
 
         return null;

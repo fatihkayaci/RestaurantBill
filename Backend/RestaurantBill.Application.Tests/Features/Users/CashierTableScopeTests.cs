@@ -18,7 +18,7 @@ using RestaurantBill.Domain.Shared;
 namespace RestaurantBill.Application.Tests.Features.Users;
 
 // Kasiyerin bölge/masa kapsamı: garsonla aynı kural (kapsam dışı masa hiç görünmez, ödeme/kapatma/taşıma reddedilir,
-// bölgesi boş kasiyer tüm masalara bakar). Garsondan farkı: paket (masasız) siparişleri kapsamı ne olursa olsun görür.
+// bölgesi boş kasiyer tüm masalara bakar). Paket (masasız) siparişler bölgeden bağımsız "Paket siparişler" yetkisine bağlıdır.
 public class CashierTableScopeTests : WaiterTestBase
 {
     private async Task<FakeCurrentUserService> SeedCashierAsync(Action<UserBranch>? configure = null)
@@ -118,33 +118,44 @@ public class CashierTableScopeTests : WaiterTestBase
         Assert.Equal(terasOrder.Id, Assert.Single(bills.Value!).Id);
     }
 
-    // Açık hesaplar listesi: kapsam dışı masanın hesabı yok, paket sipariş var.
+    // Açık hesaplar listesi: kapsam dışı masanın hesabı yok; paket sipariş "Paket siparişler" yetkisi varsa var.
     [Fact]
-    public async Task Cashier_WithRegions_OpenBills_HideOutOfScopeTables_ButKeepDeliveryOrders()
+    public async Task Cashier_WithRegions_OpenBills_HideOutOfScopeTables_DeliveryFollowsPermission()
     {
         await SeedBranchAsync();
         Order salonOrder = await SeedOrderAsync(Salon, "S1");
         await SeedOrderAsync(Teras, "T1");
         Order delivery = await SeedDeliveryOrderAsync();
-        FakeCurrentUserService cashier = await SeedSalonCashierAsync();
+        FakeCurrentUserService withDelivery = await SeedSalonCashierAsync();
+        FakeCurrentUserService withoutDelivery = await SeedCashierAsync(m =>
+        {
+            m.SetRegions([Salon.Id]);
+            m.SetCashierPermissions(true, 100, true, canViewDelivery: false);
+        });
 
-        var result = await new GetAllOrdersToCashierQueryHandler(Db, cashier).Handle(new GetAllOrdersToCashierQuery(), CancellationToken.None);
+        var withResult = await new GetAllOrdersToCashierQueryHandler(Db, withDelivery).Handle(new GetAllOrdersToCashierQuery(), CancellationToken.None);
+        var withoutResult = await new GetAllOrdersToCashierQueryHandler(Db, withoutDelivery).Handle(new GetAllOrdersToCashierQuery(), CancellationToken.None);
 
-        Assert.True(result.IsSuccess, result.Error);
-        Assert.Equal(new[] { salonOrder.Id, delivery.Id }.Order(), result.Value!.Select(o => o.Id).Order());
+        Assert.Equal(new[] { salonOrder.Id, delivery.Id }.Order(), withResult.Value!.Select(o => o.Id).Order());
+        Assert.Equal(salonOrder.Id, Assert.Single(withoutResult.Value!).Id);
     }
 
+    // Paket yetkisi bölgeden bağımsız: bölgesi boş kasiyerden de kapatılabilir.
     [Fact]
-    public async Task Cashier_WithRegions_CanAccessDeliveryOrder_UnlikeWaiter()
+    public async Task Cashier_DeliveryAccess_FollowsPermission_UnlikeWaiter()
     {
         await SeedBranchAsync();
         Order delivery = await SeedDeliveryOrderAsync();
-        FakeCurrentUserService cashier = await SeedSalonCashierAsync();
+        FakeCurrentUserService scopedCashier = await SeedSalonCashierAsync();
+        FakeCurrentUserService noDeliveryCashier = await SeedCashierAsync(m => m.SetCashierPermissions(true, 100, true, canViewDelivery: false));
         FakeCurrentUserService waiter = await SeedWaiterAsync(regionIds: [Salon.Id]);
 
-        Assert.Null(await Db.CheckOrderAccessAsync(cashier, delivery, null, CancellationToken.None));
+        Assert.Null(await Db.CheckOrderAccessAsync(scopedCashier, delivery, null, CancellationToken.None));
+        Assert.Equal(StaffAccess.CashierDeliveryDeniedMessage, await Db.CheckOrderAccessAsync(noDeliveryCashier, delivery, null, CancellationToken.None));
         Assert.Equal(StaffAccess.DeliveryDeniedMessage, await Db.CheckOrderAccessAsync(waiter, delivery, null, CancellationToken.None));
-        Assert.False((await Db.GetStaffAccessAsync(cashier, CancellationToken.None)).IsWaiter);
+
+        var bills = await new GetAllOrdersToCashierQueryHandler(Db, noDeliveryCashier).Handle(new GetAllOrdersToCashierQuery(), CancellationToken.None);
+        Assert.DoesNotContain(bills.Value!, o => o.Id == delivery.Id);
     }
 
     [Fact]

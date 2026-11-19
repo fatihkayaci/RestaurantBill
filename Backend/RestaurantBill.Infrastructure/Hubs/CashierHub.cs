@@ -22,8 +22,10 @@ public class CashierHub : Hub
         string? restaurantId = Context.User?.FindFirst("RestaurantId")?.Value;
         if (Guid.TryParse(restaurantId, out Guid id))
         {
-            WaiterScope? cashierScope = Context.User?.IsInRole("Cashier") == true ? await GetCashierScopeAsync(id) : null;
-            foreach (string group in HubGroups.ForCashierHub(id, role => Context.User?.IsInRole(role) == true, cashierScope))
+            var (cashierScope, canViewDelivery) = Context.User?.IsInRole("Cashier") == true
+                ? await GetCashierAccessAsync(id)
+                : (null, true);
+            foreach (string group in HubGroups.ForCashierHub(id, role => Context.User?.IsInRole(role) == true, cashierScope, canViewDelivery))
                 await Groups.AddToGroupAsync(Context.ConnectionId, group);
         }
 
@@ -31,20 +33,22 @@ public class CashierHub : Hub
     }
 
     // Kasiyerin bölgeleri ve masaları bağlantı anında okunur (garsonda olduğu gibi, bkz. TableHub); yöneticinin
-    // değişikliği kasiyerin bağlantısı yeniden kurulunca geçerli olur. Üyelik yoksa hiçbir masa grubuna girmez.
-    private async Task<WaiterScope?> GetCashierScopeAsync(Guid branchId)
+    // değişikliği kasiyerin bağlantısı yeniden kurulunca geçerli olur. Üyelik yoksa hiçbir masa grubuna ve paket
+    // sipariş grubuna girmez. "Paket siparişler" yetkisi de aynı anda okunur.
+    private async Task<(WaiterScope? Scope, bool CanViewDelivery)> GetCashierAccessAsync(Guid branchId)
     {
         if (!Guid.TryParse(Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value, out Guid userId))
-            return WaiterScope.Empty;
+            return (WaiterScope.Empty, false);
 
         var membership = await _db.UserBranches.AsNoTracking()
             .Where(ub => ub.UserId == userId && ub.BranchId == branchId && !ub.IsDeleted)
-            .Select(ub => new { ub.RegionIds, ub.RestrictedRegionIds, ub.TableIds })
+            .Select(ub => new { ub.RegionIds, ub.RestrictedRegionIds, ub.TableIds, ub.CanViewDelivery })
             .FirstOrDefaultAsync(Context.ConnectionAborted);
         if (membership is null)
-            return WaiterScope.Empty;
+            return (WaiterScope.Empty, false);
 
-        return await _db.GetWaiterScopeAsync(
+        WaiterScope? scope = await _db.GetWaiterScopeAsync(
             membership.RegionIds, membership.RestrictedRegionIds, membership.TableIds, Context.ConnectionAborted);
+        return (scope, membership.CanViewDelivery);
     }
 }

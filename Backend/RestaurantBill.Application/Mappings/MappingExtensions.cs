@@ -264,6 +264,8 @@ public static class MappingExtensions
         CanTransferAndReserve = ub.Role != UserRole.Waiter || ub.CanTransferAndReserve,
         CanApplyDiscount = ub.Role != UserRole.Cashier || ub.CanApplyDiscount,
         MaxDiscountPercent = ub.Role == UserRole.Cashier ? ub.MaxDiscountPercent : 100,
-        CanTransferTables = ub.Role != UserRole.Cashier || ub.CanTransferTables
+        CanTransferTables = ub.Role != UserRole.Cashier || ub.CanTransferTables,
+        // Garson paket siparişleri hiç görmez; kasiyerde işaretlenir; diğer roller görür.
+        CanViewDelivery = ub.Role != UserRole.Waiter && (ub.Role != UserRole.Cashier || ub.CanViewDelivery)
     };
 }

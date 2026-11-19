@@ -33,7 +33,8 @@ export const userService = {
             CanTransferAndReserve: data.canTransferAndReserve,
             CanApplyDiscount: data.canApplyDiscount,
             MaxDiscountPercent: data.maxDiscountPercent,
-            CanTransferTables: data.canTransferTables
+            CanTransferTables: data.canTransferTables,
+            CanViewDelivery: data.canViewDelivery
         });
     },
     updateUser: async (data: UpdateUser) => {
@@ -60,7 +61,8 @@ export const userService = {
             CanTransferAndReserve: data.canTransferAndReserve,
             CanApplyDiscount: data.canApplyDiscount,
             MaxDiscountPercent: data.maxDiscountPercent,
-            CanTransferTables: data.canTransferTables
+            CanTransferTables: data.canTransferTables,
+            CanViewDelivery: data.canViewDelivery
         });
     },
     deleteUser: async (id: string) => {
