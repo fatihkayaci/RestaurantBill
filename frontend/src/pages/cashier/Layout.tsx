@@ -11,6 +11,7 @@ import OnlineOrderAlerts from '@/components/layout/OnlineOrderAlerts';
 import StaffSoundToggle from '@/components/layout/StaffSoundToggle';
 import { ActiveShiftProvider } from '@/features/cashier/context/ActiveShiftContext';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
+import { userService } from '@/features/users/api/userService';
 
 export default function CashierLayout() {
     return (
@@ -25,6 +26,14 @@ function CashierLayoutContent() {
 
     const [shiftGateResolved, setShiftGateResolved] = useState(false);
     const [showEndShiftModal, setShowEndShiftModal] = useState(false);
+    // "Paket siparişler" yetkisi olmayan kasiyere paket uyarısı ve sesi gösterilmez (sunucu da listeyi vermez).
+    const [canViewDelivery, setCanViewDelivery] = useState(false);
+
+    useEffect(() => {
+        userService.getCurrentUser()
+            .then(user => setCanViewDelivery(user.canViewDelivery ?? true))
+            .catch(() => {});
+    }, []);
 
     // Gün sonu otomatik kapanışı (ya da yöneticinin yaptığı bir değişiklik) kasiyerin gününü kapattıysa
     // ekran "kasa atanmadı" kapısına döner; ödeme denemesi hata verene kadar beklenmez.
@@ -66,7 +75,7 @@ function CashierLayoutContent() {
             actions={shiftGateResolved && (
                 <>
                     {/* Yeni online paket siparişi: kalıcı uyarı, tekrar eden ses ve rozet; pano kasiyer ekranının "Paket" sekmesi. */}
-                    <OnlineOrderAlerts boardPath="/cashier?sekme=paket" />
+                    {canViewDelivery && <OnlineOrderAlerts boardPath="/cashier?sekme=paket" />}
                     {/* Hesap isteği bildiriminin sesi. */}
                     <StaffSoundToggle />
                     {endShiftButton}

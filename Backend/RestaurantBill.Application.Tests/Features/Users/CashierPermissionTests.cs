@@ -78,7 +78,7 @@ public class CashierPermissionTests : WaiterTestBase
     public async Task Cashier_WithoutDiscountPermission_CannotApplyDiscount()
     {
         await SeedBranchAsync();
-        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(false, 100, true));
+        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(false, 100, true, true));
         var (order, register) = await SeedBillAsync(cashier);
 
         var result = await PayAsync(cashier, order, register, discountAmount: 50m);
@@ -92,7 +92,7 @@ public class CashierPermissionTests : WaiterTestBase
     public async Task Cashier_WithoutDiscountPermission_CanStillTakeFullPayment()
     {
         await SeedBranchAsync();
-        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(false, 100, true));
+        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(false, 100, true, true));
         var (order, register) = await SeedBillAsync(cashier);
 
         var result = await PayAsync(cashier, order, register);
@@ -105,7 +105,7 @@ public class CashierPermissionTests : WaiterTestBase
     public async Task Cashier_DiscountAboveLimit_IsRejected_ByPercentAndByAmount()
     {
         await SeedBranchAsync();
-        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(true, 10, true));
+        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(true, 10, true, true));
         var (order, register) = await SeedBillAsync(cashier);
 
         var byPercent = await PayAsync(cashier, order, register, discountPercent: 20m);
@@ -122,7 +122,7 @@ public class CashierPermissionTests : WaiterTestBase
     public async Task Cashier_DiscountAtLimit_IsAllowed()
     {
         await SeedBranchAsync();
-        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(true, 10, true));
+        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(true, 10, true, true));
         var (order, register) = await SeedBillAsync(cashier);
 
         var result = await PayAsync(cashier, order, register, discountAmount: 40m);
@@ -148,7 +148,7 @@ public class CashierPermissionTests : WaiterTestBase
     public async Task Cashier_WithoutTransferPermission_CannotMoveTable()
     {
         await SeedBranchAsync();
-        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(true, 100, false));
+        FakeCurrentUserService cashier = await SeedCashierAsync(m => m.SetCashierPermissions(true, 100, false, true));
         Order order = await SeedOrderAsync(Salon);
         Table destination = await SeedEmptyTableAsync();
         Guid sourceTableId = order.TableId!.Value;
@@ -207,6 +207,7 @@ public class CashierPermissionTests : WaiterTestBase
         Assert.True(membership.CanApplyDiscount);
         Assert.Equal(100, membership.MaxDiscountPercent);
         Assert.True(membership.CanTransferTables);
+        Assert.True(membership.CanViewDelivery);
     }
 
     [Fact]
@@ -221,7 +222,7 @@ public class CashierPermissionTests : WaiterTestBase
         var updated = await handler.Handle(new UpdateUserCommand
         {
             UserId = cashier.UserId, FullName = "Ayşe Kasiyer", UserName = membership.UserName, Role = UserRole.Cashier,
-            CanApplyDiscount = true, MaxDiscountPercent = 15, CanTransferTables = false
+            CanApplyDiscount = true, MaxDiscountPercent = 15, CanTransferTables = false, CanViewDelivery = false
         }, CancellationToken.None);
         var invalid = await handler.Handle(new UpdateUserCommand
         {
@@ -234,5 +235,6 @@ public class CashierPermissionTests : WaiterTestBase
         Assert.True(membership.CanApplyDiscount);
         Assert.Equal(15, membership.MaxDiscountPercent);
         Assert.False(membership.CanTransferTables);
+        Assert.False(membership.CanViewDelivery);
     }
 }

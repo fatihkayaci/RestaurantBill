@@ -34,6 +34,8 @@ namespace RestaurantBill.Domain.Entities
         public bool CanApplyDiscount { get; private set; } = true;
         public int MaxDiscountPercent { get; private set; } = 100;
         public bool CanTransferTables { get; private set; } = true;
+        // Kasiyer paket (masasız) siparişleri görür ve yönetir mi; yönetici kasiyer başına işaretler.
+        public bool CanViewDelivery { get; private set; } = true;
 
         protected UserBranch() { }
 
@@ -111,7 +113,7 @@ namespace RestaurantBill.Domain.Entities
             CanTransferAndReserve = canTransferAndReserve;
         }
 
-        public void SetCashierPermissions(bool canApplyDiscount, int maxDiscountPercent, bool canTransferTables)
+        public void SetCashierPermissions(bool canApplyDiscount, int maxDiscountPercent, bool canTransferTables, bool canViewDelivery)
         {
             if (maxDiscountPercent is < 1 or > 100)
                 throw new DomainException("İndirim sınırı %1 ile %100 arasında olmalıdır.");
@@ -119,6 +121,7 @@ namespace RestaurantBill.Domain.Entities
             CanApplyDiscount = canApplyDiscount;
             MaxDiscountPercent = maxDiscountPercent;
             CanTransferTables = canTransferTables;
+            CanViewDelivery = canViewDelivery;
         }
 
         public void SetHireDate(DateTime hireDate)

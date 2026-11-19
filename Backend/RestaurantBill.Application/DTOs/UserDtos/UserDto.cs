@@ -34,4 +34,5 @@ public class UserDto
     public bool CanApplyDiscount { get; set; }
     public int MaxDiscountPercent { get; set; }
     public bool CanTransferTables { get; set; }
+    public bool CanViewDelivery { get; set; }
 }

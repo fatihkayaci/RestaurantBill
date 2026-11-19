@@ -1967,6 +1967,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("CanTransferTables")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("CanViewDelivery")
+                        .HasColumnType("boolean");
+
                     b.PrimitiveCollection<List<Guid>>("CategoryIds")
                         .IsRequired()
                         .HasColumnType("uuid[]");

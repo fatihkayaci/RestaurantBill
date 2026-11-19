@@ -177,7 +177,7 @@ public class ItemDiscountPaymentTests : WaiterTestBase
         User cashierUser = User.Create("Ayşe Kasiyer", $"{Guid.NewGuid():N}@test.com", "5550000000");
         DbContext.Users.Add(cashierUser);
         UserBranch membership = UserBranch.Create(cashierUser, Branch, "kasiyer" + Guid.NewGuid().ToString("N")[..6], null, UserRole.Cashier);
-        membership.SetCashierPermissions(true, 10, true);
+        membership.SetCashierPermissions(true, 10, true, true);
         DbContext.UserBranches.Add(membership);
         await DbContext.SaveChangesAsync();
         var cashier = new FakeCurrentUserService { UserId = cashierUser.Id, Role = "Cashier", BranchId = Branch.Id, CompanyId = CurrentUser.CompanyId };
@@ -343,7 +343,7 @@ public class ItemDiscountPaymentTests : WaiterTestBase
         User cashierUser = User.Create("Ayşe Kasiyer", $"{Guid.NewGuid():N}@test.com", "5550000000");
         DbContext.Users.Add(cashierUser);
         UserBranch membership = UserBranch.Create(cashierUser, Branch, "kasiyer" + Guid.NewGuid().ToString("N")[..6], null, UserRole.Cashier);
-        membership.SetCashierPermissions(true, 10, true);
+        membership.SetCashierPermissions(true, 10, true, true);
         DbContext.UserBranches.Add(membership);
         await DbContext.SaveChangesAsync();
         var cashier = new FakeCurrentUserService { UserId = cashierUser.Id, Role = "Cashier", BranchId = Branch.Id, CompanyId = CurrentUser.CompanyId };

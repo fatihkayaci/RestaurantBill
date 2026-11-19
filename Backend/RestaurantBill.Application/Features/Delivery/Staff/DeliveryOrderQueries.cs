@@ -11,11 +11,11 @@ namespace RestaurantBill.Application.Features.Delivery.Staff;
 
 internal static class DeliveryStaff
 {
-    // Paket siparişleri kasiyer ve yöneticiler yönetir; garson (kapsamı ne olursa olsun) erişemez.
+    // Paket siparişleri yöneticiler ve "Paket siparişler" yetkisi olan kasiyer yönetir; garson erişemez.
     public static async Task<string?> CheckAccessAsync(IAppDbContext db, ICurrentUserService currentUser, CancellationToken cancellationToken)
     {
         StaffAccess access = await db.GetStaffAccessAsync(currentUser, cancellationToken);
-        return access.IsWaiter ? DeliveryScope.WaiterDeniedMessage : null;
+        return access.DeliveryDeniedReason;
     }
 
     /// <summary>

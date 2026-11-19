@@ -14,13 +14,14 @@ public static class HubGroups
     // kasiyer, Admin ve Owner online siparişler grubunda. Mutfak, garson ve kurye online sipariş olaylarını almaz.
     // Masaya özgü kasiyer olayları ("Hesap istendi") için ayrıca ForCashierTables'ın grupları: cashierScope yalnızca
     // bölge/masa atanmış kasiyerde verilir; diğer herkes (yönetici, kapsamı boş kasiyer) CashiersAll'dadır.
-    public static List<string> ForCashierHub(Guid restaurantId, Func<string, bool> isInRole, WaiterScope? cashierScope = null)
+    // canViewDelivery: kasiyerin "Paket siparişler" yetkisi; yoksa online sipariş olaylarını almaz.
+    public static List<string> ForCashierHub(Guid restaurantId, Func<string, bool> isInRole, WaiterScope? cashierScope = null, bool canViewDelivery = true)
     {
         List<string> groups = [Restaurant(restaurantId)];
         bool isManager = isInRole("Admin") || isInRole("Owner");
         if (isManager)
             groups.Add(BranchManagers(restaurantId));
-        if (isManager || isInRole("Cashier"))
+        if (isManager || (isInRole("Cashier") && canViewDelivery))
             groups.Add(OnlineOrders(restaurantId));
         groups.AddRange(ForCashierTables(restaurantId, cashierScope));
         return groups;
