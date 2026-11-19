@@ -22,7 +22,7 @@ public class BranchSiteDto
 
     /// <summary>Hazır renk teması ("terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"); boş = terracotta.</summary>
     public string Theme { get; set; } = string.Empty;
-    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit"); boş = renkli. Renk teması her tasarımda ayrı çizilir.</summary>
+    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak"); boş = renkli. Renk teması her tasarımda ayrı çizilir.</summary>
     public string Design { get; set; } = string.Empty;
     /// <summary>Yazı tipi çifti (SiteContent.FontKeys, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi.</summary>
     public string Font { get; set; } = string.Empty;
@@ -64,9 +64,6 @@ public class BranchSiteDto
     public string ReservationHeroUrl { get; set; } = string.Empty;
 
     public static string ImageUrl(string cdnBaseUrl, string? key) => string.IsNullOrWhiteSpace(key) ? string.Empty : $"{cdnBaseUrl}/{key}";
-
-    /// <summary>Yayındaki site.</summary>
-    public static BranchSiteDto From(Branch branch, string cdnBaseUrl) => From(branch.GetPublishedSite(), cdnBaseUrl);
 
     /// <summary>Verilen hâl (yayındaki ya da taslak).</summary>
     public static BranchSiteDto From(SiteSnapshot site, string cdnBaseUrl)

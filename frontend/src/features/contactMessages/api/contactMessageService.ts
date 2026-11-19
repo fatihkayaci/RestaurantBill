@@ -9,10 +9,14 @@ export const publicContactService = {
     },
 };
 
-// Admin "Şikayet ve Öneriler".
+// "Şikayet ve Öneriler": şube modunda o şubenin, sahibin "Tümü" modunda bütün şubelerin mesajları.
 export const contactMessageService = {
-    getAll: async (unreadOnly = false) => {
-        const response = await api.get<ContactMessage[]>('/contact-messages', { params: unreadOnly ? { unreadOnly: true } : undefined });
+    /** `branchId`: "Tümü" modunda tek şubeye süzer. */
+    getAll: async (unreadOnly = false, branchId?: string) => {
+        const params: Record<string, string | boolean> = {};
+        if (unreadOnly) params.unreadOnly = true;
+        if (branchId) params.branchId = branchId;
+        const response = await api.get<ContactMessage[]>('/contact-messages', { params });
         return response.data;
     },
     getUnreadCount: async () => {

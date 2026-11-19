@@ -1,3 +1,4 @@
+using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Domain.Enums;
 
 namespace RestaurantBill.Application.DTOs
@@ -109,6 +110,8 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public DateTime? LastOrderAt { get; set; }
         public List<DeliveryZoneDto> Zones { get; set; } = [];
         public List<PaymentMethod> PaymentMethods { get; set; } = [];
+        /// <summary>PaymentMethods'ta Iban varken ödeme adımında gösterilen IBAN bilgileri; yoksa null.</summary>
+        public TableIbanPaymentDto? IbanPayment { get; set; }
         public bool RequiresPhoneVerification { get; set; }
         public List<OnlineMenuCategoryDto> Categories { get; set; } = [];
         public List<OnlineSetMenuDto> SetMenus { get; set; } = [];
@@ -195,6 +198,8 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public string CustomerPhone { get; set; } = string.Empty;
         public string ZoneName { get; set; } = string.Empty;
         public PaymentMethod PaymentPreference { get; set; }
+        /// <summary>IBAN tercihli, iptal/ret olmamış siparişte havale bilgileri (tutar Total, açıklama sipariş numarası); yoksa null.</summary>
+        public TableIbanPaymentDto? IbanPayment { get; set; }
         public List<DeliveryLineDto> Lines { get; set; } = [];
         public decimal Subtotal { get; set; }
         public decimal DeliveryFee { get; set; }
@@ -219,7 +224,7 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public string AccentColor { get; set; } = string.Empty;
         /// <summary>Sitenin hazır renk teması (SiteContent.ThemeKeys); boş = varsayılan.</summary>
         public string Theme { get; set; } = string.Empty;
-        /// <summary>Sitenin tasarımı (SiteContent.DesignKeys); boş = varsayılan (renkli).</summary>
+        /// <summary>Sitenin tasarımı (SiteContent.DesignKeys: "renkli", "sade", "elit", "sicak"); boş = varsayılan (renkli).</summary>
         public string Design { get; set; } = string.Empty;
         /// <summary>Sitenin yazı tipi çifti (SiteContent.FontKeys); boş = tasarımın kendi yazı tipi.</summary>
         public string Font { get; set; } = string.Empty;
@@ -317,7 +322,7 @@ namespace RestaurantBill.Application.DTOs.Delivery
         /// <summary>Teslim edilmiş, kasiyerin "Teslim al"ıyla kasaya geçmemiş nakit.</summary>
         public decimal OutstandingCash { get; set; }
         public int OutstandingCashOrderCount { get; set; }
-        /// <summary>Teslim edilmiş, kasaya teslim alınmamış kart tahsilatı.</summary>
+        /// <summary>Teslim edilmiş, kasaya teslim alınmamış nakitsiz tahsilat (kart ve IBAN).</summary>
         public decimal OutstandingCard { get; set; }
         public int OutstandingCardOrderCount { get; set; }
         /// <summary>Önceki iş günlerinde tahsil edilip hâlâ teslim edilmemiş nakit.</summary>
@@ -352,6 +357,10 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public int MaxOrdersPerPhonePerDay { get; set; }
         public bool AcceptCash { get; set; }
         public bool AcceptCard { get; set; }
+        /// <summary>IBAN ile ödeme (havale/EFT) ayarı; şubede geçerli IBAN yoksa müşteriye gösterilmez.</summary>
+        public bool AcceptIban { get; set; }
+        /// <summary>Şubede müşteriye gösterilebilecek IBAN var mı (Ayarlar → Ödeme).</summary>
+        public bool HasIban { get; set; }
         public bool RequirePhoneVerification { get; set; }
         /// <summary>SMS sağlayıcısı yapılandırılmış mı; değilse telefon doğrulaması açık olsa da istenmez.</summary>
         public bool SmsConfigured { get; set; }

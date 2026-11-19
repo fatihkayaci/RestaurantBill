@@ -3,7 +3,7 @@ import type { BranchSite } from '@/features/customerSite/types';
 import { cn } from '@/lib/utils';
 import { serif } from './siteParts';
 import {
-    EXTERNAL_SOURCES, textLimit, useSiteEdit, type SiteEditApi, type SiteEditTarget, type SiteListName, type SiteTextField,
+    BRANCH_INFO_FIELDS, EXTERNAL_SOURCES, editExternal, textLimit, useSiteEdit, type SiteEditApi, type SiteEditTarget, type SiteListName, type SiteTextField,
 } from './siteEditContext';
 
 // Admin'deki görsel site düzenleyicisinin sitenin içindeki katmanı. Site sayfaları müşteri sitesiyle AYNI bileşenlerdir;
@@ -117,6 +117,11 @@ export function EditableText({ field, value, as: Tag = 'span', className, placeh
 }) {
     const edit = useSiteEdit();
     if (!edit) return <Tag id={id} className={className}>{value || fallback}</Tag>;
+    // Şubeye ait yazı (saat notu, nasıl gelinir) burada yazılmaz: tıklanınca nereden değiştiği gösterilir.
+    if (BRANCH_INFO_FIELDS.includes(field)) {
+        const x = editExternal(edit, 'branchInfo');
+        return <Tag id={id} {...x} className={cn(className, x.className, !value && 'opacity-60')}>{value || fallback || placeholder}</Tag>;
+    }
     return <EditableTextInner edit={edit} field={field} value={value} as={Tag} className={className} placeholder={placeholder}
         fallback={fallback} multiline={multiline} id={id} />;
 }

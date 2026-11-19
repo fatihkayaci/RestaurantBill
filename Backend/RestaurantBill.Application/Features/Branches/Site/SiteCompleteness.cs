@@ -15,9 +15,6 @@ public sealed record SiteCompletenessFacts(int TotalProducts, int ProductsWithou
 
 public static class SiteCompleteness
 {
-    /// <summary>Yayındaki sitenin puanı.</summary>
-    public static SiteCompletenessDto Evaluate(Branch branch, SiteCompletenessFacts facts) => Evaluate(branch.GetPublishedSite(), facts);
-
     /// <summary>Görsel etkisine göre büyükten küçüğe maddeler ve 0–100 puan (yayındaki ya da taslak hâl).</summary>
     public static SiteCompletenessDto Evaluate(SiteSnapshot site, SiteCompletenessFacts facts)
     {
@@ -137,20 +134,25 @@ public class GetSiteCompletenessQueryHandler(IAppDbContext db, ICurrentUserServi
 {
     public async Task<Result<SiteCompletenessDto>> Handle(GetSiteCompletenessQuery request, CancellationToken cancellationToken)
     {
-        Branch? branch = await BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken, tracking: false);
-        if (branch is null) return Result<SiteCompletenessDto>.Failure("Şube bulunamadı.");
+        Company? company = await CompanySiteLoader.LoadAsync(db, currentUser, cancellationToken, tracking: false);
+        if (company is null) return Result<SiteCompletenessDto>.Failure(CompanySiteLoader.NotFoundMessage);
+
+        // Site şirket genelidir; menü, bölümler ve şubeye ait bilgiler (saatler, WhatsApp, nasıl gelinir) müşteri sitesinin
+        // varsayılan şubesinden (en eski) sayılır.
+        Branch? primary = await CompanySiteLoader.PrimaryBranchAsync(db, company.Id, cancellationToken);
+        Guid branchId = primary?.Id ?? Guid.Empty;
 
         // Sitede görünen ürünler: aktif olanlar.
         var products = await db.Products.AsNoTracking()
-            .Where(p => p.Category.BranchId == branch.Id && p.IsActive)
+            .Where(p => p.Category.BranchId == branchId && p.IsActive)
             .Select(p => p.ImageUrl)
             .ToListAsync(cancellationToken);
 
         List<Guid> regionIds = await db.Regions.AsNoTracking()
-            .Where(r => r.BranchId == branch.Id)
+            .Where(r => r.BranchId == branchId)
             .Select(r => r.Id)
             .ToListAsync(cancellationToken);
-        SiteSnapshot site = request.Draft ? branch.GetSiteDraft() : branch.GetPublishedSite();
+        SiteSnapshot site = CompanySiteLoader.WithBranch(request.Draft ? company.GetSiteDraft() : company.GetPublishedSite(), primary);
         HashSet<Guid> withPhoto = site.Content.RegionDetails.Where(d => d.PhotoKey.Length > 0).Select(d => d.RegionId).ToHashSet();
 
         var facts = new SiteCompletenessFacts(

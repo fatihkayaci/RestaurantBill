@@ -35,6 +35,8 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
             return Result<PublicSiteDto>.Failure("Restoran bulunamadı.");
 
         string cdnBaseUrl = storageOptions.Value.CdnBaseUrl.TrimEnd('/');
+        // Site şirket genelidir; saatler, WhatsApp ve nasıl gelinir seçilen şubeden eklenir.
+        SiteSnapshot site = branch.SiteFor(company.GetPublishedSite());
 
         var categories = await db.Categories.AsNoTracking()
             .Where(c => c.BranchId == branch.Id)
@@ -86,7 +88,7 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
                 .Select(t => new PublicTableDto { Id = t.Id, Name = t.Name, Capacity = t.Capacity })
                 .ToList();
             // Bölümün sitedeki fotoğrafı ve açıklaması (Restoran sitesi ayarı).
-            SiteRegionDetail? detail = branch.GetSiteContent().RegionDetails.FirstOrDefault(d => d.RegionId == region.Id);
+            SiteRegionDetail? detail = site.Content.RegionDetails.FirstOrDefault(d => d.RegionId == region.Id);
             region.PhotoUrl = BranchSiteDto.ImageUrl(cdnBaseUrl, detail?.PhotoKey);
             region.Description = detail?.Description ?? string.Empty;
         }
@@ -112,11 +114,11 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
             Categories = categories.Where(c => c.Products.Count > 0).ToList(),
             SetMenus = setMenus,
             Regions = regions.Where(r => r.Tables.Count > 0).ToList(),
-            Site = BranchSiteDto.From(branch, cdnBaseUrl),
+            Site = BranchSiteDto.From(site, cdnBaseUrl),
             IsOpenNow = branch.IsOpenAt(LocalNow(branch)),
             Today = (int)LocalNow(branch).DayOfWeek,
             Reservation = ReservationRulesDto.From(branch),
-            Seo = SiteSeo.ToDto(SiteSeo.Resolve(branch.GetPublishedSite(), company.Name, branch.BranchName, branch.District), cdnBaseUrl),
+            Seo = SiteSeo.ToDto(SiteSeo.Resolve(site, company.Name, branch.BranchName, branch.District), cdnBaseUrl),
         });
     }
 

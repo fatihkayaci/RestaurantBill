@@ -1,9 +1,11 @@
 // Online paket sipariş: müşteri sitesi (/siparis), takip sayfası ve personel ekranlarının ortak tipleri.
 // Backend: Application/DTOs/Delivery/DeliveryDtos.cs. Enum'lar sayı olarak gelir.
 import type { DeliveryOrderStatus, DoorPaymentMethod } from '@/features/courier/types';
+import type { TableIbanPayment } from '@/features/customerSite/tableIbanPayment';
 
 export type { DeliveryOrderStatus, DoorPaymentMethod } from '@/features/courier/types';
-export { DoorPayment } from '@/features/courier/types';
+export { DoorPayment, doorPaymentLabel, doorPaymentWord } from '@/features/courier/types';
+export type { TableIbanPayment } from '@/features/customerSite/tableIbanPayment';
 
 export const DeliveryStatus = {
     Received: 1,
@@ -101,6 +103,8 @@ export interface OnlineOrdering {
     lastOrderAt?: string | null;
     zones: DeliveryZone[];
     paymentMethods: DoorPaymentMethod[];
+    /** paymentMethods'ta IBAN varken ödeme adımında gösterilen hesap bilgileri; yoksa null. */
+    ibanPayment?: TableIbanPayment | null;
     requiresPhoneVerification: boolean;
     categories: OnlineMenuCategory[];
     setMenus: OnlineSetMenu[];
@@ -196,6 +200,8 @@ export interface DeliveryTracking {
     customerPhone: string;
     zoneName: string;
     paymentPreference: DoorPaymentMethod;
+    /** IBAN tercihli, iptal/ret olmamış siparişte havale bilgileri; yoksa null. */
+    ibanPayment?: TableIbanPayment | null;
     lines: DeliveryLine[];
     subtotal: number;
     deliveryFee: number;
@@ -302,6 +308,10 @@ export interface OnlineOrderSettings {
     maxOrdersPerPhonePerDay: number;
     acceptCash: boolean;
     acceptCard: boolean;
+    /** IBAN ile ödeme (havale/EFT); şubede IBAN yoksa müşteriye gösterilmez. */
+    acceptIban: boolean;
+    /** Şubede müşteriye gösterilebilecek IBAN var mı (Ayarlar → Ödeme). */
+    hasIban: boolean;
     requirePhoneVerification: boolean;
     /** SMS sağlayıcısı yok: doğrulama açık olsa da kod gönderilmez, istenmez. */
     smsConfigured: boolean;
@@ -310,7 +320,7 @@ export interface OnlineOrderSettings {
     isCustomized: boolean;
 }
 
-export type OnlineOrderSettingsInput = Omit<OnlineOrderSettings, 'paused' | 'smsConfigured' | 'isCustomized'> & {
+export type OnlineOrderSettingsInput = Omit<OnlineOrderSettings, 'paused' | 'smsConfigured' | 'isCustomized' | 'hasIban'> & {
     resetToDefaults?: boolean;
 };
 

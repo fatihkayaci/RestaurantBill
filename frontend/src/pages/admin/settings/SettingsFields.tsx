@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 // Ayarlar sekmelerinin ortak kart/satır parçaları (önceden Online sipariş sayfasının içindeydi).
 
 export function SettingsSkeleton() {
-    return <div className="h-64 max-w-3xl animate-pulse rounded-2xl bg-muted" aria-busy="true" />;
+    return <div className="h-64 animate-pulse rounded-2xl bg-muted" aria-busy="true" />;
 }
 
 export function SettingsCard({ title, children }: { title: string; children: ReactNode }) {

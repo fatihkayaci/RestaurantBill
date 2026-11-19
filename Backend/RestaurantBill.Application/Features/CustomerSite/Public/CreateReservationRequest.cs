@@ -62,7 +62,7 @@ public class CreateReservationRequestCommandHandler(IAppDbContext db, ITenantRes
 
         Table? table = await db.Tables
             .Include(t => t.Region).ThenInclude(r => r.Branch)
-            .FirstOrDefaultAsync(t => t.Id == request.TableId && t.Region.Branch.CompanyId == company.Id, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == request.TableId && t.Region.Branch.CompanyId == company.Id && !t.Region.Branch.IsDeleted, cancellationToken);
 
         if (table is null || table.Status == TableStatus.OutOfService)
             return Result<ReservationCreatedDto>.Failure("Bu masa rezervasyona uygun değil.");

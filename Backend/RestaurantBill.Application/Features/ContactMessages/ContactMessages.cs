@@ -9,7 +9,8 @@ using RestaurantBill.Domain.Shared;
 namespace RestaurantBill.Application.Features.ContactMessages;
 
 // Admin "Şikayet ve Öneriler": restoran sitesinin İletişim formundan gelen mesajlar. Liste ve sayaç çalışılan
-// şube(ler)le, okundu/silme işlemleri erişilebilir şubelerle sınırlıdır.
+// şube(ler)le, okundu/silme işlemleri erişilebilir şubelerle sınırlıdır. Şube modunda (admin ya da şube seçmiş sahip)
+// yalnız o şubenin mesajları; sahibin "Tümü" modunda bütün şubelerin mesajları tek listede, şube adıyla ve şube süzgeciyle.
 internal static class ContactMessageScope
 {
     public const string NotFoundMessage = "Mesaj bulunamadı.";
@@ -26,6 +27,8 @@ public class GetContactMessagesQuery : IRequest<Result<List<ContactMessageDto>>>
 {
     /// <summary>true: yalnızca okunmamışlar.</summary>
     public bool UnreadOnly { get; set; }
+    /// <summary>"Tümü" modunda tek şubeye süzer; çalışma kapsamı dışındaki şube boş liste döner.</summary>
+    public Guid? BranchId { get; set; }
 }
 
 public class GetContactMessagesQueryHandler(IAppDbContext db, ICurrentUserService currentUser)
@@ -34,6 +37,9 @@ public class GetContactMessagesQueryHandler(IAppDbContext db, ICurrentUserServic
     public async Task<Result<List<ContactMessageDto>>> Handle(GetContactMessagesQuery request, CancellationToken cancellationToken)
     {
         List<Guid> branchIds = await db.GetWorkingBranchIdsAsync(currentUser, cancellationToken);
+
+        if (request.BranchId is Guid only && only != Guid.Empty)
+            branchIds = branchIds.Where(id => id == only).ToList();
 
         IQueryable<ContactMessage> query = db.ContactMessages.AsNoTracking()
             .Where(m => branchIds.Contains(m.BranchId) && !m.IsDeleted);
@@ -50,7 +56,9 @@ public class GetContactMessagesQueryHandler(IAppDbContext db, ICurrentUserServic
                 Type = m.Type,
                 Message = m.Message,
                 IsRead = m.IsRead,
-                CreatedAt = m.CreatedAt
+                CreatedAt = m.CreatedAt,
+                BranchId = m.BranchId,
+                BranchName = db.Branches.Where(b => b.Id == m.BranchId).Select(b => b.BranchName).FirstOrDefault() ?? string.Empty,
             })
             .ToListAsync(cancellationToken);
 

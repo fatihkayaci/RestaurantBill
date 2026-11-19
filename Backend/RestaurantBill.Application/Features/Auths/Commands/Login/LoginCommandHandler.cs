@@ -114,6 +114,7 @@ namespace RestaurantBill.Application.Features.Auths.Commands.Login
                 .Include(ur => ur.User)
                 .Where(
                     ur => ur.Branch.CompanyId == company.Id
+                       && !ur.Branch.IsDeleted
                        && ur.UserName == request.UserName
                        && !ur.IsDeleted
                        && !ur.User.IsDeleted)

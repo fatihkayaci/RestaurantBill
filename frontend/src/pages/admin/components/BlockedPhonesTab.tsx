@@ -93,7 +93,7 @@ export default function BlockedPhonesTab() {
     };
 
     return (
-        <div className="max-w-3xl space-y-3">
+        <div className="space-y-3">
             <form onSubmit={e => { e.preventDefault(); void add(); }} className="flex flex-col gap-2">
                 <div className="flex gap-2">
                     <label className="relative flex-1">

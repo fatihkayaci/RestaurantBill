@@ -81,15 +81,19 @@ public static class DeliveryScope
     /// <summary>
     /// Şubenin yerel saatine göre şu an sipariş alınabilir mi. Kapanış açılıştan küçük ya da eşitse aralık gece yarısını
     /// aşar (dünün 18:00–02:00 aralığı bu sabah 01:00'i kapsar). Kapanıştan LastOrderMinutesBeforeClose dakika önce
-    /// sipariş alma biter. Sonraki açılış en fazla bir hafta ileriye bakılarak bulunur.
+    /// sipariş alma biter. "24 saat" gün (00:00–23:59) ertesi gece yarısına kadar sürer ve son sipariş kesintisi yoktur.
+    /// Birbirine değen ya da örtüşen aralıklar tek aralık sayılır: art arda 24 saat günlerde son sipariş, zincirin
+    /// bittiği yerdir; zincir bakılan bir haftanın sonuna kadar sürüyorsa son sipariş saati yoktur (her zaman açık).
+    /// Sonraki açılış en fazla bir hafta ileriye bakılarak bulunur.
     /// </summary>
     public static Hours EvaluateHours(OnlineOrderSettings settings, TimeZoneInfo zone, DateTime utcNow)
     {
         DateTime local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcNow, DateTimeKind.Utc), zone);
-        DateTime? lastOrderAt = null;
-        DateTime? nextOpensAt = null;
+        const int lastOffset = 7;
 
-        for (int offset = -1; offset <= 7; offset++)
+        // Dünden itibaren sekiz günün sipariş aralıkları: [başlangıç, son sipariş).
+        List<(DateTime Start, DateTime LastOrder, int Offset)> windows = [];
+        for (int offset = -1; offset <= lastOffset; offset++)
         {
             DateTime date = local.Date.AddDays(offset);
             OnlineOrderDayHours day = settings.For(date.DayOfWeek);
@@ -97,20 +101,40 @@ public static class DeliveryScope
                 continue;
 
             DateTime start = date.Add(day.Opens.ToTimeSpan());
-            DateTime end = date.Add(day.Closes.ToTimeSpan());
-            if (day.Closes <= day.Opens)
-                end = end.AddDays(1);
-            DateTime lastOrder = end.AddMinutes(-settings.LastOrderMinutesBeforeClose);
-            if (lastOrder <= start)
-                continue;
-
-            if (local >= start && local < lastOrder)
-                lastOrderAt = ToUtc(lastOrder, zone);
-            else if (start > local && nextOpensAt is null)
-                nextOpensAt = ToUtc(start, zone);
+            DateTime lastOrder;
+            if (day.IsAllDay)
+                lastOrder = date.AddDays(1);
+            else
+            {
+                DateTime end = date.Add(day.Closes.ToTimeSpan());
+                if (day.Closes <= day.Opens)
+                    end = end.AddDays(1);
+                lastOrder = end.AddMinutes(-settings.LastOrderMinutesBeforeClose);
+            }
+            if (lastOrder > start)
+                windows.Add((start, lastOrder, offset));
         }
 
-        return new Hours(lastOrderAt is not null, lastOrderAt, lastOrderAt is null ? nextOpensAt : null);
+        var current = windows.Where(w => local >= w.Start && local < w.LastOrder).OrderByDescending(w => w.LastOrder).FirstOrDefault();
+        if (current == default)
+        {
+            DateTime? next = windows.Where(w => w.Start > local).Select(w => (DateTime?)w.Start).Min();
+            return new Hours(false, null, next is DateTime n ? ToUtc(n, zone) : null);
+        }
+
+        // Kesintisiz zinciri sona kadar izle: bitiş anında başlamış (ve o an hâlâ açık) bir aralık zinciri uzatır.
+        var reach = current;
+        while (true)
+        {
+            var longer = windows.Where(w => w.Start <= reach.LastOrder && w.LastOrder > reach.LastOrder)
+                .OrderByDescending(w => w.LastOrder).FirstOrDefault();
+            if (longer == default)
+                break;
+            reach = longer;
+        }
+
+        DateTime? lastOrderAt = reach.Offset == lastOffset ? null : ToUtc(reach.LastOrder, zone);
+        return new Hours(true, lastOrderAt, null);
     }
 
     private static string ClosedMessage(DateTime? nextOpensAt, TimeZoneInfo zone, DateTime utcNow)
@@ -143,13 +167,24 @@ public static class DeliveryScope
         }
     }
 
-    public static List<PaymentMethod> PaymentMethodsOf(OnlineOrderSettings settings)
+    /// <summary>Müşterinin seçebileceği ödeme yöntemleri; IBAN yalnızca ayarda açık ve şubede geçerli IBAN varken.</summary>
+    public static List<PaymentMethod> PaymentMethodsOf(Branch branch)
     {
+        OnlineOrderSettings settings = branch.GetOnlineOrderSettings();
         List<PaymentMethod> methods = [];
         if (settings.AcceptCash) methods.Add(PaymentMethod.Nakit);
         if (settings.AcceptCard) methods.Add(PaymentMethod.Kart);
+        if (branch.AcceptsIbanForDelivery) methods.Add(PaymentMethod.Iban);
         return methods;
     }
+
+    /// <summary>Personel ve denetim kaydı için kısa ad: "nakit", "kart", "IBAN".</summary>
+    public static string PaymentWord(PaymentMethod? method) => method switch
+    {
+        PaymentMethod.Nakit => "nakit",
+        PaymentMethod.Iban => "IBAN",
+        _ => "kart"
+    };
 
     // ── Durum adları ────────────────────────────────────────────────────────────────────────────────
 

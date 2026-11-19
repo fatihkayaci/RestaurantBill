@@ -12,8 +12,9 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Tests.Features.CustomerSite;
 
-// Görsel site düzenleyicisi: taslak kaydet / çatışma, yayınla, at, alan bazında geri al, taslağa fotoğraf ve hazır görsel.
-// Kural: müşteri sitesi Yayınla'ya kadar eski hâli görür; dosya ancak ne yayında ne taslakta kullanılıyorsa silinir, shared/ asla.
+// Görsel site düzenleyicisi (şirket geneli, yalnız sahip): taslak kaydet / çatışma, yayınla, at, alan bazında geri al, taslağa
+// fotoğraf ve hazır görsel. Kural: müşteri sitesi Yayınla'ya kadar eski hâli görür; dosya ancak ne yayında ne taslakta
+// kullanılıyorsa silinir, shared/ asla. Şubeye ait alanlar (saatler, WhatsApp, nasıl gelinir) taslağa yazılmaz.
 public class SiteDraftHandlerTests : ApplicationTestBase
 {
     private const string Slug = "ocak";
@@ -24,15 +25,28 @@ public class SiteDraftHandlerTests : ApplicationTestBase
     private static readonly IOptions<BunnyStorageOptions> Cdn = Options.Create(new BunnyStorageOptions { CdnBaseUrl = "https://cdn.test/" });
     private static readonly IOptions<SeoOptions> Seo = Options.Create(new SeoOptions());
 
+    private Company _company = default!;
     private Branch _branch = default!;
     private Region _salon = default!;
     private StockImage _stock = default!;
+
+    // Site yalnız sahibin "Tümü" modunda düzenlenir: token şirket id'sini taşır.
+    private FakeCurrentUserService Owner => new()
+    {
+        Role = "Owner", UserId = CurrentUser.UserId, CompanyId = CurrentUser.CompanyId, BranchId = CurrentUser.CompanyId,
+    };
+
+    /// <summary>Yayındaki siteyi sürüm artırmadan yazar (göçle şirkete taşınmış bir site gibi).</summary>
+    private static void SetPublished(Company company, SiteSnapshot site)
+        => typeof(Company).GetProperty(nameof(Company.Site))!.SetValue(company, site);
 
     private async Task SeedAsync()
     {
         User owner = await SeedActorAsync("Fatma Usta");
         Company company = Company.Create("Ocak", owner);
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(company, CurrentUser.CompanyId);
         company.Slug = Slug;
+        _company = company;
         DbContext.Companies.Add(company);
         _branch = Branch.Create(company.Id, "Moda", "", "", "", "İstanbul", "Kadıköy", "Moda Cd. 48", 10m);
         typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(_branch, CurrentUser.BranchId);
@@ -43,30 +57,31 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         _salon = await SeedRegionAsync();
 
         // Yayında: kendi yüklenmiş kapak ve hikâye fotoğrafı.
-        _branch.UpdateSite("Ocakbaşı", "Közde pişen et.", "", "", null, null, "", "", "");
-        _branch.ReplaceSiteImage(SiteImageSlot.Cover, "site/eski-kapak.webp");
-        _branch.ReplaceSiteImage(SiteImageSlot.About, "site/hikaye.webp");
+        SetPublished(company, SiteSnapshot.Empty with
+        {
+            Headline = "Ocakbaşı", Tagline = "Közde pişen et.", CoverImage = "site/eski-kapak.webp", AboutImage = "site/hikaye.webp",
+        });
         await DbContext.SaveChangesAsync();
     }
 
     private Task<Result<SiteEditorDto>> GetAsync()
-        => new GetSiteEditorQueryHandler(Db, CurrentUser, Cdn, Seo).Handle(new GetSiteEditorQuery(), CancellationToken.None);
+        => new GetSiteEditorQueryHandler(Db, Owner, Cdn, Seo).Handle(new GetSiteEditorQuery(), CancellationToken.None);
 
     private Task<Result<SiteDraftResultDto>> SaveAsync(SaveSiteDraftCommand command)
-        => new SaveSiteDraftCommandHandler(Db, CurrentUser, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
+        => new SaveSiteDraftCommandHandler(Db, Owner, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
 
     private Task<Result<SiteEditorDto>> ImageAsync(SetSiteDraftImageCommand command, string? nextKey = null)
     {
         if (nextKey is not null) _storage.NextKey = nextKey;
-        return new SetSiteDraftImageCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
+        return new SetSiteDraftImageCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
     }
 
     private Task<Result<SiteDraftResultDto>> PublishAsync(int version)
-        => new PublishSiteDraftCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+        => new PublishSiteDraftCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
             .Handle(new PublishSiteDraftCommand { Version = version }, CancellationToken.None);
 
     private Task<Result<SiteDraftResultDto>> DiscardAsync(int version)
-        => new DiscardSiteDraftCommandHandler(Db, CurrentUser, _storage, Cdn, Seo)
+        => new DiscardSiteDraftCommandHandler(Db, Owner, _storage, Cdn, Seo)
             .Handle(new DiscardSiteDraftCommand { Version = version }, CancellationToken.None);
 
     private async Task<PublicSiteDto> PublicSiteAsync()
@@ -156,7 +171,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.Design);
 
         // Yalnız tasarım geri alınır; renk teması taslakta kalır.
-        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
             .Handle(new RevertSiteDraftFieldsCommand { Version = after.Version, Fields = ["design"] }, CancellationToken.None);
         Assert.True(reverted.IsSuccess, reverted.Error);
         Assert.Equal(string.Empty, reverted.Value!.Editor.Draft.Design);
@@ -206,7 +221,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.Font);
 
         // Geri al: yayındaki (boş) değere döner.
-        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
             .Handle(new RevertSiteDraftFieldsCommand { Version = after.Version, Fields = ["font"] }, CancellationToken.None);
         Assert.True(reverted.IsSuccess, reverted.Error);
         Assert.Equal(string.Empty, reverted.Value!.Editor.Draft.Font);
@@ -253,7 +268,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.Empty((await PublicSiteAsync()).Site.HiddenFaqs);
 
         // Alan bazında geri alınır.
-        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
             .Handle(new RevertSiteDraftFieldsCommand { Version = after.Version, Fields = ["hiddenFaqs"] }, CancellationToken.None);
         Assert.True(reverted.IsSuccess, reverted.Error);
         Assert.False(reverted.Value!.Editor.HasChanges);
@@ -303,9 +318,9 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         site = await PublicSiteAsync();
         Assert.Equal("Odun fırınından taze pide.", site.Site.Tagline);
         Assert.Equal("Ocak Kadıköy — ocakbaşı", site.Seo.Title);
-        Branch stored = await DbContext.Branches.AsNoTracking().FirstAsync(b => b.Id == _branch.Id);
+        Company stored = await DbContext.Companies.AsNoTracking().FirstAsync(c => c.Id == _company.Id);
         Assert.Null(stored.SiteDraft);
-        Assert.Equal("Ocak Kadıköy — ocakbaşı", stored.GetSiteContent().SeoTitle); // SEO jsonb'de saklandı
+        Assert.Equal("Ocak Kadıköy — ocakbaşı", stored.GetPublishedSite().Content.SeoTitle); // SEO jsonb'de saklandı
 
         AuditLog log = Assert.Single(DbContext.AuditLogs.Where(a => a.Action == "SitePublished"));
         Assert.Contains("2 değişikliği yayınladı", log.Message);
@@ -349,7 +364,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
 
         Assert.False(result.IsSuccess);
         Assert.Contains("https://", result.Error);
-        Assert.Null((await DbContext.Branches.AsNoTracking().FirstAsync(b => b.Id == _branch.Id)).SiteDraft);
+        Assert.Null((await DbContext.Companies.AsNoTracking().FirstAsync(c => c.Id == _company.Id)).SiteDraft);
     }
 
     [Fact]
@@ -412,7 +427,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.Equal("Bölüm · Salon", editor.Value.Changes[^1].Label);
 
         // jsonb dönüştürücüsünden geçen taslak (izlemesiz okuma) aynı değerleri taşır.
-        Branch stored = await DbContext.Branches.AsNoTracking().FirstAsync(b => b.Id == _branch.Id);
+        Company stored = await DbContext.Companies.AsNoTracking().FirstAsync(c => c.Id == _company.Id);
         Assert.Equal("site/kapak-yeni.webp", stored.SiteDraft!.CoverImage);
         Assert.Equal(StockKey, stored.SiteDraft.Content.FounderPhoto);
         Assert.Equal("site/salon.webp", Assert.Single(stored.SiteDraft.Content.RegionDetails).PhotoKey);
@@ -439,7 +454,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         editor = (await SaveAsync(command)).Value!.Editor;
         Assert.Equal(2, editor.Changes.Count);
 
-        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
             .Handle(new RevertSiteDraftFieldsCommand { Version = editor.Version, Fields = ["coverImage"] }, CancellationToken.None);
 
         Assert.True(reverted.IsSuccess, reverted.Error);
@@ -477,24 +492,6 @@ public class SiteDraftHandlerTests : ApplicationTestBase
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Bölüm bulunamadı.", result.Error);
-    }
-
-    [Fact]
-    public async Task OldImageEndpoint_DoesNotDeleteFileStillUsedByDraft()
-    {
-        await SeedAsync();
-        // Taslak, yayındaki hikâye fotoğrafını kullanmaya devam ediyor (yalnız metin değişti).
-        SiteEditorDto editor = (await GetAsync()).Value!;
-        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
-        command.Headline = "Taslak başlık";
-        await SaveAsync(command);
-
-        _storage.NextKey = "site/hikaye-eski-form.webp";
-        var result = await new SetBranchSiteImageCommandHandler(Db, CurrentUser, _storage, Cdn)
-            .Handle(new SetBranchSiteImageCommand { Slot = SiteImageSlot.About, Content = new MemoryStream([1]) }, CancellationToken.None);
-
-        Assert.True(result.IsSuccess, result.Error);
-        Assert.Empty(_storage.DeletedKeys);
     }
 
     // ── Alt sayfa kapakları (Menü, Hakkımızda, Mekân, İletişim, Rezervasyon) ─────────────────────────
@@ -554,7 +551,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.Empty(_storage.DeletedKeys);
 
         // Geri al: taslağa yüklenen dosya artık kullanılmaz ve silinir; yayındaki kalır.
-        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
             .Handle(new RevertSiteDraftFieldsCommand { Version = second.Value!.Version, Fields = ["heroContact"] }, CancellationToken.None);
         Assert.True(reverted.IsSuccess, reverted.Error);
         Assert.Equal("https://cdn.test/site/iletisim-1.webp", reverted.Value!.Editor.Draft.ContactHeroUrl);
@@ -580,15 +577,134 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         await SeedAsync();
         SiteEditorDto editor = (await GetAsync()).Value!;
         SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
-        command.WhatsappPhone = "0532 000 00 00";
+        command.InstagramUrl = "https://instagram.com/ocak";
         await SaveAsync(command);
 
-        var handler = new GetSiteCompletenessQueryHandler(Db, CurrentUser);
+        var handler = new GetSiteCompletenessQueryHandler(Db, Owner);
         SiteCompletenessDto published = (await handler.Handle(new GetSiteCompletenessQuery(), CancellationToken.None)).Value!;
         SiteCompletenessDto draft = (await handler.Handle(new GetSiteCompletenessQuery { Draft = true }, CancellationToken.None)).Value!;
 
-        Assert.False(published.Items.Single(i => i.Key == "whatsapp").Done);
-        Assert.True(draft.Items.Single(i => i.Key == "whatsapp").Done);
+        Assert.False(published.Items.Single(i => i.Key == "instagram").Done);
+        Assert.True(draft.Items.Single(i => i.Key == "instagram").Done);
         Assert.True(draft.Score > published.Score);
+    }
+
+    // ── Şirket geneli site: yetki, şubeye ait alanlar, çok şubeli şirket ─────────────────────────────
+
+    [Fact]
+    public async Task Admin_CannotOpenOrEditSite()
+    {
+        await SeedAsync();
+        // Varsayılan test kullanıcısı şube yöneticisi (Admin).
+        var get = await new GetSiteEditorQueryHandler(Db, CurrentUser, Cdn, Seo).Handle(new GetSiteEditorQuery(), CancellationToken.None);
+        var save = await new SaveSiteDraftCommandHandler(Db, CurrentUser, Cdn, Seo, TimeProvider.System)
+            .Handle(new SaveSiteDraftCommand { Headline = "Yönetici" }, CancellationToken.None);
+        var image = await new SetSiteDraftImageCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, StockImageId = _stock.Id }, CancellationToken.None);
+        var completeness = await new GetSiteCompletenessQueryHandler(Db, CurrentUser).Handle(new GetSiteCompletenessQuery(), CancellationToken.None);
+
+        Assert.False(get.IsSuccess);
+        Assert.False(save.IsSuccess);
+        Assert.False(image.IsSuccess);
+        Assert.False(completeness.IsSuccess);
+        Assert.Null((await DbContext.Companies.AsNoTracking().FirstAsync(c => c.Id == _company.Id)).SiteDraft);
+    }
+
+    [Fact]
+    public async Task OtherCompanysOwner_CannotEditThisSite()
+    {
+        await SeedAsync();
+        var stranger = new FakeCurrentUserService { Role = "Owner", CompanyId = CurrentUser.CompanyId, BranchId = CurrentUser.CompanyId };
+
+        var get = await new GetSiteEditorQueryHandler(Db, stranger, Cdn, Seo).Handle(new GetSiteEditorQuery(), CancellationToken.None);
+
+        Assert.False(get.IsSuccess); // şirketin sahibi o değil
+    }
+
+    [Fact]
+    public async Task BranchInfo_InSaveBody_IsIgnored_PreviewShowsPrimaryBranch()
+    {
+        await SeedAsync();
+        _branch.UpdateSiteInfo(new TimeOnly(9, 0), new TimeOnly(23, 0), "Pazartesi kapalı.", [], "0532 000 48 48", "Metroya 4 dk.");
+        await DbContext.SaveChangesAsync();
+
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Equal("0532 000 48 48", editor.Draft.WhatsappPhone); // önizleme varsayılan şubeyle
+        Assert.Equal("09:00", editor.Draft.OpensAt);
+
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Tagline = "Yeni alt başlık";
+        command.WhatsappPhone = "0544 111 11 11";
+        command.HoursNote = "Taslakta değişmez";
+        command.OpensAt = "10:00";
+        SiteEditorDto saved = (await SaveAsync(command)).Value!.Editor;
+
+        Assert.Equal(["tagline"], saved.Changes.Select(c => c.Field));
+        Assert.Equal("0532 000 48 48", saved.Draft.WhatsappPhone);
+        Company stored = await DbContext.Companies.AsNoTracking().FirstAsync(c => c.Id == _company.Id);
+        Assert.Equal(string.Empty, stored.SiteDraft!.Content.WhatsappPhone);
+        Assert.Null(stored.SiteDraft.OpensAt);
+        Branch branch = await DbContext.Branches.AsNoTracking().FirstAsync(b => b.Id == _branch.Id);
+        Assert.Equal("0532 000 48 48", branch.GetSiteContent().WhatsappPhone); // şube değişmedi
+        Assert.Equal(new TimeOnly(9, 0), branch.OpensAt);
+    }
+
+    [Fact]
+    public async Task MultiBranch_OneSite_EachBranchKeepsOwnHoursAndWhatsapp()
+    {
+        await SeedAsync();
+        _branch.UpdateSiteInfo(null, null, "", [], "0532 000 48 48", "");
+        Branch second = Branch.Create(_company.Id, "Kadıköy", "", "", "", "İstanbul", "Kadıköy", "Bahariye Cd. 5", 10m);
+        second.UpdateSiteInfo(new TimeOnly(12, 0), new TimeOnly(2, 0), "", [], "0544 222 22 22", "İskeleye 3 dk.");
+        DbContext.Branches.Add(second);
+        await DbContext.SaveChangesAsync();
+        Region terrace = await SeedRegionAsync(second.Id);
+        DbContext.Tables.Add(Table.Create("T1", "", terrace.Id));
+        await DbContext.SaveChangesAsync();
+
+        // Editör iki şubenin bölümlerini şube adıyla gösterir; ikinci şubenin bölümüne fotoğraf konabilir.
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Equal(["Moda · Salon", "Kadıköy · Salon"], editor.Draft.RegionDetails.Select(r => r.Name));
+        var photo = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Region, RegionId = terrace.Id, StockImageId = _stock.Id });
+        Assert.True(photo.IsSuccess, photo.Error);
+        SaveSiteDraftCommand command = TextsFrom(photo.Value!.Draft, photo.Value.Version);
+        command.Headline = "Tek site";
+        int version = (await SaveAsync(command)).Value!.Editor.Version;
+        Assert.True((await PublishAsync(version)).IsSuccess);
+
+        var first = await new GetPublicSiteQueryHandler(Db, _tenant, Cdn).Handle(new GetPublicSiteQuery(), CancellationToken.None);
+        var other = await new GetPublicSiteQueryHandler(Db, _tenant, Cdn).Handle(new GetPublicSiteQuery { BranchId = second.Id }, CancellationToken.None);
+
+        Assert.Equal("Tek site", first.Value!.Site.Headline);
+        Assert.Equal("Tek site", other.Value!.Site.Headline); // aynı site
+        Assert.Equal("0532 000 48 48", first.Value.Site.WhatsappPhone);
+        Assert.Equal("0544 222 22 22", other.Value.Site.WhatsappPhone); // şubenin kendi WhatsApp'ı
+        Assert.Equal("12:00", other.Value.Site.OpensAt);
+        Assert.Equal("İskeleye 3 dk.", other.Value.Site.DirectionsNote);
+        Assert.Equal("https://cdn.test/" + StockKey, Assert.Single(other.Value.Regions).PhotoUrl);
+    }
+
+    [Fact]
+    public async Task RegionPhoto_OtherCompanysRegion_IsRejected()
+    {
+        await SeedAsync();
+        Branch foreign = Branch.Create(Guid.NewGuid(), "Başka", "", "", "", "", "", "", 10m);
+        DbContext.Branches.Add(foreign);
+        await DbContext.SaveChangesAsync();
+        Region foreignRegion = await SeedRegionAsync(foreign.Id);
+
+        var result = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Region, RegionId = foreignRegion.Id, StockImageId = _stock.Id });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Bölüm bulunamadı.", result.Error);
+    }
+
+    [Fact]
+    public async Task Upload_IsStoredUnderCompanyFolder()
+    {
+        await SeedAsync();
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, Content = new MemoryStream([1]) }, "site/kapak-yeni.webp");
+
+        Assert.Equal(_company.Id, _storage.LastBranchId);
     }
 }

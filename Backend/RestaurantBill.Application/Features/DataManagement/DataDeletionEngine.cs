@@ -120,6 +120,16 @@ internal sealed class DataDeletionEngine(IAppDbContext db)
         return db.AuditLogs.Where(a => a.BranchId == b && (c == null || a.CreatedAt < c));
     }
 
+    private async Task<List<CountLineDto>> SiteLinesAsync(DeletionPlan p, CancellationToken ct)
+    {
+        Company? company = await db.Companies.AsNoTracking().FirstOrDefaultAsync(x => x.Id == p.Branch.CompanyId, ct);
+        return
+        [
+            new("Fotoğraf", company?.SiteImageKeysInUse().Count ?? 0),
+            new("Taslak", company?.SiteDraft is null ? 0 : 1),
+        ];
+    }
+
     private IQueryable<Category> Categories(Guid b) => db.Categories.Where(x => x.BranchId == b);
     private IQueryable<Product> Products(Guid b) => db.Products.Where(x => x.Category.BranchId == b);
     private IQueryable<SetMenu> SetMenus(Guid b) => db.SetMenus.Where(x => x.BranchId == b);
@@ -172,11 +182,8 @@ internal sealed class DataDeletionEngine(IAppDbContext db)
                     new("Bölüm", await Regions(b).CountAsync(ct)),
                     new("Masa", await Tables(b).CountAsync(ct)),
                 ],
-                DataGroups.Site =>
-                [
-                    new("Fotoğraf", p.Branch.SiteImageKeysInUse().Count),
-                    new("Taslak", p.Branch.SiteDraft is null ? 0 : 1),
-                ],
+                // Site şirket genelidir: sayılar şirketin sitesinden.
+                DataGroups.Site => await SiteLinesAsync(p, ct),
                 DataGroups.Staff => [new("Çalışan", await Staff(b).CountAsync(ct))],
                 DataGroups.AuditLogs => [new("Kayıt", await AuditLogs(p).CountAsync(ct))],
                 _ => []
@@ -349,7 +356,12 @@ internal sealed class DataDeletionEngine(IAppDbContext db)
         }
 
         if (p.Has(DataGroups.Site))
-            outcome.FileKeys.AddRange(p.Branch.ResetSite());
+        {
+            // Site şirket genelidir (bütün şubelerde ortak); şubeye ait kısmı (WhatsApp, nasıl gelinir) şubede boşalır.
+            Company? company = await db.Companies.FirstOrDefaultAsync(x => x.Id == p.Branch.CompanyId, ct);
+            if (company is not null) outcome.FileKeys.AddRange(company.ResetSite());
+            p.Branch.ResetSiteInfo();
+        }
 
         if (p.Has(DataGroups.Staff))
         {

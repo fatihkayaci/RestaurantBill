@@ -12,20 +12,20 @@ public static class PaymentAllocation
     /// <paramref name="amount"/>'u ağırlıklara orantılı, kuruşa yuvarlayarak böler; yuvarlama farkı en büyük
     /// ağırlığa yazılır, toplam her zaman tam <paramref name="amount"/> olur. Ağırlığı 0 olan anahtar 0 alır.
     /// </summary>
-    public static Dictionary<decimal, decimal> Split(decimal amount, IReadOnlyDictionary<decimal, decimal> weights)
+    public static Dictionary<TKey, decimal> Split<TKey>(decimal amount, IReadOnlyDictionary<TKey, decimal> weights) where TKey : notnull
     {
-        Dictionary<decimal, decimal> result = weights.Keys.ToDictionary(k => k, _ => 0m);
-        List<KeyValuePair<decimal, decimal>> positive = weights.Where(kv => kv.Value > 0).ToList();
+        Dictionary<TKey, decimal> result = weights.Keys.ToDictionary(k => k, _ => 0m);
+        List<KeyValuePair<TKey, decimal>> positive = weights.Where(kv => kv.Value > 0).ToList();
         if (amount == 0m || positive.Count == 0)
             return result;
 
         decimal totalWeight = positive.Sum(kv => kv.Value);
-        decimal largest = positive.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key).First().Key;
+        TKey largest = positive.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key).First().Key;
 
         decimal allocated = 0m;
-        foreach ((decimal key, decimal weight) in positive)
+        foreach ((TKey key, decimal weight) in positive)
         {
-            if (key == largest)
+            if (EqualityComparer<TKey>.Default.Equals(key, largest))
                 continue;
             decimal share = Math.Round(amount * weight / totalWeight, 2, MidpointRounding.AwayFromZero);
             result[key] = share;
@@ -36,7 +36,7 @@ public static class PaymentAllocation
         // Çok küçük tutarlarda yukarı yuvarlanan paylar toplamı aşabilir; o durumda tamamı en büyüğe yazılır.
         if (result[largest] < 0m)
         {
-            foreach (decimal key in result.Keys.ToList())
+            foreach (TKey key in result.Keys.ToList())
                 result[key] = 0m;
             result[largest] = amount;
         }

@@ -7,7 +7,7 @@ import {
     type PublicTableInfo,
 } from '@/features/customerSite/types';
 import {
-    addLine, changeQuantity, defaultSelections, estimatedSubtotal, itemCount as countItems, productKey, pruneUnavailable,
+    addLine, changeQuantity, defaultSelections, removeOneSetMenu, estimatedSubtotal, itemCount as countItems, productKey, pruneUnavailable,
     quantityOf as sumQuantity, selectionNames, setLineNote as setCartLineNote, setMenuKey, setMenuUnitPrice, toCartInput,
     type DeliveryCartLine,
 } from '@/features/delivery/deliveryCart';
@@ -375,6 +375,7 @@ export default function TableOrderPage() {
                             onAddProduct={add}
                             onRemoveProduct={remove}
                             onOpenSetMenu={openSetMenu}
+                            onRemoveSetMenu={menu => setCart(prev => removeOneSetMenu(prev, menu.id))}
                             featuredSection
                             readOnly={!canOrder}
                             empty={(

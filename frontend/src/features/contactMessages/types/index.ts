@@ -31,6 +31,9 @@ export interface ContactMessage {
     message: string;
     isRead: boolean;
     createdAt: string;
+    /** Mesajın geldiği şube (sahibin "Tümü" listesinde gösterilir). */
+    branchId: string;
+    branchName: string;
 }
 
 export interface ContactMessageInput {

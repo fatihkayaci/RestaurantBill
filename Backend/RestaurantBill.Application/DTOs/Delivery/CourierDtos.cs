@@ -64,6 +64,7 @@ namespace RestaurantBill.Application.DTOs.Delivery
         /// <summary>Teslim edilmiş, kasiyerin henüz teslim almadığı nakit (gün ayrımı yok).</summary>
         public decimal OutstandingCash { get; set; }
         public int OutstandingCashOrderCount { get; set; }
+        /// <summary>Nakitsiz tahsilat: kart ve IBAN (havale) birlikte.</summary>
         public decimal OutstandingCard { get; set; }
         public int OutstandingCardOrderCount { get; set; }
     }
@@ -89,6 +90,7 @@ namespace RestaurantBill.Application.DTOs.Delivery
     {
         public int SettledCount { get; set; }
         public decimal CashAmount { get; set; }
+        /// <summary>Nakitsiz: kart ve IBAN (havale) birlikte.</summary>
         public decimal CardAmount { get; set; }
         public decimal Total => CashAmount + CardAmount;
         /// <summary>Kasaya girmesi beklenen nakit (CashAmount ile aynı).</summary>
@@ -110,6 +112,7 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public List<int> Numbers { get; set; } = [];
         /// <summary>Beklenen nakit: teslimdeki nakit siparişlerin toplamı.</summary>
         public decimal ExpectedCash { get; set; }
+        /// <summary>Nakitsiz: kart ve IBAN (havale) birlikte.</summary>
         public decimal CardAmount { get; set; }
         /// <summary>Sayılan nakit; sayım yoksa (nakitsiz teslim ya da eski kayıt) null.</summary>
         public decimal? CountedCash { get; set; }

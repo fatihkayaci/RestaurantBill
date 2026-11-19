@@ -161,6 +161,15 @@ public class OnlineOrderingController : BaseController
         return HandleResult(result);
     }
 
+    /// <summary>{ acceptIban } — yalnızca "IBAN ile ödeme" anahtarı; hemen kaydedilir, güncel ayarları döner.</summary>
+    [Authorize(Roles = "Owner,Admin")]
+    [HttpPut("settings/iban")]
+    public async Task<IActionResult> SetIban([FromBody] SetOnlineOrderIbanCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
     /// <summary>Kasanın "Online siparişe kapalı" anahtarı: { branchId, paused, enabled }.</summary>
     [Authorize(Roles = "Owner,Admin,Cashier")]
     [HttpGet("status")]

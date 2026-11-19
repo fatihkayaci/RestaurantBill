@@ -166,7 +166,7 @@ public class TableIbanPaymentTests : ApplicationTestBase
         {
             b.SetIban(ValidIban, "Ocak Gıda", "Ziraat Bankası");
             b.SetShowIbanOnTable(true);
-            b.UpdateSiteContent(new SiteContentTexts { WhatsappPhone = "0544 000 48 48" }, 2026);
+            b.UpdateSiteInfo(null, null, "", [], "0544 000 48 48", "");
         });
 
         TableIbanPaymentDto? iban = await PublicIbanAsync(table.Id);

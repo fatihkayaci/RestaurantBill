@@ -11,6 +11,9 @@ import type { CSSProperties } from 'react';
 // - Elit: krem zemin #F4EEE3, ara bant #EAE2D4, koyu espresso bantlar #2B2119, Bodoni Moda + Montserrat (300);
 //   tema yalnız VURGU AİLESİNİ seçer (koyu zeminde açık ton: çizgi, süs, düğme; krem zeminde koyu ton: yazı).
 //   Kapak her zaman koyu (fotoğraf + koyu perde ya da desenli koyu bant), alt bilgi koyu espresso.
+// - Sıcak: şeftali/krem zemin #FFF3E6, şeftali bant #FDE4CB, beyaz kutular (ince turuncu-ten çizgi), parlak turuncu vurgu,
+//   neredeyse siyah koyu bantlar #1E1915; Montserrat 700 başlık + Poppins gövde. Tema yalnız VURGU rengini seçer; kapak
+//   açık şeftali (koyu yazı), menü kutusu ve alt bilgi koyu.
 //
 // Renkli kutuların (kapak, menü kutusu, hikâye, zeytin, kiremit, hardal, alt bilgi) her biri zemin + üstündeki yazı
 // değişkeniyle gelir (`--site-cover-bg` / `--site-on-cover` …). Sayfa bu çiftleri kullanır; tasarım değerlerini değiştirir.
@@ -22,7 +25,7 @@ import type { CSSProperties } from 'react';
 // Özel vurgu renginde düğme yazısı ve açık zemindeki vurgu yazısı okunurluk (WCAG AA, 4.5:1) için otomatik ayarlanır.
 
 /** Sitenin tasarımları (backend: SiteContent.DesignKeys). Boş/bilinmeyen = varsayılan (renkli). */
-export const SITE_DESIGN_KEYS = ['renkli', 'sade', 'elit'] as const;
+export const SITE_DESIGN_KEYS = ['renkli', 'sade', 'elit', 'sicak'] as const;
 export type SiteDesignKey = (typeof SITE_DESIGN_KEYS)[number];
 export const DEFAULT_DESIGN: SiteDesignKey = 'renkli';
 
@@ -32,7 +35,7 @@ export function resolveDesign(key?: string | null): SiteDesignKey {
 
 // ── Yazı tipi çiftleri ──
 // Başlık (`--site-serif`) + gövde (`--site-sans`). Restoran "Yazı tipi"nde birini seçer; boş = tasarımın kendi çifti
-// (Renkli: Fraunces + Manrope; Sade: Instrument Serif + Manrope; Elit: Bodoni Moda + Montserrat). Hepsi Google Fonts,
+// (Renkli: Fraunces + Manrope; Sade: Instrument Serif + Manrope; Elit: Bodoni Moda + Montserrat; Sıcak: Montserrat + Poppins). Hepsi Google Fonts,
 // hepsinde Türkçe harfler (latin-ext: ğ ş ı İ ç ö ü) var. Backend: SiteContent.FontKeys (aynı anahtarlar).
 
 const MANROPE = 'family=Manrope:wght@400;500;600;700;800';
@@ -47,10 +50,12 @@ const DM_SANS = 'family=DM+Sans:wght@300;400;500;600;700;800';
 const CORMORANT = 'family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700';
 const LATO = 'family=Lato:wght@300;400;700;900';
 const GROTESK = 'family=Space+Grotesk:wght@300..700';
+const POPPINS = 'family=Poppins:wght@300;400;500;600;700';
 const fontsUrl = (...families: string[]) => `https://fonts.googleapis.com/css2?${families.join('&')}&display=swap`;
 
 export const SITE_FONT_KEYS = [
     'fraunces-manrope', 'instrument-manrope', 'bodoni-montserrat', 'playfair-inter', 'dmserif-dmsans', 'cormorant-lato', 'grotesk-inter',
+    'montserrat-poppins',
 ] as const;
 export type SiteFontKey = (typeof SITE_FONT_KEYS)[number];
 
@@ -106,6 +111,11 @@ export const SITE_FONTS: Record<SiteFontKey, SiteFontPair> = {
         key: 'grotesk-inter', label: 'Space Grotesk + Inter', heading: "'Space Grotesk', system-ui, sans-serif", tracking: '-0.03em',
         body: INTER_STACK, charWidth: { regular: 0.66, bold: 0.66 },
     }, GROTESK, INTER),
+    // Genişlikler tahmin (Montserrat geniş bir grotesk; Space Grotesk'ten biraz geniş, kalını daha da geniş).
+    'montserrat-poppins': fontPair({
+        key: 'montserrat-poppins', label: 'Montserrat + Poppins', heading: 'Montserrat, system-ui, sans-serif', tracking: '-0.02em',
+        body: 'Poppins, system-ui, sans-serif', charWidth: { regular: 0.66, bold: 0.72 },
+    }, MONTSERRAT, POPPINS),
 };
 
 /** Seçilen yazı tipi çifti; boş/bilinmeyen = tasarımın kendi çifti. */
@@ -120,9 +130,9 @@ export function siteFontsHref(design?: string | null, font?: string | null): str
 }
 
 /** Tasarımı bilmeyen sayfalar için tasarımların kendi yazı tipleri birlikte (tarayıcı yalnız kullanılan dosyayı indirir). */
-export const SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT);
+export const SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, POPPINS);
 /** Bütün çiftler birlikte (yalnız admin'deki yazı tipi seçici). */
-export const ALL_SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, PLAYFAIR, INTER, DM_SERIF, DM_SANS, CORMORANT, LATO, GROTESK);
+export const ALL_SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, PLAYFAIR, INTER, DM_SERIF, DM_SANS, CORMORANT, LATO, GROTESK, POPPINS);
 
 export interface SiteThemePreset {
     key: string;
@@ -323,6 +333,52 @@ const ELIT: SitePalette = {
     headingWeight: 400,
 };
 
+/** Sıcak paleti: şeftali/krem zemin, beyaz kutular, koyu (neredeyse siyah) menü kutusu, hikâye ve alt bilgi. Kapak açık
+ *  şeftali (üstünde koyu yazı); koyu zeminlerdeki vurgu ve düğme (pop) temanın vurgusundan hesaplanır. */
+const SICAK: SitePalette = {
+    bg: '#FFF3E6',
+    fg: '#1E1915',
+    alt: '#FDE4CB',
+    card: '#FFFFFF',
+    text2: '#5C4A3B',
+    muted: '#6E5C4D',
+    wordmark: '#F6DCC0',
+    placeholder: '#F6DCC0',
+    rgb: '30,25,21',
+    heroOverlay: 'rgba(255,243,230,0.82)',
+    disabled: '#B09C88',
+    paper: '#1E1915',
+    onPaper: '#FFF3E6',
+    onPaperSub: '#D9C7B5',
+    paperRgb: '255,243,230',
+    mustard: '#F7C88F',
+    mustardText: null,
+    onHero: '#1E1915',
+    onMenuBox: '#FFF3E6',
+    onMenuBoxSub: '#D9C7B5',
+    heroAccent: null,
+    menuCard: '#FFF3E6',
+    dotOk: '#2EAD62',
+    dotBad: '#E0603A',
+    pop: null,
+    onPop: null,
+    story: '#1E1915',
+    olive: '#2A231D',
+    terracotta: null,
+    onTerracotta: null,
+    terracottaText: null,
+    onTerracottaSoft: null,
+    footer: '#1E1915',
+    onFooter: '#FFF3E6',
+    footerMuted: '#D9C7B5',
+    footerLabel: null,
+    footerMap: '#2A231D',
+    footerRoad: '#3A3028',
+    footerWater: '#23303A',
+    font: 'montserrat-poppins',
+    headingWeight: 700,
+};
+
 type PresetInput = Omit<SiteThemePreset, 'bg' | 'card' | 'border' | 'text' | 'muted'>;
 
 function presets(p: SitePalette, list: PresetInput[]): Record<string, SiteThemePreset> {
@@ -368,6 +424,17 @@ const SADE_THEMES = presets(SADE, [
     { key: 'beyaz', label: 'Sade gri', description: 'Serin gri vurgu. Sade ve modern.', accent: '#9AA5B1', onAccent: SADE.fg, accentText: '#4A5563', ...WHITE },
 ]);
 
+// Sıcak: tema yalnız vurguyu seçer; kapak açık şeftali, koyu kapak (masa QR, akış sayfaları) ve menü kutusu koyu.
+// Turuncu (#D9660B) beyaz yazıyla 3.6:1 kaldığı için düğme yazısı koyu (4.9:1); koyu vurgularda beyaz yazı.
+const PEACH = { hero: SICAK.paper, heroDeep: '#15110E', cover: SICAK.alt, coverDeep: '#F9D6B3', menuBox: SICAK.paper };
+const SICAK_THEMES = presets(SICAK, [
+    { key: 'altin', label: 'Turuncu', description: 'Parlak turuncu vurgu, şeftali zemin. Varsayılan.', accent: '#D9660B', onAccent: SICAK.fg, accentText: '#A34A06', ...PEACH },
+    { key: 'terracotta', label: 'Kırmızı biber', description: 'Biber kırmızısı vurgu. Ocakbaşı, ızgara, burger.', accent: '#C8341E', onAccent: '#FFFFFF', accentText: '#A62A16', ...PEACH },
+    { key: 'zeytin', label: 'Zeytin', description: 'Zeytin yeşili vurgu. Ege, kahvaltı, salata.', accent: '#6B7A2E', onAccent: '#FFFFFF', accentText: '#56622F', ...PEACH },
+    { key: 'bordo', label: 'Bordo', description: 'Şarap rengi vurgu. Akşam yemeği, steakhouse.', accent: '#8E2433', onAccent: '#FFFFFF', accentText: '#8E2433', ...PEACH },
+    { key: 'komur', label: 'Kömür', description: 'Kömür siyahı vurgu. Bar, gece mekânı; sade ve güçlü.', accent: SICAK.fg, onAccent: SICAK.bg, accentText: SICAK.fg, ...PEACH },
+]);
+
 export interface SiteDesignInfo {
     key: SiteDesignKey;
     label: string;
@@ -394,6 +461,10 @@ export const SITE_DESIGNS: Record<SiteDesignKey, SiteDesignInfo> = {
     elit: {
         key: 'elit', label: 'Elit', description: 'Krem ve koyu espresso, tam sayfa fotoğraf, ince altın çizgiler.',
         palette: ELIT, themes: ELIT_THEMES,
+    },
+    sicak: {
+        key: 'sicak', label: 'Sıcak', description: 'Şeftali ve krem zemin, turuncu vurgu, yuvarlak tabak fotoğrafları.',
+        palette: SICAK, themes: SICAK_THEMES,
     },
 };
 
@@ -510,7 +581,7 @@ export function resolveSiteColors(accentColor?: string | null, theme?: string | 
 
 /**
  * Sitenin kök stili. `theme`: hazır tema anahtarı (boş/bilinmeyen = tasarımın varsayılanı). `accentColor`: restoranın
- * özel vurgu rengi (boşsa temanınki). `design`: "renkli" | "sade" | "elit" (boş = renkli). `font`: yazı tipi çifti
+ * özel vurgu rengi (boşsa temanınki). `design`: "renkli" | "sade" | "elit" | "sicak" (boş = renkli). `font`: yazı tipi çifti
  * (SITE_FONTS anahtarı; boş = tasarımın çifti). Parametresiz çağrı varsayılanı verir.
  */
 export function siteRootStyle(accentColor?: string | null, theme?: string | null, design?: string | null, font?: string | null): CSSProperties {

@@ -10,6 +10,7 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { customerFontsHref, customerRootStyle } from './customerTheme';
+import DeliveryIbanCard from './delivery/DeliveryIbanCard';
 import { ImageSlot } from './site/SiteChrome';
 import { FlowSiteHeader, SiteFooter } from './site/SiteFrame';
 import { serif } from './site/siteParts';
@@ -38,6 +39,7 @@ const STEP_HEADLINE: Record<number, string> = {
 };
 
 function paymentText(order: DeliveryTracking): string {
+    if (order.paymentPreference === DoorPayment.Iban) return 'IBAN ile havale';
     return `Kapıda ${order.paymentPreference === DoorPayment.Nakit ? 'nakit' : 'kart'}`;
 }
 
@@ -214,6 +216,9 @@ export default function DeliveryTrackingPage() {
 
     const reorder = delivered || failed;
     const phone = order.restaurantPhone;
+    const byIban = order.paymentPreference === DoorPayment.Iban;
+    // Havale bilgileri teslime kadar görünür; parayı müşteri burada gönderir (açıklama: sipariş numarası).
+    const ibanPayment = byIban && !failed && !delivered ? order.ibanPayment ?? null : null;
 
     return root(
         <>
@@ -285,6 +290,18 @@ export default function DeliveryTrackingPage() {
                     )}
                 </section>
 
+                {ibanPayment && (
+                    <section aria-labelledby="takip-iban" className="flex flex-col gap-4 rounded-[24px] bg-[var(--site-card)] p-5 sm:p-8 md:flex-row md:items-start md:gap-10 md:rounded-[36px] md:p-11">
+                        <div className="flex min-w-0 flex-col gap-2 md:max-w-[360px]">
+                            <h2 id="takip-iban" className={cn(serif, 'm-0 text-[32px] leading-none md:text-[40px]')}>IBAN ile ödeme</h2>
+                            <p className="m-0 text-[15px] leading-relaxed text-[var(--site-sub)]">
+                                Tutarı bu hesaba gönderin, açıklamaya sipariş numaranızı yazın. Restoran ödemeyi hesabında görünce onaylar.
+                            </p>
+                        </div>
+                        <DeliveryIbanCard payment={ibanPayment} amount={order.total} orderNumber={order.number} className="min-w-0 flex-1 bg-[var(--site-bg)]" />
+                    </section>
+                )}
+
                 <div className="flex flex-wrap items-start gap-4">
                     {/* ── Sipariş detayı ── */}
                     <section aria-labelledby="takip-siparis" className="flex min-w-0 flex-[999_1_620px] flex-col gap-5 rounded-[24px] bg-[var(--site-card)] p-5 sm:p-8 md:rounded-[36px] md:p-11">
@@ -323,7 +340,7 @@ export default function DeliveryTrackingPage() {
                             <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[var(--site-terracotta-text)]" aria-hidden="true" />
                             <div className="flex min-w-0 flex-col gap-0.5">
                                 <span className="font-extrabold">Teslimat{order.zoneName ? ` · ${order.zoneName}` : ''}</span>
-                                <span className="text-sm text-[var(--site-sub)]">{order.customerName} · {paymentText(order).toLocaleLowerCase('tr-TR')} ödeme</span>
+                                <span className="text-sm text-[var(--site-sub)]">{order.customerName} · {byIban ? 'IBAN ile havale/EFT' : `${paymentText(order).toLocaleLowerCase('tr-TR')} ödeme`}</span>
                             </div>
                         </div>
 
@@ -372,7 +389,7 @@ export default function DeliveryTrackingPage() {
                             {onTheWay && (
                                 <p className="m-0 text-[15px] leading-relaxed text-[var(--site-on-paper-sub)]">
                                     {order.dispatchedAt && <>{timeOfDay(order.dispatchedAt)}&apos;de yola çıktı. </>}
-                                    {paymentText(order)} ile ödeyeceksiniz · <span className="font-bold text-[var(--site-on-paper)]">{formatPrice(order.total)} ₺</span>
+                                    {byIban ? 'IBAN ile ödemeyi seçtiniz' : `${paymentText(order)} ile ödeyeceksiniz`} · <span className="font-bold text-[var(--site-on-paper)]">{formatPrice(order.total)} ₺</span>
                                 </p>
                             )}
                             <div className="flex flex-wrap gap-2">

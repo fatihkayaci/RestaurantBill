@@ -118,7 +118,8 @@ public class GetCourierSummaryQueryHandler(IAppDbContext db, ICurrentUserService
 
         var outstanding = rows.Where(r => r.Status == DeliveryOrderStatus.Delivered && r.SettledAt == null).ToList();
         var cash = outstanding.Where(r => r.CollectedMethod == PaymentMethod.Nakit).ToList();
-        var card = outstanding.Where(r => r.CollectedMethod == PaymentMethod.Kart).ToList();
+        // Kart ve IBAN: kuryede para yok, kasiyer yalnızca tahsilatı onaylar.
+        var card = outstanding.Where(r => r.CollectedMethod is PaymentMethod.Kart or PaymentMethod.Iban).ToList();
 
         return Result<CourierDaySummaryDto>.Success(new CourierDaySummaryDto
         {

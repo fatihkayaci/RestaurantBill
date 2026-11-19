@@ -376,7 +376,10 @@ public class DispatchDeliveryOrderCommandHandler(
     }
 }
 
-/// <summary>Teslim ve tahsilat kaydı (nakit/kart). Kasaya geçmesi ve siparişin kapanması kasiyerin "Teslim al"ıyla olur.</summary>
+/// <summary>
+/// Teslim ve tahsilat kaydı (nakit/kart; IBAN tercihli siparişte IBAN). Kasaya geçmesi ve siparişin kapanması kasiyerin
+/// "Teslim al"ıyla olur.
+/// </summary>
 public class DeliverDeliveryOrderCommand : IRequest<Result>
 {
     public Guid Id { get; set; }
@@ -388,7 +391,7 @@ public class DeliverDeliveryOrderCommandValidator : AbstractValidator<DeliverDel
     public DeliverDeliveryOrderCommandValidator()
     {
         RuleFor(x => x.Method)
-            .Must(m => m is PaymentMethod.Nakit or PaymentMethod.Kart).WithMessage("Tahsilat nakit ya da kart olabilir.");
+            .Must(m => m is PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban).WithMessage("Tahsilat nakit, kart ya da IBAN olabilir.");
     }
 }
 
@@ -413,7 +416,7 @@ public class DeliverDeliveryOrderCommandHandler(
             },
             "DeliveryOrderDelivered",
             (order, actor) => $"{actor} online paket sipariş #{order.Number}'i teslim edildi olarak işaretledi " +
-                              $"({(order.CollectedMethod == PaymentMethod.Nakit ? "nakit" : "kart")} ₺{order.CollectedAmount:0.##}).",
+                              $"({DeliveryScope.PaymentWord(order.CollectedMethod)} ₺{order.CollectedAmount:0.##}).",
             cancellationToken);
 
         await CourierOwnership.NotifyAsync(courierNotifications, result, branch, courierId, request.Id);

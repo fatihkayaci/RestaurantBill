@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
+using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.DTOs.Delivery;
 using RestaurantBill.Application.Features.CustomerSite;
 using RestaurantBill.Application.Interfaces;
@@ -72,18 +73,20 @@ public class GetDeliveryTrackingQueryHandler(IAppDbContext db, ITenantResolver t
         }
 
         // Takip sayfası restoranın markasıyla açılır: ad, vurgu rengi ve kapak (restoran sitesiyle aynı alanlar).
-        string companyName = await db.Companies.AsNoTracking()
-            .Where(c => c.Id == branch.CompanyId).Select(c => c.Name).FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+        var company = await db.Companies.AsNoTracking()
+            .Where(c => c.Id == branch.CompanyId).Select(c => new { c.Name, c.Site }).FirstOrDefaultAsync(cancellationToken);
+        string companyName = company?.Name ?? string.Empty;
+        SiteSnapshot site = company?.Site ?? SiteSnapshot.Empty;
         string cdnBaseUrl = storageOptions?.Value.CdnBaseUrl.TrimEnd('/') ?? string.Empty;
 
         return Result<DeliveryTrackingDto>.Success(new DeliveryTrackingDto
         {
             CompanyName = companyName,
-            AccentColor = branch.SiteAccentColor,
-            Theme = branch.GetSiteContent().Theme,
-            Design = branch.GetSiteContent().Design,
-            Font = branch.GetSiteContent().Font,
-            CoverImageUrl = string.IsNullOrWhiteSpace(branch.SiteCoverImage) || cdnBaseUrl.Length == 0 ? string.Empty : $"{cdnBaseUrl}/{branch.SiteCoverImage}",
+            AccentColor = site.AccentColor,
+            Theme = site.Content.Theme,
+            Design = site.Content.Design,
+            Font = site.Content.Font,
+            CoverImageUrl = string.IsNullOrWhiteSpace(site.CoverImage) || cdnBaseUrl.Length == 0 ? string.Empty : $"{cdnBaseUrl}/{site.CoverImage}",
             AcceptedAt = order.AcceptedAt,
             Number = order.Number,
             Status = order.Status,
@@ -93,6 +96,11 @@ public class GetDeliveryTrackingQueryHandler(IAppDbContext db, ITenantResolver t
             CustomerPhone = DeliveryScope.MaskPhone(order.CustomerPhone),
             ZoneName = order.ZoneName,
             PaymentPreference = order.PaymentPreference,
+            // Ayar sonradan kapatılsa da müşterinin seçtiği IBAN'a ödeyebilmesi için şubenin IBAN'ı gösterilir.
+            IbanPayment = order.PaymentPreference == PaymentMethod.Iban
+                && order.Status is not (DeliveryOrderStatus.Rejected or DeliveryOrderStatus.Cancelled)
+                    ? TableIbanPaymentDto.ForPayment(branch)
+                    : null,
             Lines = DeliveryScope.ToLineDtos(order, names),
             Subtotal = order.Subtotal,
             DeliveryFee = order.DeliveryFee,

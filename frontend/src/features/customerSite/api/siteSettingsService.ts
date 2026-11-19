@@ -5,7 +5,7 @@ import type { SiteCompleteness } from '../types';
 export const siteSettingsService = {
     /** Doluluk puanı ve yapılacaklar; `draft`: taslağa göre (site düzenleyicisi), yoksa yayındaki siteye göre. */
     getCompleteness: async (draft = false) => {
-        const response = await api.get<SiteCompleteness>('/branch/site/completeness', { params: draft ? { draft: true } : undefined });
+        const response = await api.get<SiteCompleteness>('/company/site/completeness', { params: draft ? { draft: true } : undefined });
         return response.data;
     },
 };

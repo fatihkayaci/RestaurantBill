@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import PrivateRoute from './components/PrivateRoute';
+import OwnerCompanyRoute from './components/OwnerCompanyRoute';
 import { getTenantSlug } from './lib/tenant';
 
 import LoginPage from './pages/LoginPage';
@@ -92,7 +93,8 @@ function App() {
 
                 {/* Owner */}
                 <Route path="/setup-slug" element={<PrivateRoute allowedRoles={["Owner"]}><SlugSetupPage /></PrivateRoute>} />
-                <Route path="/owner" element={<PrivateRoute allowedRoles={["Owner"]} scope="company"><OwnerLayout /></PrivateRoute>}>
+                {/* Çok şubede yalnız "Tümü" modunda; tek şubede şube kapsamında da açılır (OwnerCompanyRoute). */}
+                <Route path="/owner" element={<PrivateRoute allowedRoles={["Owner"]}><OwnerCompanyRoute><OwnerLayout /></OwnerCompanyRoute></PrivateRoute>}>
                     <Route index element={<Navigate to="/owner/overview" replace />} />
                     <Route path="overview" element={<OwnerDashboardPage />} />
                     <Route path="branches" element={<OwnerBranchesPage />} />
@@ -101,6 +103,9 @@ function App() {
                     <Route path="reports" element={<ReportsPage role="owner" />} />
                     <Route path="audit-log" element={<OwnerAuditLogPage />} />
                     <Route path="data" element={<DataManagementPage />} />
+                    {/* Restoran sitesi şirket genelidir (tek site); bütün şubelerin mesajları tek listede. */}
+                    <Route path="site" element={<SiteEditorPage />} />
+                    <Route path="contact-messages" element={<ContactMessagesPage />} />
                 </Route>
 
                 {/* Sahip hesabı kapattıysa silinene kadar yalnızca bu ekran */}
@@ -128,7 +133,8 @@ function App() {
                     <Route path="reports" element={<ReportsPage role="admin" />} />
                     <Route path="restaurant" element={<LegacySettingsRedirect sekme="restoran" />} />
                     <Route path="settings" element={<SettingsPage />} />
-                    <Route path="site" element={<SiteEditorPage />} />
+                    {/* Site şirket genelidir: sahip /owner/site'tan düzenler ("Tümü" modunda; tek şubede şube kapsamında da). */}
+                    <Route path="site" element={<Navigate to="/admin/overview" replace />} />
                     <Route path="profile" element={<ProfilePage />} />
                 </Route>
 

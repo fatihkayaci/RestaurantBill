@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
-    AlertTriangle, Banknote, Bike, Check, ChefHat, ChevronDown, CreditCard, Navigation, Phone, RefreshCw, Undo2,
+    AlertTriangle, Banknote, Bike, Check, ChefHat, ChevronDown, CreditCard, Landmark, Navigation, Phone, RefreshCw, Undo2,
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Modal, ModalTitle } from '@/components/ui/modal';
 import { courierService } from '@/features/courier/api/courierService';
 import {
-    DoorPayment, mapsUrl, telUrl,
+    DoorPayment, doorPaymentLabel, doorPaymentWord, mapsUrl, telUrl,
     type CourierDaySummary, type CourierOrder, type DoorPaymentMethod,
 } from '@/features/courier/types';
 import { createHubConnection } from '@/lib/signalrConnection';
@@ -70,7 +70,7 @@ const TICK_MS = 5_000;
 const UNDO_TOAST_MS = 20_000;
 
 function methodWord(method: DoorPaymentMethod): string {
-    return method === DoorPayment.Nakit ? 'nakit' : 'kart';
+    return doorPaymentWord(method);
 }
 
 // Kurye ekranı: telefonda, tek elle ve güneş altında. Ekranda tek iş (sıradaki paket) büyük kartta; ana düğme hep
@@ -271,7 +271,7 @@ export default function CourierDashboardPage() {
                                 Bugün teslim ettiklerim · {summary?.deliveredTodayCount ?? delivered.length}
                             </h2>
                             {(summary?.outstandingCard ?? 0) > 0 && (
-                                <span className="text-xs font-semibold text-muted-foreground">Kartla alınan ₺{formatPrice(summary?.outstandingCard ?? 0)}</span>
+                                <span className="text-xs font-semibold text-muted-foreground">Kart/IBAN ₺{formatPrice(summary?.outstandingCard ?? 0)}</span>
                             )}
                         </div>
                         {delivered.length > 0 && (
@@ -281,7 +281,7 @@ export default function CourierDashboardPage() {
                                         <div className="min-w-0">
                                             <p className="truncate text-[15px] font-bold text-foreground">#{order.number} · {order.zoneName}</p>
                                             <p className="text-sm text-muted-foreground">
-                                                {timeOf(order.deliveredAt)} · {order.collectedMethod === DoorPayment.Nakit ? 'Nakit' : 'Kart'}
+                                                {timeOf(order.deliveredAt)} · {doorPaymentLabel(order.collectedMethod)}
                                                 {order.settledAt ? ' · kasaya teslim edildi' : ''}
                                             </p>
                                         </div>
@@ -359,6 +359,8 @@ function StatusPill({ order, now }: { order: CourierOrder; now: number }) {
 
 function NextJobCard({ order, now }: { order: CourierOrder; now: number }) {
     const cash = order.paymentPreference === DoorPayment.Nakit;
+    // Müşteri IBAN'a havale yapar; kurye kapıda para almaz.
+    const iban = order.paymentPreference === DoorPayment.Iban;
     const promise = promiseText(order, now);
     const late = (promiseMinutes(order, now) ?? 0) < 0;
     const itemCount = order.lines.reduce((sum, l) => sum + l.quantity, 0);
@@ -400,12 +402,12 @@ function NextJobCard({ order, now }: { order: CourierOrder; now: number }) {
 
             <div className={cn(
                 'mx-4 mb-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3',
-                cash ? 'bg-rb-green-bg' : 'bg-rb-accent-bg'
+                cash ? 'bg-rb-green-bg' : iban ? 'bg-rb-purple-bg' : 'bg-rb-accent-bg'
             )}>
                 <div className="min-w-0">
-                    <p className={cn('flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider', cash ? 'text-rb-green' : 'text-rb-accent')}>
-                        {cash ? <Banknote className="h-4 w-4" aria-hidden="true" /> : <CreditCard className="h-4 w-4" aria-hidden="true" />}
-                        {cash ? 'Kapıda nakit al' : 'Kapıda kart (POS)'}
+                    <p className={cn('flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider', cash ? 'text-rb-green' : iban ? 'text-rb-purple' : 'text-rb-accent')}>
+                        {cash ? <Banknote className="h-4 w-4" aria-hidden="true" /> : iban ? <Landmark className="h-4 w-4" aria-hidden="true" /> : <CreditCard className="h-4 w-4" aria-hidden="true" />}
+                        {cash ? 'Kapıda nakit al' : iban ? 'IBAN (havale) · para almayın' : 'Kapıda kart (POS)'}
                     </p>
                     {promise && <p className={cn('text-[13px]', late ? 'font-bold text-rb-red' : 'text-muted-foreground')}>{promise}</p>}
                 </div>
@@ -433,7 +435,6 @@ function NextJobCard({ order, now }: { order: CourierOrder; now: number }) {
 }
 
 function LaterRow({ order, position, now, onFocus }: { order: CourierOrder; position: number; now: number; onFocus: () => void }) {
-    const cash = order.paymentPreference === DoorPayment.Nakit;
     const state = order.canDeliver
         ? 'Yolda'
         : order.canDispatch
@@ -449,7 +450,7 @@ function LaterRow({ order, position, now, onFocus }: { order: CourierOrder; posi
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-black text-foreground">{position}</span>
             <span className="min-w-0 flex-1">
                 <span className="block truncate font-bold text-foreground">{order.zoneName} · #{order.number}</span>
-                <span className="block truncate text-sm text-muted-foreground">{cash ? 'Nakit' : 'Kart'} · {state}</span>
+                <span className="block truncate text-sm text-muted-foreground">{doorPaymentLabel(order.paymentPreference)} · {state}</span>
             </span>
             <span className="shrink-0 text-lg font-black tabular-nums text-foreground">₺{formatPrice(order.total)}</span>
         </button>
@@ -553,6 +554,13 @@ function DeliverSheet({ order, busy, onClose, onConfirm }: DeliverSheetProps) {
     const paid = customValue !== null && Number.isFinite(customValue) ? customValue : given;
     const change = paid !== null ? Math.round((paid - order.total) * 100) / 100 : null;
     const differs = method !== order.paymentPreference;
+    // IBAN yalnızca müşteri IBAN'ı seçtiyse kaydedilebilir (sunucu da öyle ister).
+    const options3 = order.paymentPreference === DoorPayment.Iban;
+    const methodOptions = [
+        [DoorPayment.Nakit, 'Nakit', Banknote],
+        [DoorPayment.Kart, 'Kart', CreditCard],
+        ...(options3 ? [[DoorPayment.Iban, 'IBAN', Landmark] as const] : []),
+    ] as const;
 
     const chip = (value: number, label: string) => {
         const selected = custom.trim() === '' && given === value;
@@ -583,8 +591,8 @@ function DeliverSheet({ order, busy, onClose, onConfirm }: DeliverSheetProps) {
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-1">
                 <p className="mt-1 text-[40px] font-black leading-none tabular-nums text-foreground">₺{formatPrice(order.total)}</p>
 
-                <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Ödeme türü">
-                    {([[DoorPayment.Nakit, 'Nakit', Banknote], [DoorPayment.Kart, 'Kart', CreditCard]] as const).map(([value, label, Icon]) => {
+                <div className={cn('mt-3 grid gap-2', options3 ? 'grid-cols-3' : 'grid-cols-2')} role="radiogroup" aria-label="Ödeme türü">
+                    {methodOptions.map(([value, label, Icon]) => {
                         const selected = method === value;
                         return (
                             <button
@@ -599,7 +607,9 @@ function DeliverSheet({ order, busy, onClose, onConfirm }: DeliverSheetProps) {
                                     selected
                                         ? value === DoorPayment.Nakit
                                             ? 'bg-rb-green text-rb-green-foreground ring-4 ring-rb-green/25'
-                                            : 'bg-rb-accent text-rb-accent-foreground ring-4 ring-rb-accent/25'
+                                            : value === DoorPayment.Iban
+                                                ? 'bg-rb-purple text-white ring-4 ring-rb-purple/25'
+                                                : 'bg-rb-accent text-rb-accent-foreground ring-4 ring-rb-accent/25'
                                         : 'border-2 border-border text-foreground active:bg-muted'
                                 )}
                             >
@@ -612,7 +622,13 @@ function DeliverSheet({ order, busy, onClose, onConfirm }: DeliverSheetProps) {
                 {differs && (
                     <p role="alert" className="mt-3 flex items-start gap-2 rounded-2xl bg-rb-amber-bg px-4 py-3 text-[15px] font-semibold text-foreground">
                         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rb-amber" aria-hidden="true" />
-                        Müşteri kapıda {methodWord(order.paymentPreference)} demişti. {cash ? 'Nakit' : 'Kart'} olarak kaydedilecek.
+                        Müşteri {order.paymentPreference === DoorPayment.Iban ? 'IBAN ile ödeyeceğini' : `kapıda ${methodWord(order.paymentPreference)}`} demişti. {doorPaymentLabel(method)} olarak kaydedilecek.
+                    </p>
+                )}
+
+                {method === DoorPayment.Iban && (
+                    <p className="mt-3 rounded-2xl bg-rb-purple-bg px-4 py-3 text-[15px] font-semibold text-foreground">
+                        Müşteri havale/EFT ile öder; kapıda para almayın. Paranın hesaba geçtiğini kasa kontrol eder.
                     </p>
                 )}
 
@@ -658,7 +674,7 @@ function DeliverSheet({ order, busy, onClose, onConfirm }: DeliverSheetProps) {
                     disabled={busy}
                     className={cn(
                         'mt-4 flex h-16 w-full items-center justify-center rounded-[18px] text-xl font-black active:opacity-80 disabled:opacity-50',
-                        cash ? 'bg-rb-green text-rb-green-foreground' : 'bg-rb-accent text-rb-accent-foreground'
+                        cash ? 'bg-rb-green text-rb-green-foreground' : method === DoorPayment.Iban ? 'bg-rb-purple text-white' : 'bg-rb-accent text-rb-accent-foreground'
                     )}
                 >
                     {busy ? 'Kaydediliyor…' : `Teslim ettim · ${methodWord(method)} ₺${formatPrice(order.total)}`}

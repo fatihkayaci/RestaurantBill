@@ -223,7 +223,7 @@ export default function DeliveryZonesTab({ onDirtyChange }: Props) {
         setSheet(null);
     };
 
-    if (!rows) return <div className="h-48 max-w-4xl animate-pulse rounded-2xl bg-muted" aria-busy="true" />;
+    if (!rows) return <div className="h-48 animate-pulse rounded-2xl bg-muted" aria-busy="true" />;
 
     const numberCell = (value: number, onChange: (v: number) => void, label: string, step: number, changed: boolean, prefix?: string) => (
         <div className={cn('flex items-center rounded-[10px]', changed && changedCell)}>
@@ -245,7 +245,7 @@ export default function DeliveryZonesTab({ onDirtyChange }: Props) {
     const sheetRow = sheetRowIndex >= 0 ? rows[sheetRowIndex] : null;
 
     return (
-        <div className={cn('max-w-5xl space-y-4', dirty && 'pb-24')}>
+        <div className={cn('space-y-4', dirty && 'pb-24')}>
             <p className="text-sm text-muted-foreground">
                 Müşteri sipariş verirken önce mahallesini seçer. Listede olmayan mahalleye sipariş verilemez.
             </p>

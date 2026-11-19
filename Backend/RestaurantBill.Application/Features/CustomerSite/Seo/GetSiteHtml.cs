@@ -57,7 +57,8 @@ public class GetSiteHtmlQueryHandler(
         Branch? branch = await CustomerSiteScope.ResolveBranchAsync(db, company.Id, null, cancellationToken);
         if (branch is null) return null;
 
-        SiteSeoValues seo = SiteSeo.Resolve(branch.GetPublishedSite(), company.Name, branch.BranchName, branch.District);
+        // Site şirket genelidir; otomatik açıklamadaki saatler ve ilçe varsayılan şubeden (en eski) gelir.
+        SiteSeoValues seo = SiteSeo.Resolve(branch.SiteFor(company.GetPublishedSite()), company.Name, branch.BranchName, branch.District);
         SitePageTitle page = SiteSeo.PageTitle(path, seo.RestaurantName, seo.Title);
 
         string rootDomain = seoOptions.Value.RootDomain.Trim().Trim('.');

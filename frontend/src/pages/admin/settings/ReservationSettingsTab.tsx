@@ -23,7 +23,7 @@ export default function ReservationSettingsTab() {
     useEffect(() => { load(); }, [load]);
 
     return (
-        <div className="grid max-w-3xl gap-4">
+        <div className="grid gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-muted-foreground">Sitedeki rezervasyon saatleri, kuralları ve ön sipariş.</p>
                 <Link to="/admin/reservations" className="flex h-10 items-center rounded-[10px] border border-border bg-card px-3.5 text-sm font-semibold text-foreground hover:border-rb-gold">

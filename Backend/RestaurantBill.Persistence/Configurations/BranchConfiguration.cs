@@ -66,7 +66,8 @@ public class BranchConfiguration : IEntityTypeConfiguration<Branch>
                     v => (QrFeaturesJson.SerializeOrNull(v) ?? string.Empty).GetHashCode(),
                     v => v));
 
-        // Sitenin ek içeriği (tema, galeri, haftalık saat, usta, yorumlar...) da tek jsonb sütununda; null = hiç kaydedilmemiş.
+        // Şubenin site bilgileri (haftalık saat, WhatsApp, nasıl gelinir) SiteContent şeklinde tek jsonb sütununda; null = hiç
+        // kaydedilmemiş. Sitenin geri kalanı şirkettedir (CompanyConfiguration).
         builder.Property(b => b.SiteContent)
             .HasColumnType("jsonb")
             .HasConversion(
@@ -76,21 +77,6 @@ public class BranchConfiguration : IEntityTypeConfiguration<Branch>
                     (a, b) => SiteContentJson.SerializeOrNull(a) == SiteContentJson.SerializeOrNull(b),
                     v => (SiteContentJson.SerializeOrNull(v) ?? string.Empty).GetHashCode(),
                     v => v));
-
-        // Site taslağı (Taslak + Yayınla): sitenin taslağa alınabilen bütün hâli tek jsonb sütununda; null = taslak yok.
-        // Müşteri sitesi bu sütunu hiç okumaz, yalnızca yukarıdaki yayındaki alanları okur.
-        builder.Property(b => b.SiteDraft)
-            .HasColumnType("jsonb")
-            .HasConversion(
-                v => SiteDraftJson.Serialize(v!),
-                s => SiteDraftJson.Deserialize(s),
-                new ValueComparer<SiteSnapshot?>(
-                    (a, b) => SiteDraftJson.SerializeOrNull(a) == SiteDraftJson.SerializeOrNull(b),
-                    v => (SiteDraftJson.SerializeOrNull(v) ?? string.Empty).GetHashCode(),
-                    v => v));
-
-        builder.Property(b => b.SiteDraftVersion)
-            .HasDefaultValue(0);
 
         builder.Ignore(b => b.AcceptsOnlineOrders);
     }
@@ -179,7 +165,8 @@ internal static class SiteContentJson
     }
 }
 
-// Site taslağı: şubenin site sütunları + ek içerik (SiteContentJson ile aynı şekil, "Content" altında). Eksik alan boş sayılır.
+// Şirketin sitesi (yayındaki ve taslak): sitenin sütun alanları + ek içerik (SiteContentJson ile aynı şekil, "Content" altında).
+// Eksik alan boş sayılır. Şekil, 20261119 göçünden önceki şube taslağıyla (Branches.SiteDraft) aynıdır.
 internal static class SiteDraftJson
 {
     private sealed record Stored(
@@ -246,13 +233,14 @@ internal static class ReservationSettingsJson
     }
 }
 
-// Saklanan şekil alan adlarıyla sabittir; alan adları domain'den bağımsız tutulur.
+// Saklanan şekil alan adlarıyla sabittir; alan adları domain'den bağımsız tutulur. Iban sonradan eklendi: eski kayıtta yok, kapalı sayılır.
 internal static class OnlineOrderSettingsJson
 {
     private sealed record StoredDay(int Day, bool Open, string Opens, string Closes);
 
     private sealed record Stored(bool Enabled, List<StoredDay> Days, int LastOrderMinutes, int EtaMinutes, int AutoRejectMinutes,
-        int MaxOpenPerPhone, int MaxPerPhonePerDay, bool Cash, bool Card, bool RequirePhoneVerification, bool PreOrder, int PreOrderLeadMinutes);
+        int MaxOpenPerPhone, int MaxPerPhonePerDay, bool Cash, bool Card, bool RequirePhoneVerification, bool PreOrder, int PreOrderLeadMinutes,
+        bool Iban = false);
 
     private const string TimeFormat = "HH:mm";
 
@@ -266,7 +254,7 @@ internal static class OnlineOrderSettingsJson
                 d.Closes.ToString(TimeFormat, CultureInfo.InvariantCulture))).ToList(),
             settings.LastOrderMinutesBeforeClose, settings.DefaultEtaMinutes, settings.AutoRejectAfterMinutes,
             settings.MaxOpenOrdersPerPhone, settings.MaxOrdersPerPhonePerDay, settings.AcceptCash, settings.AcceptCard,
-            settings.RequirePhoneVerification, settings.PreOrderEnabled, settings.PreOrderLeadMinutes));
+            settings.RequirePhoneVerification, settings.PreOrderEnabled, settings.PreOrderLeadMinutes, settings.AcceptIban));
 
     public static OnlineOrderSettings Deserialize(string json)
     {
@@ -278,7 +266,7 @@ internal static class OnlineOrderSettingsJson
                 TimeOnly.ParseExact(d.Closes, TimeFormat, CultureInfo.InvariantCulture))),
             stored.LastOrderMinutes, stored.EtaMinutes, stored.AutoRejectMinutes,
             stored.MaxOpenPerPhone, stored.MaxPerPhonePerDay, stored.Cash, stored.Card,
-            stored.RequirePhoneVerification, stored.PreOrder, stored.PreOrderLeadMinutes);
+            stored.RequirePhoneVerification, stored.PreOrder, stored.PreOrderLeadMinutes, stored.Iban);
     }
 }
 

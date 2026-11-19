@@ -1,22 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-    Bike, ChevronDown, Columns3, List, RefreshCw, Search, Volume2, VolumeX, Wallet,
+    AlertTriangle, Banknote, Bike, Check, ChevronDown, Clock, Columns3, CreditCard, Landmark, List, MapPin, Phone, RefreshCw, Search,
+    Settings, StickyNote, Volume2, VolumeX, Wallet, X,
 } from 'lucide-react';
-import { SwitchTrack } from '@/components/ui/switch';
+import { Modal, ModalTitle } from '@/components/ui/modal';
 import CourierCashPanel from '@/pages/cashier/components/CourierCashPanel';
-import type { CourierCashSummary } from '@/features/courier/types';
+import { telUrl, type CourierCashSummary } from '@/features/courier/types';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { formatElapsed, formatPrice } from '@/lib/format';
+import { formatAmount, formatElapsed, formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { deliveryService, type OnlineOrderingStatus } from '../api/deliveryService';
 import {
-    ETA_CHOICES, boardColumnOf, countdownText, deliveryLateness, mergeBoardOrders, orderTitle, type BoardColumnKey,
+    ETA_CHOICES, boardColumnOf, countdownText, courierLoadText, deliveryLateness, mergeBoardOrders, orderTitle, type BoardColumnKey,
 } from '../deliveryStatus';
 import { onlineOrderSound } from '../onlineOrderSound';
 import { markOnlineOrderSeen, subscribeOnlineOrders } from '../onlineOrdersHub';
-import { DeliveryStatus, DoorPayment, type DeliveryOrder } from '../types';
+import { DeliveryStatus, DoorPayment, doorPaymentWord, type DeliveryOrder } from '../types';
 import CourierPicker from './CourierPicker';
 import DeliveryOrderDetail from './DeliveryOrderDetail';
 import LatenessBadge from './LatenessBadge';
@@ -26,19 +27,39 @@ interface Props {
     canBlockPhone: boolean;
     /** Kök kutunun iç boşluğu; yönetici sayfası kendi boşluğunu verdiği için "" geçer. */
     className?: string;
+    /** Yönetici sayfası: üst satırdaki büyük başlık (kasiyer sekmesinde yok). */
+    title?: string;
+    /** Yönetici sayfası: "Ayarlar" bağlantısı (online sipariş ayarları). */
+    settingsHref?: string;
 }
 
-type View = 'board' | 'list' | 'couriers';
+type View = 'board' | 'list';
 
-/** Panonun dört şeridi (teslim edilenler şeritlerin altında katlanır). */
-type LaneKey = Exclude<BoardColumnKey, 'delivered'>;
+/** Akışın üç şeridi; onay bekleyenler soldaki gelen kutusunda, teslim edilenler altta katlanır. */
+type FlowLaneKey = 'preparing' | 'ready' | 'onTheWay';
 
-const LANES: { key: LaneKey; label: string; empty: string }[] = [
-    { key: 'new', label: 'Onay bekliyor', empty: 'Onay bekleyen sipariş yok.' },
-    { key: 'preparing', label: 'Mutfakta', empty: 'Mutfakta sipariş yok.' },
+const FLOW_LANES: { key: FlowLaneKey; label: string; hint?: string; empty: string }[] = [
+    { key: 'preparing', label: 'Mutfakta', hint: 'en acil üstte', empty: 'Mutfakta sipariş yok.' },
     { key: 'ready', label: 'Hazır · kurye bekliyor', empty: 'Hazır paket yok.' },
     { key: 'onTheWay', label: 'Yolda', empty: 'Yolda paket yok.' },
 ];
+
+/**
+ * Durum renkleri (şerit noktası, liste rozeti): Onay bekliyor mavi (dolu rozet), Mutfakta turuncu, Hazır mor,
+ * Yolda gri-kahve, Teslim soluk. Yeşil/sarı/kırmızı gecikme ve ödeme için ayrıldığından durumlarda kullanılmaz.
+ */
+const STATUS_TONE: Record<BoardColumnKey, { label: string; chip: string; bar: string }> = {
+    new: { label: 'Onay bekliyor', chip: 'bg-rb-accent text-rb-accent-foreground', bar: 'bg-rb-accent' },
+    preparing: { label: 'Mutfakta', chip: 'bg-rb-orange-bg text-rb-orange', bar: 'bg-rb-orange' },
+    ready: { label: 'Hazır', chip: 'bg-rb-purple-bg text-rb-purple', bar: 'bg-rb-purple' },
+    onTheWay: { label: 'Yolda', chip: 'bg-rb-neutral-bg text-rb-neutral', bar: 'bg-rb-neutral' },
+    delivered: { label: 'Teslim edildi', chip: 'bg-muted text-muted-foreground', bar: 'bg-muted-foreground/40' },
+};
+
+/** Klavye odağı: açık zeminde uygulamanın halka rengi. */
+const FOCUS = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+/** Koyu gelen kutusunda altın halka. */
+const FOCUS_DARK = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rb-gold';
 
 /** "Teslim edildi" bölümünde kasaya alınmışlardan kaç tanesi açık durur; gerisi "Tümünü göster" ile. */
 const SETTLED_VISIBLE = 6;
@@ -50,19 +71,15 @@ function timeOf(iso?: string | null): string {
     return iso ? new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '';
 }
 
-function payWord(order: DeliveryOrder): string {
-    return order.paymentPreference === DoorPayment.Nakit ? 'nakit' : 'kart';
-}
-
 function itemCount(order: DeliveryOrder): number {
     return order.lines.reduce((sum, l) => sum + l.quantity, 0);
 }
 
 function initials(name: string): string {
-    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]?.toLocaleUpperCase('tr-TR')).join('');
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]?.toLocaleUpperCase('tr-TR')).join('') || '?';
 }
 
-/** Otomatik rete kalan sürenin ne kadarı geçti (0–1); çubuğun doluluğu. */
+/** Otomatik rete kalan sürenin ne kadarı geçti (0–1). */
 function autoRejectProgress(order: DeliveryOrder, now: number): number {
     if (!order.autoRejectAt) return 0;
     const start = new Date(order.createdAt).getTime();
@@ -81,31 +98,57 @@ function etaChoicesFor(order: DeliveryOrder): number[] {
         : [...ETA_CHOICES, suggested].sort((a, b) => a - b).slice(-4);
 }
 
-// Online paket siparişler panosu: kasiyer ekranında sekme, yöneticide /admin/online-orders sayfası. Üstte canlı durum
-// şeridi (satış açık/durduruldu, ses, sayaçlar). "Pano": Onay bekliyor / Mutfakta / Hazır / Yolda şeritleri; kabul,
-// ret ve kurye ataması kartın üstünde. Teslim edilenler altta katlanır. "Liste": yoğun şube için tek liste, filtre ve
-// arama. "Kurye kasası": kuryelerdeki tahsilatın "Teslim al"ı. Canlı olaylar uyarılarla aynı bağlantıdan.
-export default function OnlineOrdersBoard({ canBlockPhone, className }: Props) {
+/** Kapıda ödeme şekli: kuryenin ne tahsil edeceği. IBAN'da müşteri havale yapar, kurye para almaz. */
+function paymentInfo(order: DeliveryOrder) {
+    const cash = order.paymentPreference === DoorPayment.Nakit;
+    const iban = order.paymentPreference === DoorPayment.Iban;
+    return {
+        Icon: cash ? Banknote : iban ? Landmark : CreditCard,
+        label: iban ? 'IBAN (havale)' : `Kapıda ${cash ? 'nakit' : 'kart'}`,
+        note: iban ? 'kurye para almaz' : null,
+        tone: cash ? 'text-rb-green' : iban ? 'text-rb-purple' : 'text-rb-accent',
+    };
+}
+
+/** Akış sırası: söz verilen saate en yakın (geciken) üstte; söz yoksa geliş sırası. */
+function byPromise(a: DeliveryOrder, b: DeliveryOrder, now: number): number {
+    const pa = deliveryLateness(a, now)?.promisedAt.getTime() ?? Infinity;
+    const pb = deliveryLateness(b, now)?.promisedAt.getTime() ?? Infinity;
+    return pa - pb || a.createdAt.localeCompare(b.createdAt);
+}
+
+// Online paket siparişler panosu: kasiyer ekranında sekme, yöneticide /admin/online-orders sayfası.
+// Üst satır: bugünün özeti, satış açık/kapalı, ses, görünüm, kurye kasası. "Pano": solda koyu "gelen kutusu" (onay
+// bekleyenler; en acili büyük açılır, kabul/ret ve süre orada; diğerleri altında nabız gibi atar), sağda akış (kurye
+// şeridi, Mutfakta / Hazır / Yolda satırları, teslim edilenler). "Liste": yoğun şube için tek liste, filtre ve arama.
+// "Kurye kasası" sağdan açılan çekmecede. Canlı olaylar uyarılarla aynı bağlantıdan.
+export default function OnlineOrdersBoard({ canBlockPhone, className, title, settingsHref }: Props) {
     const [params, setParams] = useSearchParams();
     const [orders, setOrders] = useState<DeliveryOrder[] | null>(null);
     const [couriers, setCouriers] = useState<CourierCashSummary[]>([]);
     const [status, setStatus] = useState<OnlineOrderingStatus | null>(null);
     const [loadFailed, setLoadFailed] = useState(false);
     const [view, setView] = useState<View>('board');
-    const [mobileLane, setMobileLane] = useState<BoardColumnKey>('new');
     const [now, setNow] = useState(() => Date.now());
     const [pausing, setPausing] = useState(false);
-    /** Kartın üzerinde kurye seçicisi açık olan sipariş (aynı anda bir tane). */
+    /** Satırın altında kurye seçicisi açık olan sipariş (aynı anda bir tane). */
     const [pickerFor, setPickerFor] = useState<string | null>(null);
     const [assigning, setAssigning] = useState(false);
-    /** Kartta kabul/ret işlemi süren sipariş. */
+    /** Kabul işlemi süren sipariş. */
     const [actingId, setActingId] = useState<string | null>(null);
-    /** Kartta seçilen teslim süresi (seçilmediyse bölgenin önerisi). */
+    /** Seçilen teslim süresi (seçilmediyse bölgenin önerisi). */
     const [etaFor, setEtaFor] = useState<Record<string, number>>({});
-    /** Detay "Reddet" adımında açılsın (kartın Reddet düğmesi). */
+    /** Detay "Reddet" adımında açılsın (gelen kutusunun Reddet düğmesi). */
     const [rejectFor, setRejectFor] = useState<string | null>(null);
     const [deliveredOpen, setDeliveredOpen] = useState(false);
+    /** Gelen kutusunda büyük açık sipariş (seçilmediyse otomatik rete en yakın). */
+    const [inboxId, setInboxId] = useState<string | null>(null);
+    /** Akışta ayrıntısı açık satır. */
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    /** Kurye kasası çekmecesi; courierId verilirse o kurye açık gelir. */
+    const [kasa, setKasa] = useState<{ courierId?: string } | null>(null);
     const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const sound = useSyncExternalStore(onlineOrderSound.subscribe, onlineOrderSound.getState);
 
     const selectedId = params.get('siparis');
 
@@ -158,7 +201,7 @@ export default function OnlineOrdersBoard({ canBlockPhone, className }: Props) {
             const key = boardColumnOf(order.status);
             if (key) grouped[key].push(order);
         }
-        // Onay bekleyenler otomatik rete en yakın üstte; teslim edilenler en yeni üstte; diğerleri en eski üstte.
+        // Onay bekleyenler otomatik rete en yakın üstte; teslim edilenler en yeni üstte.
         grouped.new.sort((a, b) => (a.autoRejectAt ?? a.createdAt).localeCompare(b.autoRejectAt ?? b.createdAt));
         grouped.delivered.reverse();
         return grouped;
@@ -172,13 +215,14 @@ export default function OnlineOrdersBoard({ canBlockPhone, className }: Props) {
         const late = [...columns.preparing, ...columns.ready, ...columns.onTheWay]
             .filter(o => deliveryLateness(o, now)?.level === 'late').length;
         return {
-            pending: columns.new.length,
             late,
             avgMinutes: durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null,
             todayCount: delivered.length,
             todayTotal: delivered.reduce((sum, o) => sum + (o.collectedAmount ?? o.total), 0),
         };
     }, [columns, now]);
+
+    const courierCash = couriers.reduce((sum, c) => sum + c.outstandingCash, 0);
 
     const selected = selectedId ? (orders ?? []).find(o => o.id === selectedId) ?? null : null;
 
@@ -251,99 +295,57 @@ export default function OnlineOrdersBoard({ canBlockPhone, className }: Props) {
 
     const togglePicker = (id: string) => setPickerFor(prev => (prev === id ? null : id));
 
-    const cardProps = (order: DeliveryOrder) => ({
-        order,
-        now,
-        couriers,
-        onOpen: () => openOrder(order.id),
-        pickerOpen: pickerFor === order.id,
-        onTogglePicker: () => togglePicker(order.id),
-        assigning,
-        onAssign: (courierUserId: string | null) => assignFromCard(order, courierUserId),
-    });
-
-    const renderNewCard = (order: DeliveryOrder) => (
-        <NewOrderCard
-            key={order.id}
-            order={order}
-            now={now}
-            eta={etaOf(order)}
-            onEta={m => setEtaFor(prev => ({ ...prev, [order.id]: m }))}
-            busy={actingId === order.id}
-            onOpen={() => openOrder(order.id)}
-            onAccept={() => acceptFromCard(order)}
-            onReject={() => openOrder(order.id, true)}
-        />
-    );
+    const pickInbox = (id: string) => {
+        setInboxId(id);
+        markOnlineOrderSeen(id);
+    };
 
     // Teslim edilenler: kuryede duran (kasaya teslim edilmemiş) tahsilat ayrı ve açık; kasaya alınanlar tek satır.
     const unsettled = columns.delivered.filter(o => !o.settledAt);
     const settled = columns.delivered.filter(o => o.settledAt);
     const unsettledTotal = unsettled.reduce((sum, o) => sum + (o.collectedAmount ?? o.total), 0);
 
-    const deliveredSummary = (
-        <button
-            type="button"
-            onClick={() => { setDeliveredOpen(v => !v); setMobileLane('delivered'); }}
-            aria-expanded={deliveredOpen}
-            className="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-dashed border-border px-3 py-2.5 text-left text-sm text-muted-foreground hover:border-rb-gold"
-        >
-            <span>Bugün teslim: <b className="tabular-nums text-foreground">{columns.delivered.length}</b></span>
-            {unsettled.length > 0
-                ? <span className="font-semibold text-rb-amber">{unsettled.length} kasaya teslim edilmedi →</span>
-                : <ChevronDown className={cn('h-4 w-4 transition-transform', deliveredOpen && 'rotate-180')} aria-hidden="true" />}
-        </button>
-    );
+    const inboxActive = columns.new.find(o => o.id === inboxId) ?? columns.new[0] ?? null;
 
     return (
-        <div className={cn('flex min-h-0 flex-1 flex-col gap-4', className ?? 'p-4 sm:p-6')}>
-            {/* Görünüm seçici */}
-            <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex rounded-xl border border-border bg-card p-1" role="tablist" aria-label="Görünüm">
-                    {([
-                        ['board', 'Pano', Columns3],
-                        ['list', 'Liste', List],
-                        ['couriers', 'Kurye kasası', Wallet],
-                    ] as const).map(([key, label, Icon]) => (
-                        <button
-                            key={key}
-                            type="button"
-                            role="tab"
-                            aria-selected={view === key}
-                            onClick={() => setView(key)}
-                            className={cn(
-                                'flex min-h-10 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold transition-colors',
-                                view === key ? 'bg-rb-gold text-rb-gold-foreground' : 'text-muted-foreground hover:text-foreground'
-                            )}
-                        >
-                            <Icon className="h-4 w-4" aria-hidden="true" />{label}
-                        </button>
-                    ))}
+        <div className={cn('flex min-h-0 flex-1 flex-col gap-4', className ?? 'overflow-y-auto p-4 sm:p-6')}>
+            <BoardHeader
+                title={title}
+                settingsHref={settingsHref}
+                status={status}
+                pausing={pausing}
+                onSetOpen={setOpen}
+                stats={stats}
+                sound={sound}
+                view={view}
+                onView={setView}
+                courierCash={courierCash}
+                onOpenKasa={() => setKasa({})}
+                onRefresh={() => { load(); loadStatus(); }}
+            />
+
+            {status?.enabled && status.paused && (
+                <div role="status" className="flex flex-wrap items-center gap-3 rounded-2xl border border-rb-red/40 bg-rb-red-bg px-4 py-2.5">
+                    <p className="flex-1 text-sm font-semibold text-rb-red">Online sipariş durduruldu · müşteriler şu an sipariş veremez.</p>
+                    <button type="button" onClick={() => setOpen(true)} disabled={pausing}
+                        className={cn('min-h-11 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground disabled:opacity-50', FOCUS)}>
+                        Yeniden aç
+                    </button>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => { load(); loadStatus(); }}
-                    aria-label="Yenile"
-                    title="Yenile"
-                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground"
-                >
-                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                </button>
-            </div>
+            )}
 
-            <StatusStrip status={status} pausing={pausing} onSetOpen={setOpen} stats={stats} />
-
-            {view === 'couriers' ? (
-                <CourierCashPanel />
-            ) : orders === null ? (
+            {orders === null ? (
                 loadFailed ? (
                     <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-rb-red/30 bg-rb-red-bg px-4 py-3">
                         <p className="text-sm text-foreground">Online siparişler yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.</p>
-                        <button type="button" onClick={load} className="h-11 rounded-xl border border-border bg-card px-4 text-sm font-semibold">Tekrar dene</button>
+                        <button type="button" onClick={load} className={cn('h-11 rounded-xl border border-border bg-card px-4 text-sm font-semibold', FOCUS)}>Tekrar dene</button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.35fr_1fr_1fr_1fr]" aria-busy="true">
-                        {[...Array(4)].map((_, i) => <div key={i} className="h-48 animate-pulse rounded-[20px] bg-muted" />)}
+                    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)]" aria-busy="true">
+                        <div className="h-96 animate-pulse rounded-[20px] bg-muted" />
+                        <div className="flex flex-col gap-4">
+                            {[...Array(3)].map((_, i) => <div key={i} className="h-28 animate-pulse rounded-2xl bg-muted" />)}
+                        </div>
                     </div>
                 )
             ) : view === 'list' ? (
@@ -361,78 +363,69 @@ export default function OnlineOrdersBoard({ canBlockPhone, className }: Props) {
                     onOpen={openOrder}
                 />
             ) : (
-                <>
-                    {/* Dar ekran: şerit seçici */}
-                    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden" role="tablist" aria-label="Şeritler">
-                        {[...LANES, { key: 'delivered' as const, label: 'Teslim' }].map(lane => {
-                            const count = columns[lane.key].length;
-                            const active = mobileLane === lane.key;
-                            return (
-                                <button
-                                    key={lane.key}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={active}
-                                    onClick={() => setMobileLane(lane.key)}
-                                    className={cn(
-                                        'flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold',
-                                        active ? 'border-foreground bg-foreground text-background'
-                                            : lane.key === 'new' && count > 0 ? 'border-rb-accent/50 bg-rb-accent-bg text-rb-accent'
-                                                : 'border-border bg-card text-foreground'
-                                    )}
-                                >
-                                    {lane.label}
-                                    <span className={cn('rounded-full px-1.5 text-xs tabular-nums', active ? 'bg-white/20' : 'bg-black/10')}>{count}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)]">
+                    <Inbox
+                        orders={columns.new}
+                        active={inboxActive}
+                        now={now}
+                        paused={!!status?.enabled && status.paused}
+                        soundOn={sound === 'on'}
+                        onPick={pickInbox}
+                        eta={inboxActive ? etaOf(inboxActive) : 0}
+                        onEta={m => inboxActive && setEtaFor(prev => ({ ...prev, [inboxActive.id]: m }))}
+                        busy={!!inboxActive && actingId === inboxActive.id}
+                        onAccept={() => inboxActive && acceptFromCard(inboxActive)}
+                        onReject={() => inboxActive && openOrder(inboxActive.id, true)}
+                        onOpen={() => inboxActive && openOrder(inboxActive.id)}
+                    />
 
-                    <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1.35fr_1fr_1fr_1fr]">
-                        {LANES.map(lane => {
-                            const list = columns[lane.key];
-                            const isNewLane = lane.key === 'new';
-                            return (
-                                <section
-                                    key={lane.key}
-                                    aria-label={lane.label}
-                                    className={cn(
-                                        'flex min-h-0 flex-col gap-3 rounded-[20px] lg:overflow-y-auto lg:p-3',
-                                        isNewLane && 'lg:bg-rb-accent/[.06]',
-                                        mobileLane !== lane.key && 'hidden lg:flex'
-                                    )}
-                                >
-                                    <h2 className="hidden items-center justify-between px-1 text-sm font-bold text-foreground lg:flex">
-                                        {lane.label}
-                                        <span className={cn(
-                                            'rounded-full px-2 text-xs font-bold tabular-nums',
-                                            isNewLane && list.length > 0 ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground'
-                                        )}>{list.length}</span>
-                                    </h2>
-                                    {list.length === 0 ? (
-                                        <p className="rounded-2xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">{lane.empty}</p>
-                                    ) : isNewLane ? list.map(renderNewCard) : list.map(order => <LaneCard key={order.id} {...cardProps(order)} />)}
-                                    {lane.key === 'onTheWay' && <div className="mt-auto hidden lg:block">{deliveredSummary}</div>}
-                                </section>
-                            );
-                        })}
+                    <section aria-label="Sipariş akışı" className="flex min-w-0 flex-col gap-5">
+                        {couriers.length > 0 && <CourierStrip couriers={couriers} onOpen={id => setKasa({ courierId: id })} />}
 
-                        {/* Dar ekranda "Teslim" şeridi: teslim edilenler doğrudan açık. */}
-                        <div className={cn('flex flex-col gap-3 lg:hidden', mobileLane !== 'delivered' && 'hidden')}>
-                            <DeliveredSection unsettled={unsettled} unsettledTotal={unsettledTotal} settled={settled} now={now} onOpen={openOrder} />
+                        {FLOW_LANES.map(lane => (
+                            <FlowLane
+                                key={lane.key}
+                                laneKey={lane.key}
+                                label={lane.label}
+                                hint={lane.key === 'ready'
+                                    ? (() => {
+                                        const waiting = columns.ready.filter(o => !o.courierUserId).length;
+                                        return waiting > 0 ? `${waiting} paket kuryesiz` : undefined;
+                                    })()
+                                    : lane.hint}
+                                empty={lane.empty}
+                                orders={[...columns[lane.key]].sort((a, b) => byPromise(a, b, now))}
+                                now={now}
+                                couriers={couriers}
+                                expandedId={expandedId}
+                                onToggleExpand={id => setExpandedId(prev => (prev === id ? null : id))}
+                                pickerFor={pickerFor}
+                                onTogglePicker={togglePicker}
+                                assigning={assigning}
+                                onAssign={assignFromCard}
+                                onOpen={openOrder}
+                            />
+                        ))}
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setDeliveredOpen(v => !v)}
+                                aria-expanded={deliveredOpen}
+                                className={cn('flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-dashed border-border px-4 py-2.5 text-left text-sm text-muted-foreground hover:border-rb-gold', FOCUS)}
+                            >
+                                <span>Bugün teslim: <b className="tabular-nums text-foreground">{columns.delivered.length}</b></span>
+                                <span className="flex items-center gap-2">
+                                    {unsettled.length > 0 && <span className="font-semibold text-rb-amber">{unsettled.length} kasaya teslim edilmedi</span>}
+                                    <ChevronDown className={cn('h-4 w-4 transition-transform', deliveredOpen && 'rotate-180')} aria-hidden="true" />
+                                </span>
+                            </button>
+                            {deliveredOpen && (
+                                <DeliveredSection unsettled={unsettled} unsettledTotal={unsettledTotal} settled={settled} now={now} onOpen={openOrder} wide />
+                            )}
                         </div>
-                    </div>
-
-                    {deliveredOpen && (
-                        <section aria-label="Bugün teslim edilenler" className="hidden flex-col gap-3 rounded-[20px] border border-border bg-card p-4 lg:flex">
-                            <div className="flex items-center justify-between gap-2">
-                                <h2 className="text-sm font-bold text-foreground">Bugün teslim edilenler · {columns.delivered.length}</h2>
-                                <button type="button" onClick={() => setDeliveredOpen(false)} className="min-h-10 rounded-lg px-3 text-xs font-semibold text-muted-foreground hover:text-foreground">Kapat</button>
-                            </div>
-                            <DeliveredSection unsettled={unsettled} unsettledTotal={unsettledTotal} settled={settled} now={now} onOpen={openOrder} wide />
-                        </section>
-                    )}
-                </>
+                    </section>
+                </div>
             )}
 
             {selected && (
@@ -447,62 +440,79 @@ export default function OnlineOrdersBoard({ canBlockPhone, className }: Props) {
                     initialStep={rejectFor === selected.id && selected.status === DeliveryStatus.Received ? 'reject' : 'main'}
                 />
             )}
+
+            {kasa && (
+                <Modal onClose={() => { setKasa(null); load(); }} overlayClassName="z-80 items-stretch justify-end overflow-hidden bg-black/40 backdrop-blur-[2px]">
+                    <aside className="flex h-dvh w-full max-w-[600px] flex-col bg-background shadow-2xl motion-safe:animate-in motion-safe:slide-in-from-right-10 motion-safe:fade-in motion-safe:duration-200">
+                        <div className="flex items-center justify-between gap-3 border-b border-border bg-card px-5 py-4">
+                            <ModalTitle className="font-serif text-3xl font-semibold leading-none text-foreground">Kurye kasası</ModalTitle>
+                            <button type="button" onClick={() => { setKasa(null); load(); }} aria-label="Kapat"
+                                className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-muted hover:text-foreground', FOCUS)}>
+                                <X className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+                            <CourierCashPanel initialCourierId={kasa.courierId} />
+                        </div>
+                    </aside>
+                </Modal>
+            )}
         </div>
     );
 }
 
-// ── Canlı durum şeridi ────────────────────────────────────────────────────────────────────────
+// ── Üst satır ─────────────────────────────────────────────────────────────────────────────────
 
-interface StripProps {
+interface HeaderProps {
+    title?: string;
+    settingsHref?: string;
     status: OnlineOrderingStatus | null;
     pausing: boolean;
     onSetOpen: (open: boolean) => void;
-    stats: { pending: number; late: number; avgMinutes: number | null; todayCount: number; todayTotal: number };
+    stats: { late: number; avgMinutes: number | null; todayCount: number; todayTotal: number };
+    sound: ReturnType<typeof onlineOrderSound.getState>;
+    view: View;
+    onView: (view: View) => void;
+    courierCash: number;
+    onOpenKasa: () => void;
+    onRefresh: () => void;
 }
 
-function StatusStrip({ status, pausing, onSetOpen, stats }: StripProps) {
-    const sound = useSyncExternalStore(onlineOrderSound.subscribe, onlineOrderSound.getState);
+// Solda başlık ve bugünün özeti (teslim, ciro, ortalama süre, geciken); sağda satış anahtarı, ses, görünüm, kurye kasası.
+function BoardHeader({ title, settingsHref, status, pausing, onSetOpen, stats, sound, view, onView, courierCash, onOpenKasa, onRefresh }: HeaderProps) {
     const open = !!status?.enabled && !status.paused;
-
-    const stat = (label: string, value: string, className = 'text-foreground') => (
-        <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
-            <p className={cn('text-xl font-bold tabular-nums', className)}>{value}</p>
-        </div>
-    );
+    const ctl = cn('inline-flex min-h-11 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold', FOCUS);
 
     return (
-        <div className={cn(
-            'flex flex-col gap-3 rounded-2xl border bg-card px-4 py-3 lg:flex-row lg:items-center',
-            status?.paused ? 'border-rb-red/40' : 'border-border'
-        )}>
-            <div className="flex flex-wrap items-center gap-2">
-                <div className="flex min-h-9 items-center gap-2 pr-1">
-                    <span
-                        aria-hidden="true"
-                        className={cn(
-                            'h-2.5 w-2.5 rounded-full',
-                            !status ? 'bg-muted-foreground/40' : open ? 'bg-rb-green motion-safe:animate-pulse' : status.enabled ? 'bg-rb-red' : 'bg-muted-foreground/50'
-                        )}
-                    />
-                    <span className="text-sm font-semibold text-foreground">
-                        {!status ? 'Durum okunuyor…' : open ? 'Sipariş alınıyor' : status.enabled ? 'Durduruldu · müşteri sipariş veremez' : 'Online sipariş ayarlarda kapalı'}
-                    </span>
-                </div>
+        <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
+            <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-6">
+                {title && <h1 className="font-serif text-[32px] font-semibold leading-none text-foreground">{title}</h1>}
+                <p className="text-sm text-muted-foreground">
+                    Bugün <b className="tabular-nums text-foreground">{stats.todayCount} teslim</b>
+                    {' · '}<b className="tabular-nums text-foreground">₺{formatPrice(stats.todayTotal)}</b>
+                    {stats.avgMinutes !== null && <>{' · '}ort. <b className="tabular-nums text-foreground">{stats.avgMinutes} dk</b></>}
+                    {stats.late > 0 && <>{' · '}<b className="tabular-nums text-rb-red">{stats.late} geciken</b></>}
+                </p>
+            </div>
 
-                {status?.enabled && (
+            <div className="flex flex-wrap items-center gap-2">
+                {!status ? (
+                    <span className={cn(ctl, 'border-border bg-card text-muted-foreground')}>Durum okunuyor…</span>
+                ) : !status.enabled ? (
+                    <span className={cn(ctl, 'border-border bg-card text-muted-foreground')}>
+                        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-muted-foreground/50" />Ayarlarda kapalı
+                    </span>
+                ) : (
                     <button
                         type="button"
                         role="switch"
                         aria-checked={open}
                         disabled={pausing}
                         onClick={() => onSetOpen(!open)}
-                        className={cn(
-                            'flex min-h-10 items-center gap-2 rounded-full border px-3 text-sm font-semibold disabled:opacity-50',
-                            open ? 'border-border text-foreground' : 'border-rb-red/40 bg-rb-red-bg text-rb-red'
-                        )}
+                        title={open ? 'Durdurmak için dokunun' : 'Yeniden açmak için dokunun'}
+                        className={cn(ctl, 'disabled:opacity-50', open ? 'border-rb-green/30 bg-rb-green-bg text-rb-green' : 'border-rb-red/30 bg-rb-red-bg text-rb-red')}
                     >
-                        <SwitchTrack checked={open} />
+                        <span aria-hidden="true" className={cn('h-2 w-2 rounded-full', open ? 'bg-rb-green motion-safe:animate-pulse' : 'bg-rb-red')} />
                         {open ? 'Siparişe açık' : 'Siparişe kapalı'}
                     </button>
                 )}
@@ -513,69 +523,253 @@ function StatusStrip({ status, pausing, onSetOpen, stats }: StripProps) {
                     onClick={onlineOrderSound.toggle}
                     aria-pressed={sound === 'on'}
                     title={sound === 'locked' ? 'Tarayıcı sesi bekletiyor; açmak için dokunun' : sound === 'on' ? 'Sesi kapat' : 'Sesi aç'}
-                    className={cn(
-                        'flex min-h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold',
-                        sound === 'on' ? 'bg-rb-green-bg text-rb-green'
-                            : sound === 'locked' ? 'bg-rb-amber-bg text-rb-amber ring-1 ring-rb-amber/40'
-                                : 'bg-muted text-muted-foreground'
+                    className={cn(ctl,
+                        sound === 'on' ? 'border-border bg-card text-foreground'
+                            : sound === 'locked' ? 'border-rb-amber/50 bg-rb-amber-bg text-rb-amber'
+                                : 'border-border bg-muted text-muted-foreground'
                     )}
                 >
                     {sound === 'on' ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />}
                     {sound === 'on' ? 'Ses açık' : sound === 'locked' ? 'Ses kilitli · aç' : 'Ses kapalı'}
                 </button>
-            </div>
 
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4 lg:ml-auto lg:flex lg:items-center">
-                {stat('Onay bekleyen', String(stats.pending), stats.pending > 0 ? 'text-rb-accent' : 'text-foreground')}
-                {stat('Geciken', String(stats.late), stats.late > 0 ? 'text-rb-red' : 'text-foreground')}
-                {stat('Ort. teslim', stats.avgMinutes !== null ? `${stats.avgMinutes} dk` : '—')}
-                {stat('Bugün', `${stats.todayCount} · ₺${formatPrice(stats.todayTotal)}`)}
+                <span aria-hidden="true" className="mx-1 hidden h-6 w-px bg-border sm:block" />
+
+                <div className="inline-flex overflow-hidden rounded-xl border border-border bg-card" role="tablist" aria-label="Görünüm">
+                    {([['board', 'Pano', Columns3], ['list', 'Liste', List]] as const).map(([key, label, Icon]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            role="tab"
+                            aria-selected={view === key}
+                            onClick={() => onView(key)}
+                            className={cn(
+                                'flex min-h-11 items-center gap-1.5 px-3.5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+                                view === key ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+                            )}
+                        >
+                            <Icon className="h-4 w-4" aria-hidden="true" />{label}
+                        </button>
+                    ))}
+                </div>
+
+                <button type="button" onClick={onOpenKasa} className={cn(ctl, 'border-rb-gold/60 bg-rb-gold-bg text-foreground hover:bg-rb-gold/20')}>
+                    <Bike className="h-4 w-4" aria-hidden="true" />Kurye kasası · <b className="tabular-nums">₺{formatPrice(courierCash)}</b>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onRefresh}
+                    aria-label="Yenile"
+                    title="Yenile"
+                    className={cn('flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground', FOCUS)}
+                >
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                </button>
+
+                {settingsHref && (
+                    <Link to={settingsHref} className={cn(ctl, 'border-border bg-card text-foreground hover:border-rb-gold')}>
+                        <Settings className="h-4 w-4" aria-hidden="true" />Ayarlar
+                    </Link>
+                )}
             </div>
         </div>
     );
 }
 
-// ── Kartlar ───────────────────────────────────────────────────────────────────────────────────
+// ── Gelen kutusu (onay bekleyenler) ───────────────────────────────────────────────────────────
 
-interface NewOrderCardProps {
-    order: DeliveryOrder;
+interface InboxProps {
+    orders: DeliveryOrder[];
+    active: DeliveryOrder | null;
     now: number;
+    paused: boolean;
+    soundOn: boolean;
+    onPick: (id: string) => void;
     eta: number;
     onEta: (minutes: number) => void;
     busy: boolean;
-    onOpen: () => void;
     onAccept: () => void;
     onReject: () => void;
+    onOpen: () => void;
 }
 
-// Onay bekleyen sipariş: geri sayım ve çubuk, teslim süresi seçimi, Reddet (gerekçe detayda) ve Kabul et.
-function NewOrderCard({ order, now, eta, onEta, busy, onOpen, onAccept, onReject }: NewOrderCardProps) {
-    const urgent = isUrgent(order, now);
-    const progress = autoRejectProgress(order, now);
-
+// Koyu panel: her iki temada da koyu kalsın diye "dark" kapsamıyla uygulamanın koyu tema değişkenlerini kullanır.
+// En acil sipariş büyük açılır (geri sayım halkası, müşteri, kalemler, süre, kabul/ret); diğerleri altında nabız gibi atar.
+function Inbox({ orders, active, now, paused, soundOn, onPick, eta, onEta, busy, onAccept, onReject, onOpen }: InboxProps) {
+    const others = orders.filter(o => o !== active);
     return (
-        <div className={cn('rounded-2xl border bg-card p-3.5 shadow-sm', urgent ? 'border-rb-red/40' : 'border-border')}>
-            <button type="button" onClick={onOpen} className="flex w-full items-start justify-between gap-2 text-left">
-                <span className="min-w-0">
-                    <span className="block truncate font-serif text-xl font-bold text-foreground">{orderTitle(order)}</span>
-                    <span className="block text-xs text-muted-foreground">
-                        {itemCount(order)} ürün · ₺{formatPrice(order.total)} · {payWord(order)} · {formatElapsed(order.createdAt, now)} önce
-                    </span>
-                </span>
-                {order.autoRejectAt && (
-                    <span className="flex shrink-0 flex-col items-end">
-                        <span className={cn('text-[11px] font-semibold', urgent ? 'text-rb-red' : 'text-muted-foreground')}>otomatik ret</span>
-                        <span className={cn('text-lg font-bold tabular-nums', urgent ? 'text-rb-red' : 'text-rb-amber')}>{countdownText(order.autoRejectAt, now)}</span>
-                    </span>
+        <section
+            aria-label="Onay bekleyen siparişler"
+            className="dark flex flex-col overflow-hidden rounded-[20px] bg-card text-foreground shadow-lg ring-1 ring-rb-gold/25 xl:sticky xl:top-0 xl:max-h-[calc(100dvh-8rem)]"
+        >
+            <header className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
+                <h2 className="flex items-center gap-2.5 text-[13px] font-semibold uppercase tracking-[.14em] text-rb-gold">
+                    <span aria-hidden="true" className={cn('h-2.5 w-2.5 rounded-full bg-rb-gold', orders.length > 0 ? 'online-order-pulse online-order-pulse-fast' : 'opacity-30')} />
+                    Onay bekliyor
+                </h2>
+                <span className="font-serif text-[28px] leading-none tabular-nums text-rb-gold" aria-label={`${orders.length} sipariş`}>{orders.length}</span>
+            </header>
+
+            <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-5">
+                {active ? (
+                    <>
+                        <InboxCard
+                            key={active.id}
+                            order={active}
+                            now={now}
+                            eta={eta}
+                            onEta={onEta}
+                            busy={busy}
+                            onAccept={onAccept}
+                            onReject={onReject}
+                            onOpen={onOpen}
+                        />
+                        {others.length > 0 && (
+                            <ul className="mt-2 flex flex-col gap-2.5" aria-label="Sırada bekleyenler">
+                                {others.map(o => {
+                                    const urgent = isUrgent(o, now);
+                                    return (
+                                        <li key={o.id}>
+                                            <button
+                                                type="button"
+                                                onClick={() => onPick(o.id)}
+                                                aria-label={`Sipariş #${o.number}, ${o.customerName}: büyük aç`}
+                                                className={cn(
+                                                    'online-order-pulse flex min-h-14 w-full items-center gap-3 rounded-2xl border bg-foreground/[.04] px-4 py-3 text-left hover:bg-foreground/[.08]',
+                                                    urgent ? 'border-rb-red/60' : 'border-border',
+                                                    FOCUS_DARK
+                                                )}
+                                            >
+                                                <span className="font-serif text-xl tabular-nums text-rb-gold">#{o.number}</span>
+                                                <span className="min-w-0 flex-1 text-sm">
+                                                    <b className="block truncate">{o.customerName}</b>
+                                                    <span className="block truncate text-xs text-muted-foreground">
+                                                        {[o.zoneName, `${itemCount(o)} ürün`, `₺${formatPrice(o.total)}`].filter(Boolean).join(' · ')}
+                                                    </span>
+                                                </span>
+                                                {o.autoRejectAt && (
+                                                    <b className={cn('text-[15px] tabular-nums', urgent && 'text-rb-red')}>{countdownText(o.autoRejectAt, now)}</b>
+                                                )}
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </>
+                ) : (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-2 py-14 text-center">
+                        <p className="font-serif text-3xl text-foreground/85">Yeni sipariş yok</p>
+                        <p className="max-w-64 text-sm text-muted-foreground">
+                            {paused
+                                ? 'Online sipariş durduruldu; müşteriler şu an sipariş veremez.'
+                                : `Sipariş gelince burada büyük açılır${soundOn ? ' ve ses çalar' : ''}.`}
+                        </p>
+                    </div>
                 )}
-            </button>
-            {order.autoRejectAt && (
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                    <span className={cn('block h-full transition-[width]', urgent ? 'bg-rb-red' : 'bg-rb-amber')} style={{ width: `${Math.round(progress * 100)}%` }} />
+            </div>
+        </section>
+    );
+}
+
+// Otomatik rete kalan süre halkası (dolu = süre bol). Son 2 dakikada kırmızı.
+function CountdownRing({ order, now }: { order: DeliveryOrder; now: number }) {
+    const circumference = 2 * Math.PI * 36;
+    const has = !!order.autoRejectAt;
+    const left = has ? 1 - autoRejectProgress(order, now) : 1;
+    const urgent = isUrgent(order, now);
+    const text = has ? countdownText(order.autoRejectAt!, now) : formatElapsed(order.createdAt, now);
+    return (
+        <div
+            className="relative h-[84px] w-[84px] shrink-0"
+            role="img"
+            aria-label={has ? `Otomatik rete kalan süre ${text}` : `${text} önce geldi`}
+        >
+            <svg viewBox="0 0 84 84" className="h-full w-full -rotate-90" aria-hidden="true">
+                <circle cx="42" cy="42" r="36" fill="none" stroke="currentColor" strokeWidth="5" className="text-foreground/10" />
+                <circle
+                    cx="42" cy="42" r="36" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round"
+                    strokeDasharray={`${(circumference * left).toFixed(1)} ${circumference.toFixed(1)}`}
+                    className={cn('transition-[stroke-dasharray] duration-1000 ease-linear', urgent ? 'text-rb-red' : 'text-rb-gold')}
+                />
+            </svg>
+            <span className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
+                <b className={cn('text-lg tabular-nums leading-tight', urgent && 'text-rb-red')}>{text}</b>
+                <span className="text-[9px] tracking-[.12em] text-muted-foreground">{has ? 'YANITLA' : 'BEKLİYOR'}</span>
+            </span>
+        </div>
+    );
+}
+
+function InboxCard({ order, now, eta, onEta, busy, onAccept, onReject, onOpen }: {
+    order: DeliveryOrder; now: number; eta: number; onEta: (m: number) => void; busy: boolean;
+    onAccept: () => void; onReject: () => void; onOpen: () => void;
+}) {
+    const pay = paymentInfo(order);
+    const PayIcon = pay.Icon;
+    return (
+        <article aria-label={`Sipariş #${order.number} · onay bekliyor`} className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+            <div className="flex items-center gap-4">
+                <CountdownRing order={order} now={now} />
+                <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">
+                        #{order.number} · {timeOf(order.createdAt)} geldi{order.autoRejectAt ? ' · yanıtlamazsan otomatik reddedilir' : ''}
+                    </p>
+                    <p className="mt-1 break-words font-serif text-[28px] font-semibold leading-[1.1]">{order.customerName}</p>
+                    <a href={telUrl(order.customerPhone)} className={cn('inline-flex min-h-9 items-center gap-1.5 rounded text-sm font-semibold tabular-nums text-rb-gold', FOCUS_DARK)}>
+                        <Phone className="h-3.5 w-3.5" aria-hidden="true" />{order.customerPhone}
+                    </a>
+                </div>
+            </div>
+
+            {(order.zoneName || order.address) && (
+                <div className="mt-4 flex items-start gap-2 rounded-xl bg-foreground/[.06] px-3.5 py-3 text-sm leading-relaxed">
+                    <MapPin className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <span className="min-w-0 break-words">
+                        {order.zoneName && <b className="text-rb-gold">{order.zoneName}</b>}
+                        {order.zoneName && order.address ? ' · ' : ''}{order.address}
+                        {order.addressDirections && <span className="block text-xs text-muted-foreground">Tarif: {order.addressDirections}</span>}
+                    </span>
                 </div>
             )}
 
-            <div className="mt-3 grid grid-cols-4 gap-1.5" role="radiogroup" aria-label="Teslim süresi">
+            <ul className="mt-3.5 flex flex-col gap-2">
+                {order.lines.map((line, i) => (
+                    <li key={i} className="flex items-baseline gap-2.5 text-[15px]">
+                        <b className="w-7 shrink-0 tabular-nums text-rb-gold">{line.quantity}×</b>
+                        <span className="min-w-0 flex-1 break-words">
+                            {line.name}
+                            {line.selections.length > 0 && <span className="block text-xs text-muted-foreground">{line.selections.join(', ')}</span>}
+                            {line.note && <span className="block text-xs font-semibold text-rb-amber">Not: {line.note}</span>}
+                        </span>
+                        <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">₺{formatAmount(line.lineTotal)}</span>
+                    </li>
+                ))}
+            </ul>
+
+            {order.note && (
+                <p className="mt-3 flex items-start gap-2 rounded-r-xl border-l-[3px] border-rb-gold bg-rb-gold/[.12] px-3.5 py-2.5 text-sm">
+                    <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-rb-gold" aria-hidden="true" />
+                    <span className="min-w-0 break-words"><span className="sr-only">Sipariş notu: </span>“{order.note}”</span>
+                </p>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3.5">
+                <span className="font-serif text-[30px] font-semibold leading-none tabular-nums">₺{formatPrice(order.total)}</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground/20 px-2.5 py-1 text-xs font-semibold">
+                    <PayIcon className={cn('h-3.5 w-3.5', pay.tone)} aria-hidden="true" />
+                    {pay.label}{pay.note && <span className="text-muted-foreground">· {pay.note}</span>}
+                </span>
+            </div>
+
+            <button type="button" onClick={onOpen}
+                className={cn('mt-2 min-h-11 text-sm font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline', FOCUS_DARK)}>
+                Tüm ayrıntılar · numara engelleme
+            </button>
+
+            <p id={`eta-${order.id}`} className="mt-2 text-[11px] font-semibold uppercase tracking-[.14em] text-muted-foreground">Müşteriye söylenecek süre</p>
+            <div className="mt-2 flex gap-1.5" role="radiogroup" aria-labelledby={`eta-${order.id}`}>
                 {etaChoicesFor(order).map(m => (
                     <button
                         key={m}
@@ -584,102 +778,276 @@ function NewOrderCard({ order, now, eta, onEta, busy, onOpen, onAccept, onReject
                         aria-checked={eta === m}
                         onClick={() => onEta(m)}
                         className={cn(
-                            'flex h-10 items-center justify-center rounded-lg border text-sm font-bold tabular-nums',
-                            eta === m ? 'border-rb-gold bg-rb-gold text-rb-gold-foreground' : 'border-border text-foreground hover:border-rb-gold'
+                            'flex h-11 flex-1 items-center justify-center rounded-[10px] border text-sm font-semibold tabular-nums transition-colors',
+                            eta === m ? 'border-rb-gold bg-rb-gold text-rb-gold-foreground' : 'border-foreground/20 text-foreground hover:border-rb-gold',
+                            FOCUS_DARK
                         )}
                     >
-                        {m}
+                        {m} dk
                     </button>
                 ))}
             </div>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-3 flex gap-2.5">
                 <button type="button" onClick={onReject} disabled={busy}
-                    className="flex h-12 flex-1 items-center justify-center rounded-xl border border-rb-red/40 text-sm font-semibold text-rb-red hover:bg-rb-red-bg disabled:opacity-50">
+                    className={cn('h-14 w-28 shrink-0 rounded-xl border border-foreground/25 text-[15px] font-semibold hover:border-rb-red hover:text-rb-red disabled:opacity-50', FOCUS_DARK)}>
                     Reddet
                 </button>
                 <button type="button" onClick={onAccept} disabled={busy}
-                    className="flex h-12 flex-[2] items-center justify-center rounded-xl bg-rb-green text-sm font-semibold text-rb-green-foreground hover:opacity-90 disabled:opacity-50">
-                    {busy ? 'Kabul ediliyor…' : `Kabul et · ${eta} dk`}
+                    className={cn('flex h-14 flex-1 items-center justify-center gap-1.5 rounded-xl bg-rb-gold px-3 text-base font-bold text-rb-gold-foreground hover:brightness-105 disabled:opacity-50', FOCUS_DARK)}>
+                    <Check className="h-5 w-5" aria-hidden="true" />{busy ? 'Kabul ediliyor…' : `Kabul et · ${eta} dk`}
                 </button>
             </div>
-        </div>
+        </article>
     );
 }
 
-interface LaneCardProps {
-    order: DeliveryOrder;
-    now: number;
-    couriers: CourierCashSummary[];
-    onOpen: () => void;
-    pickerOpen: boolean;
-    onTogglePicker: () => void;
-    assigning: boolean;
-    onAssign: (courierUserId: string | null) => void;
-}
+// ── Akış ──────────────────────────────────────────────────────────────────────────────────────
 
-// Mutfakta / Hazır / Yolda kartı: söz verilen saate göre hap, özet, kurye (Hazır'da kurye yoksa seçici açık gelir).
-function LaneCard({ order, now, couriers, onOpen, pickerOpen, onTogglePicker, assigning, onAssign }: LaneCardProps) {
-    const lateness = deliveryLateness(order, now);
-    const isReady = order.status === DeliveryStatus.Ready;
-    const onTheWay = order.status === DeliveryStatus.OnTheWay;
-    const canAssign = canAssignCourier(order.status);
-    const needsCourier = isReady && !order.courierUserId;
-    const showPicker = canAssign && (pickerOpen || needsCourier);
-    const firstLine = order.lines[0];
-
+// Kurye şeridi: her kurye bir kutu; durumu (boşta / yolda), üzerindeki nakit; önceki günden kalan para kırmızı.
+// Dokununca kurye kasası o kurye açık gelir.
+function CourierStrip({ couriers, onOpen }: { couriers: CourierCashSummary[]; onOpen: (id: string) => void }) {
+    const sorted = [...couriers].sort((a, b) => b.outstandingCash - a.outstandingCash || a.fullName.localeCompare(b.fullName, 'tr'));
     return (
-        <div className={cn(
-            'rounded-2xl border bg-card p-3.5 transition-shadow hover:shadow-md',
-            lateness?.level === 'late' ? 'border-rb-red/40' : needsCourier ? 'border-rb-amber/50' : 'border-border'
-        )}>
-            <button type="button" onClick={onOpen} className="flex w-full flex-col gap-1 text-left">
-                <span className="flex items-start justify-between gap-2">
-                    <span className="min-w-0 truncate font-serif text-lg font-bold text-foreground">{orderTitle(order)}</span>
-                    <LatenessBadge order={order} now={now} className="shrink-0" />
-                </span>
-                <span className="truncate text-xs text-muted-foreground">
-                    ₺{formatPrice(order.total)} · {payWord(order)}
-                    {onTheWay
-                        ? `${order.courierName ? ` · ${order.courierName}` : ''}${order.dispatchedAt ? ` · ${formatElapsed(order.dispatchedAt, now)} önce çıktı` : ''}`
-                        : firstLine ? ` · ${firstLine.quantity}× ${firstLine.name}${order.lines.length > 1 ? '…' : ''}` : ''}
-                </span>
-            </button>
-
-            {canAssign && (
-                <div className="mt-2">
-                    {needsCourier ? (
-                        <p className="mb-1.5 mt-1 text-[11px] font-semibold uppercase tracking-widest text-rb-amber">Kurye ata</p>
-                    ) : (
+        <ul className="-mx-1 flex gap-2.5 overflow-x-auto px-1 py-1" aria-label="Kuryeler">
+            {sorted.map(c => {
+                const onRoad = c.onTheWayCount > 0;
+                const free = c.openOrderCount === 0;
+                const old = c.previousDayCash > 0;
+                return (
+                    <li key={c.userId} className="min-w-[230px] max-w-[360px] flex-1">
                         <button
                             type="button"
-                            onClick={onTogglePicker}
-                            aria-expanded={pickerOpen}
-                            className="flex min-h-10 w-full items-center justify-between gap-2 rounded-lg text-xs font-semibold"
-                        >
-                            {order.courierName ? (
-                                <span className="flex min-w-0 items-center gap-1.5 text-foreground">
-                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rb-gold/30 text-[10px] font-bold" aria-hidden="true">
-                                        {initials(order.courierName)}
-                                    </span>
-                                    <span className="truncate">{order.courierName}</span>
-                                </span>
-                            ) : (
-                                <span className="text-muted-foreground">Kurye: <span className="text-rb-accent underline">ata</span></span>
+                            onClick={() => onOpen(c.userId)}
+                            aria-label={`${c.fullName} · kurye kasasını aç`}
+                            className={cn(
+                                'flex min-h-14 w-full items-center gap-2.5 rounded-2xl border bg-card px-3 py-2.5 text-left hover:border-rb-gold',
+                                old ? 'border-rb-red/45' : 'border-border',
+                                FOCUS
                             )}
-                            <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
-                                {order.courierName ? 'Değiştir' : ''}
-                                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', pickerOpen && 'rotate-180')} aria-hidden="true" />
+                        >
+                            <span aria-hidden="true" className={cn(
+                                'flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                                onRoad ? 'bg-foreground text-rb-gold' : 'bg-rb-gold/25 text-foreground'
+                            )}>{initials(c.fullName)}</span>
+                            <span className="min-w-0 flex-1">
+                                <b className="block truncate text-sm text-foreground">{c.fullName}</b>
+                                <span className={cn('block truncate text-xs', onRoad ? 'text-rb-amber' : free ? 'text-rb-green' : 'text-rb-accent')}>{courierLoadText(c)}</span>
+                            </span>
+                            <span className="shrink-0 text-right">
+                                <b className="block text-[15px] tabular-nums text-foreground">₺{formatPrice(c.outstandingCash)}</b>
+                                <span className={cn('text-[11px]', old ? 'font-semibold text-rb-red' : 'text-muted-foreground')}>
+                                    {old ? 'önceki günden kalan' : 'kuryede nakit'}
+                                </span>
                             </span>
                         </button>
-                    )}
-                    {showPicker && (
-                        <div className={cn(!needsCourier && 'pt-1.5')}>
-                            <CourierPicker couriers={couriers} selectedId={order.courierUserId} disabled={assigning} onPick={onAssign} />
-                        </div>
-                    )}
+                    </li>
+                );
+            })}
+        </ul>
+    );
+}
+
+interface FlowLaneProps {
+    laneKey: FlowLaneKey;
+    label: string;
+    hint?: string;
+    empty: string;
+    orders: DeliveryOrder[];
+    now: number;
+    couriers: CourierCashSummary[];
+    expandedId: string | null;
+    onToggleExpand: (id: string) => void;
+    pickerFor: string | null;
+    onTogglePicker: (id: string) => void;
+    assigning: boolean;
+    onAssign: (order: DeliveryOrder, courierUserId: string | null) => void;
+    onOpen: (id: string) => void;
+}
+
+function FlowLane({ laneKey, label, hint, empty, orders, ...rowProps }: FlowLaneProps) {
+    const headingId = `lane-${laneKey}`;
+    return (
+        <section aria-labelledby={headingId}>
+            <div className="mx-1 mb-2 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <span aria-hidden="true" className={cn('h-2.5 w-2.5 rounded-full', STATUS_TONE[laneKey].bar)} />
+                <h2 id={headingId} className="font-serif text-[22px] font-semibold leading-none text-foreground">{label}</h2>
+                <span className="inline-flex h-[22px] min-w-6 items-center justify-center rounded-full bg-foreground/[.08] px-2 text-xs font-bold tabular-nums text-foreground" aria-label={`${orders.length} sipariş`}>
+                    {orders.length}
+                </span>
+                {hint && <span className={cn('text-xs', laneKey === 'ready' ? 'font-semibold text-rb-purple' : 'text-muted-foreground')}>{hint}</span>}
+            </div>
+            <div className="@container overflow-hidden rounded-2xl border border-border bg-card">
+                {orders.length === 0 ? (
+                    <p className="px-4 py-3.5 text-sm italic text-muted-foreground">{empty}</p>
+                ) : (
+                    <ul className="divide-y divide-border">
+                        {orders.map(order => <FlowRow key={order.id} order={order} {...rowProps} />)}
+                    </ul>
+                )}
+            </div>
+        </section>
+    );
+}
+
+// Söz verilen saate göre süre hapı: yeşil zamanında, sarı son dakikalar, kırmızı gecikti. Söz yoksa geçen süre.
+function TimePill({ order, now }: { order: DeliveryOrder; now: number }) {
+    const lateness = deliveryLateness(order, now);
+    const base = 'inline-flex h-7 w-fit items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-semibold tabular-nums';
+    if (!lateness) {
+        return (
+            <span className={cn(base, 'bg-muted text-muted-foreground')} title={`Sipariş ${timeOf(order.createdAt)}`}>
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />{formatElapsed(order.createdAt, now)}
+            </span>
+        );
+    }
+    const promised = timeOf(lateness.promisedAt.toISOString());
+    const late = lateness.level === 'late';
+    return (
+        <span
+            title={`Müşteriye söz verilen teslim saati ${promised}`}
+            className={cn(base, late ? 'bg-rb-red-bg text-rb-red' : lateness.level === 'soon' ? 'bg-rb-amber-bg text-rb-amber' : 'bg-rb-green-bg text-rb-green')}
+        >
+            {late && <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />}
+            {late ? `${lateness.minutes} dk gecikti` : `${lateness.minutes} dk kaldı`}
+            <span className="font-normal opacity-80">· {promised}</span>
+        </span>
+    );
+}
+
+type FlowRowProps = Omit<FlowLaneProps, 'laneKey' | 'label' | 'hint' | 'empty' | 'orders'> & { order: DeliveryOrder };
+
+// Akış satırı: süre hapı · numara, müşteri, bölge ve kalem özeti (dokununca ayrıntı) · tutar ve ödeme · o adımın işi.
+// Mutfakta: kurye atanabilir (isteğe bağlı). Hazır: kuryesizse "Kuryeye ver" ana iş. Yolda: kurye ve çıkış süresi.
+// "Hazır" mutfaktan, "Yolda" ve "Teslim" kuryenin ekranından gelir; burada düğmesi yoktur.
+function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, onTogglePicker, assigning, onAssign, onOpen }: FlowRowProps) {
+    const expanded = expandedId === order.id;
+    const pickerOpen = pickerFor === order.id;
+    const pay = paymentInfo(order);
+    const isReady = order.status === DeliveryStatus.Ready;
+    const onTheWay = order.status === DeliveryStatus.OnTheWay;
+    const needsCourier = isReady && !order.courierUserId;
+    const detailsId = `flow-${order.id}`;
+
+    const summary = [
+        order.lines.map(l => `${l.quantity}× ${l.name}`).join(', '),
+        order.status === DeliveryStatus.Accepted ? order.statusLabel : null,
+        !onTheWay && order.courierName ? `kurye ${order.courierName}` : null,
+    ].filter(Boolean).join(' · ');
+
+    let action: ReactNode = null;
+    if (onTheWay) {
+        action = (
+            <span className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground">
+                <Bike className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 truncate">
+                    <b className="font-semibold text-foreground">{order.courierName ?? 'Kurye'}</b>
+                    {order.dispatchedAt ? ` · ${formatElapsed(order.dispatchedAt, now)} önce çıktı` : ' · yolda'}
+                </span>
+            </span>
+        );
+    } else if (canAssignCourier(order.status)) {
+        action = (
+            <button
+                type="button"
+                onClick={() => onTogglePicker(order.id)}
+                aria-expanded={pickerOpen}
+                className={cn(
+                    'flex h-11 w-full items-center justify-center gap-1.5 rounded-[10px] px-3 text-sm font-semibold transition-colors',
+                    needsCourier && !pickerOpen
+                        ? 'bg-foreground text-background hover:opacity-90'
+                        : 'border border-border bg-card text-foreground hover:border-rb-gold',
+                    FOCUS
+                )}
+            >
+                {pickerOpen ? 'Vazgeç'
+                    : needsCourier ? 'Kuryeye ver →'
+                        : order.courierName ? (
+                            <span className="flex min-w-0 items-center gap-1.5">
+                                <Bike className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                <span className="truncate">{order.courierName}</span>
+                                <span className="shrink-0 font-normal text-muted-foreground">· değiştir</span>
+                            </span>
+                        ) : <><Bike className="h-4 w-4" aria-hidden="true" />Kurye ata</>}
+            </button>
+        );
+    }
+
+    return (
+        <li className={cn(needsCourier && 'bg-rb-purple-bg/60')}>
+            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/40 @3xl:grid @3xl:grid-cols-[150px_minmax(0,1fr)_130px_190px]">
+                <span className="order-1"><TimePill order={order} now={now} /></span>
+                <span className="order-2 ml-auto text-right text-[13px] leading-tight @3xl:order-3 @3xl:ml-0">
+                    <b className="block text-base tabular-nums text-foreground">₺{formatPrice(order.total)}</b>
+                    <span className={cn('font-semibold', pay.tone)}>{pay.label}</span>
+                    {pay.note && <span className="block text-[11px] text-muted-foreground">{pay.note}</span>}
+                </span>
+                <button
+                    type="button"
+                    onClick={() => onToggleExpand(order.id)}
+                    aria-expanded={expanded}
+                    aria-controls={detailsId}
+                    className={cn('order-3 min-h-11 w-full min-w-0 rounded-lg text-left @3xl:order-2', FOCUS)}
+                >
+                    <span className="block truncate text-[15px] font-semibold text-foreground">
+                        <span className="mr-1.5 font-serif text-lg font-bold tabular-nums">#{order.number}</span>
+                        {order.customerName}
+                        {order.zoneName && <span className="font-normal text-muted-foreground"> · {order.zoneName}</span>}
+                    </span>
+                    <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                        <span className="min-w-0 truncate">{summary}</span>
+                        <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 transition-transform', expanded && 'rotate-180')} aria-hidden="true" />
+                    </span>
+                </button>
+                <div className="order-4 w-full min-w-0 @3xl:w-auto">{action}</div>
+            </div>
+
+            {expanded && (
+                <div id={detailsId} className="grid gap-4 px-4 pb-4 text-[13px] leading-relaxed motion-safe:animate-in motion-safe:fade-in @3xl:grid-cols-2 @3xl:pl-[180px]">
+                    <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Adres</p>
+                        <p className="break-words text-foreground">
+                            {order.zoneName && <b>{order.zoneName}</b>}{order.zoneName && order.address ? ' · ' : ''}{order.address}
+                        </p>
+                        {order.addressDirections && <p className="text-muted-foreground">Tarif: {order.addressDirections}</p>}
+                        <a href={telUrl(order.customerPhone)} className={cn('inline-flex min-h-9 items-center gap-1.5 rounded font-semibold tabular-nums text-rb-accent', FOCUS)}>
+                            <Phone className="h-3.5 w-3.5" aria-hidden="true" />{order.customerPhone}
+                        </a>
+                        {order.note && (
+                            <p className="mt-1 rounded-r-lg border-l-[3px] border-rb-gold bg-rb-gold-bg px-3 py-2 text-foreground">
+                                <span className="sr-only">Sipariş notu: </span>“{order.note}”
+                            </p>
+                        )}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Ürünler · {itemCount(order)}</p>
+                        <ul>
+                            {order.lines.map((line, i) => (
+                                <li key={i} className="break-words text-foreground">
+                                    <b>{line.quantity}×</b> {line.name}
+                                    {line.selections.length > 0 && <span className="block pl-5 text-xs text-muted-foreground">{line.selections.join(', ')}</span>}
+                                    {line.note && <span className="block pl-5 text-xs font-semibold text-rb-amber">Not: {line.note}</span>}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div className="@3xl:col-span-2">
+                        <button type="button" onClick={() => onOpen(order.id)}
+                            className={cn('min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-foreground hover:border-rb-gold', FOCUS)}>
+                            Tüm ayrıntılar · iptal
+                        </button>
+                    </div>
                 </div>
             )}
-        </div>
+
+            {pickerOpen && canAssignCourier(order.status) && (
+                <div className="px-4 pb-4 motion-safe:animate-in motion-safe:fade-in @3xl:pl-[180px]">
+                    <p className="mb-2 text-xs font-semibold text-muted-foreground">Kurye seç</p>
+                    <div className="max-w-md">
+                        <CourierPicker couriers={couriers} selectedId={order.courierUserId} disabled={assigning} onPick={id => onAssign(order, id)} />
+                    </div>
+                </div>
+            )}
+        </li>
     );
 }
 
@@ -699,7 +1067,7 @@ function DeliveredSection({ unsettled, unsettledTotal, settled, now, onOpen, wid
     if (unsettled.length === 0 && settled.length === 0) {
         return <p className="rounded-2xl border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">Bugün teslim edilen yok.</p>;
     }
-    const grid = wide ? 'grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3' : 'flex flex-col gap-2';
+    const grid = wide ? 'grid grid-cols-1 gap-2 md:grid-cols-2 2xl:grid-cols-3' : 'flex flex-col gap-2';
     return (
         <>
             {unsettled.length > 0 && (
@@ -742,7 +1110,7 @@ function DeliveredSection({ unsettled, unsettledTotal, settled, now, onOpen, wid
 // Teslim edilmiş sipariş: tek satır; dokununca detay açılır.
 function DeliveredRow({ order, now, onOpen }: { order: DeliveryOrder; now: number; onOpen: () => void }) {
     const amount = order.collectedAmount ?? order.total;
-    const method = (order.collectedMethod ?? order.paymentPreference) === DoorPayment.Nakit ? 'nakit' : 'kart';
+    const method = doorPaymentWord(order.collectedMethod ?? order.paymentPreference);
     return (
         <button
             type="button"
@@ -773,14 +1141,6 @@ const LIST_FILTERS: { key: ListFilter; label: string }[] = [
     { key: 'onTheWay', label: 'Yolda' },
     { key: 'delivered', label: 'Teslim' },
 ];
-
-const STATUS_PILL: Record<BoardColumnKey, { label: string; className: string }> = {
-    new: { label: 'Onay bekliyor', className: 'bg-rb-accent text-rb-accent-foreground' },
-    preparing: { label: 'Mutfakta', className: 'bg-rb-amber-bg text-rb-amber' },
-    ready: { label: 'Hazır', className: 'bg-rb-green-bg text-rb-green' },
-    onTheWay: { label: 'Yolda', className: 'bg-rb-accent-bg text-rb-accent' },
-    delivered: { label: 'Teslim edildi', className: 'bg-muted text-muted-foreground' },
-};
 
 /** Liste sırası: önce onay bekleyenler (rete yakın üstte), sonra gecikenler, sonra söz verilen saate göre. */
 function urgencyRank(order: DeliveryOrder, now: number): number {
@@ -938,7 +1298,7 @@ interface ListRowProps {
 
 function ListRow({ order, now, couriers, pickerOpen, onTogglePicker, assigning, onAssign, busy, eta, onAccept, onReject, onOpen }: ListRowProps) {
     const key = boardColumnOf(order.status) ?? 'delivered';
-    const pill = STATUS_PILL[key];
+    const pill = STATUS_TONE[key];
     const isNew = order.status === DeliveryStatus.Received;
     const urgent = isNew && isUrgent(order, now);
     const canAssign = canAssignCourier(order.status);
@@ -951,14 +1311,16 @@ function ListRow({ order, now, couriers, pickerOpen, onTogglePicker, assigning, 
                     <span className="block truncate font-serif text-lg font-bold text-foreground">{orderTitle(order)}</span>
                     <span className="block truncate text-xs text-muted-foreground">{order.customerName} · {itemCount(order)} ürün</span>
                 </button>
-                <span><span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-bold', pill.className)}>{pill.label}</span></span>
+                <span><span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-bold', pill.chip)}>{pill.label}</span></span>
                 <span className={cn('text-sm tabular-nums', isNew ? cn('font-bold', urgent ? 'text-rb-red' : 'text-rb-amber') : 'text-muted-foreground')}>
                     {isNew && order.autoRejectAt ? `ret ${countdownText(order.autoRejectAt, now)}` : formatElapsed(order.createdAt, now)}
                 </span>
                 <span className="min-w-0">{isNew ? <span className="text-sm text-muted-foreground">—</span> : <LatenessBadge order={order} now={now} />}</span>
                 <span className="ml-auto text-right font-serif text-lg font-bold tabular-nums text-foreground lg:ml-0">
                     ₺{formatPrice(order.total)}{' '}
-                    <span className={cn('font-sans text-[10px] font-bold', cash ? 'text-rb-green' : 'text-rb-accent')}>{cash ? 'NAKİT' : 'KART'}</span>
+                    <span className={cn('font-sans text-[10px] font-bold', cash ? 'text-rb-green' : order.paymentPreference === DoorPayment.Iban ? 'text-rb-purple' : 'text-rb-accent')}>
+                        {cash ? 'NAKİT' : order.paymentPreference === DoorPayment.Iban ? 'IBAN' : 'KART'}
+                    </span>
                 </span>
                 <span className="min-w-0">
                     {canAssign ? (

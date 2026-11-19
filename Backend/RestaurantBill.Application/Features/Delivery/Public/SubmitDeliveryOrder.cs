@@ -56,7 +56,7 @@ public class SubmitDeliveryOrderCommandValidator : AbstractValidator<SubmitDeliv
         RuleFor(x => x.Note)
             .MaximumLength(DeliveryOrder.NoteMaxLength).WithMessage($"Sipariş notu en fazla {DeliveryOrder.NoteMaxLength} karakter olabilir.");
         RuleFor(x => x.PaymentMethod)
-            .Must(m => m is PaymentMethod.Nakit or PaymentMethod.Kart).WithMessage("Kapıda ödeme yöntemini seçin: nakit ya da kart.");
+            .Must(m => m is PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban).WithMessage("Ödeme yöntemini seçin.");
     }
 }
 
@@ -74,6 +74,7 @@ public class SubmitDeliveryOrderCommandHandler(
     public const string VerificationRequiredMessage = "Siparişi göndermek için telefon numaranızı doğrulayın.";
     public const string VerificationInvalidMessage = "Telefon doğrulaması geçersiz, tekrar doğrulayın.";
     public const string PendingPerIpMessage = "Onay bekleyen siparişleriniz var. Restoran yanıtladıktan sonra yeni sipariş verebilirsiniz.";
+    public const string IbanNotAcceptedMessage = "Bu restoran şu an IBAN ile ödeme almıyor; başka bir ödeme yöntemi seçin.";
     public const string DailyLimitMessage = "Bu numarayla bugün verilebilecek online sipariş sınırına ulaşıldı. Lütfen restoranı arayın.";
 
     public async Task<Result<SubmitDeliveryOrderResultDto>> Handle(SubmitDeliveryOrderCommand request, CancellationToken cancellationToken)
@@ -110,10 +111,13 @@ public class SubmitDeliveryOrderCommandHandler(
             return Fail(availability.Message);
 
         OnlineOrderSettings settings = branch.GetOnlineOrderSettings();
-        if (!DeliveryScope.PaymentMethodsOf(settings).Contains(request.PaymentMethod))
-            return Fail(request.PaymentMethod == PaymentMethod.Nakit
-                ? "Bu restoran kapıda nakit ödeme almıyor; kartla ödemeyi seçin."
-                : "Bu restoran kapıda kartla ödeme almıyor; nakit ödemeyi seçin.");
+        if (!DeliveryScope.PaymentMethodsOf(branch).Contains(request.PaymentMethod))
+            return Fail(request.PaymentMethod switch
+            {
+                PaymentMethod.Nakit => "Bu restoran kapıda nakit ödeme almıyor; başka bir ödeme yöntemi seçin.",
+                PaymentMethod.Iban => IbanNotAcceptedMessage,
+                _ => "Bu restoran kapıda kartla ödeme almıyor; başka bir ödeme yöntemi seçin."
+            });
 
         DeliveryZone? zone = await db.DeliveryZones.AsNoTracking()
             .FirstOrDefaultAsync(z => z.Id == request.ZoneId && z.BranchId == branch.Id && z.IsActive && !z.IsDeleted, cancellationToken);

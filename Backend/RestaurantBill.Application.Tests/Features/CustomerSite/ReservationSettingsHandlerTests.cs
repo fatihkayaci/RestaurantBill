@@ -85,7 +85,7 @@ public class ReservationSettingsHandlerTests : ApplicationTestBase
     public async Task UnconfiguredBranch_WithOpeningHours_DaySlotsFollowOpeningAndClosing()
     {
         await SeedAsync();
-        _branch.UpdateSite("", "", "", "", new TimeOnly(12, 0), new TimeOnly(23, 0), "", "", "");
+        _branch.UpdateSiteInfo(new TimeOnly(12, 0), new TimeOnly(23, 0), "", [], "", "");
         await DbContext.SaveChangesAsync();
 
         List<string> times = await DaySlotsAsync();

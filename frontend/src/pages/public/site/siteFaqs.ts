@@ -76,10 +76,14 @@ export function faqItems(site: PublicSite, ordering: OnlineOrdering | null): Faq
         ordering.paymentMethods.includes(DoorPayment.Nakit) ? 'nakit' : null,
         ordering.paymentMethods.includes(DoorPayment.Kart) ? 'kartla' : null,
     ].filter(Boolean) : [];
+    const iban = canOrder && ordering.paymentMethods.includes(DoorPayment.Iban);
+    const doorText = methods.length > 0 ? `kapıda ${methods.join(' veya ')}` : '';
     items.push({
         key: 'odeme', q: 'Paket siparişte ödemeyi nasıl yapabilirim?',
         reason: canOrder ? 'Online siparişte kapıda ödeme yolu seçilince görünür' : orderReason,
-        a: methods.length > 0 ? `Paket siparişlerde ödemeyi kapıda ${methods.join(' veya ')} yapabilirsiniz.` : null,
+        a: methods.length > 0 || iban
+            ? `Paket siparişlerde ödemeyi ${[doorText, iban ? 'IBAN ile havale/EFT olarak' : ''].filter(Boolean).join(' ya da ')} yapabilirsiniz.`
+            : null,
     });
 
     // ── Mekân (olanaklardan; yalnız "evet") ──

@@ -177,7 +177,7 @@ public class HandoverCourierCashCommandHandler(
                 db.AuditLogs.Add(AuditLog.Create(branchId, actor, AuditLogCategory.Payment, AuditLogSeverity.Info,
                     "DeliveryOrderSettled",
                     $"{actor}, {courierName} kuryesinin online paket sipariş #{delivery.Number} tahsilatını teslim aldı " +
-                    $"({(method == PaymentMethod.Nakit ? "nakit" : "kart")} ₺{amount:0.##}, {register.Name}).",
+                    $"({DeliveryScope.PaymentWord(method)} ₺{amount:0.##}, {register.Name}).",
                     nameof(DeliveryOrder), delivery.Id));
             }
         }
@@ -280,7 +280,7 @@ public class GetCourierHandoversQueryHandler(IAppDbContext db, ICurrentUserServi
                 OrderCount = g.Count(),
                 Numbers = g.Select(r => r.Number).Order().ToList(),
                 ExpectedCash = g.Where(r => r.CollectedMethod == PaymentMethod.Nakit).Sum(r => r.CollectedAmount ?? 0m),
-                CardAmount = g.Where(r => r.CollectedMethod == PaymentMethod.Kart).Sum(r => r.CollectedAmount ?? 0m),
+                CardAmount = g.Where(r => r.CollectedMethod is PaymentMethod.Kart or PaymentMethod.Iban).Sum(r => r.CollectedAmount ?? 0m),
                 CountedCash = counted?.HandoverCountedCash,
                 CashDifference = counted?.HandoverCashDifference
             };

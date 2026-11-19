@@ -17,12 +17,14 @@ interface Props {
     isOwner: boolean;
     // Owner "Tümü" modunda: şirket geneli görünüm, aktif şube yok.
     companyMode: boolean;
+    // Tek şubeli sahip: "Tümü" seçeneği ve şube listesi yok; yalnız "Şubeleri yönet" (yeni şube eklemek için).
+    singleBranch?: boolean;
     activeBranchId: string | null;
     activeBranchName?: string | null;
     collapsed: boolean;
 }
 
-export default function BranchSwitcher({ branches, isOwner, companyMode, activeBranchId, activeBranchName, collapsed }: Props) {
+export default function BranchSwitcher({ branches, isOwner, companyMode, singleBranch = false, activeBranchId, activeBranchName, collapsed }: Props) {
     const navigate = useNavigate();
     const [switching, setSwitching] = useState(false);
 
@@ -96,7 +98,7 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, activeB
                 sideOffset={8}
                 className="w-56 rounded-2xl border-white/10 bg-[#241D16] p-2 text-sidebar-foreground shadow-2xl"
             >
-                {isOwner && (
+                {isOwner && !singleBranch && (
                     <>
                         <DropdownMenuLabel className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold tracking-[0.15em] text-sidebar-foreground/45">
                             GÖRÜNÜM
@@ -116,10 +118,12 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, activeB
                     </>
                 )}
 
-                <DropdownMenuLabel className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold tracking-[0.15em] text-sidebar-foreground/45">
-                    ŞUBELER
-                </DropdownMenuLabel>
-                {branches.map(branch => {
+                {!singleBranch && (
+                    <DropdownMenuLabel className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold tracking-[0.15em] text-sidebar-foreground/45">
+                        ŞUBELER
+                    </DropdownMenuLabel>
+                )}
+                {!singleBranch && branches.map(branch => {
                     const active = !companyMode && branch.id === activeBranchId;
                     return (
                         <DropdownMenuItem
@@ -136,7 +140,7 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, activeB
 
                 {isOwner && (
                     <>
-                        <DropdownMenuSeparator className="my-1 bg-white/10" />
+                        {!singleBranch && <DropdownMenuSeparator className="my-1 bg-white/10" />}
                         <DropdownMenuItem
                             onSelect={() => navigate(companyMode ? '/owner/branches' : '/admin/branches')}
                             className={cn(itemClass, 'text-rb-gold focus:text-rb-gold')}
@@ -144,7 +148,7 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, activeB
                             <Settings2 className="w-4 h-4" />
                             <span className="flex-1 flex flex-col">
                                 <span>Şubeleri yönet</span>
-                                <span className="text-[11px] text-sidebar-foreground/45">Düzenle veya yeni şube ekle</span>
+                                <span className="text-[11px] text-sidebar-foreground/45">{singleBranch ? 'Yeni şube ekle veya düzenle' : 'Düzenle veya yeni şube ekle'}</span>
                             </span>
                         </DropdownMenuItem>
                     </>

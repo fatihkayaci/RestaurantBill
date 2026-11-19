@@ -35,6 +35,8 @@ internal static class OnlineOrderSettingsMapping
             MaxOrdersPerPhonePerDay = s.MaxOrdersPerPhonePerDay,
             AcceptCash = s.AcceptCash,
             AcceptCard = s.AcceptCard,
+            AcceptIban = s.AcceptIban,
+            HasIban = branch.HasPayableIban,
             RequirePhoneVerification = s.RequirePhoneVerification,
             SmsConfigured = smsConfigured,
             PreOrderEnabled = s.PreOrderEnabled,
@@ -74,6 +76,8 @@ public class UpdateOnlineOrderSettingsCommand : IRequest<Result<OnlineOrderSetti
     public int MaxOrdersPerPhonePerDay { get; set; }
     public bool AcceptCash { get; set; }
     public bool AcceptCard { get; set; }
+    /// <summary>IBAN ile ödeme (havale/EFT); açmak için şubede geçerli IBAN ve hesap sahibi kayıtlı olmalı.</summary>
+    public bool AcceptIban { get; set; }
     public bool RequirePhoneVerification { get; set; }
     public bool PreOrderEnabled { get; set; }
     public int PreOrderLeadMinutes { get; set; }
@@ -108,6 +112,8 @@ public class UpdateOnlineOrderSettingsCommandValidator : AbstractValidator<Updat
 public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentUserService currentUser, ISmsSender sms)
     : IRequestHandler<UpdateOnlineOrderSettingsCommand, Result<OnlineOrderSettingsDto>>
 {
+    public const string IbanMissingMessage = "IBAN ile ödemeyi açmak için önce Ayarlar → Ödeme'den IBAN ve hesap sahibini girin.";
+
     public async Task<Result<OnlineOrderSettingsDto>> Handle(UpdateOnlineOrderSettingsCommand request, CancellationToken cancellationToken)
     {
         Branch? branch = await db.Branches
@@ -120,6 +126,9 @@ public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentU
         }
         else
         {
+            if (request.AcceptIban && !branch.HasPayableIban)
+                return Result<OnlineOrderSettingsDto>.Failure(IbanMissingMessage);
+
             try
             {
                 branch.SetOnlineOrderSettings(OnlineOrderSettings.Create(
@@ -138,7 +147,8 @@ public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentU
                     request.AcceptCard,
                     request.RequirePhoneVerification,
                     request.PreOrderEnabled,
-                    request.PreOrderLeadMinutes));
+                    request.PreOrderLeadMinutes,
+                    request.AcceptIban));
             }
             catch (DomainException ex)
             {
@@ -158,6 +168,54 @@ public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentU
                 ? $"{actor} {branch.BranchName} şubesinin online sipariş ayarlarını varsayılana döndürdü."
                 : $"{actor} {branch.BranchName} şubesinin online sipariş ayarlarını güncelledi " +
                   $"({(effective.Enabled ? "açık" : "kapalı")}, otomatik ret {effective.AutoRejectAfterMinutes} dk).",
+            nameof(Branch),
+            branch.Id));
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Result<OnlineOrderSettingsDto>.Success(OnlineOrderSettingsMapping.ToDto(branch, sms.IsConfigured));
+    }
+}
+
+// ── Yalnızca "IBAN ile ödeme" anahtarı ─────────────────────────────────────────────────────────────
+// Ayarlar → Ödeme ve Online sipariş → Genel'deki anahtar: hemen kaydedilir, diğer online sipariş alanlarına dokunmaz.
+public class SetOnlineOrderIbanCommand : IRequest<Result<OnlineOrderSettingsDto>>
+{
+    public bool AcceptIban { get; set; }
+}
+
+public class SetOnlineOrderIbanCommandHandler(IAppDbContext db, ICurrentUserService currentUser, ISmsSender sms)
+    : IRequestHandler<SetOnlineOrderIbanCommand, Result<OnlineOrderSettingsDto>>
+{
+    public async Task<Result<OnlineOrderSettingsDto>> Handle(SetOnlineOrderIbanCommand request, CancellationToken cancellationToken)
+    {
+        Branch? branch = await db.Branches
+            .FirstOrDefaultAsync(b => b.Id == currentUser.BranchId && !b.IsDeleted, cancellationToken);
+        if (branch is null) return Result<OnlineOrderSettingsDto>.Failure("Şube bulunamadı.");
+
+        if (request.AcceptIban && !branch.HasPayableIban)
+            return Result<OnlineOrderSettingsDto>.Failure(UpdateOnlineOrderSettingsCommandHandler.IbanMissingMessage);
+
+        OnlineOrderSettings current = branch.GetOnlineOrderSettings();
+        if (current.AcceptIban == request.AcceptIban)
+            return Result<OnlineOrderSettingsDto>.Success(OnlineOrderSettingsMapping.ToDto(branch, sms.IsConfigured));
+
+        try
+        {
+            branch.SetOnlineOrderSettings(current.WithAcceptIban(request.AcceptIban));
+        }
+        catch (DomainException ex)
+        {
+            return Result<OnlineOrderSettingsDto>.Failure(ex.Message);
+        }
+
+        string actor = await db.ActorNameAsync(currentUser, cancellationToken);
+        db.AuditLogs.Add(AuditLog.Create(
+            branch.Id,
+            actor,
+            AuditLogCategory.System,
+            AuditLogSeverity.Info,
+            "BranchOnlineOrderIbanUpdated",
+            $"{actor} {branch.BranchName} şubesinde online paket siparişte IBAN ile ödemeyi {(request.AcceptIban ? "açtı" : "kapattı")}.",
             nameof(Branch),
             branch.Id));
 

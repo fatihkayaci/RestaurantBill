@@ -26,6 +26,18 @@ public class CreatePaymentCommandValidator : AbstractValidator<CreatePaymentComm
         {
             item.RuleFor(i => i.OrderItemId).NotEqual(Guid.Empty).WithMessage("Geçersiz sipariş kalemi.");
             item.RuleFor(i => i.Quantity).GreaterThan(0).WithMessage("Miktar 0'dan büyük olmalı.");
+            item.RuleFor(i => i.DiscountPercent)
+                .InclusiveBetween(0, 100)
+                .When(i => i.DiscountPercent.HasValue)
+                .WithMessage("Ürün indirimi yüzdesi 0-100 arasında olmalı.");
+            item.RuleFor(i => i.DiscountAmount)
+                .GreaterThanOrEqualTo(0).WithMessage("Ürün indirimi tutarı negatif olamaz.")
+                .Must(a => decimal.Round(a!.Value, 2) == a.Value).WithMessage("Ürün indirimi tutarı en fazla iki ondalık basamak içerebilir.")
+                .When(i => i.DiscountAmount.HasValue);
+            item.RuleFor(i => i)
+                .Must(i => !(i.DiscountPercent.HasValue && i.DiscountAmount.HasValue))
+                .WithMessage("Bir üründe yüzde ve tutar indirimi aynı anda kullanılamaz.")
+                .WithName("Discount");
         });
 
         RuleFor(x => x.DiscountPercent)

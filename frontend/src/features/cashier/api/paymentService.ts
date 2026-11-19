@@ -3,6 +3,9 @@ import { api } from '@/lib/axiosInstance';
 export interface PaymentItem {
     orderItemId: number;
     quantity: number;
+    /** Ürün indirimi: bu kalemin bu ödemede ödenen adetlerine yüzde ya da tutar (ikisi birden değil). */
+    discountPercent?: number;
+    discountAmount?: number;
 }
 
 export interface PaymentDiscount {
@@ -25,7 +28,12 @@ export const paymentService = {
             OrderId: orderId,
             CashRegisterId: cashRegisterId,
             PaymentMethod: paymentMethod,
-            Items: items.map(i => ({ OrderItemId: i.orderItemId, Quantity: i.quantity })),
+            Items: items.map(i => ({
+                OrderItemId: i.orderItemId,
+                Quantity: i.quantity,
+                DiscountPercent: i.discountPercent ?? null,
+                DiscountAmount: i.discountAmount ?? null,
+            })),
             Amount: amount ?? null,
             DiscountPercent: discount?.percent ?? null,
             DiscountAmount: discount?.amount ?? null,

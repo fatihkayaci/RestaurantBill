@@ -53,6 +53,8 @@ export default function PreOrderSettingsCard() {
                 maxOrdersPerPhonePerDay: latest.maxOrdersPerPhonePerDay,
                 acceptCash: latest.acceptCash,
                 acceptCard: latest.acceptCard,
+                // IBAN sonradan kaldırıldıysa eski açık ayar kaydı engellemesin.
+                acceptIban: latest.acceptIban && latest.hasIban,
                 requirePhoneVerification: latest.requirePhoneVerification,
                 preOrderEnabled: draft.enabled,
                 preOrderLeadMinutes: lead,

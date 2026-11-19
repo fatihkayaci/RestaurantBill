@@ -35,7 +35,7 @@ namespace RestaurantBill.Application.Features.Stats.Queries.GetOwnerDashboard
 
             List<Branch> branches = await _db.Branches
                 .AsNoTracking()
-                .Where(b => b.Company.OwnerUserId == _currentUser.UserId)
+                .Where(b => b.Company.OwnerUserId == _currentUser.UserId && !b.IsDeleted)
                 .OrderBy(b => b.CreatedAt)
                 .ToListAsync(cancellationToken);
 

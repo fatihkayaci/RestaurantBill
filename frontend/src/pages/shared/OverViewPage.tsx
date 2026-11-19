@@ -9,6 +9,8 @@ import { PageError, PageLoading } from '@/components/ui/page-state';
 import { DATA_CHANGED_EVENT } from '@/lib/axiosInstance';
 import { OVERDUE_EVENT } from '@/components/layout/OverdueAlerts';
 import { cn } from '@/lib/utils';
+import { getSession } from '@/lib/auth';
+import { isSingleBranchOwner, useMyBranches } from '@/features/branches/useMyBranches';
 import { SiteBeautifyCard } from '@/pages/admin/site/SiteBeautifyPanel';
 
 /** Canlı kartlar (masa, mutfak, bekleyenler) bu aralıkla yenilenir; masa alanı ayrıca SignalR olaylarıyla yenilenir. */
@@ -21,6 +23,8 @@ export default function OverViewPage() {
     const [failed, setFailed] = useState(false);
     const [now, setNow] = useState(() => Date.now());
     const [customizeOpen, setCustomizeOpen] = useState(false);
+    // Tek şubeli sahipte Şirket Genel Bakış yok; oradaki "Sitenizi güzelleştirin" kartı burada çıkar.
+    const singleBranchOwner = isSingleBranchOwner(getSession()?.role, useMyBranches());
 
     const load = useCallback(() => {
         statsService.getDashboard()
@@ -72,8 +76,7 @@ export default function OverViewPage() {
                 </button>
             </div>
 
-            {/* Restoran sitesinin doluluğu: eksik varsa küçük kart (tamamsa ya da yetki yoksa çizilmez). */}
-            <SiteBeautifyCard />
+            {singleBranchOwner && <SiteBeautifyCard />}
 
             {failed && !stats ? (
                 <PageError onRetry={load} />

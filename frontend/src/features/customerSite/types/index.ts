@@ -104,7 +104,7 @@ export interface SiteEditorSeo extends SiteSeo {
     pageTitles: Record<string, string>;
 }
 
-/** GET api/branch/site/draft: taslak, yayındaki, değişen alanlar ve sürüm. */
+/** GET api/company/site/draft (şirket geneli site, yalnız sahip): taslak, yayındaki, değişen alanlar ve sürüm. */
 export interface SiteEditor {
     version: number;
     hasChanges: boolean;

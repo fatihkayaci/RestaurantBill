@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Banknote, CreditCard } from 'lucide-react';
+import { Banknote, CreditCard, Landmark } from 'lucide-react';
 import { publicDeliveryService } from '@/features/delivery/api/publicDeliveryService';
 import { formatPhoneInput, isCompletePhone, toCartInput, type DeliveryCartLine } from '@/features/delivery/deliveryCart';
 import {
@@ -10,6 +10,7 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { headingFont } from '../site/siteTheme';
+import DeliveryIbanCard from './DeliveryIbanCard';
 import Sheet from './Sheet';
 
 interface Props {
@@ -32,7 +33,8 @@ interface SubmitProblem {
     retry: boolean;
 }
 
-// Paket siparişin son adımı: ad, telefon (0xxx xxx xx xx), adres, tarif, not, kapıda ödeme ve gerekiyorsa SMS kodu.
+// Paket siparişin son adımı: ad, telefon (0xxx xxx xx xx), adres, tarif, not, ödeme (kapıda nakit/kart ya da IBAN ile
+// havale) ve gerekiyorsa SMS kodu. IBAN seçilince hesap bilgileri ve tutar kopyalanabilir kutuda gösterilir.
 // Gizli "website" alanı bot tuzağıdır. Fiyat değiştiyse (409) yeni toplam gösterilir, müşteri onaylayıp yeniden gönderir.
 export default function DeliveryCheckout({ data, zone, lines, quote, clientRequestId, onQuoteChanged, onSubmitted, onClose }: Props) {
     const [name, setName] = useState('');
@@ -40,7 +42,9 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
     const [address, setAddress] = useState('');
     const [directions, setDirections] = useState('');
     const [note, setNote] = useState('');
-    const [payment, setPayment] = useState<DoorPaymentMethod | null>(data.paymentMethods.length === 1 ? data.paymentMethods[0] : null);
+    // Tek yöntem varsa seçili gelir; IBAN tek yöntemse bilgileri de gelmiş olmalı.
+    const [payment, setPayment] = useState<DoorPaymentMethod | null>(
+        data.paymentMethods.length === 1 && (data.paymentMethods[0] !== DoorPayment.Iban || !!data.ibanPayment) ? data.paymentMethods[0] : null);
     const [website, setWebsite] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [problem, setProblem] = useState<SubmitProblem | null>(null);
@@ -71,9 +75,13 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
         name: !name.trim() ? 'Adınızı ve soyadınızı yazın.' : null,
         phone: !phoneOk ? 'Telefon numaranızı 0xxx xxx xx xx biçiminde yazın.' : null,
         address: !address.trim() ? 'Açık adresinizi yazın.' : null,
-        payment: payment === null ? 'Kapıda ödeme yöntemini seçin.' : null,
+        payment: payment === null ? 'Ödeme yöntemini seçin.' : null,
     };
     const valid = !Object.values(errors).some(Boolean) && verified;
+    // IBAN listede olsa da bilgileri gelmediyse seçenek gösterilmez (sunucu ikisini birlikte gönderir).
+    const methods = data.paymentMethods.filter(m => m !== DoorPayment.Iban || !!data.ibanPayment);
+    const byIban = payment === DoorPayment.Iban && !!data.ibanPayment;
+    const onlyDoor = methods.every(m => m !== DoorPayment.Iban);
 
     const sendCode = async () => {
         if (!phoneOk) return;
@@ -166,7 +174,11 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
                 <span className="text-base font-semibold">{submitting ? 'Gönderiliyor…' : problem?.retry ? 'Tekrar gönder' : 'Siparişi gönder'}</span>
                 <span className={cn(headingFont, 'text-lg font-bold tabular-nums')}>{formatPrice(quote.total)} ₺</span>
             </button>
-            <p className="mt-2 text-center text-xs text-[var(--site-muted)]">Restoran onaylayınca hazırlanır. Ödeme kapıda yapılır.</p>
+            <p className="mt-2 text-center text-xs text-[var(--site-muted)]">
+                {byIban
+                    ? 'Restoran onaylayınca hazırlanır. IBAN bilgileri ve sipariş numaranız takip sayfasında da görünür.'
+                    : 'Restoran onaylayınca hazırlanır. Ödeme kapıda yapılır.'}
+            </p>
         </>
     );
 
@@ -257,11 +269,12 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
                 </label>
 
                 <fieldset>
-                    <legend className="text-sm font-semibold">Kapıda ödeme</legend>
-                    <div className="mt-1.5 grid grid-cols-2 gap-2">
-                        {data.paymentMethods.map(method => {
-                            const cash = method === DoorPayment.Nakit;
+                    <legend className="text-sm font-semibold">{onlyDoor ? 'Kapıda ödeme' : 'Ödeme'}</legend>
+                    <div role="radiogroup" aria-label="Ödeme yöntemi" className="mt-1.5 grid grid-cols-2 gap-2">
+                        {methods.map((method, index) => {
                             const checked = payment === method;
+                            const Icon = method === DoorPayment.Nakit ? Banknote : method === DoorPayment.Iban ? Landmark : CreditCard;
+                            const label = method === DoorPayment.Nakit ? 'Kapıda nakit' : method === DoorPayment.Iban ? 'IBAN ile öde' : 'Kapıda kart';
                             return (
                                 <button
                                     key={method}
@@ -271,16 +284,21 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
                                     onClick={() => setPayment(method)}
                                     className={cn(
                                         'flex min-h-14 items-center justify-center gap-2 rounded-2xl border text-[15px] font-semibold transition-colors',
+                                        // Tek sayıda seçenekte sonuncusu tam satır.
+                                        methods.length % 2 === 1 && index === methods.length - 1 && 'col-span-2',
                                         checked ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]' : 'border-[var(--site-border-strong)]'
                                     )}
                                 >
-                                    {cash ? <Banknote className="h-5 w-5" aria-hidden="true" /> : <CreditCard className="h-5 w-5" aria-hidden="true" />}
-                                    {cash ? 'Kapıda nakit' : 'Kapıda kart'}
+                                    <Icon className="h-5 w-5" aria-hidden="true" />
+                                    {label}
                                 </button>
                             );
                         })}
                     </div>
                     {showError('payment')}
+                    {byIban && data.ibanPayment && (
+                        <DeliveryIbanCard payment={data.ibanPayment} amount={quote.total} orderNumber={null} className="mt-3 bg-[var(--site-raised)]" />
+                    )}
                 </fieldset>
 
                 {/* Bal küpü: ekranda ve ekran okuyucuda yok; yalnızca botlar doldurur. */}

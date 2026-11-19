@@ -4,46 +4,81 @@ using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Domain.Tests.Entities;
 
-// Site taslağı: değişen alanlar, alan bazında geri alma, fotoğraf anahtarları, yayınla / at.
+// Site taslağı (şirket geneli): değişen alanlar, alan bazında geri alma, fotoğraf anahtarları, yayınla / at.
 public class SiteSnapshotTests
 {
-    private static Branch NewBranch()
+    private static readonly DateTime Now = new(2026, 11, 17, 12, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>Başlığı ve kapağı yayında bir şirket sitesi.</summary>
+    private static Company NewCompany()
     {
-        Branch branch = Branch.Create(Guid.NewGuid(), "Merkez", "", "", "", "İstanbul", "Kadıköy", "", 10m);
-        branch.UpdateSite("Başlık", "Alt başlık", "", "", null, null, "", "", "");
-        branch.ReplaceSiteImage(SiteImageSlot.Cover, "site/kapak.webp");
-        return branch;
+        Company company = Company.Create("Ocak", User.Create("Sahip", "s@test.com", "5550000000"));
+        company.SaveSiteDraft(SiteSnapshot.Empty.WithImage(SiteImageSlot.Cover, "site/kapak.webp") with { Headline = "Başlık", Tagline = "Alt başlık" }, Now);
+        company.PublishSiteDraft(Now);
+        return company;
     }
 
     [Fact]
     public void NoDraft_DraftEqualsPublished_NoChanges()
     {
-        Branch branch = NewBranch();
+        Company company = NewCompany();
 
-        Assert.Null(branch.SiteDraft);
-        Assert.Empty(branch.GetSiteDraft().ChangedFields(branch.GetPublishedSite()));
-        Assert.Equal(0, branch.SiteDraftVersion);
+        Assert.Null(company.SiteDraft);
+        Assert.Empty(company.GetSiteDraft().ChangedFields(company.GetPublishedSite()));
+        Assert.Equal(2, company.SiteDraftVersion);
+    }
+
+    [Fact]
+    public void NeverPublished_IsEmptySite()
+    {
+        Company company = Company.Create("Ocak", User.Create("Sahip", "s@test.com", "5550000000"));
+
+        Assert.Null(company.Site);
+        Assert.Equal(string.Empty, company.GetPublishedSite().Headline);
+        Assert.Empty(company.SiteImageKeysInUse());
     }
 
     [Fact]
     public void ChangedFields_ListsTextImageAndRegionChanges_InScreenOrder()
     {
-        Branch branch = NewBranch();
+        Company company = NewCompany();
         Guid region = Guid.NewGuid();
 
-        SiteSnapshot draft = branch.GetSiteDraft()
+        SiteSnapshot draft = company.GetSiteDraft()
             .WithImage(SiteImageSlot.Cover, "site/yeni.webp")
             .WithRegionPhoto(region, "site/salon.webp")
             with { Tagline = "Yeni" };
 
-        Assert.Equal(["tagline", "coverImage", $"region:{region}"], draft.ChangedFields(branch.GetPublishedSite()));
+        Assert.Equal(["tagline", "coverImage", $"region:{region}"], draft.ChangedFields(company.GetPublishedSite()));
+    }
+
+    [Fact]
+    public void BranchInfo_IsNeverStored_OnCompanySite()
+    {
+        Company company = NewCompany();
+        SiteSnapshot draft = company.GetSiteDraft() with
+        {
+            OpensAt = new TimeOnly(9, 0),
+            ClosesAt = new TimeOnly(22, 0),
+            HoursNote = "Not",
+            Content = company.GetSiteDraft().Content with { WhatsappPhone = "0532 000 48 48", DirectionsNote = "Metro" },
+        };
+
+        company.SaveSiteDraft(draft, Now);
+
+        SiteSnapshot stored = company.GetSiteDraft();
+        Assert.Null(stored.OpensAt);
+        Assert.Equal(string.Empty, stored.HoursNote);
+        Assert.Equal(string.Empty, stored.Content.WhatsappPhone);
+        Assert.Equal(string.Empty, stored.Content.DirectionsNote);
+        Assert.Empty(stored.ChangedFields(company.GetPublishedSite()));
     }
 
     [Fact]
     public void WithTexts_KeepsPhotos_AndNullSeoKeepsValue()
     {
-        Branch branch = NewBranch();
-        SiteSnapshot draft = branch.GetSiteDraft().WithTexts(new SiteTexts
+        Company company = NewCompany();
+        SiteSnapshot draft = company.GetSiteDraft().WithTexts(new SiteTexts
         {
             Headline = "  Yeni başlık ",
             Content = new SiteContentTexts { SeoTitle = "Ocak Kadıköy" },
@@ -53,15 +88,15 @@ public class SiteSnapshotTests
 
         Assert.Equal("Yeni başlık", draft.Headline);
         Assert.Equal("site/kapak.webp", draft.CoverImage);
-        Assert.Equal("Ocak Kadıköy", again.Content.SeoTitle); // eski form SEO göndermez, korunur
+        Assert.Equal("Ocak Kadıköy", again.Content.SeoTitle); // SEO gönderilmezse korunur
         Assert.Throws<DomainException>(() => draft.WithTexts(new SiteTexts { Content = new SiteContentTexts { SeoTitle = new string('a', 101) } }, 2026));
     }
 
     [Fact]
     public void WithFieldFrom_RevertsOneField_UnknownFieldThrows()
     {
-        Branch branch = NewBranch();
-        SiteSnapshot published = branch.GetPublishedSite();
+        Company company = NewCompany();
+        SiteSnapshot published = company.GetPublishedSite();
         SiteSnapshot draft = published.WithImage(SiteImageSlot.Cover, "site/yeni.webp") with { Tagline = "Yeni" };
 
         SiteSnapshot reverted = draft.WithFieldFrom(published, "coverImage");
@@ -72,37 +107,52 @@ public class SiteSnapshotTests
     }
 
     [Fact]
-    public void Publish_CopiesDraftToColumns_BumpsVersion_ClearsDraft()
+    public void Publish_CopiesDraftToSite_BumpsVersion_ClearsDraft()
     {
-        Branch branch = NewBranch();
-        branch.SaveSiteDraft(branch.GetSiteDraft().WithImage(SiteImageSlot.Share, "shared/stock/mangal.webp") with { Headline = "Taslak" }, DateTime.UtcNow);
-        Assert.Equal(1, branch.SiteDraftVersion);
-        Assert.Equal("Başlık", branch.SiteHeadline); // yayındaki değişmedi
+        Company company = NewCompany();
+        company.SaveSiteDraft(company.GetSiteDraft().WithImage(SiteImageSlot.Share, "shared/stock/mangal.webp") with { Headline = "Taslak" }, Now);
+        Assert.Equal(3, company.SiteDraftVersion);
+        Assert.Equal("Başlık", company.GetPublishedSite().Headline); // yayındaki değişmedi
 
-        DateTime now = new(2026, 11, 17, 12, 0, 0, DateTimeKind.Utc);
-        branch.PublishSiteDraft(now);
+        DateTime later = Now.AddHours(1);
+        company.PublishSiteDraft(later);
 
-        Assert.Equal("Taslak", branch.SiteHeadline);
-        Assert.Equal("shared/stock/mangal.webp", branch.GetSiteContent().ShareImage);
-        Assert.Null(branch.SiteDraft);
-        Assert.Equal(2, branch.SiteDraftVersion);
-        Assert.Equal(now, branch.SitePublishedAt);
+        Assert.Equal("Taslak", company.GetPublishedSite().Headline);
+        Assert.Equal("shared/stock/mangal.webp", company.GetPublishedSite().Content.ShareImage);
+        Assert.Null(company.SiteDraft);
+        Assert.Equal(4, company.SiteDraftVersion);
+        Assert.Equal(later, company.SitePublishedAt);
     }
 
     [Fact]
     public void Discard_RestoresPublished_KeysInUseCoverBoth()
     {
-        Branch branch = NewBranch();
-        branch.SaveSiteDraft(branch.GetSiteDraft().WithImage(SiteImageSlot.Cover, "site/yeni.webp"), DateTime.UtcNow);
+        Company company = NewCompany();
+        company.SaveSiteDraft(company.GetSiteDraft().WithImage(SiteImageSlot.Cover, "site/yeni.webp"), Now);
 
-        Assert.Equal(["site/kapak.webp", "site/yeni.webp"], branch.SiteImageKeysInUse().Order());
+        Assert.Equal(["site/kapak.webp", "site/yeni.webp"], company.SiteImageKeysInUse().Order());
 
-        branch.DiscardSiteDraft();
+        company.DiscardSiteDraft();
 
-        Assert.Equal("site/kapak.webp", branch.GetSiteDraft().CoverImage);
-        Assert.Equal(["site/kapak.webp"], branch.SiteImageKeysInUse());
-        Assert.True(branch.IsSiteDraftStale(1));
-        Assert.False(branch.IsSiteDraftStale(2));
+        Assert.Equal("site/kapak.webp", company.GetSiteDraft().CoverImage);
+        Assert.Equal(["site/kapak.webp"], company.SiteImageKeysInUse());
+        Assert.True(company.IsSiteDraftStale(3));
+        Assert.False(company.IsSiteDraftStale(4));
+    }
+
+    [Fact]
+    public void ResetSite_ClearsSiteAndDraft_ReturnsKeys()
+    {
+        Company company = NewCompany();
+        company.SaveSiteDraft(company.GetSiteDraft().WithImage(SiteImageSlot.About, "site/hikaye.webp"), Now);
+
+        IReadOnlyList<string> keys = company.ResetSite();
+
+        Assert.Equal(["site/hikaye.webp", "site/kapak.webp"], keys.Order());
+        Assert.Null(company.Site);
+        Assert.Null(company.SiteDraft);
+        Assert.Null(company.SitePublishedAt);
+        Assert.Empty(company.SiteImageKeysInUse());
     }
 
     [Fact]

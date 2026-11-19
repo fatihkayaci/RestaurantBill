@@ -152,124 +152,19 @@ public class BranchController : BaseController
     #endregion
 
     #region restaurant site
-    /// <summary>Oturumdaki şubenin müşteri sitesi içeriği (başlık, hikâye, saatler, fotoğraflar).</summary>
+    // Restoran sitesi şirket genelidir; düzenleyicisi SiteEditorController'da (api/company/site, yalnız sahip).
+    // Burada yalnız sitenin şubeye ait bilgileri: çalışma saatleri, saat notu, WhatsApp, nasıl gelinir.
+
+    /// <summary>Oturumdaki şubenin site bilgileri (Ayarlar → Saatler ve iletişim).</summary>
     [Authorize(Roles = "Owner,Admin")]
-    [HttpGet("site")]
-    public async Task<IActionResult> GetSite(CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new GetBranchSiteQuery(), cancellationToken);
-        return HandleResult(result);
-    }
+    [HttpGet("site-info")]
+    public async Task<IActionResult> GetSiteInfo(CancellationToken cancellationToken)
+        => HandleResult(await _mediator.Send(new GetBranchSiteInfoQuery(), cancellationToken));
 
+    /// <summary>Taslaksız, hemen yayında (adres ve telefon gibi).</summary>
     [Authorize(Roles = "Owner,Admin")]
-    [HttpPut("site")]
-    public async Task<IActionResult> UpdateSite([FromBody] UpdateBranchSiteCommand command, CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(command, cancellationToken);
-        return HandleResult(result);
-    }
-
-    /// <summary>Kapak (cover) ya da hikâye (about) fotoğrafını yükler; eskisi silinir.</summary>
-    [Authorize(Roles = "Owner,Admin")]
-    [HttpPost("site/image/{slot}")]
-    [RequestSizeLimit(11_000_000)]
-    public async Task<IActionResult> UploadSiteImage([FromRoute] string slot, IFormFile file, CancellationToken cancellationToken)
-    {
-        if (!TryParseSlot(slot, out SiteImageSlot imageSlot)) return BadRequest(new { Error = "Geçersiz görsel alanı." });
-        if (file is null || file.Length == 0) return BadRequest(new { Error = "Dosya seçilmedi." });
-        if (file.Length > 10_000_000) return BadRequest(new { Error = "Görsel en fazla 10 MB olabilir." });
-        // Biçim burada Content-Type'tan değil, depolama servisinde dosyanın baytlarından doğrulanır (yalnızca JPEG/PNG/WebP);
-        // desteklenmeyen biçim handler'dan "Desteklenmeyen görsel biçimi..." hatasıyla döner.
-
-        await using Stream stream = file.OpenReadStream();
-        var result = await _mediator.Send(new SetBranchSiteImageCommand { Slot = imageSlot, Content = stream }, cancellationToken);
-        return HandleResult(result);
-    }
-
-    [Authorize(Roles = "Owner,Admin")]
-    [HttpDelete("site/image/{slot}")]
-    public async Task<IActionResult> DeleteSiteImage([FromRoute] string slot, CancellationToken cancellationToken)
-    {
-        if (!TryParseSlot(slot, out SiteImageSlot imageSlot)) return BadRequest(new { Error = "Geçersiz görsel alanı." });
-        var result = await _mediator.Send(new SetBranchSiteImageCommand { Slot = imageSlot, Content = null }, cancellationToken);
-        return HandleResult(result);
-    }
-
-    private static bool TryParseSlot(string value, out SiteImageSlot slot)
-    {
-        slot = value.ToLowerInvariant() switch
-        {
-            "cover" => SiteImageSlot.Cover,
-            "about" => SiteImageSlot.About,
-            "founder" => SiteImageSlot.Founder,
-            _ => 0,
-        };
-        return slot != 0;
-    }
-
-    /// <summary>
-    /// "Sitenizi güzelleştirin": sitenin doluluk puanı ve görsel etkisine göre sıralı yapılacaklar.
-    /// <c>?draft=true</c>: taslağı puanlar (site düzenleyicisi); yoksa yayındaki site (Genel Bakış kartı).
-    /// </summary>
-    [Authorize(Roles = "Owner,Admin")]
-    [HttpGet("site/completeness")]
-    public async Task<IActionResult> GetSiteCompleteness([FromQuery] bool draft, CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new GetSiteCompletenessQuery { Draft = draft }, cancellationToken);
-        return HandleResult(result);
-    }
-
-    /// <summary>Mekân fotoğrafı ekler (galerinin sonuna; en çok 12).</summary>
-    [Authorize(Roles = "Owner,Admin")]
-    [HttpPost("site/gallery")]
-    [RequestSizeLimit(11_000_000)]
-    public async Task<IActionResult> AddSiteGalleryImage(IFormFile file, CancellationToken cancellationToken)
-    {
-        if (file is null || file.Length == 0) return BadRequest(new { Error = "Dosya seçilmedi." });
-        if (file.Length > 10_000_000) return BadRequest(new { Error = "Görsel en fazla 10 MB olabilir." });
-
-        await using Stream stream = file.OpenReadStream();
-        var result = await _mediator.Send(new AddSiteGalleryImageCommand { Content = stream }, cancellationToken);
-        return HandleResult(result);
-    }
-
-    [Authorize(Roles = "Owner,Admin")]
-    [HttpDelete("site/gallery/{index:int}")]
-    public async Task<IActionResult> RemoveSiteGalleryImage([FromRoute] int index, CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new RemoveSiteGalleryImageCommand { Index = index }, cancellationToken);
-        return HandleResult(result);
-    }
-
-    /// <summary>Galerinin yeni sırası: mevcut sıraların dizilişi, ör. { "order": [2, 0, 1] }.</summary>
-    [Authorize(Roles = "Owner,Admin")]
-    [HttpPut("site/gallery/order")]
-    public async Task<IActionResult> ReorderSiteGallery([FromBody] ReorderSiteGalleryCommand command, CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(command, cancellationToken);
-        return HandleResult(result);
-    }
-
-    /// <summary>Oturma bölümünün sitedeki fotoğrafı (Mekân sayfasındaki bölüm kartı).</summary>
-    [Authorize(Roles = "Owner,Admin")]
-    [HttpPost("site/regions/{regionId:guid}/image")]
-    [RequestSizeLimit(11_000_000)]
-    public async Task<IActionResult> UploadSiteRegionImage([FromRoute] Guid regionId, IFormFile file, CancellationToken cancellationToken)
-    {
-        if (file is null || file.Length == 0) return BadRequest(new { Error = "Dosya seçilmedi." });
-        if (file.Length > 10_000_000) return BadRequest(new { Error = "Görsel en fazla 10 MB olabilir." });
-
-        await using Stream stream = file.OpenReadStream();
-        var result = await _mediator.Send(new SetSiteRegionImageCommand { RegionId = regionId, Content = stream }, cancellationToken);
-        return HandleResult(result);
-    }
-
-    [Authorize(Roles = "Owner,Admin")]
-    [HttpDelete("site/regions/{regionId:guid}/image")]
-    public async Task<IActionResult> DeleteSiteRegionImage([FromRoute] Guid regionId, CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new SetSiteRegionImageCommand { RegionId = regionId, Content = null }, cancellationToken);
-        return HandleResult(result);
-    }
+    [HttpPut("site-info")]
+    public async Task<IActionResult> UpdateSiteInfo([FromBody] UpdateBranchSiteInfoCommand command, CancellationToken cancellationToken)
+        => HandleResult(await _mediator.Send(command, cancellationToken));
     #endregion
 }

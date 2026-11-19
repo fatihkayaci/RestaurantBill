@@ -26,7 +26,7 @@ internal static class ResetResolver
     public static async Task<(Company? Company, List<Branch> Branches, IReadOnlyList<string> Items, string? Error)> ResolveAsync(
         IAppDbContext db, ICurrentUserService currentUser, ResetSelection selection, bool tracking, CancellationToken ct)
     {
-        (Company? company, string? error) = await OwnerDataAccess.ResolveCompanyAsync(db, currentUser, ct);
+        (Company? company, string? error) = await OwnerDataAccess.ResolveCompanyAsync(db, currentUser, ct, tracking);
         if (company is null)
             return (null, [], [], error);
 
@@ -49,7 +49,8 @@ internal static class ResetResolver
     };
 
     /// <summary>Şubeye maddeleri uygular; silinecek site fotoğrafı anahtarlarını döner.</summary>
-    public static async Task<List<string>> ApplyAsync(IAppDbContext db, Branch branch, IReadOnlyList<string> items, User owner, CancellationToken ct)
+    public static async Task<List<string>> ApplyAsync(IAppDbContext db, Company company, Branch branch, IReadOnlyList<string> items, User owner,
+        CancellationToken ct)
     {
         List<string> keys = [];
         foreach (string item in items)
@@ -57,7 +58,11 @@ internal static class ResetResolver
             switch (item)
             {
                 case ResetItems.WorkingHours: branch.ResetWorkingHours(); break;
-                case ResetItems.Site: keys.AddRange(branch.ResetSite()); break;
+                // Site şirket genelidir (bütün şubelerde ortak); şubenin WhatsApp ve nasıl gelinir bilgisi de boşalır.
+                case ResetItems.Site:
+                    keys.AddRange(company.ResetSite());
+                    branch.ResetSiteInfo();
+                    break;
                 case ResetItems.Reservations: branch.SetReservationSettings(null); break;
                 case ResetItems.OnlineOrdering: branch.ResetOnlineOrdering(); break;
                 case ResetItems.QrFeatures: branch.SetQrFeatures(null); break;
@@ -122,7 +127,7 @@ public class ResetSettingsCommandHandler(
         {
             foreach (Branch branch in branches)
             {
-                keys.AddRange(await ResetResolver.ApplyAsync(db, branch, items, owner, cancellationToken));
+                keys.AddRange(await ResetResolver.ApplyAsync(db, company!, branch, items, owner, cancellationToken));
                 db.AuditLogs.Add(AuditLog.Create(branch.Id, owner.FullName, AuditLogCategory.System, AuditLogSeverity.Warning,
                     "SettingsReset", $"{owner.FullName} şu ayarları sıfırladı: {string.Join(", ", items.Select(ResetItems.Label))}.",
                     nameof(Branch), branch.Id));

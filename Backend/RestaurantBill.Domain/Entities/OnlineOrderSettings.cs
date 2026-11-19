@@ -5,6 +5,9 @@ namespace RestaurantBill.Domain.Entities
     /// <summary>Bir gün için online sipariş saatleri: açılış ve kapanış (şubenin saat diliminde).</summary>
     public sealed class OnlineOrderDayHours
     {
+        /// <summary>"24 saat" gününün kapanışı: 00:00–23:59 kaydı gün boyu açık demektir (bkz. <see cref="IsAllDay"/>).</summary>
+        public static readonly TimeOnly AllDayCloses = new(23, 59);
+
         public DayOfWeek Day { get; }
         public bool IsOpen { get; }
         public TimeOnly Opens { get; }
@@ -18,6 +21,12 @@ namespace RestaurantBill.Domain.Entities
             Opens = opens;
             Closes = closes;
         }
+
+        /// <summary>
+        /// Gün boyu açık mı: 00:00–23:59. Böyle bir gün ertesi gece yarısına kadar sürer ve son sipariş kesintisi uygulanmaz;
+        /// ertesi gün de açıksa sipariş alma kesintisiz devam eder.
+        /// </summary>
+        public bool IsAllDay => IsOpen && Opens == TimeOnly.MinValue && Closes == AllDayCloses;
     }
 
     /// <summary>
@@ -59,6 +68,8 @@ namespace RestaurantBill.Domain.Entities
         public int MaxOrdersPerPhonePerDay { get; }
         public bool AcceptCash { get; }
         public bool AcceptCard { get; }
+        /// <summary>Müşteri havale/EFT ile öder; yalnızca şubede geçerli IBAN ve hesap sahibi varken kullanılır (bkz. Branch.HasPayableIban).</summary>
+        public bool AcceptIban { get; }
         /// <summary>SMS kodu ile telefon doğrulaması; SMS sağlayıcısı yapılandırılmadıysa etkisizdir.</summary>
         public bool RequirePhoneVerification { get; }
         public bool PreOrderEnabled { get; }
@@ -66,7 +77,7 @@ namespace RestaurantBill.Domain.Entities
         public int PreOrderLeadMinutes { get; }
 
         private OnlineOrderSettings(bool enabled, IReadOnlyList<OnlineOrderDayHours> days, int lastOrderMinutesBeforeClose, int defaultEtaMinutes,
-            int autoRejectAfterMinutes, int maxOpenOrdersPerPhone, int maxOrdersPerPhonePerDay, bool acceptCash, bool acceptCard,
+            int autoRejectAfterMinutes, int maxOpenOrdersPerPhone, int maxOrdersPerPhonePerDay, bool acceptCash, bool acceptCard, bool acceptIban,
             bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes)
         {
             Enabled = enabled;
@@ -78,6 +89,7 @@ namespace RestaurantBill.Domain.Entities
             MaxOrdersPerPhonePerDay = maxOrdersPerPhonePerDay;
             AcceptCash = acceptCash;
             AcceptCard = acceptCard;
+            AcceptIban = acceptIban;
             RequirePhoneVerification = requirePhoneVerification;
             PreOrderEnabled = preOrderEnabled;
             PreOrderLeadMinutes = preOrderLeadMinutes;
@@ -86,7 +98,7 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Admin'in kaydettiği ayarlar; kurallara uymayan değerde DomainException.</summary>
         public static OnlineOrderSettings Create(bool enabled, IEnumerable<OnlineOrderDayHours> days, int lastOrderMinutesBeforeClose, int defaultEtaMinutes,
             int autoRejectAfterMinutes, int maxOpenOrdersPerPhone, int maxOrdersPerPhonePerDay, bool acceptCash, bool acceptCard,
-            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes)
+            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes, bool acceptIban = false)
         {
             if (lastOrderMinutesBeforeClose < 0 || lastOrderMinutesBeforeClose > LastOrderMinutesMax)
                 throw new DomainException($"Son sipariş süresi 0–{LastOrderMinutesMax} dakika arasında olmalı.");
@@ -100,8 +112,8 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"Bir numaranın günlük sipariş sınırı 1–{OrdersPerPhonePerDayMax} arasında olmalı.");
             if (maxOrdersPerPhonePerDay < maxOpenOrdersPerPhone)
                 throw new DomainException("Günlük sipariş sınırı açık sipariş sınırından küçük olamaz.");
-            if (!acceptCash && !acceptCard)
-                throw new DomainException("Kapıda en az bir ödeme yöntemi (nakit ya da kart) açık olmalı.");
+            if (!acceptCash && !acceptCard && !acceptIban)
+                throw new DomainException("En az bir ödeme yöntemi (nakit, kart ya da IBAN) açık olmalı.");
             if (preOrderLeadMinutes < PreOrderLeadMin || preOrderLeadMinutes > PreOrderLeadMax)
                 throw new DomainException($"Ön sipariş süresi {PreOrderLeadMin}–{PreOrderLeadMax} dakika arasında olmalı.");
 
@@ -114,20 +126,20 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"{ReservationSettings.DayName(sameHours.Day)}: açılış ve kapanış saati aynı olamaz.");
 
             return new OnlineOrderSettings(enabled, Ordered(list), lastOrderMinutesBeforeClose, defaultEtaMinutes, autoRejectAfterMinutes,
-                maxOpenOrdersPerPhone, maxOrdersPerPhonePerDay, acceptCash, acceptCard, requirePhoneVerification, preOrderEnabled, preOrderLeadMinutes);
+                maxOpenOrdersPerPhone, maxOrdersPerPhonePerDay, acceptCash, acceptCard, acceptIban, requirePhoneVerification, preOrderEnabled, preOrderLeadMinutes);
         }
 
         /// <summary>Yalnızca veritabanından okurken: kayıtlı değer, bugünkü sınırlar değişmiş olsa da olduğu gibi yüklenir.</summary>
         public static OnlineOrderSettings Restore(bool enabled, IEnumerable<OnlineOrderDayHours> days, int lastOrderMinutesBeforeClose, int defaultEtaMinutes,
             int autoRejectAfterMinutes, int maxOpenOrdersPerPhone, int maxOrdersPerPhonePerDay, bool acceptCash, bool acceptCard,
-            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes)
+            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes, bool acceptIban = false)
         {
             List<OnlineOrderDayHours> list = days.GroupBy(d => d.Day).Select(g => g.First()).ToList();
             // Eksik gün kapalı sayılır.
             foreach (DayOfWeek missing in ReservationSettings.WeekOrder.Where(d => list.All(x => x.Day != d)))
                 list.Add(new OnlineOrderDayHours(missing, false, DefaultOpens, DefaultCloses));
             return new OnlineOrderSettings(enabled, Ordered(list), lastOrderMinutesBeforeClose, defaultEtaMinutes, autoRejectAfterMinutes,
-                maxOpenOrdersPerPhone, maxOrdersPerPhonePerDay, acceptCash, acceptCard, requirePhoneVerification, preOrderEnabled, preOrderLeadMinutes);
+                maxOpenOrdersPerPhone, maxOrdersPerPhonePerDay, acceptCash, acceptCard, acceptIban, requirePhoneVerification, preOrderEnabled, preOrderLeadMinutes);
         }
 
         /// <summary>
@@ -143,8 +155,21 @@ namespace RestaurantBill.Domain.Entities
 
             List<OnlineOrderDayHours> days = ReservationSettings.WeekOrder.Select(d => new OnlineOrderDayHours(d, true, opens, closes)).ToList();
             return new OnlineOrderSettings(false, days, DefaultLastOrderMinutesBeforeClose, DefaultEta, DefaultAutoRejectAfterMinutes,
-                DefaultMaxOpenOrdersPerPhone, DefaultMaxOrdersPerPhonePerDay, acceptCash: true, acceptCard: true,
+                DefaultMaxOpenOrdersPerPhone, DefaultMaxOrdersPerPhonePerDay, acceptCash: true, acceptCard: true, acceptIban: false,
                 requirePhoneVerification: false, preOrderEnabled: false, DefaultPreOrderLeadMinutes);
+        }
+
+        /// <summary>
+        /// Yalnızca IBAN ile ödeme anahtarı değişmiş kopya (Ayarlar → Ödeme ve Online sipariş'teki anahtar). Diğer alanlar
+        /// olduğu gibi kalır; kapatınca hiç ödeme yöntemi kalmıyorsa DomainException.
+        /// </summary>
+        public OnlineOrderSettings WithAcceptIban(bool acceptIban)
+        {
+            if (!acceptIban && !AcceptCash && !AcceptCard)
+                throw new DomainException("Online paket siparişte tek ödeme yöntemi IBAN. Kapatmak için önce Online sipariş ayarlarından nakit ya da kartı açın.");
+            return new OnlineOrderSettings(Enabled, Days, LastOrderMinutesBeforeClose, DefaultEtaMinutes, AutoRejectAfterMinutes,
+                MaxOpenOrdersPerPhone, MaxOrdersPerPhonePerDay, AcceptCash, AcceptCard, acceptIban, RequirePhoneVerification,
+                PreOrderEnabled, PreOrderLeadMinutes);
         }
 
         public OnlineOrderDayHours For(DayOfWeek day) => Days.First(d => d.Day == day);

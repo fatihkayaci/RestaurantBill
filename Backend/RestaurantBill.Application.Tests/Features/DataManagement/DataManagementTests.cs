@@ -364,6 +364,13 @@ public class DataManagementTests : IDisposable
 
     // ── Sıfırla ──────────────────────────────────────────────────────────────────────────────────────
 
+    /// <summary>Şirketin sitesini (şirket geneli) yayına alır.</summary>
+    private void PublishSite(SiteSnapshot site)
+    {
+        _company.SaveSiteDraft(site, DateTime.UtcNow);
+        _company.PublishSiteDraft(DateTime.UtcNow);
+    }
+
     [Fact]
     public async Task Reset_RestoresRegistrationDefaults_KeepsHistoryAndIdentity()
     {
@@ -371,9 +378,12 @@ public class DataManagementTests : IDisposable
         _branch.SetReservationSettings(ReservationSettings.Default(new TimeOnly(9, 0), new TimeOnly(22, 0)));
         _branch.SetQrFeatures(QrFeatures.Create(false, false, false, false, false));
         _branch.SetOnlineOrdersPaused(true);
-        _branch.UpdateSite("Başlık", "Slogan", "Hikâye", "Hakkında", new TimeOnly(9, 0), new TimeOnly(22, 0), "Pazar kapalı", "", "");
-        _branch.ReplaceSiteImage(SiteImageSlot.Cover, $"site/{_branch.Id:N}/cover.webp");
-        _branch.AddSiteGalleryImage("shared/stock/salon.webp");
+        _branch.UpdateSiteInfo(new TimeOnly(9, 0), new TimeOnly(22, 0), "Pazar kapalı", [], "0532 000 48 48", "Metroya 4 dk.");
+        PublishSite(SiteSnapshot.Empty with
+        {
+            Headline = "Başlık", Tagline = "Slogan", StoryTitle = "Hikâye", About = "Hakkında",
+            CoverImage = $"site/{_branch.Id:N}/cover.webp", Content = SiteContent.Empty.WithGalleryImage("shared/stock/salon.webp"),
+        });
         _branch.UpdateDayEndSettings(new TimeOnly(4, 0), "Europe/London");
         _db.DeliveryZones.Add(DeliveryZone.Create(_branch.Id, "Moda", 20m, 100m, 30, 0));
         await _db.SaveChangesAsync();
@@ -393,9 +403,13 @@ public class DataManagementTests : IDisposable
         Assert.False(branch.OnlineOrdersPaused);
         Assert.Null(branch.QrFeatures);
         Assert.Null(branch.OpensAt);
-        Assert.Equal(string.Empty, branch.SiteHeadline);
-        Assert.Equal(string.Empty, branch.SiteCoverImage);
-        Assert.Empty(branch.GetSiteContent().GalleryImages);
+        // Site şirket genelidir: şirketin sitesi sıfırlanır, şubenin WhatsApp ve nasıl gelinir bilgisi boşalır.
+        Company company = await _db.Companies.SingleAsync(c => c.Id == _company.Id);
+        Assert.Null(company.Site);
+        Assert.Equal(string.Empty, company.GetPublishedSite().Headline);
+        Assert.Empty(company.GetPublishedSite().Content.GalleryImages);
+        Assert.Equal(string.Empty, branch.GetSiteContent().WhatsappPhone);
+        Assert.Equal(string.Empty, branch.GetSiteContent().DirectionsNote);
         Assert.Equal(new TimeOnly(0, 0), branch.DayEndTime);
         Assert.Equal("Europe/Istanbul", branch.TimeZoneId);
         Assert.Equal(Branch.DefaultTaxRate, branch.TaxRate);
@@ -415,7 +429,8 @@ public class DataManagementTests : IDisposable
     [Fact]
     public async Task Reset_OnlyWorkingHours_KeepsSiteTexts()
     {
-        _branch.UpdateSite("Başlık", "Slogan", "", "", new TimeOnly(9, 0), new TimeOnly(22, 0), "Not", "", "");
+        _branch.UpdateSiteInfo(new TimeOnly(9, 0), new TimeOnly(22, 0), "Not", [], "0532 000 48 48", "");
+        PublishSite(SiteSnapshot.Empty with { Headline = "Başlık", Tagline = "Slogan" });
         await _db.SaveChangesAsync();
 
         var handler = new ResetSettingsCommandHandler(_db, _owner, new FakePasswordHasher(), _storage, NullLogger<ResetSettingsCommandHandler>.Instance);
@@ -425,7 +440,8 @@ public class DataManagementTests : IDisposable
         Branch branch = await _db.Branches.SingleAsync(b => b.Id == _branch.Id);
         Assert.Null(branch.OpensAt);
         Assert.Equal(string.Empty, branch.HoursNote);
-        Assert.Equal("Başlık", branch.SiteHeadline);
+        Assert.Equal("0532 000 48 48", branch.GetSiteContent().WhatsappPhone);
+        Assert.Equal("Başlık", (await _db.Companies.SingleAsync(c => c.Id == _company.Id)).GetPublishedSite().Headline);
     }
 
     // ── Hesabı kapat ─────────────────────────────────────────────────────────────────────────────────
@@ -514,8 +530,10 @@ public class DataManagementTests : IDisposable
         Category drinks = Category.Create("İçecek", _branch.Id);
         _db.Categories.Add(drinks);
         _db.Products.Add(Product.Create("Çay", 20m, "shared/stock/cay.webp", drinks.Id));
-        _branch.ReplaceSiteImage(SiteImageSlot.Cover, $"site/{_branch.Id:N}/cover.webp");
-        _branch.AddSiteGalleryImage("shared/stock/salon.webp");
+        PublishSite(SiteSnapshot.Empty with
+        {
+            CoverImage = $"site/{_branch.Id:N}/cover.webp", Content = SiteContent.Empty.WithGalleryImage("shared/stock/salon.webp"),
+        });
         _db.Reservations.Add(Reservation.Create(sale.Table, "Ali", "555", DateTime.UtcNow.AddDays(1), ""));
         _db.ContactMessages.Add(ContactMessage.Create(_branch.Id, "Ali", "555", ContactMessageType.Oneri, "Güzel"));
         _db.AuditLogs.Add(AuditLog.Create(_branch.Id, "Ayşe", AuditLogCategory.System, AuditLogSeverity.Info, "X", "x"));

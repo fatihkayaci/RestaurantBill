@@ -42,11 +42,23 @@ export function addLine(lines: DeliveryCartLine[], line: Omit<DeliveryCartLine, 
     return [...lines, { ...line, quantity: Math.min(MAX_LINE_QUANTITY, quantity) }];
 }
 
+/** Satırı listenin sonuna taşır (son eklenen; sipariş panelinde en üstte gösterilir). */
+export function moveLineToEnd(lines: DeliveryCartLine[], key: string): DeliveryCartLine[] {
+    const line = lines.find(l => l.key === key);
+    return line ? [...lines.filter(l => l.key !== key), line] : lines;
+}
+
 /** Adedi değiştirir; 0 ya da altı satırı siler. */
 export function changeQuantity(lines: DeliveryCartLine[], key: string, delta: number): DeliveryCartLine[] {
     return lines
         .map(l => l.key === key ? { ...l, quantity: Math.min(MAX_LINE_QUANTITY, l.quantity + delta) } : l)
         .filter(l => l.quantity > 0);
+}
+
+/** Menünün (set) son eklenen satırını bir azaltır (farklı seçimli satırlar olabilir; en son eklenen önce düşer). */
+export function removeOneSetMenu(lines: DeliveryCartLine[], setMenuId: string): DeliveryCartLine[] {
+    const last = [...lines].reverse().find(l => l.kind === 'setMenu' && l.setMenuId === setMenuId);
+    return last ? changeQuantity(lines, last.key, -1) : lines;
 }
 
 export function setLineNote(lines: DeliveryCartLine[], key: string, note: string): DeliveryCartLine[] {

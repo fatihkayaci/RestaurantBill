@@ -13,8 +13,10 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Branches.Site;
 
-// Görsel site düzenleyicisi: Taslak + Yayınla. Bütün değişiklikler şubenin SiteDraft sütununa gider; müşteri sitesi
-// yayındaki alanları okumaya devam eder. Yayınla taslağı yayına kopyalar, "Değişiklikleri at" taslağı siler.
+// Görsel site düzenleyicisi: Taslak + Yayınla. Site şirket genelidir; yalnız sahip düzenler. Bütün değişiklikler şirketin
+// SiteDraft sütununa gider; müşteri sitesi yayındaki hâli (Company.Site) okumaya devam eder. Yayınla taslağı yayına kopyalar,
+// "Değişiklikleri at" taslağı siler. Şubeye ait alanlar (saatler, WhatsApp, nasıl gelinir) taslağa girmez: önizlemede
+// varsayılan şubenin (en eski) değerleriyle gösterilir, şubenin Ayarlar'ından değişir.
 // Fotoğraf kuralı: bir dosya ancak ne yayında ne taslakta kullanılıyorsa silinir; shared/ (hazır görsel) hiç silinmez.
 // Sözleşme: docs/site-editor.md.
 
@@ -73,21 +75,21 @@ internal static class SiteEditor
            || (field.StartsWith(SiteSnapshot.RegionFieldPrefix, StringComparison.Ordinal)
                && Guid.TryParse(field[SiteSnapshot.RegionFieldPrefix.Length..], out _));
 
-    public static Task<Branch?> LoadAsync(IAppDbContext db, ICurrentUserService currentUser, CancellationToken cancellationToken)
-        => BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken);
+    public static Task<Company?> LoadAsync(IAppDbContext db, ICurrentUserService currentUser, CancellationToken cancellationToken)
+        => CompanySiteLoader.LoadAsync(db, currentUser, cancellationToken);
 
-    public static async Task<SiteEditorDto> BuildAsync(IAppDbContext db, Branch branch, string cdnBaseUrl, SeoOptions seoOptions,
+    public static async Task<SiteEditorDto> BuildAsync(IAppDbContext db, Company company, string cdnBaseUrl, SeoOptions seoOptions,
         CancellationToken cancellationToken)
     {
-        var company = await db.Companies.AsNoTracking()
-            .Where(c => c.Id == branch.CompanyId)
-            .Select(c => new { c.Name, c.Slug })
-            .FirstOrDefaultAsync(cancellationToken);
-        List<BranchSiteLoader.RegionRow> regions = await BranchSiteLoader.RegionsAsync(db, branch.Id, cancellationToken);
+        Branch? primary = await CompanySiteLoader.PrimaryBranchAsync(db, company.Id, cancellationToken);
+        List<CompanySiteLoader.RegionRow> regions = await CompanySiteLoader.RegionsAsync(db, company.Id, cancellationToken);
 
-        SiteSnapshot draft = branch.GetSiteDraft();
-        SiteSnapshot published = branch.GetPublishedSite();
-        SiteSeoValues seo = SiteSeo.Resolve(draft, company?.Name ?? string.Empty, branch.BranchName, branch.District);
+        SiteSnapshot draft = company.GetSiteDraft();
+        SiteSnapshot published = company.GetPublishedSite();
+        // Önizleme ve SEO'nun otomatik metni varsayılan şubenin saatleri, ilçesi ve WhatsApp'ıyla.
+        SiteSnapshot draftView = CompanySiteLoader.WithBranch(draft, primary);
+        SiteSnapshot publishedView = CompanySiteLoader.WithBranch(published, primary);
+        SiteSeoValues seo = SiteSeo.Resolve(draftView, company.Name, primary?.BranchName ?? string.Empty, primary?.District ?? string.Empty);
         string rootDomain = seoOptions.RootDomain.Trim().Trim('.');
 
         List<SiteChangeDto> changes = draft.ChangedFields(published).Select(field =>
@@ -100,13 +102,13 @@ internal static class SiteEditor
 
         return new SiteEditorDto
         {
-            Version = branch.SiteDraftVersion,
+            Version = company.SiteDraftVersion,
             HasChanges = changes.Count > 0,
             Changes = changes,
-            DraftUpdatedAt = branch.SiteDraftUpdatedAt,
-            PublishedAt = branch.SitePublishedAt,
-            Draft = BranchSiteLoader.ToAdminDto(draft, regions, cdnBaseUrl),
-            Published = BranchSiteLoader.ToAdminDto(published, regions, cdnBaseUrl),
+            DraftUpdatedAt = company.SiteDraftUpdatedAt,
+            PublishedAt = company.SitePublishedAt,
+            Draft = CompanySiteLoader.ToAdminDto(draftView, regions, cdnBaseUrl),
+            Published = CompanySiteLoader.ToAdminDto(publishedView, regions, cdnBaseUrl),
             Seo = new SiteEditorSeoDto
             {
                 Title = seo.Title,
@@ -120,38 +122,41 @@ internal static class SiteEditor
                 ShareImageIsAuto = draft.Content.ShareImage.Length == 0,
                 PageTitles = SiteSeo.Pages.ToDictionary(p => p.Path, p => SiteSeo.PageTitle(p.Path, seo.RestaurantName, seo.Title).Title),
             },
-            SiteUrl = !string.IsNullOrWhiteSpace(company?.Slug) && rootDomain.Length > 0 ? $"https://{company.Slug}.{rootDomain}" : string.Empty,
+            SiteUrl = !string.IsNullOrWhiteSpace(company.Slug) && rootDomain.Length > 0 ? $"https://{company.Slug}.{rootDomain}" : string.Empty,
         };
     }
 
-    public static async Task<Result<SiteDraftResultDto>> ConflictAsync(IAppDbContext db, Branch branch, string cdnBaseUrl, SeoOptions seoOptions,
+    public static async Task<Result<SiteDraftResultDto>> ConflictAsync(IAppDbContext db, Company company, string cdnBaseUrl, SeoOptions seoOptions,
         CancellationToken cancellationToken)
         => Result<SiteDraftResultDto>.Success(new SiteDraftResultDto
         {
             Conflict = true,
-            Editor = await BuildAsync(db, branch, cdnBaseUrl, seoOptions, cancellationToken),
+            Editor = await BuildAsync(db, company, cdnBaseUrl, seoOptions, cancellationToken),
         });
 
-    public static async Task<Result<SiteDraftResultDto>> OkAsync(IAppDbContext db, Branch branch, string cdnBaseUrl, SeoOptions seoOptions,
+    public static async Task<Result<SiteDraftResultDto>> OkAsync(IAppDbContext db, Company company, string cdnBaseUrl, SeoOptions seoOptions,
         CancellationToken cancellationToken)
         => Result<SiteDraftResultDto>.Success(new SiteDraftResultDto
         {
-            Editor = await BuildAsync(db, branch, cdnBaseUrl, seoOptions, cancellationToken),
+            Editor = await BuildAsync(db, company, cdnBaseUrl, seoOptions, cancellationToken),
         });
 
-    public static async Task AddAuditLogAsync(IAppDbContext db, ICurrentUserService currentUser, Branch branch, string action, string messageTail,
+    /// <summary>Denetim kaydı şube kapsamlıdır: site kaydı varsayılan şubeye yazılır (Denetim Kaydı'nda görünsün diye).</summary>
+    public static async Task AddAuditLogAsync(IAppDbContext db, ICurrentUserService currentUser, Company company, string action, string messageTail,
         CancellationToken cancellationToken)
     {
+        Branch? primary = await CompanySiteLoader.PrimaryBranchAsync(db, company.Id, cancellationToken);
+        if (primary is null) return;
         User? actor = await db.Users.FirstOrDefaultAsync(u => u.Id == currentUser.UserId, cancellationToken);
         db.AuditLogs.Add(AuditLog.Create(
-            branch.Id,
+            primary.Id,
             actor?.FullName ?? string.Empty,
             AuditLogCategory.System,
             AuditLogSeverity.Info,
             action,
             $"{actor?.FullName} {messageTail}",
-            nameof(Branch),
-            branch.Id));
+            nameof(Company),
+            company.Id));
     }
 
     public static string Labels(SiteEditorDto editor) => string.Join(", ", editor.Changes.Select(c => c.Label));
@@ -168,10 +173,10 @@ public class GetSiteEditorQueryHandler(
 {
     public async Task<Result<SiteEditorDto>> Handle(GetSiteEditorQuery request, CancellationToken cancellationToken)
     {
-        Branch? branch = await BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken, tracking: false);
-        if (branch is null) return Result<SiteEditorDto>.Failure("Şube bulunamadı.");
+        Company? company = await CompanySiteLoader.LoadAsync(db, currentUser, cancellationToken, tracking: false);
+        if (company is null) return Result<SiteEditorDto>.Failure(CompanySiteLoader.NotFoundMessage);
         return Result<SiteEditorDto>.Success(
-            await SiteEditor.BuildAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), seoOptions.Value, cancellationToken));
+            await SiteEditor.BuildAsync(db, company, CompanySiteLoader.Cdn(storageOptions), seoOptions.Value, cancellationToken));
     }
 }
 
@@ -203,17 +208,19 @@ public class SaveSiteDraftCommandHandler(
 {
     public async Task<Result<SiteDraftResultDto>> Handle(SaveSiteDraftCommand request, CancellationToken cancellationToken)
     {
-        Branch? branch = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<SiteDraftResultDto>.Failure("Şube bulunamadı.");
-        string cdn = BranchSiteLoader.Cdn(storageOptions);
-        if (branch.IsSiteDraftStale(request.Version)) return await SiteEditor.ConflictAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
+        Company? company = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
+        if (company is null) return Result<SiteDraftResultDto>.Failure(CompanySiteLoader.NotFoundMessage);
+        string cdn = CompanySiteLoader.Cdn(storageOptions);
+        if (company.IsSiteDraftStale(request.Version)) return await SiteEditor.ConflictAsync(db, company, cdn, seoOptions.Value, cancellationToken);
 
-        IReadOnlySet<Guid> regionIds = await BranchSiteLoader.RegionIdsAsync(db, branch.Id, cancellationToken);
+        IReadOnlySet<Guid> regionIds = await CompanySiteLoader.RegionIdsAsync(db, company.Id, cancellationToken);
         DateTime now = clock.GetUtcNow().UtcDateTime;
+        // Saatler, WhatsApp ve nasıl gelinir şubenindir: gövdede gelse de taslağa yazılmaz.
+        request.ClearBranchInfo();
         try
         {
-            SiteSnapshot next = branch.GetSiteDraft().WithTexts(request.ToSiteTexts(regionIds, request.SeoTitle, request.SeoDescription), now.Year);
-            branch.SaveSiteDraft(next, now);
+            SiteSnapshot next = company.GetSiteDraft().WithTexts(request.ToSiteTexts(regionIds, request.SeoTitle, request.SeoDescription), now.Year);
+            company.SaveSiteDraft(next, now);
         }
         catch (DomainException ex)
         {
@@ -221,7 +228,7 @@ public class SaveSiteDraftCommandHandler(
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        return await SiteEditor.OkAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
+        return await SiteEditor.OkAsync(db, company, cdn, seoOptions.Value, cancellationToken);
     }
 }
 
@@ -249,17 +256,17 @@ public class RevertSiteDraftFieldsCommandHandler(
 {
     public async Task<Result<SiteDraftResultDto>> Handle(RevertSiteDraftFieldsCommand request, CancellationToken cancellationToken)
     {
-        Branch? branch = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<SiteDraftResultDto>.Failure("Şube bulunamadı.");
-        string cdn = BranchSiteLoader.Cdn(storageOptions);
-        if (branch.IsSiteDraftStale(request.Version)) return await SiteEditor.ConflictAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
+        Company? company = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
+        if (company is null) return Result<SiteDraftResultDto>.Failure(CompanySiteLoader.NotFoundMessage);
+        string cdn = CompanySiteLoader.Cdn(storageOptions);
+        if (company.IsSiteDraftStale(request.Version)) return await SiteEditor.ConflictAsync(db, company, cdn, seoOptions.Value, cancellationToken);
 
-        IReadOnlySet<string> before = branch.SiteImageKeysInUse();
-        SiteSnapshot published = branch.GetPublishedSite();
+        IReadOnlySet<string> before = company.SiteImageKeysInUse();
+        SiteSnapshot published = company.GetPublishedSite();
         try
         {
-            SiteSnapshot next = request.Fields.Distinct().Aggregate(branch.GetSiteDraft(), (draft, field) => draft.WithFieldFrom(published, field));
-            branch.SaveSiteDraft(next, clock.GetUtcNow().UtcDateTime);
+            SiteSnapshot next = request.Fields.Distinct().Aggregate(company.GetSiteDraft(), (draft, field) => draft.WithFieldFrom(published, field));
+            company.SaveSiteDraft(next, clock.GetUtcNow().UtcDateTime);
         }
         catch (DomainException ex)
         {
@@ -268,8 +275,8 @@ public class RevertSiteDraftFieldsCommandHandler(
 
         await db.SaveChangesAsync(cancellationToken);
         // Geri alınan alanın taslağa yeni yüklenmiş fotoğrafı artık kullanılmıyor.
-        await BranchSiteLoader.DeleteUnusedImagesAsync(imageStorage, branch, before, cancellationToken);
-        return await SiteEditor.OkAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
+        await CompanySiteLoader.DeleteUnusedImagesAsync(imageStorage, company, before, cancellationToken);
+        return await SiteEditor.OkAsync(db, company, cdn, seoOptions.Value, cancellationToken);
     }
 }
 
@@ -286,23 +293,23 @@ public class PublishSiteDraftCommandHandler(
 {
     public async Task<Result<SiteDraftResultDto>> Handle(PublishSiteDraftCommand request, CancellationToken cancellationToken)
     {
-        Branch? branch = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<SiteDraftResultDto>.Failure("Şube bulunamadı.");
-        string cdn = BranchSiteLoader.Cdn(storageOptions);
-        if (branch.IsSiteDraftStale(request.Version)) return await SiteEditor.ConflictAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
+        Company? company = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
+        if (company is null) return Result<SiteDraftResultDto>.Failure(CompanySiteLoader.NotFoundMessage);
+        string cdn = CompanySiteLoader.Cdn(storageOptions);
+        if (company.IsSiteDraftStale(request.Version)) return await SiteEditor.ConflictAsync(db, company, cdn, seoOptions.Value, cancellationToken);
 
-        SiteEditorDto current = await SiteEditor.BuildAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
+        SiteEditorDto current = await SiteEditor.BuildAsync(db, company, cdn, seoOptions.Value, cancellationToken);
         if (!current.HasChanges) return Result<SiteDraftResultDto>.Success(new SiteDraftResultDto { Editor = current });
 
-        IReadOnlySet<string> before = branch.SiteImageKeysInUse();
-        branch.PublishSiteDraft(clock.GetUtcNow().UtcDateTime);
-        await SiteEditor.AddAuditLogAsync(db, currentUser, branch, "SitePublished",
+        IReadOnlySet<string> before = company.SiteImageKeysInUse();
+        company.PublishSiteDraft(clock.GetUtcNow().UtcDateTime);
+        await SiteEditor.AddAuditLogAsync(db, currentUser, company, "SitePublished",
             $"restoran sitesindeki {current.Changes.Count} değişikliği yayınladı ({SiteEditor.Labels(current)}).", cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         // Yayından kalkan eski fotoğraflar (restoranın kendi dosyaları) silinir; hazır görseller (shared/) kalır.
-        await BranchSiteLoader.DeleteUnusedImagesAsync(imageStorage, branch, before, cancellationToken);
-        return await SiteEditor.OkAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
+        await CompanySiteLoader.DeleteUnusedImagesAsync(imageStorage, company, before, cancellationToken);
+        return await SiteEditor.OkAsync(db, company, cdn, seoOptions.Value, cancellationToken);
     }
 }
 
@@ -319,16 +326,16 @@ public class DiscardSiteDraftCommandHandler(
 {
     public async Task<Result<SiteDraftResultDto>> Handle(DiscardSiteDraftCommand request, CancellationToken cancellationToken)
     {
-        Branch? branch = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<SiteDraftResultDto>.Failure("Şube bulunamadı.");
-        string cdn = BranchSiteLoader.Cdn(storageOptions);
-        if (branch.IsSiteDraftStale(request.Version)) return await SiteEditor.ConflictAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
-        if (branch.SiteDraft is null) return await SiteEditor.OkAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
+        Company? company = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
+        if (company is null) return Result<SiteDraftResultDto>.Failure(CompanySiteLoader.NotFoundMessage);
+        string cdn = CompanySiteLoader.Cdn(storageOptions);
+        if (company.IsSiteDraftStale(request.Version)) return await SiteEditor.ConflictAsync(db, company, cdn, seoOptions.Value, cancellationToken);
+        if (company.SiteDraft is null) return await SiteEditor.OkAsync(db, company, cdn, seoOptions.Value, cancellationToken);
 
-        SiteEditorDto current = await SiteEditor.BuildAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
-        IReadOnlySet<string> before = branch.SiteImageKeysInUse();
-        branch.DiscardSiteDraft();
-        await SiteEditor.AddAuditLogAsync(db, currentUser, branch, "SiteDraftDiscarded",
+        SiteEditorDto current = await SiteEditor.BuildAsync(db, company, cdn, seoOptions.Value, cancellationToken);
+        IReadOnlySet<string> before = company.SiteImageKeysInUse();
+        company.DiscardSiteDraft();
+        await SiteEditor.AddAuditLogAsync(db, currentUser, company, "SiteDraftDiscarded",
             current.HasChanges
                 ? $"restoran sitesinin taslağındaki {current.Changes.Count} değişikliği attı ({SiteEditor.Labels(current)})."
                 : "restoran sitesinin taslağını attı.",
@@ -336,8 +343,8 @@ public class DiscardSiteDraftCommandHandler(
         await db.SaveChangesAsync(cancellationToken);
 
         // Yalnız taslağa yüklenmiş fotoğraflar silinir.
-        await BranchSiteLoader.DeleteUnusedImagesAsync(imageStorage, branch, before, cancellationToken);
-        return await SiteEditor.OkAsync(db, branch, cdn, seoOptions.Value, cancellationToken);
+        await CompanySiteLoader.DeleteUnusedImagesAsync(imageStorage, company, before, cancellationToken);
+        return await SiteEditor.OkAsync(db, company, cdn, seoOptions.Value, cancellationToken);
     }
 }
 
@@ -393,16 +400,16 @@ public class SetSiteDraftImageCommandHandler(
         if (!Enum.IsDefined(request.Target)) return Result<SiteEditorDto>.Failure("Geçersiz görsel alanı.");
         if (request.Content is not null && request.StockImageId is not null) return Result<SiteEditorDto>.Failure("Tek bir görsel seçin.");
 
-        Branch? branch = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<SiteEditorDto>.Failure("Şube bulunamadı.");
+        Company? company = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
+        if (company is null) return Result<SiteEditorDto>.Failure(CompanySiteLoader.NotFoundMessage);
 
         bool removing = request.Content is null && request.StockImageId is null;
-        SiteSnapshot draft = branch.GetSiteDraft();
+        SiteSnapshot draft = company.GetSiteDraft();
 
         if (request.Target == SiteDraftImageTarget.Region)
         {
             bool regionExists = request.RegionId is Guid regionId
-                && await db.Regions.AnyAsync(r => r.Id == regionId && r.BranchId == branch.Id, cancellationToken);
+                && await db.Regions.AnyAsync(r => r.Id == regionId && r.Branch.CompanyId == company.Id && !r.Branch.IsDeleted, cancellationToken);
             if (!regionExists) return Result<SiteEditorDto>.Failure("Bölüm bulunamadı.");
         }
         if (request.Target == SiteDraftImageTarget.Gallery)
@@ -426,13 +433,13 @@ public class SetSiteDraftImageCommandHandler(
         }
         else if (request.Content is not null)
         {
-            (key, string? error) = await SiteImageUpload.UploadAsync(imageStorage, request.Content, branch.Id, MaxSize(request.Target), cancellationToken);
+            (key, string? error) = await SiteImageUpload.UploadAsync(imageStorage, request.Content, company.Id, MaxSize(request.Target), cancellationToken);
             if (error is not null) return Result<SiteEditorDto>.Failure(error);
             uploaded = key;
         }
 
         // Yeni yüklenen dosya da listede: işlem başarısız olursa kullanılmadığı için silinir.
-        List<string> before = [.. branch.SiteImageKeysInUse(), uploaded];
+        List<string> before = [.. company.SiteImageKeysInUse(), uploaded];
         try
         {
             SiteSnapshot next = request.Target switch
@@ -450,7 +457,7 @@ public class SetSiteDraftImageCommandHandler(
                 SiteDraftImageTarget.Gallery => draft.WithGalleryImage(key, request.GalleryIndex),
                 _ => draft.WithRegionPhoto(request.RegionId!.Value, key),
             };
-            branch.SaveSiteDraft(next, clock.GetUtcNow().UtcDateTime);
+            company.SaveSiteDraft(next, clock.GetUtcNow().UtcDateTime);
         }
         catch (DomainException ex)
         {
@@ -460,10 +467,10 @@ public class SetSiteDraftImageCommandHandler(
 
         await db.SaveChangesAsync(cancellationToken);
         // Taslakta yerini yenisine bırakan ve yayında olmayan dosya (ör. iki kez yüklenen kapak) silinir.
-        await BranchSiteLoader.DeleteUnusedImagesAsync(imageStorage, branch, before, cancellationToken);
+        await CompanySiteLoader.DeleteUnusedImagesAsync(imageStorage, company, before, cancellationToken);
 
         return Result<SiteEditorDto>.Success(
-            await SiteEditor.BuildAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), seoOptions.Value, cancellationToken));
+            await SiteEditor.BuildAsync(db, company, CompanySiteLoader.Cdn(storageOptions), seoOptions.Value, cancellationToken));
     }
 }
 
@@ -480,12 +487,12 @@ public class ReorderSiteDraftGalleryCommandHandler(
 {
     public async Task<Result<SiteEditorDto>> Handle(ReorderSiteDraftGalleryCommand request, CancellationToken cancellationToken)
     {
-        Branch? branch = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<SiteEditorDto>.Failure("Şube bulunamadı.");
+        Company? company = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
+        if (company is null) return Result<SiteEditorDto>.Failure(CompanySiteLoader.NotFoundMessage);
 
         try
         {
-            branch.SaveSiteDraft(branch.GetSiteDraft().WithGalleryOrder(request.Order ?? []), clock.GetUtcNow().UtcDateTime);
+            company.SaveSiteDraft(company.GetSiteDraft().WithGalleryOrder(request.Order ?? []), clock.GetUtcNow().UtcDateTime);
         }
         catch (DomainException ex)
         {
@@ -494,6 +501,6 @@ public class ReorderSiteDraftGalleryCommandHandler(
 
         await db.SaveChangesAsync(cancellationToken);
         return Result<SiteEditorDto>.Success(
-            await SiteEditor.BuildAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), seoOptions.Value, cancellationToken));
+            await SiteEditor.BuildAsync(db, company, CompanySiteLoader.Cdn(storageOptions), seoOptions.Value, cancellationToken));
     }
 }

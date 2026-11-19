@@ -40,7 +40,7 @@ export function Panel({ id, title, description, children }: { id?: string; title
 // ── Tasarım ve tema ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Sitenin tasarımı ("Renkli ve sıcak" / "Sade" / "Elit"): her kart tasarımın küçük bir maketini o anki tema ve vurgu rengiyle
+ * Sitenin tasarımı ("Renkli ve sıcak" / "Sade" / "Elit" / "Sıcak"): her kart tasarımın küçük bir maketini o anki tema ve vurgu rengiyle
  * çizer (sayfa zemini, kapak, menü kutusu, alt bilgi, başlık yazı tipi). Renkli varsayılandır ve "" olarak kaydedilir.
  */
 export function DesignPicker({ design, theme, accent, onDesign }: {
@@ -63,7 +63,8 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
                         onClick={() => onDesign(key === DEFAULT_DESIGN ? '' : key)}
                         className={cn('flex flex-col gap-2.5 rounded-xl border-2 p-2.5 text-left transition-colors',
                             on ? 'border-foreground' : 'border-border hover:border-foreground/40')}>
-                        {key === 'elit' ? <EliteMock accent={c.pop} accentText={c.accentText} /> : (
+                        {key === 'elit' ? <EliteMock accent={c.pop} accentText={c.accentText} />
+                            : key === 'sicak' ? <SicakMock accent={c.accent} onAccent={c.onAccent} accentText={c.accentText} /> : (
                         /* Küçük maket: üst menü, kapak (başlık + düğme), menü kutusu ve alt bilgi şeridi. */
                         <span aria-hidden="true" className="flex h-[148px] flex-col gap-1.5 overflow-hidden rounded-lg p-2" style={{ background: P.bg }}>
                             <span className="flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2" style={{ background: sade ? P.card : 'transparent' }}>
@@ -138,6 +139,44 @@ function EliteMock({ accent, accentText }: { accent: string; accentText: string 
 }
 
 /**
+ * Sıcak tasarımın maketi: şeftali kapakta kalın başlık, turuncu düğme ve yuvarlak tabak; altında ince turuncu-ten çizgili
+ * beyaz ürün kartları (yuvarlak tabak + fiyat) ve koyu alt bilgi.
+ */
+function SicakMock({ accent, onAccent, accentText }: { accent: string; onAccent: string; accentText: string }) {
+    const P = SITE_DESIGNS.sicak.palette;
+    const font = SITE_FONTS[P.font];
+    return (
+        <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg" style={{ background: `linear-gradient(160deg, ${P.bg}, ${P.alt})` }}>
+            <span className="flex flex-[3] items-center gap-2 px-2.5">
+                <span className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-[17px] leading-[0.95]" style={{ fontFamily: font.heading, fontWeight: 700, letterSpacing: font.tracking, color: P.fg }}>
+                        Ocak<br /><span style={{ color: accentText }}>Kadıköy</span>
+                    </span>
+                    <span className="flex h-3.5 w-14 items-center justify-center rounded-full" style={{ background: accent }}>
+                        <span className="h-1 w-7 rounded-full" style={{ background: onAccent }} />
+                    </span>
+                </span>
+                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full" style={{ background: P.card, boxShadow: '0 4px 10px rgba(30,25,21,0.15)' }}>
+                    <span className="h-11 w-11 rounded-full" style={{ background: `radial-gradient(circle at 35% 35%, ${P.mustard}, ${accent})` }} />
+                </span>
+            </span>
+            <span className="flex flex-[2] items-center gap-1.5 px-2.5">
+                {[0, 1].map(i => (
+                    <span key={i} className="flex flex-1 items-center gap-1 rounded-md px-1 py-1" style={{ background: P.card, border: `1px solid ${P.mustard}` }}>
+                        <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: P.placeholder }} />
+                        <span className="flex flex-1 flex-col gap-0.5">
+                            <span className="h-1 w-3/4 rounded-full" style={{ background: P.fg }} />
+                            <span className="h-1 w-1/3 rounded-full" style={{ background: accentText }} />
+                        </span>
+                    </span>
+                ))}
+            </span>
+            <span className="h-3 shrink-0" style={{ background: P.footer }} />
+        </span>
+    );
+}
+
+/**
  * Sitenin yazı tipi: ilk seçenek "Tasarımın yazı tipi" ("" kaydedilir; tasarım değişince onun çiftine geçer), altında hazır
  * başlık + gövde çiftleri. Her kart "Aa" ve kısa bir Türkçe örneği o çiftle çizer. Admin olduğu için bütün çiftler yüklenir.
  */
@@ -183,10 +222,12 @@ const ACCENT_OPTIONS: Record<SiteDesignKey, string[]> = {
     renkli: ['#DC5B2F', '#EBB03F', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#24180F', '#9AA5B1'],
     sade: ['#E8B04B', '#E2683C', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#2A2622', '#9AA5B1'],
     elit: ['#C8A35F', '#D4A0A0', '#B9BD8E', '#A9B8D0', '#CFC6B8', '#E79A9A', '#2F4F8F', '#A8354A'],
+    sicak: ['#D9660B', '#C8341E', '#6B7A2E', '#8E2433', '#1E1915', '#EBB03F', '#2F4F8F', '#E2683C'],
 };
 
 /** Seçili tasarımın hazır temaları ve isteğe bağlı özel vurgu rengi. Renkli: tema kapak rengini ve vurguyu seçer;
- *  Sade: yalnız vurguyu (kapak beyaz kutu); Elit: yalnız vurgu ailesini (koyu zeminde açık, kremde koyu ton). */
+ *  Sade: yalnız vurguyu (kapak beyaz kutu); Elit: yalnız vurgu ailesini (koyu zeminde açık, kremde koyu ton);
+ *  Sıcak: yalnız vurguyu (zemin şeftali, koyu bantlar). */
 export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
     design?: string; theme: string; accent: string; onTheme: (key: string) => void; onAccent: (hex: string) => void;
 }) {
@@ -198,6 +239,7 @@ export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
             <p className="m-0 text-sm text-muted-foreground">
                 {key === 'sade' ? 'Sade tasarımda tema vurgu rengini seçer; kapak ve kutular beyaz kalır.'
                     : key === 'elit' ? 'Elit tasarımda tema yalnız vurgu ailesini seçer (çizgiler, süsler, düğmeler); zemin krem ve koyu espresso kalır.'
+                        : key === 'sicak' ? 'Sıcak tasarımda tema vurgu rengini seçer (düğmeler, etiketler); zemin şeftali ve krem, koyu bantlar kalır.'
                         : 'Renkli tasarımda tema ana sayfa kapağının rengini ve vurguyu seçer.'}
             </p>
             <div role="radiogroup" aria-label="Site teması" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">

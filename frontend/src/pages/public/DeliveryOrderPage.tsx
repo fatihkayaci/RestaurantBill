@@ -6,7 +6,7 @@ import {
 import { publicService } from '@/features/customerSite/api/publicService';
 import { publicDeliveryService } from '@/features/delivery/api/publicDeliveryService';
 import {
-    addLine, changeQuantity, clearCart, estimatedSubtotal, itemCount, loadBranchChoice, loadCart, loadOrderSnapshot, loadRecentOrders,
+    addLine, changeQuantity, clearCart, moveLineToEnd, removeOneSetMenu, estimatedSubtotal, itemCount, loadBranchChoice, loadCart, loadOrderSnapshot, loadRecentOrders,
     newClientRequestId, productKey, pruneUnavailable, quantityOf, rememberOrder, saveBranchChoice, saveCart, saveOrderSnapshot,
     selectionNames, setLineNote, setMenuKey, setMenuUnitPrice, toCartInput, type DeliveryCartLine, type OrderSnapshot,
     type RecentDeliveryOrder,
@@ -24,10 +24,12 @@ import Sheet from './delivery/Sheet';
 import { customerFontsHref, customerRootStyle } from './customerTheme';
 import type { PublicSite } from '@/features/customerSite/types';
 import { GlassStatusPill } from './site/SiteCards';
+import { ImageSlot } from './site/SiteChrome';
 import { FlowSiteHeader } from './site/SiteFrame';
 import { serif, siteCardDark } from './site/siteParts';
 import { headingFont, resolveDesign, telHref } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
+import { isSicak, scCard, scDarkTone, scLine, scPageBg, scQtyTone } from './site/sicak/sicakParts';
 import { normalizeSite } from './site/useSite';
 
 const QUOTE_DEBOUNCE_MS = 400;
@@ -56,7 +58,9 @@ function fold(text: string): string {
 const MENU_ANCHOR = 'paket-menu';
 
 // Online paket sipariş sayfası (/siparis, restoranın alan adında). Sıra: şube (birden fazlaysa) → mahalle (ücret ve en az
-// tutar) → menü → sepet → teslimat bilgileri. Sepet, mahalle ve gönderim anahtarı (clientRequestId) cihazda şube başına
+// tutar) → menü → sepet → teslimat bilgileri. Düzen: solda üstte sepetteki ürünler, altında menü; sağda (masaüstünde
+// yapışkan) "Siparişiniz": teslimat mahallesi, ara toplam, teslimat ücreti, toplam ve "Devam et". Telefonda mahalle sepetin
+// altında, toplamlar alttaki çubuğun açtığı pencerede. Sepet, mahalle ve gönderim anahtarı (clientRequestId) cihazda şube başına
 // saklanır; gönderim anahtarı sipariş açılana kadar değişmez, bağlantı kopunca yeniden göndermek aynı siparişi döndürür.
 // Gösterilen tutarlar sunucunun teklifidir (quote); kapalı/durdurulmuş restoranda menü görünür ama sipariş gönderilmez.
 export default function DeliveryOrderPage() {
@@ -78,6 +82,10 @@ export default function DeliveryOrderPage() {
     const [siteFailed, setSiteFailed] = useState(false);
     // Sade tasarımda menü kutusu beyaz: sağdaki sepet özeti krem yazılı zeytin kutu değil, beyaz kutu olur.
     const sadeDesign = resolveDesign(siteData?.site.design) === 'sade';
+    // Sıcak: şeftali degrade zemin, çerçeveli yarı saydam kutular, yuvarlak tabak fotoğrafları, koyu "Siparişiniz".
+    const sicak = isSicak(siteData?.site.design);
+    // Elit: solda yalnız ürünler (üstte teslimat bilgi şeridi); sepetteki ürünler sağdaki "Siparişiniz"de mahalleyle birlikte.
+    const cartInPanel = resolveDesign(siteData?.site.design) === 'elit';
     const site = siteData && {
         name: siteData.companyName || siteData.branchName,
         accent: siteData.site.accentColor,
@@ -193,20 +201,22 @@ export default function DeliveryOrderPage() {
     const currentQuote = quote && quote.key === quoteKey && lines.length > 0 ? quote.value : null;
 
     // ── Sepet işlemleri ──
+    // Menüden eklenen satır listenin sonuna taşınır: "Siparişiniz" panelinde son eklenen en üstte görünür.
+    const toEnd = moveLineToEnd;
     const addProduct = (product: OnlineMenuProduct) => {
         if (product.isOutOfStock) return;
-        setLines(prev => addLine(prev, {
+        setLines(prev => toEnd(addLine(prev, {
             key: productKey(product.id), kind: 'product', productId: product.id, name: product.name, unitPrice: product.price,
             note: '', selections: {}, selectionNames: [],
-        }));
+        }), productKey(product.id)));
     };
     const removeProduct = (product: OnlineMenuProduct) => setLines(prev => changeQuantity(prev, productKey(product.id), -1));
     const addSetMenu = (menu: OnlineSetMenu, selections: Record<string, string>, quantity: number, note: string) => {
         const key = setMenuKey(menu.id, selections) + (note ? `:${note}` : '');
-        setLines(prev => addLine(prev, {
+        setLines(prev => toEnd(addLine(prev, {
             key, kind: 'setMenu', setMenuId: menu.id, name: menu.name, unitPrice: setMenuUnitPrice(menu, selections),
             note, selections, selectionNames: selectionNames(menu, selections),
-        }, quantity));
+        }, quantity), key));
         setSetMenuOpen(null);
     };
 
@@ -243,7 +253,7 @@ export default function DeliveryOrderPage() {
     const nav = !siteFailed;
     const root = (children: ReactNode, withNav = true) => (
         // Elit: köşesiz, ince serif giydirme (rb-el-flow); düzen ve mantık aynı.
-        <div style={customerRootStyle({ accentColor: site?.accent, theme: site?.theme, design: site?.design, font: site?.font })}
+        <div style={{ ...customerRootStyle({ accentColor: site?.accent, theme: site?.theme, design: site?.design, font: site?.font }), ...(sicak ? scPageBg : {}) }}
             className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)]', resolveDesign(site?.design) === 'elit' && 'rb-el-flow')}>
             <EliteFlowStyle design={site?.design} />
             <link rel="stylesheet" href={customerFontsHref(site)} precedence="default" />
@@ -324,18 +334,29 @@ export default function DeliveryOrderPage() {
         : null;
     const checkoutHint = !open ? 'Restoran şu an sipariş almıyor.'
         : !zone ? 'Devam etmek için teslimat mahallenizi seçin.'
+        : lines.length === 0 ? 'Sepetiniz boş. Menüden ürün ekleyin.'
             : amountToMinimum > 0 ? null
                 : quoteError ?? (quoting || !currentQuote ? 'Tutar hesaplanıyor…' : null);
 
     const goToCheckout = () => { setCartOpen(false); setCheckoutOpen(true); };
-    const cartLines = (
-        <CartLines lines={lines} quote={currentQuote}
+    // Sepet satırının görseli menüden (ürün ya da hazır menü); görseli yoksa restoranın yazı logosu.
+    const productImages = new Map(data.categories.flatMap(c => c.products).map(p => [p.id, { src: p.imageUrl, stock: p.isStockImage }]));
+    const menuImages = new Map((data.setMenus ?? []).map(m => [m.id, { src: m.imageUrl, stock: m.isStockImage }]));
+    const lineImage = (line: DeliveryCartLine) =>
+        (line.kind === 'product' ? productImages.get(line.productId ?? '') : menuImages.get(line.setMenuId ?? '')) ?? { src: '', stock: false };
+    const renderCartLines = (limit?: number) => (
+        <CartLines limit={limit} lines={lines} quote={currentQuote} restaurant={restaurant} imageOf={lineImage} round={sicak}
             onChange={(key, delta) => setLines(prev => changeQuantity(prev, key, delta))}
             onNote={(key, note) => setLines(prev => setLineNote(prev, key, note))} />
     );
+    const cartLines = renderCartLines();
+    // Boş sepet önerileri: ustanın seçimi (yoksa ilk ürünler), tükenmemiş, en fazla 3.
+    const available = data.categories.flatMap(c => c.products).filter(p => !p.isOutOfStock);
+    const suggestions = (available.some(p => p.isFeatured) ? available.filter(p => p.isFeatured) : available).slice(0, 3);
     const cartTotals = (
         <CartTotals subtotal={subtotal} fee={fee} total={total} zoneName={zone?.name ?? null} minimum={minimum}
-            hint={checkoutHint} hintIsError={!!quoteError} canCheckout={canCheckout} onCheckout={goToCheckout} />
+            hint={checkoutHint} hintIsError={!!quoteError} canCheckout={canCheckout} onCheckout={goToCheckout}
+            closedLabel={open ? null : data.nextOpensAt ? `${opensText(data.nextOpensAt)}'da açılıyor` : 'Şu an sipariş alınmıyor'} />
     );
 
     const pillText = data.state === 'open'
@@ -345,8 +366,9 @@ export default function DeliveryOrderPage() {
 
     return root(
         <main className={cn('min-h-screen lg:pb-16', count > 0 ? 'pb-40' : 'pb-12')}>
-            <Hero
+            {!cartInPanel && <Hero
                 nav={nav}
+                sicak={sicak}
                 restaurant={restaurant}
                 cover={site?.cover}
                 eyebrow={['Paket sipariş', zone?.name ?? (multiBranch ? data.branchName : site?.place)].filter(Boolean).join(' · ')}
@@ -357,16 +379,52 @@ export default function DeliveryOrderPage() {
                         <Store className="h-4 w-4" aria-hidden="true" />Şube değiştir
                     </button>
                 ) : null}
-            />
+            />}
 
-            <div className="relative mx-auto max-w-[1408px] px-2 sm:px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-4">
-                <div className="min-w-0 rounded-[24px] bg-[var(--site-card)] p-4 sm:p-8 md:rounded-[32px] lg:p-12">
-                    <div className="flex flex-col gap-3">
+            <div className={cn('relative mx-auto max-w-[1408px] px-2 sm:px-4 lg:grid lg:items-start lg:gap-4', cartInPanel && 'pt-4 md:pt-6',
+                cartInPanel ? 'lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_460px]' : 'lg:grid-cols-[minmax(0,1fr)_380px]')}>
+                <div className={cn('min-w-0', cartInPanel && 'flex flex-col gap-4')}>
+                {cartInPanel && (
+                    <EliteBanner nav={nav} restaurant={restaurant} cover={site?.cover}
+                        eyebrow={['Paket sipariş', zone?.name ?? (multiBranch ? data.branchName : site?.place)].filter(Boolean).join(' · ')}
+                        status={<GlassStatusPill tone="glass" open={data.state === 'open'}>{pillText}</GlassStatusPill>}
+                        action={multiBranch ? (
+                            <button type="button" onClick={() => setPickingBranch(true)}
+                                className="flex h-11 items-center gap-1.5 rounded-full border border-white/30 px-4 text-sm font-semibold text-[var(--site-on-paper)] transition-colors hover:bg-white/10">
+                                <Store className="h-4 w-4" aria-hidden="true" />Şube değiştir
+                            </button>
+                        ) : null} />
+                )}
+                <div className={cn('min-w-0 p-4 sm:p-8 lg:p-12', sicak
+                    ? cn('rounded-[28px] border', scLine, 'bg-[color-mix(in_srgb,#FFFFFF_42%,transparent)]')
+                    : 'rounded-[24px] bg-[var(--site-card)] md:rounded-[32px]')}>
+                    {/* Sol üst: sepetteki ürünler (adet, not). Boşsa kısa bir çağrı. Elit'te sepet sağdaki panelde. */}
+                    {data.state !== 'disabled' && !cartInPanel && (
+                        <section aria-labelledby="sepet-baslik" className={cn('p-4 md:p-6', sicak ? cn(scCard, scQtyTone, 'bg-[#FFF9F2]') : 'rounded-[20px] bg-[var(--site-bg)]')}>
+                            <div className="flex items-center justify-between gap-3">
+                                <h2 id="sepet-baslik" className={cn(headingFont, 'text-[26px] leading-none md:text-[32px]')}>Sepetiniz</h2>
+                                {count > 0 && <span className={cn('px-2.5 py-1 text-sm font-extrabold tabular-nums', sicak ? 'rounded-lg bg-[var(--site-accent)] text-[var(--site-on-accent)]' : 'rounded-full bg-[var(--site-mustard)] text-[#24180F]')}>{count} ürün</span>}
+                            </div>
+                            {lines.length === 0
+                                ? <p className="mt-2 text-sm text-[var(--site-sub)]">Sepetiniz boş. Aşağıdaki menüden beğendiklerinizi ekleyin.</p>
+                                : <div className="mt-1">{cartLines}</div>}
+                        </section>
+                    )}
+
+                    {/* Elit, masaüstü: teslimat bilgi şeridi (süre, ücret, en az tutar, bölge). Telefonda yerine mahalle kartı. */}
+                    {data.state !== 'disabled' && cartInPanel && (
+                        <DeliveryInfoStrip zone={zone} hasZones={data.zones.length > 0} onPick={() => setZonePickerOpen(true)} />
+                    )}
+
+                    <div className={cn('flex flex-col gap-3 empty:hidden', cartInPanel ? 'lg:mt-3' : 'mt-3')}>
+                        {/* Telefonda mahalle burada; masaüstünde sağdaki "Siparişiniz" kutusunda. */}
                         {data.state !== 'disabled' && (
-                            <ZoneCard zones={data.zones} zone={zone} onPick={() => setZonePickerOpen(true)} />
+                            <div className="lg:hidden">
+                                <ZoneCard zones={data.zones} zone={zone} onPick={() => setZonePickerOpen(true)} />
+                            </div>
                         )}
 
-                        {!open && <ClosedCard data={data} onBrowse={scrollToMenu} />}
+                        {!open && <ClosedCard data={data} onBrowse={scrollToMenu} slim={cartInPanel} />}
 
                         {prunedNames.length > 0 && (
                             <p role="status" className="rounded-2xl bg-[var(--site-raised)] px-4 py-3 text-sm">
@@ -375,7 +433,8 @@ export default function DeliveryOrderPage() {
                             </p>
                         )}
 
-                        {recent.length > 0 && (
+                        {/* Elit: son siparişler üst menüdeki "Siparişim"de; burada yer kaplamasın. */}
+                        {recent.length > 0 && !cartInPanel && (
                             <nav aria-label="Son siparişleriniz" className="flex items-center gap-2 overflow-x-auto rounded-2xl bg-[var(--site-raised)] px-3 py-2.5 text-sm [scrollbar-width:none]">
                                 <Receipt className="h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
                                 <span className="shrink-0 font-medium text-[var(--site-sub)]">Siparişleriniz:</span>
@@ -389,8 +448,9 @@ export default function DeliveryOrderPage() {
                         )}
                     </div>
 
+                    {/* Sol alt: menünün kalanı. */}
                     {data.state !== 'disabled' && (
-                        <div id={MENU_ANCHOR} className="scroll-mt-4">
+                        <div id={MENU_ANCHOR} className="mt-6 scroll-mt-4">
                         <DeliveryMenu
                             categories={data.categories}
                             setMenus={data.setMenus}
@@ -400,23 +460,50 @@ export default function DeliveryOrderPage() {
                             onAddProduct={addProduct}
                             onRemoveProduct={removeProduct}
                             onOpenSetMenu={setSetMenuOpen}
+                            onRemoveSetMenu={menu => setLines(prev => removeOneSetMenu(prev, menu.id))}
+                            variant={sicak ? 'sicak' : 'default'}
                         />
                         </div>
                     )}
                 </div>
+                </div>
 
-                {/* Masaüstü: sağda yapışkan sepet. Telefonda yerine alttaki sepet çubuğu ve pencere. */}
-                {data.state !== 'disabled' && (
-                    <aside aria-label="Sepetiniz" className={cn(sadeDesign ? 'border border-[var(--site-border)] bg-[var(--site-card)]' : cn(summaryTone, 'bg-[var(--site-menu-box)]'),
-                        'sticky top-4 mt-0 hidden max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[32px] text-[var(--site-text)] lg:flex')}>
-                        <div className="flex items-center justify-between gap-3 px-7 pb-3 pt-7">
-                            <h2 className={cn(headingFont, 'text-[38px] leading-none')}>Sepetiniz</h2>
+                {/* Masaüstü: sağda yapışkan "Siparişiniz" (mahalle + tutarlar). Telefonda yerine alttaki çubuk ve pencere. */}
+                {data.state !== 'disabled' && cartInPanel && (
+                    // Elit: koyu panelde tek parça açık kart (mahalle, sepetteki ürünler, tutarlar ve "Devam et"); kart bütün
+                    // olarak kayar.
+                    <div className="sticky top-4 hidden max-h-[calc(100dvh-2rem)] flex-col gap-3 lg:flex">
+                    <OrderSteps className="flex justify-center py-2" />
+                    <aside aria-label="Siparişiniz"
+                        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[32px] bg-[var(--site-menu-box)] p-4">
+                        <div className="flex items-center justify-between gap-3 px-3 pb-4 pt-3">
+                            <h2 className={cn(headingFont, 'text-[38px] leading-none text-[var(--site-on-menu-box)]')}>Siparişiniz</h2>
                             {count > 0 && <span className="rounded-full bg-[var(--site-mustard)] px-2.5 py-1 text-sm font-extrabold tabular-nums text-[#24180F]">{count} ürün</span>}
                         </div>
-                        <div className="min-h-0 flex-1 overflow-y-auto px-7 py-2">
-                            {lines.length === 0 ? <EmptyCart /> : cartLines}
+                        <div className="min-h-0 flex-1 overflow-y-auto rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)]">
+                            <div className="border-b border-[var(--site-border)] px-5 pb-4 pt-5">
+                                <ZoneCard zones={data.zones} zone={zone} onPick={() => setZonePickerOpen(true)} flat compact />
+                            </div>
+                            <div className="px-5">{lines.length === 0
+                                ? <EmptyCart suggestions={suggestions} restaurant={restaurant} onAdd={addProduct} />
+                                : renderCartLines(CART_PANEL_LIMIT)}</div>
+                            <div className="border-t border-dashed border-[var(--site-border-strong)] px-5 pb-5 pt-4">{cartTotals}</div>
                         </div>
-                        {lines.length > 0 && <div className="border-t border-dashed border-[var(--site-border-strong)] px-7 pb-7 pt-4">{cartTotals}</div>}
+                    </aside>
+                    </div>
+                )}
+                {data.state !== 'disabled' && !cartInPanel && (
+                    <aside aria-label="Siparişiniz" className={cn(sicak ? cn(scDarkTone, 'rounded-[24px] bg-[#1E1915] shadow-[0_24px_50px_-28px_rgba(30,25,21,0.7)]')
+                        : sadeDesign ? 'rounded-[32px] border border-[var(--site-border)] bg-[var(--site-card)]' : cn(summaryTone, 'rounded-[32px] bg-[var(--site-menu-box)]'),
+                        'sticky top-4 mt-0 hidden max-h-[calc(100dvh-2rem)] flex-col overflow-hidden text-[var(--site-text)] lg:flex')}>
+                        <div className="flex items-center justify-between gap-3 px-7 pb-3 pt-7">
+                            <h2 className={cn(headingFont, 'text-[38px] leading-none')}>Siparişiniz</h2>
+                            {count > 0 && <span className={cn('px-2.5 py-1 text-sm font-extrabold tabular-nums', sicak ? 'rounded-lg bg-[var(--site-accent)] text-[var(--site-on-accent)]' : 'rounded-full bg-[var(--site-mustard)] text-[#24180F]')}>{count} ürün</span>}
+                        </div>
+                        <div className="min-h-0 flex-1 overflow-y-auto px-7 py-2">
+                            <ZoneCard zones={data.zones} zone={zone} onPick={() => setZonePickerOpen(true)} />
+                        </div>
+                        <div className="border-t border-dashed border-[var(--site-border-strong)] px-7 pb-7 pt-4">{cartTotals}</div>
                     </aside>
                 )}
             </div>
@@ -439,8 +526,9 @@ export default function DeliveryOrderPage() {
             )}
 
             {cartOpen && (
-                <Sheet title="Sepetiniz" onClose={() => setCartOpen(false)} footer={cartTotals}>
-                    {lines.length === 0 ? <EmptyCart /> : cartLines}
+                <Sheet title="Siparişiniz" onClose={() => setCartOpen(false)} footer={cartTotals}>
+                    <ZoneCard zones={data.zones} zone={zone} onPick={() => { setCartOpen(false); setZonePickerOpen(true); }} />
+                    <div className="mt-3">{lines.length === 0 ? <EmptyCart /> : cartLines}</div>
                 </Sheet>
             )}
 
@@ -483,8 +571,10 @@ const ORDER_STEPS = ['Sepet', 'Teslimat', 'Ödeme', 'Onay'];
  * Sayfanın başı (Renkli: kum zeminde başlık satırı): ana sayfaya dönüş, büyük "Paket sipariş" başlığı, restoran ve mahalle
  * satırı, durum hapı ve sağda adımlar. `nav` yoksa (site bilgisi alınamadı) yalnız dönüş bağlantısı ve başlık.
  */
-function Hero({ restaurant, eyebrow, action, status, nav }: {
+function Hero({ restaurant, eyebrow, action, status, nav, sicak = false }: {
     restaurant: string; eyebrow: string; cover?: string; action?: ReactNode; status?: ReactNode; nav: boolean;
+    /** Sıcak: kalın düz başlık, "sipariş" turuncu (italik değil), turuncu adım. */
+    sicak?: boolean;
 }) {
     return (
         <header className="mx-auto max-w-[1408px] px-3 pb-4 pt-5 sm:px-6 md:pb-6 md:pt-7">
@@ -496,24 +586,66 @@ function Hero({ restaurant, eyebrow, action, status, nav }: {
                     <p className="m-0 flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-[0.22em] text-[var(--site-accent-text)]">
                         <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />{eyebrow}
                     </p>
-                    <h1 className={cn(serif, 'm-0 break-words text-[52px] font-extrabold leading-[0.9] md:text-[clamp(60px,6.4vw,100px)]')}>
-                        Paket <em className="rb-accent font-semibold italic text-[var(--site-accent-text)]">sipariş</em>
-                    </h1>
+                    {sicak ? (
+                        <h1 className={cn(headingFont, 'm-0 break-words text-[44px] leading-[1.02] tracking-[-0.02em] md:text-[clamp(52px,5.2vw,80px)]')}>
+                            Paket <span className="text-[var(--site-accent-text)]">sipariş</span>
+                        </h1>
+                    ) : (
+                        <h1 className={cn(serif, 'm-0 break-words text-[52px] font-extrabold leading-[0.9] md:text-[clamp(60px,6.4vw,100px)]')}>
+                            Paket <em className="rb-accent font-semibold italic text-[var(--site-accent-text)]">sipariş</em>
+                        </h1>
+                    )}
                     {status && <div className="mt-1 flex flex-wrap items-center gap-2">{status}{action}</div>}
                     {!status && action}
                 </div>
-                <ol aria-label="Sipariş adımları" className="m-0 hidden list-none flex-wrap items-center gap-2.5 p-0 text-sm font-bold md:flex">
-                    {ORDER_STEPS.map((label, i) => (
-                        <li key={label} className="flex items-center gap-2.5" aria-current={i === 0 ? 'step' : undefined}>
-                            {i > 0 && <span aria-hidden="true" className="h-px w-7 bg-[var(--site-border-strong)]" />}
-                            <span className={cn('inline-flex items-center gap-2', i > 0 && 'text-[var(--site-muted)]')}>
-                                <span aria-hidden="true" className={cn('flex h-7 w-7 items-center justify-center rounded-full text-[13px]',
-                                    i === 0 ? 'bg-[var(--site-accent-text)] text-[var(--site-card)]' : 'border border-[var(--site-border-strong)]')}>{i === ORDER_STEPS.length - 1 ? '✓' : i + 1}</span>
-                                {label}
-                            </span>
-                        </li>
-                    ))}
-                </ol>
+                <OrderSteps sicak={sicak} className="hidden md:flex" />
+            </div>
+        </header>
+    );
+}
+
+/** Sipariş adımları (bilgi amaçlı): bu sayfa ilk adım (Sepet). */
+function OrderSteps({ sicak = false, onDark = false, className }: { sicak?: boolean; onDark?: boolean; className?: string }) {
+    return (
+        <ol aria-label="Sipariş adımları" className={cn('m-0 list-none flex-wrap items-center gap-2.5 p-0 text-sm font-bold', className)}>
+            {ORDER_STEPS.map((label, i) => (
+                <li key={label} className="flex items-center gap-2.5" aria-current={i === 0 ? 'step' : undefined}>
+                    {i > 0 && <span aria-hidden="true" className={cn('h-px w-6', onDark ? 'bg-[var(--site-on-paper-sub)]' : 'bg-[var(--site-border-strong)]')} />}
+                    <span className={cn('inline-flex items-center gap-2', i > 0 && 'text-[var(--site-muted)]')}>
+                        <span aria-hidden="true" className={cn('flex h-7 w-7 items-center justify-center rounded-full text-[13px]',
+                            i === 0 ? (sicak ? 'bg-[var(--site-accent)] text-[var(--site-on-accent)]' : 'bg-[var(--site-accent-text)] text-[var(--site-card)]') : 'border border-[var(--site-border-strong)]')}>{i === ORDER_STEPS.length - 1 ? '✓' : i + 1}</span>
+                        {label}
+                    </span>
+                </li>
+            ))}
+        </ol>
+    );
+}
+
+/**
+ * Elit'in sipariş başlığı: restoranın kapak fotoğrafı üstünde koyu degrade, krem yazıyla "Paket sipariş", bölge satırı ve
+ * durum hapı (ekran görüntüsündeki afiş). Kapak yoksa koyu panel rengi.
+ */
+function EliteBanner({ cover, eyebrow, status, action, nav, restaurant }: {
+    cover?: string | null; eyebrow: string; status: ReactNode; action?: ReactNode; nav: boolean; restaurant: string;
+}) {
+    return (
+        <header className="relative isolate overflow-hidden rounded-[28px] bg-[var(--site-paper)] text-[var(--site-on-paper)]">
+            {cover && <img src={cover} alt="" aria-hidden="true" className="absolute inset-0 -z-10 h-full w-full object-cover" />}
+            <span aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(30,22,16,0.92)_0%,rgba(30,22,16,0.72)_45%,rgba(30,22,16,0.25)_100%)]" />
+            <div className="flex min-h-[260px] flex-col justify-between gap-6 p-6 sm:p-9 md:min-h-[300px]">
+                <Link to="/" className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-semibold text-[var(--site-on-paper-sub)] no-underline hover:text-[var(--site-on-paper)]">
+                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />{nav ? 'Ana sayfa' : restaurant}
+                </Link>
+                <div className="flex max-w-[560px] flex-col gap-3">
+                    <p className="m-0 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--site-accent-on-dark)]">
+                        <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />{eyebrow}
+                    </p>
+                    <h1 className={cn(serif, 'm-0 break-words text-[48px] leading-[0.95] md:text-[clamp(56px,5.6vw,84px)]')}>
+                        Paket <em className="italic text-[var(--site-accent-on-dark)]">sipariş</em>
+                    </h1>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">{status}{action}</div>
+                </div>
             </div>
         </header>
     );
@@ -539,10 +671,55 @@ function zoneFacts(zone: DeliveryZone) {
     };
 }
 
-const zoneShell = 'rounded-[20px] bg-[var(--site-bg)] p-4 md:p-5';
+/** Elit "Siparişiniz" panelinde ilk görünen sepet satırı sayısı (son eklenenler); kalanı "Tüm siparişleri gör". */
+const CART_PANEL_LIMIT = 2;
+
+const zoneShellBox = 'rounded-[20px] bg-[var(--site-bg)] p-4 md:p-5';
+
+/**
+ * Elit sipariş sayfasının sol üstündeki teslimat bilgi şeridi (yalnız masaüstü): ortalama teslimat, teslimat ücreti, en az
+ * sipariş ve teslimat bölgesi. Mahalle seçilmemişse bölge hücresi seçim düğmesidir.
+ */
+function DeliveryInfoStrip({ zone, hasZones, onPick }: { zone: DeliveryZone | null; hasZones: boolean; onPick: () => void }) {
+    const facts = zone ? zoneFacts(zone) : null;
+    const cells = [
+        { icon: <Clock className="h-5 w-5" aria-hidden="true" />, label: 'Ortalama teslimat', value: facts?.time ?? '—' },
+        { icon: <Bike className="h-5 w-5" aria-hidden="true" />, label: 'Teslimat ücreti', value: facts?.fee ?? '—' },
+        { icon: <Wallet className="h-5 w-5" aria-hidden="true" />, label: 'En az sipariş', value: facts?.minimum ?? '—' },
+    ];
+    return (
+        <section aria-label="Teslimat bilgileri" className="hidden grid-cols-4 divide-x divide-[var(--site-border)] rounded-[20px] bg-[var(--site-bg)] py-3 lg:grid">
+            {cells.map(cell => (
+                <div key={cell.label} className="flex min-w-0 items-center gap-3 px-4">
+                    <span className="shrink-0 text-[var(--site-sub)]">{cell.icon}</span>
+                    <span className="min-w-0">
+                        <span className="block text-xs text-[var(--site-sub)]">{cell.label}</span>
+                        <span className="block truncate text-[15px] font-semibold tabular-nums">{cell.value}</span>
+                    </span>
+                </div>
+            ))}
+            <div className="flex min-w-0 items-center gap-3 px-4">
+                <MapPin className="h-5 w-5 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
+                <span className="min-w-0">
+                    <span className="block text-xs text-[var(--site-sub)]">Teslimat bölgesi</span>
+                    {zone ? <span className="block truncate text-[15px] font-semibold" title={zone.name}>{zone.name}</span>
+                        : hasZones ? <button type="button" onClick={onPick} className="block min-h-6 text-[15px] font-semibold text-[var(--site-accent-text)] underline">Mahalle seçin</button>
+                            : <span className="block text-[15px] font-semibold">—</span>}
+                </span>
+            </div>
+        </section>
+    );
+}
 
 /** Mahalle kartı: seçimden önce "Mahallenizi seçin", sonra süre, ücret ve en az tutar hep görünür. */
-function ZoneCard({ zones, zone, onPick }: { zones: DeliveryZone[]; zone: DeliveryZone | null; onPick: () => void }) {
+function ZoneCard({ zones, zone, onPick, flat = false, compact = false }: {
+    zones: DeliveryZone[]; zone: DeliveryZone | null; onPick: () => void;
+    /** true: kendi zemini ve iç boşluğu yok (içinde durduğu kartın parçası). */
+    flat?: boolean;
+    /** true: yalnız mahalle adı ve "Değiştir" (süre/ücret/en az başka yerde gösteriliyor). */
+    compact?: boolean;
+}) {
+    const zoneShell = flat ? '' : zoneShellBox;
     if (zones.length === 0) {
         return (
             <section aria-label="Teslimat mahallesi" className={zoneShell}>
@@ -574,8 +751,8 @@ function ZoneCard({ zones, zone, onPick }: { zones: DeliveryZone[]; zone: Delive
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--site-sub)]">Teslimat</p>
-                    <p className={cn(serif, 'm-0 mt-0.5 truncate text-[30px] leading-none md:text-[34px]')}>{zone.name}</p>
-                    <p className="mt-1.5 text-sm text-[var(--site-sub)] md:hidden">
+                    <p className={cn(serif, 'm-0 mt-0.5 break-words leading-[1.05]', compact ? 'text-[24px]' : 'text-[28px] md:text-[30px]')}>{zone.name}</p>
+                    <p className={cn('mt-1.5 text-sm text-[var(--site-sub)] md:hidden', compact && 'hidden')}>
                         {facts.time} · Teslimat {facts.fee}{zone.minOrderAmount > 0 ? ` · En az ${facts.minimum}` : ''}
                     </p>
                 </div>
@@ -586,7 +763,7 @@ function ZoneCard({ zones, zone, onPick }: { zones: DeliveryZone[]; zone: Delive
                     </button>
                 )}
             </div>
-            <dl className="mt-4 hidden grid-cols-3 gap-3 border-t border-[var(--site-border)] pt-4 md:grid">
+            <dl className={cn('mt-4 hidden grid-cols-3 gap-3 border-t border-[var(--site-border)] pt-4', !compact && 'md:grid')}>
                 {[
                     { icon: <Clock className="h-4 w-4" aria-hidden="true" />, label: 'Süre', value: facts.time },
                     { icon: <Bike className="h-4 w-4" aria-hidden="true" />, label: 'Ücret', value: facts.fee },
@@ -702,31 +879,84 @@ function MinimumProgress({ subtotal, target, left, className }: { subtotal: numb
     );
 }
 
-function EmptyCart() {
+function EmptyCart({ suggestions = [], restaurant = '', onAdd }: {
+    /** Boş sepette önerilen ürünler (ustanın seçimi; yoksa ilk ürünler), tek dokunuşla eklenir. */
+    suggestions?: OnlineMenuProduct[]; restaurant?: string; onAdd?: (product: OnlineMenuProduct) => void;
+}) {
     return (
-        <div className="flex flex-col items-center py-10 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-raised)] text-[var(--site-sub)]">
-                <ShoppingBag className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <p className="mt-3 text-base font-semibold">Sepetiniz boş</p>
-            <p className="mt-0.5 text-sm text-[var(--site-sub)]">Menüden beğendiklerinizi ekleyin.</p>
+        <div className="py-8">
+            <div className="flex flex-col items-center text-center">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-raised)] text-[var(--site-sub)]">
+                    <ShoppingBag className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <p className="mt-3 text-base font-semibold">Sepetiniz boş</p>
+                <p className="mt-0.5 text-sm text-[var(--site-sub)]">Menüden beğendiklerinizi ekleyin.</p>
+            </div>
+            {onAdd && suggestions.length > 0 && (
+                <div className="mt-6">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--site-sub)]">Ustanın önerileri</p>
+                    <ul className="mt-2 divide-y divide-[var(--site-border)]">
+                        {suggestions.map(product => (
+                            <li key={product.id} className="flex items-center gap-3 py-2.5">
+                                <span className="relative h-12 w-12 shrink-0">
+                                    <ImageSlot src={product.imageUrl} alt={product.name} restaurant={restaurant} logoTextClassName="text-[min(9px,14cqw)]" className="h-full rounded-xl" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-[15px] font-semibold">{product.name}</span>
+                                    <span className="block text-sm tabular-nums text-[var(--site-sub)]">{formatPrice(product.price)} ₺</span>
+                                </span>
+                                <button type="button" onClick={() => onAdd(product)} aria-label={`${product.name} sepete ekle`}
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--site-paper)] text-[var(--site-on-paper)] transition-opacity hover:opacity-90">
+                                    <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
 
-function CartLines({ lines, quote, onChange, onNote }: {
+function CartLines({ lines, quote, restaurant, imageOf, round = false, limit, onChange, onNote }: {
     lines: DeliveryCartLine[];
     quote: DeliveryQuote | null;
+    restaurant: string;
+    /** Satırın görseli (menüden); hazır kütüphane görseliyse üzerine gelince "Temsili görsel". */
+    imageOf: (line: DeliveryCartLine) => { src: string; stock: boolean };
+    /** Sıcak tasarım: koyu kenarlı yuvarlak "tabak" görsel. */
+    round?: boolean;
+    /**
+     * Verilirse son eklenen en üstte ve yalnız ilk `limit` satır görünür; kalanı "Tüm siparişleri gör" ile açılır
+     * (Elit'in "Siparişiniz" paneli).
+     */
+    limit?: number;
     onChange: (key: string, delta: number) => void;
     onNote: (key: string, note: string) => void;
 }) {
+    const [expanded, setExpanded] = useState(false);
+    // Not kutusu yalnız istenince (ya da not yazılmışsa) açılır; yoksa küçük "Not ekle" bağlantısı.
+    const [noteOpen, setNoteOpen] = useState<ReadonlySet<string>>(() => new Set());
+    // Satırın sunucu teklifindeki karşılığı sıraya göredir; ters çevirirken asıl sırası korunur.
+    const ordered = lines.map((line, index) => ({ line, index }));
+    if (limit) ordered.reverse();
+    const hidden = limit && !expanded ? Math.max(0, ordered.length - limit) : 0;
+    const visible = hidden > 0 ? ordered.slice(0, limit) : ordered;
     return (
+        <>
         <ul className="divide-y divide-[var(--site-border)]">
-            {lines.map((line, i) => {
+            {visible.map(({ line, index: i }) => {
                 const quoted = quote && quote.lines.length === lines.length ? quote.lines[i] : null;
+                const image = imageOf(line);
                 return (
                     <li key={line.key} className="py-3">
                         <div className="flex items-center gap-3">
+                            <span className={cn('relative h-16 w-16 shrink-0 md:h-[72px] md:w-[72px]', round && 'rounded-full bg-[#1E1915] p-[3px]')}
+                                title={image.src && image.stock ? 'Temsili görsel' : undefined}>
+                                <ImageSlot src={image.src} alt={line.name} restaurant={restaurant} logoTextClassName="text-[min(11px,14cqw)]"
+                                    className={cn('h-full', round ? 'rounded-full' : 'rounded-2xl')} />
+                                {image.src && image.stock && <span className="sr-only"> (temsili görsel)</span>}
+                            </span>
                             <div className="min-w-0 flex-1">
                                 <p className={cn(serif, 'm-0 text-[19px] font-semibold leading-tight')}>{line.name}</p>
                                 {line.selectionNames.length > 0 && <p className="text-sm text-[var(--site-sub)]">{line.selectionNames.join(', ')}</p>}
@@ -740,8 +970,15 @@ function CartLines({ lines, quote, onChange, onNote }: {
                                     className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--site-qty-plus,var(--site-paper))] text-[var(--site-qty-plus-text,var(--site-on-paper))]"><Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" /></button>
                             </div>
                         </div>
-                        {line.kind === 'product' && (
+                        {line.kind === 'product' && !line.note && !noteOpen.has(line.key) && (
+                            <button type="button" onClick={() => setNoteOpen(prev => new Set(prev).add(line.key))}
+                                className="mt-1 inline-flex min-h-9 items-center gap-1 text-[13px] font-semibold text-[var(--site-sub)] underline-offset-2 hover:text-[var(--site-text)] hover:underline">
+                                <Plus className="h-3.5 w-3.5" aria-hidden="true" />Not ekle<span className="sr-only">: {line.name}</span>
+                            </button>
+                        )}
+                        {line.kind === 'product' && (line.note || noteOpen.has(line.key)) && (
                             <input
+                                autoFocus={!line.note}
                                 value={line.note}
                                 onChange={e => onNote(line.key, e.target.value)}
                                 maxLength={300}
@@ -755,13 +992,23 @@ function CartLines({ lines, quote, onChange, onNote }: {
                 );
             })}
         </ul>
+        {limit && ordered.length > limit && (
+            <button type="button" onClick={() => setExpanded(v => !v)} aria-expanded={expanded}
+                className="mb-3 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--site-border-strong)] text-sm font-semibold text-[var(--site-text)] transition-colors hover:border-[var(--site-text)]">
+                {expanded ? 'Daha az göster' : `Tüm siparişleri gör (${ordered.length})`}
+                <ChevronRight className={cn('h-4 w-4 transition-transform', expanded ? '-rotate-90' : 'rotate-90')} aria-hidden="true" />
+            </button>
+        )}
+        </>
     );
 }
 
-function CartTotals({ subtotal, fee, total, zoneName, minimum, hint, hintIsError, canCheckout, onCheckout }: {
+function CartTotals({ subtotal, fee, total, zoneName, minimum, hint, hintIsError, canCheckout, onCheckout, closedLabel }: {
     subtotal: number; fee: number; total: number; zoneName: string | null;
     minimum: { subtotal: number; target: number; left: number } | null;
     hint: string | null; hintIsError: boolean; canCheckout: boolean; onCheckout: () => void;
+    /** Restoran sipariş almıyorken soluk düğme yerine net durum ("Yarın 09:00'da açılıyor"). */
+    closedLabel?: string | null;
 }) {
     return (
         <>
@@ -771,16 +1018,22 @@ function CartTotals({ subtotal, fee, total, zoneName, minimum, hint, hintIsError
                 <div className="flex items-baseline justify-between border-t border-dashed border-[var(--site-border-strong)] pt-3"><dt className="font-bold">Toplam</dt><dd className={cn(headingFont, 'text-[36px] font-semibold! leading-none tabular-nums')}>{formatPrice(total)} ₺</dd></div>
             </dl>
             {minimum && <MinimumProgress {...minimum} className="mb-3" />}
-            {hint && (
+            {hint && !closedLabel && (
                 <p className={cn('mb-3 rounded-xl px-3 py-2.5 text-sm font-medium',
                     hintIsError ? 'border border-[var(--site-error-line)] bg-[var(--site-error-bg)] text-[var(--site-error)]' : 'bg-[var(--site-raised)]')}>
                     {hint}
                 </p>
             )}
-            <button type="button" disabled={!canCheckout} onClick={onCheckout}
-                className="flex h-[60px] w-full items-center justify-center rounded-full bg-[var(--site-accent)] text-base font-extrabold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:opacity-50">
-                Devam et
-            </button>
+            {closedLabel ? (
+                <div role="status" className="flex min-h-[60px] w-full items-center justify-center gap-2 rounded-full border border-dashed border-[var(--site-border-strong)] px-4 text-center text-[15px] font-semibold">
+                    <Clock className="h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />{closedLabel}
+                </div>
+            ) : (
+                <button type="button" disabled={!canCheckout} onClick={onCheckout}
+                    className="flex h-[60px] w-full items-center justify-center rounded-full bg-[var(--site-accent)] text-base font-extrabold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:opacity-50">
+                    Devam et
+                </button>
+            )}
         </>
     );
 }
@@ -831,12 +1084,30 @@ function LoadingSkeleton() {
  * Kapalı / ara verildi / online sipariş kapalı: hata değil bilgi, sitenin koyu çağrı kartıyla. Açılış saati (nextOpensAt)
  * biliniyorsa başlıkta; bilinmiyorsa sunucunun mesajı (şubenin yerel saatiyle yazılmış).
  */
-function ClosedCard({ data, onBrowse }: { data: OnlineOrdering; onBrowse: () => void }) {
+function ClosedCard({ data, onBrowse, slim = false }: { data: OnlineOrdering; onBrowse: () => void; slim?: boolean }) {
     const opens = data.nextOpensAt ? opensText(data.nextOpensAt) : null;
     const eyebrow = data.state === 'paused' ? 'Kısa bir ara' : data.state === 'closed' ? 'Mutfak dinleniyor' : 'Online sipariş';
     const title = data.state === 'disabled' ? 'Online sipariş şu an kapalı.'
         : opens ? `${opens}'de açılıyoruz.`
             : data.state === 'paused' ? 'Kısa bir ara verdik.' : 'Şu an kapalıyız.';
+    // İnce şerit (Elit): menü hemen görünsün; ayrıntı sağdaki panelin durum satırında.
+    if (slim) {
+        return (
+            <section role="status" aria-label="Sipariş durumu" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-[var(--site-paper)] px-4 py-3 text-[var(--site-on-paper)]">
+                <Clock className="h-4 w-4 shrink-0 text-[var(--site-accent-on-dark)]" aria-hidden="true" />
+                <p className="m-0 min-w-0 flex-1 text-[15px]">
+                    <span className="font-semibold">{title}</span>{' '}
+                    <span className="text-[var(--site-on-paper-sub)]">{data.state !== 'disabled' ? 'Sepetinizi şimdiden hazırlayabilirsiniz.' : (!opens && data.message) || ''}</span>
+                </p>
+                {data.restaurantPhone && (
+                    <a href={telHref(data.restaurantPhone)}
+                        className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/30 px-3.5 text-sm font-semibold text-[var(--site-on-paper)] no-underline transition-colors hover:bg-white/10">
+                        <Phone className="h-3.5 w-3.5" aria-hidden="true" />Ara
+                    </a>
+                )}
+            </section>
+        );
+    }
     return (
         <section role="status" aria-label="Sipariş durumu" className={cn(siteCardDark, 'flex flex-col gap-3 p-5 md:p-6')}>
             <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--site-on-paper-sub)]">

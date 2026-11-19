@@ -21,21 +21,12 @@ namespace RestaurantBill.Domain.Entities
         public TimeOnly DayEndTime { get; private set; } = new(0, 0);
         public string TimeZoneId { get; private set; } = "Europe/Istanbul";
 
-        // Restoranın müşteri sitesi. Boş alanın bölümü sitede hiç görünmez.
-        public string SiteHeadline { get; private set; } = string.Empty;
-        public string SiteTagline { get; private set; } = string.Empty;
-        /// <summary>"Hikâyemiz" bölümünün büyük başlığı; ürün fotoğrafları kelimeler arasına hap olarak girer.</summary>
-        public string SiteStoryTitle { get; private set; } = string.Empty;
-        public string SiteAbout { get; private set; } = string.Empty;
-        /// <summary>Görsel deposundaki anahtar; adres CDN ile birleştirilerek verilir.</summary>
-        public string SiteCoverImage { get; private set; } = string.Empty;
-        public string SiteAboutImage { get; private set; } = string.Empty;
+        // Şubenin site bilgileri. Restoran sitesi şirket geneli tek sitedir (Company.Site); şubeye ait olanlar burada:
+        // çalışma saatleri (tek aralık + haftalık), saat notu, WhatsApp ve "nasıl gelinir". Müşteri sitesi seçilen şubenin
+        // bu bilgilerini şirketin sitesine ekler (SiteFor). Tek aralık rezervasyon ve online sipariş varsayılanlarını da besler.
         public TimeOnly? OpensAt { get; private set; }
         public TimeOnly? ClosesAt { get; private set; }
         public string HoursNote { get; private set; } = string.Empty;
-        public string InstagramUrl { get; private set; } = string.Empty;
-        /// <summary>"#RRGGBB"; boşsa sitenin varsayılan vurgu rengi.</summary>
-        public string SiteAccentColor { get; private set; } = string.Empty;
 
         // Kasada "IBAN ile ödeme" için: boşluksuz, büyük harf "TR..." (26 karakter) ve hesap sahibinin adı.
         // İkisi de boşsa IBAN ile ödeme kapalıdır.
@@ -86,8 +77,14 @@ namespace RestaurantBill.Domain.Entities
 
         public bool HasIban => Iban.Length > 0;
 
+        /// <summary>Müşteriye gösterilebilecek IBAN var mı: geçerli TR IBAN ve hesap sahibi dolu (masa QR'ı ve online paket sipariş).</summary>
+        public bool HasPayableIban => TurkishIban.IsValid(Iban) && IbanHolderName.Length > 0;
+
         /// <summary>Masa QR sayfasında "IBAN ile öde" gerçekten gösterilir mi: anahtar açık, IBAN geçerli ve hesap sahibi dolu.</summary>
-        public bool ShowsIbanOnTable => ShowIbanOnTable && TurkishIban.IsValid(Iban) && IbanHolderName.Length > 0;
+        public bool ShowsIbanOnTable => ShowIbanOnTable && HasPayableIban;
+
+        /// <summary>Online paket siparişte "IBAN ile öde" seçilebilir mi: ayarda açık ve gösterilebilecek IBAN var.</summary>
+        public bool AcceptsIbanForDelivery => GetOnlineOrderSettings().AcceptIban && HasPayableIban;
 
         /// <summary>
         /// IBAN ve hesap sahibi ikisi de boş: IBAN'ı kaldırır (banka adı ve QR gösterimi de kapanır). Aksi halde geçerli bir
@@ -101,6 +98,10 @@ namespace RestaurantBill.Domain.Entities
 
             if (normalized.Length == 0 && holder.Length == 0)
             {
+                // Online siparişin tek ödeme yöntemi IBAN ise müşteri ödeme seçemez hale gelirdi.
+                if (OnlineOrderSettings is { AcceptIban: true, AcceptCash: false, AcceptCard: false })
+                    throw new DomainException("Online paket siparişte tek ödeme yöntemi IBAN. Önce Online sipariş ayarlarından nakit ya da kartı açın.");
+
                 Iban = string.Empty;
                 IbanHolderName = string.Empty;
                 PaymentBankName = string.Empty;
@@ -125,178 +126,62 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Masa QR sayfasındaki "IBAN ile öde" anahtarı; açmak için önce geçerli IBAN ve hesap sahibi kaydedilmiş olmalı.</summary>
         public void SetShowIbanOnTable(bool show)
         {
-            if (show && !(TurkishIban.IsValid(Iban) && IbanHolderName.Length > 0))
+            if (show && !HasPayableIban)
                 throw new DomainException("QR menüde göstermek için önce geçerli bir IBAN ve hesap sahibi girin.");
             ShowIbanOnTable = show;
         }
 
-        public const int SiteHeadlineMaxLength = 80;
-        public const int SiteTaglineMaxLength = 160;
-        public const int SiteStoryTitleMaxLength = 120;
-        public const int SiteAboutMaxLength = 800;
         public const int HoursNoteMaxLength = 80;
-        public const int InstagramUrlMaxLength = 200;
 
-        /// <summary>Eski form: yayındaki site metinlerini doğrudan değiştirir (kurallar <see cref="SiteSnapshot.WithBasics"/>).</summary>
-        public void UpdateSite(string headline, string tagline, string storyTitle, string about, TimeOnly? opensAt, TimeOnly? closesAt,
-            string hoursNote, string instagramUrl, string accentColor)
-        {
-            SiteSnapshot next = GetPublishedSite().WithBasics(headline, tagline, storyTitle, about, opensAt, closesAt, hoursNote, instagramUrl, accentColor);
-            SiteHeadline = next.Headline;
-            SiteTagline = next.Tagline;
-            SiteStoryTitle = next.StoryTitle;
-            SiteAbout = next.About;
-            OpensAt = next.OpensAt;
-            ClosesAt = next.ClosesAt;
-            HoursNote = next.HoursNote;
-            InstagramUrl = next.InstagramUrl;
-            SiteAccentColor = next.AccentColor;
-        }
-
-        /// <summary>Yeni anahtarı yazar, eskisini döner (silmek çağıranın işi). Boş anahtar görseli kaldırır.</summary>
-        public string ReplaceSiteImage(SiteImageSlot slot, string key)
-        {
-            string previous;
-            if (slot == SiteImageSlot.Cover)
-            {
-                previous = SiteCoverImage;
-                SiteCoverImage = key;
-            }
-            else if (slot == SiteImageSlot.Founder)
-            {
-                SiteContent = GetSiteContent().WithFounderPhoto(key, out previous);
-            }
-            else if (slot == SiteImageSlot.Share)
-            {
-                SiteContent = GetSiteContent().WithShareImage(key, out previous);
-            }
-            else if (Entities.SiteContent.IsHeroSlot(slot))
-            {
-                SiteContent = GetSiteContent().WithHeroImage(slot, key, out previous);
-            }
-            else
-            {
-                previous = SiteAboutImage;
-                SiteAboutImage = key;
-            }
-            return previous;
-        }
-
-        /// <summary>Sitenin ek içeriği (tema, mekân fotoğrafları, haftalık saatler, usta, yorumlar...); null ise hiç kaydedilmemiş.</summary>
+        /// <summary>
+        /// Şubenin site bilgileri (jsonb, SiteContent şeklinde): yalnız WeeklyHours, DirectionsNote ve WhatsappPhone kullanılır;
+        /// sitenin geri kalanı şirkettedir (<see cref="Company.Site"/>). null ise hiç kaydedilmemiş.
+        /// </summary>
         public SiteContent? SiteContent { get; private set; }
 
         public SiteContent GetSiteContent() => SiteContent ?? Entities.SiteContent.Empty;
 
         /// <summary>
-        /// Metin alanlarını kaydeder (fotoğraflar korunur). Haftalık saat girildiyse eski tek aralık (OpensAt/ClosesAt) en sık
-        /// görülen aralıkla güncellenir: rezervasyon ve online sipariş varsayılanları onu kullanmaya devam eder.
+        /// Şubenin saatlerini, saat notunu, WhatsApp'ını ve "nasıl gelinir"ini kaydeder (taslak yok, hemen yayında; adres ve
+        /// telefon gibi). Haftalık saat girildiyse tek aralık (OpensAt/ClosesAt) en sık görülen aralıkla güncellenir.
         /// </summary>
-        public void UpdateSiteContent(SiteContentTexts texts, int currentYear)
+        public void UpdateSiteInfo(TimeOnly? opensAt, TimeOnly? closesAt, string hoursNote, IReadOnlyList<SiteDayHours> weeklyHours,
+            string whatsappPhone, string directionsNote)
         {
-            SiteContent next = GetSiteContent().WithTexts(texts, currentYear);
+            if ((opensAt is null) != (closesAt is null))
+                throw new DomainException("Açılış ve kapanış saatini birlikte girin ya da ikisini de boş bırakın.");
+            string note = (hoursNote ?? string.Empty).Trim();
+            if (note.Length > HoursNoteMaxLength)
+                throw new DomainException($"Saat notu en fazla {HoursNoteMaxLength} karakter olabilir.");
+
+            SiteContent next = GetSiteContent().WithBranchInfo(weeklyHours, directionsNote, whatsappPhone);
+            OpensAt = opensAt;
+            ClosesAt = closesAt;
             if (next.MostCommonRange() is { } range)
             {
                 OpensAt = range.Opens;
                 ClosesAt = range.Closes;
             }
+            HoursNote = note;
             SiteContent = next;
         }
 
-        public void AddSiteGalleryImage(string key) => SiteContent = GetSiteContent().WithGalleryImage(key);
-
-        /// <summary>Galeriden çıkarır; silinecek anahtarı döner.</summary>
-        public string RemoveSiteGalleryImage(int index)
+        /// <summary>Şirketin sitesine bu şubenin bilgilerini (saatler, saat notu, WhatsApp, nasıl gelinir) ekler.</summary>
+        public SiteSnapshot SiteFor(SiteSnapshot site)
         {
-            SiteContent = GetSiteContent().WithoutGalleryImage(index, out string removed);
-            return removed;
-        }
-
-        public void ReorderSiteGallery(IReadOnlyList<int> order) => SiteContent = GetSiteContent().WithGalleryOrder(order);
-
-        /// <summary>Bölüm fotoğrafını yazar (boş anahtar kaldırır), eskisini döner.</summary>
-        public string ReplaceSiteRegionPhoto(Guid regionId, string key)
-        {
-            SiteContent = GetSiteContent().WithRegionPhoto(regionId, key, out string previous);
-            return previous;
-        }
-
-        // ── Site taslağı ("Taslak + Yayınla") ──────────────────────────────────────────────────────────
-        // Müşteri sitesi yayındaki sütunları okur; düzenleyici yalnızca taslağı değiştirir. Yayınla taslağı sütunlara kopyalar.
-
-        /// <summary>Yayınlanmamış site taslağı (jsonb); null ise taslak yok, düzenleyici yayındaki hâli gösterir.</summary>
-        public SiteSnapshot? SiteDraft { get; private set; }
-        /// <summary>Taslağın sürümü: her taslak yazımında, yayında ve atmada artar. Eski sürümle kaydetmek "başkası düzenledi" çatışmasıdır.</summary>
-        public int SiteDraftVersion { get; private set; }
-        public DateTime? SiteDraftUpdatedAt { get; private set; }
-        public DateTime? SitePublishedAt { get; private set; }
-
-        /// <summary>Müşterinin şu an gördüğü site (şubenin sütunları).</summary>
-        public SiteSnapshot GetPublishedSite() => new()
-        {
-            Headline = SiteHeadline,
-            Tagline = SiteTagline,
-            StoryTitle = SiteStoryTitle,
-            About = SiteAbout,
-            CoverImage = SiteCoverImage,
-            AboutImage = SiteAboutImage,
-            OpensAt = OpensAt,
-            ClosesAt = ClosesAt,
-            HoursNote = HoursNote,
-            InstagramUrl = InstagramUrl,
-            AccentColor = SiteAccentColor,
-            Content = GetSiteContent(),
-        };
-
-        /// <summary>Düzenleyicide görünen hâl: taslak varsa o, yoksa yayındaki.</summary>
-        public SiteSnapshot GetSiteDraft() => SiteDraft ?? GetPublishedSite();
-
-        public bool IsSiteDraftStale(int version) => version != SiteDraftVersion;
-
-        public void SaveSiteDraft(SiteSnapshot draft, DateTime nowUtc)
-        {
-            SiteDraft = draft;
-            SiteDraftVersion++;
-            SiteDraftUpdatedAt = nowUtc;
-        }
-
-        /// <summary>Taslağı yayına alır (yoksa bir şey değişmez) ve taslağı kapatır.</summary>
-        public void PublishSiteDraft(DateTime nowUtc)
-        {
-            if (SiteDraft is { } draft)
+            SiteContent info = GetSiteContent();
+            return site with
             {
-                SiteHeadline = draft.Headline;
-                SiteTagline = draft.Tagline;
-                SiteStoryTitle = draft.StoryTitle;
-                SiteAbout = draft.About;
-                SiteCoverImage = draft.CoverImage;
-                SiteAboutImage = draft.AboutImage;
-                OpensAt = draft.OpensAt;
-                ClosesAt = draft.ClosesAt;
-                HoursNote = draft.HoursNote;
-                InstagramUrl = draft.InstagramUrl;
-                SiteAccentColor = draft.AccentColor;
-                SiteContent = draft.Content;
-            }
-            SiteDraft = null;
-            SiteDraftVersion++;
-            SiteDraftUpdatedAt = null;
-            SitePublishedAt = nowUtc;
-        }
-
-        /// <summary>Taslağı siler; site son yayınlanan hâline döner.</summary>
-        public void DiscardSiteDraft()
-        {
-            SiteDraft = null;
-            SiteDraftVersion++;
-            SiteDraftUpdatedAt = null;
-        }
-
-        /// <summary>Yayında ya da taslakta kullanılan bütün site fotoğrafı anahtarları: bunlardan biri silinmez.</summary>
-        public IReadOnlySet<string> SiteImageKeysInUse()
-        {
-            HashSet<string> keys = [.. GetPublishedSite().ImageKeys()];
-            if (SiteDraft is { } draft) keys.UnionWith(draft.ImageKeys());
-            return keys;
+                OpensAt = OpensAt,
+                ClosesAt = ClosesAt,
+                HoursNote = HoursNote,
+                Content = site.Content with
+                {
+                    WeeklyHours = info.WeeklyHours,
+                    DirectionsNote = info.DirectionsNote,
+                    WhatsappPhone = info.WhatsappPhone,
+                },
+            };
         }
 
         /// <summary>
@@ -373,7 +258,7 @@ namespace RestaurantBill.Domain.Entities
         public const decimal DefaultTaxRate = 10m;
         public const string DefaultTimeZoneId = "Europe/Istanbul";
 
-        /// <summary>Açılış/kapanış, saat notu ve haftalık saatler (yayındaki site ve taslak) silinir.</summary>
+        /// <summary>Açılış/kapanış, saat notu ve haftalık saatler silinir.</summary>
         public void ResetWorkingHours()
         {
             OpensAt = null;
@@ -381,33 +266,16 @@ namespace RestaurantBill.Domain.Entities
             HoursNote = string.Empty;
             if (SiteContent is { } content)
                 SiteContent = content with { WeeklyHours = [] };
-            if (SiteDraft is { } draft)
-                SiteDraft = draft with { OpensAt = null, ClosesAt = null, HoursNote = string.Empty, Content = draft.Content with { WeeklyHours = [] } };
         }
 
         /// <summary>
-        /// Sitenin metinleri, fotoğrafları, teması ve taslağı silinir; çalışma saatleri korunur (onlar ayrı bir maddedir).
-        /// Artık kullanılmayan fotoğraf anahtarlarını döner (dosyaları silmek çağıranın işi; paylaşılan anahtarlar silinmez).
+        /// Sitenin şubeye ait kısmı (WhatsApp, nasıl gelinir) silinir; çalışma saatleri korunur (onlar ayrı bir maddedir).
+        /// Sitenin kendisi şirkettedir: <see cref="Company.ResetSite"/>.
         /// </summary>
-        public IReadOnlyList<string> ResetSite()
+        public void ResetSiteInfo()
         {
-            List<string> keys = [.. SiteImageKeysInUse()];
             IReadOnlyList<SiteDayHours> weeklyHours = GetSiteContent().WeeklyHours;
-
-            SiteHeadline = string.Empty;
-            SiteTagline = string.Empty;
-            SiteStoryTitle = string.Empty;
-            SiteAbout = string.Empty;
-            SiteCoverImage = string.Empty;
-            SiteAboutImage = string.Empty;
-            InstagramUrl = string.Empty;
-            SiteAccentColor = string.Empty;
             SiteContent = weeklyHours.Count > 0 ? Entities.SiteContent.Empty with { WeeklyHours = weeklyHours } : null;
-            SiteDraft = null;
-            SiteDraftVersion++;
-            SiteDraftUpdatedAt = null;
-            SitePublishedAt = null;
-            return keys;
         }
 
         /// <summary>Yönetici, telefon ve e-posta kayıttaki gibi sahibin bilgileri olur; adres boşalır, KDV %10'a döner.</summary>
@@ -442,13 +310,46 @@ namespace RestaurantBill.Domain.Entities
             OnlineOrdersPaused = false;
         }
 
-        public void EnsureCanBeDeleted(IEnumerable<Region> linkedRegions, IEnumerable<UserBranch> linkedStaff)
+        // Şube silme yumuşaktır (IsDeleted): adisyon, ödeme, vardiya ve kayıt geçmişi raporlarda kalır; şube listelerden,
+        // şube seçiciden, girişten ve müşteri sitesinden düşer. Bölge/masa/menü şubeyle birlikte gizlenir, ayrıca silinmez.
+        // Engeller: şirketin son şubesi ve şubede hâlâ süren iş (personel, açık adisyon/vardiya/paket, yaklaşan rezervasyon).
+        public void Delete(BranchDeletionBlockers blockers)
         {
-            if (linkedRegions.Any())
-                throw new DomainException("Bu şubeye bağlı bölgeler bulunmaktadır. Lütfen silmeden önce ilgili bölgeleri kaldırın.");
+            EnsureCanBeDeleted(blockers);
+            MarkAsDeleted();
+        }
 
-            if (linkedStaff.Any())
-                throw new DomainException("Bu şubeye atanmış personel bulunmaktadır. Lütfen silmeden önce personeli kaldırın veya başka bir şubeye taşıyın.");
+        public void EnsureCanBeDeleted(BranchDeletionBlockers blockers)
+        {
+            if (IsDeleted)
+                throw new DomainException("Bu şube zaten silinmiş.");
+
+            if (blockers.OtherActiveBranchCount <= 0)
+                throw new DomainException("Restoranın son şubesi silinemez. Önce yeni bir şube ekleyin ya da bu şubenin bilgilerini düzenleyin.");
+
+            List<string> reasons = [];
+            if (blockers.StaffCount > 0)
+                reasons.Add($"şubeye atanmış {blockers.StaffCount} personel var (Personel sayfasından başka şubeye taşıyın ya da silin)");
+            if (blockers.OpenOrderCount > 0)
+                reasons.Add($"{blockers.OpenOrderCount} açık adisyon var (ödemesini alın ya da iptal edin)");
+            if (blockers.OpenShiftCount > 0)
+                reasons.Add($"{blockers.OpenShiftCount} açık vardiya var (vardiyayı kapatın)");
+            if (blockers.OpenDeliveryOrderCount > 0)
+                reasons.Add($"{blockers.OpenDeliveryOrderCount} sonuçlanmamış paket sipariş var (teslim edin ya da iptal edin)");
+            if (blockers.UpcomingReservationCount > 0)
+                reasons.Add($"{blockers.UpcomingReservationCount} yaklaşan rezervasyon var (iptal edin ya da reddedin)");
+
+            if (reasons.Count > 0)
+                throw new DomainException($"Şube silinemedi: {string.Join("; ", reasons)}.");
         }
     }
+
+    /// <summary>Şube silinmeden önce sayılan engeller. Hepsi sıfır (ve başka şube varsa) silme serbesttir.</summary>
+    public sealed record BranchDeletionBlockers(
+        int OtherActiveBranchCount,
+        int StaffCount = 0,
+        int OpenOrderCount = 0,
+        int OpenShiftCount = 0,
+        int OpenDeliveryOrderCount = 0,
+        int UpcomingReservationCount = 0);
 }

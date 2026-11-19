@@ -26,7 +26,7 @@ import { PreviewApp } from './PreviewApp';
 import { SitePreviewFrame } from './SitePreviewFrame';
 import { useSiteEditor } from './useSiteEditor';
 
-// Admin /admin/site: restoran sitesinin görsel düzenleyicisi (docs/site-editor.md). Ortada müşteri sitesinin KENDİ
+// Sahip /owner/site (şirket geneli, tek site): restoran sitesinin görsel düzenleyicisi (docs/site-editor.md). Ortada müşteri sitesinin KENDİ
 // sayfaları taslakla çizilir (iframe, SitePreviewFrame) ve her şey önizlemenin üstünde düzenlenir: yazılar yerinde,
 // fotoğraflar tıklanan fotoğrafın üstünde açılan menüyle (Yükle · Hazır görsellerden seç · Kaldır), liste kartları
 // kartın üstünde, saat/iletişim/puan küçük pencerede; başka sayfadan gelen bilgi tıklanınca nereden değiştiğini söyler.
@@ -133,7 +133,10 @@ export default function SiteEditorPage() {
     useEffect(() => {
         if (!loaded) return;
         let cancelled = false;
-        publicService.getSite(getSession()?.restaurantId ?? undefined, slugOf(siteUrl))
+        // Site şirket genelidir; "Tümü" modunda şube yok: önizleme müşteri sitesinin varsayılan şubesiyle (en eski).
+        const session = getSession();
+        const branchId = session?.isCompanyScope ? undefined : session?.restaurantId ?? undefined;
+        publicService.getSite(branchId, slugOf(siteUrl))
             .then(data => { if (!cancelled) { setBase(normalizeSite(data)); setBaseError(false); } })
             .catch(() => { if (!cancelled) setBaseError(true); });
         return () => { cancelled = true; };
@@ -209,7 +212,14 @@ export default function SiteEditorPage() {
         setSelection({ target: `text:${field}`, anchor: null });
         setFocusRequest({ field, n: Date.now() });
     }, []);
-    const openAdmin = useCallback((path: string) => navigate(path), [navigate]);
+    // Site sahibin "Tümü" modunda düzenlenir; şubeye ait sayfalar (menü, masalar, Ayarlar) önce bir şube seçilince açılır.
+    const openAdmin = useCallback((path: string) => {
+        if (path.startsWith('/admin/') && getSession()?.isCompanyScope) {
+            toast.info('Bu bilgi şubeye aittir. Üstteki şube seçiciden bir şube seçip ilgili sayfayı açın.');
+            return;
+        }
+        navigate(path);
+    }, [navigate]);
     const setText = useCallback((field: SiteTextField, value: string) => updateTexts(t => withText(t, field, value)), [updateTexts]);
     const listOp = useCallback((list: SiteListName, op: ListOp) => {
         let focus: SiteTextField | null = null;
@@ -402,7 +412,7 @@ export default function SiteEditorPage() {
                     </div>
                 ) : (
                     <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card px-3">
-                        <button type="button" aria-label="Geri" onClick={() => navigate('/admin/overview')} className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-muted">
+                        <button type="button" aria-label="Geri" onClick={() => navigate('/owner/overview')} className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-muted">
                             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                         </button>
                         <label className="relative flex h-9 items-center rounded-[9px] border border-[#DDD3C2] font-bold dark:border-border">
@@ -660,10 +670,10 @@ function GeneralSettingsDialog({ open, ctx, base, onClose }: { open: boolean; ct
                     </nav>
                 </div>
                 <div ref={bodyRef} className="relative flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-5 md:px-7">
-                    {section('genel-saat', 'Çalışma saatleri', <HoursFields ctx={ctx} idPrefix="g-" />)}
+                    {section('genel-saat', 'Çalışma saatleri', <HoursFields ctx={ctx} />)}
                     {section('genel-iletisim', 'İletişim ve sosyal', (
                         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                            <ContactFields ctx={ctx} idPrefix="g-" withDirections />
+                            <ContactFields ctx={ctx} idPrefix="g-" />
                             <RatingFields ctx={ctx} idPrefix="g-" />
                         </div>
                     ))}

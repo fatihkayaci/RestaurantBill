@@ -138,7 +138,8 @@ public class PublicTableInfoDto
     public TableIbanPaymentDto? IbanPayment { get; set; }
 }
 
-// Masa QR sayfasındaki "IBAN ile öde": misafir IBAN'ı kopyalar, ödemeyi yapar, dekontu WhatsApp'tan restorana gönderir.
+// "IBAN ile öde" bilgileri: masa QR sayfası ve online paket sipariş (ödeme adımı ve takip sayfası). Misafir IBAN'ı
+// kopyalar, ödemeyi yapar, dekontu WhatsApp'tan restorana gönderir.
 public class TableIbanPaymentDto
 {
     /// <summary>Boşluksuz "TR..." (kopyalanan değer).</summary>
@@ -153,10 +154,13 @@ public class TableIbanPaymentDto
     /// <summary>Gösterilen ve "Ara" ile aranan numara: WhatsApp numarası, yoksa şube telefonu; boş olabilir.</summary>
     public string Phone { get; set; } = string.Empty;
 
-    /// <summary>Gösterim kapalıysa ya da IBAN geçersizse null.</summary>
-    public static TableIbanPaymentDto? From(Branch branch)
+    /// <summary>Masa QR'ı: gösterim kapalıysa ya da IBAN geçersizse null.</summary>
+    public static TableIbanPaymentDto? From(Branch branch) => branch.ShowsIbanOnTable ? ForPayment(branch) : null;
+
+    /// <summary>Şubenin IBAN bilgileri (anahtarlara bakılmaz); geçerli IBAN ya da hesap sahibi yoksa null.</summary>
+    public static TableIbanPaymentDto? ForPayment(Branch branch)
     {
-        if (!branch.ShowsIbanOnTable) return null;
+        if (!branch.HasPayableIban) return null;
 
         string sitePhone = branch.GetSiteContent().WhatsappPhone.Trim();
         string branchPhone = branch.Number.Trim();

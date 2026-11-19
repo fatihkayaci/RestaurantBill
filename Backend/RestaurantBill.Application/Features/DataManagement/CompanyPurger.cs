@@ -53,7 +53,7 @@ public class CompanyPurger(IAppDbContext db, IImageStorageService imageStorage, 
 
         // Yüklemeler şube id'siyle, şirket kapsamındaki ("Tümü") sahibin yüklemeleri şirket id'siyle klasörlenir.
         List<string> folders = [.. branchIds.Append(companyId).SelectMany(StorageKeys.OwnFoldersOf)];
-        List<string> keys = [.. branches.SelectMany(b => b.SiteImageKeysInUse())];
+        List<string> keys = [.. company.SiteImageKeysInUse()];
 
         List<Guid> staffUserIds = await db.UserBranches.Where(ub => branchIds.Contains(ub.BranchId)).Select(ub => ub.UserId).Distinct().ToListAsync(ct);
         List<Guid> userIds = [.. staffUserIds.Append(company.OwnerUserId).Distinct()];
@@ -68,7 +68,7 @@ public class CompanyPurger(IAppDbContext db, IImageStorageService imageStorage, 
         {
             foreach (Branch branch in branches)
             {
-                // Site grubu şube satırını değiştirir; şube zaten silineceği için atlanır (anahtarlar yukarıda alındı).
+                // Site grubu şirket ve şube satırını değiştirir; ikisi de silineceği için atlanır (anahtarlar yukarıda alındı).
                 await engine.ExecuteAsync(new DeletionPlan(branch, DataGroups.All.Where(g => g != DataGroups.Site), null), outcome, ct);
             }
 
