@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import { paymentService } from '@/features/cashier/api/paymentService';
-import { buildPayItems, groupBillLines, lineDiscountAmount, round2, type BillLine, type LineDiscount } from '@/features/cashier/billLines';
+import { buildPayItems, describeLineDiscount, discountedQuantity, groupBillLines, lineDiscountAmount, round2, type BillLine, type LineDiscount } from '@/features/cashier/billLines';
 import { paymentSettingsService, type BranchPaymentSettings } from '@/features/branches/api/paymentSettingsService';
 import { orderService } from '@/features/orders/api/orderService';
 import type { OpenRegister } from '@/features/cashier/types';
@@ -28,7 +28,8 @@ const SPLITS: [Split, string][] = [['full', 'Tamamı'], ['items', 'Ürün seç']
 const AMOUNT_CHIPS: [string, number][] = [['½', 2], ['⅓', 3], ['¼', 4], ['Kalan', 1]];
 /** İndirim kapsamı: hesabın tamamına ya da yalnızca bazı ürünlere (kalanı tam fiyat). */
 type DiscountScope = 'bill' | 'items';
-type LineDiscountInput = { type: 'percent' | 'amount'; input: string };
+/** Ürün indirimi girişi: tür, değer ve kaç adede (boşsa ödenen adetlerin tamamı). */
+type LineDiscountInput = { type: 'percent' | 'amount'; input: string; quantity?: number };
 
 interface Props {
     table: Table;
@@ -133,7 +134,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
     if (itemScope) {
         for (const [key, value] of Object.entries(lineDiscountInputs)) {
             const parsed = parseFloat(value.input.replace(',', '.')) || 0;
-            if (parsed > 0) lineDiscounts[key] = { type: value.type, value: parsed };
+            if (parsed > 0) lineDiscounts[key] = { type: value.type, value: parsed, quantity: value.quantity };
         }
     }
     const quantityOf = (line: BillLine) =>
@@ -486,11 +487,16 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                             const qty = quantityOf(line);
                                             const input = lineDiscountInputs[line.key];
                                             const type = input?.type ?? 'percent';
-                                            const off = lineDiscountAmount(round2(line.unitPrice * qty), lineDiscounts[line.key]);
+                                            const off = lineDiscountAmount(line.unitPrice, qty, lineDiscounts[line.key]);
+                                            // İndirimli adet: seçilmemişse ödenen adetlerin tamamı; seçim küçülürse kırpılır.
+                                            const discountQty = discountedQuantity(input, qty);
                                             return (
                                                 <li key={line.key} className="flex flex-col gap-1.5">
                                                     <div className="flex items-baseline justify-between gap-2 text-[15px]">
-                                                        <span className="min-w-0 truncate text-foreground">{qty}× {line.productName}</span>
+                                                        <span className="min-w-0 truncate text-foreground">
+                                                            {qty}× {line.productName}
+                                                            {off > 0 && <span className="ml-1.5 text-[13px] font-semibold text-rb-red">{describeLineDiscount(lineDiscounts[line.key], qty)}</span>}
+                                                        </span>
                                                         <span className="shrink-0 font-semibold tabular-nums">
                                                             {off > 0 && <span className="mr-1.5 text-[13px] font-medium text-rb-text-sub line-through">₺{formatPrice(line.unitPrice * qty)}</span>}
                                                             ₺{formatPrice(line.unitPrice * qty - off)}
@@ -514,11 +520,25 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                                             inputMode="decimal"
                                                             value={input?.input ?? ''}
                                                             onChange={e => updateLineDiscount(line.key, { input: e.target.value.replace(/[^\d.,]/g, '') })}
-                                                            placeholder={type === 'percent' ? 'Yüzde' : 'Tutar'}
+                                                            placeholder={type === 'percent' ? 'Yüzde' : 'Toplam tutar'}
                                                             aria-label={`${line.productName}: indirim ${type === 'percent' ? 'yüzdesi' : 'tutarı'}`}
                                                             className="h-11 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-rb-gold"
                                                         />
                                                     </div>
+                                                    {qty > 1 && (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-muted p-0.5" role="group" aria-label={`${line.productName}: indirim kaç adede`}>
+                                                                <button type="button" onClick={() => updateLineDiscount(line.key, { quantity: discountQty - 1 })} disabled={discountQty <= 1} aria-label="İndirimli adedi azalt" className="flex size-9 items-center justify-center rounded-full text-lg font-bold disabled:opacity-30">−</button>
+                                                                <span className="w-5 text-center text-sm font-bold tabular-nums" aria-live="polite">{discountQty}</span>
+                                                                {/* Tümüne ulaşınca adet boş tutulur: seçim değişse de "tümü" kalır. */}
+                                                                <button type="button" onClick={() => updateLineDiscount(line.key, { quantity: discountQty + 1 >= qty ? undefined : discountQty + 1 })} disabled={discountQty >= qty} aria-label="İndirimli adedi artır" className="flex size-9 items-center justify-center rounded-full text-lg font-bold disabled:opacity-30">+</button>
+                                                            </div>
+                                                            <span className="text-[13px] text-rb-text-sub">
+                                                                {discountQty < qty ? `${qty} adetten ${discountQty} adede` : `${qty} adedin tümüne`}
+                                                                {type === 'percent' ? ', her adede ayrı' : discountQty > 1 ? ', ₺ toplam (adet başı değil)' : ''}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </li>
                                             );
                                         })}

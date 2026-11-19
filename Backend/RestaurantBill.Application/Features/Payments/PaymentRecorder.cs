@@ -16,8 +16,11 @@ public sealed record PaymentDiscount(decimal? Percent, decimal? Amount, string? 
     public static readonly PaymentDiscount None = new(null, null, null, 100);
 }
 
-/// <summary>Bir kalemin ürün indirimi: bu ödemede ödenen adetlerinin brütüne yüzde ya da tutar olarak.</summary>
-public sealed record ItemDiscount(decimal? Percent, decimal? Amount);
+/// <summary>
+/// Bir kalemin ürün indirimi: bu ödemede ödenen adetlerin <see cref="Quantity"/> kadarının (boşsa tamamının) brütüne
+/// yüzde ya da tutar olarak. Tutar, indirimli adetlerin toplam indirimidir (adet başı değil).
+/// </summary>
+public sealed record ItemDiscount(decimal? Percent, decimal? Amount, int? Quantity = null);
 
 /// <summary>
 /// Ödeme satırlarını yazar: KDV oranı başına bir Payment, satır kalemleri (menüler dahil), indirimin oranlara dağılımı,
@@ -53,25 +56,34 @@ public sealed class PaymentRecorder(IAppDbContext db)
         IReadOnlyDictionary<decimal, decimal> paidOnAccountByRate, PaymentDiscount discount,
         IReadOnlyDictionary<Guid, ItemDiscount>? itemDiscounts = null)
     {
-        // Ürün indirimleri: kalemin bu ödemede ödenen adetlerinin brütüne uygulanır, kuruşa yuvarlanır.
+        // Ürün indirimleri: kalemin bu ödemede ödenen adetlerinden indirimli olanların (varsayılan tamamı) brütüne
+        // uygulanır, kuruşa yuvarlanır. Adetlerin bir kısmı indirimliyse kalem ikiye ayrılır: indirimli adetler kendi
+        // satırında, kalanı tam fiyat satırlarla birlikte. Sınır da indirimli adetlerin tutarına göre ölçülür.
         var lines = new List<Line>(paidItems.Count);
         foreach (var (item, quantity) in paidItems)
         {
-            decimal gross = item.UnitPrice * quantity;
-            decimal lineDiscount = 0m;
-            decimal? linePercent = null;
-            if (itemDiscounts?.GetValueOrDefault(item.Id) is ItemDiscount requested)
+            if (itemDiscounts?.GetValueOrDefault(item.Id) is not ItemDiscount requested)
             {
-                linePercent = requested.Percent;
-                lineDiscount = requested.Percent.HasValue
-                    ? Math.Round(gross * requested.Percent.Value / 100m, 2, MidpointRounding.AwayFromZero)
-                    : requested.Amount ?? 0m;
-                if (lineDiscount > gross)
-                    return Result<(decimal, decimal)>.Failure($"{LineName(item)} için indirim ürün tutarından fazla olamaz.");
-                if (lineDiscount > LimitOf(gross, discount.MaxPercent))
-                    return Result<(decimal, decimal)>.Failure(StaffAccess.DiscountLimitMessage(discount.MaxPercent));
+                lines.Add(new Line(item, quantity, item.UnitPrice * quantity, 0m, null));
+                continue;
             }
-            lines.Add(new Line(item, quantity, gross, lineDiscount, lineDiscount > 0m ? linePercent : null));
+
+            int discountedQuantity = requested.Quantity ?? quantity;
+            if (discountedQuantity < 1 || discountedQuantity > quantity)
+                return Result<(decimal, decimal)>.Failure($"{LineName(item)} için indirim uygulanacak adet ödenen adetten fazla olamaz.");
+
+            decimal gross = item.UnitPrice * discountedQuantity;
+            decimal lineDiscount = requested.Percent.HasValue
+                ? Math.Round(gross * requested.Percent.Value / 100m, 2, MidpointRounding.AwayFromZero)
+                : requested.Amount ?? 0m;
+            if (lineDiscount > gross)
+                return Result<(decimal, decimal)>.Failure($"{LineName(item)} için indirim ürün tutarından fazla olamaz.");
+            if (lineDiscount > LimitOf(gross, discount.MaxPercent))
+                return Result<(decimal, decimal)>.Failure(StaffAccess.DiscountLimitMessage(discount.MaxPercent));
+
+            lines.Add(new Line(item, discountedQuantity, gross, lineDiscount, lineDiscount > 0m ? requested.Percent : null));
+            if (discountedQuantity < quantity)
+                lines.Add(new Line(item, quantity - discountedQuantity, item.UnitPrice * (quantity - discountedQuantity), 0m, null));
         }
 
         Dictionary<decimal, decimal> grossByRate = lines

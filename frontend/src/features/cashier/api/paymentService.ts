@@ -6,6 +6,8 @@ export interface PaymentItem {
     /** Ürün indirimi: bu kalemin bu ödemede ödenen adetlerine yüzde ya da tutar (ikisi birden değil). */
     discountPercent?: number;
     discountAmount?: number;
+    /** İndirimin uygulanacağı adet (1..quantity); boşsa ödenen adetlerin tamamı. Tutar bu adetlerin toplam indirimidir. */
+    discountQuantity?: number;
 }
 
 export interface PaymentDiscount {
@@ -33,6 +35,7 @@ export const paymentService = {
                 Quantity: i.quantity,
                 DiscountPercent: i.discountPercent ?? null,
                 DiscountAmount: i.discountAmount ?? null,
+                DiscountQuantity: i.discountQuantity ?? null,
             })),
             Amount: amount ?? null,
             DiscountPercent: discount?.percent ?? null,

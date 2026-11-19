@@ -210,4 +210,152 @@ public class ItemDiscountPaymentTests : WaiterTestBase
 
         Assert.False(new CreatePaymentCommandValidator().Validate(command).IsValid);
     }
+
+    // --- Adede indirim: satırdaki adetlerin yalnızca bir kısmına ürün indirimi (DiscountQuantity) ---
+
+    // Köfte 2 × 200 (%10) + Ayran 3 × 50 (%1) = 550 TL.
+    private async Task<(Order Order, CashRegister Register)> SeedThreeAyranAsync(Guid? shiftOwnerId = null)
+    {
+        _ayran = Product.Create("Ayran", 50m, "", Product.CategoryId);
+        DbContext.Products.Add(_ayran);
+        await DbContext.SaveChangesAsync();
+        var (register, _) = await SeedRegisterAsync("Ana Kasa", shiftOwnerId ?? CurrentUser.UserId);
+        Order order = await SeedOrderAsync(Salon);
+        order.AddItem(_ayran, 3, 1m);
+        await DbContext.SaveChangesAsync();
+        return (order, register);
+    }
+
+    private List<PaymentItemDto> AllItemsWithAyranDiscount(Order order, int discountQuantity, decimal? percent = null, decimal? amount = null) =>
+        order.OrderItems.Select(i => new PaymentItemDto
+        {
+            OrderItemId = i.Id,
+            Quantity = i.Quantity,
+            DiscountPercent = i.ProductId == _ayran.Id ? percent : null,
+            DiscountAmount = i.ProductId == _ayran.Id ? amount : null,
+            DiscountQuantity = i.ProductId == _ayran.Id ? discountQuantity : null,
+        }).ToList();
+
+    [Fact]
+    public async Task PercentDiscount_OnOneOfThreeUnits_DiscountsOnlyThatUnit()
+    {
+        await SeedActorAsync();
+        await SeedBranchAsync();
+        var (order, register) = await SeedThreeAyranAsync();
+
+        var result = await PayAsync(CurrentUser, order, register, AllItemsWithAyranDiscount(order, 1, percent: 50m));
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(result.Value);
+        List<Payment> payments = await DbContext.Payments.ToListAsync();
+        // 550 - 25 (1 ayranın yarısı) = 525.
+        Assert.Equal(525m, payments.Sum(p => p.TotalAmount));
+        Assert.Equal(25m, payments.Sum(p => p.DiscountAmount));
+
+        // İndirimli adet kendi ödeme satırında; kalan 2 ayran tam fiyat.
+        Payment discounted = payments.Single(p => p.DiscountAmount > 0m);
+        Assert.Equal(1, discounted.ItemCount);
+        Assert.Equal(25m, discounted.TotalAmount);
+        Assert.Equal(50m, discounted.DiscountPercent);
+        Payment plainAyran = payments.Single(p => p.TaxRate == 1m && p.DiscountAmount == 0m);
+        Assert.Equal(2, plainAyran.ItemCount);
+        Assert.Equal(100m, plainAyran.TotalAmount);
+
+        // Ürün raporu için ayranın satır kalemleri toplam 3 adet.
+        List<PaymentLineItem> ayranLines = await DbContext.PaymentLineItems.Where(l => l.ProductName == "Ayran").ToListAsync();
+        Assert.Equal(3, ayranLines.Sum(l => l.Quantity));
+        Assert.Contains("Ayran ×1/3 %50", (await DbContext.AuditLogs.SingleAsync()).Message);
+    }
+
+    [Fact]
+    public async Task AmountDiscount_OnTwoOfThreeUnits_IsTotalForThoseUnits()
+    {
+        await SeedActorAsync();
+        await SeedBranchAsync();
+        var (order, register) = await SeedThreeAyranAsync();
+
+        var result = await PayAsync(CurrentUser, order, register, AllItemsWithAyranDiscount(order, 2, amount: 20m));
+
+        Assert.True(result.IsSuccess, result.Error);
+        List<Payment> payments = await DbContext.Payments.ToListAsync();
+        Assert.Equal(530m, payments.Sum(p => p.TotalAmount));
+        Payment discounted = payments.Single(p => p.DiscountAmount > 0m);
+        Assert.Equal(20m, discounted.DiscountAmount);
+        Assert.Equal(2, discounted.ItemCount);
+        Assert.Equal(80m, discounted.TotalAmount);
+        Assert.Contains("Ayran ×2/3 ₺20", (await DbContext.AuditLogs.SingleAsync()).Message);
+    }
+
+    [Fact]
+    public async Task PartialSelection_DiscountOnOneOfSelectedUnits()
+    {
+        await SeedActorAsync();
+        await SeedBranchAsync();
+        var (order, register) = await SeedThreeAyranAsync();
+        OrderItem ayran = Line(order, _ayran);
+
+        // Ürün seç: 3 ayrandan 2'si ödeniyor, 1'i ikram.
+        var result = await PayAsync(CurrentUser, order, register,
+            [new PaymentItemDto { OrderItemId = ayran.Id, Quantity = 2, DiscountPercent = 100m, DiscountQuantity = 1 }]);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.False(result.Value);
+        List<Payment> payments = await DbContext.Payments.ToListAsync();
+        Assert.Equal(50m, payments.Sum(p => p.TotalAmount));
+        Assert.Equal(50m, payments.Sum(p => p.DiscountAmount));
+        Assert.Equal(2, payments.Sum(p => p.ItemCount));
+        // Masada köfteler ve 1 ayran kalır.
+        Assert.Equal(450m, (await DbContext.Orders.SingleAsync()).TotalPrice);
+    }
+
+    [Fact]
+    public async Task DiscountQuantity_AbovePaidQuantity_IsRejected()
+    {
+        await SeedActorAsync();
+        await SeedBranchAsync();
+        var (order, register) = await SeedThreeAyranAsync();
+        OrderItem ayran = Line(order, _ayran);
+
+        var result = await PayAsync(CurrentUser, order, register,
+            [new PaymentItemDto { OrderItemId = ayran.Id, Quantity = 2, DiscountPercent = 50m, DiscountQuantity = 3 }]);
+
+        Assert.False(result.IsSuccess);
+        Assert.Empty(DbContext.Payments);
+
+        var command = new CreatePaymentCommand
+        {
+            OrderId = Guid.NewGuid(),
+            CashRegisterId = Guid.NewGuid(),
+            PaymentMethod = PaymentMethod.Kart,
+            Items = [new PaymentItemDto { OrderItemId = Guid.NewGuid(), Quantity = 2, DiscountPercent = 50m, DiscountQuantity = 3 }],
+        };
+        Assert.False(new CreatePaymentCommandValidator().Validate(command).IsValid);
+        command.Items.First().DiscountQuantity = 0;
+        Assert.False(new CreatePaymentCommandValidator().Validate(command).IsValid);
+        command.Items.First().DiscountQuantity = 2;
+        Assert.True(new CreatePaymentCommandValidator().Validate(command).IsValid);
+    }
+
+    [Fact]
+    public async Task Cashier_DiscountLimit_IsJudgedOnDiscountedUnits()
+    {
+        await SeedBranchAsync();
+        User cashierUser = User.Create("Ayşe Kasiyer", $"{Guid.NewGuid():N}@test.com", "5550000000");
+        DbContext.Users.Add(cashierUser);
+        UserBranch membership = UserBranch.Create(cashierUser, Branch, "kasiyer" + Guid.NewGuid().ToString("N")[..6], null, UserRole.Cashier);
+        membership.SetCashierPermissions(true, 10, true);
+        DbContext.UserBranches.Add(membership);
+        await DbContext.SaveChangesAsync();
+        var cashier = new FakeCurrentUserService { UserId = cashierUser.Id, Role = "Cashier", BranchId = Branch.Id, CompanyId = CurrentUser.CompanyId };
+        var (order, register) = await SeedThreeAyranAsync(cashier.UserId);
+
+        // 1 ayrana ₺10 = o adedin %20'si (3 ayranın %6,7'si olsa da) → sınır %10, reddedilir.
+        var overLimit = await PayAsync(cashier, order, register, AllItemsWithAyranDiscount(order, 1, amount: 10m));
+        var withinLimit = await PayAsync(cashier, order, register, AllItemsWithAyranDiscount(order, 1, amount: 5m));
+
+        Assert.False(overLimit.IsSuccess);
+        Assert.Equal(StaffAccess.DiscountLimitMessage(10), overLimit.Error);
+        Assert.True(withinLimit.IsSuccess, withinLimit.Error);
+        Assert.Equal(545m, await DbContext.Payments.SumAsync(p => p.TotalAmount));
+    }
 }
