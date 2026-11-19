@@ -132,10 +132,17 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
                 paidItems.Add((item, requested.Quantity));
                 if ((requested.DiscountPercent ?? 0m) > 0m || (requested.DiscountAmount ?? 0m) > 0m)
                 {
-                    itemDiscounts[item.Id] = new ItemDiscount(requested.DiscountPercent, requested.DiscountAmount);
+                    if (requested.DiscountQuantity is int dq && (dq < 1 || dq > requested.Quantity))
+                        return Result<bool>.Failure($"{LineName(item)} için indirim uygulanacak adet ödenen adetten fazla olamaz.");
+
+                    itemDiscounts[item.Id] = new ItemDiscount(requested.DiscountPercent, requested.DiscountAmount, requested.DiscountQuantity);
+                    // "Çay ×1/3 %50": ödenen 3 adetten 1'ine indirim; tamamına ise "Çay ×3 %50".
+                    string units = requested.DiscountQuantity is int n && n < requested.Quantity
+                        ? $"×{n}/{requested.Quantity}"
+                        : $"×{requested.Quantity}";
                     itemDiscountLabels.Add(requested.DiscountPercent is decimal p
-                        ? $"{LineName(item)} ×{requested.Quantity} %{p:0.##}"
-                        : $"{LineName(item)} ×{requested.Quantity} ₺{requested.DiscountAmount:0.##}");
+                        ? $"{LineName(item)} {units} %{p:0.##}"
+                        : $"{LineName(item)} {units} ₺{requested.DiscountAmount:0.##}");
                 }
             }
 

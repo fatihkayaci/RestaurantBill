@@ -34,6 +34,10 @@ public class CreatePaymentCommandValidator : AbstractValidator<CreatePaymentComm
                 .GreaterThanOrEqualTo(0).WithMessage("Ürün indirimi tutarı negatif olamaz.")
                 .Must(a => decimal.Round(a!.Value, 2) == a.Value).WithMessage("Ürün indirimi tutarı en fazla iki ondalık basamak içerebilir.")
                 .When(i => i.DiscountAmount.HasValue);
+            item.RuleFor(i => i.DiscountQuantity)
+                .Must((i, q) => q!.Value >= 1 && q.Value <= i.Quantity)
+                .When(i => i.DiscountQuantity.HasValue)
+                .WithMessage("İndirim uygulanacak adet 1 ile ödenen adet arasında olmalı.");
             item.RuleFor(i => i)
                 .Must(i => !(i.DiscountPercent.HasValue && i.DiscountAmount.HasValue))
                 .WithMessage("Bir üründe yüzde ve tutar indirimi aynı anda kullanılamaz.")

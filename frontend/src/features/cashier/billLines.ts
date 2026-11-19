@@ -19,10 +19,15 @@ export interface BillLine {
     items: OrderItem[];
 }
 
-/** Ürün indirimi: satırın bu ödemede ödenen adetlerine yüzde ya da tutar olarak uygulanır. */
+/**
+ * Ürün indirimi: satırın bu ödemede ödenen adetlerinden `quantity` kadarına (boşsa tamamına) uygulanır.
+ * Yüzde her indirimli adede ayrı uygulanır; tutar ise indirimli adetlerin TOPLAM indirimidir (adet başı değil).
+ */
 export interface LineDiscount {
     type: 'percent' | 'amount';
     value: number;
+    /** İndirimli adet; boşsa ödenen adetlerin tamamı. Ödenen adetten büyükse ödenen adede kırpılır. */
+    quantity?: number;
 }
 
 export const round2 = (value: number) => Math.round(value * 100) / 100;
@@ -87,9 +92,17 @@ export interface PayPlan {
     lineOverLimit: boolean;
 }
 
+/** İndirimin uygulanacağı adet: seçilen adet, ödenen adetle sınırlı; seçilmemişse ödenen adetlerin tamamı. */
+export function discountedQuantity(discount: { quantity?: number } | undefined, paidQuantity: number): number {
+    if (!discount?.quantity || discount.quantity <= 0) return paidQuantity;
+    return Math.min(discount.quantity, paidQuantity);
+}
+
 /**
- * Ödeme kalemleri: her satırdan ödenecek adet, satırın kalemlerine dağıtılır; ürün indirimi yüzde ise her kaleme aynı
- * yüzde, tutar ise kalemlerin brütüyle orantılı (kuruşa yuvarlı, fark sondaki kaleme) yazılır.
+ * Ödeme kalemleri: her satırdan ödenecek adet, satırın kalemlerine dağıtılır. Ürün indirimi ödenen adetlerin ilk
+ * N'ine (en eski turdan başlayarak) uygulanır: yüzde ise her kaleme aynı yüzde, tutar ise indirimli adetlerin brütüyle
+ * orantılı (kuruşa yuvarlı, fark son indirimli kaleme) yazılır. Kalemin adetlerinin bir kısmı indirimliyse
+ * discountQuantity gönderilir.
  */
 export function buildPayItems(
     lines: BillLine[],
@@ -108,37 +121,56 @@ export function buildPayItems(
         gross += lineGross;
         const discount = discounts[line.key];
         const value = discount && discount.value > 0 ? discount.value : 0;
+        const paidQuantity = pieces.reduce((s, p) => s + p.quantity, 0);
+        let discountLeft = value > 0 ? discountedQuantity(discount, paidQuantity) : 0;
+        // Satırın kalemleri aynı birim fiyatlıdır (birleşme anahtarında).
+        const discountedGross = round2(line.unitPrice * discountLeft);
         let lineDiscount = 0;
         let allocated = 0;
-        pieces.forEach((piece, index) => {
-            const pieceGross = round2(piece.item.unitPrice * piece.quantity);
+        for (const piece of pieces) {
             const entry: PaymentItem = { orderItemId: piece.item.id, quantity: piece.quantity };
-            if (value > 0 && discount.type === 'percent') {
-                const percent = Math.min(value, 100);
-                entry.discountPercent = percent;
-                lineDiscount += round2(pieceGross * percent / 100);
-            } else if (value > 0) {
-                const total = Math.min(value, lineGross);
-                const share = index === pieces.length - 1
-                    ? round2(total - allocated)
-                    : lineGross > 0 ? round2(total * pieceGross / lineGross) : 0;
-                allocated = round2(allocated + share);
-                if (share > 0) entry.discountAmount = share;
-                lineDiscount += share;
+            const dq = Math.min(piece.quantity, discountLeft);
+            discountLeft -= dq;
+            if (dq > 0) {
+                const pieceGross = round2(piece.item.unitPrice * dq);
+                let pieceDiscount = 0;
+                if (discount.type === 'percent') {
+                    const percent = Math.min(value, 100);
+                    entry.discountPercent = percent;
+                    pieceDiscount = round2(pieceGross * percent / 100);
+                } else {
+                    const total = Math.min(value, discountedGross);
+                    pieceDiscount = discountLeft === 0
+                        ? round2(total - allocated)
+                        : discountedGross > 0 ? round2(total * pieceGross / discountedGross) : 0;
+                    allocated = round2(allocated + pieceDiscount);
+                    if (pieceDiscount > 0) entry.discountAmount = pieceDiscount;
+                }
+                if (dq < piece.quantity && (entry.discountPercent || entry.discountAmount)) entry.discountQuantity = dq;
+                lineDiscount += pieceDiscount;
             }
             items.push(entry);
-        });
+        }
         lineDiscount = round2(lineDiscount);
         itemDiscount += lineDiscount;
-        if (lineDiscount > round2(lineGross * maxDiscountPercent / 100)) lineOverLimit = true;
+        // Sınır indirimli adetlerin tutarına göre ölçülür (sunucu da öyle yapar).
+        if (lineDiscount > round2(discountedGross * maxDiscountPercent / 100)) lineOverLimit = true;
     }
     return { items, gross: round2(gross), itemDiscount: round2(itemDiscount), lineOverLimit };
 }
 
-/** Satırın ürün indirimi tutarı (gösterim için; ödenen adetlere göre). */
-export function lineDiscountAmount(lineGross: number, discount: LineDiscount | undefined): number {
-    if (!discount || discount.value <= 0) return 0;
+/** Satırın ürün indirimi tutarı (gösterim için): ödenen adetlerden indirimli olanlara göre. */
+export function lineDiscountAmount(unitPrice: number, paidQuantity: number, discount: LineDiscount | undefined): number {
+    if (!discount || discount.value <= 0 || paidQuantity <= 0) return 0;
+    const discountedGross = round2(unitPrice * discountedQuantity(discount, paidQuantity));
     return discount.type === 'percent'
-        ? round2(lineGross * Math.min(discount.value, 100) / 100)
-        : Math.min(discount.value, lineGross);
+        ? round2(discountedGross * Math.min(discount.value, 100) / 100)
+        : Math.min(discount.value, discountedGross);
+}
+
+/** İndirimin kısa yazımı: "%50", "1 adede %50", "2 adede ₺20". Tümüne uygulanıyorsa adet yazılmaz. */
+export function describeLineDiscount(discount: LineDiscount, paidQuantity: number): string {
+    const value = discount.type === 'percent' ? `%${discount.value}` : `₺${discount.value}`;
+    const quantity = discountedQuantity(discount, paidQuantity);
+    return paidQuantity > 1 && quantity < paidQuantity ? `${quantity} adede ${value}` : value;
 }

@@ -6,7 +6,7 @@ import { getSession } from '@/lib/auth';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
 import { paymentService } from '@/features/cashier/api/paymentService';
-import { buildPayItems, groupBillLines, lineDiscountAmount, round2, type BillLine, type LineDiscount } from '@/features/cashier/billLines';
+import { buildPayItems, describeLineDiscount, discountedQuantity, groupBillLines, lineDiscountAmount, round2, type BillLine, type LineDiscount } from '@/features/cashier/billLines';
 import { orderService } from '@/features/orders/api/orderService';
 import type { Order } from '@/features/orders/types';
 import type { Shift, ShiftStartCandidate } from '@/features/cashier/types';
@@ -29,8 +29,8 @@ const PAYMENT_METHOD_VALUES: Record<PaymentMethod, number> = { kart: 1, nakit: 2
 type Split = 'full' | 'items' | 'amount';
 const SPLITS: [Split, string][] = [['full', 'Tamamı'], ['items', 'Ürün seç'], ['amount', 'Tutar gir']];
 const AMOUNT_CHIPS: [string, number][] = [['½', 2], ['⅓', 3], ['¼', 4], ['Kalan', 1]];
-/** Satırdaki ürün indirimi düzenleme durumu: tür ve yazılan değer. */
-type LineDiscountInput = { type: 'percent' | 'amount'; input: string };
+/** Satırdaki ürün indirimi düzenleme durumu: tür, yazılan değer ve kaç adede (boşsa ödenen adetlerin tamamı). */
+type LineDiscountInput = { type: 'percent' | 'amount'; input: string; quantity?: number };
 
 interface Props {
     order: Order;
@@ -118,7 +118,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
     if (discountAllowed) {
         for (const [key, value] of Object.entries(lineDiscountInputs)) {
             const parsed = parseFloat(value.input.replace(',', '.')) || 0;
-            if (parsed > 0) lineDiscounts[key] = { type: value.type, value: parsed };
+            if (parsed > 0) lineDiscounts[key] = { type: value.type, value: parsed, quantity: value.quantity };
         }
     }
     const quantityOf = (line: BillLine) =>
@@ -127,7 +127,9 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
     // Önce ürün indirimleri, hesap indirimi kalan tutara uygulanır (sunucu da böyle hesaplar).
     const itemDiscountValue = Math.min(plan.itemDiscount, chargeBase);
     const afterItemDiscounts = round2(chargeBase - itemDiscountValue);
-    const billDiscountValue = discountAllowed ? round2(Math.min(
+    // "Ürün seç"te hesap indirimi yok: indirim soldaki ürün satırlarından yapılır.
+    const billDiscountOn = discountAllowed && split !== 'items';
+    const billDiscountValue = billDiscountOn ? round2(Math.min(
         discountType === 'percent'
             ? afterItemDiscounts * (parseFloat(discountValueInput) || 0) / 100
             : parseFloat(discountValueInput) || 0,
@@ -137,7 +139,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
     const netAmount = Math.max(round2(chargeBase - discountValue), 0);
     // Sunucu da aynı sınırı uygular; tutarla girilen indirim tahsil edilecek tutara oranlanır. Ürün indirimi varsa her
     // satırın ve toplam indirimin de sınırı aşmaması gerekir.
-    const discountPercent = discountType === 'percent'
+    const discountPercent = !billDiscountOn ? 0 : discountType === 'percent'
         ? parseFloat(discountValueInput) || 0
         : afterItemDiscounts > 0 ? round2(billDiscountValue * 100 / afterItemDiscounts) : 0;
     const discountOverLimit = discountAllowed && (
@@ -272,7 +274,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         // Birleşmiş satırın adetleri ve ürün indirimi, satırın sipariş kalemlerine dağıtılır.
         const itemsToPay = split === 'amount' ? [] : plan.items;
 
-        const discount = discountAllowed && discountValueInput
+        const discount = billDiscountOn && discountValueInput
             ? {
                 percent: discountType === 'percent' ? parseFloat(discountValueInput) : undefined,
                 amount: discountType === 'amount' ? parseFloat(discountValueInput) : undefined,
@@ -366,7 +368,10 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         const selectedQty = selectedQuantities[line.key] ?? 0;
                         const paidQty = quantityOf(line);
                         const lineInput = lineDiscountInputs[line.key];
-                        const lineDiscount = lineDiscountAmount(round2(line.unitPrice * paidQty), lineDiscounts[line.key]);
+                        const lineDiscount = lineDiscountAmount(line.unitPrice, paidQty, lineDiscounts[line.key]);
+                        // İndirimli adet: seçilmemişse ödenen adetlerin tamamı; seçim küçülürse ödenen adede kırpılır.
+                        const discountQty = discountedQuantity(lineInput, paidQty);
+                        const lineType = lineInput?.type ?? 'percent';
                         const editing = editingLineKey === line.key;
                         return (
                             <div key={line.key} className="py-3.5 border-b border-dashed border-border">
@@ -389,7 +394,9 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                                 className={`mt-1 inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 -ml-1.5 text-xs font-semibold transition-colors hover:bg-muted ${lineDiscount > 0 ? 'text-rb-red' : 'text-muted-foreground'}`}
                                             >
                                                 <Tag className="w-3.5 h-3.5" aria-hidden="true" />
-                                                {lineDiscount > 0 ? `İndirim -₺${formatPrice(lineDiscount)}` : 'İndirim'}
+                                                {lineDiscount > 0
+                                                    ? `İndirim ${describeLineDiscount(lineDiscounts[line.key], paidQty)} · -₺${formatPrice(lineDiscount)}`
+                                                    : 'İndirim'}
                                             </button>
                                         )}
                                     </div>
@@ -460,10 +467,36 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                         autoFocus
                                         value={lineInput?.input ?? ''}
                                         onChange={e => updateLineDiscount(line.key, { input: e.target.value.replace(/[^\d.,]/g, '') })}
-                                        placeholder={(lineInput?.type ?? 'percent') === 'percent' ? 'Yüzde (%)' : 'Tutar (₺)'}
+                                        placeholder={lineType === 'percent' ? 'Yüzde (%)' : 'Toplam tutar (₺)'}
                                         aria-label={`${line.productName}: indirim ${(lineInput?.type ?? 'percent') === 'percent' ? 'yüzdesi' : 'tutarı'}`}
                                         className="h-9 w-28 rounded-lg border border-border bg-muted/50 px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
                                     />
+                                    {paidQty > 1 && (
+                                        <div className="flex items-center gap-1 rounded-lg border border-border px-1 py-0.5" role="group" aria-label={`${line.productName}: indirim kaç adede`}>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateLineDiscount(line.key, { quantity: discountQty - 1 })}
+                                                disabled={discountQty <= 1}
+                                                aria-label="İndirimli adedi azalt"
+                                                className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <Minus className="w-3.5 h-3.5" />
+                                            </button>
+                                            <span className="min-w-16 text-center text-xs font-semibold tabular-nums text-foreground" aria-live="polite">
+                                                {discountQty} / {paidQty} adede
+                                            </span>
+                                            <button
+                                                type="button"
+                                                // Tümüne ulaşınca adet boş tutulur: seçim değişse de "tümü" olarak kalır.
+                                                onClick={() => updateLineDiscount(line.key, { quantity: discountQty + 1 >= paidQty ? undefined : discountQty + 1 })}
+                                                disabled={discountQty >= paidQty}
+                                                aria-label="İndirimli adedi artır"
+                                                className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    )}
                                     {lineInput && (
                                         <button
                                             type="button"
@@ -475,7 +508,9 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                     )}
                                     <p className="basis-full text-xs text-muted-foreground">
                                         {paidQty > 0
-                                            ? `Bu ödemedeki ${paidQty} adede uygulanır; hesabın kalanı tam fiyattan alınır.`
+                                            ? `${discountQty < paidQty ? `Bu ödemedeki ${paidQty} adetten ${discountQty} adede` : `Bu ödemedeki ${paidQty} adede`} uygulanır; ${
+                                                lineType === 'percent' ? 'yüzde her adede ayrı uygulanır' : `₺ tutar ${discountQty > 1 ? `bu ${discountQty} adedin toplam indirimidir (adet başı değil)` : 'bu adedin indirimidir'}`
+                                            }. Kalanı tam fiyattan alınır.`
                                             : 'Bu ürün bu ödemede seçili değil; indirim, ürün ödenirken uygulanır.'}
                                     </p>
                                 </div>
@@ -636,7 +671,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                             )}
                         </div>
 
-                        {discountAllowed && (
+                        {billDiscountOn && (
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <p className="text-xs text-muted-foreground">Hesaba indirim</p>
