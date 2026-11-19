@@ -447,7 +447,8 @@ export default function Tables() {
                 ]);
                 setCategories(cats);
                 setProducts(prods.filter(p => p.isActive));
-                if (cats.length > 0) setSelectedCategoryId(cats[0].id);
+                // Masa açılınca "Tümü" seçili gelir.
+                setSelectedCategoryId(null);
 
                 try {
                     const order = await orderService.getOrderByTableId(table.id.toString());
@@ -1220,8 +1221,22 @@ export default function Tables() {
                             <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
                                 {/* Sol: Kategori pilleri + Ürün listesi */}
                                 <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-                                    {/* Kategori pilleri */}
-                                    <div className="flex gap-2 px-4 py-3 overflow-x-auto shrink-0 border-b" style={{ scrollbarWidth: 'none' }}>
+                                    {/* Kategori pilleri: sığmayan alt satıra geçer (yatay kaydırma tekerlekle yapılamıyordu); çok kategoride
+                                        alan sınırlı kalır ve dikey kayar. */}
+                                    <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto px-4 py-3 shrink-0 border-b">
+                                        {/* Tümü: kategori filtresi yok (selectedCategoryId null). */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedCategoryId(null)}
+                                            aria-pressed={selectedCategoryId === null}
+                                            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+                                                selectedCategoryId === null
+                                                    ? 'bg-rb-accent text-rb-accent-foreground'
+                                                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                                            }`}
+                                        >
+                                            Tümü
+                                        </button>
                                         {categories.map(cat => (
                                             <button
                                                 key={cat.id}
