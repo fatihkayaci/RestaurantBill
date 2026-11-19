@@ -3,7 +3,7 @@ using RestaurantBill.Application.Interfaces;
 
 namespace RestaurantBill.Application.Common;
 
-// Bölgesi seçilmiş garsonun baktığı masalar. Her bölge için yöneticinin seçimi ayrı saklanır:
+// Bölgesi seçilmiş garsonun (ve aynı kuralla kasiyerin) baktığı masalar. Her bölge için yöneticinin seçimi ayrı saklanır:
 //   - "Tüm masalar": bölgenin tamamı;
 //   - "Seçili masalar" (RestrictedRegionIds): yalnızca seçilmiş ve şu an o bölgede duran masalar. Hiçbiri kalmamışsa
 //     (silindi, taşındı) garson o bölgede hiçbir masaya bakmaz; yetki kendiliğinden genişlemez.

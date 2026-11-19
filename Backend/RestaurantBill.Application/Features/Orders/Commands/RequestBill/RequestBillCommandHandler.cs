@@ -68,7 +68,7 @@ public class RequestBillCommandHandler : IRequestHandler<RequestBillCommand, Res
         await _tableNotifications.SendBillRequestChangedAsync(branchId, table.Id, order.BillRequestedAt);
         await _cashierNotifications.SendOrdersChangedAsync(branchId);
         if (!request.Cancel)
-            await _cashierNotifications.SendBillRequestedAsync(branchId, table.Id, table.Name, actorName);
+            await _cashierNotifications.SendBillRequestedAsync(branchId, table.RegionId, table.Id, table.Name, actorName);
 
         return Result.Success();
     }

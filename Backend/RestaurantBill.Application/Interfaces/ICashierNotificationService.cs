@@ -10,8 +10,8 @@ public interface ICashierNotificationService
     Task SendShiftsChangedAsync(Guid restaurantId);
     /// <summary>Yalnızca şubenin yöneticilerine (Admin/Owner) gider: hazırlanma süresini aşan kalemler.</summary>
     Task SendOrderItemsOverdueAsync(Guid restaurantId, IReadOnlyList<OverdueOrderItemDto> items);
-    /// <summary>Garson bir masanın hesabını istedi: şubenin kasiyer ve yönetici ekranlarında uyarı (toast) çıkar.</summary>
-    Task SendBillRequestedAsync(Guid restaurantId, Guid tableId, string tableName, string requestedByName);
+    /// <summary>Garson bir masanın hesabını istedi: şubenin kasiyer ve yönetici ekranlarında uyarı (toast) çıkar; bölge/masa atanmış kasiyere yalnızca kapsamındaki masalar için.</summary>
+    Task SendBillRequestedAsync(Guid restaurantId, Guid regionId, Guid tableId, string tableName, string requestedByName);
     /// <summary>Online (paket) sipariş geldi ya da durumu değişti: şubenin OnlineOrders grubuna (kasiyer, Admin, Owner) gider.</summary>
     Task SendDeliveryOrdersChangedAsync(Guid restaurantId, DeliveryOrdersChangedDto payload);
 }

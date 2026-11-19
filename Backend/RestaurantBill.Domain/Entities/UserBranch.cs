@@ -14,7 +14,7 @@ namespace RestaurantBill.Domain.Entities
         public UserRole Role { get; private set; }
         public bool IsActive { get; private set; } = true;
         public DateTime? HireDate { get; private set; }
-        // Garsonun çalıştığı bölgeler. Boş liste = şubenin tüm bölgeleri. Diğer rollerde yok sayılır.
+        // Garsonun ya da kasiyerin çalıştığı bölgeler. Boş liste = şubenin tüm bölgeleri. Diğer rollerde yok sayılır.
         public List<Guid> RegionIds { get; private set; } = [];
         // Masa masa bakılan bölgeler (RegionIds'in alt kümesi; yönetici "Seçili masalar" demiş). Bu bölgelerde garson
         // yalnızca TableIds'teki masalara bakar, diğer bölgelerinin tamamına. RegionIds boşken ikisi de anlamsızdır.

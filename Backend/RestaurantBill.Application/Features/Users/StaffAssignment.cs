@@ -23,11 +23,12 @@ public interface IStaffAssignmentRequest
 
 public static class StaffAssignment
 {
-    public static bool UsesRegions(UserRole role) => role is UserRole.Waiter;
+    public static bool UsesRegions(UserRole role) => role is UserRole.Waiter or UserRole.Cashier;
     public static bool UsesCategories(UserRole role) => role is UserRole.Kitchen;
 
-    // Bölgeler ve yetkiler yalnızca garsonda, kategoriler yalnızca mutfakta saklanır; başka role geçen kullanıcının
-    // atamaları temizlenir ki eski rolüne döndüğünde eski kısıt sessizce geri gelmesin.
+    // Bölgeler garsonda ve kasiyerde, garson yetkileri yalnızca garsonda, kategoriler yalnızca mutfakta saklanır; başka
+    // role geçen kullanıcının atamaları temizlenir ki eski rolüne döndüğünde eski kısıt sessizce geri gelmesin.
+    // Garson ↔ kasiyer geçişinde bölge ve masa seçimi korunur (ikisi de aynı kapsamı kullanır).
     public static async Task<string?> ApplyAsync(
         IAppDbContext db, UserBranch membership, UserRole role, IStaffAssignmentRequest request, CancellationToken cancellationToken)
     {

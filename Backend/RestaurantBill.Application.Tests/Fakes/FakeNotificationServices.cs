@@ -80,7 +80,7 @@ public class FakeCashierNotificationService : ICashierNotificationService
         return Task.CompletedTask;
     }
     public List<(Guid BranchId, Guid TableId, string TableName, string RequestedBy)> BillRequestsSent { get; } = [];
-    public Task SendBillRequestedAsync(Guid restaurantId, Guid tableId, string tableName, string requestedByName)
+    public Task SendBillRequestedAsync(Guid restaurantId, Guid regionId, Guid tableId, string tableName, string requestedByName)
     {
         BillRequestsSent.Add((restaurantId, tableId, tableName, requestedByName));
         return Task.CompletedTask;

@@ -19,14 +19,17 @@ import type { Table } from '@/features/tables/types';
 
 const roleMap: Record<number, string> = { 1: "Admin", 2: "Garson", 3: "Kasiyer", 4: "Mutfak", 6: "Kurye" };
 
-// Bölge ve garson yetkileri yalnızca garsonda, kasiyer yetkileri yalnızca kasiyerde, menü kategorileri yalnızca mutfakta.
+// Bölge/masa kapsamı garsonda ve kasiyerde, garson yetkileri yalnızca garsonda, kasiyer yetkileri yalnızca kasiyerde,
+// menü kategorileri yalnızca mutfakta.
 const WAITER = 2;
 const CASHIER = 3;
 const KITCHEN = 4;
-const usesRegions = (role: number) => role === WAITER;
+const usesRegions = (role: number) => role === WAITER || role === CASHIER;
 const usesCategories = (role: number) => role === KITCHEN;
 const hasAccessTab = (role: number) => usesRegions(role) || usesCategories(role) || role === CASHIER;
-const accessTabLabel: Record<number, string> = { [WAITER]: 'Bölge ve Yetkiler', [CASHIER]: 'Kasiyer Yetkileri', [KITCHEN]: 'Kategoriler' };
+const accessTabLabel: Record<number, string> = { [WAITER]: 'Bölge ve Yetkiler', [CASHIER]: 'Bölge ve Yetkiler', [KITCHEN]: 'Kategoriler' };
+// Bölge/masa açıklamalarında rolün adı: "Garson yalnızca ...", "Kasiyer yalnızca ...".
+const scopedRoleNoun = (role: number) => (role === CASHIER ? 'Kasiyer' : 'Garson');
 
 type PermissionKey = 'canTakeOrders' | 'canTakePayment' | 'canCancelAndDiscount' | 'canTransferAndReserve';
 
@@ -64,7 +67,7 @@ function compactTableNames(names: string[]): string {
     return names.join(', ');
 }
 
-// Garsonun bölge başına kapsamı. restricted = "Seçili masalar" (yalnızca tables), değilse bölgenin tamamı.
+// Garsonun/kasiyerin bölge başına kapsamı. restricted = "Seçili masalar" (yalnızca tables), değilse bölgenin tamamı.
 // Silinmiş ya da artık o bölgede olmayan masalar sayılmaz; sunucu da onları yok sayar.
 type RegionCoverage = { regionId: string; restricted: boolean; tables: Table[] };
 
@@ -284,12 +287,13 @@ export default function StaffPage() {
             return;
         }
         setFieldErrors({});
-        // Bölge ve garson yetkileri yalnızca garsonda, kasiyer yetkileri yalnızca kasiyerde, kategoriler yalnızca mutfakta gönderilir.
+        // Bölgeler garsonda ve kasiyerde, garson yetkileri yalnızca garsonda, kasiyer yetkileri yalnızca kasiyerde, kategoriler
+        // yalnızca mutfakta gönderilir.
         const isWaiter = form.role === WAITER;
         const payload: CreateUser = {
             ...form,
             regionIds: usesRegions(form.role) ? (form.regionIds ?? []) : [],
-            // Tüm bölgelere bakan garsonda masa seçimi anlamsız; sunucu da aynı kuralı uygular.
+            // Tüm bölgelere bakan garsonda/kasiyerde masa seçimi anlamsız; sunucu da aynı kuralı uygular.
             restrictedRegionIds: usesRegions(form.role) && (form.regionIds?.length ?? 0) > 0 ? (form.restrictedRegionIds ?? []) : [],
             tableIds: usesRegions(form.role) && (form.regionIds?.length ?? 0) > 0 ? (form.tableIds ?? []) : [],
             categoryIds: usesCategories(form.role) ? (form.categoryIds ?? []) : [],
@@ -760,7 +764,8 @@ export default function StaffPage() {
                                             </div>
                                         )}
                                         <p className="text-xs text-muted-foreground mt-1.5">
-                                            Boş bırakılırsa tüm bölgeler. Garson yalnızca seçili bölgelerin masalarını görür.
+                                            Boş bırakılırsa tüm bölgeler. {scopedRoleNoun(form.role)} yalnızca seçili bölgelerin masalarını görür
+                                            {form.role === CASHIER && '; paket siparişler her zaman görünür'}.
                                         </p>
                                     </div>
 
@@ -825,7 +830,7 @@ export default function StaffPage() {
                                                             )}
                                                             {restricted && picked.length === 0 && (
                                                                 <p className="text-xs text-rb-amber">
-                                                                    Bu bölgede hiç masa seçilmedi. Garson bu bölgede hiçbir masaya bakamaz.
+                                                                    Bu bölgede hiç masa seçilmedi. {scopedRoleNoun(form.role)} bu bölgede hiçbir masaya bakamaz.
                                                                 </p>
                                                             )}
                                                         </div>
@@ -834,7 +839,7 @@ export default function StaffPage() {
                                             </div>
                                         )}
                                         <p className="text-xs text-muted-foreground mt-1.5">
-                                            "Seçili masalar" denen bölgede garson yalnızca işaretli masalara bakar; seçili masa silinir ya da
+                                            "Seçili masalar" denen bölgede {scopedRoleNoun(form.role).toLocaleLowerCase('tr')} yalnızca işaretli masalara bakar; seçili masa silinir ya da
                                             taşınırsa o bölgede yetkisi daralır, genişlemez.
                                         </p>
                                     </div>

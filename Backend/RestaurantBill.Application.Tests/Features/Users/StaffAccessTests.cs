@@ -490,7 +490,7 @@ public class StaffAccessTests : ApplicationTestBase
     }
 
     [Fact]
-    public async Task UpdateUser_SetsWaiterPermissions_AndClearsRegionsWhenRoleLeavesWaiter()
+    public async Task UpdateUser_SetsWaiterPermissions_KeepsRegionsForCashier_ClearsThemForKitchen()
     {
         Region salon = await SeedRegionAsync();
         await SeedActorAsync();
@@ -510,11 +510,19 @@ public class StaffAccessTests : ApplicationTestBase
         Assert.False(membership.CanTransferAndReserve);
         Assert.Equal([salon.Id], membership.RegionIds);
 
+        // Kasiyer de bölge/masa kapsamı kullanır: garsondan kasiyere geçişte bölgeler korunur.
         var toCashier = await handler.Handle(new UpdateUserCommand
         {
             UserId = waiter.UserId, FullName = "Personel", UserName = "garson1", Role = UserRole.Cashier, RegionIds = [salon.Id]
         }, CancellationToken.None);
         Assert.True(toCashier.IsSuccess);
+        Assert.Equal([salon.Id], membership.RegionIds);
+
+        var toKitchen = await handler.Handle(new UpdateUserCommand
+        {
+            UserId = waiter.UserId, FullName = "Personel", UserName = "garson1", Role = UserRole.Kitchen, RegionIds = [salon.Id]
+        }, CancellationToken.None);
+        Assert.True(toKitchen.IsSuccess);
         Assert.Empty(membership.RegionIds);
     }
 }

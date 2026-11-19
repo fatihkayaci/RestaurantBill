@@ -12,7 +12,9 @@ public static class HubGroups
 
     // Kasiyer hub'ına bağlanan kullanıcının grupları: herkes şubenin genel grubunda; Admin/Owner yöneticiler grubunda;
     // kasiyer, Admin ve Owner online siparişler grubunda. Mutfak, garson ve kurye online sipariş olaylarını almaz.
-    public static List<string> ForCashierHub(Guid restaurantId, Func<string, bool> isInRole)
+    // Masaya özgü kasiyer olayları ("Hesap istendi") için ayrıca ForCashierTables'ın grupları: cashierScope yalnızca
+    // bölge/masa atanmış kasiyerde verilir; diğer herkes (yönetici, kapsamı boş kasiyer) CashiersAll'dadır.
+    public static List<string> ForCashierHub(Guid restaurantId, Func<string, bool> isInRole, WaiterScope? cashierScope = null)
     {
         List<string> groups = [Restaurant(restaurantId)];
         bool isManager = isInRole("Admin") || isInRole("Owner");
@@ -20,8 +22,32 @@ public static class HubGroups
             groups.Add(BranchManagers(restaurantId));
         if (isManager || isInRole("Cashier"))
             groups.Add(OnlineOrders(restaurantId));
+        groups.AddRange(ForCashierTables(restaurantId, cashierScope));
         return groups;
     }
+
+    // Kasiyer hub'ının masa grupları; garson gruplarıyla aynı kural (bkz. ForWaiter): kapsam yoksa yalnızca CashiersAll,
+    // varsa tamamına bakılan her bölge için CashierRegion, masa masa bakılan bölgelerde seçili her masa için CashierTable.
+    public static string CashierRegion(Guid restaurantId, Guid regionId) => $"restaurant-{restaurantId}-cashiers-region-{regionId}";
+    public static string CashierTable(Guid restaurantId, Guid tableId) => $"restaurant-{restaurantId}-cashiers-table-{tableId}";
+    public static string CashiersAll(Guid restaurantId) => $"restaurant-{restaurantId}-cashiers-all";
+
+    public static List<string> ForCashierTables(Guid restaurantId, WaiterScope? scope)
+    {
+        if (scope is null)
+            return [CashiersAll(restaurantId)];
+
+        return
+        [
+            .. scope.WholeRegionIds.Select(regionId => CashierRegion(restaurantId, regionId)),
+            .. scope.TableIds.Select(tableId => CashierTable(restaurantId, tableId)),
+        ];
+    }
+
+    // Bir masanın "Hesap istendi" bildiriminin kasiyer hub'ındaki hedefleri: her bağlantı bu üç gruptan en fazla
+    // birindedir (ItemsReadyTargets ile aynı mantık); kapsamı dışındaki masanın bildirimi kasiyere hiç gitmez.
+    public static string[] CashierTableTargets(Guid restaurantId, Guid regionId, Guid tableId) =>
+        [CashierRegion(restaurantId, regionId), CashierTable(restaurantId, tableId), CashiersAll(restaurantId)];
     // Kurye hub'ı: her kuryenin kendi grubu ve şubenin kurye olaylarını izleyen yöneticiler (Admin/Owner).
     public static string Courier(Guid restaurantId, Guid userId) => $"restaurant-{restaurantId}-courier-{userId}";
     public static string Couriers(Guid restaurantId) => $"restaurant-{restaurantId}-couriers";
