@@ -135,7 +135,7 @@ public class RequestTableBillCommandHandler(IAppDbContext db, ITenantResolver te
 
         await tableNotifications.SendBillRequestChangedAsync(order.BranchId, table.Id, order.BillRequestedAt);
         await cashierNotifications.SendOrdersChangedAsync(order.BranchId);
-        await cashierNotifications.SendBillRequestedAsync(order.BranchId, table.Id, table.Name, RequestedByName);
+        await cashierNotifications.SendBillRequestedAsync(order.BranchId, table.RegionId, table.Id, table.Name, RequestedByName);
         await tableNotifications.SendCustomerBillRequestedAsync(order.BranchId, new WaiterCalledDto
         {
             TableId = table.Id,

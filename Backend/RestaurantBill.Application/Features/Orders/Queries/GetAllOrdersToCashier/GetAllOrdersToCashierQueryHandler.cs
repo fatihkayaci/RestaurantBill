@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Enums;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
@@ -27,12 +28,16 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetAllOrdersToCashi
             if (restaurantId == Guid.Empty)
                 return Result<List<OrderDto>>.Failure("Geçersiz şube bilgisi.");
 
+            // Bölge/masa atanmış kasiyer yalnızca kapsamındaki masaların hesaplarını görür; paket siparişler her zaman listede.
+            StaffAccess access = await _db.GetStaffAccessAsync(_currentUser, cancellationToken);
+
             List<Order> orders = await _db.Orders
                 .AsNoTracking()
                 .Include(o => o.Table)
                 .Include(o => o.OrderItems).ThenInclude(i => i.Product).ThenInclude(p => p!.Category).ThenInclude(c => c!.Branch)
                 .Include(o => o.OrderItems).ThenInclude(i => i.SetMenu).ThenInclude(s => s!.Category)
                 .Where(o => o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled && o.BranchId == restaurantId)
+                .InStaffRegions(access)
                 .ToListAsync(cancellationToken);
 
             List<Guid> creatorIds = orders.Select(o => o.CreatedUser).Distinct().ToList();

@@ -33,10 +33,12 @@ public class CashierNotificationService : ICashierNotificationService
         await _hubContext.Clients.Group(HubGroups.BranchManagers(restaurantId)).SendAsync("OrderItemsOverdue", items);
     }
 
-    // Kasiyer hub'ına yalnızca kasiyer ve yönetici ekranları bağlanır; garsonlar bu olayı almaz.
-    public async Task SendBillRequestedAsync(Guid restaurantId, Guid tableId, string tableName, string requestedByName)
+    // Kasiyer hub'ına yalnızca kasiyer ve yönetici ekranları bağlanır; garsonlar bu olayı almaz. Bölge/masa atanmış
+    // kasiyer yalnızca kapsamındaki masaların isteğini alır (bkz. HubGroups.CashierTableTargets).
+    public async Task SendBillRequestedAsync(Guid restaurantId, Guid regionId, Guid tableId, string tableName, string requestedByName)
     {
-        await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("BillRequested", tableId, tableName, requestedByName);
+        await _hubContext.Clients.Groups(HubGroups.CashierTableTargets(restaurantId, regionId, tableId))
+            .SendAsync("BillRequested", tableId, tableName, requestedByName);
     }
 
     // Garson, mutfak ve kurye ekranları OnlineOrders grubunda değildir.
