@@ -345,7 +345,7 @@ location /api/ {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 
-location ~ ^/(kitchen-hub|table-hub|cashier-hub)(/|$) {
+location ~ ^/(kitchen-hub|table-hub|cashier-hub|courier-hub)(/|$) {
     proxy_pass http://127.0.0.1:8080;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
@@ -362,7 +362,7 @@ location / {
 }
 ```
 
-Without the hub block the frontend container answers the `/negotiate` call with a 405 and the Kitchen, Tables and Cashier screens silently stop receiving live updates.
+Without the hub block the frontend container answers the `/negotiate` call with a 405 and the Kitchen, Tables, Cashier and Courier screens silently stop receiving live updates.
 
 ---
 
