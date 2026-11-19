@@ -208,10 +208,12 @@ public class SiteSeoTests
             company.Slug = "ocak";
             DbContext.Companies.Add(company);
             Branch branch = Branch.Create(company.Id, "Moda", "", "", "", "İstanbul", "Kadıköy", "", 10m);
-            branch.UpdateSite("", "Közde pişen et.", "", "", new TimeOnly(12, 0), new TimeOnly(23, 0), "", "", "");
-            branch.ReplaceSiteImage(SiteImageSlot.Cover, "site/kapak.webp");
+            // Saatler şubeden, metin ve kapak şirketin sitesinden gelir.
+            branch.UpdateSiteInfo(new TimeOnly(12, 0), new TimeOnly(23, 0), "", [], "", "");
+            company.SaveSiteDraft(SiteSnapshot.Empty with { Tagline = "Közde pişen et.", CoverImage = "site/kapak.webp" }, DateTime.UtcNow);
+            company.PublishSiteDraft(DateTime.UtcNow);
             // Taslaktaki değer sitede görünmez: etiketler yayındaki değerlerle yazılır.
-            branch.SaveSiteDraft(branch.GetPublishedSite() with { Tagline = "TASLAK" }, DateTime.UtcNow);
+            company.SaveSiteDraft(company.GetPublishedSite() with { Tagline = "TASLAK" }, DateTime.UtcNow);
             DbContext.Branches.Add(branch);
             await DbContext.SaveChangesAsync();
         }

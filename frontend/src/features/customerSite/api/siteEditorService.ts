@@ -27,7 +27,7 @@ export class SiteDraftConflictError extends Error {
 }
 
 const multipart = { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 };
-const BASE = '/branch/site/draft';
+const BASE = '/company/site/draft';
 
 function fileForm(file: File): FormData {
     const formData = new FormData();

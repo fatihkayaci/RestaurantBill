@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { EXTERNAL_SOURCES, SITE_LIMITS, type SiteEditTarget } from '@/pages/public/site/siteEditContext';
 import { SITE_AMENITIES } from '@/pages/public/site/siteParts';
 import { restaurantName } from '@/pages/public/site/useSite';
-import { DesignPicker, FontPicker, ThemePicker, WeeklyHoursEditor } from '../SiteSettingsEditors';
+import { DesignPicker, FontPicker, ThemePicker } from '../SiteSettingsEditors';
 import { photoTarget, type EditorCtx } from './editorActions';
 import { isStockUrl, tooBig } from './editorModel';
 import { ed } from './editorStyles';
@@ -116,35 +116,20 @@ function numberOrNull(value: string): number | null {
 type Patch = (patch: Partial<SiteDraftTexts>) => void;
 const patcher = (ctx: EditorCtx): Patch => patch => ctx.state.updateTexts(x => ({ ...x, ...patch }));
 
-export function HoursFields({ ctx, idPrefix = '' }: { ctx: EditorCtx; idPrefix?: string }) {
-    const t = ctx.texts;
-    return (
-        <div className="flex flex-col gap-3.5">
-            <WeeklyHoursEditor opensAt={t.opensAt} closesAt={t.closesAt} week={t.weeklyHours}
-                onSingle={(opens, closes) => ctx.state.updateTexts(x => ({ ...x, opensAt: opens, closesAt: closes }))}
-                onWeek={week => ctx.state.updateTexts(x => ({ ...x, weeklyHours: week }))} />
-            <TextInput id={`${idPrefix}saat-notu`} label="Saat notu" max={SITE_LIMITS.hoursNote} value={t.hoursNote} placeholder="Pazartesi kapalıyız."
-                onChange={v => patcher(ctx)({ hoursNote: v })} />
-            <button type="button" className={cn(ed.link, 'self-start text-xs')} onClick={() => ctx.openAdmin(EXTERNAL_SOURCES.reservation.links[0].to)}>
-                Rezervasyon saatleri ayrı ↗
-            </button>
-        </div>
-    );
+/** Çalışma saatleri, saat notu, WhatsApp ve "nasıl gelinir" şubenindir: burada değişmez, nereden değiştiği gösterilir. */
+export function HoursFields({ ctx }: { ctx: EditorCtx }) {
+    return <ExternalInfo ctx={ctx} source="branchInfo" />;
 }
 
-export function ContactFields({ ctx, idPrefix = '', withDirections = false }: { ctx: EditorCtx; idPrefix?: string; withDirections?: boolean }) {
+/** Instagram şirketin sitesinde; WhatsApp her şubenin kendi bilgisidir (şube Ayarlar'ı). */
+export function ContactFields({ ctx, idPrefix = '' }: { ctx: EditorCtx; idPrefix?: string }) {
     const t = ctx.texts;
     const set = patcher(ctx);
     return (
         <div className="flex flex-col gap-3.5">
             <TextInput id={`${idPrefix}instagram`} type="url" label="Instagram adresi" value={t.instagramUrl} placeholder="https://instagram.com/restoraniniz"
                 onChange={v => set({ instagramUrl: v })} />
-            <TextInput id={`${idPrefix}whatsapp`} type="tel" label="WhatsApp numarası" max={SITE_LIMITS.whatsapp} value={t.whatsappPhone} placeholder="0532 000 48 48"
-                onChange={v => set({ whatsappPhone: v })} />
-            {withDirections && (
-                <TextInput id={`${idPrefix}yol`} label="Nasıl gelinir" rows={3} max={SITE_LIMITS.directionsNote} value={t.directionsNote}
-                    placeholder="Kadıköy iskelesinden 12 dk yürüme." onChange={v => set({ directionsNote: v })} />
-            )}
+            <p className="m-0 text-xs text-muted-foreground">{EXTERNAL_SOURCES.branchInfo.text}</p>
         </div>
     );
 }
@@ -231,9 +216,9 @@ export function ExternalInfo({ ctx, source }: { ctx: EditorCtx; source: string }
 export function PopoverBody({ ctx, target, onDone }: { ctx: EditorCtx; target: SiteEditTarget; onDone: () => void }) {
     if (target.startsWith('external:')) return <ExternalInfo ctx={ctx} source={target.slice(9)} />;
     switch (target) {
-        case 'hours': return <><Head title="Çalışma saatleri" /><HoursFields ctx={ctx} /></>;
+        case 'hours': return <HoursFields ctx={ctx} />;
         case 'rating': return <><Head title="Google puanı" hint="Yalnız gerçek puan. Boşsa “Misafirlerimiz” kartı görünmez." /><RatingFields ctx={ctx} /></>;
-        case 'contact': return <><Head title="WhatsApp ve Instagram" /><ContactFields ctx={ctx} /></>;
+        case 'contact': return <><Head title="Instagram" /><ContactFields ctx={ctx} /></>;
         case 'year': return <YearField ctx={ctx} />;
         case 'amenities': return <><Head title="Olanaklar" /><AmenitiesFields ctx={ctx} /></>;
     }
@@ -373,7 +358,7 @@ export function SeoFields({ ctx, live }: { ctx: EditorCtx; live: { title: string
 }
 
 export function ExternalList({ ctx }: { ctx: EditorCtx }) {
-    const rows = ['restaurant', 'menu', 'setMenus', 'reservation', 'online', 'tables', 'messages', 'auto'];
+    const rows = ['restaurant', 'branchInfo', 'menu', 'setMenus', 'reservation', 'online', 'tables', 'messages', 'auto'];
     return (
         <ul className="m-0 flex list-none flex-col p-0">
             {rows.map(key => {

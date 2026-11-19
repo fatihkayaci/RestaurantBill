@@ -185,10 +185,6 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasDefaultValue("");
 
-                    b.Property<string>("InstagramUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -233,50 +229,8 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
-                    b.Property<string>("SiteAbout")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SiteAboutImage")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SiteAccentColor")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("SiteContent")
                         .HasColumnType("jsonb");
-
-                    b.Property<string>("SiteCoverImage")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SiteDraft")
-                        .HasColumnType("jsonb");
-
-                    b.Property<DateTime?>("SiteDraftUpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("SiteDraftVersion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
-                    b.Property<string>("SiteHeadline")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("SitePublishedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("SiteStoryTitle")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SiteTagline")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<decimal>("TaxRate")
                         .HasPrecision(5, 2)
@@ -443,6 +397,23 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<Guid>("OwnerUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Site")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SiteDraft")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("SiteDraftUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SiteDraftVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("SitePublishedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Slug")
                         .IsRequired()

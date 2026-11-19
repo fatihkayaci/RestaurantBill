@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect } from 'react';
 // Ayarlar sayfasının sekmeleri. Adres: /admin/settings?sekme=<anahtar>[&bolum=<alt sekme>]
 export const SETTINGS_TABS = [
     { key: 'restoran', label: 'Restoran' },
+    { key: 'saatler', label: 'Saatler ve iletişim' },
     { key: 'odeme', label: 'Ödeme' },
     { key: 'qr', label: 'QR menü' },
     { key: 'online', label: 'Online sipariş' },

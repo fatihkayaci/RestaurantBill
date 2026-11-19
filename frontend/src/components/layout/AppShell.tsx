@@ -3,14 +3,13 @@ import { useEffect, useRef, useState, type FocusEvent, type MouseEvent } from 'r
 import type { LucideIcon } from 'lucide-react';
 import {
     House, UtensilsCrossed, Users, LayoutGrid, Wallet, Clock, BarChart3, Settings, Briefcase,
-    UserCog, Palette, History, CalendarCheck, Globe, Menu, X, PanelLeftClose, PanelLeftOpen, Layers, Bike, MessageSquareText, ChevronDown, Trash2,
+    UserCog, Palette, History, CalendarCheck, Globe, Menu, X, PanelLeftClose, PanelLeftOpen, Layers, Bike, MessageSquareText, ChevronDown, Trash2, Landmark,
 } from 'lucide-react';
 import { authService } from '@/features/auth/api/authService';
 import { userService } from '@/features/users/api/userService';
-import { branchService } from '@/features/branches/api/branchService';
+import { isSingleBranchOwner, useMyBranches } from '@/features/branches/useMyBranches';
 import type { User } from '@/features/users/types';
-import type { Branch } from '@/features/branches/types';
-import { getSession } from '@/lib/auth';
+import { getSession, startSession } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import sophramLogo from '@/assets/sophram-logo-yazisiz.svg';
 import BranchSwitcher from './BranchSwitcher';
@@ -46,14 +45,12 @@ const branchSections: NavSection[] = [
         { to: '/admin/online-orders', icon: Bike, label: 'Online siparişler' },
         { to: '/admin/cash-registers', icon: Wallet, label: 'Kasalar' },
         { to: '/admin/shifts', icon: Clock, label: 'Vardiyalar' },
+        // Şube modunda yalnız bu şubenin mesajları; bütün şubeler sahibin "Tümü" menüsünde.
+        { to: '/admin/contact-messages', icon: MessageSquareText, label: 'Şikayet ve Öneriler', badge: 'unreadContactMessages' },
     ] },
     { key: 'menu', label: 'Menü', icon: UtensilsCrossed, items: [
         { to: '/admin/menu', icon: UtensilsCrossed, label: 'Yemeklerimiz' },
         { to: '/admin/set-menus', icon: Layers, label: 'Set menüler' },
-    ] },
-    { key: 'musteri', label: 'Müşteri', icon: MessageSquareText, items: [
-        { to: '/admin/contact-messages', icon: MessageSquareText, label: 'Şikayet ve Öneriler', badge: 'unreadContactMessages' },
-        { to: '/admin/site', icon: Globe, label: 'Restoran sitesi', dot: 'siteDraft' },
     ] },
     { key: 'yonetim', label: 'Yönetim', icon: Briefcase, items: [
         { to: '/admin/staff', icon: Users, label: 'Çalışanlar' },
@@ -62,6 +59,25 @@ const branchSections: NavSection[] = [
     ] },
 ];
 
+// Tek şubeli sahip: "Tümü" ayrımı yok; şube menüsüne şirket sayfaları eklenir (tek birleşik menü, şube kapsamında).
+// Şirket Genel Bakış yerine şubenin Genel Bakış'ı, Finansal Rapor yerine Raporlar (tek şubede aynı veri),
+// Şikayet ve Öneriler bir kez (şubenin mesajları = bütün mesajlar). Şube eklemek için şube seçicideki "Şubeleri yönet".
+const singleBranchSections: NavSection[] = [
+    ...branchSections.map(section => (section.key === 'yonetim'
+        ? { ...section, items: [
+            { to: '/admin/staff', icon: Users, label: 'Çalışanlar' },
+            { to: '/admin/admins', icon: UserCog, label: 'Yöneticiler' },
+            { to: '/admin/reports', icon: BarChart3, label: 'Raporlar' },
+            { to: '/admin/settings', icon: Settings, label: 'Ayarlar' },
+        ] }
+        : section)),
+    { key: 'sirket', label: 'Şirket', icon: Landmark, items: [
+        { to: '/owner/site', icon: Globe, label: 'Restoran sitesi', dot: 'siteDraft' },
+        { to: '/admin/branding', icon: Palette, label: 'Marka Ayarları' },
+        { to: '/admin/audit-log', icon: History, label: 'Denetim Kaydı' },
+        { to: '/owner/data', icon: Trash2, label: 'Verileri sil' },
+    ] },
+];
 
 // "Tümü" modu: yalnızca şirket geneli sayfalar, bölümsüz düz liste; şubeye ait ekranlar saklanır.
 const companyTop: NavItem[] = [
@@ -70,6 +86,9 @@ const companyTop: NavItem[] = [
     { to: '/owner/branding', icon: Palette, label: 'Marka Ayarları' },
     { to: '/owner/reports', icon: BarChart3, label: 'Finansal Rapor' },
     { to: '/owner/audit-log', icon: History, label: 'Denetim Kaydı' },
+    // Restoran sitesi şirket genelidir (tek site); mesajlar bütün şubelerden.
+    { to: '/owner/site', icon: Globe, label: 'Restoran sitesi', dot: 'siteDraft' },
+    { to: '/owner/contact-messages', icon: MessageSquareText, label: 'Şikayet ve Öneriler', badge: 'unreadContactMessages' },
     { to: '/owner/data', icon: Trash2, label: 'Verileri sil' },
 ];
 
@@ -84,22 +103,40 @@ export default function AppShell() {
     const companyMode = session?.isCompanyScope ?? false;
 
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [branches, setBranches] = useState<Branch[]>([]);
+    const branchList = useMyBranches();
+    const branches = branchList ?? [];
+    // Tek şubeli sahip: "Tümü" yok, birleşik menü (singleBranchSections).
+    const singleBranch = isSingleBranchOwner(session?.role, branchList);
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [hoverTip, setHoverTip] = useState<{ label: string; top: number } | null>(null);
     const asideRef = useRef<HTMLElement>(null);
-    // "Tümü" modunda şube menüsü yok; sayaç yalnızca şube modunda çekilir.
-    const unreadContactMessages = useUnreadContactMessages(!companyMode);
+    // Sayaç her iki modda da: şube modunda o şubenin, "Tümü" modunda bütün şubelerin okunmamış mesajları.
+    const unreadContactMessages = useUnreadContactMessages(true);
     const badgeCount = (badge: NavItem['badge']) => (badge === 'unreadContactMessages' ? unreadContactMessages : 0);
-    const siteHasDraft = useSiteHasDraft(!companyMode);
+    const siteHasDraft = useSiteHasDraft(isOwner && (companyMode || singleBranch));
     const hasDot = (dot: NavItem['dot']) => dot === 'siteDraft' && siteHasDraft;
     const draftDot = <span aria-label="Yayınlanmamış değişiklik var" title="Yayınlanmamış değişiklik var" className="ml-auto h-2 w-2 shrink-0 rounded-full bg-[#E0952A]" />;
 
     useEffect(() => {
         userService.getCurrentUser().then(setCurrentUser).catch(() => {});
-        branchService.getMyBranches().then(setBranches).catch(() => {});
     }, []);
+
+    // Tek şubeli sahip "Tümü" modunda kalmaz (ör. ikinci şubeyi sildi): o şubeye geçilir. Aynı adres yeniden açılır;
+    // /owner sayfaları gerekirse şube panelindeki karşılığına yönlenir (OwnerCompanyRoute).
+    const autoSwitching = useRef(false);
+    const singleBranchId = singleBranch ? branches[0].id : null;
+    useEffect(() => {
+        if (!companyMode || !singleBranchId || autoSwitching.current) return;
+        autoSwitching.current = true;
+        authService.switchBranch(singleBranchId)
+            .then(token => {
+                startSession(token);
+                // Token kapsamı değişti: SignalR bağlantıları ve sayfa cache'leri yeni şube için sıfırdan kurulsun.
+                window.location.assign(`${window.location.pathname}${window.location.search}`);
+            })
+            .catch(() => { autoSwitching.current = false; });
+    }, [companyMode, singleBranchId]);
 
     const handleLogout = () => {
         authService.logout();
@@ -107,8 +144,9 @@ export default function AppShell() {
     };
 
     const topItems = companyMode ? companyTop : branchTop;
-    // Şirket sayfaları (Yöneticiler, Marka Ayarları, Denetim Kaydı) yalnız "Tümü" modunda: şubeye ait değiller.
-    const sections: NavSection[] = companyMode ? [] : branchSections;
+    // Çok şubede şirket sayfaları (Yöneticiler, Marka Ayarları, Denetim Kaydı) yalnız "Tümü" modunda: şubeye ait değiller.
+    // Tek şubede şube menüsüyle birleşir.
+    const sections: NavSection[] = companyMode ? [] : (singleBranch ? singleBranchSections : branchSections);
 
     // Aktif rotayı içeren bölüm: kullanıcı kapalı bir bölüme girince açılır.
     const isActivePath = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
@@ -175,20 +213,28 @@ export default function AppShell() {
     // Üst düzey bağlantı (Genel Bakış, şirket modundaki sayfalar): ikon + etiket.
     const renderTopItem = (item: NavItem) => {
         if (iconOnly) return renderIconItem(item);
-        const { to, icon: Icon, label } = item;
+        const { to, icon: Icon, label, badge, dot } = item;
+        const count = badgeCount(badge);
         return (
             <NavLink
                 key={to}
                 to={to}
                 onClick={() => setMobileOpen(false)}
+                aria-label={count > 0 ? `${label}, ${count} okunmamış` : undefined}
                 className={({ isActive }) => cn(
                     'flex h-[42px] items-center gap-3 rounded-[10px] px-3 text-sm font-medium transition-colors',
                     focusRing,
                     isActive ? 'bg-rb-gold font-semibold text-rb-gold-foreground' : 'text-[#E8E1D6] hover:bg-white/5 hover:text-white'
                 )}
             >
-                <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
-                <span className="truncate">{label}</span>
+                {({ isActive }) => (
+                    <>
+                        <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
+                        <span className="truncate">{label}</span>
+                        {count > 0 && countBadge(count, isActive)}
+                        {hasDot(dot) && draftDot}
+                    </>
+                )}
             </NavLink>
         );
     };
@@ -390,6 +436,7 @@ export default function AppShell() {
                             branches={branches}
                             isOwner={isOwner}
                             companyMode={companyMode}
+                            singleBranch={singleBranch}
                             activeBranchId={companyMode ? null : (session?.restaurantId ?? null)}
                             activeBranchName={currentUser?.branchName ?? currentUser?.restaurantName}
                             collapsed={false}
@@ -431,7 +478,7 @@ export default function AppShell() {
                 <div id="online-order-strip-slot" />
 
                 {/* Restoran sitesi düzenleyicisi ekranın tamamını kullanır (kendi kaydırması var). */}
-                <main className={cn('flex-1', pathname === '/admin/site' ? 'min-h-0 overflow-hidden' : 'overflow-auto p-6 pb-24 md:pb-6')}>
+                <main className={cn('flex-1', pathname === '/owner/site' ? 'min-h-0 overflow-hidden' : 'overflow-auto p-6 pb-24 md:pb-6')}>
                     <Outlet />
                 </main>
             </div>

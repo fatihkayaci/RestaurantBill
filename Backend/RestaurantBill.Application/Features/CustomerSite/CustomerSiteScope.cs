@@ -65,7 +65,7 @@ public static class CustomerSiteScope
         return features ?? QrFeatures.Default;
     }
 
-    // Slug'ın şirketine ait, hizmet dışı olmayan masa (bölgesiyle). Yoksa null.
+    // Slug'ın şirketine ait, silinmemiş şubedeki, hizmet dışı olmayan masa (bölgesiyle). Yoksa null.
     public static async Task<Table?> ResolveTableAsync(IAppDbContext db, ITenantResolver tenant, Guid tableId, CancellationToken cancellationToken)
     {
         Company? company = await ResolveCompanyAsync(db, tenant, cancellationToken);
@@ -74,7 +74,7 @@ public static class CustomerSiteScope
 
         Table? table = await db.Tables
             .Include(t => t.Region)
-            .FirstOrDefaultAsync(t => t.Id == tableId && t.Region.Branch.CompanyId == company.Id, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == tableId && t.Region.Branch.CompanyId == company.Id && !t.Region.Branch.IsDeleted, cancellationToken);
 
         return table is null || table.Status == TableStatus.OutOfService ? null : table;
     }

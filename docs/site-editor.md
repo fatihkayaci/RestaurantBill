@@ -3,6 +3,17 @@
 Admin'deki `/admin/site` form sayfasının yerine gelen WYSIWYG düzenleyicinin backend'i. Tasarım:
 <https://claude.ai/artifact/AmfKG3NtspqWnnWRrBQA2Z> (özellikle 2 fotoğraf paneli, 6 yayın durumları, 12 Google ve paylaşım).
 
+> **19 Kasım 2026 — site şirket geneli oldu.** Restoran sitesi artık şirket başına tektir: yayındaki hâl `Companies.Site`,
+> taslak `Companies.SiteDraft` (jsonb, aynı şekil), sürüm ve tarihler de şirkettedir. Düzenleyici yalnız sahibin "Tümü"
+> modundadır (`/owner/site`, uçlar `api/company/site/...`, `[Authorize(Roles = "Owner")]`; doluluk puanı
+> `api/company/site/completeness`). Şubeye ait alanlar (tek aralık + haftalık saat, saat notu, WhatsApp, nasıl gelinir)
+> taslağa girmez: şubede kalır (`Branches.OpensAt/ClosesAt/HoursNote` + `Branches.SiteContent` jsonb'nin yalnız
+> `Week/Directions/Whatsapp` alanları), şube Ayarlar → Saatler ve iletişim'den (`GET/PUT api/branch/site-info`) hemen
+> kaydedilir; müşteri sitesi seçilen şubenin bu bilgilerini şirketin sitesine ekler (`Branch.SiteFor`). Bölüm
+> fotoğrafları/açıklamaları bölüm kimliğiyle şirketin sitesinde (bütün şubelerin bölümleri). Eski form uçları
+> (`api/branch/site`, `site/image`, `site/gallery`, `site/regions`) kaldırıldı. Göç: `20261119063457_MoveSiteToCompany`
+> (en eski şubenin sitesi ve taslağı şirkete taşınır). Aşağıdaki "şube" geçen yerler bu nedenle "şirket" okunmalıdır.
+
 Kararlar (kullanıcı onaylı):
 
 1. Bütün site düzenlemeleri **taslağa** gider. Müşteri sitesi **Yayınla**'ya kadar eski hâli gösterir. "Değişiklikleri at"
@@ -66,21 +77,21 @@ Bütün uçlar `Authorize(Roles = "Owner,Admin")` ve oturumdaki şubeye bağlıd
 
 | Yöntem | Yol | Gövde | Sürüm denetimi | Döner |
 |---|---|---|---|---|
-| GET | `api/branch/site/draft` | – | – | `SiteEditor` |
-| PUT | `api/branch/site/draft` | metinler + `version` (aşağıda) | **evet** | `SiteEditor` · 409 |
-| POST | `api/branch/site/draft/revert` | `{ "version": 7, "fields": ["coverImage", "region:{id}"] }` | **evet** | `SiteEditor` · 409 |
-| POST | `api/branch/site/draft/publish` | `{ "version": 7 }` | **evet** | `SiteEditor` · 409 |
-| POST | `api/branch/site/draft/discard` | `{ "version": 7 }` | **evet** | `SiteEditor` · 409 |
-| POST | `api/branch/site/draft/image/{slot}` | multipart `file` | hayır | `SiteEditor` |
-| POST | `api/branch/site/draft/image/{slot}/stock` | `{ "stockImageId": "…" }` | hayır | `SiteEditor` |
-| DELETE | `api/branch/site/draft/image/{slot}` | – | hayır | `SiteEditor` |
-| POST | `api/branch/site/draft/gallery[?index=N]` | multipart `file` | hayır | `SiteEditor` |
-| POST | `api/branch/site/draft/gallery/stock[?index=N]` | `{ "stockImageId": "…" }` | hayır | `SiteEditor` |
-| DELETE | `api/branch/site/draft/gallery/{index}` | – | hayır | `SiteEditor` |
-| PUT | `api/branch/site/draft/gallery/order` | `{ "order": [2, 0, 1] }` | hayır | `SiteEditor` |
-| POST | `api/branch/site/draft/regions/{regionId}/image` | multipart `file` | hayır | `SiteEditor` |
-| POST | `api/branch/site/draft/regions/{regionId}/image/stock` | `{ "stockImageId": "…" }` | hayır | `SiteEditor` |
-| DELETE | `api/branch/site/draft/regions/{regionId}/image` | – | hayır | `SiteEditor` |
+| GET | `api/company/site/draft` | – | – | `SiteEditor` |
+| PUT | `api/company/site/draft` | metinler + `version` (aşağıda) | **evet** | `SiteEditor` · 409 |
+| POST | `api/company/site/draft/revert` | `{ "version": 7, "fields": ["coverImage", "region:{id}"] }` | **evet** | `SiteEditor` · 409 |
+| POST | `api/company/site/draft/publish` | `{ "version": 7 }` | **evet** | `SiteEditor` · 409 |
+| POST | `api/company/site/draft/discard` | `{ "version": 7 }` | **evet** | `SiteEditor` · 409 |
+| POST | `api/company/site/draft/image/{slot}` | multipart `file` | hayır | `SiteEditor` |
+| POST | `api/company/site/draft/image/{slot}/stock` | `{ "stockImageId": "…" }` | hayır | `SiteEditor` |
+| DELETE | `api/company/site/draft/image/{slot}` | – | hayır | `SiteEditor` |
+| POST | `api/company/site/draft/gallery[?index=N]` | multipart `file` | hayır | `SiteEditor` |
+| POST | `api/company/site/draft/gallery/stock[?index=N]` | `{ "stockImageId": "…" }` | hayır | `SiteEditor` |
+| DELETE | `api/company/site/draft/gallery/{index}` | – | hayır | `SiteEditor` |
+| PUT | `api/company/site/draft/gallery/order` | `{ "order": [2, 0, 1] }` | hayır | `SiteEditor` |
+| POST | `api/company/site/draft/regions/{regionId}/image` | multipart `file` | hayır | `SiteEditor` |
+| POST | `api/company/site/draft/regions/{regionId}/image/stock` | `{ "stockImageId": "…" }` | hayır | `SiteEditor` |
+| DELETE | `api/company/site/draft/regions/{regionId}/image` | – | hayır | `SiteEditor` |
 | GET | `api/stock-images?q=` | – | – | `[{ id, title, group, url }]` (mevcut, en çok 48) |
 
 - `{slot}`: `cover` | `about` | `founder` | `share` | `hero-menu` | `hero-hakkimizda` | `hero-mekan` | `hero-iletisim` |
@@ -147,7 +158,7 @@ ayrıca her bölüm için `region:{regionId}` (bölümün fotoğrafı ve açıkl
 - Etiketler ve sayfa adları backend'de sabittir (`SiteDraft.cs` → `SiteEditor.Fields`). Ön yüz isterse kendi metnini
   kullanabilir.
 
-### PUT `api/branch/site/draft` (metinler, otomatik kayıt)
+### PUT `api/company/site/draft` (metinler, otomatik kayıt)
 
 Gövde, eski `PUT api/branch/site` ile aynı alanları ve üç ek alanı taşır:
 
@@ -436,8 +447,8 @@ nginx'i kullanır.
 
 | Eski uç (yayına doğrudan yazar) | Yeni düzenleyicideki karşılığı |
 |---|---|
-| `GET api/branch/site` | `GET api/branch/site/draft` (`published` alanı aynı şekil) |
-| `PUT api/branch/site` | `PUT api/branch/site/draft` |
+| `GET api/branch/site` | `GET api/company/site/draft` (`published` alanı aynı şekil) |
+| `PUT api/branch/site` | `PUT api/company/site/draft` |
 | `POST/DELETE api/branch/site/image/{cover\|about\|founder}` | `…/site/draft/image/{slot}` (+ `/stock`, `share`) |
 | `POST api/branch/site/gallery`, `DELETE …/gallery/{i}`, `PUT …/gallery/order` | `…/site/draft/gallery…` |
 | `POST/DELETE api/branch/site/regions/{id}/image` | `…/site/draft/regions/{id}/image…` |
@@ -454,7 +465,7 @@ taslaktaki değerle ezilir. Ön yüz düzenleyiciye geçince eski uçlar (`Branc
 - **Açıklamadaki adres:** Tasarımdaki örnek açık adresi kullanıyor ("Moda Cd. 48, Kadıköy · Salı–Pazar…"). Brief yalnız
   ilçe istedi; otomatik açıklama şu an `alt başlık · ilçe · saatler`. Adres de istenirse `SiteSeo.AutoDescription`'da
   tek satırlık değişiklik yeter.
-- **Kenar çubuğundaki turuncu nokta:** Hafif bir uç yok. Şimdilik `GET api/branch/site/draft` → `hasChanges` kullanılır.
+- **Kenar çubuğundaki turuncu nokta:** Hafif bir uç yok. Şimdilik `GET api/company/site/draft` → `hasChanges` kullanılır.
   Gerekirse `/me` ya da sayaçlar ucuna `siteHasDraft` eklenebilir.
 - **"Sitenizi güzelleştirin" puanı** yayındaki siteyi puanlar, taslağı değil. Düzenleyicide taslağa göre görünmesi
   istenirse `SiteCompleteness.Evaluate` snapshot alacak şekilde değiştirilmeli.

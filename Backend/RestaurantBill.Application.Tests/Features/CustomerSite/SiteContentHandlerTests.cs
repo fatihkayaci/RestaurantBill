@@ -1,4 +1,5 @@
 using FluentValidation.TestHelper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.CustomerSite;
@@ -7,12 +8,13 @@ using RestaurantBill.Application.Features.CustomerSite.Public;
 using RestaurantBill.Application.Tests.Fakes;
 using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
-using RestaurantBill.Domain.Enums;
+using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Tests.Features.CustomerSite;
 
-// Admin "Restoran sitesi": ek içerik (tema, galeri, haftalık saat, usta, yorumlar, bölüm fotoğrafı), doğrulama,
-// "Sitenizi güzelleştirin" puanı ve müşteri sitesine yansıması.
+// "Restoran sitesi" (şirket geneli; sahip taslağa yazar, Yayınla ile müşteriye gider): ek içerik (tema, galeri, usta,
+// yorumlar, bölüm açıklaması), doğrulama, "Sitenizi güzelleştirin" puanı ve müşteri sitesine yansıması. Şubeye ait
+// bilgiler (haftalık saat, WhatsApp, nasıl gelinir) Ayarlar → Saatler ve iletişim'den (UpdateBranchSiteInfoCommand).
 public class SiteContentHandlerTests : ApplicationTestBase
 {
     private const string Slug = "narli-ev";
@@ -20,14 +22,27 @@ public class SiteContentHandlerTests : ApplicationTestBase
     private readonly FakeTenantResolver _tenant = new() { Slug = Slug };
     private readonly FakeImageStorageService _storage = new() { NextKey = "site/yeni.webp" };
     private static readonly IOptions<BunnyStorageOptions> Cdn = Options.Create(new BunnyStorageOptions { CdnBaseUrl = "https://cdn.test/" });
+    private static readonly IOptions<SeoOptions> Seo = Options.Create(new SeoOptions());
 
     private Branch _branch = default!;
     private Region _salon = default!;
+
+    private FakeCurrentUserService Owner => new()
+    {
+        Role = "Owner", UserId = CurrentUser.UserId, CompanyId = CurrentUser.CompanyId, BranchId = CurrentUser.CompanyId,
+    };
+
+    // Ayarlar şube modunda: token şubenin id'sini taşır.
+    private FakeCurrentUserService BranchAdmin => new()
+    {
+        Role = "Admin", UserId = CurrentUser.UserId, CompanyId = CurrentUser.CompanyId, BranchId = CurrentUser.BranchId,
+    };
 
     private async Task SeedAsync(bool withMenu = true)
     {
         User owner = await SeedActorAsync();
         Company company = Company.Create("Narlı Ev", owner);
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(company, CurrentUser.CompanyId);
         company.Slug = Slug;
         DbContext.Companies.Add(company);
         await DbContext.SaveChangesAsync();
@@ -48,16 +63,13 @@ public class SiteContentHandlerTests : ApplicationTestBase
         await DbContext.SaveChangesAsync();
     }
 
-    private static UpdateBranchSiteCommand FullCommand(Guid regionId) => new()
+    private static SaveSiteDraftCommand FullCommand(Guid regionId) => new()
     {
         Headline = "Avlulu bir taş evde.",
         StoryTitle = "Üç kuşaktır aynı ocağın başındayız.",
         About = "1987'de açıldık.",
         InstagramUrl = "https://instagram.com/narliev",
         Theme = "bordo",
-        WeeklyHours = [.. new[] { 1, 2, 3, 4, 5, 6, 0 }.Select(d => new SiteDayHoursDto { Day = d, IsOpen = d != 0, Opens = "09:00", Closes = "23:30" })],
-        DirectionsNote = "Kadıköy iskelesinden 12 dk yürüme.",
-        WhatsappPhone = "0532 000 48 48",
         Amenities = ["avlu", "vale"],
         Rating = 4.7m,
         ReviewCount = 1240,
@@ -69,35 +81,61 @@ public class SiteContentHandlerTests : ApplicationTestBase
         FoundedYear = 1987,
         Values = [new SiteValueDto { Title = "Her sabah zırh", Text = "Kıyma günlük, el ile çekilir." }],
         Milestones = [new SiteMilestoneDto { Year = 2019, Text = "Moda'ya taşındık." }, new SiteMilestoneDto { Year = 1987, Text = "Açıldık." }],
-        RegionDetails = [new SiteRegionDetailDto { RegionId = regionId, Description = "Ocak başına bakan masalar." }, new SiteRegionDetailDto { RegionId = Guid.NewGuid(), Description = "Başka şube" }],
+        RegionDetails = [new SiteRegionDetailDto { RegionId = regionId, Description = "Ocak başına bakan masalar." }, new SiteRegionDetailDto { RegionId = Guid.NewGuid(), Description = "Başka şirket" }],
     };
 
-    private Task<Domain.Shared.Result<BranchSiteDto>> UpdateAsync(UpdateBranchSiteCommand command)
-        => new UpdateBranchSiteCommandHandler(Db, CurrentUser, Cdn).Handle(command, CancellationToken.None);
+    private static UpdateBranchSiteInfoCommand FullInfo() => new()
+    {
+        WeeklyHours = [.. new[] { 1, 2, 3, 4, 5, 6, 0 }.Select(d => new SiteDayHoursDto { Day = d, IsOpen = d != 0, Opens = "09:00", Closes = "23:30" })],
+        HoursNote = "Pazar kapalıyız.",
+        DirectionsNote = "Kadıköy iskelesinden 12 dk yürüme.",
+        WhatsappPhone = "0532 000 48 48",
+    };
+
+    private async Task<int> VersionAsync()
+        => (await new GetSiteEditorQueryHandler(Db, Owner, Cdn, Seo).Handle(new GetSiteEditorQuery(), CancellationToken.None)).Value!.Version;
+
+    /// <summary>Taslağa yazar ve yayınlar; yayındaki hâli döner.</summary>
+    private async Task<Result<BranchSiteDto>> UpdateAsync(SaveSiteDraftCommand command)
+    {
+        command.Version = await VersionAsync();
+        var saved = await new SaveSiteDraftCommandHandler(Db, Owner, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
+        if (!saved.IsSuccess) return Result<BranchSiteDto>.Failure(saved.Error!);
+        var published = await new PublishSiteDraftCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new PublishSiteDraftCommand { Version = saved.Value!.Editor.Version }, CancellationToken.None);
+        return Result<BranchSiteDto>.Success(published.Value!.Editor.Published);
+    }
+
+    private Task<Result<BranchSiteInfoDto>> UpdateInfoAsync(UpdateBranchSiteInfoCommand command)
+        => new UpdateBranchSiteInfoCommandHandler(Db, BranchAdmin).Handle(command, CancellationToken.None);
+
+    private Task<Result<SiteEditorDto>> ImageAsync(SetSiteDraftImageCommand command, string nextKey)
+    {
+        _storage.NextKey = nextKey;
+        return new SetSiteDraftImageCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
+    }
+
+    private async Task PublishDraftAsync()
+        => Assert.True((await new PublishSiteDraftCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new PublishSiteDraftCommand { Version = await VersionAsync() }, CancellationToken.None)).IsSuccess);
 
     [Fact]
-    public async Task Update_SavesAllFields_AndGetReturnsThem()
+    public async Task Update_SavesAllFields_AndEditorReturnsThem()
     {
         await SeedAsync();
 
         var saved = await UpdateAsync(FullCommand(_salon.Id));
         Assert.True(saved.IsSuccess, saved.Error);
 
-        var result = await new GetBranchSiteQueryHandler(Db, CurrentUser, Cdn).Handle(new GetBranchSiteQuery(), CancellationToken.None);
-        BranchSiteDto site = result.Value!;
+        BranchSiteDto site = saved.Value!;
         Assert.Equal("bordo", site.Theme);
-        Assert.Equal(7, site.WeeklyHours.Count);
-        Assert.Equal(1, site.WeeklyHours[0].Day); // Pazartesi başta
-        Assert.False(site.WeeklyHours.Single(d => d.Day == 0).IsOpen);
-        Assert.Equal("09:00", site.OpensAt); // eski tek aralık en sık aralıkla güncellendi
-        Assert.Equal("23:30", site.ClosesAt);
         Assert.Equal(["avlu", "vale"], site.Amenities);
         Assert.Equal(4.7m, site.Rating);
         Assert.Equal("Elif K.", Assert.Single(site.FeaturedReviews).Author);
         Assert.Equal("Hasan Narlı", site.FounderName);
         Assert.Equal(1987, site.FoundedYear);
         Assert.Equal([1987, 2019], site.Milestones.Select(m => m.Year));
-        // Admin şeklinde şubenin bütün bölümleri var; başka şubenin bölüm kimliği yok sayıldı.
+        // Admin şeklinde şirketin bütün bölümleri var; başka şirketin bölüm kimliği yok sayıldı.
         SiteRegionDetailDto region = Assert.Single(site.RegionDetails);
         Assert.Equal("Salon", region.Name);
         Assert.Equal(1, region.TableCount);
@@ -108,30 +146,93 @@ public class SiteContentHandlerTests : ApplicationTestBase
     public async Task Update_DomainError_ReturnsFailure_AndDoesNotSave()
     {
         await SeedAsync();
-        UpdateBranchSiteCommand command = FullCommand(_salon.Id);
+        SaveSiteDraftCommand command = FullCommand(_salon.Id);
         command.Amenities = ["havuz"];
 
         var result = await UpdateAsync(command);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("hazır listeden", result.Error);
-        Assert.Null((await DbContext.Branches.FindAsync(_branch.Id))!.SiteContent);
+        Company company = await DbContext.Companies.AsNoTracking().FirstAsync(c => c.Id == CurrentUser.CompanyId);
+        Assert.Null(company.SiteDraft);
+        Assert.Null(company.Site);
     }
+
+    // ── Şubenin site bilgileri (Ayarlar → Saatler ve iletişim) ────────────────────────────────────
+
+    [Fact]
+    public async Task BranchInfo_SavesHoursWhatsappDirections_AndReachesPublicSite()
+    {
+        await SeedAsync();
+
+        var saved = await UpdateInfoAsync(FullInfo());
+
+        Assert.True(saved.IsSuccess, saved.Error);
+        BranchSiteInfoDto info = saved.Value!;
+        Assert.Equal(7, info.WeeklyHours.Count);
+        Assert.Equal(1, info.WeeklyHours[0].Day); // Pazartesi başta
+        Assert.Equal("09:00", info.OpensAt); // eski tek aralık en sık aralıkla güncellendi
+        Assert.Equal("23:30", info.ClosesAt);
+        Assert.Equal("0532 000 48 48", info.WhatsappPhone);
+
+        var get = await new GetBranchSiteInfoQueryHandler(Db, BranchAdmin).Handle(new GetBranchSiteInfoQuery(), CancellationToken.None);
+        Assert.Equal("Kadıköy iskelesinden 12 dk yürüme.", get.Value!.DirectionsNote);
+
+        var site = await new GetPublicSiteQueryHandler(Db, _tenant, Cdn).Handle(new GetPublicSiteQuery(), CancellationToken.None);
+        Assert.Equal("0532 000 48 48", site.Value!.Site.WhatsappPhone);
+        Assert.Equal("Pazar kapalıyız.", site.Value.Site.HoursNote);
+        Assert.False(site.Value.Site.WeeklyHours.Single(d => d.Day == 0).IsOpen);
+        Assert.NotNull(site.Value.IsOpenNow);
+    }
+
+    [Fact]
+    public async Task BranchInfo_InvalidPhone_Fails_CompanyMode_HasNoBranch()
+    {
+        await SeedAsync();
+        UpdateBranchSiteInfoCommand command = FullInfo();
+        command.WhatsappPhone = "whatsapp";
+
+        var bad = await UpdateInfoAsync(command);
+        var companyMode = await new GetBranchSiteInfoQueryHandler(Db, Owner).Handle(new GetBranchSiteInfoQuery(), CancellationToken.None);
+
+        Assert.False(bad.IsSuccess);
+        Assert.Null((await DbContext.Branches.AsNoTracking().FirstAsync(b => b.Id == _branch.Id)).SiteContent);
+        Assert.False(companyMode.IsSuccess); // "Tümü" modunda şube yok
+    }
+
+    [Fact]
+    public void BranchInfoValidator_RejectsLimits()
+    {
+        var result = new UpdateBranchSiteInfoCommandValidator().TestValidate(new UpdateBranchSiteInfoCommand
+        {
+            OpensAt = "9",
+            WeeklyHours = [new SiteDayHoursDto { Day = 1, IsOpen = true, Opens = "9", Closes = "23:00" }],
+            DirectionsNote = new string('a', SiteContent.DirectionsNoteMaxLength + 1),
+            HoursNote = new string('a', Branch.HoursNoteMaxLength + 1),
+        });
+
+        result.ShouldHaveValidationErrorFor(x => x.OpensAt);
+        result.ShouldHaveValidationErrorFor(x => x.WeeklyHours);
+        result.ShouldHaveValidationErrorFor("WeeklyHours[0].Opens");
+        result.ShouldHaveValidationErrorFor(x => x.DirectionsNote);
+        result.ShouldHaveValidationErrorFor(x => x.HoursNote);
+        new UpdateBranchSiteInfoCommandValidator().TestValidate(new UpdateBranchSiteInfoCommand()).ShouldNotHaveAnyValidationErrors();
+    }
+
+    // ── Sitenin metin doğrulaması ─────────────────────────────────────────────────────────────────
 
     [Fact]
     public void Validator_RejectsLimits()
     {
-        var validator = new UpdateBranchSiteCommandValidator();
-        var command = new UpdateBranchSiteCommand
+        var validator = new SaveSiteDraftCommandValidator();
+        var command = new SaveSiteDraftCommand
         {
             Theme = "pembe",
             Rating = 6,
-            WeeklyHours = [new SiteDayHoursDto { Day = 1, IsOpen = true, Opens = "9", Closes = "23:00" }],
             FeaturedReviews = [.. Enumerable.Range(0, 4).Select(_ => new SiteReviewDto { Author = "A", Text = "B" })],
             Values = [.. Enumerable.Range(0, 4).Select(_ => new SiteValueDto { Title = "A" })],
             Milestones = [.. Enumerable.Range(0, 6).Select(i => new SiteMilestoneDto { Year = 2000 + i, Text = "A" })],
             Amenities = ["havuz"],
-            DirectionsNote = new string('a', SiteContent.DirectionsNoteMaxLength + 1),
             FounderQuote = new string('a', SiteContent.FounderQuoteMaxLength + 1),
         };
 
@@ -139,31 +240,28 @@ public class SiteContentHandlerTests : ApplicationTestBase
 
         result.ShouldHaveValidationErrorFor(x => x.Theme);
         result.ShouldHaveValidationErrorFor(x => x.Rating);
-        result.ShouldHaveValidationErrorFor(x => x.WeeklyHours);
-        result.ShouldHaveValidationErrorFor("WeeklyHours[0].Opens");
         result.ShouldHaveValidationErrorFor(x => x.FeaturedReviews.Count);
         result.ShouldHaveValidationErrorFor(x => x.Values.Count);
         result.ShouldHaveValidationErrorFor(x => x.Milestones.Count);
         result.ShouldHaveValidationErrorFor("Amenities[0]");
-        result.ShouldHaveValidationErrorFor(x => x.DirectionsNote);
         result.ShouldHaveValidationErrorFor(x => x.FounderQuote);
     }
 
     [Fact]
     public void Validator_HiddenFaqs_RejectsBadKeysAndTooMany_AcceptsSlugsAndNull()
     {
-        var validator = new UpdateBranchSiteCommandValidator();
+        var validator = new SaveSiteDraftCommandValidator();
 
-        var bad = validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = ["rezervasyon", "Ödeme yolu!", new string('a', 41)] });
+        var bad = validator.TestValidate(new SaveSiteDraftCommand { HiddenFaqs = ["rezervasyon", "Ödeme yolu!", new string('a', 41)] });
         bad.ShouldHaveValidationErrorFor("HiddenFaqs[1]");
         bad.ShouldHaveValidationErrorFor("HiddenFaqs[2]");
         bad.ShouldNotHaveValidationErrorFor("HiddenFaqs[0]");
 
-        var many = validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = [.. Enumerable.Range(0, SiteContent.HiddenFaqsMax + 1).Select(i => $"soru-{i}")] });
+        var many = validator.TestValidate(new SaveSiteDraftCommand { HiddenFaqs = [.. Enumerable.Range(0, SiteContent.HiddenFaqsMax + 1).Select(i => $"soru-{i}")] });
         many.ShouldHaveValidationErrorFor("HiddenFaqs.Count");
 
-        validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = ["rezervasyon-sorgula", "otopark", "teslimat-bolgeleri"] }).ShouldNotHaveAnyValidationErrors();
-        validator.TestValidate(new UpdateBranchSiteCommand { HiddenFaqs = null }).ShouldNotHaveAnyValidationErrors();
+        validator.TestValidate(new SaveSiteDraftCommand { HiddenFaqs = ["rezervasyon-sorgula", "otopark", "teslimat-bolgeleri"] }).ShouldNotHaveAnyValidationErrors();
+        validator.TestValidate(new SaveSiteDraftCommand { HiddenFaqs = null }).ShouldNotHaveAnyValidationErrors();
     }
 
     [Theory]
@@ -171,8 +269,8 @@ public class SiteContentHandlerTests : ApplicationTestBase
     [InlineData("tema2")]
     [InlineData("renkli-sade")]
     public void Validator_Design_RejectsUnknownKey(string design)
-        => new UpdateBranchSiteCommandValidator()
-            .TestValidate(new UpdateBranchSiteCommand { Design = design })
+        => new SaveSiteDraftCommandValidator()
+            .TestValidate(new SaveSiteDraftCommand { Design = design })
             .ShouldHaveValidationErrorFor(x => x.Design);
 
     [Theory]
@@ -186,21 +284,21 @@ public class SiteContentHandlerTests : ApplicationTestBase
     [InlineData("sicak")]
     [InlineData(" SICAK ")]
     public void Validator_Design_AcceptsKnownEmptyAndNull(string? design)
-        => new UpdateBranchSiteCommandValidator()
-            .TestValidate(new UpdateBranchSiteCommand { Design = design })
+        => new SaveSiteDraftCommandValidator()
+            .TestValidate(new SaveSiteDraftCommand { Design = design })
             .ShouldNotHaveAnyValidationErrors();
 
     [Fact]
-    public async Task Update_Design_NormalizedAndKeptWhenOldFormOmitsIt()
+    public async Task Update_Design_NormalizedAndKeptWhenOmitted()
     {
         await SeedAsync();
-        UpdateBranchSiteCommand command = FullCommand(_salon.Id);
+        SaveSiteDraftCommand command = FullCommand(_salon.Id);
         command.Design = " SADE ";
         var first = await UpdateAsync(command);
         Assert.True(first.IsSuccess, first.Error);
         Assert.Equal("sade", first.Value!.Design);
 
-        // Eski form alanı göndermez (null): tasarım korunur.
+        // Alan gönderilmezse (null) tasarım korunur.
         command.Design = null;
         var second = await UpdateAsync(command);
         Assert.True(second.IsSuccess, second.Error);
@@ -222,8 +320,8 @@ public class SiteContentHandlerTests : ApplicationTestBase
     [InlineData("playfair")]
     [InlineData("inter-playfair")]
     public void Validator_Font_RejectsUnknownKey(string font)
-        => new UpdateBranchSiteCommandValidator()
-            .TestValidate(new UpdateBranchSiteCommand { Font = font })
+        => new SaveSiteDraftCommandValidator()
+            .TestValidate(new SaveSiteDraftCommand { Font = font })
             .ShouldHaveValidationErrorFor(x => x.Font);
 
     [Theory]
@@ -238,21 +336,21 @@ public class SiteContentHandlerTests : ApplicationTestBase
     [InlineData(" Grotesk-Inter ")]
     [InlineData("montserrat-poppins")]
     public void Validator_Font_AcceptsKnownEmptyAndNull(string? font)
-        => new UpdateBranchSiteCommandValidator()
-            .TestValidate(new UpdateBranchSiteCommand { Font = font })
+        => new SaveSiteDraftCommandValidator()
+            .TestValidate(new SaveSiteDraftCommand { Font = font })
             .ShouldNotHaveAnyValidationErrors();
 
     [Fact]
     public void Validator_AcceptsNewAmenityKeys()
-        => new UpdateBranchSiteCommandValidator()
-            .TestValidate(new UpdateBranchSiteCommand { Amenities = ["bebek-sandalyesi", "aile-salonu", "sigara-alani", "ozel-gun"] })
+        => new SaveSiteDraftCommandValidator()
+            .TestValidate(new SaveSiteDraftCommand { Amenities = ["bebek-sandalyesi", "aile-salonu", "sigara-alani", "ozel-gun"] })
             .ShouldNotHaveAnyValidationErrors();
 
     [Fact]
-    public async Task Update_NewAmenities_KeptInFixedOrder_AndOldFormKeepsHiddenFaqs()
+    public async Task Update_NewAmenities_KeptInFixedOrder_AndOmittedHiddenFaqsKept()
     {
         await SeedAsync();
-        UpdateBranchSiteCommand command = FullCommand(_salon.Id);
+        SaveSiteDraftCommand command = FullCommand(_salon.Id);
         command.Amenities = ["ozel-gun", "otopark", "bebek-sandalyesi", "sigara-alani", "aile-salonu"];
         command.HiddenFaqs = ["Otopark", "odeme", "otopark"];
 
@@ -262,7 +360,7 @@ public class SiteContentHandlerTests : ApplicationTestBase
         // Küçük harfe çevrilir, tekrar atılır, sıra korunur.
         Assert.Equal(["otopark", "odeme"], first.Value.HiddenFaqs);
 
-        // Eski form alanı göndermez (null): gizlenenler korunur.
+        // Alan gönderilmezse (null) gizlenenler korunur.
         command.HiddenFaqs = null;
         var second = await UpdateAsync(command);
         Assert.True(second.IsSuccess, second.Error);
@@ -275,72 +373,36 @@ public class SiteContentHandlerTests : ApplicationTestBase
 
     [Fact]
     public void Validator_AcceptsEmptyCommand()
-        => new UpdateBranchSiteCommandValidator().TestValidate(new UpdateBranchSiteCommand()).ShouldNotHaveAnyValidationErrors();
+        => new SaveSiteDraftCommandValidator().TestValidate(new SaveSiteDraftCommand()).ShouldNotHaveAnyValidationErrors();
+
+    // ── Fotoğraflar ───────────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Gallery_AddRemoveReorder_AndTwelfthIsLast()
+    public async Task Gallery_TwelfthIsLast_UploadsUnderSiteFolder()
     {
         await SeedAsync();
-        var add = new AddSiteGalleryImageCommandHandler(Db, CurrentUser, _storage, Cdn);
-
         for (int i = 0; i < SiteContent.GalleryMax; i++)
         {
-            _storage.NextKey = $"site/{i}.webp";
-            var r = await add.Handle(new AddSiteGalleryImageCommand { Content = new MemoryStream([1]) }, CancellationToken.None);
+            var r = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Gallery, Content = new MemoryStream([1]) }, $"site/{i}.webp");
             Assert.True(r.IsSuccess, r.Error);
         }
         Assert.Equal("site", _storage.LastFolder);
 
         int uploadsBefore = _storage.UploadedKeys.Count;
-        var full = await add.Handle(new AddSiteGalleryImageCommand { Content = new MemoryStream([1]) }, CancellationToken.None);
+        var full = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Gallery, Content = new MemoryStream([1]) }, "site/fazla.webp");
         Assert.False(full.IsSuccess);
         Assert.Equal(uploadsBefore, _storage.UploadedKeys.Count); // dolu galeriye dosya yüklenmedi
-
-        var removed = await new RemoveSiteGalleryImageCommandHandler(Db, CurrentUser, _storage, Cdn)
-            .Handle(new RemoveSiteGalleryImageCommand { Index = 0 }, CancellationToken.None);
-        Assert.True(removed.IsSuccess, removed.Error);
-        Assert.Contains("site/0.webp", _storage.DeletedKeys);
-        Assert.Equal(11, removed.Value!.GalleryImageUrls.Count);
-        Assert.Equal("https://cdn.test/site/1.webp", removed.Value.GalleryImageUrls[0]);
-
-        var reordered = await new ReorderSiteGalleryCommandHandler(Db, CurrentUser, Cdn)
-            .Handle(new ReorderSiteGalleryCommand { Order = [.. Enumerable.Range(0, 11).Reverse()] }, CancellationToken.None);
-        Assert.True(reordered.IsSuccess, reordered.Error);
-        Assert.Equal("https://cdn.test/site/11.webp", reordered.Value!.GalleryImageUrls[0]);
-
-        var bad = await new ReorderSiteGalleryCommandHandler(Db, CurrentUser, Cdn)
-            .Handle(new ReorderSiteGalleryCommand { Order = [0, 1] }, CancellationToken.None);
-        Assert.False(bad.IsSuccess);
-    }
-
-    [Fact]
-    public async Task FounderPhoto_UploadsAndReplaces()
-    {
-        await SeedAsync();
-        var handler = new SetBranchSiteImageCommandHandler(Db, CurrentUser, _storage, Cdn);
-
-        _storage.NextKey = "site/usta-1.webp";
-        await handler.Handle(new SetBranchSiteImageCommand { Slot = SiteImageSlot.Founder, Content = new MemoryStream([1]) }, CancellationToken.None);
-        _storage.NextKey = "site/usta-2.webp";
-        var result = await handler.Handle(new SetBranchSiteImageCommand { Slot = SiteImageSlot.Founder, Content = new MemoryStream([1]) }, CancellationToken.None);
-
-        Assert.True(result.IsSuccess, result.Error);
-        Assert.Equal("https://cdn.test/site/usta-2.webp", result.Value!.FounderPhotoUrl);
-        Assert.Contains("site/usta-1.webp", _storage.DeletedKeys);
-        Assert.Equal(1000, _storage.LastMaxSize);
     }
 
     [Fact]
     public async Task RegionPhoto_OnlyForOwnRegion_AndShowsOnPublicSite()
     {
         await SeedAsync();
-        var handler = new SetSiteRegionImageCommandHandler(Db, CurrentUser, _storage, Cdn);
 
-        var foreign = await handler.Handle(new SetSiteRegionImageCommand { RegionId = Guid.NewGuid(), Content = new MemoryStream([1]) }, CancellationToken.None);
+        var foreign = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Region, RegionId = Guid.NewGuid(), Content = new MemoryStream([1]) }, "site/x.webp");
         Assert.False(foreign.IsSuccess);
 
-        _storage.NextKey = "site/salon.webp";
-        var ok = await handler.Handle(new SetSiteRegionImageCommand { RegionId = _salon.Id, Content = new MemoryStream([1]) }, CancellationToken.None);
+        var ok = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Region, RegionId = _salon.Id, Content = new MemoryStream([1]) }, "site/salon.webp");
         Assert.True(ok.IsSuccess, ok.Error);
         await UpdateAsync(FullCommand(_salon.Id));
 
@@ -351,14 +413,10 @@ public class SiteContentHandlerTests : ApplicationTestBase
         Assert.Equal("Ocak başına bakan masalar.", region.Description);
         Assert.Equal("bordo", site.Value.Site.Theme);
         Assert.Empty(site.Value.Site.RegionDetails); // sitede bölüm bilgisi regions[] içinde
-
-        var removed = await handler.Handle(new SetSiteRegionImageCommand { RegionId = _salon.Id, Content = null }, CancellationToken.None);
-        Assert.Equal(string.Empty, Assert.Single(removed.Value!.RegionDetails).PhotoUrl);
-        Assert.Contains("site/salon.webp", _storage.DeletedKeys);
     }
 
     [Fact]
-    public async Task PublicSite_OldRestaurant_HasDefaultThemeAndToday()
+    public async Task PublicSite_NeverPublished_HasDefaultThemeAndToday()
     {
         await SeedAsync();
 
@@ -371,12 +429,14 @@ public class SiteContentHandlerTests : ApplicationTestBase
         Assert.InRange(site.Value.Today, 0, 6);
     }
 
+    // ── "Sitenizi güzelleştirin" ──────────────────────────────────────────────────────────────────
+
     [Fact]
     public async Task Completeness_EmptySite_IsLow_AndOrderedByImpact()
     {
         await SeedAsync();
 
-        var result = await new GetSiteCompletenessQueryHandler(Db, CurrentUser).Handle(new GetSiteCompletenessQuery(), CancellationToken.None);
+        var result = await new GetSiteCompletenessQueryHandler(Db, Owner).Handle(new GetSiteCompletenessQuery(), CancellationToken.None);
 
         SiteCompletenessDto c = result.Value!;
         Assert.InRange(c.Score, 0, 20);
@@ -396,16 +456,19 @@ public class SiteContentHandlerTests : ApplicationTestBase
         await SeedAsync(withMenu: false);
         Guid category = await DefaultCategoryIdAsync();
         DbContext.Products.Add(Product.Create("Adana Kebap", 520m, "products/adana.webp", category));
-        _branch.UpdateSite("Başlık", "Alt", "Hikâye başlığı", "Hikâye", null, null, "", "https://instagram.com/narliev", "");
-        _branch.ReplaceSiteImage(SiteImageSlot.Cover, "site/kapak.webp");
-        _branch.ReplaceSiteImage(SiteImageSlot.About, "site/hikaye.webp");
-        _branch.ReplaceSiteImage(SiteImageSlot.Founder, "site/usta.webp");
-        for (int i = 0; i < 3; i++) _branch.AddSiteGalleryImage($"site/g{i}.webp");
-        _branch.ReplaceSiteRegionPhoto(_salon.Id, "site/salon.webp");
         await DbContext.SaveChangesAsync();
-        await UpdateAsync(FullCommand(_salon.Id));
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, Content = new MemoryStream([1]) }, "site/kapak.webp");
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.About, Content = new MemoryStream([1]) }, "site/hikaye.webp");
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Founder, Content = new MemoryStream([1]) }, "site/usta.webp");
+        for (int i = 0; i < 3; i++)
+            await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Gallery, Content = new MemoryStream([1]) }, $"site/g{i}.webp");
+        await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Region, RegionId = _salon.Id, Content = new MemoryStream([1]) }, "site/salon.webp");
+        SaveSiteDraftCommand command = FullCommand(_salon.Id);
+        command.Tagline = "Alt";
+        await UpdateAsync(command);
+        await UpdateInfoAsync(FullInfo()); // saatler, WhatsApp, nasıl gelinir şubeden
 
-        var result = await new GetSiteCompletenessQueryHandler(Db, CurrentUser).Handle(new GetSiteCompletenessQuery(), CancellationToken.None);
+        var result = await new GetSiteCompletenessQueryHandler(Db, Owner).Handle(new GetSiteCompletenessQuery(), CancellationToken.None);
 
         Assert.Equal(100, result.Value!.Score);
         Assert.All(result.Value.Items, i => Assert.True(i.Done, i.Key));
@@ -416,7 +479,7 @@ public class SiteContentHandlerTests : ApplicationTestBase
     {
         await SeedAsync(withMenu: false);
 
-        var result = await new GetSiteCompletenessQueryHandler(Db, CurrentUser).Handle(new GetSiteCompletenessQuery(), CancellationToken.None);
+        var result = await new GetSiteCompletenessQueryHandler(Db, Owner).Handle(new GetSiteCompletenessQuery(), CancellationToken.None);
 
         SiteChecklistItemDto item = result.Value!.Items.Single(i => i.Key == "productPhotos");
         Assert.Equal("Menüye ürün ekleyin", item.Title);

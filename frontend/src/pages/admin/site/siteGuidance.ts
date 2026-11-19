@@ -3,7 +3,8 @@ import type { SiteChecklistItem, SiteCompleteness } from '@/features/customerSit
 // "Sitenizi güzelleştirin": Genel Bakış kartı ve site düzenleyicisinin rehber şeridi aynı listeyi ve sırayı kullanır
 // (sunucu maddeleri görsel etkisine göre sıralar; burada yalnız eksikler ve eylem cümleleri).
 
-export const SITE_SETTINGS_PATH = '/admin/site';
+// Restoran sitesi şirket genelidir: düzenleyici sahibin "Tümü" modunda.
+export const SITE_SETTINGS_PATH = '/owner/site';
 
 /** Eksik maddeler, en çok fark yaratan önce. */
 export function missingItems(data: SiteCompleteness): SiteChecklistItem[] {

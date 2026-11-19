@@ -5,7 +5,8 @@ using RestaurantBill.Application.Features.ContactMessages;
 
 namespace RestaurantBill.WebAPI.Controllers;
 
-// Admin "Şikayet ve Öneriler": restoran sitesinin İletişim formundan gelen mesajlar (şube kapsamlı).
+// "Şikayet ve Öneriler": restoran sitesinin İletişim formundan gelen mesajlar. Şube modunda o şubenin, sahibin "Tümü"
+// modunda bütün şubelerin mesajları (?branchId= ile tek şube).
 [Authorize(Roles = "Owner,Admin")]
 [Route("api/contact-messages")]
 [ApiController]
@@ -18,11 +19,11 @@ public class ContactMessagesController : BaseController
         _mediator = mediator;
     }
 
-    /// <summary>En yenisi önce; ?unreadOnly=true yalnızca okunmamışlar.</summary>
+    /// <summary>En yenisi önce; ?unreadOnly=true yalnızca okunmamışlar; ?branchId= yalnız o şube ("Tümü" modunda süzgeç).</summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] bool unreadOnly, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll([FromQuery] bool unreadOnly, [FromQuery] Guid? branchId, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetContactMessagesQuery { UnreadOnly = unreadOnly }, cancellationToken);
+        var result = await _mediator.Send(new GetContactMessagesQuery { UnreadOnly = unreadOnly, BranchId = branchId }, cancellationToken);
         return HandleResult(result);
     }
 

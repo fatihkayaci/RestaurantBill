@@ -65,9 +65,6 @@ public class BranchSiteDto
 
     public static string ImageUrl(string cdnBaseUrl, string? key) => string.IsNullOrWhiteSpace(key) ? string.Empty : $"{cdnBaseUrl}/{key}";
 
-    /// <summary>Yayındaki site.</summary>
-    public static BranchSiteDto From(Branch branch, string cdnBaseUrl) => From(branch.GetPublishedSite(), cdnBaseUrl);
-
     /// <summary>Verilen hâl (yayındaki ya da taslak).</summary>
     public static BranchSiteDto From(SiteSnapshot site, string cdnBaseUrl)
     {

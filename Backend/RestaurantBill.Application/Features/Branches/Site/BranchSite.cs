@@ -13,33 +13,56 @@ using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Branches.Site;
 
-// Admin "Restoran sitesi" sayfası: oturumdaki şubenin site içeriği.
-// Bu dosyadaki uçlar ESKİ formun uçlarıdır ve YAYINDAKİ siteyi doğrudan değiştirir. Yeni görsel düzenleyici taslağa yazar
-// (SiteDraft.cs, api/branch/site/draft...). Ön yüz düzenleyiciye geçince bu uçlar kaldırılabilir (docs/site-editor.md).
+// Restoran sitesi şirket genelidir (Company.Site / SiteDraft); yalnız sahip, "Tümü" modunda düzenler (SiteDraft.cs).
+// Şubeye ait site bilgileri (saatler, WhatsApp, nasıl gelinir) şubenin Ayarlar'ından değişir (BranchSiteInfo.cs).
+// Bu dosya: ortak yükleyici, sitenin metin girdisi ve doğrulaması, fotoğraf yükleme adımı.
 
-internal static class BranchSiteLoader
+internal static class CompanySiteLoader
 {
-    public static Task<Branch?> LoadAsync(IAppDbContext db, ICurrentUserService currentUser, CancellationToken cancellationToken, bool tracking = true)
+    public const string NotFoundMessage = "Restoran bulunamadı.";
+
+    /// <summary>Oturumdaki sahibin şirketi; sahip değilse null (site yalnız sahip tarafından düzenlenir).</summary>
+    public static Task<Company?> LoadAsync(IAppDbContext db, ICurrentUserService currentUser, CancellationToken cancellationToken, bool tracking = true)
     {
-        IQueryable<Branch> query = tracking ? db.Branches : db.Branches.AsNoTracking();
-        return query.FirstOrDefaultAsync(b => b.Id == currentUser.BranchId && !b.IsDeleted, cancellationToken);
+        if (currentUser.Role != "Owner") return Task.FromResult<Company?>(null);
+        IQueryable<Company> query = tracking ? db.Companies : db.Companies.AsNoTracking();
+        return query.FirstOrDefaultAsync(
+            c => c.Id == currentUser.CompanyId && c.OwnerUserId == currentUser.UserId && !c.IsDeleted, cancellationToken);
     }
 
-    /// <summary>Admin şekli: site içeriği + şubenin bütün bölümleri (ad, masa sayısı, sitedeki fotoğraf ve açıklama).</summary>
-    public static async Task<BranchSiteDto> ToAdminDtoAsync(IAppDbContext db, Branch branch, string cdnBaseUrl, CancellationToken cancellationToken)
-        => ToAdminDto(branch.GetPublishedSite(), await RegionsAsync(db, branch.Id, cancellationToken), cdnBaseUrl);
+    /// <summary>Müşteri sitesinin varsayılan şubesi (en eski şube): önizlemedeki saatler, ilçe ve SEO'nun otomatik metni.</summary>
+    public static Task<Branch?> PrimaryBranchAsync(IAppDbContext db, Guid companyId, CancellationToken cancellationToken)
+        => db.Branches.AsNoTracking()
+            .Where(b => b.CompanyId == companyId && !b.IsDeleted)
+            .OrderBy(b => b.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    /// <summary>Şubenin bilgileriyle birleştirilmiş site (şube yoksa olduğu gibi).</summary>
+    public static SiteSnapshot WithBranch(SiteSnapshot site, Branch? branch) => branch is null ? site : branch.SiteFor(site);
 
     public sealed record RegionRow(Guid Id, string Name, int Tables);
 
-    public static Task<List<RegionRow>> RegionsAsync(IAppDbContext db, Guid branchId, CancellationToken cancellationToken)
-        => db.Regions.AsNoTracking()
-            .Where(r => r.BranchId == branchId)
-            .OrderBy(r => r.SortOrder).ThenBy(r => r.Name)
-            .Select(r => new RegionRow(r.Id, r.Name, db.Tables.Count(t => t.RegionId == r.Id && t.Status != TableStatus.OutOfService)))
+    /// <summary>Şirketin bütün şubelerinin bölümleri; birden fazla şube varsa adın önünde şube adı ("Kadıköy · Bahçe").</summary>
+    public static async Task<List<RegionRow>> RegionsAsync(IAppDbContext db, Guid companyId, CancellationToken cancellationToken)
+    {
+        var rows = await db.Regions.AsNoTracking()
+            .Where(r => r.Branch.CompanyId == companyId && !r.Branch.IsDeleted)
+            .OrderBy(r => r.Branch.CreatedAt).ThenBy(r => r.SortOrder).ThenBy(r => r.Name)
+            .Select(r => new
+            {
+                r.Id, r.Name, r.BranchId, r.Branch.BranchName,
+                Tables = db.Tables.Count(t => t.RegionId == r.Id && t.Status != TableStatus.OutOfService),
+            })
             .ToListAsync(cancellationToken);
+        bool manyBranches = rows.Select(r => r.BranchId).Distinct().Count() > 1;
+        return rows.Select(r => new RegionRow(r.Id, manyBranches ? $"{r.BranchName} · {r.Name}" : r.Name, r.Tables)).ToList();
+    }
 
-    public static async Task<IReadOnlySet<Guid>> RegionIdsAsync(IAppDbContext db, Guid branchId, CancellationToken cancellationToken)
-        => (await db.Regions.AsNoTracking().Where(r => r.BranchId == branchId).Select(r => r.Id).ToListAsync(cancellationToken)).ToHashSet();
+    public static async Task<IReadOnlySet<Guid>> RegionIdsAsync(IAppDbContext db, Guid companyId, CancellationToken cancellationToken)
+        => (await db.Regions.AsNoTracking()
+            .Where(r => r.Branch.CompanyId == companyId && !r.Branch.IsDeleted)
+            .Select(r => r.Id)
+            .ToListAsync(cancellationToken)).ToHashSet();
 
     /// <summary>Verilen hâlin (yayındaki ya da taslak) admin şekli.</summary>
     public static BranchSiteDto ToAdminDto(SiteSnapshot site, IReadOnlyList<RegionRow> regions, string cdnBaseUrl)
@@ -63,13 +86,13 @@ internal static class BranchSiteLoader
 
     /// <summary>
     /// Değişiklikten sonra artık ne yayında ne taslakta kullanılan fotoğrafları siler (en iyi çaba, kayıttan sonra).
-    /// <paramref name="before"/>: değişiklikten önceki <see cref="Branch.SiteImageKeysInUse"/> (ve varsa yeni yüklenen anahtar).
+    /// <paramref name="before"/>: değişiklikten önceki <see cref="Company.SiteImageKeysInUse"/> (ve varsa yeni yüklenen anahtar).
     /// Paylaşılan (shared/) anahtar hiç silinmez.
     /// </summary>
-    public static async Task DeleteUnusedImagesAsync(IImageStorageService imageStorage, Branch branch, IEnumerable<string> before,
+    public static async Task DeleteUnusedImagesAsync(IImageStorageService imageStorage, Company company, IEnumerable<string> before,
         CancellationToken cancellationToken)
     {
-        IReadOnlySet<string> inUse = branch.SiteImageKeysInUse();
+        IReadOnlySet<string> inUse = company.SiteImageKeysInUse();
         foreach (string key in before.Where(k => !inUse.Contains(k)).Distinct())
             await imageStorage.DeleteReplacedImageAsync(key, cancellationToken);
     }
@@ -77,25 +100,11 @@ internal static class BranchSiteLoader
     public static string Cdn(IOptions<BunnyStorageOptions> options) => options.Value.CdnBaseUrl.TrimEnd('/');
 }
 
-// ── Oku ─────────────────────────────────────────────────────────────────────────────────────────
-public class GetBranchSiteQuery : IRequest<Result<BranchSiteDto>>
-{
-}
-
-public class GetBranchSiteQueryHandler(IAppDbContext db, ICurrentUserService currentUser, IOptions<BunnyStorageOptions> storageOptions)
-    : IRequestHandler<GetBranchSiteQuery, Result<BranchSiteDto>>
-{
-    public async Task<Result<BranchSiteDto>> Handle(GetBranchSiteQuery request, CancellationToken cancellationToken)
-    {
-        Branch? branch = await BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken, tracking: false);
-        if (branch is null) return Result<BranchSiteDto>.Failure("Şube bulunamadı.");
-
-        return Result<BranchSiteDto>.Success(await BranchSiteLoader.ToAdminDtoAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), cancellationToken));
-    }
-}
-
-// ── Metinleri ve saatleri kaydet ────────────────────────────────────────────────────────────────
-/// <summary>Sitenin metin kısmı: eski form (<see cref="UpdateBranchSiteCommand"/>) ve taslak (<see cref="SaveSiteDraftCommand"/>) ortak kullanır.</summary>
+// ── Sitenin metinleri ────────────────────────────────────────────────────────────────────────────
+/// <summary>
+/// Sitenin metin kısmı (<see cref="SaveSiteDraftCommand"/>). Şubeye ait alanlar (saatler, saat notu, WhatsApp, nasıl gelinir)
+/// gövdede gelebilir ama şirketin sitesine yazılmaz (<see cref="ClearBranchInfo"/>); onlar şubenin Ayarlar'ından değişir.
+/// </summary>
 public abstract class SiteTextsInput
 {
     public string Headline { get; set; } = string.Empty;
@@ -135,7 +144,18 @@ public abstract class SiteTextsInput
     /// <summary>Bölüm açıklamaları (yalnız RegionId ve Description okunur).</summary>
     public List<SiteRegionDetailDto> RegionDetails { get; set; } = [];
 
-    /// <summary>Domain'in metin girdisi. Başka şubenin bölüm kimliği sessizce yok sayılır. SEO null: değiştirme.</summary>
+    /// <summary>Şubeye ait alanları boşaltır: şirketin sitesine yazılmazlar, doğrulamaya da takılmasınlar.</summary>
+    public void ClearBranchInfo()
+    {
+        OpensAt = null;
+        ClosesAt = null;
+        HoursNote = string.Empty;
+        WeeklyHours = [];
+        DirectionsNote = string.Empty;
+        WhatsappPhone = string.Empty;
+    }
+
+    /// <summary>Domain'in metin girdisi. Başka şirketin bölüm kimliği sessizce yok sayılır. SEO null: değiştirme.</summary>
     internal SiteTexts ToSiteTexts(IReadOnlySet<Guid> regionIds, string? seoTitle = null, string? seoDescription = null) => new()
     {
         Headline = Headline ?? string.Empty,
@@ -182,28 +202,23 @@ public abstract class SiteTextsInput
         string.IsNullOrWhiteSpace(value) ? null : TimeOnly.ParseExact(value, "HH:mm", CultureInfo.InvariantCulture);
 }
 
-/// <summary>Eski "Restoran sitesi" formu: yayındaki siteyi doğrudan değiştirir. Yeni düzenleyici taslağa yazar (SaveSiteDraftCommand).</summary>
-public class UpdateBranchSiteCommand : SiteTextsInput, IRequest<Result<BranchSiteDto>>
-{
-}
-
-/// <summary>Site metinlerinin ortak kuralları (eski form ve taslak).</summary>
+/// <summary>Site metinlerinin kuralları.</summary>
 public abstract class SiteTextsValidator<T> : AbstractValidator<T> where T : SiteTextsInput
 {
     protected SiteTextsValidator()
     {
-        RuleFor(x => x.Headline).MaximumLength(Branch.SiteHeadlineMaxLength)
-            .WithMessage($"Başlık en fazla {Branch.SiteHeadlineMaxLength} karakter olabilir.");
-        RuleFor(x => x.Tagline).MaximumLength(Branch.SiteTaglineMaxLength)
-            .WithMessage($"Alt başlık en fazla {Branch.SiteTaglineMaxLength} karakter olabilir.");
-        RuleFor(x => x.StoryTitle).MaximumLength(Branch.SiteStoryTitleMaxLength)
-            .WithMessage($"Hikâye başlığı en fazla {Branch.SiteStoryTitleMaxLength} karakter olabilir.");
-        RuleFor(x => x.About).MaximumLength(Branch.SiteAboutMaxLength)
-            .WithMessage($"Hikâye en fazla {Branch.SiteAboutMaxLength} karakter olabilir.");
+        RuleFor(x => x.Headline).MaximumLength(SiteSnapshot.HeadlineMaxLength)
+            .WithMessage($"Başlık en fazla {SiteSnapshot.HeadlineMaxLength} karakter olabilir.");
+        RuleFor(x => x.Tagline).MaximumLength(SiteSnapshot.TaglineMaxLength)
+            .WithMessage($"Alt başlık en fazla {SiteSnapshot.TaglineMaxLength} karakter olabilir.");
+        RuleFor(x => x.StoryTitle).MaximumLength(SiteSnapshot.StoryTitleMaxLength)
+            .WithMessage($"Hikâye başlığı en fazla {SiteSnapshot.StoryTitleMaxLength} karakter olabilir.");
+        RuleFor(x => x.About).MaximumLength(SiteSnapshot.AboutMaxLength)
+            .WithMessage($"Hikâye en fazla {SiteSnapshot.AboutMaxLength} karakter olabilir.");
         RuleFor(x => x.HoursNote).MaximumLength(Branch.HoursNoteMaxLength)
             .WithMessage($"Saat notu en fazla {Branch.HoursNoteMaxLength} karakter olabilir.");
-        RuleFor(x => x.InstagramUrl).MaximumLength(Branch.InstagramUrlMaxLength)
-            .WithMessage($"Instagram adresi en fazla {Branch.InstagramUrlMaxLength} karakter olabilir.");
+        RuleFor(x => x.InstagramUrl).MaximumLength(SiteSnapshot.InstagramUrlMaxLength)
+            .WithMessage($"Instagram adresi en fazla {SiteSnapshot.InstagramUrlMaxLength} karakter olabilir.");
         RuleFor(x => x.OpensAt).Must(BeTimeOrEmpty).WithMessage("Açılış saati SS:dd biçiminde olmalıdır.");
         RuleFor(x => x.ClosesAt).Must(BeTimeOrEmpty).WithMessage("Kapanış saati SS:dd biçiminde olmalıdır.");
 
@@ -285,48 +300,17 @@ public abstract class SiteTextsValidator<T> : AbstractValidator<T> where T : Sit
         TimeOnly.TryParseExact(value, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
 }
 
-public class UpdateBranchSiteCommandValidator : SiteTextsValidator<UpdateBranchSiteCommand>
-{
-}
-
-public class UpdateBranchSiteCommandHandler(IAppDbContext db, ICurrentUserService currentUser, IOptions<BunnyStorageOptions> storageOptions)
-    : IRequestHandler<UpdateBranchSiteCommand, Result<BranchSiteDto>>
-{
-    public async Task<Result<BranchSiteDto>> Handle(UpdateBranchSiteCommand request, CancellationToken cancellationToken)
-    {
-        Branch? branch = await BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<BranchSiteDto>.Failure("Şube bulunamadı.");
-
-        // Açıklaması yazılan bölüm bu şubenin olmalı; başka şubenin kimliği sessizce yok sayılır.
-        IReadOnlySet<Guid> regionIds = await BranchSiteLoader.RegionIdsAsync(db, branch.Id, cancellationToken);
-
-        try
-        {
-            SiteTexts texts = request.ToSiteTexts(regionIds);
-            branch.UpdateSite(texts.Headline, texts.Tagline, texts.StoryTitle, texts.About, texts.OpensAt, texts.ClosesAt,
-                texts.HoursNote, texts.InstagramUrl, texts.AccentColor);
-            branch.UpdateSiteContent(texts.Content, DateTime.UtcNow.Year);
-        }
-        catch (DomainException ex)
-        {
-            return Result<BranchSiteDto>.Failure(ex.Message);
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-        return Result<BranchSiteDto>.Success(await BranchSiteLoader.ToAdminDtoAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), cancellationToken));
-    }
-}
-
 // ── Fotoğraf yükleme ortak adımı ────────────────────────────────────────────────────────────────
 internal static class SiteImageUpload
 {
     /// <summary>Görseli yükler; hata olursa kullanıcıya gösterilecek mesajı döner.</summary>
-    public static async Task<(string Key, string? Error)> UploadAsync(IImageStorageService imageStorage, Stream content, Guid branchId, int maxSize,
+    /// <param name="ownerId">Depodaki klasör: şirketin sitesi için şirket id'si.</param>
+    public static async Task<(string Key, string? Error)> UploadAsync(IImageStorageService imageStorage, Stream content, Guid ownerId, int maxSize,
         CancellationToken cancellationToken)
     {
         try
         {
-            return (await imageStorage.UploadAsync(content, branchId, "site", maxSize, cancellationToken), null);
+            return (await imageStorage.UploadAsync(content, ownerId, "site", maxSize, cancellationToken), null);
         }
         catch (ImageUploadException ex)
         {
@@ -337,199 +321,5 @@ internal static class SiteImageUpload
         {
             return (string.Empty, "Görsel dosyası işlenemedi. Lütfen geçerli bir resim yükleyin.");
         }
-    }
-}
-
-// ── Fotoğraf yükle / kaldır (kapak, hikâye, usta) ───────────────────────────────────────────────
-public class SetBranchSiteImageCommand : IRequest<Result<BranchSiteDto>>
-{
-    public SiteImageSlot Slot { get; set; }
-    /// <summary>null: fotoğrafı kaldır.</summary>
-    public Stream? Content { get; set; }
-}
-
-public class SetBranchSiteImageCommandHandler(
-    IAppDbContext db,
-    ICurrentUserService currentUser,
-    IImageStorageService imageStorage,
-    IOptions<BunnyStorageOptions> storageOptions)
-    : IRequestHandler<SetBranchSiteImageCommand, Result<BranchSiteDto>>
-{
-    // Kapak tam ekran gösterildiği için büyük, hikâye fotoğrafı yarım genişlikte, usta portresi küçük.
-    private const int CoverMaxSize = 2000;
-    private const int AboutMaxSize = 1400;
-    private const int FounderMaxSize = 1000;
-
-    public async Task<Result<BranchSiteDto>> Handle(SetBranchSiteImageCommand request, CancellationToken cancellationToken)
-    {
-        if (!Enum.IsDefined(request.Slot)) return Result<BranchSiteDto>.Failure("Geçersiz görsel alanı.");
-
-        Branch? branch = await BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<BranchSiteDto>.Failure("Şube bulunamadı.");
-
-        string newKey = string.Empty;
-        if (request.Content is not null)
-        {
-            int maxSize = request.Slot switch
-            {
-                SiteImageSlot.Cover => CoverMaxSize,
-                SiteImageSlot.Founder => FounderMaxSize,
-                _ => AboutMaxSize,
-            };
-            (newKey, string? error) = await SiteImageUpload.UploadAsync(imageStorage, request.Content, branch.Id, maxSize, cancellationToken);
-            if (error is not null) return Result<BranchSiteDto>.Failure(error);
-        }
-
-        string previousKey = branch.ReplaceSiteImage(request.Slot, newKey);
-        await db.SaveChangesAsync(cancellationToken);
-
-        // Eski dosya en iyi çabayla silinir; paylaşılan anahtar ve taslağın hâlâ kullandığı dosya silinmez.
-        await BranchSiteLoader.DeleteUnusedImagesAsync(imageStorage, branch, [previousKey], cancellationToken);
-
-        return Result<BranchSiteDto>.Success(await BranchSiteLoader.ToAdminDtoAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), cancellationToken));
-    }
-}
-
-// ── Mekân fotoğrafları (galeri): ekle, kaldır, sırala ────────────────────────────────────────────
-public class AddSiteGalleryImageCommand : IRequest<Result<BranchSiteDto>>
-{
-    public Stream Content { get; set; } = Stream.Null;
-}
-
-public class AddSiteGalleryImageCommandHandler(
-    IAppDbContext db,
-    ICurrentUserService currentUser,
-    IImageStorageService imageStorage,
-    IOptions<BunnyStorageOptions> storageOptions)
-    : IRequestHandler<AddSiteGalleryImageCommand, Result<BranchSiteDto>>
-{
-    private const int GalleryMaxSize = 1600;
-
-    public async Task<Result<BranchSiteDto>> Handle(AddSiteGalleryImageCommand request, CancellationToken cancellationToken)
-    {
-        Branch? branch = await BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<BranchSiteDto>.Failure("Şube bulunamadı.");
-
-        // Sınır yüklemeden önce denetlenir: dolu galeriye boşuna dosya yüklenmesin.
-        if (branch.GetSiteContent().GalleryImages.Count >= SiteContent.GalleryMax)
-            return Result<BranchSiteDto>.Failure($"En fazla {SiteContent.GalleryMax} mekân fotoğrafı yüklenebilir. Yenisini eklemek için birini kaldırın.");
-
-        (string key, string? error) = await SiteImageUpload.UploadAsync(imageStorage, request.Content, branch.Id, GalleryMaxSize, cancellationToken);
-        if (error is not null) return Result<BranchSiteDto>.Failure(error);
-
-        try
-        {
-            branch.AddSiteGalleryImage(key);
-        }
-        catch (DomainException ex)
-        {
-            await imageStorage.DeleteReplacedImageAsync(key, cancellationToken);
-            return Result<BranchSiteDto>.Failure(ex.Message);
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-        return Result<BranchSiteDto>.Success(await BranchSiteLoader.ToAdminDtoAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), cancellationToken));
-    }
-}
-
-public class RemoveSiteGalleryImageCommand : IRequest<Result<BranchSiteDto>>
-{
-    /// <summary>Galerideki sıra (0'dan).</summary>
-    public int Index { get; set; }
-}
-
-public class RemoveSiteGalleryImageCommandHandler(
-    IAppDbContext db,
-    ICurrentUserService currentUser,
-    IImageStorageService imageStorage,
-    IOptions<BunnyStorageOptions> storageOptions)
-    : IRequestHandler<RemoveSiteGalleryImageCommand, Result<BranchSiteDto>>
-{
-    public async Task<Result<BranchSiteDto>> Handle(RemoveSiteGalleryImageCommand request, CancellationToken cancellationToken)
-    {
-        Branch? branch = await BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<BranchSiteDto>.Failure("Şube bulunamadı.");
-
-        string removed;
-        try
-        {
-            removed = branch.RemoveSiteGalleryImage(request.Index);
-        }
-        catch (DomainException ex)
-        {
-            return Result<BranchSiteDto>.Failure(ex.Message);
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-        await BranchSiteLoader.DeleteUnusedImagesAsync(imageStorage, branch, [removed], cancellationToken);
-        return Result<BranchSiteDto>.Success(await BranchSiteLoader.ToAdminDtoAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), cancellationToken));
-    }
-}
-
-public class ReorderSiteGalleryCommand : IRequest<Result<BranchSiteDto>>
-{
-    /// <summary>Mevcut sıraların yeni dizilişi; ör. [2, 0, 1] üçüncü fotoğrafı başa alır.</summary>
-    public List<int> Order { get; set; } = [];
-}
-
-public class ReorderSiteGalleryCommandHandler(IAppDbContext db, ICurrentUserService currentUser, IOptions<BunnyStorageOptions> storageOptions)
-    : IRequestHandler<ReorderSiteGalleryCommand, Result<BranchSiteDto>>
-{
-    public async Task<Result<BranchSiteDto>> Handle(ReorderSiteGalleryCommand request, CancellationToken cancellationToken)
-    {
-        Branch? branch = await BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<BranchSiteDto>.Failure("Şube bulunamadı.");
-
-        try
-        {
-            branch.ReorderSiteGallery(request.Order ?? []);
-        }
-        catch (DomainException ex)
-        {
-            return Result<BranchSiteDto>.Failure(ex.Message);
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-        return Result<BranchSiteDto>.Success(await BranchSiteLoader.ToAdminDtoAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), cancellationToken));
-    }
-}
-
-// ── Oturma bölümünün sitedeki fotoğrafı ─────────────────────────────────────────────────────────
-public class SetSiteRegionImageCommand : IRequest<Result<BranchSiteDto>>
-{
-    public Guid RegionId { get; set; }
-    /// <summary>null: fotoğrafı kaldır.</summary>
-    public Stream? Content { get; set; }
-}
-
-public class SetSiteRegionImageCommandHandler(
-    IAppDbContext db,
-    ICurrentUserService currentUser,
-    IImageStorageService imageStorage,
-    IOptions<BunnyStorageOptions> storageOptions)
-    : IRequestHandler<SetSiteRegionImageCommand, Result<BranchSiteDto>>
-{
-    private const int RegionMaxSize = 1400;
-
-    public async Task<Result<BranchSiteDto>> Handle(SetSiteRegionImageCommand request, CancellationToken cancellationToken)
-    {
-        Branch? branch = await BranchSiteLoader.LoadAsync(db, currentUser, cancellationToken);
-        if (branch is null) return Result<BranchSiteDto>.Failure("Şube bulunamadı.");
-
-        bool regionExists = await db.Regions.AnyAsync(r => r.Id == request.RegionId && r.BranchId == branch.Id, cancellationToken);
-        if (!regionExists) return Result<BranchSiteDto>.Failure("Bölüm bulunamadı.");
-
-        string newKey = string.Empty;
-        if (request.Content is not null)
-        {
-            (newKey, string? error) = await SiteImageUpload.UploadAsync(imageStorage, request.Content, branch.Id, RegionMaxSize, cancellationToken);
-            if (error is not null) return Result<BranchSiteDto>.Failure(error);
-        }
-
-        string previousKey = branch.ReplaceSiteRegionPhoto(request.RegionId, newKey);
-        await db.SaveChangesAsync(cancellationToken);
-        await BranchSiteLoader.DeleteUnusedImagesAsync(imageStorage, branch, [previousKey], cancellationToken);
-
-        return Result<BranchSiteDto>.Success(await BranchSiteLoader.ToAdminDtoAsync(db, branch, BranchSiteLoader.Cdn(storageOptions), cancellationToken));
     }
 }

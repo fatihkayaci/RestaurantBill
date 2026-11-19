@@ -233,4 +233,47 @@ public class ContactMessageHandlerTests : ApplicationTestBase
         Assert.True(DbContext.ContactMessages.Single(m => m.Id == own.Id).IsDeleted);
         Assert.False(DbContext.ContactMessages.Single(m => m.Id == foreign.Id).IsDeleted);
     }
+
+    // ── Sahip: "Tümü" modunda bütün şubelerin mesajları, şube adıyla ve şube süzgeciyle ──────────────
+
+    private FakeCurrentUserService OwnerIn(Guid companyId, Guid? branchId = null)
+        => new() { Role = "Owner", UserId = CurrentUser.UserId, CompanyId = companyId, BranchId = branchId ?? companyId };
+
+    [Fact]
+    public async Task Owner_CompanyMode_ListsAllBranches_WithBranchName_AndFilter()
+    {
+        var (main, other) = await SeedRestaurantAsync();
+        await SeedMessageAsync(main.Id, "Merkez mesajı");
+        await SeedMessageAsync(other.Id, "Kadıköy mesajı");
+        await SeedMessageAsync(Guid.NewGuid(), "Başka şirket");
+        FakeCurrentUserService owner = OwnerIn(main.CompanyId);
+
+        var all = await new GetContactMessagesQueryHandler(Db, owner).Handle(new GetContactMessagesQuery(), CancellationToken.None);
+        var filtered = await new GetContactMessagesQueryHandler(Db, owner).Handle(new GetContactMessagesQuery { BranchId = other.Id }, CancellationToken.None);
+        var foreignFilter = await new GetContactMessagesQueryHandler(Db, owner).Handle(new GetContactMessagesQuery { BranchId = Guid.NewGuid() }, CancellationToken.None);
+        var count = await new GetUnreadContactMessageCountQueryHandler(Db, owner).Handle(new GetUnreadContactMessageCountQuery(), CancellationToken.None);
+
+        Assert.Equal(["Kadıköy", "Merkez"], all.Value!.Select(m => m.BranchName).Order());
+        Assert.Equal(2, count.Value!.Count);
+        var only = Assert.Single(filtered.Value!);
+        Assert.Equal("Kadıköy mesajı", only.Message);
+        Assert.Equal(other.Id, only.BranchId);
+        Assert.Empty(foreignFilter.Value!);
+    }
+
+    [Fact]
+    public async Task Owner_BranchMode_And_Admin_SeeOnlyTheirBranch_FilterCannotWiden()
+    {
+        var (main, other) = await SeedRestaurantAsync();
+        await SeedMessageAsync(main.Id, "Merkez mesajı");
+        await SeedMessageAsync(other.Id, "Kadıköy mesajı");
+
+        var ownerInBranch = await new GetContactMessagesQueryHandler(Db, OwnerIn(main.CompanyId, other.Id))
+            .Handle(new GetContactMessagesQuery(), CancellationToken.None);
+        var adminWidening = await new GetContactMessagesQueryHandler(Db, CurrentUser)
+            .Handle(new GetContactMessagesQuery { BranchId = other.Id }, CancellationToken.None);
+
+        Assert.Equal("Kadıköy mesajı", Assert.Single(ownerInBranch.Value!).Message);
+        Assert.Empty(adminWidening.Value!); // admin başka şubeye süzemez
+    }
 }

@@ -3,12 +3,17 @@ import { toast } from 'sonner';
 import { Check, MessageSquareText, Trash2 } from 'lucide-react';
 import { contactMessageService } from '@/features/contactMessages/api/contactMessageService';
 import { ContactMessageType, contactMessageTypeLabel, type ContactMessage } from '@/features/contactMessages/types';
+import { branchService } from '@/features/branches/api/branchService';
+import type { Branch } from '@/features/branches/types';
 import { PageError } from '@/components/ui/page-state';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { getSession } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 // "Şikayet ve Öneriler": restoran sitesinin İletişim formundan gelen mesajlar. En yenisi önce; okunmamışlar vurgulu.
 // Okundu işaretleme ve silme yazma isteği olduğu için yan menüdeki sayaç (DATA_CHANGED_EVENT) kendiliğinden güncellenir.
+// Şube modunda (yönetici ya da şube seçmiş sahip) yalnız o şubenin mesajları; sahibin "Tümü" modunda (/owner/contact-messages)
+// bütün şubelerin mesajları tek listede, her mesajda şube adı ve bir şube süzgeci.
 
 const typeBadge: Record<ContactMessageType, string> = {
     [ContactMessageType.Oneri]: 'bg-rb-green-bg text-rb-green',
@@ -23,16 +28,25 @@ function formatDate(iso: string): string {
 type Filter = 'all' | 'unread';
 
 export default function ContactMessagesPage() {
+    const companyMode = getSession()?.isCompanyScope ?? false;
     const [filter, setFilter] = useState<Filter>('all');
+    // "Tümü" modunda şube süzgeci: '' = bütün şubeler.
+    const [branchId, setBranchId] = useState('');
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [items, setItems] = useState<ContactMessage[] | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [busyId, setBusyId] = useState<string | null>(null);
 
+    useEffect(() => {
+        if (!companyMode) return;
+        branchService.getMyBranches().then(setBranches).catch(() => { /* süzgeç yalnız "Tüm şubeler" */ });
+    }, [companyMode]);
+
     const load = useCallback(() => {
-        contactMessageService.getAll(filter === 'unread')
+        contactMessageService.getAll(filter === 'unread', branchId || undefined)
             .then(data => { setItems(data); setLoadError(null); })
             .catch(err => setLoadError(getApiErrorMessage(err, 'Mesajlar yüklenemedi.')));
-    }, [filter]);
+    }, [filter, branchId]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -77,8 +91,24 @@ export default function ContactMessagesPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-serif font-bold text-foreground">Şikayet ve Öneriler</h1>
-                    <p className="mt-0.5 text-sm text-muted-foreground">Restoran sitenizin İletişim sayfasındaki formdan gelen mesajlar.</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                        {companyMode
+                            ? 'Restoran sitenizin İletişim sayfasındaki formdan gelen mesajlar, bütün şubelerden.'
+                            : 'Restoran sitenizin İletişim sayfasındaki formdan gelen mesajlar.'}
+                    </p>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                {companyMode && branches.length > 1 && (
+                    <select
+                        aria-label="Şube"
+                        value={branchId}
+                        onChange={e => { if (e.target.value !== branchId) { setItems(null); setLoadError(null); setBranchId(e.target.value); } }}
+                        className="h-11 rounded-[10px] border border-border bg-card px-3 text-sm font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                        <option value="">Tüm şubeler</option>
+                        {branches.map(b => <option key={b.id} value={b.id}>{b.branchName}</option>)}
+                    </select>
+                )}
                 <div role="group" aria-label="Mesaj filtresi" className="flex rounded-[10px] border border-border bg-card p-1">
                     {([['all', 'Tümü'], ['unread', 'Okunmamış']] as const).map(([key, label]) => (
                         <button
@@ -94,6 +124,7 @@ export default function ContactMessagesPage() {
                             {label}
                         </button>
                     ))}
+                </div>
                 </div>
             </div>
 
@@ -128,6 +159,11 @@ export default function ContactMessagesPage() {
                                     {!item.isRead && (
                                         <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-rb-gold/15 px-2.5 text-xs font-semibold text-rb-gold">
                                             <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-rb-gold" />Yeni
+                                        </span>
+                                    )}
+                                    {companyMode && item.branchName && (
+                                        <span className="inline-flex h-6 items-center rounded-full border border-border px-2.5 text-xs font-semibold text-foreground">
+                                            {item.branchName}
                                         </span>
                                     )}
                                     <time dateTime={item.createdAt} className="text-xs text-muted-foreground">{formatDate(item.createdAt)}</time>

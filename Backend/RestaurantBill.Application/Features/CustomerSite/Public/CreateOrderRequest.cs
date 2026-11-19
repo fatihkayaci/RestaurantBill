@@ -91,7 +91,7 @@ public class CreateOrderRequestCommandHandler(
 
         Table? table = await db.Tables
             .Include(t => t.Region)
-            .FirstOrDefaultAsync(t => t.Id == request.TableId && t.Region.Branch.CompanyId == company.Id, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == request.TableId && t.Region.Branch.CompanyId == company.Id && !t.Region.Branch.IsDeleted, cancellationToken);
 
         if (table is null || table.Status == TableStatus.OutOfService)
             return Result<OrderRequestStatusDto>.Failure("Bu masa bulunamadı. Lütfen garsona haber verin.");

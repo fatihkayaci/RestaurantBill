@@ -73,18 +73,20 @@ public class GetDeliveryTrackingQueryHandler(IAppDbContext db, ITenantResolver t
         }
 
         // Takip sayfası restoranın markasıyla açılır: ad, vurgu rengi ve kapak (restoran sitesiyle aynı alanlar).
-        string companyName = await db.Companies.AsNoTracking()
-            .Where(c => c.Id == branch.CompanyId).Select(c => c.Name).FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+        var company = await db.Companies.AsNoTracking()
+            .Where(c => c.Id == branch.CompanyId).Select(c => new { c.Name, c.Site }).FirstOrDefaultAsync(cancellationToken);
+        string companyName = company?.Name ?? string.Empty;
+        SiteSnapshot site = company?.Site ?? SiteSnapshot.Empty;
         string cdnBaseUrl = storageOptions?.Value.CdnBaseUrl.TrimEnd('/') ?? string.Empty;
 
         return Result<DeliveryTrackingDto>.Success(new DeliveryTrackingDto
         {
             CompanyName = companyName,
-            AccentColor = branch.SiteAccentColor,
-            Theme = branch.GetSiteContent().Theme,
-            Design = branch.GetSiteContent().Design,
-            Font = branch.GetSiteContent().Font,
-            CoverImageUrl = string.IsNullOrWhiteSpace(branch.SiteCoverImage) || cdnBaseUrl.Length == 0 ? string.Empty : $"{cdnBaseUrl}/{branch.SiteCoverImage}",
+            AccentColor = site.AccentColor,
+            Theme = site.Content.Theme,
+            Design = site.Content.Design,
+            Font = site.Content.Font,
+            CoverImageUrl = string.IsNullOrWhiteSpace(site.CoverImage) || cdnBaseUrl.Length == 0 ? string.Empty : $"{cdnBaseUrl}/{site.CoverImage}",
             AcceptedAt = order.AcceptedAt,
             Number = order.Number,
             Status = order.Status,

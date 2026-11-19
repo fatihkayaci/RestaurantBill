@@ -20,12 +20,21 @@ namespace RestaurantBill.Domain.Entities
     }
 
     /// <summary>
-    /// Restoran sitesinin taslağa alınabilen bütün hâli (değişmez değer nesnesi): metinler, saatler, fotoğraf anahtarları
-    /// ve SEO. Yayındaki hâl şubenin sütunlarından (<see cref="Branch.GetPublishedSite"/>), taslak tek bir jsonb sütunundan
-    /// (<see cref="Branch.SiteDraft"/>) okunur. Restoran adı, adres ve telefon taslağa girmez (Ayarlar'da kalır).
+    /// Restoran sitesinin bütün hâli (değişmez değer nesnesi): metinler, fotoğraf anahtarları ve SEO. Site şirket genelidir:
+    /// yayındaki hâl <see cref="Company.Site"/>, taslak <see cref="Company.SiteDraft"/> jsonb sütunlarındadır. Şubeye ait
+    /// alanlar (saatler, saat notu, WhatsApp, nasıl gelinir) şirkette boş tutulur ve müşteriye gösterilirken seçilen
+    /// şubeden eklenir (<see cref="Branch.SiteFor"/>). Restoran adı, adres ve telefon da şubenin Ayarlar'ındadır.
     /// </summary>
     public sealed record SiteSnapshot
     {
+        public static SiteSnapshot Empty { get; } = new();
+
+        public const int HeadlineMaxLength = 80;
+        public const int TaglineMaxLength = 160;
+        public const int StoryTitleMaxLength = 120;
+        public const int AboutMaxLength = 800;
+        public const int InstagramUrlMaxLength = 200;
+
         public string Headline { get; init; } = string.Empty;
         public string Tagline { get; init; } = string.Empty;
         public string StoryTitle { get; init; } = string.Empty;
@@ -63,6 +72,15 @@ namespace RestaurantBill.Domain.Entities
             ["heroVenue"] = SiteImageSlot.VenueHero,
             ["heroContact"] = SiteImageSlot.ContactHero,
             ["heroReservation"] = SiteImageSlot.ReservationHero,
+        };
+
+        /// <summary>Şubeye ait alanları (saatler, saat notu, WhatsApp, nasıl gelinir) boşaltır: şirketin sitesinde saklanmazlar.</summary>
+        public SiteSnapshot WithoutBranchInfo() => this with
+        {
+            OpensAt = null,
+            ClosesAt = null,
+            HoursNote = string.Empty,
+            Content = Content with { WeeklyHours = [], DirectionsNote = string.Empty, WhatsappPhone = string.Empty },
         };
 
         /// <summary>Metinleri doğrular ve yeni hâli döner; fotoğraf anahtarları korunur.</summary>

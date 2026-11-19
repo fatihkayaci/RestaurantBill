@@ -102,17 +102,24 @@ export function textLimit(field: SiteTextField): number {
     return SITE_LIMITS[field as 'headline'];
 }
 
-/** Sitede değiştirilmeyen bilgilerin admin sayfaları. */
+/**
+ * Sitede değiştirilmeyen bilgilerin admin sayfaları. Site şirket genelidir (düzenleyici sahibin "Tümü" modunda); /admin/
+ * sayfaları şubeye aittir ve bir şube seçilince açılır.
+ */
 export const ADMIN_PATHS = {
     restaurant: '/admin/settings?sekme=restoran',
+    branchInfo: '/admin/settings?sekme=saatler',
     menu: '/admin/menu',
     setMenus: '/admin/set-menus',
     reservationRules: '/admin/settings?sekme=rezervasyon',
     onlineOrdering: '/admin/settings?sekme=online',
     tables: '/admin/tables',
     reservations: '/admin/reservations',
-    messages: '/admin/contact-messages',
+    messages: '/owner/contact-messages',
 } as const;
+
+/** Yerinde yazılmayan, şubeye ait yazılar (şube Ayarlar → Saatler ve iletişim). */
+export const BRANCH_INFO_FIELDS: readonly SiteTextField[] = ['hoursNote', 'directionsNote'];
 
 export interface ExternalSource {
     /** Üstüne gelince gri etiket: "Ayarlar'da değişir". */
@@ -127,6 +134,7 @@ export interface ExternalSource {
 /** Önizlemede tıklanan ama burada değişmeyen bilgiler: nereden değiştiği ve oraya bağlantı. */
 export const EXTERNAL_SOURCES: Record<string, ExternalSource> = {
     restaurant: { hover: "Ayarlar'da değişir", title: 'Restoran bilgisi', text: "Restoran adı, adres ve telefon Ayarlar → Restoran sayfasından değişir.", links: [{ label: 'Ayarlar', to: ADMIN_PATHS.restaurant }] },
+    branchInfo: { hover: 'Şube ayarlarında değişir', title: 'Saatler ve iletişim', text: "Çalışma saatleri, saat notu, WhatsApp ve “nasıl gelinir” her şubenin kendi bilgisidir; şube seçilip Ayarlar → Saatler ve iletişim sayfasından değişir. Önizlemede ilk şubenin bilgileri görünür.", links: [{ label: 'Saatler ve iletişim', to: ADMIN_PATHS.branchInfo }] },
     menu: { hover: "Yemeklerimiz'de değişir", title: 'Menüden gelir', text: 'Ürünler, kategoriler, fiyatlar ve ürün fotoğrafları Yemeklerimiz sayfasından değişir.', links: [{ label: 'Yemeklerimiz', to: ADMIN_PATHS.menu }] },
     setMenus: { hover: 'Set menülerde değişir', title: 'Hazır menüler', text: 'Hazır menüler Set menüler sayfasından değişir.', links: [{ label: 'Set menüler', to: ADMIN_PATHS.setMenus }] },
     reservation: { hover: 'Rezervasyon ayarlarında değişir', title: 'Rezervasyon', text: 'Online rezervasyonun açık olması, günler, saatler ve kişi sınırı Ayarlar → Rezervasyon sayfasından değişir.', links: [{ label: 'Rezervasyon ayarları', to: ADMIN_PATHS.reservationRules }, { label: 'Gelen rezervasyonlar', to: ADMIN_PATHS.reservations }] },
@@ -136,7 +144,7 @@ export const EXTERNAL_SOURCES: Record<string, ExternalSource> = {
     auto: { hover: 'Otomatik hesaplanır', title: 'Otomatik hesaplanır', text: 'Bu satır menüdeki ürünlerden, masalardan ve çalışma saatlerinden kendiliğinden hesaplanır.', links: [{ label: 'Yemeklerimiz', to: ADMIN_PATHS.menu }, { label: 'Masalar', to: ADMIN_PATHS.tables }] },
     eyebrow: { hover: 'Otomatik oluşur', title: 'Kapaktaki üst satır', text: 'Kuruluş yılından ve ilçeden oluşur.', links: [{ label: 'Yemeklerimiz', to: ADMIN_PATHS.menu }, { label: 'Ayarlar', to: ADMIN_PATHS.restaurant }], edit: { label: 'Kuruluş yılını değiştir', target: 'year' } },
     heroActions: { hover: 'Ayarlara göre çıkar', title: 'Kapak düğmeleri', text: '“Sipariş ver” online sipariş açıkken, “Masa ayırt” rezervasyon açıkken görünür; ikisinden biri yoksa yerine “Menüyü gör” gelir.', links: [{ label: 'Rezervasyon ayarları', to: ADMIN_PATHS.reservationRules }, { label: 'Online sipariş ayarları', to: ADMIN_PATHS.onlineOrdering }] },
-    actions: { hover: 'Ayarlara göre çıkar', title: 'Hızlı eylemler', text: '“Ara” ve “Yol tarifi” telefondan ve adresten (Ayarlar), “Masa ayırt” rezervasyon ayarından, “WhatsApp” buradaki WhatsApp numarasından gelir.', links: [{ label: 'Ayarlar', to: ADMIN_PATHS.restaurant }, { label: 'Rezervasyon ayarları', to: ADMIN_PATHS.reservationRules }], edit: { label: 'WhatsApp numarasını değiştir', target: 'contact' } },
+    actions: { hover: 'Ayarlara göre çıkar', title: 'Hızlı eylemler', text: '“Ara” ve “Yol tarifi” telefondan ve adresten (Ayarlar), “Masa ayırt” rezervasyon ayarından, “WhatsApp” şubenin WhatsApp numarasından (Ayarlar → Saatler ve iletişim) gelir.', links: [{ label: 'Ayarlar', to: ADMIN_PATHS.restaurant }, { label: 'Saatler ve iletişim', to: ADMIN_PATHS.branchInfo }, { label: 'Rezervasyon ayarları', to: ADMIN_PATHS.reservationRules }] },
     fixed: { hover: 'Sabit yazı', title: 'Sabit yazı', text: 'Bu yazı ve bağlantılar her restoran sitesinde aynıdır; değiştirilemez.', links: [] },
     reservationText: { hover: 'Sabit yazı', title: 'Rezervasyon sayfası', text: '“Masanızı ayırtın.” başlığı ve açıklaması sabittir. Akışın içeriği (günler, saatler, masalar) rezervasyon ayarlarından ve masalardan gelir.', links: [{ label: 'Rezervasyon ayarları', to: ADMIN_PATHS.reservationRules }, { label: 'Masalar', to: ADMIN_PATHS.tables }] },
 };
@@ -168,7 +176,7 @@ export function editExternal(edit: SiteEditApi | null, source: keyof typeof EXTE
 }
 
 const TARGET_HOVER: Record<string, string> = {
-    hours: 'Saatleri değiştir', rating: 'Puanı değiştir', contact: 'Bağlantıyı değiştir', year: 'Yılı değiştir',
+    hours: 'Şube ayarlarında değişir', rating: 'Puanı değiştir', contact: 'Bağlantıyı değiştir', year: 'Yılı değiştir',
     amenities: 'Olanakları seç', 'gallery:add': 'Fotoğraf ekle',
 };
 

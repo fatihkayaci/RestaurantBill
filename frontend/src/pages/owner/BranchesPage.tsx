@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
-import { X, Store } from 'lucide-react';
+import { X, Store, Trash2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import axios from "axios";
 import { toast } from "sonner";
-import { branchService } from "@/features/branches/api/branchService";
+import { BRANCHES_CHANGED_EVENT, branchService } from "@/features/branches/api/branchService";
+import DeleteBranchDialog from "@/features/branches/components/DeleteBranchDialog";
+import { authService } from "@/features/auth/api/authService";
+import { getSession, startSession } from "@/lib/auth";
+import { getApiErrorMessage } from "@/lib/apiError";
 import type { Branch, CreateBranch, UpdateBranch } from "@/features/branches/types";
 import { getTurkeyProvinces, type Province } from "@/lib/turkeyLocations";
 import { cn } from "@/lib/utils";
@@ -40,6 +44,7 @@ export default function BranchesPage() {
     const districtsFor = (cityName: string) => provinces.find(p => p.name === cityName)?.districts ?? [];
 
     const [loaded, setLoaded] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null);
 
     const loadBranches = () => {
         branchService.getMyBranches()
@@ -155,6 +160,7 @@ export default function BranchesPage() {
         try {
             await branchService.createBranch(createForm);
             loadBranches();
+            window.dispatchEvent(new Event(BRANCHES_CHANGED_EVENT));
             setIsModalOpen(false);
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
@@ -163,6 +169,30 @@ export default function BranchesPage() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleBranchDeleted = async (deleted: Branch) => {
+        setDeleteTarget(null);
+        setEditTarget(null);
+        const remaining = branches.filter(b => b.id !== deleted.id);
+
+        // Oturum silinen şubede açıksa token artık geçersiz bir kapsamı taşır: tek şube kaldıysa ona, yoksa "Tümü"ne geçilir.
+        if (getSession()?.restaurantId === deleted.id) {
+            const next = remaining.length === 1 ? remaining[0].id : null;
+            try {
+                const token = await authService.switchBranch(next);
+                startSession(token);
+                window.location.assign(next ? '/admin/branches' : '/owner/branches');
+            } catch (err) {
+                toast.error(getApiErrorMessage(err, 'Şube silindi ama görünüm değiştirilemedi. Lütfen yeniden giriş yapın.'));
+            }
+            return;
+        }
+
+        setBranches(remaining);
+        loadBranches();
+        window.dispatchEvent(new Event(BRANCHES_CHANGED_EVENT));
+        toast.success(`${deleted.branchName} şubesi silindi.`);
     };
 
     return (
@@ -523,6 +553,29 @@ export default function BranchesPage() {
                                 </button>
                             </div>
                         </form>
+
+                        <div className="px-6 pb-6 pt-4 mt-2 border-t border-border space-y-2">
+                            <p className={labelClass}>Şubeyi Sil</p>
+                            {branches.length > 1 ? (
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <p className="text-xs text-muted-foreground flex-1 min-w-[12rem]">
+                                        Şube listelerden ve müşteri sitesinden kalkar; geçmiş adisyon ve ödemeler raporlarda kalır.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeleteTarget(editTarget)}
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg border border-destructive/40 text-destructive hover:bg-destructive/10 font-medium transition-colors"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Şubeyi sil
+                                    </button>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">
+                                    Restoranın tek şubesi silinemez. Bilgilerini yukarıdan düzenleyebilir ya da önce yeni bir şube ekleyebilirsiniz.
+                                </p>
+                            )}
+                        </div>
                         </div>
 
                         <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3 shrink-0">
@@ -537,6 +590,12 @@ export default function BranchesPage() {
                     </div>
                 </Modal>
             )}
+
+            <DeleteBranchDialog
+                branch={deleteTarget}
+                onClose={() => setDeleteTarget(null)}
+                onDeleted={deleted => { void handleBranchDeleted(deleted); }}
+            />
         </div>
     );
 }

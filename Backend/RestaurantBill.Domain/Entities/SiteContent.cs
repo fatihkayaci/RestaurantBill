@@ -285,6 +285,14 @@ namespace RestaurantBill.Domain.Entities
             };
         }
 
+        /// <summary>Şubeye ait alanlar (haftalık saat, nasıl gelinir, WhatsApp): doğrulayıp yeni içerik döner; diğer alanlar korunur.</summary>
+        public SiteContent WithBranchInfo(IReadOnlyList<SiteDayHours> weeklyHours, string directionsNote, string whatsappPhone) => this with
+        {
+            WeeklyHours = NormalizeWeek(weeklyHours ?? []),
+            DirectionsNote = Limit(directionsNote, DirectionsNoteMaxLength, "Nasıl gelinir notu"),
+            WhatsappPhone = NormalizePhone(whatsappPhone ?? string.Empty),
+        };
+
         /// <summary>Gizlenen soru anahtarları: kırpılır, küçük harfe çevrilir, tekrarlar atılır (sıra korunur); en çok 30.</summary>
         private static List<string> NormalizeFaqKeys(IReadOnlyList<string> keys)
         {

@@ -22,7 +22,7 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.UpdateBranch
         {
             Branch? branch = await _db.Branches
                 .Include(b => b.Company)
-                .FirstOrDefaultAsync(b => b.Id == request.RestaurantId, cancellationToken);
+                .FirstOrDefaultAsync(b => b.Id == request.RestaurantId && !b.IsDeleted, cancellationToken);
             if (branch is null || branch.Company.OwnerUserId != _currentUser.UserId)
                 return Result.Failure("Şube bulunamadı.");
 

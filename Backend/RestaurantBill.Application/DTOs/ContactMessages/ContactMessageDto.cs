@@ -12,6 +12,9 @@ public class ContactMessageDto
     public string Message { get; set; } = string.Empty;
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }
+    /// <summary>Mesajın geldiği şube: sahibin "Tümü" listesinde her mesajın yanında gösterilir.</summary>
+    public Guid BranchId { get; set; }
+    public string BranchName { get; set; } = string.Empty;
 }
 
 public class ContactMessageUnreadCountDto

@@ -72,7 +72,7 @@ public static class ResetItems
     public static string Description(string key) => key switch
     {
         WorkingHours => "Açılış, kapanış ve haftalık saatler silinir.",
-        Site => "Sitenin metinleri, fotoğrafları, teması ve taslağı silinir.",
+        Site => "Restoran sitesi bütün şubelerde ortaktır: sitenin metinleri, fotoğrafları, teması ve taslağı silinir; şubenin WhatsApp ve nasıl gelinir bilgisi boşalır.",
         Reservations => "Rezervasyon kuralları ilk hâline döner.",
         OnlineOrdering => "Online sipariş kapanır, kuralları ilk hâline döner.",
         DeliveryZones => "Teslimat bölgeleri silinir.",

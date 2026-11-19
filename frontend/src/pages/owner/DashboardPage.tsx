@@ -16,6 +16,7 @@ import type { AuditLog } from '@/features/auditLogs/types';
 import { SEVERITY_LABELS, SEVERITY_STYLE } from '@/features/auditLogs/constants';
 import { formatPercentChange, formatCurrency } from '@/lib/format';
 import { PageError, PageLoading } from '@/components/ui/page-state';
+import { SiteBeautifyCard } from '@/pages/admin/site/SiteBeautifyPanel';
 
 
 const minutesAgoLabel = (iso: string) => {
@@ -204,6 +205,9 @@ export default function DashboardPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Restoran sitesinin doluluğu (site şirket genelidir): eksik varsa küçük kart, tamamsa çizilmez. */}
+            <SiteBeautifyCard />
 
             {/* Stat cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
