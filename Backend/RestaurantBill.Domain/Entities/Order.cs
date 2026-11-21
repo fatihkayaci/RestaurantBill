@@ -225,6 +225,39 @@ namespace RestaurantBill.Domain.Entities
             ChangeLineQuantity(FindLine(orderItemId, "Güncellemek istediğiniz ürün bu siparişte yok."), quantity);
         }
 
+        /// <summary>
+        /// Satırın verilen adedini iptal eder (3 ayrandan 1'i); adet satırın tamamıysa satır çıkar. Mutfağa geçmiş
+        /// (hazırlanan, hazır, servis edilmiş) ürün de iptal edilebilir. Menü satırında menünün adedi düşer, içindeki
+        /// ürünler de aynı adet kadar azalır; menüdeki tek bir ürün iptal edilemez. Ödenmiş adetler satırda kalmaz
+        /// (SettleItem düşer), "Tutar gir" ile alınmış ödeme varsa hesap o tutarın altına inemez.
+        /// </summary>
+        /// <returns>İptal edilen satır (adı ve birim fiyatı kayıt için; satır çıkarıldıysa artık siparişte değildir).</returns>
+        public OrderItem CancelOrderItem(Guid orderItemId, int quantity)
+        {
+            if (IsClosed())
+                throw new DomainException("Kapanmış bir siparişte ürün iptal edilemez.");
+
+            OrderItem item = FindLine(orderItemId, "İptal etmek istediğiniz ürün zaten bu siparişte yok.");
+
+            if (quantity <= 0)
+                throw new DomainException("İptal edilecek adet 0'dan büyük olmalı.");
+
+            if (quantity > item.Quantity)
+                throw new DomainException($"İptal edilecek adet, satırdaki ödenmemiş adetten ({item.Quantity}) fazla olamaz.");
+
+            if (quantity == item.Quantity)
+            {
+                RemoveLine(item);
+                return item;
+            }
+
+            EnsureTotalCoversPaidOnAccount(TotalPrice - item.UnitPrice * quantity);
+            foreach (OrderItem line in GetSetMenuComponents(item).Append(item))
+                line.ReduceQuantity(quantity);
+            RecalculateTotal();
+            return item;
+        }
+
         // Hesapta görünen satır: tek ürün ya da menü. Menü içeriği tek başına iptal edilemez, adedi değiştirilemez.
         private OrderItem FindLine(Guid orderItemId, string notFoundMessage)
         {

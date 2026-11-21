@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
 using RestaurantBill.Application.Features.Orders.Commands.AddSetMenuToOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
+using RestaurantBill.Application.Features.Orders.Commands.CancelOrderItem;
 using RestaurantBill.Application.Features.Orders.Commands.CloseOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CreateOrder;
 using RestaurantBill.Application.Features.Orders.Commands.RemoveProductFromOrder;
@@ -147,6 +148,18 @@ namespace RestaurantBill.WebAPI.Controllers
             return HandleResult(result);
         }
         
+        /// <summary>
+        /// Cancels a quantity of one order line (product or whole set menu units). Body: { orderId, orderItemId, quantity, reason }.
+        /// Quantity equal to the line's quantity removes the line. Same roles/permission as cancelling the whole order.
+        /// </summary>
+        [Authorize(Roles = "Owner,Admin,Waiter")]
+        [HttpPost("item/cancel")]
+        public async Task<IActionResult> CancelOrderItem([FromBody] CancelOrderItemCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
         /// <summary> Updates the status of an order (Kitchen use). </summary>
         /// <param name="id">Order ID</param>
         /// <param name="command"></param>
