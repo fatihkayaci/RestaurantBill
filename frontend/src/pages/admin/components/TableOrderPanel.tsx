@@ -106,7 +106,7 @@ export default function TableOrderPanel({ regions, tables, onRegionsChange, onTa
                             layout="grid"
                             getName={t => t.name}
                             onReorder={next => void reorderTables(region.id, next)}
-                            className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                            className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,9rem),1fr))] gap-2"
                             renderItem={(table, state) => (
                                 <div
                                     ref={state.handle.setNodeRef}

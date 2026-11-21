@@ -352,7 +352,7 @@ export default function CashierDashboardPage() {
                         className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[3px] animate-in fade-in duration-200"
                         onClick={() => setSelectedOrder(null)}
                     />
-                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-190 lg:w-240 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
+                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full max-w-full sm:w-190 lg:w-240 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
                         <PaymentPanel
                             order={selectedOrder}
                             onClose={() => setSelectedOrder(null)}
@@ -371,7 +371,7 @@ export default function CashierDashboardPage() {
                         className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[3px] animate-in fade-in duration-200"
                         onClick={() => setSelectedTransaction(null)}
                     />
-                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-110 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
+                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full max-w-full sm:w-110 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
                         <TransactionDetailPanel
                             transaction={selectedTransaction}
                             onClose={() => setSelectedTransaction(null)}

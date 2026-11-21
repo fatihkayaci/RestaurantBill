@@ -12,7 +12,8 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, QrCode, Image as ImageIcon, LayoutGrid, Trash2, Layers, Minus, Plus } from 'lucide-react';
+import { Check, X, Pencil, QrCode, Image as ImageIcon, LayoutGrid, Trash2, Layers, Minus, Plus, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SortModeButton } from '@/components/dnd/SortMode';
 import { DraggableTable, TableDragTransferProvider } from '@/features/tables/components/TableDragTransfer';
 import TableOrderPanel from './components/TableOrderPanel';
@@ -47,6 +48,9 @@ const ORDER_ITEM_STATUS_LABELS: Record<number, string> = {
 const ORDER_ITEM_STATUS_TEXT_COLOR: Record<number, string> = {
     1: "text-rb-amber", 2: "text-rb-accent", 3: "text-rb-green", 4: "text-muted-foreground",
 };
+
+// Masa kartındaki QR / düzenle / sil düğmeleri: küçük ikon; fareyle 36 px, dokunmatikte 44 px alan.
+const TABLE_ICON_BTN = "flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/10";
 
 // Masa grid kartlarının renk/etiket şeması — waiter tarafındaki tasarımla birebir aynı.
 const STATUS_CARD = {
@@ -673,6 +677,10 @@ export default function Tables() {
                 : ['orders', 'new-order'];
 
     const canSort = regions.length > 1 || tables.length > 1;
+    const secondaryBtn = "flex min-h-11 items-center gap-1.5 border border-border bg-card hover:bg-muted text-foreground text-sm font-medium px-4 rounded-lg transition-colors md:min-h-9";
+    const showBulkQr = !sorting && tables.length > 0;
+    const showBulkCreate = !sorting && regions.length > 0;
+    // Telefonda (md altı) yalnız "Düzenle" ve "+ Masa Ekle" açıkta; toplu işlemler "⋯" menüsünde.
     const header = (
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -681,28 +689,49 @@ export default function Tables() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     {canSort && <SortModeButton active={sorting} onToggle={() => setSorting(v => !v)} />}
-                    {!sorting && tables.length > 0 && (
-                        <button
-                            onClick={() => setBulkQrOpen(true)}
-                            className="flex items-center gap-1.5 border border-border bg-card hover:bg-muted text-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                        >
+                    {showBulkQr && (
+                        <button onClick={() => setBulkQrOpen(true)} className={cn(secondaryBtn, "hidden md:flex")}>
                             <QrCode className="w-4 h-4" aria-hidden="true" />
                             Toplu QR
                         </button>
                     )}
-                    {!sorting && regions.length > 0 && (
-                        <button
-                            onClick={() => setBulkCreateOpen(true)}
-                            className="flex items-center gap-1.5 border border-border bg-card hover:bg-muted text-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                        >
+                    {showBulkCreate && (
+                        <button onClick={() => setBulkCreateOpen(true)} className={cn(secondaryBtn, "hidden md:flex")}>
                             <Layers className="w-4 h-4" aria-hidden="true" />
                             Toplu Masa Ekle
                         </button>
                     )}
+                    {(showBulkQr || showBulkCreate) && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    aria-label="Diğer işlemler"
+                                    className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-card text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                                >
+                                    <MoreHorizontal className="w-5 h-5" aria-hidden="true" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" sideOffset={6} className="w-52">
+                                {showBulkQr && (
+                                    <DropdownMenuItem onSelect={() => setBulkQrOpen(true)} className="min-h-11 gap-2.5 cursor-pointer">
+                                        <QrCode className="w-4 h-4" aria-hidden="true" />
+                                        Toplu QR
+                                    </DropdownMenuItem>
+                                )}
+                                {showBulkCreate && (
+                                    <DropdownMenuItem onSelect={() => setBulkCreateOpen(true)} className="min-h-11 gap-2.5 cursor-pointer">
+                                        <Layers className="w-4 h-4" aria-hidden="true" />
+                                        Toplu Masa Ekle
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                     {!sorting && (
                         <button
                             onClick={openCreateModal}
-                            className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                            className="flex min-h-11 items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 rounded-lg transition-colors md:min-h-9"
                         >
                             + Masa Ekle
                         </button>
@@ -727,12 +756,12 @@ export default function Tables() {
 
             <CustomerOrderRequests requests={orderRequests} onChanged={() => { loadOrderRequests(); void refreshTables(); }} />
 
-            {/* Bölge Sekmeleri */}
-            <div className="flex gap-2 flex-wrap items-center">
+            {/* Bölge Sekmeleri: telefonda tek satır, yatay kayar; sm ve üstünde satırlara sarar. */}
+            <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 *:shrink-0">
                 <button
                     onClick={() => setSelectedRegionId('all')}
                     className={cn(
-                        "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                        "px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
                         selectedRegionId === 'all'
                             ? "bg-rb-accent text-rb-accent-foreground"
                             : "border border-border text-muted-foreground hover:text-foreground"
@@ -744,7 +773,7 @@ export default function Tables() {
                     <div
                         key={region.id}
                         className={cn(
-                            "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium transition-colors",
+                            "flex items-center gap-1 pl-4 pr-1.5 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
                             selectedRegionId === region.id
                                 ? "bg-rb-accent text-rb-accent-foreground"
                                 : "border border-border text-muted-foreground hover:text-foreground"
@@ -805,7 +834,7 @@ export default function Tables() {
                 ) : (
                     <button
                         onClick={startAddRegion}
-                        className="px-4 py-1.5 rounded-full text-sm font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                        className="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
                     >
                         + Bölge Ekle
                     </button>
@@ -842,7 +871,8 @@ export default function Tables() {
             {/* Dolu masayı başka masanın üstüne sürükleyince taşı / birleştir / yer değiştir sorulur. */}
             {tables.length > 0 && tables.some(t => t.status === 2) && (
                 <p className="text-xs text-muted-foreground">
-                    İpucu: dolu masayı tutup başka masanın üstüne bırakın (telefonda basılı tutun); taşıma, birleştirme ya da yer değiştirme sorulur. Sırayı değiştirmek için "Düzenle".
+                    <span className="sm:hidden">İpucu: dolu masayı basılı tutup başka masaya bırakın; taşıma, birleştirme ya da yer değiştirme sorulur.</span>
+                    <span className="hidden sm:inline">İpucu: dolu masayı tutup başka masanın üstüne bırakın (telefonda basılı tutun); taşıma, birleştirme ya da yer değiştirme sorulur. Sırayı değiştirmek için "Düzenle".</span>
                 </p>
             )}
             {tables.length > 0 && (
@@ -865,7 +895,8 @@ export default function Tables() {
                             clearLabel="Tüm masaları göster"
                         />
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {/* Sütun sayısı alan genişliğine göre: kart en az 13rem (208 px); daha dar alanda tek sütun. */}
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-4">
                         {group.tables.map(table => {
                             const cfg = STATUS_CARD[table.status as 1 | 2 | 3] ?? STATUS_CARD[1];
                             const qrCount = qrByTable.get(table.id) ?? 0;
@@ -873,54 +904,60 @@ export default function Tables() {
                             // Kartın "yanması" (index.css: .table-alert-glow): QR sipariş altın, çağrı kırmızı, hesap mavi.
                             const glow = qrCount > 0 ? 'qr' : alertKind;
                             return (
-                                <DraggableTable key={table.id} table={table} className="grid rounded-2xl">
+                                <DraggableTable key={table.id} table={table} className="grid min-w-0 rounded-2xl">
                                 <div
                                     onClick={() => handleTableClick(table)}
                                     data-glow={glow ?? undefined}
                                     className={cn(
-                                        "rounded-2xl border py-4 px-4 flex flex-col gap-1.5 cursor-pointer min-h-27",
+                                        "min-w-0 rounded-2xl border py-4 px-4 flex flex-col gap-1.5 cursor-pointer min-h-27",
                                         "transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]",
                                         "dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]",
                                         cfg.bg, cfg.border,
                                         glow && 'table-alert-glow'
                                     )}
                                 >
-                                    <div className="flex items-start justify-between gap-1.5">
-                                        <span className="font-serif text-[21px] font-bold text-foreground leading-[1.15]">
+                                    {/* 1. satır: ad (gerekirse iki satıra sarar) + durum rozeti. 2. satır: bölge + QR/düzenle/sil.
+                                        Böylece dar kartta da ikonlar ve rozet adın üstüne binmez. */}
+                                    <div className="flex items-start justify-between gap-2">
+                                        <span className="min-w-0 font-serif text-[21px] font-bold text-foreground leading-[1.15] line-clamp-2 wrap-anywhere" title={table.name}>
                                             {table.name}
                                         </span>
-                                        <div className="flex items-center gap-2 shrink-0">
+                                        <span className={cn("mt-0.5 shrink-0 text-xs font-bold px-2 py-0.5 rounded-md leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
+                                            {cfg.label}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="min-w-0 truncate text-xs font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                            {table.regionName}
+                                        </span>
+                                        <div className="-mr-2 flex shrink-0 items-center">
                                             <button
                                                 onClick={e => { e.stopPropagation(); setQrTable(table); }}
                                                 aria-label={`${table.name} QR kodu`}
                                                 title="Müşteri QR kodu"
-                                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                                className={TABLE_ICON_BTN}
                                             >
-                                                <QrCode className="h-3.5 w-3.5" />
+                                                <QrCode className="h-4 w-4" />
                                             </button>
                                             <button
                                                 onClick={e => { e.stopPropagation(); openEditModal(table); }}
                                                 aria-label={`${table.name} masasını düzenle`}
-                                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                                title="Düzenle"
+                                                className={TABLE_ICON_BTN}
                                             >
-                                                <Pencil className="h-3.5 w-3.5" />
+                                                <Pencil className="h-4 w-4" />
                                             </button>
                                             <button
                                                 onClick={e => { e.stopPropagation(); setDeleteTargetId(table.id); }}
                                                 aria-label={`${table.name} masasını sil`}
-                                                className="text-muted-foreground hover:text-destructive transition-colors"
+                                                title="Sil"
+                                                className={cn(TABLE_ICON_BTN, "hover:text-destructive")}
                                             >
-                                                <Trash2 className="h-3.5 w-3.5" />
+                                                <Trash2 className="h-4 w-4" />
                                             </button>
-                                            <span className={cn("text-xs font-bold px-2 py-0.5 rounded-md leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
-                                                {cfg.label}
-                                            </span>
                                         </div>
                                     </div>
-
-                                    <span className="self-start text-xs font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                                        {table.regionName}
-                                    </span>
 
                                     {(qrCount > 0 || alertKind) && (
                                         <div className="flex flex-wrap gap-1">
@@ -951,24 +988,24 @@ export default function Tables() {
                                                         Hesap istendi · {formatElapsed(table.billRequestedAt, now)}
                                                     </span>
                                                 )}
-                                                <div className="flex items-center justify-between mt-1">
+                                                <div className="flex flex-wrap items-center justify-between gap-x-2 mt-1">
                                                     <span className={cn("text-xs", cfg.hint)}>Aktif sipariş</span>
                                                     <span className="text-sm font-bold text-foreground">{formatPrice(table.activeOrderTotal)} ₺</span>
                                                 </div>
                                                 {(table.paidAmount ?? 0) > 0 && (
-                                                    <div className="flex items-center justify-between text-xs font-semibold">
+                                                    <div className="flex flex-wrap items-center justify-between gap-x-2 text-xs font-semibold">
                                                         <span className="text-rb-green">Ödenen {formatPrice(table.paidAmount ?? 0)} ₺</span>
                                                         <span className="text-foreground">Kalan {formatPrice(table.activeOrderTotal - (table.paidAmount ?? 0))} ₺</span>
                                                     </div>
                                                 )}
                                                 {table.occupiedSince && (
-                                                    <div className="flex items-center justify-between text-xs text-muted-foreground/80">
+                                                    <div className="flex flex-wrap items-center justify-between gap-x-2 text-xs text-muted-foreground/80">
                                                         <span>Açılış: {new Date(table.occupiedSince).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
                                                         <span>{formatElapsed(table.occupiedSince, now)}</span>
                                                     </div>
                                                 )}
                                                 {table.createdByUserName && (
-                                                    <div className="text-xs text-muted-foreground/80">
+                                                    <div className="truncate text-xs text-muted-foreground/80">
                                                         Alan: {table.createdByUserName}
                                                     </div>
                                                 )}
@@ -1626,7 +1663,7 @@ export default function Tables() {
                         className="fixed inset-0 z-80 bg-black/60 backdrop-blur-[3px] animate-in fade-in duration-200"
                         onClick={() => setPaymentOrder(null)}
                     />
-                    <div className="fixed top-0 right-0 bottom-0 z-80 w-full md:w-190 lg:w-240 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
+                    <div className="fixed top-0 right-0 bottom-0 z-80 w-full max-w-full md:w-190 lg:w-240 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
                         <PaymentPanel
                             order={paymentOrder}
                             cashRegisterMode="manual"

@@ -22,9 +22,11 @@ interface Props {
     activeBranchId: string | null;
     activeBranchName?: string | null;
     collapsed: boolean;
+    /** Şube simgesinin görünürlüğü (ör. dar üst barda gizlemek için "hidden @[22rem]:flex"). */
+    iconClassName?: string;
 }
 
-export default function BranchSwitcher({ branches, isOwner, companyMode, singleBranch = false, activeBranchId, activeBranchName, collapsed }: Props) {
+export default function BranchSwitcher({ branches, isOwner, companyMode, singleBranch = false, activeBranchId, activeBranchName, collapsed, iconClassName }: Props) {
     const navigate = useNavigate();
     const [switching, setSwitching] = useState(false);
 
@@ -72,12 +74,12 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, singleB
                 collapsed && 'md:justify-center md:px-0'
             )}
         >
-            <span className="w-7 h-7 rounded-lg bg-rb-gold/20 flex items-center justify-center shrink-0">
+            <span className={cn('w-7 h-7 rounded-lg bg-rb-gold/20 flex items-center justify-center shrink-0', iconClassName)}>
                 <Icon className="w-4 h-4 text-rb-gold" />
             </span>
             <span className={cn('flex-1 min-w-0 flex flex-col gap-0.5', collapsed && 'md:hidden')}>
                 <span className="text-xs font-semibold tracking-[0.15em] text-rb-gold leading-none">{caption}</span>
-                <span className="font-serif font-bold text-base leading-none truncate">{title}</span>
+                <span className="font-serif font-bold text-base leading-tight truncate" title={title}>{title}</span>
             </span>
             {canSwitch && (
                 <ChevronsUpDown className={cn('w-3.5 h-3.5 text-sidebar-foreground/60 shrink-0', collapsed && 'md:hidden')} />

@@ -42,9 +42,10 @@ export function useSidebarGroups(userId: string | null, activeKey: string | unde
     return { isOpen, toggle };
 }
 
-// md (768px) ve üstü: daraltılmış ikon modunda akordeon devre dışı kalır; mobil çekmece her zaman akordeon.
+// lg (1024px) ve üstü: kenar çubuğu sabit; daraltılmış ikon modunda akordeon devre dışı kalır.
+// Altında kenar çubuğu çekmecedir ve her zaman tam (akordeonlu) düzendedir.
 export function useIsDesktop() {
-    const query = '(min-width: 768px)';
+    const query = '(min-width: 1024px)';
     const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
     useEffect(() => {
         const mql = window.matchMedia(query);
