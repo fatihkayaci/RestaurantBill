@@ -16,8 +16,8 @@ import {
     RESERVATION_PATH, averagePrepMinutes, cardButton, dativeSuffix, foldText, formatRating, hasAboutPage, productCount,
     serif, sinceYear, untilTime,
 } from './site/siteParts';
-import { formatSitePrice, resolveDesign, resolveFont, splitAccent, telHref } from './site/siteTheme';
-import EliteHome from './site/elite/EliteHome';
+import { formatSitePrice, resolveFont, splitAccent, telHref } from './site/siteTheme';
+import { designLayout } from './site/designs/registry';
 import { useSiteDesign } from './site/siteDesign';
 import { restaurantName, useMyReservations, useSite, weekSchedule } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
@@ -60,7 +60,9 @@ export default function RestaurantSitePage() {
     if (!site) {
         return <SiteShell><SiteStatus error={error} /></SiteShell>;
     }
-    if (resolveDesign(site.site.design) === 'elit') return <EliteHome site={site} mine={mine} />;
+    // Tasarımın kendi ana sayfası (tasarım kaydı: Elit, Meyhane Gecesi…); yoksa ortak düzen.
+    const { Home } = designLayout(site.site.design);
+    if (Home) return <Home site={site} mine={mine} />;
 
     return (
         <SitePage site={site} current="home">

@@ -180,34 +180,39 @@ function SicakMock({ accent, onAccent, accentText }: { accent: string; onAccent:
 }
 
 /**
- * Meyhane Gecesi maketi: koyu kömür zemin, koyu kapakta kehribar ışık ve dik serif ad, altında basılı menü kartı gibi
- * noktalı çizgiyle fiyata bağlanan satırlar, en altta neredeyse siyah alt bilgi.
+ * Meyhane Gecesi maketi (kendi düzeni): kapak renginde gece kapağı, tepede lamba dizisi, ortada çift çizgili tabelada ad;
+ * altında "bu akşam" şeridi, meze tepsisi (yuvarlak kâseler) ve noktalı fiyat satırı; en altta krem adisyon fişi.
  */
 function MeyhaneMock({ accent, accentText, cover }: { accent: string; accentText: string; cover: string }) {
     const P = SITE_DESIGNS.meyhane.palette;
     const font = SITE_FONTS[P.font];
     return (
         <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg" style={{ background: P.bg }}>
-            <span className="relative flex flex-[3] items-center gap-2 px-2.5"
-                style={{ background: `radial-gradient(120px 70px at 20% 10%, ${accent}33, transparent 70%), ${cover}`, color: P.fg }}>
-                <span className="flex flex-1 flex-col gap-1.5">
-                    <span className="text-[19px] leading-[0.95]" style={{ fontFamily: font.heading, letterSpacing: font.tracking }}>
-                        Ocak<br /><span style={{ color: accentText, textShadow: `0 0 12px ${accent}66` }}>Kadıköy</span>
-                    </span>
-                    <span className="h-3.5 w-14 rounded-full" style={{ background: accent, boxShadow: `0 4px 10px -4px ${accent}` }} />
+            <span className="relative flex flex-[3] flex-col items-center justify-center"
+                style={{ background: `radial-gradient(110px 50px at 50% 0%, ${accentText}40, transparent 75%), ${cover}`, color: P.fg }}>
+                <span className="absolute inset-x-2 top-1.5 flex justify-between">
+                    {[0, 1, 2, 3, 4, 5, 6].map(i => (
+                        <span key={i} className="h-1.5 w-1 rounded-full" style={{ background: accentText, boxShadow: `0 0 6px 1px ${accentText}AA`, marginTop: [0, 3, 5, 6, 5, 3, 0][i] }} />
+                    ))}
                 </span>
-                <span className="h-14 w-14 shrink-0 rounded-full" style={{ background: `radial-gradient(circle at 40% 35%, ${accent}AA, ${P.paper} 70%)` }} />
+                <span className="mt-2 px-2 py-1 text-center text-[15px] leading-[0.95]"
+                    style={{ fontFamily: font.heading, letterSpacing: font.tracking, border: `1px solid ${accent}AA`, outline: `1px solid ${P.fg}33`, outlineOffset: 2 }}>
+                    Ocak <span style={{ color: accentText, textShadow: `0 0 10px ${accent}88` }}>Kadıköy</span>
+                </span>
             </span>
-            <span className="flex flex-[2] flex-col justify-center gap-1.5 px-3">
-                {[0, 1].map(i => (
-                    <span key={i} className="flex items-end gap-1">
-                        <span className="h-1.5 w-10 rounded-full" style={{ background: P.fg }} />
-                        <span className="mb-px flex-1 border-b border-dotted" style={{ borderColor: P.muted }} />
-                        <span className="h-1.5 w-5 rounded-full" style={{ background: accentText }} />
-                    </span>
-                ))}
+            <span className="flex flex-[3] flex-col justify-center gap-1.5 px-3">
+                <span className="flex justify-center gap-1.5">
+                    {[0, 1, 2, 3].map(i => <span key={i} className="h-4 w-4 rounded-full" style={{ background: P.placeholder, boxShadow: `0 0 0 1px ${P.fg}44` }} />)}
+                </span>
+                <span className="flex items-end gap-1">
+                    <span className="h-1.5 w-10 rounded-full" style={{ background: P.fg }} />
+                    <span className="mb-px flex-1 border-b border-dotted" style={{ borderColor: P.muted }} />
+                    <span className="h-1.5 w-5 rounded-full" style={{ background: accentText }} />
+                </span>
             </span>
-            <span className="h-3 shrink-0" style={{ background: P.footer, borderTop: `1px solid ${accent}55` }} />
+            <span className="flex h-5 shrink-0 justify-center pt-1" style={{ background: P.footer }}>
+                <span className="h-full w-12" style={{ background: P.fg }} />
+            </span>
         </span>
     );
 }

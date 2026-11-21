@@ -7,6 +7,9 @@ import { StockImageLabel } from '../components/StockImageLabel';
 import { ImageSlot } from '../site/SiteChrome';
 import { headingFont } from '../site/siteTheme';
 import { scCard } from '../site/sicak/sicakParts';
+import { MezeTray } from '../site/designs/meyhane/MezeTray';
+import { MeyhaneCategoryHeader } from '../site/designs/meyhane/MeyhaneMenuParts';
+import { isMezeCategory, meyhaneTabClass } from '../site/designs/meyhane/meyhaneParts';
 
 /** Kartın ürünü: paket menüsünün ürünü; masa menüsü hazırlanma süresini de verir. */
 export type MenuCardProduct = OnlineMenuProduct & { prepMinutes?: number | null };
@@ -36,7 +39,8 @@ interface Props<P extends MenuCardProduct> {
     /** Menü boşken gösterilecek içerik (varsayılan: "Menü henüz hazırlanmadı"). */
     empty?: ReactNode;
     /** "sicak": Sıcak tasarımın kartları (üstten taşan yuvarlak tabak fotoğrafı, ortalı ad, küçük turuncu düğme).
-     *  "meyhane" / "esnaf": ürünler satır satır (basılı menü kartı / pano; lineMenuVariant), menüler yine kart. */
+     *  "meyhane" / "esnaf": ürünler satır satır (basılı menü kartı / pano; lineMenuVariant), menüler yine kart. Meyhane'de
+     *  ayrıca ortalı basılı bölüm başlığı, yazı sekmeli kategori şeridi ve meze kategorilerinde tepsi (designs/meyhane). */
     variant?: 'default' | 'sicak' | 'meyhane' | 'esnaf';
 }
 
@@ -129,6 +133,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
     const current = active ?? sections[0].id;
     const sicak = variant === 'sicak';
     const lines = variant === 'meyhane' || variant === 'esnaf';
+    const meyhane = variant === 'meyhane';
 
     return (
         <div>
@@ -143,7 +148,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                 <a key={section.id} href={`#${sectionDomId(section.id)}`} data-section={section.id}
                                     onClick={e => goTo(e, section.id)}
                                     aria-current={selected ? 'true' : undefined}
-                                    className={cn(
+                                    className={meyhane ? meyhaneTabClass(selected) : cn(
                                         sicak
                                             ? 'flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-semibold no-underline transition-colors'
                                             : 'flex h-11 shrink-0 items-center rounded-full border px-4 text-[15px] font-semibold no-underline transition-colors',
@@ -168,15 +173,33 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                     const total = section.menus.length + section.products.length;
                     return (
                         <section key={section.id} id={sectionDomId(section.id)} aria-labelledby={`${sectionDomId(section.id)}-baslik`} className="scroll-mt-20">
-                            {/* rb-menu-cat: tasarıma özgü kategori başlığı (Esnaf'ta tabela şeridi; siteThemes.css). */}
-                            <div className="rb-menu-cat flex items-baseline justify-between gap-3">
-                                <h2 id={`${sectionDomId(section.id)}-baslik`} className={cn(headingFont, 'text-[24px] font-bold leading-tight md:text-[30px]')}>{section.name}</h2>
-                                <span className="shrink-0 text-sm font-medium text-[var(--site-sub)]">{total} çeşit</span>
-                            </div>
-                            {featured && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Birkaç lezzet bir arada, seçimi size kalsın.</p>}
-                            {chefPicks && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Mutfağın bugün önerdikleri.</p>}
+                            {meyhane ? (
+                                <MeyhaneCategoryHeader id={`${sectionDomId(section.id)}-baslik`} name={section.name} total={total}
+                                    note={featured ? 'Birkaç lezzet bir arada, seçimi size kalsın.' : chefPicks ? 'Mutfağın bugün önerdikleri.' : undefined} />
+                            ) : (
+                                <>
+                                    {/* rb-menu-cat: tasarıma özgü kategori başlığı (Esnaf'ta tabela şeridi; siteThemes.css). */}
+                                    <div className="rb-menu-cat flex items-baseline justify-between gap-3">
+                                        <h2 id={`${sectionDomId(section.id)}-baslik`} className={cn(headingFont, 'text-[24px] font-bold leading-tight md:text-[30px]')}>{section.name}</h2>
+                                        <span className="shrink-0 text-sm font-medium text-[var(--site-sub)]">{total} çeşit</span>
+                                    </div>
+                                    {featured && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Birkaç lezzet bir arada, seçimi size kalsın.</p>}
+                                    {chefPicks && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Mutfağın bugün önerdikleri.</p>}
+                                </>
+                            )}
 
-                            {sicak ? (
+                            {meyhane && !featured && !chefPicks && section.menus.length === 0 && isMezeCategory(section.name) ? (
+                                // Meyhane: meze kategorisi tepside, küçük kâseler gibi.
+                                <MezeTray className="mt-4" restaurant={restaurant} items={section.products.map(product => {
+                                    const qty = productQuantity(product.id);
+                                    return {
+                                        id: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl, isStockImage: product.isStockImage,
+                                        description: product.description, soldOut: product.isOutOfStock, featured: product.isFeatured, quantity: qty,
+                                        readOnly: readOnly || (qty === 0 && !canAddProduct(product)),
+                                        onAdd: () => onAddProduct(product), onRemove: () => onRemoveProduct(product),
+                                    };
+                                })} />
+                            ) : sicak ? (
                                 <ul className="mt-4 grid list-none gap-x-4 gap-y-[72px] p-0 pt-14 sm:grid-cols-2 xl:grid-cols-3">
                                     {section.menus.map(menu => (
                                         <li key={menu.id}>

@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 // Yeni tasarımların (Meyhane Gecesi, Esnaf Tabelası, Bahçe Kahvaltısı) tasarıma özgü çizgileri; yalnız kökünde
 // `data-site-design` o tasarım olan sayfada etkilidir.
 import './siteThemes.css';
+import { designTraits, type SiteDesignTraits } from './designs/designTraits';
 
 // Restoranın müşteri sitesinin görünümü. Restoran önce TASARIMI ("Renkli ve sıcak" ya da "Sade"), sonra o tasarımın
 // içinde RENGİ (hazır tema ya da özel vurgu rengi) seçer. Her ikisi de tek yerde, CSS değişkeni olarak tanımlıdır:
@@ -726,11 +727,11 @@ export function isDarkDesign(design?: string | null): boolean {
     return SITE_DESIGNS[resolveDesign(design)].palette.dark === true;
 }
 
-/** Menünün satır düzeni (DeliveryMenu `variant`): Meyhane Gecesi noktalı fiyat satırı, Esnaf Tabelası pano satırı;
- *  öteki tasarımlar kart ('default'; Sıcak'ın tabak kartı yalnız paket sipariş sayfasında ayrıca seçilir). */
-export function lineMenuVariant(design?: string | null): 'default' | 'meyhane' | 'esnaf' {
-    const d = resolveDesign(design);
-    return d === 'meyhane' || d === 'esnaf' ? d : 'default';
+/** Menünün sunumu (DeliveryMenu `variant`), tasarım kaydından (designs/designTraits.ts): Meyhane Gecesi basılı menü
+ *  satırı ve meze tepsisi, Esnaf Tabelası pano satırı; öteki tasarımlar kart ('default'; Sıcak'ın tabak kartı yalnız
+ *  paket sipariş sayfasında ayrıca seçilir). */
+export function lineMenuVariant(design?: string | null): SiteDesignTraits['menuVariant'] {
+    return designTraits(resolveDesign(design)).menuVariant;
 }
 
 /** Renkli tasarımın temaları (geriye dönük ad). */
