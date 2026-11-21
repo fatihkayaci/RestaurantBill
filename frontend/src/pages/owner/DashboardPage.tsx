@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
     TrendingUp, ShoppingCart, ShoppingBag, Building2, RefreshCw,
     ArrowUpRight, ArrowDownRight, ArrowRight,
@@ -17,7 +18,25 @@ import { SEVERITY_LABELS, SEVERITY_STYLE } from '@/features/auditLogs/constants'
 import { formatPercentChange, formatCurrency } from '@/lib/format';
 import { PageError, PageLoading } from '@/components/ui/page-state';
 import { SiteBeautifyCard } from '@/pages/admin/site/SiteBeautifyPanel';
+import SortableGrid from '@/components/dashboard/SortableGrid';
+import DashboardEditBar from '@/components/dashboard/DashboardEditBar';
+import { mergeOrder, sameOrder } from '@/components/dashboard/layoutOrder';
 
+// Şirket Genel Bakış kart kataloğu. Kimlikler backend'deki OwnerDashboardWidgets.All ile aynı olmalı; sıra varsayılandır.
+// span: mobilde 2, masaüstünde (lg) 12 sütunlu ızgarada kartın kapladığı alan.
+const OWNER_WIDGETS = {
+    revenue: { title: 'Bugünkü Ciro', span: 'col-span-1 lg:col-span-3' },
+    orders: { title: 'Bugünkü Sipariş', span: 'col-span-1 lg:col-span-3' },
+    avgBasket: { title: 'Ortalama Sepet', span: 'col-span-1 lg:col-span-3' },
+    branches: { title: 'Aktif Şube Sayısı', span: 'col-span-1 lg:col-span-3' },
+    trend: { title: 'Ciro Trendi', span: 'col-span-2 lg:col-span-8' },
+    payments: { title: 'Ödeme Yöntemleri', span: 'col-span-2 lg:col-span-4' },
+    branchPerformance: { title: 'Şube Performansı', span: 'col-span-2 lg:col-span-8 lg:row-span-2' },
+    liveStatus: { title: 'Şube Canlı Durumu', span: 'col-span-2 lg:col-span-4' },
+    auditLogs: { title: 'Son Denetim Kayıtları', span: 'col-span-2 lg:col-span-4' },
+} as const satisfies Record<string, { title: string; span: string }>;
+type OwnerWidgetId = keyof typeof OWNER_WIDGETS;
+const DEFAULT_ORDER = Object.keys(OWNER_WIDGETS) as OwnerWidgetId[];
 
 const minutesAgoLabel = (iso: string) => {
     const minutes = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
@@ -96,6 +115,39 @@ export default function DashboardPage() {
     const [dashboard, setDashboard] = useState<OwnerDashboardStats | null>(null);
     const [recentAuditLogs, setRecentAuditLogs] = useState<AuditLog[]>([]);
     const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+    // Kart sırası kullanıcının hesabında saklanır; "Düzenle" açıkken sürükle-bırak ile değişir.
+    const [order, setOrder] = useState<OwnerWidgetId[]>(DEFAULT_ORDER);
+    const [editing, setEditing] = useState(false);
+    const [resetting, setResetting] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        statsService.getOwnerDashboardLayout()
+            .then(saved => { if (!cancelled) setOrder(mergeOrder(saved, DEFAULT_ORDER)); })
+            .catch(() => { /* Kayıtlı sıra okunamazsa varsayılan sıra kalır. */ });
+        return () => { cancelled = true; };
+    }, []);
+
+    // Her bırakışta kaydedilir (iyimser); kayıt başarısızsa önceki sıraya dönülür.
+    const saveOrder = (next: OwnerWidgetId[]) => {
+        const previous = order;
+        setOrder(next);
+        // Varsayılanla aynıysa null: katalog ileride değişince kullanıcı yeni varsayılanı alır.
+        statsService.saveOwnerDashboardLayout(sameOrder(next, DEFAULT_ORDER) ? null : next)
+            .catch(() => { setOrder(previous); toast.error('Kart sırası kaydedilemedi.'); });
+    };
+
+    const resetLayout = async () => {
+        setResetting(true);
+        try {
+            setOrder(mergeOrder(await statsService.saveOwnerDashboardLayout(null), DEFAULT_ORDER));
+            toast.success('Panel varsayılan düzene döndü.');
+        } catch {
+            toast.error('Panel sıfırlanamadı.');
+        } finally {
+            setResetting(false);
+        }
+    };
 
     const loadData = useCallback((showRefreshSpinner: boolean) => {
         if (showRefreshSpinner) setRefreshing(true);
@@ -170,6 +222,292 @@ export default function DashboardPage() {
     if (loading) return <PageLoading />;
     if (loadFailed && !dashboard) return <PageError onRetry={() => { setLoading(true); void loadData(false); }} />;
 
+    // Kartların içeriği; sıra ve ızgara genişliği OWNER_WIDGETS ile kullanıcının kayıtlı sırasından gelir.
+    const widgets: Record<OwnerWidgetId, ReactNode> = {
+        revenue: (
+            <StatCard
+                icon={TrendingUp} colorBg="bg-rb-green-bg" colorText="text-rb-green"
+                label="Bugünkü Ciro" value={formatCurrency(stats?.totalRevenue ?? 0, 2)}
+                change={stats ? stats.totalRevenueChangePercent : 0} caption="düne göre"
+            />
+        ),
+        orders: (
+            <StatCard
+                icon={ShoppingCart} colorBg="bg-rb-accent-bg" colorText="text-rb-accent"
+                label="Bugünkü Sipariş" value={(stats?.totalOrders ?? 0).toLocaleString('tr-TR')}
+                change={stats ? stats.totalOrdersChangePercent : 0} caption="geçen haftaya göre"
+            />
+        ),
+        avgBasket: (
+            <StatCard
+                icon={ShoppingBag} colorBg="bg-rb-purple-bg" colorText="text-rb-purple"
+                label="Ortalama Sepet" value={formatCurrency(stats?.avgOrderValue ?? 0, 2)}
+                change={stats ? stats.avgOrderValueChangePercent : 0} caption="geçen haftaya göre"
+            />
+        ),
+        branches: (
+            <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-lg bg-rb-orange-bg flex items-center justify-center shrink-0">
+                        <Building2 className="w-5 h-5 text-rb-orange" />
+                    </div>
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Aktif Şube Sayısı</p>
+                </div>
+                <p className="text-3xl font-bold text-foreground mt-3">{stats?.activeBranchCount ?? 0} / {stats?.totalBranchCount ?? 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">%{activeRatio.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} aktiflik oranı</p>
+            </div>
+        ),
+        trend: (
+            <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Ciro Trendi</p>
+                    <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+                        {([7, 30, 90] as const).map(d => (
+                            <button
+                                key={d}
+                                type="button"
+                                onClick={() => setRange(d)}
+                                className={cn(
+                                    'px-3 py-1 rounded-md text-xs font-medium transition-colors',
+                                    range === d ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                                )}
+                            >
+                                {d} Gün
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <ResponsiveContainer width="100%" height={260}>
+                    <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
+                        {branchSeries.filter(series => !hiddenSeries.has(series.key)).map(series => (
+                            <Line
+                                key={series.key}
+                                type="monotone"
+                                dataKey={series.key}
+                                name={series.label}
+                                stroke={series.color}
+                                strokeWidth={series.key === 'total' ? 2.5 : 2}
+                                dot={false}
+                            />
+                        ))}
+                    </LineChart>
+                </ResponsiveContainer>
+
+                <div className="flex flex-wrap items-center gap-3 mt-3">
+                    {branchSeries.map(series => (
+                        <button
+                            key={series.key}
+                            type="button"
+                            onClick={() => toggleSeries(series.key)}
+                            className={cn(
+                                'flex items-center gap-1.5 text-xs font-medium transition-opacity',
+                                hiddenSeries.has(series.key) ? 'opacity-40' : 'opacity-100'
+                            )}
+                        >
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: series.color }} />
+                            {series.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        ),
+        payments: (
+            <div className="rounded-xl border border-border bg-card p-5">
+                <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">Ödeme Yöntemleri</p>
+                {paymentMethods.length === 0 ? (
+                    <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">
+                        Bugün için ödeme verisi yok.
+                    </div>
+                ) : (
+                    <>
+                        <div className="relative">
+                            <ResponsiveContainer width="100%" height={200}>
+                                <PieChart>
+                                    <Pie
+                                        data={paymentMethods}
+                                        dataKey="amount"
+                                        nameKey="method"
+                                        innerRadius={55}
+                                        outerRadius={80}
+                                        paddingAngle={2}
+                                    >
+                                        {paymentMethods.map(p => <Cell key={p.method} fill={PAYMENT_COLOR[p.method]} />)}
+                                    </Pie>
+                                    <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <p className="text-lg font-bold text-foreground">{formatCurrency(paymentTotal)}</p>
+                                <p className="text-[10px] text-muted-foreground">Toplam Ciro</p>
+                            </div>
+                        </div>
+                        <div className="space-y-2.5 mt-4">
+                            {paymentMethods.map(p => (
+                                <div key={p.method} className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PAYMENT_COLOR[p.method] }} />
+                                        <span className="text-foreground">{PAYMENT_LABEL[p.method]}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-foreground font-medium">{formatCurrency(p.amount)}</p>
+                                        <p className="text-xs text-muted-foreground">%{p.percent}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+        ),
+        branchPerformance: (
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-border">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube Performansı ({selectedDayLabel})</p>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-border">
+                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
+                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
+                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
+                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sipariş</th>
+                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ort. Sepet</th>
+                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Çalışan</th>
+                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Masa</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {branchPerformance.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                                        Henüz şube bulunmuyor.
+                                    </td>
+                                </tr>
+                            ) : branchPerformance.map(row => (
+                                <tr key={row.branchId} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                                    <td className="px-5 py-3.5">
+                                        <p className="font-medium text-foreground whitespace-nowrap">{row.branchName}</p>
+                                        <p className="text-xs text-muted-foreground">{[row.district, row.city].filter(Boolean).join(', ') || '—'}</p>
+                                    </td>
+                                    <td className="px-4 py-3.5">
+                                        <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold', STATUS_STYLE[row.status])}>
+                                            {STATUS_LABEL[row.status]}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3.5">
+                                        {row.status === 'expired' ? (
+                                            <span className="text-muted-foreground">—</span>
+                                        ) : (
+                                            <>
+                                                <p className="text-foreground font-medium whitespace-nowrap">{formatCurrency(row.todayRevenue)}</p>
+                                                <ChangeCaption value={row.todayRevenueChangePercent} />
+                                            </>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3.5">
+                                        {row.status === 'expired' ? (
+                                            <span className="text-muted-foreground">—</span>
+                                        ) : (
+                                            <>
+                                                <p className="text-foreground font-medium">{row.todayOrders}</p>
+                                                <ChangeCaption value={row.todayOrdersChangePercent} />
+                                            </>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3.5 text-foreground whitespace-nowrap">
+                                        {row.status === 'expired' ? '—' : formatCurrency(row.avgBasket, 2)}
+                                    </td>
+                                    <td className="px-4 py-3.5 text-foreground">{row.status === 'expired' ? '—' : row.staffCount}</td>
+                                    <td className="px-4 py-3.5">
+                                        <p className="text-foreground whitespace-nowrap">{row.openTables} / {row.totalTables}</p>
+                                        <div className="h-1 w-16 rounded-full bg-muted mt-1 overflow-hidden">
+                                            <div
+                                                className="h-full bg-rb-green"
+                                                style={{ width: `${row.totalTables > 0 ? (row.openTables / row.totalTables) * 100 : 0}%` }}
+                                            />
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => navigate('/owner/branches')}
+                    className="flex items-center justify-center gap-1.5 w-full px-5 py-3 text-sm font-medium text-rb-accent hover:bg-muted/30 transition-colors border-t border-border"
+                >
+                    Tüm Şubeleri Görüntüle <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+            </div>
+        ),
+        liveStatus: (
+            <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube Canlı Durumu</p>
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-rb-green">
+                        <span className="h-1.5 w-1.5 rounded-full bg-rb-green animate-pulse" /> Canlı
+                    </span>
+                </div>
+                <div className="space-y-3">
+                    {branchPerformance.filter(b => b.status !== 'expired').length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Aktif şube yok.</p>
+                    ) : branchPerformance.filter(b => b.status !== 'expired').map(row => (
+                        <div key={row.branchId} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Table2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-foreground truncate">{row.branchName}</span>
+                                <span className="text-muted-foreground text-xs whitespace-nowrap">{row.openTables}/{row.totalTables}</span>
+                            </div>
+                            <span className={cn(
+                                'text-xs font-semibold rounded-full px-2 py-0.5 shrink-0',
+                                row.pendingOrders === 0 ? 'bg-rb-neutral-bg text-rb-neutral' : row.pendingOrders >= 4 ? 'bg-rb-red-bg text-rb-red' : 'bg-rb-amber-bg text-rb-amber'
+                            )}>
+                                {row.pendingOrders}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        ),
+        auditLogs: (
+            <div className="rounded-xl border border-border bg-card p-5">
+                <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">Son Denetim Kayıtları</p>
+                <div className="space-y-3">
+                    {recentAuditLogs.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Henüz kayıt yok.</p>
+                    ) : recentAuditLogs.map(log => (
+                        <div key={log.id} className="flex items-start justify-between gap-2 text-sm">
+                            <div className="min-w-0">
+                                <p className="text-foreground truncate">{log.message}</p>
+                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-semibold', SEVERITY_STYLE[log.severity])}>
+                                        {SEVERITY_LABELS[log.severity]}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">{log.branchName}</span>
+                                </div>
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">{minutesAgoLabel(log.createdAt)}</span>
+                        </div>
+                    ))}
+                </div>
+                <button
+                    type="button"
+                    onClick={() => navigate('/owner/audit-log')}
+                    className="flex items-center justify-center gap-1.5 w-full mt-4 pt-3 border-t border-border text-sm font-medium text-rb-accent hover:opacity-80 transition-opacity"
+                >
+                    Tümünü Gör <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+            </div>
+        ),
+    };
+
     return (
         <div className="space-y-5">
             {/* Header */}
@@ -178,7 +516,14 @@ export default function DashboardPage() {
                     <h1 className="text-2xl font-serif font-bold text-foreground">Genel Bakış</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">Şirket genelinizin özet performansı</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <DashboardEditBar
+                        size="sm"
+                        editing={editing}
+                        onEditingChange={setEditing}
+                        onReset={resetLayout}
+                        resetting={resetting}
+                    />
                     {lastUpdatedAt && (
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                             Son güncelleme: {lastUpdatedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
@@ -209,288 +554,17 @@ export default function DashboardPage() {
             {/* Restoran sitesinin doluluğu (site şirket genelidir): eksik varsa küçük kart, tamamsa çizilmez. */}
             <SiteBeautifyCard />
 
-            {/* Stat cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                    icon={TrendingUp} colorBg="bg-rb-green-bg" colorText="text-rb-green"
-                    label="Bugünkü Ciro" value={formatCurrency(stats?.totalRevenue ?? 0, 2)}
-                    change={stats ? stats.totalRevenueChangePercent : 0} caption="düne göre"
-                />
-                <StatCard
-                    icon={ShoppingCart} colorBg="bg-rb-accent-bg" colorText="text-rb-accent"
-                    label="Bugünkü Sipariş" value={(stats?.totalOrders ?? 0).toLocaleString('tr-TR')}
-                    change={stats ? stats.totalOrdersChangePercent : 0} caption="geçen haftaya göre"
-                />
-                <StatCard
-                    icon={ShoppingBag} colorBg="bg-rb-purple-bg" colorText="text-rb-purple"
-                    label="Ortalama Sepet" value={formatCurrency(stats?.avgOrderValue ?? 0, 2)}
-                    change={stats ? stats.avgOrderValueChangePercent : 0} caption="geçen haftaya göre"
-                />
-                <div className="rounded-xl border border-border bg-card p-5">
-                    <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-lg bg-rb-orange-bg flex items-center justify-center shrink-0">
-                            <Building2 className="w-5 h-5 text-rb-orange" />
-                        </div>
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Aktif Şube Sayısı</p>
-                    </div>
-                    <p className="text-3xl font-bold text-foreground mt-3">{stats?.activeBranchCount ?? 0} / {stats?.totalBranchCount ?? 0}</p>
-                    <p className="text-xs text-muted-foreground mt-1">%{activeRatio.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} aktiflik oranı</p>
-                </div>
-            </div>
-
-            {/* Trend + Payment methods */}
-            <div className="grid lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Ciro Trendi</p>
-                        <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-                            {([7, 30, 90] as const).map(d => (
-                                <button
-                                    key={d}
-                                    type="button"
-                                    onClick={() => setRange(d)}
-                                    className={cn(
-                                        'px-3 py-1 rounded-md text-xs font-medium transition-colors',
-                                        range === d ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:text-foreground'
-                                    )}
-                                >
-                                    {d} Gün
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <ResponsiveContainer width="100%" height={260}>
-                        <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
-                            <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
-                            {branchSeries.filter(series => !hiddenSeries.has(series.key)).map(series => (
-                                <Line
-                                    key={series.key}
-                                    type="monotone"
-                                    dataKey={series.key}
-                                    name={series.label}
-                                    stroke={series.color}
-                                    strokeWidth={series.key === 'total' ? 2.5 : 2}
-                                    dot={false}
-                                />
-                            ))}
-                        </LineChart>
-                    </ResponsiveContainer>
-
-                    <div className="flex flex-wrap items-center gap-3 mt-3">
-                        {branchSeries.map(series => (
-                            <button
-                                key={series.key}
-                                type="button"
-                                onClick={() => toggleSeries(series.key)}
-                                className={cn(
-                                    'flex items-center gap-1.5 text-xs font-medium transition-opacity',
-                                    hiddenSeries.has(series.key) ? 'opacity-40' : 'opacity-100'
-                                )}
-                            >
-                                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: series.color }} />
-                                {series.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">Ödeme Yöntemleri</p>
-                    {paymentMethods.length === 0 ? (
-                        <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">
-                            Bugün için ödeme verisi yok.
-                        </div>
-                    ) : (
-                        <>
-                            <div className="relative">
-                                <ResponsiveContainer width="100%" height={200}>
-                                    <PieChart>
-                                        <Pie
-                                            data={paymentMethods}
-                                            dataKey="amount"
-                                            nameKey="method"
-                                            innerRadius={55}
-                                            outerRadius={80}
-                                            paddingAngle={2}
-                                        >
-                                            {paymentMethods.map(p => <Cell key={p.method} fill={PAYMENT_COLOR[p.method]} />)}
-                                        </Pie>
-                                        <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <p className="text-lg font-bold text-foreground">{formatCurrency(paymentTotal)}</p>
-                                    <p className="text-[10px] text-muted-foreground">Toplam Ciro</p>
-                                </div>
-                            </div>
-                            <div className="space-y-2.5 mt-4">
-                                {paymentMethods.map(p => (
-                                    <div key={p.method} className="flex items-center justify-between text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PAYMENT_COLOR[p.method] }} />
-                                            <span className="text-foreground">{PAYMENT_LABEL[p.method]}</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-foreground font-medium">{formatCurrency(p.amount)}</p>
-                                            <p className="text-xs text-muted-foreground">%{p.percent}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* Branch performance + right column */}
-            <div className="grid lg:grid-cols-3 gap-4 items-start">
-                <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
-                    <div className="px-5 py-3.5 border-b border-border">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube Performansı ({selectedDayLabel})</p>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-border">
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sipariş</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ort. Sepet</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Çalışan</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Masa</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {branchPerformance.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                                            Henüz şube bulunmuyor.
-                                        </td>
-                                    </tr>
-                                ) : branchPerformance.map(row => (
-                                    <tr key={row.branchId} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                                        <td className="px-5 py-3.5">
-                                            <p className="font-medium text-foreground whitespace-nowrap">{row.branchName}</p>
-                                            <p className="text-xs text-muted-foreground">{[row.district, row.city].filter(Boolean).join(', ') || '—'}</p>
-                                        </td>
-                                        <td className="px-4 py-3.5">
-                                            <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold', STATUS_STYLE[row.status])}>
-                                                {STATUS_LABEL[row.status]}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3.5">
-                                            {row.status === 'expired' ? (
-                                                <span className="text-muted-foreground">—</span>
-                                            ) : (
-                                                <>
-                                                    <p className="text-foreground font-medium whitespace-nowrap">{formatCurrency(row.todayRevenue)}</p>
-                                                    <ChangeCaption value={row.todayRevenueChangePercent} />
-                                                </>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3.5">
-                                            {row.status === 'expired' ? (
-                                                <span className="text-muted-foreground">—</span>
-                                            ) : (
-                                                <>
-                                                    <p className="text-foreground font-medium">{row.todayOrders}</p>
-                                                    <ChangeCaption value={row.todayOrdersChangePercent} />
-                                                </>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3.5 text-foreground whitespace-nowrap">
-                                            {row.status === 'expired' ? '—' : formatCurrency(row.avgBasket, 2)}
-                                        </td>
-                                        <td className="px-4 py-3.5 text-foreground">{row.status === 'expired' ? '—' : row.staffCount}</td>
-                                        <td className="px-4 py-3.5">
-                                            <p className="text-foreground whitespace-nowrap">{row.openTables} / {row.totalTables}</p>
-                                            <div className="h-1 w-16 rounded-full bg-muted mt-1 overflow-hidden">
-                                                <div
-                                                    className="h-full bg-rb-green"
-                                                    style={{ width: `${row.totalTables > 0 ? (row.openTables / row.totalTables) * 100 : 0}%` }}
-                                                />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => navigate('/owner/branches')}
-                        className="flex items-center justify-center gap-1.5 w-full px-5 py-3 text-sm font-medium text-rb-accent hover:bg-muted/30 transition-colors border-t border-border"
-                    >
-                        Tüm Şubeleri Görüntüle <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    {/* Live status */}
-                    <div className="rounded-xl border border-border bg-card p-5">
-                        <div className="flex items-center justify-between mb-3">
-                            <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube Canlı Durumu</p>
-                            <span className="flex items-center gap-1 text-[10px] font-semibold text-rb-green">
-                                <span className="h-1.5 w-1.5 rounded-full bg-rb-green animate-pulse" /> Canlı
-                            </span>
-                        </div>
-                        <div className="space-y-3">
-                            {branchPerformance.filter(b => b.status !== 'expired').length === 0 ? (
-                                <p className="text-sm text-muted-foreground">Aktif şube yok.</p>
-                            ) : branchPerformance.filter(b => b.status !== 'expired').map(row => (
-                                <div key={row.branchId} className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <Table2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                        <span className="text-foreground truncate">{row.branchName}</span>
-                                        <span className="text-muted-foreground text-xs whitespace-nowrap">{row.openTables}/{row.totalTables}</span>
-                                    </div>
-                                    <span className={cn(
-                                        'text-xs font-semibold rounded-full px-2 py-0.5 shrink-0',
-                                        row.pendingOrders === 0 ? 'bg-rb-neutral-bg text-rb-neutral' : row.pendingOrders >= 4 ? 'bg-rb-red-bg text-rb-red' : 'bg-rb-amber-bg text-rb-amber'
-                                    )}>
-                                        {row.pendingOrders}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Recent audit logs */}
-                    <div className="rounded-xl border border-border bg-card p-5">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">Son Denetim Kayıtları</p>
-                        <div className="space-y-3">
-                            {recentAuditLogs.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">Henüz kayıt yok.</p>
-                            ) : recentAuditLogs.map(log => (
-                                <div key={log.id} className="flex items-start justify-between gap-2 text-sm">
-                                    <div className="min-w-0">
-                                        <p className="text-foreground truncate">{log.message}</p>
-                                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                            <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-semibold', SEVERITY_STYLE[log.severity])}>
-                                                {SEVERITY_LABELS[log.severity]}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">{log.branchName}</span>
-                                        </div>
-                                    </div>
-                                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">{minutesAgoLabel(log.createdAt)}</span>
-                                </div>
-                            ))}
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => navigate('/owner/audit-log')}
-                            className="flex items-center justify-center gap-1.5 w-full mt-4 pt-3 border-t border-border text-sm font-medium text-rb-accent hover:opacity-80 transition-opacity"
-                        >
-                            Tümünü Gör <ArrowRight className="h-3.5 w-3.5" />
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <SortableGrid
+                items={order}
+                editing={editing}
+                onReorder={saveOrder}
+                // 12 sütun: istatistikler 3, grafik/tablo 8, yan kartlar 4. Şube performansı iki satır kaplar;
+                // canlı durum ve denetim kayıtları varsayılanda yanında alt alta durur. dense: boşluklar doldurulur.
+                className="grid grid-flow-row-dense grid-cols-2 gap-4 lg:grid-cols-12"
+                itemClassName={id => OWNER_WIDGETS[id].span}
+                itemLabel={id => OWNER_WIDGETS[id].title}
+                renderItem={id => widgets[id]}
+            />
         </div>
     );
 }

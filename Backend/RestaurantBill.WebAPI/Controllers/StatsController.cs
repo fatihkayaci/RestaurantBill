@@ -7,6 +7,8 @@ using RestaurantBill.Application.Features.Stats.Queries.GetOwnerDashboard;
 using RestaurantBill.Application.Features.Stats.Queries.GetDashboard;
 using RestaurantBill.Application.Features.Stats.Queries.GetDashboardLayout;
 using RestaurantBill.Application.Features.Stats.Commands.UpdateDashboardLayout;
+using RestaurantBill.Application.Features.Stats.Queries.GetOwnerDashboardLayout;
+using RestaurantBill.Application.Features.Stats.Commands.UpdateOwnerDashboardLayout;
 
 namespace RestaurantBill.WebAPI.Controllers
 {
@@ -45,6 +47,23 @@ namespace RestaurantBill.WebAPI.Controllers
 
         [HttpPut("dashboard-layout")]
         public async Task<IActionResult> UpdateDashboardLayout([FromBody] UpdateDashboardLayoutCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
+        // Şirket Genel Bakış'ının kart sırası: kullanıcı başına, hesapta saklanır.
+        [Authorize(Roles = "Owner")]
+        [HttpGet("owner-dashboard-layout")]
+        public async Task<IActionResult> GetOwnerDashboardLayout(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetOwnerDashboardLayoutQuery(), cancellationToken);
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "Owner")]
+        [HttpPut("owner-dashboard-layout")]
+        public async Task<IActionResult> UpdateOwnerDashboardLayout([FromBody] UpdateOwnerDashboardLayoutCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);

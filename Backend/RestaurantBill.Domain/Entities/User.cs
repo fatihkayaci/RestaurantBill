@@ -13,12 +13,19 @@ namespace RestaurantBill.Domain.Entities
         public bool IsEmailVerified { get; private set; } = false;
         // Genel Bakış'ta görünen kartlar, sırasıyla. null = kullanıcı hiç düzenlemedi, varsayılan düzen kullanılır.
         public List<string>? DashboardCards { get; private set; }
+        // Şirket Genel Bakış'ındaki (sahip paneli) kartların sırası. null = varsayılan sıra.
+        public List<string>? OwnerDashboardWidgets { get; private set; }
 
         protected User() { }
 
         public void SetDashboardCards(List<string>? cards)
         {
             DashboardCards = cards;
+        }
+
+        public void SetOwnerDashboardWidgets(List<string>? widgets)
+        {
+            OwnerDashboardWidgets = widgets;
         }
 
         public static User Create(string fullName, string email, string phoneNumber)
