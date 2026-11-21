@@ -192,17 +192,19 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         }, {} as Record<number, { rate: number; total: number; categories: Set<string> }>)
     ).sort((a, b) => a.rate - b.rate);
 
-    const activeShift = cashRegisterMode === 'shift' ? cashierActiveShift : manualShift;
+    // Manuel modda hazırlanan vardiya yalnızca seçili kasaya aitse kullanılır: kasa değiştirilirken geç dönen bir
+    // vardiya isteği ödemeyi önceki kasaya yazdırmasın.
+    const activeShift = cashRegisterMode === 'shift'
+        ? cashierActiveShift
+        : manualShift?.cashRegisterId === selectedCashRegisterId ? manualShift : null;
 
-    /** Kasada açık vardiyayı getirir; yoksa yöneticinin adına açar (uyarı toast'ı ile). */
+    /** Kasada açık vardiyayı getirir; yoksa yöneticinin adına açar (ekranda önceden uyarılır). */
     const ensureRegisterShift = async (register: ShiftStartCandidate): Promise<Shift | null> => {
-        if (!register.hasOpenShift) {
-            toast.warning(`${register.cashRegisterName} kasasında açık vardiya yok, bu ödemeyle birlikte sizin adınıza açılacak.`);
-        }
         setEnsuringShift(true);
         try {
             const shift = await shiftService.ensureOpen(register.cashRegisterId);
             setManualShift(shift);
+            if (!register.hasOpenShift) toast.info(`${register.cashRegisterName} kasasında sizin adınıza vardiya açıldı.`);
             return shift;
         } catch (err) {
             toast.error(getApiErrorMessage(err, 'Bu kasada vardiya açılamadı.'));
@@ -212,10 +214,12 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         }
     };
 
+    // Kasa seçmek vardiya açmaz: açık vardiyası olan kasa hemen hazırlanır, olmayanınki ödeme alınırken açılır.
     const handleSelectRegister = async (register: ShiftStartCandidate) => {
+        if (register.cashRegisterId === selectedCashRegisterId) return;
         setSelectedCashRegisterId(register.cashRegisterId);
         setManualShift(null);
-        await ensureRegisterShift(register);
+        if (register.hasOpenShift) await ensureRegisterShift(register);
     };
 
     useEffect(() => {
@@ -341,10 +345,10 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="text-2xl font-serif font-bold text-foreground">
-                            {displayOrder.tableName} — Hesap
+                            {displayOrder.tableName ? `${displayOrder.tableName} · Hesap` : 'Hesap'}
                         </h2>
                         <p className="text-sm text-muted-foreground mt-1">
-                            {displayOrder.createdByUserName || '—'} · {formatElapsed(displayOrder.createdAt)}
+                            {[displayOrder.createdByUserName, formatElapsed(displayOrder.createdAt)].filter(Boolean).join(' · ')}
                         </p>
                     </div>
                     <button
@@ -360,10 +364,15 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
 
             <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
                 {/* Sol: Ürünler */}
-                <div className="md:flex-1 md:overflow-y-auto px-4 sm:px-8 py-5">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-                        Sipariş Kalemleri
-                    </p>
+                <div className="min-w-0 md:flex-1 md:overflow-y-auto px-4 sm:px-6 py-5">
+                    <div className="mb-3 flex items-baseline justify-between gap-3">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                            Sipariş Kalemleri
+                        </p>
+                        {split === 'items' && (
+                            <p className="text-xs text-muted-foreground">Bu ödemedeki adet</p>
+                        )}
+                    </div>
                     {lines.map(line => {
                         const selectedQty = selectedQuantities[line.key] ?? 0;
                         const paidQty = quantityOf(line);
@@ -376,9 +385,9 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         return (
                             <div key={line.key} className="py-3.5 border-b border-dashed border-border">
                             <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-start gap-3">
-                                    <span className="text-sm text-muted-foreground mt-0.5 w-7 shrink-0">×{line.quantity}</span>
-                                    <div>
+                                <div className="flex min-w-0 flex-1 items-start gap-3">
+                                    <span className="text-sm text-muted-foreground mt-0.5 w-7 shrink-0 tabular-nums">×{line.quantity}</span>
+                                    <div className="min-w-0">
                                         <p className="text-sm font-medium text-foreground">{line.productName}</p>
                                         {line.components && line.components.length > 0 && (
                                             <p className="text-xs text-muted-foreground">{line.components.map(c => c.productName).join(' · ')}</p>
@@ -402,6 +411,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">
+                                    {/* Adet seçimi yalnızca "Ürün seç"te; Tamamı ve Tutar gir'de satırlar düz listelenir. */}
+                                    {split === 'items' && (
                                     <div
                                         className={`flex items-center gap-2 rounded-lg border-[1.5px] px-1 py-1 transition-colors ${selectedQty > 0 ? 'border-rb-accent' : 'border-border'}`}
                                     >
@@ -432,7 +443,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                             <Plus className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
-                                    <span className="w-16 text-right">
+                                    )}
+                                    <span className="min-w-16 text-right">
                                         <span className={`block text-sm font-semibold tabular-nums ${lineDiscount > 0 ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                                             {formatPrice(line.unitPrice * line.quantity)} ₺
                                         </span>
@@ -633,6 +645,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                         <input
                                             type="text"
                                             inputMode="decimal"
+                                            autoFocus
                                             value={amountInput}
                                             onChange={e => setAmountInput(e.target.value.replace(/[^\d.,]/g, ''))}
                                             placeholder={formatPrice(due)}
@@ -728,50 +741,74 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         </div>
                         )}
 
+                        {/* Kasa: fiziksel kasa/vardiya; ödeme yönteminden bağımsızdır (adı "Kart Kasa" olan kasaya nakit de alınır). */}
                         {cashRegisterMode === 'shift' ? (
+                            // Kasiyer kasa seçmez: vardiyasını yönetici atadığı kasada açar, ödeme o kasaya yazılır.
                             activeShift ? (
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs text-muted-foreground">Kasa</span>
-                                    <span className="text-sm font-medium text-foreground">{activeShift.cashRegisterName}</span>
+                                <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-sm">
+                                    <Landmark className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                                    <span className="text-muted-foreground">Kasa:</span>
+                                    <span className="min-w-0 truncate font-semibold text-foreground">{activeShift.cashRegisterName}</span>
+                                    <span className="shrink-0 text-muted-foreground">· vardiyanız</span>
                                 </div>
                             ) : (
                                 <p className="text-sm text-destructive">Açık bir vardiyanız yok, ödeme alınamaz.</p>
                             )
                         ) : (
-                            <div>
-                                <p className="text-xs text-muted-foreground mb-2">Kasa Seç</p>
+                            <div className="space-y-2">
+                                <p id="payment-register-label" className="text-xs text-muted-foreground">Ödemenin yazılacağı kasa</p>
                                 {loadingCashRegisters ? (
                                     <p className="text-sm text-muted-foreground">Yükleniyor...</p>
                                 ) : cashRegisters.length === 0 ? (
                                     <p className="text-sm text-destructive">Açık kasa bulunamadı.</p>
                                 ) : (
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {cashRegisters.map(register => {
-                                            const isSelected = selectedCashRegisterId === register.cashRegisterId;
-                                            return (
-                                                <button
-                                                    key={register.cashRegisterId}
-                                                    onClick={() => handleSelectRegister(register)}
-                                                    disabled={ensuringShift}
-                                                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all disabled:opacity-60 disabled:cursor-not-allowed ${isSelected ? 'border-rb-accent bg-rb-accent-bg ring-1 ring-rb-accent' : 'border-border bg-card hover:bg-muted/50'}`}
-                                                >
-                                                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-rb-accent text-rb-accent-foreground' : 'bg-muted'}`}>
-                                                        <Landmark className="h-4 w-4" />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-rb-accent' : ''}`}>{register.cashRegisterName}</p>
-                                                        <p className={`text-xs ${!register.hasOpenShift && !(isSelected && ensuringShift) ? 'text-rb-amber font-medium' : 'text-muted-foreground'}`}>
-                                                            {isSelected && ensuringShift
-                                                                ? 'Vardiya açılıyor...'
-                                                                : register.hasOpenShift
-                                                                    ? `${register.openShiftOwnerName || 'Açık'} vardiyası · ${formatAmount(register.expectedOpeningBalance ?? 0)} ₺`
-                                                                    : 'Vardiya yok, sizin adınıza açılacak'}
-                                                        </p>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                    <>
+                                        {cashRegisters.length > 1 && (
+                                            <div role="group" aria-labelledby="payment-register-label" className="flex flex-wrap gap-1 rounded-xl border border-border p-1">
+                                                {cashRegisters.map(register => {
+                                                    const isSelected = selectedCashRegisterId === register.cashRegisterId;
+                                                    return (
+                                                        <button
+                                                            key={register.cashRegisterId}
+                                                            type="button"
+                                                            aria-pressed={isSelected}
+                                                            onClick={() => handleSelectRegister(register)}
+                                                            disabled={ensuringShift}
+                                                            className={`min-h-11 min-w-0 flex-1 basis-28 truncate rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 ${
+                                                                isSelected ? 'bg-rb-accent text-rb-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                                            }`}
+                                                        >
+                                                            {register.cashRegisterName}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        {selectedRegister && (
+                                            <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground" aria-hidden="true">
+                                                    <Landmark className="h-4 w-4" />
+                                                </div>
+                                                <div className="min-w-0" aria-live="polite">
+                                                    <p className="truncate text-sm font-semibold text-foreground">{selectedRegister.cashRegisterName}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {ensuringShift
+                                                            ? 'Vardiya hazırlanıyor...'
+                                                            : selectedRegister.hasOpenShift
+                                                                ? `${selectedRegister.openShiftOwnerName || 'Açık'} vardiyası${selectedRegister.expectedOpeningBalance != null ? ` · Bakiye ${formatAmount(selectedRegister.expectedOpeningBalance)} ₺` : ''}`
+                                                                : activeShift
+                                                                    ? `${activeShift.openedByUserName || 'Sizin'} vardiyası · bu ekranda açıldı`
+                                                                    : 'Açık vardiya yok'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedRegister && !selectedRegister.hasOpenShift && !activeShift && (
+                                            <p role="status" className="rounded-lg border border-rb-amber/40 bg-rb-amber-bg px-3 py-2 text-xs font-medium text-rb-amber">
+                                                Bu kasada açık vardiya yok; ödeme alınınca sizin adınıza vardiya açılır.
+                                            </p>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}

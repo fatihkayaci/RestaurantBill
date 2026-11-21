@@ -304,30 +304,41 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
         <div className="relative flex h-full min-h-0 flex-col bg-[#F5F0E8] dark:bg-background">
             {header}
             <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pt-1 pb-4 *:shrink-0">
-                {/* Kasa */}
-                <button
-                    type="button"
-                    onClick={() => multi && setPickerOpen(true)}
-                    aria-label={register ? `Kasa: ${register.cashRegisterName}${multi ? ', değiştir' : ''}` : 'Kasa seçin'}
-                    className={cn(
+                {/* Kasa: açık günü olan kasalardan seçilir; tek açık kasa varsa salt okunur gösterilir. */}
+                {(() => {
+                    const content = (
+                        <>
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rb-gold-bg text-rb-gold" aria-hidden="true">
+                                <Store className="size-5" />
+                            </span>
+                            <span className="flex min-w-0 flex-1 flex-col">
+                                <span className="text-xs font-medium text-rb-text-sub">Kasaya yazılacak</span>
+                                <span className="truncate text-[15px] font-bold text-foreground">
+                                    {register ? `${register.cashRegisterName} · ${personDay(register)}` : 'Kasa seçin'}
+                                </span>
+                            </span>
+                            <span className="flex shrink-0 items-center text-[13px] font-semibold text-rb-text-sub">
+                                {multi ? <>Değiştir<ChevronRight className="size-4" aria-hidden="true" /></> : 'Tek açık kasa'}
+                            </span>
+                        </>
+                    );
+                    const boxClass = cn(
                         'flex min-h-15 items-center gap-3 rounded-2xl border bg-card px-3.5 py-2 text-left',
                         register ? 'border-border' : 'border-rb-amber',
-                        !multi && 'cursor-default',
-                    )}
-                >
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rb-gold-bg text-rb-gold" aria-hidden="true">
-                        <Store className="size-5" />
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="text-xs font-medium text-rb-text-sub">Kasaya yazılacak</span>
-                        <span className="truncate text-[15px] font-bold text-foreground">
-                            {register ? `${register.cashRegisterName} · ${personDay(register)}` : 'Kasa seçin'}
-                        </span>
-                    </span>
-                    <span className="flex shrink-0 items-center text-[13px] font-semibold text-rb-text-sub">
-                        {multi ? <>Değiştir<ChevronRight className="size-4" aria-hidden="true" /></> : 'Tek açık kasa'}
-                    </span>
-                </button>
+                    );
+                    return multi ? (
+                        <button
+                            type="button"
+                            onClick={() => setPickerOpen(true)}
+                            aria-label={register ? `Kasa: ${register.cashRegisterName}, değiştir` : 'Kasa seçin'}
+                            className={cn(boxClass, 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')}
+                        >
+                            {content}
+                        </button>
+                    ) : (
+                        <div className={boxClass}>{content}</div>
+                    );
+                })()}
 
                 {/* Tutar */}
                 <div className="flex flex-col items-center rounded-2xl bg-foreground px-4 py-3.5 text-background">
