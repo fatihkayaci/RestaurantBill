@@ -168,7 +168,8 @@ export interface SubmitDeliveryOrderInput {
     address: string;
     addressDirections?: string;
     note?: string;
-    paymentMethod: DoorPaymentMethod;
+    /** Adrese teslimde zorunlu. Gel al'da gönderilmez (restoranda ödenir) ya da yalnızca IBAN. */
+    paymentMethod?: DoorPaymentMethod | null;
     expectedTotal: number;
     /** Bal küpü: insan doldurmaz. */
     website?: string;
@@ -214,7 +215,8 @@ export interface DeliveryTracking {
     customerName: string;
     customerPhone: string;
     zoneName: string;
-    paymentPreference: DoorPaymentMethod;
+    /** Gel al'da null: ödeme restoranda, yöntem teslimde belli olur. */
+    paymentPreference: DoorPaymentMethod | null;
     /** IBAN tercihli, iptal/ret olmamış siparişte havale bilgileri; yoksa null. */
     ibanPayment?: TableIbanPayment | null;
     lines: DeliveryLine[];
@@ -268,7 +270,8 @@ export interface DeliveryOrder {
     note: string;
     deliveryZoneId?: string | null;
     zoneName: string;
-    paymentPreference: DoorPaymentMethod;
+    /** Gel al'da null: müşteri restoranda öder, yöntem "Müşteri aldı"da seçilir. */
+    paymentPreference: DoorPaymentMethod | null;
     lines: DeliveryLine[];
     subtotal: number;
     deliveryFee: number;

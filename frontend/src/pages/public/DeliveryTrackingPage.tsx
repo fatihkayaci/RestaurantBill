@@ -46,6 +46,8 @@ const PICKUP_STEP_HEADLINE: Record<number, string> = {
 
 function paymentText(order: DeliveryTracking): string {
     if (order.paymentPreference === DoorPayment.Iban) return 'IBAN ile havale';
+    // Gel al'da tercih yok: müşteri restoranda öder, yöntemi orada seçer.
+    if (order.paymentPreference == null) return 'Restoranda ödeme';
     return `${order.isPickup ? 'Restoranda' : 'Kapıda'} ${order.paymentPreference === DoorPayment.Nakit ? 'nakit' : 'kart'}`;
 }
 
@@ -362,7 +364,7 @@ export default function DeliveryTrackingPage() {
                                     <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.pickupAddress)}`} target="_blank" rel="noreferrer"
                                         className="text-sm text-[var(--site-sub)] underline underline-offset-2">{order.pickupAddress}</a>
                                 )}
-                                <span className="text-sm text-[var(--site-sub)]">{order.customerName} · {byIban ? 'IBAN ile havale/EFT' : `${paymentText(order).toLocaleLowerCase('tr-TR')} ödeme`}</span>
+                                <span className="text-sm text-[var(--site-sub)]">{order.customerName} · {byIban ? 'IBAN ile havale/EFT' : order.paymentPreference == null ? 'ödeme restoranda' : `${paymentText(order).toLocaleLowerCase('tr-TR')} ödeme`}</span>
                             </div>
                         </div>
 

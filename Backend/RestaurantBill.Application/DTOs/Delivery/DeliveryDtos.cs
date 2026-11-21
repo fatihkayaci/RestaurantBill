@@ -209,7 +209,8 @@ namespace RestaurantBill.Application.DTOs.Delivery
         /// <summary>"0532 *** ** 67"</summary>
         public string CustomerPhone { get; set; } = string.Empty;
         public string ZoneName { get; set; } = string.Empty;
-        public PaymentMethod PaymentPreference { get; set; }
+        /// <summary>Gel al'da null: ödeme restoranda, yöntem teslimde belli olur.</summary>
+        public PaymentMethod? PaymentPreference { get; set; }
         /// <summary>IBAN tercihli, iptal/ret olmamış siparişte havale bilgileri (tutar Total, açıklama sipariş numarası); yoksa null.</summary>
         public TableIbanPaymentDto? IbanPayment { get; set; }
         public List<DeliveryLineDto> Lines { get; set; } = [];
@@ -295,7 +296,8 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public string Note { get; set; } = string.Empty;
         public Guid? DeliveryZoneId { get; set; }
         public string ZoneName { get; set; } = string.Empty;
-        public PaymentMethod PaymentPreference { get; set; }
+        /// <summary>Gel al'da null: ödeme restoranda, yöntem teslimde belli olur.</summary>
+        public PaymentMethod? PaymentPreference { get; set; }
         public List<DeliveryLineDto> Lines { get; set; } = [];
         public decimal Subtotal { get; set; }
         public decimal DeliveryFee { get; set; }

@@ -17,7 +17,7 @@ interface Props {
     data: OnlineOrdering;
     /** Adrese teslimde seçilen mahalle; gel al'da null. */
     zone: DeliveryZone | null;
-    /** Gel al: adres istenmez, ödeme restoranda (ya da IBAN). */
+    /** Gel al: adres istenmez; ödeme restoranda (nakit/kart sorulmaz), isteyen IBAN ile önceden öder. */
     pickup?: boolean;
     lines: DeliveryCartLine[];
     quote: DeliveryQuote;
@@ -37,7 +37,9 @@ interface SubmitProblem {
 }
 
 // Paket siparişin son adımı: ad, telefon (0xxx xxx xx xx), adres, tarif, not, ödeme (kapıda nakit/kart ya da IBAN ile
-// havale) ve gerekiyorsa SMS kodu. Gel al'da adres ve tarif yoktur; restoranın adresi gösterilir, ödeme restoranda yapılır. IBAN seçilince hesap bilgileri ve tutar kopyalanabilir kutuda gösterilir.
+// havale) ve gerekiyorsa SMS kodu. Gel al'da adres ve tarif yoktur; restoranın adresi gösterilir, ödeme restoranda yapılır:
+// nakit/kart sorulmaz (yöntem kasada belli olur), şube IBAN alıyorsa yalnızca isteğe bağlı "IBAN ile önceden öde" seçeneği
+// çıkar. IBAN seçilince hesap bilgileri ve tutar kopyalanabilir kutuda gösterilir.
 // Gizli "website" alanı bot tuzağıdır. Fiyat değiştiyse (409) yeni toplam gösterilir, müşteri onaylayıp yeniden gönderir.
 export default function DeliveryCheckout({ data, zone, pickup = false, lines, quote, clientRequestId, onQuoteChanged, onSubmitted, onClose }: Props) {
     const [name, setName] = useState('');
@@ -45,9 +47,9 @@ export default function DeliveryCheckout({ data, zone, pickup = false, lines, qu
     const [address, setAddress] = useState('');
     const [directions, setDirections] = useState('');
     const [note, setNote] = useState('');
-    // Tek yöntem varsa seçili gelir; IBAN tek yöntemse bilgileri de gelmiş olmalı.
+    // Tek yöntem varsa seçili gelir; IBAN tek yöntemse bilgileri de gelmiş olmalı. Gel al'da varsayılan restoranda ödemedir (null).
     const [payment, setPayment] = useState<DoorPaymentMethod | null>(
-        data.paymentMethods.length === 1 && (data.paymentMethods[0] !== DoorPayment.Iban || !!data.ibanPayment) ? data.paymentMethods[0] : null);
+        !pickup && data.paymentMethods.length === 1 && (data.paymentMethods[0] !== DoorPayment.Iban || !!data.ibanPayment) ? data.paymentMethods[0] : null);
     const [website, setWebsite] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [problem, setProblem] = useState<SubmitProblem | null>(null);
@@ -78,13 +80,15 @@ export default function DeliveryCheckout({ data, zone, pickup = false, lines, qu
         name: !name.trim() ? 'Adınızı ve soyadınızı yazın.' : null,
         phone: !phoneOk ? 'Telefon numaranızı 0xxx xxx xx xx biçiminde yazın.' : null,
         address: !pickup && !address.trim() ? 'Açık adresinizi yazın.' : null,
-        payment: payment === null ? 'Ödeme yöntemini seçin.' : null,
+        payment: !pickup && payment === null ? 'Ödeme yöntemini seçin.' : null,
     };
     const valid = !Object.values(errors).some(Boolean) && verified;
     // IBAN listede olsa da bilgileri gelmediyse seçenek gösterilmez (sunucu ikisini birlikte gönderir).
     const methods = data.paymentMethods.filter(m => m !== DoorPayment.Iban || !!data.ibanPayment);
     const byIban = payment === DoorPayment.Iban && !!data.ibanPayment;
     const onlyDoor = methods.every(m => m !== DoorPayment.Iban);
+    // Gel al'da tek soru: IBAN ile önceden ödemek isteyip istemediği (şube IBAN alıyorsa).
+    const pickupIban = pickup && methods.includes(DoorPayment.Iban);
 
     const sendCode = async () => {
         if (!phoneOk) return;
@@ -119,7 +123,7 @@ export default function DeliveryCheckout({ data, zone, pickup = false, lines, qu
 
     const submit = async () => {
         setTouched(true);
-        if (!valid || submitting || payment === null) return;
+        if (!valid || submitting || (!pickup && payment === null)) return;
         setSubmitting(true);
         setProblem(null);
         try {
@@ -134,7 +138,8 @@ export default function DeliveryCheckout({ data, zone, pickup = false, lines, qu
                 address: pickup ? '' : address.trim(),
                 addressDirections: pickup ? undefined : directions.trim() || undefined,
                 note: note.trim() || undefined,
-                paymentMethod: payment,
+                // Gel al: yalnızca IBAN gönderilir; yoksa ödeme restoranda, yöntem teslimde belli olur.
+                paymentMethod: pickup ? (payment === DoorPayment.Iban ? DoorPayment.Iban : null) : payment,
                 expectedTotal: quote.total,
                 website,
                 verificationToken: verification?.token,
@@ -291,14 +296,45 @@ export default function DeliveryCheckout({ data, zone, pickup = false, lines, qu
                     <textarea value={note} onChange={e => setNote(e.target.value)} maxLength={500} rows={2} className={cn(fieldClass, 'mt-1.5 py-2.5')} />
                 </label>
 
+                {pickup ? (
+                    pickupIban ? (
+                        <div>
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={byIban}
+                                onClick={() => setPayment(byIban ? null : DoorPayment.Iban)}
+                                className={cn(
+                                    'flex min-h-14 w-full items-center gap-3 rounded-2xl border px-4 text-left transition-colors',
+                                    byIban ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]' : 'border-[var(--site-border-strong)]'
+                                )}
+                            >
+                                <Landmark className="h-5 w-5 shrink-0" aria-hidden="true" />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block text-[15px] font-semibold">IBAN ile önceden öde</span>
+                                    <span className={cn('block text-xs', byIban ? 'opacity-80' : 'text-[var(--site-sub)]')}>
+                                        İsteğe bağlı. Seçmezseniz ödemeyi restoranda yaparsınız.
+                                    </span>
+                                </span>
+                                <span aria-hidden="true" className={cn('relative h-6 w-10 shrink-0 rounded-full transition-colors', byIban ? 'bg-[var(--site-accent)]' : 'bg-[var(--site-border-strong)]')}>
+                                    <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all', byIban ? 'left-[18px]' : 'left-0.5')} />
+                                </span>
+                            </button>
+                            {byIban && data.ibanPayment && (
+                                <DeliveryIbanCard payment={data.ibanPayment} amount={quote.total} orderNumber={null} className="mt-3 bg-[var(--site-raised)]" />
+                            )}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-[var(--site-sub)]">Ödemeyi restoranda yaparsınız.</p>
+                    )
+                ) : (
                 <fieldset>
-                    <legend className="text-sm font-semibold">{onlyDoor ? (pickup ? 'Restoranda ödeme' : 'Kapıda ödeme') : 'Ödeme'}</legend>
+                    <legend className="text-sm font-semibold">{onlyDoor ? 'Kapıda ödeme' : 'Ödeme'}</legend>
                     <div role="radiogroup" aria-label="Ödeme yöntemi" className="mt-1.5 grid grid-cols-2 gap-2">
                         {methods.map((method, index) => {
                             const checked = payment === method;
                             const Icon = method === DoorPayment.Nakit ? Banknote : method === DoorPayment.Iban ? Landmark : CreditCard;
-                            const where = pickup ? 'Restoranda' : 'Kapıda';
-                            const label = method === DoorPayment.Nakit ? `${where} nakit` : method === DoorPayment.Iban ? 'IBAN ile öde' : `${where} kart`;
+                            const label = method === DoorPayment.Nakit ? 'Kapıda nakit' : method === DoorPayment.Iban ? 'IBAN ile öde' : 'Kapıda kart';
                             return (
                                 <button
                                     key={method}
@@ -324,6 +360,7 @@ export default function DeliveryCheckout({ data, zone, pickup = false, lines, qu
                         <DeliveryIbanCard payment={data.ibanPayment} amount={quote.total} orderNumber={null} className="mt-3 bg-[var(--site-raised)]" />
                     )}
                 </fieldset>
+                )}
 
                 {/* Bal küpü: ekranda ve ekran okuyucuda yok; yalnızca botlar doldurur. */}
                 <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">

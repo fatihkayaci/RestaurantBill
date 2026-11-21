@@ -14,7 +14,7 @@ public class PickupOrderTests
     private static void SetId(BaseEntity entity, Guid id) =>
         typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(entity, id);
 
-    private static DeliveryOrder Received(PaymentMethod payment = PaymentMethod.Nakit)
+    private static DeliveryOrder Received(PaymentMethod? payment = null)
     {
         DeliveryOrder order = DeliveryOrder.CreatePickup(BranchId, 3, Guid.NewGuid(), " Ayşe Yılmaz ", "0532 123 45 67", " acısız ", payment, "10.0.0.1");
         Product product = Product.Create("Lahmacun", 90m, "", Guid.NewGuid());
@@ -23,7 +23,7 @@ public class PickupOrderTests
         return order;
     }
 
-    private static DeliveryOrder Accepted(PaymentMethod payment = PaymentMethod.Nakit)
+    private static DeliveryOrder Accepted(PaymentMethod? payment = null)
     {
         DeliveryOrder order = Received(payment);
         Order kitchen = Order.CreatePickup(BranchId, order.Note);
@@ -47,6 +47,16 @@ public class PickupOrderTests
         Assert.Equal("Ayşe Yılmaz", order.CustomerName);
         Assert.Equal("+905321234567", order.CustomerPhone);
         Assert.Equal("acısız", order.Note);
+        Assert.Null(order.PaymentPreference);
+    }
+
+    [Fact]
+    public void CreatePickup_PaymentPreference_IsEmptyOrIban_NeverCashOrCard()
+    {
+        Assert.Null(Received(null).PaymentPreference);
+        Assert.Equal(PaymentMethod.Iban, Received(PaymentMethod.Iban).PaymentPreference);
+        Assert.Throws<DomainException>(() => Received(PaymentMethod.Nakit));
+        Assert.Throws<DomainException>(() => Received(PaymentMethod.Kart));
     }
 
     [Theory]
@@ -55,7 +65,7 @@ public class PickupOrderTests
     public void CreatePickup_StillRequiresNameAndPhone(string name, string phone)
     {
         Assert.Throws<DomainException>(() =>
-            DeliveryOrder.CreatePickup(BranchId, 1, Guid.NewGuid(), name, phone, null, PaymentMethod.Nakit, null));
+            DeliveryOrder.CreatePickup(BranchId, 1, Guid.NewGuid(), name, phone, null, null, null));
     }
 
     [Fact]
@@ -136,9 +146,24 @@ public class PickupOrderTests
     }
 
     [Fact]
-    public void CompletePickup_Iban_OnlyWhenCustomerChoseIban()
+    public void CompletePickup_WithoutPreference_AcceptsAnyCounterMethod()
     {
-        Assert.Throws<DomainException>(() => Accepted(PaymentMethod.Nakit).CompletePickup(PaymentMethod.Iban, 160m, StaffId, Now));
+        foreach (PaymentMethod method in new[] { PaymentMethod.Nakit, PaymentMethod.Kart, PaymentMethod.Iban })
+        {
+            DeliveryOrder order = Accepted();
+            order.CompletePickup(method, 160m, StaffId, Now);
+            Assert.Equal(method, order.CollectedMethod);
+            Assert.Equal(DeliveryOrderStatus.Delivered, order.Status);
+        }
+        Assert.Throws<DomainException>(() => Accepted().CompletePickup(PaymentMethod.Qr, 160m, StaffId, Now));
+    }
+
+    [Fact]
+    public void CompletePickup_IbanPreference_CanStillPayAtCounter()
+    {
+        DeliveryOrder cash = Accepted(PaymentMethod.Iban);
+        cash.CompletePickup(PaymentMethod.Nakit, 160m, StaffId, Now);
+        Assert.Equal(PaymentMethod.Nakit, cash.CollectedMethod);
 
         DeliveryOrder iban = Accepted(PaymentMethod.Iban);
         iban.CompletePickup(PaymentMethod.Iban, 160m, StaffId, Now);

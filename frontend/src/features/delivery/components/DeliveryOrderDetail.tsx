@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, Ban, Banknote, CreditCard, Landmark, MapPin, Phone, X, XCircle } from 'lucide-react';
+import { AlertTriangle, Ban, Banknote, CreditCard, Landmark, MapPin, Phone, Wallet, X, XCircle } from 'lucide-react';
 import { Modal, ModalTitle } from '@/components/ui/modal';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { shiftService } from '@/features/cashier/api/shiftService';
@@ -77,7 +77,9 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
     const canBlock = canBlockPhone && !order.isPhoneBlocked;
     const cash = order.paymentPreference === DoorPayment.Nakit;
     const iban = order.paymentPreference === DoorPayment.Iban;
-    const PayIcon = cash ? Banknote : iban ? Landmark : CreditCard;
+    // Gel al'da tercih yoksa müşteri restoranda öder; yöntem "Müşteri aldı"da seçilir.
+    const atCounter = order.paymentPreference == null;
+    const PayIcon = atCounter ? Wallet : cash ? Banknote : iban ? Landmark : CreditCard;
     const column = boardColumnOf(order.status);
     const urgent = !!order.autoRejectAt && new Date(order.autoRejectAt).getTime() - now < 2 * 60_000;
     const hasLateness = !!deliveryLateness(order, now);
@@ -118,7 +120,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
     const ownRegisterId = shift?.cashRegisterId ?? null;
     const [openRegisters, setOpenRegisters] = useState<OpenRegister[] | null>(null);
     const [pickedRegisterId, setPickedRegisterId] = useState('');
-    const [pickupMethod, setPickupMethod] = useState<DoorPaymentMethod>(order.paymentPreference);
+    const [pickupMethod, setPickupMethod] = useState<DoorPaymentMethod>(order.paymentPreference ?? DoorPayment.Nakit);
     useEffect(() => {
         if (!canHandOver || ownRegisterId) return;
         shiftService.getOpenRegisters()
@@ -129,9 +131,10 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
             .catch(() => setOpenRegisters([]));
     }, [canHandOver, ownRegisterId]);
     const registerId = ownRegisterId ?? (pickedRegisterId || null);
+    // Kasada her yöntem alınabilir (müşteri orada da havale yapabilir); IBAN'ı önceden seçtiyse o öne gelir.
     const pickupMethods: DoorPaymentMethod[] = order.paymentPreference === DoorPayment.Iban
         ? [DoorPayment.Iban, DoorPayment.Nakit, DoorPayment.Kart]
-        : [DoorPayment.Nakit, DoorPayment.Kart];
+        : [DoorPayment.Nakit, DoorPayment.Kart, DoorPayment.Iban];
     const completePickup = () => {
         if (!registerId) {
             toast.error(ownRegisterId === null ? 'Ödemeyi almak için açık günü olan bir kasa seçin.' : 'Ödemeyi almak için açık bir vardiyanız olmalı.');
@@ -258,9 +261,9 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                         </div>
                         <div className="text-right">
                             <p className="font-serif text-[28px] font-bold leading-none tabular-nums text-foreground">₺{formatAmount(order.total)}</p>
-                            <p className={cn('mt-1 flex items-center justify-end gap-1 text-xs font-semibold', cash ? 'text-rb-green' : iban ? 'text-rb-purple' : 'text-rb-accent')}>
+                            <p className={cn('mt-1 flex items-center justify-end gap-1 text-xs font-semibold', atCounter ? 'text-muted-foreground' : cash ? 'text-rb-green' : iban ? 'text-rb-purple' : 'text-rb-accent')}>
                                 <PayIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                                {iban ? 'IBAN (havale)' : `${isPickup ? 'Kasada' : 'Kapıda'} ${cash ? 'nakit' : 'kart'}`}
+                                {atCounter ? 'Restoranda ödeyecek' : iban ? 'IBAN (havale)' : `${isPickup ? 'Kasada' : 'Kapıda'} ${cash ? 'nakit' : 'kart'}`}
                                 {iban && !isPickup && <span className="font-normal text-muted-foreground">· kurye para almaz</span>}
                             </p>
                         </div>
