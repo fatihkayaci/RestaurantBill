@@ -18,6 +18,7 @@ import { createHubConnection } from '@/lib/signalrConnection';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatMinutes, formatPrice, prepCountdown } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import CancelOrderItemDialog from '@/features/orders/components/CancelOrderItemDialog';
 import AddItemsView from './AddItemsView';
 import PaymentView, { type PaymentMode } from './PaymentView';
 import MoveTableView from './MoveTableView';
@@ -95,6 +96,8 @@ export default function TableWorkspace({
     const [confirm, setConfirm] = useState<'cancel-order' | 'cancel-reservation' | null>(null);
     const [busy, setBusy] = useState<string | null>(null);
     const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+    // Ürün bazlı iptal penceresinin satırı (3 ayrandan 1'i ya da tamamı).
+    const [cancelItem, setCancelItem] = useState<OrderItem | null>(null);
     const [noteDraft, setNoteDraft] = useState('');
     const [resName, setResName] = useState('');
     const [resContact, setResContact] = useState('');
@@ -497,6 +500,17 @@ export default function TableWorkspace({
                                                     ) : (
                                                         <span className="shrink-0 text-[15px] font-semibold tabular-nums text-foreground">₺{formatPrice(item.unitPrice * item.quantity)}</span>
                                                     )}
+                                                    {canCancelAndDiscount && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCancelItem(item)}
+                                                            disabled={!!busy}
+                                                            aria-label={`${item.productName} iptal et`}
+                                                            className="min-h-11 shrink-0 rounded-xl border border-rb-red/30 px-3 text-sm font-semibold text-rb-red hover:bg-rb-red-bg disabled:opacity-60"
+                                                        >
+                                                            İptal
+                                                        </button>
+                                                    )}
                                                 </li>
                                             );
                                         })}
@@ -597,6 +611,15 @@ export default function TableWorkspace({
                         </>
                     )}
                 </BottomSheet>
+            )}
+
+            {order && (
+                <CancelOrderItemDialog
+                    order={order}
+                    item={cancelItem}
+                    onClose={() => setCancelItem(null)}
+                    onCancelled={() => { void loadOrder(); onRefreshTables(); }}
+                />
             )}
 
             <AlertDialog open={confirm !== null} onOpenChange={open => !open && setConfirm(null)}>

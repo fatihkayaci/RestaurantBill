@@ -461,6 +461,7 @@ The frontend dev server runs on `http://localhost:5173`.
 | `POST` | `/api/Order/add-product` | Owner, Admin, Waiter | Add items to an order |
 | `POST` | `/api/Order/item/quantity` | Owner, Admin, Waiter | Update an order item's quantity |
 | `POST` | `/api/Order/item/remove` | Owner, Admin, Waiter | Remove an item from an order |
+| `POST` | `/api/Order/item/cancel` | Owner, Admin, Waiter | Cancel a quantity of one order line (product or set menu units), with optional reason |
 | `POST` | `/api/Order/cancel` | Owner, Admin, Waiter | Cancel an order |
 | `POST` | `/api/Order/close` | Owner, Admin, Waiter, Cashier | Close/settle an order |
 | `POST` | `/api/Order/{id}/status` | Owner, Admin, Kitchen, Waiter | Update order status |

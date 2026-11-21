@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import axios from "axios";
 import { createHubConnection } from "@/lib/signalrConnection";
 import PaymentPanel from '../cashier/components/PaymentPanel';
+import CancelOrderItemDialog from '@/features/orders/components/CancelOrderItemDialog';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
 import TableQrModal from '@/features/tables/components/TableQrModal';
 import BulkTableQrModal from '@/features/tables/components/BulkTableQrModal';
@@ -164,6 +165,8 @@ export default function Tables() {
 
     const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
     const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+    // Ürün bazlı iptal penceresinin satırı (3 ayrandan 1'i ya da tamamı).
+    const [cancelItem, setCancelItem] = useState<OrderItem | null>(null);
     const [transferModalOpen, setTransferModalOpen] = useState(false);
 
     const [reservationName, setReservationName] = useState('');
@@ -1518,6 +1521,14 @@ export default function Tables() {
                                                         )}
                                                     </div>
                                                     <span className="text-sm font-semibold text-foreground shrink-0">₺{formatPrice(item.unitPrice * item.quantity)}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCancelItem(item)}
+                                                        aria-label={`${item.productName} iptal et`}
+                                                        className="shrink-0 min-h-9 px-2.5 rounded-lg border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/10 transition-colors"
+                                                    >
+                                                        İptal
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
@@ -1601,6 +1612,21 @@ export default function Tables() {
                         setTransferModalOpen(false);
                         await refreshTables();
                         closePanel();
+                    }}
+                />
+            )}
+
+            {/* Ürün bazlı iptal: satırın bir kısmı ya da tamamı */}
+            {tableOrder && (
+                <CancelOrderItemDialog
+                    order={tableOrder}
+                    item={cancelItem}
+                    onClose={() => setCancelItem(null)}
+                    onCancelled={() => {
+                        if (selectedTable) {
+                            orderService.getOrderByTableId(selectedTable.id.toString()).then(setTableOrder).catch(() => {});
+                        }
+                        void refreshTables();
                     }}
                 />
             )}

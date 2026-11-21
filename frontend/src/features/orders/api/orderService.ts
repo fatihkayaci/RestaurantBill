@@ -69,6 +69,14 @@ export const orderService = {
         const response = await api.post(`/order/item/quantity`, { orderId, orderItemId, quantity });
         return response.data;
     },
+    /**
+     * Satırın verilen adedini iptal eder (3 ayrandan 1'i); adet satırın tamamıysa satır çıkar. Mutfağa geçmiş ürün de
+     * iptal edilir, mutfak ekranı OrderUpdated ile yenilenir. Menü satırında menü adedi düşer. Sipariş iptaliyle aynı yetki.
+     */
+    cancelOrderLine: async (orderId: number | string, orderItemId: number | string, quantity: number, reason?: string) => {
+        const response = await api.post(`/order/item/cancel`, { orderId, orderItemId, quantity, reason: reason?.trim() || null });
+        return response.data;
+    },
     updateOrderStatus: async (orderId: number, status: number) => {
         const response = await api.post(`/order/${orderId}/status`, { status });
         return response.data;
