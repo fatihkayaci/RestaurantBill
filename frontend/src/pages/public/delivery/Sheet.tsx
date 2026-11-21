@@ -13,13 +13,23 @@ interface Props {
 }
 
 // Müşteri sitesinin alttan açılan penceresi. Portal kullanılmaz: sitenin renk değişkenleri (siteRootStyle) sayfanın kök
-// kutusunda tanımlı, pencere onun içinde kalmalı. Escape ve arka plana dokunuş kapatır; açıkken sayfa kaymaz.
+// kutusunda tanımlı, pencere onun içinde kalmalı. Escape ve arka plana dokunuş kapatır; odak içeride döner; açıkken sayfa kaymaz.
 export default function Sheet({ title, onClose, locked = false, footer, children }: Props) {
     const titleId = useId();
     const panelRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !locked) onClose(); };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !locked) onClose();
+            // Odak pencerenin içinde döner (Tab / Shift+Tab).
+            if (e.key !== 'Tab' || !panelRef.current) return;
+            const focusable = [...panelRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])')];
+            if (focusable.length === 0) return;
+            const first = focusable[0], last = focusable[focusable.length - 1];
+            const active = document.activeElement;
+            if (e.shiftKey && (active === first || active === panelRef.current)) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && (active === last || !panelRef.current.contains(active))) { e.preventDefault(); first.focus(); }
+        };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose, locked]);
@@ -43,7 +53,7 @@ export default function Sheet({ title, onClose, locked = false, footer, children
                 aria-modal="true"
                 aria-labelledby={titleId}
                 tabIndex={-1}
-                className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border-t border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] outline-none animate-in slide-in-from-bottom duration-200 sm:max-w-lg sm:rounded-3xl sm:border"
+                className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border-t border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] outline-none animate-in slide-in-from-bottom duration-200 motion-reduce:animate-none sm:max-w-lg sm:rounded-3xl sm:border"
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--site-border)] px-5 py-4">

@@ -66,7 +66,7 @@ public class SiteEditorController : BaseController
     public async Task<IActionResult> Discard([FromBody] VersionBody body, CancellationToken cancellationToken)
         => DraftResult(await _mediator.Send(new DiscardSiteDraftCommand { Version = body.Version }, cancellationToken));
 
-    // ── Tek fotoğraflık alanlar: cover, about, founder, share ───────────────────────────────────
+    // ── Tek fotoğraflık alanlar: cover, about, founder, share, logo ───────────────────────────────────
     [HttpPost("draft/image/{slot}")]
     [RequestSizeLimit(11_000_000)]
     public async Task<IActionResult> UploadImage([FromRoute] string slot, IFormFile file, CancellationToken cancellationToken)
@@ -156,6 +156,7 @@ public class SiteEditorController : BaseController
             "about" => SiteDraftImageTarget.About,
             "founder" => SiteDraftImageTarget.Founder,
             "share" => SiteDraftImageTarget.Share,
+            "logo" => SiteDraftImageTarget.Logo,
             "hero-menu" => SiteDraftImageTarget.MenuHero,
             "hero-hakkimizda" => SiteDraftImageTarget.AboutHero,
             "hero-mekan" => SiteDraftImageTarget.VenueHero,

@@ -24,6 +24,7 @@ import axios from "axios";
 import { createHubConnection } from "@/lib/signalrConnection";
 import PaymentPanel from '../cashier/components/PaymentPanel';
 import CancelOrderItemDialog from '@/features/orders/components/CancelOrderItemDialog';
+import { TakeawayBadge } from '@/features/orders/components/TakeawayBadge';
 import TableTransferModal from '@/features/tables/components/TableTransferModal';
 import TableQrModal from '@/features/tables/components/TableQrModal';
 import BulkTableQrModal from '@/features/tables/components/BulkTableQrModal';
@@ -1557,7 +1558,10 @@ export default function Tables() {
                                                         className="min-w-0 flex-1 cursor-pointer"
                                                         onClick={() => { if (editingItemNoteId !== item.id) startEditingItemNote(item.id, item.note); }}
                                                     >
-                                                        <p className="text-sm font-medium text-foreground truncate">{item.productName}</p>
+                                                        <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-foreground">
+                                                            <span className="truncate">{item.productName}</span>
+                                                            {item.isTakeaway && <TakeawayBadge />}
+                                                        </p>
                                                         <p className={`text-xs mt-0.5 ${ORDER_ITEM_STATUS_TEXT_COLOR[item.status] ?? 'text-muted-foreground'}`}>
                                                             {item.quantity}x · {ORDER_ITEM_STATUS_LABELS[item.status] ?? ''}
                                                         </p>

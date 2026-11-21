@@ -172,6 +172,7 @@ export const PHOTO_META: Record<SiteDraftImageSlot, PhotoMeta> = {
     cover: { title: 'Kapak fotoğrafı', hint: 'Anasayfanın ve kendi kapağı olmayan sayfaların kapağı. Kaldırılırsa menü fotoğraflarından kolaj görünür.', removeLabel: 'Kaldır' },
     about: { title: 'Hikâye fotoğrafı', hint: 'Hikâyenin yanında. Boşken galerinin ilk fotoğrafı ya da tabaklarınızdan kolaj görünür.', removeLabel: 'Kaldır' },
     founder: { title: 'Usta portresi', hint: 'Dikey, iyi ışıkta bir fotoğraf.', removeLabel: 'Kaldır' },
+    logo: { title: 'Logo', hint: 'QR menünün başında ve fotoğrafı olmayan ürünlerde görünür. Kare, şeffaf arka planlı PNG önerilir.', removeLabel: 'Kaldır' },
     share: { title: 'Paylaşım görseli', hint: 'Google ve WhatsApp önizlemesi. Boşken kapak fotoğrafı kullanılır.', removeLabel: 'Otomatiğe dön' },
     'hero-menu': hero('Menü kapağı'),
     'hero-hakkimizda': hero('Hakkımızda kapağı'),
@@ -187,6 +188,7 @@ export function slotUrl(d: BranchSite, slot: SiteDraftImageSlot): string {
         case 'about': return d.aboutImageUrl;
         case 'founder': return d.founderPhotoUrl;
         case 'share': return d.shareImageUrl;
+        case 'logo': return d.logoUrl ?? '';
         case 'hero-menu': return d.menuHeroUrl;
         case 'hero-hakkimizda': return d.aboutHeroUrl;
         case 'hero-mekan': return d.venueHeroUrl;

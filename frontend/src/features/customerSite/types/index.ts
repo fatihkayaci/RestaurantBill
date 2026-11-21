@@ -24,6 +24,8 @@ export interface BranchSite {
     about: string;
     coverImageUrl: string;
     aboutImageUrl: string;
+    /** Restoran logosu (QR menü başlığı, fotoğrafsız ürünlerin yer tutucusu); boş = yok. Eski sunucu göndermezse de boş. */
+    logoUrl?: string;
     /** "HH:mm" ya da null */
     opensAt: string | null;
     closesAt: string | null;
@@ -272,6 +274,11 @@ export interface PublicTableInfo {
      * telefondan veriliyor (sepet kapalı). Eski sunucu göndermezse none sayılır.
      */
     orderLock?: TableOrderLock;
+    /**
+     * "Popüler" bölümünün ürün kimlikleri, çok satandan aza (en çok 8). Bölüm kapalıysa ya da yeterli satış yoksa boş;
+     * eski sunucu göndermez.
+     */
+    popularProductIds?: string[];
 }
 
 export type TableOrderLock = 'none' | 'mine' | 'other';
@@ -304,6 +311,8 @@ export interface PublicTableBillLine {
     /** Menü satırının içindeki ürünler. */
     details: string[];
     note: string;
+    /** "Paket olsun" denen kalem (eski sunucu: yok). */
+    isTakeaway?: boolean;
 }
 
 /** Masa QR karşılama ekranının anahtarları; admin "QR menü özellikleri" de aynı şekli kullanır. */
@@ -313,6 +322,10 @@ export interface QrFeatures {
     billRequestEnabled: boolean;
     deliveryLinkEnabled: boolean;
     reservationLinkEnabled: boolean;
+    /** Menü başındaki "Öne Çıkanlar" bölümü; eski sunucu göndermezse açık sayılır. */
+    featuredSectionEnabled?: boolean;
+    /** "Popüler" bölümü (son 30 günün en çok satanları); eski sunucu göndermezse kapalı. */
+    popularSectionEnabled?: boolean;
 }
 
 /** "Garson çağır" / "Hesap iste" sonucu. sent=false: bu masadan az önce yapılmış, yeniden bildirilmedi. */
@@ -433,6 +446,8 @@ export interface OrderRequestItem {
     quantity: number;
     unitPrice: number;
     note: string;
+    /** Müşteri QR'da "Paket olsun" dedi (eski sunucu: yok). */
+    isTakeaway?: boolean;
 }
 
 export interface OrderRequest {
@@ -455,6 +470,8 @@ export interface OrderRequestCreatedEvent {
     regionName: string;
     /** Taleplerdeki toplam adet (2× çay + 1× menü = 3). */
     itemCount: number;
+    /** Bunlardan müşterinin "Paket olsun" dediği adet (eski sunucu: yok). */
+    takeawayCount?: number;
     createdAt: string;
 }
 

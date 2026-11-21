@@ -141,6 +141,11 @@ public class PublicTableInfoDto
     /// "other" başka bir telefondan sipariş veriliyor (sepet kapalı). Sayfayı açmak masayı kilitlemez.
     /// </summary>
     public string OrderLock { get; set; } = "none";
+    /// <summary>
+    /// "Popüler" bölümünün ürünleri, çok satandan aza (en çok 8). Bölüm kapalıysa ya da son 30 günde yeterli satış yoksa
+    /// (3 üründen az) boş: bölüm gösterilmez.
+    /// </summary>
+    public List<Guid> PopularProductIds { get; set; } = [];
 }
 
 // "IBAN ile öde" bilgileri: masa QR sayfası ve online paket sipariş (ödeme adımı ve takip sayfası). Misafir IBAN'ı
@@ -200,6 +205,10 @@ public class QrFeaturesDto
     public bool BillRequestEnabled { get; set; } = true;
     public bool DeliveryLinkEnabled { get; set; } = true;
     public bool ReservationLinkEnabled { get; set; } = true;
+    /// <summary>Menü başındaki "Öne Çıkanlar" bölümü.</summary>
+    public bool FeaturedSectionEnabled { get; set; } = true;
+    /// <summary>"Popüler" bölümü (son 30 günün en çok satanları); varsayılan kapalı.</summary>
+    public bool PopularSectionEnabled { get; set; }
 
     public static QrFeaturesDto From(QrFeatures features) => new()
     {
@@ -208,6 +217,8 @@ public class QrFeaturesDto
         BillRequestEnabled = features.BillRequestEnabled,
         DeliveryLinkEnabled = features.DeliveryLinkEnabled,
         ReservationLinkEnabled = features.ReservationLinkEnabled,
+        FeaturedSectionEnabled = features.FeaturedSectionEnabled,
+        PopularSectionEnabled = features.PopularSectionEnabled,
     };
 }
 
@@ -252,6 +263,8 @@ public class PublicTableBillLineDto
     /// <summary>Menü satırının içindeki ürünler ("Adana", "Ayran").</summary>
     public List<string> Details { get; set; } = [];
     public string Note { get; set; } = string.Empty;
+    /// <summary>Paket kalem ("Paket olsun").</summary>
+    public bool IsTakeaway { get; set; }
 }
 
 public class AvailabilityDto
@@ -304,6 +317,8 @@ public class OrderRequestItemDto
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public string Note { get; set; } = string.Empty;
+    /// <summary>Müşteri QR'da "Paket olsun" dedi.</summary>
+    public bool IsTakeaway { get; set; }
 }
 
 public class StaffReservationDto

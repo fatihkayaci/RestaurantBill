@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.CustomerSite;
@@ -85,7 +86,7 @@ public class QrTableLockTests : ApplicationTestBase
 
     private async Task<string> LockOfAsync(string? deviceHash, Guid? tableId = null)
     {
-        var result = await new GetPublicTableQueryHandler(Db, _tenant)
+        var result = await new GetPublicTableQueryHandler(Db, _tenant, new MemoryCache(new MemoryCacheOptions()), TimeProvider.System)
             .Handle(new GetPublicTableQuery { TableId = tableId ?? _table.Id, DeviceTokenHash = deviceHash }, CancellationToken.None);
         Assert.True(result.IsSuccess, result.Error);
         return result.Value!.OrderLock;

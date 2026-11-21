@@ -27,6 +27,9 @@ namespace RestaurantBill.Domain.Entities
         public int? PrepMinutes { get; private set; }
         // Gecikme uyarısının gönderildiği an; her kalem için yalnızca bir kez uyarı gider.
         public DateTime? OverdueNotifiedAt { get; private set; }
+        // Paket: müşteri QR'da "Paket olsun" dedi; mutfak paketler, garson masaya değil pakete koyar. Menü içeriği
+        // menü satırınınkini taşır (mutfak menü satırını görmez).
+        public bool IsTakeaway { get; private set; }
 
 
         public bool IsSetMenu => SetMenuId is not null;
@@ -34,7 +37,7 @@ namespace RestaurantBill.Domain.Entities
 
         protected OrderItem() { }
 
-        internal static OrderItem Create(decimal unitPrice, int quantity, Product product, decimal taxRate, string note = "")
+        internal static OrderItem Create(decimal unitPrice, int quantity, Product product, decimal taxRate, string note = "", bool isTakeaway = false)
         {
             if (product == null)
                 throw new DomainException("Geçersiz ürün ID'si.");
@@ -54,11 +57,12 @@ namespace RestaurantBill.Domain.Entities
                 TaxRate = taxRate,
                 Note = note ?? string.Empty,
                 Status = OrderItemStatus.Pending,
-                PrepMinutes = product.PrepMinutes
+                PrepMinutes = product.PrepMinutes,
+                IsTakeaway = isTakeaway
             };
         }
 
-        internal static OrderItem CreateSetMenu(SetMenu setMenu, decimal unitPrice, int quantity, decimal taxRate, string note)
+        internal static OrderItem CreateSetMenu(SetMenu setMenu, decimal unitPrice, int quantity, decimal taxRate, string note, bool isTakeaway = false)
         {
             if (setMenu == null)
                 throw new DomainException("Geçersiz menü.");
@@ -74,7 +78,8 @@ namespace RestaurantBill.Domain.Entities
                 Quantity = quantity,
                 TaxRate = taxRate,
                 Note = note ?? string.Empty,
-                Status = OrderItemStatus.Pending
+                Status = OrderItemStatus.Pending,
+                IsTakeaway = isTakeaway
             };
         }
 
@@ -93,7 +98,8 @@ namespace RestaurantBill.Domain.Entities
                 Quantity = parent.Quantity,
                 TaxRate = parent.TaxRate,
                 Status = OrderItemStatus.Pending,
-                PrepMinutes = product.PrepMinutes
+                PrepMinutes = product.PrepMinutes,
+                IsTakeaway = parent.IsTakeaway
             };
         }
 

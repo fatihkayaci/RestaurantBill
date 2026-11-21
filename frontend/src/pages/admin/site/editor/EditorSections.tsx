@@ -227,6 +227,50 @@ export function PopoverBody({ ctx, target, onDone }: { ctx: EditorCtx; target: S
 
 // ── "Genel ayarlar" bölümleri ───────────────────────────────────────────────────────────────────
 
+/** Restoran logosu: QR menünün başlığında ve fotoğrafı olmayan ürünlerde. Hazır görsel yok; yalnız kendi dosyası. */
+export function LogoFields({ ctx }: { ctx: EditorCtx }) {
+    const fileRef = useRef<HTMLInputElement>(null);
+    const logoUrl = ctx.editor.draft.logoUrl ?? '';
+    const busy = ctx.state.busy === 'photo:logo';
+    return (
+        <div className="flex items-center gap-4">
+            <span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-muted">
+                {logoUrl
+                    ? <img src={logoUrl} alt="Restoran logosu" className="h-full w-full object-contain p-1.5" />
+                    : <span className="text-xl font-bold text-muted-foreground" aria-hidden="true">{initials(restaurantName(ctx.site))}</span>}
+            </span>
+            <div className="flex flex-col gap-1.5">
+                <span className="text-[13px] leading-snug text-muted-foreground">
+                    QR menünün başında ve fotoğrafı olmayan ürünlerde görünür. Kare, şeffaf arka planlı PNG önerilir.
+                    {!logoUrl && ' Logo yokken adınızın baş harfleri görünür.'}
+                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                    <button type="button" disabled={busy} className={cn(ed.link, 'inline-flex items-center gap-1')} onClick={() => fileRef.current?.click()}>
+                        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />}
+                        {busy ? 'Yükleniyor…' : logoUrl ? 'Değiştir' : 'Logo yükle'}
+                    </button>
+                    {logoUrl && (
+                        <button type="button" disabled={busy} className={cn(ed.link, 'inline-flex items-center gap-1')}
+                            onClick={() => void ctx.state.runPhoto('photo:logo', () => siteEditorService.removeImage('logo'))}>
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />Kaldır
+                        </button>
+                    )}
+                </div>
+            </div>
+            <input ref={fileRef} type="file" accept="image/png,image/webp,image/jpeg" className="hidden" aria-label="Logo dosyası"
+                onChange={e => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (file && !tooBig(file)) void ctx.state.runPhoto('photo:logo', () => siteEditorService.uploadImage('logo', file), 'Logo yüklenemedi.');
+                }} />
+        </div>
+    );
+}
+
+function initials(name: string): string {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toLocaleUpperCase('tr-TR')).join('') || '?';
+}
+
 /** "Tasarımlar": önce tasarım; renk (tema) altında, seçilen tasarımın temalarıyla. Seçim taslağa ve önizlemeye hemen gider. */
 export function DesignFields({ ctx }: { ctx: EditorCtx }) {
     const t = ctx.texts;

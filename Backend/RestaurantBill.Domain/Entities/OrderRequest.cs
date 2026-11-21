@@ -72,26 +72,27 @@ namespace RestaurantBill.Domain.Entities
         }
 
         /// <param name="unitPrice">Ön siparişte müşterinin gördüğü fiyat; QR talebinde null (onayda güncel fiyat).</param>
-        public void AddItem(Product product, int quantity, string? note, decimal? unitPrice = null)
+        /// <param name="isTakeaway">Müşteri QR'da "Paket olsun" dedi: kalem masada değil, paketlenip verilir.</param>
+        public void AddItem(Product product, int quantity, string? note, decimal? unitPrice = null, bool isTakeaway = false)
         {
             if (product is null)
                 throw new DomainException("Geçersiz ürün.");
             EnsureCanAdd(quantity, unitPrice);
 
-            _items.Add(OrderRequestItem.Create(product, quantity, note?.Trim() ?? string.Empty, unitPrice));
+            _items.Add(OrderRequestItem.Create(product, quantity, note?.Trim() ?? string.Empty, unitPrice, isTakeaway));
         }
 
         /// <summary>
         /// Menü (set) kalemi. <paramref name="selectionsJson"/> varsayılanlar dahil tüm bölümlerin seçimi (bölüm Id → ürün
         /// Id); doğrulaması fiyatlandırmada (OrderPricingService) yapılır. unitPrice QR talebinde null (onayda güncel fiyat).
         /// </summary>
-        public void AddSetMenuItem(SetMenu setMenu, int quantity, string selectionsJson, string? note, decimal? unitPrice = null)
+        public void AddSetMenuItem(SetMenu setMenu, int quantity, string selectionsJson, string? note, decimal? unitPrice = null, bool isTakeaway = false)
         {
             if (setMenu is null)
                 throw new DomainException("Geçersiz menü.");
             EnsureCanAdd(quantity, unitPrice);
 
-            _items.Add(OrderRequestItem.CreateSetMenu(setMenu, quantity, selectionsJson, note?.Trim() ?? string.Empty, unitPrice));
+            _items.Add(OrderRequestItem.CreateSetMenu(setMenu, quantity, selectionsJson, note?.Trim() ?? string.Empty, unitPrice, isTakeaway));
         }
 
         private void EnsureCanAdd(int quantity, decimal? unitPrice)
@@ -174,12 +175,14 @@ namespace RestaurantBill.Domain.Entities
         public string Note { get; private set; } = string.Empty;
         // Ön siparişte fiyat anlık görüntüsü; QR talebinde null.
         public decimal? UnitPrice { get; private set; }
+        // Müşteri bu kalem için "Paket olsun" dedi; onayda siparişin kalemine (OrderItem.IsTakeaway) taşınır.
+        public bool IsTakeaway { get; private set; }
 
         public bool IsSetMenu => SetMenuId is not null;
 
         protected OrderRequestItem() { }
 
-        internal static OrderRequestItem CreateSetMenu(SetMenu setMenu, int quantity, string selectionsJson, string note, decimal? unitPrice)
+        internal static OrderRequestItem CreateSetMenu(SetMenu setMenu, int quantity, string selectionsJson, string note, decimal? unitPrice, bool isTakeaway)
         {
             return new OrderRequestItem
             {
@@ -188,11 +191,12 @@ namespace RestaurantBill.Domain.Entities
                 SelectionsJson = string.IsNullOrWhiteSpace(selectionsJson) ? "{}" : selectionsJson,
                 Quantity = quantity,
                 Note = note,
-                UnitPrice = unitPrice
+                UnitPrice = unitPrice,
+                IsTakeaway = isTakeaway
             };
         }
 
-        internal static OrderRequestItem Create(Product product, int quantity, string note, decimal? unitPrice)
+        internal static OrderRequestItem Create(Product product, int quantity, string note, decimal? unitPrice, bool isTakeaway)
         {
             return new OrderRequestItem
             {
@@ -200,7 +204,8 @@ namespace RestaurantBill.Domain.Entities
                 ProductId = product.Id,
                 Quantity = quantity,
                 Note = note,
-                UnitPrice = unitPrice
+                UnitPrice = unitPrice,
+                IsTakeaway = isTakeaway
             };
         }
     }

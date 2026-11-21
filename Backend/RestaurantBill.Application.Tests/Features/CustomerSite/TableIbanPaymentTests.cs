@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.Features.Branches.Payment;
 using RestaurantBill.Application.Features.CustomerSite.Public;
@@ -43,7 +44,7 @@ public class TableIbanPaymentTests : ApplicationTestBase
 
     private async Task<TableIbanPaymentDto?> PublicIbanAsync(Guid tableId)
     {
-        var result = await new GetPublicTableQueryHandler(Db, _tenant)
+        var result = await new GetPublicTableQueryHandler(Db, _tenant, new MemoryCache(new MemoryCacheOptions()), TimeProvider.System)
             .Handle(new GetPublicTableQuery { TableId = tableId }, CancellationToken.None);
         Assert.True(result.IsSuccess, result.Error);
         return result.Value!.IbanPayment;

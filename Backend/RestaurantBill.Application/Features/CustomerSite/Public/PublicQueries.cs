@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.CustomerSite;
@@ -135,7 +136,7 @@ public class GetPublicTableQuery : IRequest<Result<PublicTableInfoDto>>
     public string? DeviceTokenHash { get; set; }
 }
 
-public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant)
+public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant, IMemoryCache cache, TimeProvider clock)
     : IRequestHandler<GetPublicTableQuery, Result<PublicTableInfoDto>>
 {
     public async Task<Result<PublicTableInfoDto>> Handle(GetPublicTableQuery request, CancellationToken cancellationToken)
@@ -163,6 +164,8 @@ public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant
         table.AcceptsOnlineOrders = branch.AcceptsOnlineOrders;
         table.IbanPayment = TableIbanPaymentDto.From(branch);
         table.OrderLock = QrTableLock.ToWire(await QrTableLock.StateAsync(db, table.Id, request.DeviceTokenHash, cancellationToken));
+        if (branch.GetQrFeatures().PopularSectionEnabled)
+            table.PopularProductIds = await PopularProducts.GetAsync(db, cache, branch.Id, clock.GetUtcNow().UtcDateTime, cancellationToken);
         return Result<PublicTableInfoDto>.Success(table);
     }
 }

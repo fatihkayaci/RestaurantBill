@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.Features.Branches.QrMenu;
@@ -80,7 +81,7 @@ public class QrTableActionsTests : ApplicationTestBase
         var (branch, table) = await SeedAsync();
         Assert.Null(branch.QrFeatures);
 
-        var result = await new GetPublicTableQueryHandler(Db, _tenant)
+        var result = await new GetPublicTableQueryHandler(Db, _tenant, new MemoryCache(new MemoryCacheOptions()), TimeProvider.System)
             .Handle(new GetPublicTableQuery { TableId = table.Id }, CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
@@ -99,7 +100,7 @@ public class QrTableActionsTests : ApplicationTestBase
     {
         var (_, table) = await SeedAsync(QrFeatures.Create(false, true, false, true, false));
 
-        var result = await new GetPublicTableQueryHandler(Db, _tenant)
+        var result = await new GetPublicTableQueryHandler(Db, _tenant, new MemoryCache(new MemoryCacheOptions()), TimeProvider.System)
             .Handle(new GetPublicTableQuery { TableId = table.Id }, CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
@@ -108,6 +109,10 @@ public class QrTableActionsTests : ApplicationTestBase
         Assert.False(result.Value.QrFeatures.BillRequestEnabled);
         Assert.True(result.Value.QrFeatures.DeliveryLinkEnabled);
         Assert.False(result.Value.QrFeatures.ReservationLinkEnabled);
+        // Yeni bölüm anahtarları verilmezse varsayılan: öne çıkanlar açık, popüler kapalı.
+        Assert.True(result.Value.QrFeatures.FeaturedSectionEnabled);
+        Assert.False(result.Value.QrFeatures.PopularSectionEnabled);
+        Assert.Empty(result.Value.PopularProductIds);
     }
 
     [Fact]
@@ -122,6 +127,8 @@ public class QrTableActionsTests : ApplicationTestBase
             BillRequestEnabled = false,
             DeliveryLinkEnabled = false,
             ReservationLinkEnabled = true,
+            FeaturedSectionEnabled = false,
+            PopularSectionEnabled = true,
         }, CancellationToken.None);
         Assert.True(update.IsSuccess, update.Error);
 
@@ -133,7 +140,9 @@ public class QrTableActionsTests : ApplicationTestBase
         Assert.False(get.Value.BillRequestEnabled);
         Assert.False(get.Value.DeliveryLinkEnabled);
         Assert.True(get.Value.ReservationLinkEnabled);
-        Assert.Contains(DbContext.AuditLogs, a => a.Action == "BranchQrFeaturesUpdated");
+        Assert.False(get.Value.FeaturedSectionEnabled);
+        Assert.True(get.Value.PopularSectionEnabled);
+        Assert.Contains(DbContext.AuditLogs, a => a.Action == "BranchQrFeaturesUpdated" && a.Message.Contains("popüler ürünler açık"));
     }
 
     // ── Sipariş anahtarı ────────────────────────────────────────────────────────────────────────

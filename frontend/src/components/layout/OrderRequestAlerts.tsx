@@ -57,7 +57,8 @@ export default function OrderRequestAlerts({ variant }: Props) {
             if (!event?.tableId) return;
             if (variant === 'waiter') playOrderRequestSound();
             else playStaffTone('request');
-            const items = event.itemCount > 0 ? `${event.itemCount} ürün` : 'Sipariş';
+            const takeaway = event.takeawayCount ? ` (${event.takeawayCount} paket)` : '';
+            const items = event.itemCount > 0 ? `${event.itemCount} ürün${takeaway}` : 'Sipariş';
             pushBlockingAlert({
                 kind: 'order',
                 tableId: event.tableId,

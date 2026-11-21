@@ -41,6 +41,8 @@ namespace RestaurantBill.Domain.Entities
         public string About { get; init; } = string.Empty;
         public string CoverImage { get; init; } = string.Empty;
         public string AboutImage { get; init; } = string.Empty;
+        /// <summary>Restoran logosu (depo anahtarı); boşsa QR menü baş harfleri gösterir.</summary>
+        public string LogoImage { get; init; } = string.Empty;
         public TimeOnly? OpensAt { get; init; }
         public TimeOnly? ClosesAt { get; init; }
         public string HoursNote { get; init; } = string.Empty;
@@ -54,7 +56,7 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Bölüm dışındaki alanların anahtarları, ekrandaki sırayla. Bölümler "region:{id}" olarak eklenir.</summary>
         public static readonly IReadOnlyList<string> FieldKeys =
         [
-            "headline", "tagline", "coverImage", "storyTitle", "about", "aboutImage",
+            "logo", "headline", "tagline", "coverImage", "storyTitle", "about", "aboutImage",
             "hours", "hoursNote", "instagramUrl", "directionsNote", "whatsappPhone",
             "design", "font", "theme", "accentColor",
             "gallery", "amenities", "hiddenFaqs",
@@ -129,6 +131,7 @@ namespace RestaurantBill.Domain.Entities
         {
             SiteImageSlot.Cover => this with { CoverImage = key },
             SiteImageSlot.About => this with { AboutImage = key },
+            SiteImageSlot.Logo => this with { LogoImage = key },
             SiteImageSlot.Founder => this with { Content = Content.WithFounderPhoto(key, out _) },
             SiteImageSlot.Share => this with { Content = Content.WithShareImage(key, out _) },
             _ when SiteContent.IsHeroSlot(slot) => this with { Content = Content.WithHeroImage(slot, key, out _) },
@@ -149,7 +152,7 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Bu hâlin kullandığı bütün depo anahtarları (paylaşılan hazır görseller dahil).</summary>
         public IReadOnlySet<string> ImageKeys()
         {
-            HashSet<string> keys = [CoverImage, AboutImage, Content.FounderPhoto, Content.ShareImage, .. Content.GalleryImages,
+            HashSet<string> keys = [CoverImage, AboutImage, LogoImage, Content.FounderPhoto, Content.ShareImage, .. Content.GalleryImages,
                 .. Content.RegionDetails.Select(r => r.PhotoKey),
                 Content.MenuHero, Content.AboutHero, Content.VenueHero, Content.ContactHero, Content.ReservationHero];
             keys.RemoveWhere(string.IsNullOrWhiteSpace);
@@ -185,6 +188,7 @@ namespace RestaurantBill.Domain.Entities
 
             return field switch
             {
+                "logo" => this with { LogoImage = source.LogoImage },
                 "headline" => this with { Headline = source.Headline },
                 "tagline" => this with { Tagline = source.Tagline },
                 "coverImage" => this with { CoverImage = source.CoverImage },
@@ -229,6 +233,7 @@ namespace RestaurantBill.Domain.Entities
             if (HeroFields.TryGetValue(field, out SiteImageSlot heroSlot)) return x.HeroImage(heroSlot) == y.HeroImage(heroSlot);
             return field switch
             {
+                "logo" => a.LogoImage == b.LogoImage,
                 "headline" => a.Headline == b.Headline,
                 "tagline" => a.Tagline == b.Tagline,
                 "coverImage" => a.CoverImage == b.CoverImage,

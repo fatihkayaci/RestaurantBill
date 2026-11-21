@@ -11,5 +11,7 @@ public class OrderRequestCreatedDto
     public string RegionName { get; set; } = string.Empty;
     // Total quantity of all lines in the request (2x tea + 1x menu = 3).
     public int ItemCount { get; set; }
+    // Of which marked "Paket olsun" by the customer (takeaway).
+    public int TakeawayCount { get; set; }
     public DateTime CreatedAt { get; set; }
 }

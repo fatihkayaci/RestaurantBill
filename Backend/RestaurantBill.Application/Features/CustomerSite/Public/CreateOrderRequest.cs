@@ -39,6 +39,8 @@ public class OrderRequestItemInput
     public Guid? SetMenuId { get; set; }
     public int Quantity { get; set; }
     public string? Note { get; set; }
+    /// <summary>Müşteri bu kalem için "Paket olsun" dedi (masada değil, paketlenip verilir). Eski istemcilerde false.</summary>
+    public bool IsTakeaway { get; set; }
     /// <summary>Menü: bölüm → ürün; gönderilmeyen bölümde varsayılan seçenek alınır.</summary>
     public List<CartSelectionInput> Selections { get; set; } = [];
 
@@ -164,11 +166,11 @@ public class CreateOrderRequestCommandHandler(
                 if (item.IsSetMenu)
                 {
                     PricedLine line = pricedMenus[menuIndex++];
-                    orderRequest.AddSetMenuItem(line.SetMenu!, line.Quantity, DeliveryScope.SerializeSelections(line.Selections), line.Note);
+                    orderRequest.AddSetMenuItem(line.SetMenu!, line.Quantity, DeliveryScope.SerializeSelections(line.Selections), line.Note, isTakeaway: item.IsTakeaway);
                 }
                 else
                 {
-                    orderRequest.AddItem(products.First(p => p.Id == item.ProductId), item.Quantity, item.Note);
+                    orderRequest.AddItem(products.First(p => p.Id == item.ProductId), item.Quantity, item.Note, isTakeaway: item.IsTakeaway);
                 }
             }
         }
@@ -189,6 +191,7 @@ public class CreateOrderRequestCommandHandler(
             RegionId = table.RegionId,
             RegionName = table.Region.Name,
             ItemCount = orderRequest.Items.Sum(i => i.Quantity),
+            TakeawayCount = orderRequest.Items.Where(i => i.IsTakeaway).Sum(i => i.Quantity),
             CreatedAt = orderRequest.CreatedAt,
         });
 

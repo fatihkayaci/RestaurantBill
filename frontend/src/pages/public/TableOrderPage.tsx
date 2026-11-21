@@ -1,86 +1,147 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, BellRing, Check, ClipboardList, Landmark, Minus, Moon, Plus, Receipt, UtensilsCrossed, X } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Info, Lock, Moon, UtensilsCrossed, WifiOff, X } from 'lucide-react';
 import { publicService } from '@/features/customerSite/api/publicService';
 import {
-    ORDER_REQUEST_APPROVED, ORDER_REQUEST_PENDING, ORDER_REQUEST_REJECTED, TABLE_LOCKED_MESSAGE, canReserveOnline, type PublicProduct,
-    type PublicSite, type PublicTableInfo,
+    ORDER_REQUEST_PENDING, TABLE_LOCKED_MESSAGE, type PublicProduct, type PublicSite, type PublicTableInfo, type TableActionResult,
 } from '@/features/customerSite/types';
 import {
-    addLine, changeQuantity, defaultSelections, removeOneSetMenu, estimatedSubtotal, itemCount as countItems, productKey, pruneUnavailable,
-    quantityOf as sumQuantity, selectionNames, setLineNote as setCartLineNote, setMenuKey, setMenuUnitPrice, toCartInput,
+    addLine, changeQuantity, defaultSelections, estimatedSubtotal, itemCount as countItems, pruneUnavailable,
+    quantityOf as sumQuantity, selectionNames, setLineNote as setCartLineNote, setMenuUnitPrice, toCartInput,
     type DeliveryCartLine,
 } from '@/features/delivery/deliveryCart';
 import type { OnlineSetMenu } from '@/features/delivery/types';
 import type { TableIbanPayment } from '@/features/customerSite/tableIbanPayment';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import IbanPaySheet from './components/IbanPaySheet';
-import MyOrdersSheet from './components/MyOrdersSheet';
-import TableLanding, { TableActionConfirmation, type TableActionKind } from './components/TableLanding';
-import { TableBadge } from './components/TableBadge';
 import { customerFontsHref, customerRootStyle, opensText } from './customerTheme';
-import DeliveryMenu from './delivery/DeliveryMenu';
-import DeliverySetMenuSheet from './delivery/DeliverySetMenuSheet';
-import { ImageSlot } from './site/SiteChrome';
-import { serif } from './site/siteParts';
-import { lineMenuVariant, resolveDesign } from './site/siteTheme';
+import { resolveDesign } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
+import QrCart from './qrMenu/QrCart';
+import QrFilterSheet from './qrMenu/QrFilterSheet';
+import QrHome, { CATEGORY_STRIP_ANCHOR } from './qrMenu/QrHome';
+import QrItemDetail from './qrMenu/QrItemDetail';
+import { QrBrandContext } from './qrMenu/qrBrand';
+import { clearTableCart, loadTableCart, saveTableCart, setLineTakeaway, tableLineKey } from './qrMenu/qrCartStore';
 import {
-    accentItalic, closeCircle, creamBox, displayTitle, eyebrowAccent, fieldClass, heroBox, heroEyebrow, heroPattern, pillAccent, pillDark,
-    pillOutline, sheetBackdrop, sheetPanel, stepperMinus, stepperPlus, stepperWrap,
-} from './table/tableUi';
-import { useTableOrderRequests, type SentOrderRequest } from './useTableOrderRequests';
+    activeFilterCount, buildCategories, DEFAULT_FILTERS, featuredItems, popularItems, type BindItem, type QrFilters, type QrItem,
+} from './qrMenu/qrModel';
+import { buildPaymentMethods } from './qrMenu/qrPayments';
+import { AccountTab, BottomBar, EmptyMenu, type BarToast, type QrTab } from './qrMenu/QrTabs';
+import { formatPrice } from '@/lib/format';
+import { column, displayTitle, focusRing, outlineButton, primaryButton } from './qrMenu/qrUi';
+import { useTableOrderRequests } from './useTableOrderRequests';
 import { useTableAction } from './useTableAction';
 import { useTableBill } from './useTableBill';
 
-/** Seçim yapılacak bölümü yok (tüm bölümler tek seçenekli): pencere açılmadan doğrudan eklenir. */
-const hasChoices = (menu: OnlineSetMenu) => menu.slots.some(slot => !slot.isFixed && slot.options.length > 1);
+// Adres çubuğundaki sekme adı (?sekme=sepet, ?sekme=hesap); menü sekmesinde parametre yok. Eski "Siparişlerim"
+// bağlantısı (?sekme=siparislerim) Hesabım'ı, eski sepet katmanı (?sepet=1) Sepetim'i, eski "Masa İşlemleri"
+// (?sekme=masa) menüyü açar.
+const TAB_PARAMS: Record<Exclude<QrTab, 'menu'>, string> = { cart: 'sepet', account: 'hesap' };
+const parseTab = (value: string | null, legacyCart: boolean): QrTab =>
+    value === TAB_PARAMS.account || value === 'siparislerim' ? 'account'
+        : value === TAB_PARAMS.cart || legacyCart ? 'cart' : 'menu';
 
-// Masadaki QR kodun açtığı sayfa (görünüm: "Renkli ve sıcak", sınıflar table/tableUi.ts). İlk ekran karşılama: sitenin kapağı, tek ana eylem (menü), garson + hesap.
-// Menüde (?ekran=menu) paket sipariş menüsünün kartları (DeliveryMenu) kullanılır; menüler (set) de listelenir: seçimi
-// olmayan menü doğrudan eklenir, seçimli menü paket siparişin seçim penceresini (DeliverySetMenuSheet) açar. Sepet satırları
-// paket sepetiyle aynı biçimdedir (deliveryCart). Sepet garsona gönderilir, garson
-// onaylayınca mutfağa gider. Gönderimden sonra tam ekran "Siparişiniz garsonda" onayı açılır ve talebin durumunu
-// (useTableOrderRequests yoklaması) canlı gösterir. Restoran kapalıyken (isOpenNow=false) menü yalnız göz atmalıktır.
-// Telefonun geri tuşu ve menüdeki geri düğmesi karşılamaya döner; sepet korunur.
-// Masa sahibi telefon (useTableBill): QR'ı okutan herkes menüyü görür, garson çağırır ve hesap ister; ilk sipariş talebini
-// gönderen telefon masayı tutar. Yalnız o telefon sipariş verir ve "Masanın hesabı"nı görür; diğerlerinde sepet kapalıdır.
+/** "Sepete eklendi" şeridinin görünme süresi. */
+const TOAST_MS = 1800;
+
+// Tarayıcının bağlantı durumu (çevrimdışı uyarısı ve bağlantı gelince menüyü tazelemek için).
+const subscribeOnline = (onChange: () => void) => {
+    window.addEventListener('online', onChange);
+    window.addEventListener('offline', onChange);
+    return () => {
+        window.removeEventListener('online', onChange);
+        window.removeEventListener('offline', onChange);
+    };
+};
+const useOnline = () => useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
+
+/** Saklanan sepet satırlarını güncel menüyle eşler: fiyat ve ad menüden; menüde olmayan ya da tükenenler düşer. */
+function restoreLines(lines: DeliveryCartLine[], site: PublicSite): { lines: DeliveryCartLine[]; removed: number } {
+    const pruned = pruneUnavailable(lines, site.categories, site.setMenus ?? []);
+    const products = new Map(site.categories.flatMap(c => c.products).map(p => [p.id, p]));
+    const menus = new Map((site.setMenus ?? []).map(m => [m.id, m]));
+    return {
+        removed: pruned.removed,
+        lines: pruned.lines.map(line => {
+            const product = line.productId ? products.get(line.productId) : undefined;
+            if (line.kind === 'product' && product) return { ...line, name: product.name, unitPrice: product.price };
+            const menu = line.setMenuId ? menus.get(line.setMenuId) : undefined;
+            if (line.kind === 'setMenu' && menu) {
+                return { ...line, name: menu.name, unitPrice: setMenuUnitPrice(menu, line.selections), selectionNames: selectionNames(menu, line.selections) };
+            }
+            return line;
+        }),
+    };
+}
+
+// Masadaki QR kodun açtığı sayfa (qrMenu/). Alt çubuk: Menü, Sepetim ve Hesabım sekmeleri, Garson Çağır düğmesi
+// (admin'in QR ayarlarına göre; onay penceresi yok, sonuç düğmede ve kısa şeritte yazar). "Hesap iste" Hesabım'da. Menü: başlık
+// (logo), arama + süzgeç ve kategori şeridi hep yerinde; "Tümü" "Öne Çıkanlar", "Popüler Lezzetler", hazır menüler ve
+// kategorileri, bir kategori aynı sayfada yalnız kendi kalemlerini gösterir. Seçili kategori (?kategori=), ürün/menü
+// ayrıntısı (?urun=) ve sekme (?sekme=sepet|hesap) adres çubuğunda durur, telefonun geri tuşu bir adım geri götürür. Hesabım:
+// masanın ortak hesabı (useTableBill), Hesap iste, ödeme yöntemleri (qrPayments), bu telefondan gönderilen talepler ve
+// garsonun kararı (useTableOrderRequests yoklaması). Kalem başına "Paket olsun" (ayrıntıda ve sepette): garson, kasa ve mutfakta "PAKET" yazar.
+// Sepet telefonda saklanır (qrCartStore: yenileyince geri gelir), garsona gönderilir, garson onaylayınca mutfağa
+// gider. Ekleme geri bildirimi pencere değil: "+" → "✓", sepet çubuğu nabzı ve alttan kısa "Sepete eklendi" şeridi.
+// Restoran kapalıyken menü yalnız göz atmalıktır.
+// Masa sahibi telefon: QR'ı okutan herkes menüyü görür, garson çağırır ve hesap ister; ilk sipariş talebini gönderen
+// telefon masayı tutar. Yalnız o telefon sipariş verir ve "Masanın hesabı"nı görür; diğerlerinde sepet kapalıdır.
+// Renkler sitenin temasından (--site-*): vurgu düğmeler ve seçili çipler, kartlar ve zemin temanın açık tonları.
 export default function TableOrderPage() {
     const { tableId = '' } = useParams();
     const [params, setParams] = useSearchParams();
-    const inMenu = params.get('ekran') === 'menu';
+    const navigate = useNavigate();
+    const location = useLocation();
+    const tab = parseTab(params.get('sekme'), params.get('sepet') === '1');
+    const categoryId = tab === 'menu' ? params.get('kategori') : null;
+    const itemKey = params.get('urun');
+
     const [table, setTable] = useState<(PublicTableInfo & { ibanPayment?: TableIbanPayment | null }) | null>(null);
     const [site, setSite] = useState<PublicSite | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [loadTick, setLoadTick] = useState(0);
     const [cart, setCart] = useState<DeliveryCartLine[]>([]);
-    const [setMenuOpen, setSetMenuOpen] = useState<OnlineSetMenu | null>(null);
     const [orderNote, setOrderNote] = useState('');
-    const [cartOpen, setCartOpen] = useState(false);
     const [sending, setSending] = useState(false);
     const [sendError, setSendError] = useState<string | null>(null);
-    const [myOrdersOpen, setMyOrdersOpen] = useState(false);
     const [sentId, setSentId] = useState<string | null>(null);
-    const [confirm, setConfirm] = useState<TableActionKind | null>(null);
     const [ibanOpen, setIbanOpen] = useState(false);
+    const [query, setQuery] = useState('');
+    const [filters, setFilters] = useState<QrFilters>(DEFAULT_FILTERS);
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [toast, setToast] = useState<BarToast | null>(null);
+    const toastTimer = useRef<number | undefined>(undefined);
+    const showToast = useCallback((text: string, kind: BarToast['kind'] = 'cart') => {
+        window.clearTimeout(toastTimer.current);
+        setToast(prev => ({ id: (prev?.id ?? 0) + 1, text, kind }));
+        toastTimer.current = window.setTimeout(() => setToast(null), kind === 'info' ? TOAST_MS * 2 : TOAST_MS);
+    }, []);
+    // Saklanan sepetten düşen kalemler için bir kerelik not.
+    const [cartNote, setCartNote] = useState<string | null>(null);
+    // Saklanan sepet ilk yüklemede bir kez okunur; okunmadan önce boş sepet depoya yazılmaz.
+    const cartRestored = useRef(false);
+    const online = useOnline();
     const { requests, addRequest } = useTableOrderRequests(tableId);
     const tableBill = useTableBill(tableId, table?.orderLock);
 
     const callWaiterRun = useCallback(() => publicService.callWaiter(tableId), [tableId]);
     const billRequestRun = useCallback(() => publicService.requestBill(tableId), [tableId]);
-    const callWaiter = useTableAction(callWaiterRun, 'Garson çağrılamadı. Lütfen tekrar deneyin.');
-    const billRequest = useTableAction(billRequestRun, 'Hesap istenemedi. Lütfen tekrar deneyin ya da garsona haber verin.');
+    // Sonuç alt çubuğun üstündeki kısa şeritte: kime haber verildiği, hesapta masa toplamı.
+    const regionName = table?.regionName ?? '';
+    const onWaiterCalled = useCallback((result: TableActionResult) => showToast(result.sent
+        ? `Garson çağrıldı${regionName ? ` · ${regionName} bölümüne haber verildi` : ''}`
+        : 'Garson az önce çağrıldı, birazdan gelir', 'info'), [showToast, regionName]);
+    const onBillRequested = useCallback((result: TableActionResult) => showToast(
+        `${result.sent ? 'Hesap istendi' : 'Hesap az önce istendi'}${result.billTotal ? ` · Masa toplamı ${formatPrice(result.billTotal)} ₺` : ''}`,
+        'info'), [showToast]);
+    const callWaiter = useTableAction(callWaiterRun, 'Garson çağrılamadı. Lütfen tekrar deneyin.', onWaiterCalled);
+    const billRequest = useTableAction(billRequestRun, 'Hesap istenemedi. Lütfen tekrar deneyin ya da garsona haber verin.', onBillRequested);
     // "IBAN ile öde"deki tutar: son "Hesap iste"nin bildirdiği masa toplamı (bekleme süresi bitince de hatırlanır).
     const [lastBillTotal, setLastBillTotal] = useState<number | null>(null);
     const reportedBillTotal = billRequest.state.status === 'done' ? billRequest.state.billTotal : null;
     if (reportedBillTotal != null && reportedBillTotal !== lastBillTotal) setLastBillTotal(reportedBillTotal);
-
-    const showView = (menu: boolean) => {
-        setParams(menu ? { ekran: 'menu' } : {});
-        window.scrollTo(0, 0);
-    };
 
     useEffect(() => {
         let cancelled = false;
@@ -91,6 +152,23 @@ export default function TableOrderPage() {
                 setTable(info);
                 setSite(siteData);
                 setLoadError(null);
+                if (cartRestored.current) {
+                    // Tazeleme: menüden kalkan ya da tükenen kalemler sepetten düşer.
+                    setCart(prev => pruneUnavailable(prev, siteData.categories, siteData.setMenus ?? []).lines);
+                } else {
+                    cartRestored.current = true;
+                    const stored = loadTableCart(tableId, info.branchId);
+                    if (stored) {
+                        const restored = restoreLines(stored.lines, siteData);
+                        setCart(restored.lines);
+                        setOrderNote(stored.note);
+                        if (restored.removed > 0) {
+                            setCartNote(restored.removed === 1
+                                ? 'Sepetinizdeki bir ürün artık menüde yok ya da tükendi; sepetten çıkarıldı.'
+                                : `Sepetinizdeki ${restored.removed} ürün artık menüde yok ya da tükendi; sepetten çıkarıldı.`);
+                        }
+                    }
+                }
             })
             .catch(err => {
                 if (!cancelled) setLoadError(getApiErrorMessage(err, 'İnternet bağlantınızı kontrol edip tekrar deneyin. Sorun sürerse garsona haber verin.'));
@@ -98,45 +176,135 @@ export default function TableOrderPage() {
         return () => { cancelled = true; };
     }, [tableId, loadTick]);
 
+    // Sepet her değişince telefonda saklanır (boşalınca silinir).
+    const branchId = table?.branchId;
+    useEffect(() => {
+        if (branchId && cartRestored.current) saveTableCart(tableId, branchId, cart, orderNote);
+    }, [tableId, branchId, cart, orderNote]);
+
+    useEffect(() => () => window.clearTimeout(toastTimer.current), []);
+
+    const categories = useMemo(() => site ? buildCategories(site) : [], [site]);
+    const itemsByKey = useMemo(() => new Map(categories.flatMap(c => c.items).map(item => [item.key, item])), [categories]);
+    // Sepet satırlarının küçük görselleri ve yer tutucuları: ürün ya da menü kimliği → kalem.
+    const itemsById = useMemo(() => new Map(categories.flatMap(c => c.items).map(item => [item.id, item])), [categories]);
+
+    // ── Gezinme (adres çubuğu) ──────────────────────────────────────────────────────────────
+    const homeScroll = useRef(0);
+
+    const pushParams = (patch: Record<string, string | null>, replace = false, state?: unknown) => {
+        const next = new URLSearchParams(params);
+        next.delete('ekran'); // eski karşılama/menü ayrımı
+        for (const [key, value] of Object.entries(patch)) {
+            if (value == null) next.delete(key); else next.set(key, value);
+        }
+        setParams(next, { replace, state });
+    };
+    // Sekme menünün üstüne mi eklendi (geri: menü)? Doğrudan ?sekme= adresiyle açılan sekmede geçmişte menü yok;
+    // orada "Menü" geri gitmez, adresi değiştirir (yoksa siteden çıkılırdı).
+    const menuBelow = (location.state as { menuBelow?: boolean } | null)?.menuBelow === true;
+    // Bir adım geri: sayfa içinde açıldıysa tarayıcı geçmişi, doğrudan bu adresle açıldıysa üst görünüm.
+    const goBack = (fallback: Record<string, string | null>) => {
+        if (location.key !== 'default') navigate(-1);
+        else pushParams(fallback, true);
+    };
+
+    const rememberHomeScroll = () => { if (tab === 'menu' && !categoryId) homeScroll.current = window.scrollY; };
+    // Kategori aynı sayfada süzülür. "Tümü"den bir kategoriye geçiş geçmişe eklenir (geri tuşu "Tümü"ne döner),
+    // kategoriler arası geçiş yer değiştirir; "Tümü" bir adım geri gider.
+    const selectCategory = (id: string | null) => {
+        if (id === categoryId) return;
+        if (id == null) goBack({ kategori: null });
+        else if (categoryId) pushParams({ kategori: id }, true);
+        else {
+            rememberHomeScroll();
+            pushParams({ kategori: id });
+        }
+    };
+    const openItem = (item: QrItem) => pushParams({ urun: item.key });
+    const closeItem = () => goBack({ urun: null });
+    const selectTab = (next: QrTab) => {
+        if (next === tab) {
+            if (next === 'menu' && categoryId) goBack({ kategori: null });
+            else window.scrollTo({ top: 0 });
+            return;
+        }
+        rememberHomeScroll();
+        // Sepetim'den ayrılınca gönderim onayı kapanır; dönünce yeniden sepet görünür.
+        if (tab === 'cart') setSentId(null);
+        // Menüden ayrılırken geçmişe eklenir (geri tuşu menüye döner); sekmeler arasında yer değiştirir.
+        const patch = { sekme: next === 'menu' ? null : TAB_PARAMS[next], kategori: null, urun: null, sepet: null };
+        if (next === 'menu' && menuBelow) navigate(-1);
+        else if (tab === 'menu') pushParams(patch, false, { menuBelow: true });
+        else pushParams(patch, true, menuBelow ? { menuBelow: true } : undefined);
+    };
+
+    // Başka sekmeye girince sayfa başı; "Tümü"ne dönünce kalınan yer. Kategori seçilince şerit üste yapışmışsa liste
+    // şeridin hemen altından başlar, değilse sayfa yerinde kalır (başlık ve arama görünür).
+    const firstView = useRef(true);
+    useLayoutEffect(() => {
+        if (firstView.current) { firstView.current = false; return; }
+        if (tab !== 'menu') { window.scrollTo({ top: 0 }); return; }
+        if (!categoryId) { window.scrollTo({ top: homeScroll.current }); return; }
+        const anchor = document.getElementById(CATEGORY_STRIP_ANCHOR);
+        if (!anchor) return;
+        const stripTop = anchor.getBoundingClientRect().top + window.scrollY;
+        if (window.scrollY > stripTop) window.scrollTo({ top: stripTop });
+    }, [tab, categoryId]);
+
     const retryLoad = () => { setLoadError(null); setLoadTick(t => t + 1); };
 
-    const pendingCount = requests.filter(r => r.status === ORDER_REQUEST_PENDING).length;
+    // Bağlantı geri gelince masa ve menü yeniden okunur: açılamadıysa ekran kendiliğinden açılır, açıksa eski menü
+    // yerinde kalarak tazelenir (tükenenler güncellenir, sepetten düşer).
+    useEffect(() => {
+        const onOnline = () => { setLoadError(null); setLoadTick(t => t + 1); };
+        window.addEventListener('online', onOnline);
+        return () => window.removeEventListener('online', onOnline);
+    }, []);
+
+    // ── Sepet ───────────────────────────────────────────────────────────────────────────────
     const lines = cart;
     const itemCount = countItems(lines);
     const total = estimatedSubtotal(lines);
-    // Sepet satırlarının küçük görselleri: ürünün ya da menünün görseli.
-    const images = useMemo(() => new Map<string, string>([
-        ...(site?.categories ?? []).flatMap(c => c.products).map(p => [p.id, p.imageUrl] as [string, string]),
-        ...(site?.setMenus ?? []).map(m => [m.id, m.imageUrl] as [string, string]),
-    ]), [site]);
+    const pendingCount = requests.filter(r => r.status === ORDER_REQUEST_PENDING).length;
 
-    const add = (product: PublicProduct) => {
+    // Aynı ürün farklı notla ya da "Paket olsun"la ayrı satır olur (tableLineKey).
+    const addProduct = (product: PublicProduct, quantity = 1, note = '', takeaway = false) => {
         if (product.isOutOfStock) return;
-        setCart(prev => addLine(prev, {
-            key: productKey(product.id), kind: 'product', productId: product.id, name: product.name, unitPrice: product.price,
-            note: '', selections: {}, selectionNames: [],
-        }));
+        const line = {
+            kind: 'product' as const, productId: product.id, name: product.name, unitPrice: product.price, note, selections: {},
+            selectionNames: [], takeaway,
+        };
+        setCart(prev => addLine(prev, { ...line, key: tableLineKey(line) }, quantity));
+        setCartNote(null);
+        showToast(`${quantity > 1 ? `${quantity} × ` : ''}${product.name}${takeaway ? ' (paket)' : ''} sepete eklendi`);
     };
 
-    const remove = (product: PublicProduct) => setCart(prev => changeQuantity(prev, productKey(product.id), -1));
-
-    // Paket siparişle aynı: aynı seçim ve notlu menüler tek satırda toplanır.
-    const addSetMenu = (menu: OnlineSetMenu, selections: Record<string, string>, quantity: number, note: string) => {
-        const key = setMenuKey(menu.id, selections) + (note ? `:${note}` : '');
-        setCart(prev => addLine(prev, {
-            key, kind: 'setMenu', setMenuId: menu.id, name: menu.name, unitPrice: setMenuUnitPrice(menu, selections),
-            note, selections, selectionNames: selectionNames(menu, selections),
-        }, quantity));
-        setSetMenuOpen(null);
-    };
-
-    const openSetMenu = (menu: OnlineSetMenu) => {
+    // Paket siparişle aynı: aynı seçim, not ve paket işaretli menüler tek satırda toplanır.
+    const addSetMenu = (menu: OnlineSetMenu, selections: Record<string, string>, quantity: number, note: string, takeaway = false) => {
         if (!menu.isAvailable) return;
-        if (hasChoices(menu)) setSetMenuOpen(menu);
-        else addSetMenu(menu, defaultSelections(menu), 1, '');
+        const line = {
+            kind: 'setMenu' as const, setMenuId: menu.id, name: menu.name, unitPrice: setMenuUnitPrice(menu, selections),
+            note, selections, selectionNames: selectionNames(menu, selections), takeaway,
+        };
+        setCart(prev => addLine(prev, { ...line, key: tableLineKey(line) }, quantity));
+        setCartNote(null);
+        showToast(`${quantity > 1 ? `${quantity} × ` : ''}${menu.name}${takeaway ? ' (paket)' : ''} sepete eklendi`);
     };
 
-    const setLineNote = (key: string, note: string) => setCart(prev => setCartLineNote(prev, key, note));
+    // Karttaki "+": ürün doğrudan eklenir; seçimli menü ayrıntıyı açar, seçimsiz menü varsayılanlarla eklenir.
+    // false: eklenmedi (ayrıntı açıldı), "+" onay işaretine dönmez.
+    const quickAdd = (item: QrItem): boolean => {
+        if (item.product) {
+            addProduct(item.product);
+            return true;
+        }
+        if (!item.menu) return false;
+        // "+" her zaman doğrudan ekler: seçimli menüde her bölümün varsayılan seçeneğiyle. Başka seçim için ürüne dokunup
+        // detaydan eklenir (sepette de satır ayrı görünür).
+        addSetMenu(item.menu, defaultSelections(item.menu), 1, '');
+        return true;
+    };
 
     // Gönderim "tükendi" gibi bir nedenle reddedilirse menü tazelenir; tükenen ürünler ve menüler sepetten düşer.
     const refreshMenu = async (branchId: string) => {
@@ -154,7 +322,7 @@ export default function TableOrderPage() {
         try {
             const result = await publicService.createOrderRequest(
                 tableId,
-                toCartInput(lines).map(line => ({ ...line, note: line.note ?? '' })),
+                toCartInput(lines).map((line, i) => ({ ...line, note: line.note ?? '', isTakeaway: lines[i].takeaway === true })),
                 orderNote.trim()
             );
             addRequest({
@@ -166,36 +334,29 @@ export default function TableOrderPage() {
                     quantity: line.quantity,
                     productId: line.productId,
                     setMenuId: line.setMenuId,
+                    takeaway: line.takeaway === true,
                 })),
             });
             tableBill.markMine();
             setCart([]);
             setOrderNote('');
-            setCartOpen(false);
+            clearTableCart(tableId);
             setSentId(result.id);
-            window.scrollTo(0, 0);
         } catch (err) {
             const message = getApiErrorMessage(err, 'Sipariş gönderilemedi. Lütfen tekrar deneyin ya da garsona haber verin.');
             setSendError(message);
-            // Masa bu arada başka telefona bağlanmış olabilir: durum yeniden sorulur, sepet kapanır.
-            if (message === TABLE_LOCKED_MESSAGE) {
-                setCartOpen(false);
-                void tableBill.refreshLock();
-            }
+            // Masa bu arada başka telefona bağlanmış olabilir: durum yeniden sorulur.
+            if (message === TABLE_LOCKED_MESSAGE) void tableBill.refreshLock();
             void refreshMenu(table.branchId);
         } finally {
             setSending(false);
         }
     };
 
-    const runAction = async (kind: TableActionKind) => {
-        const action = kind === 'waiter' ? callWaiter : billRequest;
-        if (await action.trigger()) setConfirm(kind);
-    };
-
     const root = (children: ReactNode) => (
-        // Elit: köşesiz, ince serif giydirme (rb-el-flow); koyu kapak ve krem kutular temanın değişkenlerinden.
-        <div style={customerRootStyle(site?.site)} data-site-design={resolveDesign(site?.site.design)} className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', resolveDesign(site?.site.design) === 'elit' && 'rb-el-flow')}>
+        // Elit: köşesiz, ince serif giydirme (rb-el-flow); renkler temanın değişkenlerinden.
+        <div style={customerRootStyle(site?.site)} data-site-design={resolveDesign(site?.site.design)}
+            className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)] selection:bg-[var(--site-accent-soft)]', resolveDesign(site?.site.design) === 'elit' && 'rb-el-flow')}>
             <EliteFlowStyle design={site?.site.design} />
             <link rel="stylesheet" href={customerFontsHref(site?.site)} precedence="default" />
             {children}
@@ -204,569 +365,183 @@ export default function TableOrderPage() {
 
     if (loadError) {
         return root(
-            <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-2 py-6 sm:px-4">
-                <div className={cn(creamBox, 'flex flex-col px-6 py-9 sm:px-9')}>
-                    <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-mustard)] text-[var(--site-text)]">
-                        <UtensilsCrossed className="h-6 w-6" />
-                    </span>
-                    <h1 className={cn(displayTitle, 'mt-6 text-[48px]')}>Menü <em className={accentItalic}>açılamadı.</em></h1>
-                    <p className="m-0 mt-3 text-base leading-relaxed text-[var(--site-sub)]">{loadError}</p>
-                    <button type="button" onClick={retryLoad} className={cn(pillDark, 'mt-8 w-full')}>
-                        Tekrar dene
-                    </button>
-                    <Link to="/menu" className="mt-3 flex min-h-11 items-center justify-center text-center text-sm font-bold text-[var(--site-sub)] underline underline-offset-4">
-                        QR eski olabilir: restoranın menüsünü açın
-                    </Link>
-                </div>
+            <main className={cn(column, 'flex min-h-screen flex-col justify-center px-5 py-8')}>
+                <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-accent-soft)] text-[var(--site-accent-text)]">
+                    {online ? <UtensilsCrossed className="h-6 w-6" /> : <WifiOff className="h-6 w-6" />}
+                </span>
+                <h1 className={cn(displayTitle, 'mt-5 text-[32px]')}>{online ? 'Menü açılamadı' : 'İnternet bağlantısı yok'}</h1>
+                <p className="m-0 mt-2 text-base leading-relaxed text-[var(--site-sub)]">
+                    {online ? loadError : 'Telefonunuzun internet bağlantısını açın; bağlantı gelince menü kendiliğinden açılır.'}
+                </p>
+                <button type="button" onClick={retryLoad} className={cn(primaryButton, 'mt-7 w-full')}>Tekrar dene</button>
+                <Link to="/menu" className={cn(outlineButton, 'mt-3 w-full no-underline')}>Restoranın menüsünü aç</Link>
+                <p className="m-0 mt-2 text-center text-[13px] text-[var(--site-muted)]">QR eski olabilir.</p>
             </main>
         );
     }
 
     if (!table || !site) {
         return root(
-            <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-2 px-2 pt-2 sm:gap-3 sm:px-4 sm:pt-4" aria-busy="true" aria-label="Menü yükleniyor">
-                <div className="h-[340px] animate-pulse rounded-[24px] bg-[var(--site-hero-bg)] opacity-80 motion-reduce:animate-none" />
-                <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                    <div className="h-[120px] animate-pulse rounded-[24px] bg-[var(--site-card)] motion-reduce:animate-none" />
-                    <div className="h-[120px] animate-pulse rounded-[24px] bg-[var(--site-card)] motion-reduce:animate-none" />
+            <main className={cn(column, 'flex flex-col gap-4 px-4 pt-4')} aria-busy="true" aria-label="Menü yükleniyor">
+                <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 animate-pulse rounded-full bg-[var(--site-alt)] motion-reduce:animate-none" />
+                    <div className="h-5 w-40 animate-pulse rounded-full bg-[var(--site-alt)] motion-reduce:animate-none" />
                 </div>
-                <div className="h-[220px] animate-pulse rounded-[24px] bg-[var(--site-card)] motion-reduce:animate-none" />
+                <div className="h-12 animate-pulse rounded-2xl bg-[var(--site-alt)] motion-reduce:animate-none" />
+                <div className="h-[168px] animate-pulse rounded-[20px] bg-[var(--site-alt)] motion-reduce:animate-none" />
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="h-[190px] animate-pulse rounded-2xl bg-[var(--site-alt)] motion-reduce:animate-none" />
+                    <div className="h-[190px] animate-pulse rounded-2xl bg-[var(--site-alt)] motion-reduce:animate-none" />
+                </div>
             </main>
         );
     }
 
     const features = table.qrFeatures;
     const restaurant = site.companyName || site.branchName;
+    const subtitle = site.companyName && site.branchName && site.branchName !== site.companyName
+        ? site.branchName : [site.district, site.city].filter(Boolean).join(', ');
     const closed = site.isOpenNow === false;
+    const reopen = opensText(site.site.opensAt);
     // Masa başka telefona bağlı: menü göz atmalık, sepet ve gönderim kapalı (sunucu da reddeder).
     const lockedOut = tableBill.lock === 'other';
     const canOrder = features.orderingEnabled && !closed && !lockedOut;
+    const blockedReason = canOrder ? null
+        : closed ? `Restoran şu an kapalı${reopen ? `, ${reopen} açılıyor` : ''}. Sipariş gönderilemez.`
+            : !features.orderingEnabled ? 'Bu masadan telefonla sipariş kapalı. Siparişinizi garsona verebilirsiniz.'
+                : TABLE_LOCKED_MESSAGE;
     // Açık hesap yalnız masa bu telefona bağlıyken; ödenen hesap kilit düştükten sonra da (sunucu yalnız sahibine döner).
+    // İkinci aşamada hesap masadaki herkese açılacak; Hesabım ekranı şimdiden masanın ortak hesabı olarak çizili.
     const bill = tableBill.bill?.hasBill && (tableBill.lock === 'mine' || tableBill.bill.isPaid) ? tableBill.bill : null;
     const openBill = bill && !bill.isPaid ? bill : null;
     const waiterAction = features.callWaiterEnabled ? callWaiter : null;
     const billAction = features.billRequestEnabled ? billRequest : null;
-    const myOrdersButton = requests.length > 0 || !!bill;
     const sent = sentId ? requests.find(r => r.id === sentId) ?? null : null;
     const ibanPayment = table.ibanPayment ?? null;
-    const openIban = ibanPayment ? () => setIbanOpen(true) : null;
+    const paymentMethods = buildPaymentMethods({ onIban: ibanPayment ? () => setIbanOpen(true) : null });
+    const tableLabel = table.regionName ? `${table.name} · ${table.regionName}` : table.name;
+    const filterCount = activeFilterCount(filters);
+    // Eski sunucu bu alanları göndermezse: öne çıkanlar açık (bugünkü davranış), popüler kapalı.
+    const featured = features.featuredSectionEnabled !== false ? featuredItems(categories) : [];
+    const popular = features.popularSectionEnabled ? popularItems(categories, table.popularProductIds) : [];
+    const detailItem = itemKey ? itemsByKey.get(itemKey) ?? null : null;
+    const category = categoryId ? categories.find(c => c.id === categoryId) ?? null : null;
+    const showCartBar = tab === 'menu' && canOrder && itemCount > 0;
 
-    const overlays = (
+    const bind: BindItem = item => {
+        const matches = (l: (typeof cart)[number]) => item.kind === 'product' ? l.productId === item.id : l.setMenuId === item.id;
+        const quantity = sumQuantity(cart, matches);
+        return {
+            quantity,
+            onOpen: () => openItem(item),
+            onAdd: canOrder && !item.soldOut ? () => quickAdd(item) : null,
+            // Kartta "−": aynı ürünün birden çok satırı olabilir (not, paket, menü seçimi); en son eklenenden bir düşer.
+            onRemove: quantity > 0 ? () => setCart(prev => {
+                const last = [...prev].reverse().find(matches);
+                return last ? changeQuantity(prev, last.key, -1) : prev;
+            }) : null,
+        };
+    };
+
+    const statusNotice = !online ? (
+        <Notice icon={<WifiOff className="h-4 w-4" />}>
+            <b className="font-extrabold">Bağlantı yok.</b> Menüye göz atabilirsiniz; sipariş göndermek ve garson çağırmak için internet gerekir.
+        </Notice>
+    ) : closed ? (
+        <Notice icon={<Moon className="h-4 w-4" />}>
+            <b className="font-extrabold">Mutfak kapandı.</b> {reopen ? `Restoran ${reopen} açılıyor. ` : ''}Menüye göz atabilirsiniz, sipariş şu an gönderilemez.
+        </Notice>
+    ) : !features.orderingEnabled ? (
+        <Notice icon={<UtensilsCrossed className="h-4 w-4" />}>Siparişinizi garsona verebilirsiniz; menü yalnız göz atmak için.</Notice>
+    ) : lockedOut ? (
+        <Notice icon={<Lock className="h-4 w-4" />}>{TABLE_LOCKED_MESSAGE}</Notice>
+    ) : null;
+    const notice = (
         <>
-            {myOrdersOpen && (
-                <MyOrdersSheet
-                    requests={requests}
-                    bill={bill}
-                    onClose={() => setMyOrdersOpen(false)}
-                    onBackToMenu={inMenu ? undefined : () => showView(true)}
-                    onCallWaiter={waiterAction ? () => void runAction('waiter') : undefined}
-                />
-            )}
-            {confirm && (
-                <TableActionConfirmation
-                    kind={confirm}
-                    callWaiter={waiterAction}
-                    billRequest={billAction}
-                    regionName={table.regionName}
-                    onClose={() => setConfirm(null)}
-                    onOpenMenu={inMenu ? undefined : () => showView(true)}
-                    onAction={kind => void runAction(kind)}
-                    onPayByIban={openIban ?? undefined}
-                />
-            )}
-            {ibanOpen && ibanPayment && (
-                <IbanPaySheet payment={ibanPayment} tableName={table.name} amount={openBill?.remaining ?? (bill?.isPaid ? null : lastBillTotal)} onClose={() => setIbanOpen(false)} />
+            {statusNotice}
+            {cartNote && (
+                <Notice icon={<Info className="h-4 w-4" />} onDismiss={() => setCartNote(null)}>{cartNote}</Notice>
             )}
         </>
     );
 
-    if (sent) {
-        return root(
-            <>
-                <SentConfirmation
-                    request={sent}
-                    site={site}
-                    restaurant={restaurant}
-                    tableName={table.name}
-                    onBackToMenu={() => { setSentId(null); if (!inMenu) showView(true); }}
-                    onMyOrders={() => { setSentId(null); setMyOrdersOpen(true); }}
-                    onCallWaiter={waiterAction ? () => void runAction('waiter') : undefined}
-                />
-                {overlays}
-            </>
-        );
-    }
-
-    if (!inMenu) {
-        return root(
-            <>
-                <TableLanding
-                    site={site}
-                    restaurantName={restaurant}
-                    tableName={table.name}
-                    regionName={table.regionName}
-                    orderingEnabled={features.orderingEnabled && !lockedOut}
-                    onOpenMenu={() => showView(true)}
-                    callWaiter={waiterAction}
-                    billRequest={billAction}
-                    onPayByIban={openIban}
-                    showDelivery={features.deliveryLinkEnabled && table.acceptsOnlineOrders}
-                    deliveryHref={`/siparis?sube=${encodeURIComponent(table.branchId)}`}
-                    showReservation={features.reservationLinkEnabled && canReserveOnline(site)}
-                    myOrders={myOrdersButton ? { count: requests.length, pendingCount, open: () => setMyOrdersOpen(true), billRemaining: openBill?.remaining ?? null, billPaid: !!bill?.isPaid } : null}
-                    onAction={kind => void runAction(kind)}
-                    onShowConfirmation={setConfirm}
-                />
-                {overlays}
-            </>
-        );
-    }
-
-    const quantityOf = (productId: string) => sumQuantity(cart, l => l.productId === productId);
-    const setMenuQuantity = (setMenuId: string) => sumQuantity(cart, l => l.setMenuId === setMenuId);
-    const reopen = opensText(site.site.opensAt);
-    const showActionBar = !!(waiterAction || billAction || openIban);
+    const content: ReactNode = tab === 'account' ? (
+        <AccountTab tableName={table.name} regionName={table.regionName} bill={bill} lock={tableBill.lock} requests={requests}
+            onOpenMenu={() => selectTab('menu')} billRequest={billAction} callWaiter={waiterAction} paymentMethods={paymentMethods} />
+    ) : tab === 'cart' ? (
+        <QrCart
+            tableLabel={tableLabel}
+            lines={lines}
+            total={total}
+            itemsById={itemsById}
+            orderNote={orderNote}
+            onOrderNote={setOrderNote}
+            onChange={(key, delta) => setCart(prev => changeQuantity(prev, key, delta))}
+            onRemove={key => setCart(prev => prev.filter(l => l.key !== key))}
+            onLineNote={(key, note) => setCart(prev => setCartLineNote(prev, key, note))}
+            onLineTakeaway={(key, takeaway) => setCart(prev => setLineTakeaway(prev, key, takeaway))}
+            onSend={send}
+            sending={sending}
+            sendError={sendError}
+            blockedReason={blockedReason ?? (online ? null : 'Bağlantı yok. İnternet gelince siparişi gönderebilirsiniz.')}
+            sent={sent}
+            onBack={() => selectTab('menu')}
+            onAccount={() => selectTab('account')}
+            callWaiter={waiterAction}
+        />
+    ) : (
+        <QrHome restaurant={restaurant} subtitle={subtitle} tableName={table.name} regionName={table.regionName} categories={categories}
+            categoryId={category?.id ?? null} onSelectCategory={selectCategory}
+            featured={featured} popular={popular}
+            query={query} onQuery={setQuery} filters={filters} filterCount={filterCount} onOpenFilters={() => setFiltersOpen(true)}
+            onClearFilters={() => setFilters(DEFAULT_FILTERS)} bind={bind} notice={notice}
+            empty={<EmptyMenu callWaiter={waiterAction} />} />
+    );
 
     return root(
-        <main className={cn('min-h-screen', (canOrder && itemCount > 0) || showActionBar ? 'pb-36' : 'pb-12')}>
-            <header className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2 px-3 pb-2 pt-3 sm:px-4 sm:pt-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                    <button
-                        type="button"
-                        onClick={() => showView(false)}
-                        aria-label="Karşılama ekranına dön"
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--site-border-mid)] bg-[var(--site-card)] text-[var(--site-text)] transition-colors hover:border-[var(--site-text)]"
-                    >
-                        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                    <p className={cn(serif, 'm-0 min-w-0 truncate text-[22px] italic leading-none')}>{restaurant}</p>
-                </div>
-                {myOrdersButton && (
-                    <button
-                        type="button"
-                        onClick={() => setMyOrdersOpen(true)}
-                        aria-label={`${bill ? 'Masanın hesabı' : 'Siparişlerim'}${pendingCount > 0 ? `, ${pendingCount} onay bekliyor` : ''}`}
-                        className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-[var(--site-paper)] pl-3.5 pr-2 text-sm font-bold text-[var(--site-on-paper)] transition-opacity hover:opacity-90"
-                    >
-                        <ClipboardList className="h-4 w-4" aria-hidden="true" />
-                        <span className="hidden sm:inline">{bill ? 'Masanın hesabı' : 'Siparişlerim'}</span>
-                        <span aria-hidden="true" className={cn('flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[13px] font-extrabold tabular-nums',
-                            pendingCount > 0 ? 'bg-[var(--site-mustard)] text-[var(--site-text)]' : 'bg-[rgba(251,244,232,0.15)]')}>
-                            {pendingCount > 0 ? pendingCount : bill?.isPaid ? 'Ödendi' : bill ? `${formatPrice(bill.remaining)} ₺` : requests.length}
-                        </span>
-                    </button>
-                )}
-            </header>
+        <QrBrandContext.Provider value={{ name: restaurant, logoUrl: site.site.logoUrl ?? '' }}>
+            {/* Sepetim alt boşluğunu kendi verir (yapışık sipariş paneli alt çubuğun arkasına kadar iner). */}
+            <main className={tab === 'cart' ? undefined : showCartBar ? 'pb-[calc(148px+env(safe-area-inset-bottom))]' : 'pb-[calc(96px+env(safe-area-inset-bottom))]'}>
+                {content}
+            </main>
 
-            <div className="mx-auto w-full max-w-4xl px-2 sm:px-4">
-                {/* Krem kutu (sticky kategori şeridi için overflow yok); üstünde kapak renginde "Menü" başlığı. */}
-                <section aria-labelledby="masa-menu-baslik" className={creamBox}>
-                    <div className="relative flex flex-col items-center gap-3 overflow-hidden rounded-t-[24px] bg-[var(--site-hero-bg)] px-5 pb-9 pt-9 text-center text-[var(--site-on-paper)] md:rounded-t-[32px] md:pb-12 md:pt-12">
-                        <span aria-hidden="true" className={heroPattern} />
-                        <TableBadge tableName={table.name} regionName={table.regionName} className="relative" />
-                        <h1 id="masa-menu-baslik" className={cn(displayTitle, 'relative text-[80px] leading-[0.85] tracking-[-0.03em] md:text-[112px]')}>Menü</h1>
-                        {canOrder && (
-                            <p className="relative m-0 max-w-[340px] text-[15px] font-semibold leading-snug text-[rgba(251,244,232,0.92)]">
-                                Seçin, sepete ekleyin; garson onaylayınca mutfağa gider.
-                            </p>
-                        )}
-                    </div>
+            <BottomBar tab={tab} onTab={selectTab} cartCount={itemCount} pendingCount={pendingCount}
+                cart={showCartBar ? { count: itemCount, total, onOpen: () => selectTab('cart') } : null} toast={toast}
+                callWaiter={waiterAction} />
 
-                    <div className="px-4 pb-4 md:px-6 md:pb-8 lg:px-8">
-                        {closed && (
-                            <p role="status" className="m-0 mt-4 flex items-start gap-3 rounded-[20px] bg-[var(--site-paper)] p-4 text-sm leading-relaxed text-[var(--site-on-paper-sub)]">
-                                <Moon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--site-mustard)]" aria-hidden="true" />
-                                <span><b className="font-extrabold text-[var(--site-on-paper)]">Mutfak kapandı.</b> {reopen ? `${reopen} açılıyoruz. ` : ''}Menüye göz atabilirsiniz, sipariş şu an gönderilemez.</span>
-                            </p>
-                        )}
-                        {!features.orderingEnabled && !closed && (
-                            <p className="m-0 mt-4 rounded-[20px] bg-[var(--site-bg)] px-4 py-3 text-sm font-semibold">Siparişinizi garsonumuza verebilirsiniz.</p>
-                        )}
-                        {features.orderingEnabled && !closed && lockedOut && (
-                            <p role="status" className="m-0 mt-4 rounded-[20px] bg-[var(--site-bg)] px-4 py-3 text-sm font-semibold leading-relaxed">{TABLE_LOCKED_MESSAGE}</p>
-                        )}
-
-                        <DeliveryMenu
-                            categories={site.categories}
-                            setMenus={site.setMenus ?? []}
-                            restaurant={restaurant}
-                            productQuantity={quantityOf}
-                            setMenuQuantity={setMenuQuantity}
-                            onAddProduct={add}
-                            onRemoveProduct={remove}
-                            onOpenSetMenu={openSetMenu}
-                            onRemoveSetMenu={menu => setCart(prev => removeOneSetMenu(prev, menu.id))}
-                            featuredSection
-                            readOnly={!canOrder}
-                            variant={lineMenuVariant(site.site.design)}
-                            empty={(
-                                <div className="flex flex-col items-center py-14 text-center">
-                                    <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-mustard)] text-[var(--site-text)]">
-                                        <UtensilsCrossed className="h-6 w-6" />
-                                    </span>
-                                    <h2 className={cn(displayTitle, 'mt-5 text-[40px] leading-none')}>Menü <em className={accentItalic}>hazırlanıyor.</em></h2>
-                                    <p className="m-0 mt-2 max-w-xs text-[15px] leading-relaxed text-[var(--site-sub)]">Online menümüz henüz hazır değil. Garsonumuz basılı menüyü getirsin.</p>
-                                    {waiterAction && (
-                                        <button type="button" onClick={() => void runAction('waiter')} className={cn(pillDark, 'mt-6 h-12 text-[15px]')}>
-                                            <BellRing className="h-4 w-4" aria-hidden="true" />Garson çağır
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        />
-                    </div>
-                </section>
-            </div>
-
-            {((canOrder && itemCount > 0) || showActionBar) && (
-                <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--site-border)] bg-[color-mix(in_srgb,var(--site-bg)_95%,transparent)] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-[14px] sm:px-4">
-                    <div className="mx-auto flex max-w-4xl items-center gap-2">
-                        {canOrder && itemCount > 0 ? (
-                            <>
-                                {waiterAction && (
-                                    <MenuActionButton label="Garson çağır" icon={<BellRing className="h-5 w-5" />} action={waiterAction}
-                                        onClick={() => void runAction('waiter')} onReopen={() => setConfirm('waiter')} iconOnly />
-                                )}
-                                <button
-                                    type="button"
-                                    onClick={() => setCartOpen(true)}
-                                    className="flex h-[60px] min-w-0 flex-1 items-center justify-between gap-3 rounded-full bg-[var(--site-paper)] pl-2 pr-6 text-[var(--site-on-paper)] shadow-[0_16px_40px_-12px_rgba(36,24,15,0.45)] transition-opacity hover:opacity-90"
-                                >
-                                    <span className="flex min-w-0 items-center gap-3 text-base font-bold">
-                                        <span className="flex h-11 min-w-11 items-center justify-center rounded-full bg-[var(--site-mustard)] px-2 font-extrabold tabular-nums text-[var(--site-text)]">{itemCount}</span>
-                                        <span className="truncate">Sepete git</span>
-                                    </span>
-                                    <span className={cn(serif, 'shrink-0 text-[22px] leading-none tabular-nums')}>{formatPrice(total)} ₺</span>
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                {waiterAction && (
-                                    <MenuActionButton label="Garson çağır" icon={<BellRing className="h-4 w-4" />} action={waiterAction}
-                                        onClick={() => void runAction('waiter')} onReopen={() => setConfirm('waiter')} primary />
-                                )}
-                                {billAction && (
-                                    <MenuActionButton label="Hesap iste" icon={<Receipt className="h-4 w-4" />} action={billAction}
-                                        onClick={() => void runAction('bill')} onReopen={() => setConfirm('bill')} />
-                                )}
-                                {openIban && (
-                                    <button
-                                        type="button"
-                                        onClick={openIban}
-                                        aria-label={waiterAction || billAction ? 'IBAN ile öde' : undefined}
-                                        className={cn('flex h-14 shrink-0 items-center justify-center gap-2 rounded-full border-2 border-[var(--site-border-mid)] bg-[var(--site-card)] text-[15px] font-extrabold text-[var(--site-text)] transition-colors hover:border-[var(--site-text)]',
-                                            waiterAction || billAction ? 'w-14' : 'min-w-0 flex-1 px-4')}
-                                    >
-                                        <Landmark className="h-4 w-4" aria-hidden="true" />
-                                        {!(waiterAction || billAction) && 'IBAN ile öde'}
-                                    </button>
-                                )}
-                            </>
-                        )}
-                    </div>
-                    {(waiterAction?.state.status === 'error' || billAction?.state.status === 'error') && (
-                        <p role="alert" className="mx-auto mt-2 max-w-4xl text-center text-sm font-semibold text-[var(--site-error)]">
-                            {waiterAction?.state.status === 'error' ? waiterAction.state.message : billAction?.state.status === 'error' ? billAction.state.message : ''}
-                        </p>
-                    )}
-                </div>
-            )}
-
-            {canOrder && setMenuOpen && (
-                <DeliverySetMenuSheet
-                    menu={setMenuOpen}
-                    restaurant={restaurant}
-                    onClose={() => setSetMenuOpen(null)}
-                    onAdd={(selections, quantity, note) => addSetMenu(setMenuOpen, selections, quantity, note)}
+            {detailItem && (
+                <QrItemDetail
+                    key={detailItem.key}
+                    item={detailItem}
+                    onClose={closeItem}
+                    blockedReason={blockedReason}
+                    onAddProduct={(product, quantity, note, takeaway) => { addProduct(product, quantity, note, takeaway); closeItem(); }}
+                    onAddSetMenu={(menu, selections, quantity, note, takeaway) => { addSetMenu(menu, selections, quantity, note, takeaway); closeItem(); }}
                 />
             )}
 
-            {canOrder && cartOpen && (
-                <CartSheet
-                    lines={lines}
-                    total={total}
-                    restaurant={restaurant}
-                    tableName={table.name}
-                    images={images}
-                    orderNote={orderNote}
-                    onOrderNote={setOrderNote}
-                    onChange={(key, delta) => setCart(prev => changeQuantity(prev, key, delta))}
-                    onLineNote={setLineNote}
-                    onSend={send}
-                    sending={sending}
-                    sendError={sendError}
-                    onClose={() => setCartOpen(false)}
-                />
+            {filtersOpen && (
+                <QrFilterSheet filters={filters} onChange={setFilters} onClose={() => setFiltersOpen(false)} />
             )}
 
-            {overlays}
-        </main>
-    );
-}
-
-/** Menü ekranının alt çubuğundaki garson / hesap düğmesi; bekleme süresinde onayı yeniden açar. */
-function MenuActionButton({ label, icon, action, onClick, onReopen, iconOnly = false, primary = false }: {
-    label: string; icon: ReactNode; action: ReturnType<typeof useTableAction>; onClick: () => void; onReopen: () => void; iconOnly?: boolean;
-    /** Koyu hap (garson çağır); yoksa krem. */
-    primary?: boolean;
-}) {
-    const waiting = action.state.status === 'done' && action.remainingSeconds > 0;
-    return (
-        <button
-            type="button"
-            onClick={waiting ? onReopen : onClick}
-            disabled={action.state.status === 'sending'}
-            aria-label={iconOnly ? label : undefined}
-            className={cn('flex shrink-0 items-center justify-center gap-2 rounded-full border-2 text-[15px] font-extrabold transition-colors disabled:opacity-60',
-                iconOnly ? 'h-[60px] w-[60px]' : 'h-14 min-w-0 flex-1 px-4',
-                waiting ? 'border-[var(--site-ok-line)] bg-[var(--site-ok-bg)] text-[var(--site-ok)]'
-                    : primary ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)] hover:opacity-90'
-                        : 'border-[var(--site-border-mid)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-text)]')}
-        >
-            <span aria-hidden="true">{waiting ? <Check className="h-4 w-4" strokeWidth={2.5} /> : icon}</span>
-            {!iconOnly && (waiting ? `${label.split(' ')[0]} ${label.endsWith('çağır') ? 'çağrıldı' : 'istendi'}` : label)}
-        </button>
-    );
-}
-
-function CartSheet({ lines, total, restaurant, tableName, images, orderNote, onOrderNote, onChange, onLineNote, onSend, sending, sendError, onClose }: {
-    lines: DeliveryCartLine[]; total: number; restaurant: string; tableName: string; images: Map<string, string>;
-    orderNote: string; onOrderNote: (note: string) => void;
-    onChange: (key: string, delta: number) => void;
-    onLineNote: (key: string, note: string) => void;
-    onSend: () => void; sending: boolean; sendError: string | null; onClose: () => void;
-}) {
-    // Satır notu satır başına değil, istenince açılır (yazılmış not açık kalır). Menü satırının notu seçim penceresinde
-    // yazılır ve satırın anahtarındadır; sepette yalnız gösterilir.
-    const [openNotes, setOpenNotes] = useState<Set<string>>(() => new Set(lines.filter(l => l.kind === 'product' && l.note).map(l => l.key)));
-    const [orderNoteOpen, setOrderNoteOpen] = useState(!!orderNote);
-
-    return (
-        <div className={sheetBackdrop} onClick={onClose}>
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-label="Sepet"
-                className={sheetPanel}
-                onClick={e => e.stopPropagation()}
-            >
-                <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-3 pt-6">
-                    <div className="min-w-0">
-                        <p className={cn(eyebrowAccent, 'm-0 truncate')}>{tableName}</p>
-                        <h2 className={cn(serif, 'm-0 mt-1 text-[34px] leading-none')}>Sepetiniz</h2>
-                    </div>
-                    <button type="button" onClick={onClose} aria-label="Sepeti kapat" className={closeCircle}>
-                        <X className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                </div>
-
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-3">
-                    {lines.length === 0 ? (
-                        <p className="py-8 text-center text-base text-[var(--site-sub)]">Sepetiniz boş.</p>
-                    ) : (
-                        <ul className="m-0 list-none divide-y divide-[var(--site-border)] p-0">
-                            {lines.map(line => {
-                                const isMenu = line.kind === 'setMenu';
-                                const noteOpen = !isMenu && openNotes.has(line.key);
-                                const imageId = (isMenu ? line.setMenuId : line.productId) ?? '';
-                                return (
-                                    <li key={line.key} className="py-3.5">
-                                        <div className="flex items-center gap-3">
-                                            <ImageSlot src={images.get(imageId)} alt="" restaurant={restaurant}
-                                                logoTextClassName="text-[min(10px,12cqw)]" className="h-14 w-14 shrink-0 rounded-full border-2 border-[var(--site-mustard)]" />
-                                            <div className="min-w-0 flex-1">
-                                                <p className={cn(serif, 'm-0 break-words text-[18px] leading-tight')}>{line.name}</p>
-                                                {line.selectionNames.length > 0 && (
-                                                    <p className="m-0 mt-0.5 break-words text-sm leading-snug text-[var(--site-sub)]">{line.selectionNames.join(' · ')}</p>
-                                                )}
-                                                {isMenu && line.note && <p className="m-0 mt-0.5 break-words text-sm text-[var(--site-sub)]">Not: {line.note}</p>}
-                                                <p className="m-0 mt-0.5 text-sm font-extrabold tabular-nums text-[var(--site-accent-text)]">{formatPrice(line.unitPrice * line.quantity)} ₺</p>
-                                                {!isMenu && !noteOpen && (
-                                                    <button type="button" onClick={() => setOpenNotes(prev => new Set(prev).add(line.key))}
-                                                        className="min-h-11 text-sm font-bold text-[var(--site-sub)] underline underline-offset-4">
-                                                        Not ekle
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className={stepperWrap}>
-                                                <button type="button" onClick={() => onChange(line.key, -1)} aria-label={`${line.name} bir azalt`} className={stepperMinus}>
-                                                    <Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
-                                                </button>
-                                                <span className="min-w-5 text-center text-base font-extrabold tabular-nums">{line.quantity}</span>
-                                                <button type="button" onClick={() => onChange(line.key, 1)} aria-label={`${line.name} bir artır`} className={stepperPlus}>
-                                                    <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        {noteOpen && (
-                                            <>
-                                                <label className="sr-only" htmlFor={`not-${line.key}`}>{line.name} için not</label>
-                                                <input
-                                                    id={`not-${line.key}`}
-                                                    value={line.note}
-                                                    onChange={e => onLineNote(line.key, e.target.value)}
-                                                    maxLength={300}
-                                                    autoFocus={!line.note}
-                                                    placeholder="ör. az pişmiş, soğansız"
-                                                    className={cn(fieldClass, 'mt-2 h-11')}
-                                                />
-                                            </>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
-
-                    {orderNoteOpen ? (
-                        <>
-                            <label htmlFor="siparis-notu" className="mt-3 block text-sm font-bold">Garsona not</label>
-                            <textarea
-                                id="siparis-notu"
-                                value={orderNote}
-                                onChange={e => onOrderNote(e.target.value)}
-                                maxLength={500}
-                                rows={2}
-                                placeholder="ör. biri az acılı olsun"
-                                className={cn(fieldClass, 'mt-1.5 py-2.5')}
-                            />
-                        </>
-                    ) : (
-                        <button type="button" onClick={() => setOrderNoteOpen(true)}
-                            className="mt-2 flex min-h-12 w-full items-center rounded-2xl border-2 border-dashed border-[var(--site-border-mid)] px-3.5 text-left text-[15px] font-semibold text-[var(--site-sub)] transition-colors hover:border-[var(--site-text)]">
-                            Garsona not: ör. biri az acılı olsun
-                        </button>
-                    )}
-                </div>
-
-                <div className="shrink-0 border-t border-dashed border-[var(--site-border-strong)] bg-[var(--site-alt)] px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
-                    {sendError && <p role="alert" className="m-0 mb-3 rounded-2xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3 text-sm font-semibold text-[var(--site-error)]">{sendError}</p>}
-                    <p className="m-0 mb-3 flex items-baseline justify-between gap-3">
-                        <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--site-muted)]">Toplam</span>
-                        <span className={cn(serif, 'text-[30px] leading-none tabular-nums')}>{formatPrice(total)} ₺</span>
-                    </p>
-                    <button
-                        type="button"
-                        onClick={onSend}
-                        disabled={sending || lines.length === 0}
-                        className={cn(pillAccent, 'h-[60px] w-full justify-between pl-6 pr-2 text-[17px]')}
-                    >
-                        <span>{sending ? 'Gönderiliyor…' : 'Garsona gönder'}</span>
-                        <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--site-paper)] text-[var(--site-on-paper)]">
-                            <ArrowRight className="h-5 w-5" />
-                        </span>
-                    </button>
-                    <p className="m-0 mt-2 text-center text-[13px] text-[var(--site-muted)]">Garson onayladıktan sonra hazırlanır. Ödeme kasada.</p>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-const SENT_STEPS = ['Gönderildi', 'Garson onayı', 'Mutfakta'] as const;
-
-// Gönderim sonrası tam ekran an: üç adım ORDER_REQUEST_* durumlarına karşılık gelir ve useTableOrderRequests'in
-// yoklamasıyla kendiliğinden ilerler. Reddedilirse garsonun nedeni ve sonraki adım gösterilir.
-function SentConfirmation({ request, site, restaurant, tableName, onBackToMenu, onMyOrders, onCallWaiter }: {
-    request: SentOrderRequest; site: PublicSite; restaurant: string; tableName: string;
-    onBackToMenu: () => void; onMyOrders: () => void; onCallWaiter?: () => void;
-}) {
-    const approved = request.status === ORDER_REQUEST_APPROVED;
-    const rejected = request.status === ORDER_REQUEST_REJECTED;
-    const sentAt = new Date(request.sentAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-    const images = new Map<string, string>([
-        ...site.categories.flatMap(c => c.products).map(p => [p.id, p.imageUrl] as [string, string]),
-        ...(site.setMenus ?? []).map(m => [m.id, m.imageUrl] as [string, string]),
-    ]);
-
-    return (
-        <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-2 px-2 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 sm:gap-3 sm:px-4 sm:pt-4">
-            {/* Kapak renginde durum kutusu: işaret, başlık, açıklama; reddedildiyse garsonun nedeni. */}
-            <div role="status" aria-live="polite" className={cn(heroBox, 'px-5 pb-8 pt-6 sm:px-8 sm:pb-10')}>
-                <span aria-hidden="true" className={heroPattern} />
-                <p className={cn(heroEyebrow, 'relative m-0')}>
-                    <span aria-hidden="true" className="h-0.5 w-7 shrink-0 bg-[var(--site-mustard)]" />
-                    <span className="min-w-0 break-words">{tableName} · {sentAt}</span>
-                </p>
-                <span aria-hidden="true" className={cn('relative mt-8 flex h-16 w-16 items-center justify-center rounded-full',
-                    rejected ? 'bg-[var(--site-card)] text-[var(--site-error)]' : 'bg-[var(--site-mustard)] text-[var(--site-text)]')}>
-                    {rejected ? <X className="h-8 w-8" strokeWidth={2.75} /> : <Check className="h-8 w-8" strokeWidth={2.75} />}
-                </span>
-                <h1 className={cn(displayTitle, 'relative mt-6 text-[52px] sm:text-[64px]')}>
-                    {rejected ? <>Siparişiniz <em className="font-semibold italic">onaylanmadı.</em></>
-                        : approved ? <>Siparişiniz <em className="font-semibold italic">mutfakta.</em></>
-                            : <>Siparişiniz <em className="font-semibold italic">garsonda.</em></>}
-                </h1>
-                <p className="relative m-0 mt-3 max-w-[420px] text-[15px] leading-relaxed text-[rgba(251,244,232,0.92)]">
-                    {rejected ? 'Garsonumuz bu siparişi onaylayamadı. Menüden başka bir şey seçebilir ya da garsonu çağırabilirsiniz.'
-                        : approved ? 'Garson onayladı, hazırlanıyor. Afiyet olsun.'
-                            : 'Garson onaylayınca mutfağa gidecek. Bu ekran kendiliğinden güncellenir.'}
-                </p>
-                {rejected && request.rejectReason && (
-                    <blockquote className={cn(serif, 'relative m-0 mt-5 rounded-[20px] bg-[var(--site-card)] px-4 py-3 text-[20px] font-semibold italic leading-snug text-[var(--site-text)]')}>
-                        "{request.rejectReason}"
-                    </blockquote>
-                )}
-            </div>
-
-            {!rejected && (
-                <ol aria-label="Sipariş adımları" className={cn(creamBox, 'm-0 flex list-none flex-col gap-0 px-5 py-4 sm:px-7')}>
-                    {SENT_STEPS.map((label, i) => {
-                        const step = i + 1;
-                        // Bekliyor: gönderildi ✓, garson onayı sürüyor. Onaylandı: üçü de tamam.
-                        const done = approved || step === 1;
-                        const active = !approved && step === 2;
-                        return (
-                            <li key={label} className="relative flex items-center gap-3 py-2.5" aria-current={active ? 'step' : undefined}>
-                                {i < SENT_STEPS.length - 1 && <span aria-hidden="true" className="absolute left-[17px] top-[calc(50%+18px)] h-[calc(100%-36px)] w-0.5 bg-[var(--site-border-mid)]" />}
-                                <span aria-hidden="true" className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-extrabold',
-                                    done ? 'border-[var(--site-ok)] bg-[var(--site-ok)] text-[var(--site-ok-bg)]'
-                                        : active ? 'border-[var(--site-mustard)] bg-[var(--site-mustard)] text-[var(--site-text)]'
-                                            : 'border-[var(--site-border-strong)] text-[var(--site-muted)]')}>
-                                    {done ? <Check className="h-4 w-4" strokeWidth={3} /> : step}
-                                </span>
-                                <span className={cn('text-base', active ? 'font-extrabold' : done ? 'font-bold' : 'font-semibold text-[var(--site-sub)]')}>
-                                    {active && label === 'Garson onayı' ? 'Garson onayı bekleniyor' : label}
-                                    {active && <span aria-hidden="true" className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--site-accent)] motion-reduce:animate-none" />}
-                                </span>
-                            </li>
-                        );
-                    })}
-                </ol>
+            {ibanOpen && ibanPayment && (
+                <IbanPaySheet payment={ibanPayment} tableName={table.name} amount={openBill?.remaining ?? (bill?.isPaid ? null : lastBillTotal)} onClose={() => setIbanOpen(false)} />
             )}
+        </QrBrandContext.Provider>
+    );
+}
 
-            <section aria-label="Gönderilen sipariş" className={cn(creamBox, 'px-5 py-5 sm:px-7')}>
-                <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                    {request.items.map((item, i) => (
-                        <li key={`${item.productId ?? item.name}-${i}`} className="flex items-center gap-3">
-                            <ImageSlot src={images.get(item.setMenuId ?? item.productId ?? '') ?? null} alt="" restaurant={restaurant}
-                                logoTextClassName="text-[min(9px,12cqw)]" className="h-11 w-11 shrink-0 rounded-full border-2 border-[var(--site-mustard)]" />
-                            <span className={cn(serif, 'min-w-0 flex-1 break-words text-[18px] leading-tight')}>
-                                <span className="font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)] text-[15px] font-extrabold tabular-nums tracking-normal text-[var(--site-accent-text)]">{item.quantity}×</span> {item.name}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-                <p className="m-0 mt-4 flex items-baseline justify-between gap-3 border-t border-dashed border-[var(--site-border-strong)] pt-4">
-                    <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--site-muted)]">Toplam</span>
-                    <span className={cn(serif, 'text-[28px] leading-none tabular-nums')}>{formatPrice(request.total)} ₺</span>
-                </p>
-            </section>
-
-            <div className="mt-auto flex flex-col gap-2.5 pt-6">
-                <button type="button" onClick={onBackToMenu} className={cn(pillDark, 'w-full')}>
-                    Menüye dön
+function Notice({ icon, children, onDismiss }: { icon: ReactNode; children: ReactNode; onDismiss?: () => void }) {
+    return (
+        <div role="status" className="mt-3 flex items-start gap-3 rounded-2xl bg-[var(--site-alt)] py-3 pl-4 pr-1 text-sm leading-relaxed text-[var(--site-text)]">
+            <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--site-accent-text)]">{icon}</span>
+            <p className="m-0 min-w-0 flex-1 pr-3">{children}</p>
+            {onDismiss && (
+                <button type="button" onClick={onDismiss} aria-label="Bildirimi kapat"
+                    className={cn('-my-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--site-sub)]', focusRing)}>
+                    <X className="h-4 w-4" aria-hidden="true" />
                 </button>
-                {rejected && onCallWaiter ? (
-                    <button type="button" onClick={onCallWaiter} className={cn(pillOutline, 'w-full')}>
-                        <BellRing className="h-4 w-4" aria-hidden="true" />Garson çağır
-                    </button>
-                ) : (
-                    <button type="button" onClick={onMyOrders} className={cn(pillOutline, 'w-full')}>
-                        <ClipboardList className="h-4 w-4" aria-hidden="true" />Siparişlerim
-                    </button>
-                )}
-            </div>
-        </main>
+            )}
+        </div>
     );
 }

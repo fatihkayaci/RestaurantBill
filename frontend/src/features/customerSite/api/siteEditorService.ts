@@ -6,13 +6,13 @@ import type { BranchSite, SiteEditor } from '../types';
 // Sürüm taşıyan uçlar (kaydet, geri al, yayınla, at) eski sürümde 409 { error, editor } döner: SiteDraftConflictError.
 // Fotoğraf uçları sürüm denetlemez ama sürümü artırır; çağıran bütün yazmaları sırayla yapmalıdır.
 
-/** `cover` kapak, `about` hikâye, `founder` usta portresi, `share` paylaşım görseli, `hero-*` alt sayfa kapakları. */
-export type SiteDraftImageSlot = 'cover' | 'about' | 'founder' | 'share'
+/** `cover` kapak, `about` hikâye, `founder` usta portresi, `share` paylaşım görseli, `logo` restoran logosu, `hero-*` alt sayfa kapakları. */
+export type SiteDraftImageSlot = 'cover' | 'about' | 'founder' | 'share' | 'logo'
     | 'hero-menu' | 'hero-hakkimizda' | 'hero-mekan' | 'hero-iletisim' | 'hero-rezervasyon';
 
 /** Taslağın metin alanları: PUT tam yazımdır, hepsi gönderilir. Fotoğraflar ayrı uçlardan değişir. */
 export type SiteDraftTexts = Omit<BranchSite,
-    'coverImageUrl' | 'aboutImageUrl' | 'founderPhotoUrl' | 'galleryImageUrls' | 'shareImageUrl' | 'regionDetails'
+    'coverImageUrl' | 'aboutImageUrl' | 'logoUrl' | 'founderPhotoUrl' | 'galleryImageUrls' | 'shareImageUrl' | 'regionDetails'
     | 'menuHeroUrl' | 'aboutHeroUrl' | 'venueHeroUrl' | 'contactHeroUrl' | 'reservationHeroUrl'> & {
     /** Yalnız regionId + description okunur. */
     regionDetails: { regionId: string; description: string }[];

@@ -970,6 +970,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsTakeaway")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Note")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -1101,6 +1104,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTakeaway")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Note")

@@ -6,7 +6,16 @@ import type { QrFeatures } from '@/features/customerSite/types';
 import { SwitchTrack } from '@/components/ui/switch';
 import { getApiErrorMessage } from '@/lib/apiError';
 
-const OPTIONS: { key: keyof QrFeatures; title: string; description: string }[] = [
+type Features = Required<QrFeatures>;
+
+/** Eski sunucu bölüm anahtarlarını göndermezse varsayılanlar: öne çıkanlar açık, popüler kapalı. */
+const normalize = (f: QrFeatures): Features => ({
+    ...f,
+    featuredSectionEnabled: f.featuredSectionEnabled ?? true,
+    popularSectionEnabled: f.popularSectionEnabled ?? false,
+});
+
+const OPTIONS: { key: keyof Features; title: string; description: string }[] = [
     {
         key: 'orderingEnabled',
         title: 'Sipariş ver',
@@ -22,38 +31,40 @@ const OPTIONS: { key: keyof QrFeatures; title: string; description: string }[] =
         title: 'Hesap iste',
         description: 'Masanın açık hesabı için kasaya ve garsonlara "hesap istendi" bildirimi gider.',
     },
+    // Paket servis ve rezervasyon bağlantıları QR menüden kaldırıldı (masadan okunur); anahtarları sunucuda duruyor ama
+    // burada gösterilmez. Masada paket isteği ürün başına "Paket olsun" ile verilir.
     {
-        key: 'deliveryLinkEnabled',
-        title: 'Paket servis bağlantısı',
-        description: 'Online paket sipariş sayfasına bağlantı. Yalnızca şube online sipariş alırken görünür.',
+        key: 'featuredSectionEnabled',
+        title: 'Öne çıkanlar bölümü',
+        description: "Ürünlerde 'Sitede ve QR menüde öne çıkar' işaretlediğiniz ürünler menünün başında büyük fotoğraflı gösterilir.",
     },
     {
-        key: 'reservationLinkEnabled',
-        title: 'Rezervasyon bağlantısı',
-        description: 'Rezervasyon sayfasına bağlantı. Yalnızca online rezervasyon açıkken görünür.',
+        key: 'popularSectionEnabled',
+        title: 'Popüler ürünler',
+        description: 'Son 30 günde en çok satılan ürünler; yeterli satış yoksa görünmez.',
     },
 ];
 
-// Masadaki QR kodun açtığı karşılama ekranında hangi düğmelerin görüneceği. Her anahtar anında kaydedilir;
+// Masadaki QR kodun açtığı menü ekranında hangi düğme ve bölümlerin görüneceği. Her anahtar anında kaydedilir;
 // kapalı özellik müşteriye hiç gösterilmez ve sunucu da isteği reddeder.
 export default function QrFeaturesCard() {
-    const [features, setFeatures] = useState<QrFeatures | null>(null);
-    const [saving, setSaving] = useState<keyof QrFeatures | null>(null);
+    const [features, setFeatures] = useState<Features | null>(null);
+    const [saving, setSaving] = useState<keyof Features | null>(null);
 
     useEffect(() => {
         qrFeaturesService.get()
-            .then(setFeatures)
+            .then(f => setFeatures(normalize(f)))
             .catch(() => toast.error('QR menü özellikleri alınamadı.'));
     }, []);
 
-    const toggle = async (key: keyof QrFeatures) => {
+    const toggle = async (key: keyof Features) => {
         if (!features || saving) return;
         const previous = features;
         const next = { ...features, [key]: !features[key] };
         setFeatures(next);
         setSaving(key);
         try {
-            setFeatures(await qrFeaturesService.update(next));
+            setFeatures(normalize(await qrFeaturesService.update(next)));
         } catch (err) {
             setFeatures(previous);
             toast.error(getApiErrorMessage(err, 'QR menü özellikleri kaydedilemedi.'));
@@ -69,7 +80,7 @@ export default function QrFeaturesCard() {
                 <h2 id="qr-features-title" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">QR menü özellikleri</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-                Müşteri masadaki QR kodu okutunca önce bir karşılama ekranı görür. Bu şubede o ekranda hangi düğmelerin olacağını seçin; kapalı olanlar hiç görünmez.
+                Müşteri masadaki QR kodu okutunca doğrudan menü açılır. Bu şubede menüde hangi düğme ve bölümlerin olacağını seçin; kapalı olanlar hiç görünmez.
             </p>
             {!features ? (
                 <p className="text-sm text-muted-foreground">Yükleniyor...</p>

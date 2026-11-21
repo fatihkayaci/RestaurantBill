@@ -1,6 +1,7 @@
 import { AlarmClock, Check } from 'lucide-react';
 import type { OrderItem } from '@/features/orders/types';
 import { cn } from '@/lib/utils';
+import { TakeawayBadge } from '@/features/orders/components/TakeawayBadge';
 import { formatClock, groupTicketItems, isWaiting, itemCountText, NEW_BAND_MS, ticketTimer, type Ticket } from '../kitchenTickets';
 
 interface TicketCardProps {
@@ -136,6 +137,7 @@ export default function TicketCard({ ticket, now, busy, onToggleItem, onPass }: 
                         ready && 'text-muted-foreground line-through decoration-2'
                     )}>
                         <span className="tabular-nums">{item.quantity}×</span> {item.productName}
+                        {item.isTakeaway && <TakeawayBadge size="lg" className="ml-2" />}
                     </p>
                     {item.note && (
                         <span className="mt-1.5 inline-block rounded-md bg-foreground px-2 py-0.5 text-base font-bold text-rb-gold">

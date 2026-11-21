@@ -150,6 +150,7 @@ public static class MappingExtensions
         Note = i.Note,
         CreatedAt = i.CreatedAt,
         PrepMinutes = i.PrepMinutes,
+        IsTakeaway = i.IsTakeaway,
         SetMenuId = i.SetMenuId
     };
 

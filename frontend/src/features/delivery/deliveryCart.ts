@@ -21,6 +21,8 @@ export interface DeliveryCartLine {
     selections: Record<string, string>;
     /** Menü: seçilen ürünlerin adları (sepette gösterilir). */
     selectionNames: string[];
+    /** Yalnız masa QR sepeti: müşteri "Paket olsun" dedi (paket siparişte kullanılmaz). */
+    takeaway?: boolean;
 }
 
 export function productKey(productId: string): string {

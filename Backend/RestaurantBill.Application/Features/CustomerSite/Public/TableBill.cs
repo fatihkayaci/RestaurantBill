@@ -155,6 +155,7 @@ public class GetTableBillQueryHandler(IAppDbContext db, ITenantResolver tenant, 
             LineTotal = i.UnitPrice * i.Quantity,
             Details = i.Components.Select(c => c.ProductName).Where(n => n.Length > 0).ToList(),
             Note = i.Note,
+            IsTakeaway = i.IsTakeaway,
         }).ToList();
     }
 }

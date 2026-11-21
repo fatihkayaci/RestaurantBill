@@ -106,21 +106,22 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException(TableOnlyMessage);
         }
 
-        public void AddItem(Product product, int quantity, decimal taxRate = 0m, string? note = null)
+        /// <param name="isTakeaway">Kalem paket (QR'da "Paket olsun"); paket satırı masadaki aynı ürünle birleşmez.</param>
+        public void AddItem(Product product, int quantity, decimal taxRate = 0m, string? note = null, bool isTakeaway = false)
         {
-            AddProductLine(product, product.Price, quantity, taxRate, note);
+            AddProductLine(product, product.Price, quantity, taxRate, note, isTakeaway);
         }
 
         /// <summary>
         /// Ürünü verilen birim fiyatla ekler (paket siparişte müşterinin onayladığı fiyat). Ürünün güncel fiyatı
         /// sonradan değişmiş olsa da satır bu fiyatla yazılır.
         /// </summary>
-        public void AddItemAtPrice(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note = null)
+        public void AddItemAtPrice(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note = null, bool isTakeaway = false)
         {
-            AddProductLine(product, unitPrice, quantity, taxRate, note);
+            AddProductLine(product, unitPrice, quantity, taxRate, note, isTakeaway);
         }
 
-        private void AddProductLine(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note)
+        private void AddProductLine(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note, bool isTakeaway)
         {
             if (quantity <= 0)
                 throw new DomainException("Miktar 0'dan büyük olmalı.");
@@ -128,10 +129,11 @@ namespace RestaurantBill.Domain.Entities
             string normalizedNote = note?.Trim() ?? string.Empty;
 
             // Menü satırlarının ProductId'si yoktur; menü içeriği ise kendi menüsüne aittir, tek ürünle birleşmez.
-            // Fiyatı farklı satırla birleşmez; aksi halde yeni adetler eski fiyattan yazılırdı.
+            // Fiyatı farklı satırla birleşmez; aksi halde yeni adetler eski fiyattan yazılırdı. Paket satırı masadakiyle
+            // birleşmez; aksi halde mutfak hangisinin paket olduğunu bilemezdi.
             OrderItem? existing = _orderItems.FirstOrDefault(x =>
                 x.ProductId == product.Id && !x.IsSetMenuComponent && x.Status == OrderItemStatus.Pending && x.Note == normalizedNote
-                && x.UnitPrice == unitPrice);
+                && x.UnitPrice == unitPrice && x.IsTakeaway == isTakeaway);
 
             if (existing != null)
             {
@@ -140,7 +142,7 @@ namespace RestaurantBill.Domain.Entities
             }
             else
             {
-                _orderItems.Add(OrderItem.Create(unitPrice, quantity, product, taxRate, normalizedNote));
+                _orderItems.Add(OrderItem.Create(unitPrice, quantity, product, taxRate, normalizedNote, isTakeaway));
             }
 
             RecalculateTotal();
@@ -155,15 +157,15 @@ namespace RestaurantBill.Domain.Entities
         /// birleştirilmez: aynı menü iki kez eklenirse iki ayrı satır olur.
         /// </summary>
         /// <param name="selections">Bölüm Id → seçilen ürün Id; seçilmeyen bölümde varsayılan seçenek kullanılır.</param>
-        public OrderItem AddSetMenu(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, int quantity, decimal taxRate, string? note = null)
-            => AddSetMenuLine(setMenu, selections, unitPrice: null, quantity, taxRate, note);
+        public OrderItem AddSetMenu(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, int quantity, decimal taxRate, string? note = null, bool isTakeaway = false)
+            => AddSetMenuLine(setMenu, selections, unitPrice: null, quantity, taxRate, note, isTakeaway);
 
         /// <summary>Menüyü verilen birim fiyatla ekler (paket siparişte müşterinin onayladığı, ek ücretler dahil fiyat).</summary>
-        public OrderItem AddSetMenuAtPrice(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal unitPrice, int quantity, decimal taxRate, string? note = null)
-            => AddSetMenuLine(setMenu, selections, unitPrice, quantity, taxRate, note);
+        public OrderItem AddSetMenuAtPrice(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal unitPrice, int quantity, decimal taxRate, string? note = null, bool isTakeaway = false)
+            => AddSetMenuLine(setMenu, selections, unitPrice, quantity, taxRate, note, isTakeaway);
 
-        // unitPrice null: menünün güncel fiyatı + seçilen seçeneklerin ek ücreti.
-        private OrderItem AddSetMenuLine(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal? unitPrice, int quantity, decimal taxRate, string? note)
+        // unitPrice null: menünün güncel fiyatı + seçilen seçeneklerin ek ücreti. Paket menüde içindeki ürünler de pakettir.
+        private OrderItem AddSetMenuLine(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal? unitPrice, int quantity, decimal taxRate, string? note, bool isTakeaway)
         {
             if (setMenu is null)
                 throw new DomainException("Geçersiz menü.");
@@ -184,7 +186,7 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"{inactive.Product.Name} şu an satışta değil, {setMenu.Name} için başka bir seçim yapın.");
 
             decimal linePrice = unitPrice ?? setMenu.Price + chosen.Sum(o => o.Surcharge);
-            OrderItem parent = OrderItem.CreateSetMenu(setMenu, linePrice, quantity, taxRate, note?.Trim() ?? string.Empty);
+            OrderItem parent = OrderItem.CreateSetMenu(setMenu, linePrice, quantity, taxRate, note?.Trim() ?? string.Empty, isTakeaway);
             _orderItems.Add(parent);
             foreach (SetMenuSlotOption option in chosen)
                 _orderItems.Add(OrderItem.CreateSetMenuComponent(parent, option.Product));
@@ -544,7 +546,7 @@ namespace RestaurantBill.Domain.Entities
                 OrderItem? existing = isSetMenuLine ? null : _orderItems.FirstOrDefault(x =>
                     !x.IsSetMenu && !x.IsSetMenuComponent &&
                     x.ProductId == item.ProductId && x.Status == item.Status &&
-                    x.UnitPrice == item.UnitPrice && x.TaxRate == item.TaxRate && x.Note == item.Note);
+                    x.UnitPrice == item.UnitPrice && x.TaxRate == item.TaxRate && x.Note == item.Note && x.IsTakeaway == item.IsTakeaway);
 
                 if (existing != null)
                 {

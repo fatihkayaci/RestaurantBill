@@ -12,6 +12,8 @@ public class BranchSiteDto
     public string About { get; set; } = string.Empty;
     public string CoverImageUrl { get; set; } = string.Empty;
     public string AboutImageUrl { get; set; } = string.Empty;
+    /// <summary>Restoran logosu (tam adres); yoksa boş. QR menü başlığı ve fotoğrafsız ürünlerin yer tutucusu.</summary>
+    public string LogoUrl { get; set; } = string.Empty;
     /// <summary>"HH:mm" ya da null. Haftalık saat girildiyse en sık görülen aralık (eski istemciler ve varsayılanlar için).</summary>
     public string? OpensAt { get; set; }
     public string? ClosesAt { get; set; }
@@ -77,6 +79,7 @@ public class BranchSiteDto
             About = site.About,
             CoverImageUrl = ImageUrl(cdnBaseUrl, site.CoverImage),
             AboutImageUrl = ImageUrl(cdnBaseUrl, site.AboutImage),
+            LogoUrl = ImageUrl(cdnBaseUrl, site.LogoImage),
             OpensAt = site.OpensAt?.ToString("HH:mm", CultureInfo.InvariantCulture),
             ClosesAt = site.ClosesAt?.ToString("HH:mm", CultureInfo.InvariantCulture),
             HoursNote = site.HoursNote,

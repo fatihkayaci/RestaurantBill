@@ -12,6 +12,8 @@ export interface OrderItem {
     createdAt: string;
     /** Sipariş anındaki hazırlanma süresi (dk); null ise geri sayım yok. */
     prepMinutes: number | null;
+    /** Paket kalem: müşteri QR'da "Paket olsun" dedi (eski sunucu: yok). */
+    isTakeaway?: boolean;
     /**
      * Menü satırıysa menünün Id'si. Menü satırında productId boş Guid'dir, productName menünün adıdır,
      * fiyat menü fiyatı + ek ücretlerdir. Silme/adet için orderItemId kullanılır.

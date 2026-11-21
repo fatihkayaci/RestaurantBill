@@ -707,4 +707,29 @@ public class SiteDraftHandlerTests : ApplicationTestBase
 
         Assert.Equal(_company.Id, _storage.LastBranchId);
     }
+
+    [Fact]
+    public async Task Logo_UploadsSmall_ReachesPublicSiteOnPublish_StockRejected()
+    {
+        await SeedAsync();
+
+        var stock = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Logo, StockImageId = _stock.Id });
+        Assert.False(stock.IsSuccess);
+
+        var editor = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Logo, Content = new MemoryStream([1]) }, "site/logo.webp");
+        Assert.True(editor.IsSuccess, editor.Error);
+        Assert.Equal(512, _storage.LastMaxSize);
+        SiteChangeDto change = Assert.Single(editor.Value!.Changes);
+        Assert.Equal("logo", change.Field);
+        Assert.Equal("Logo", change.Label);
+        Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.LogoUrl);
+
+        // jsonb dönüştürücüsünden geçen taslak logoyu taşır.
+        Company stored = await DbContext.Companies.AsNoTracking().FirstAsync(c => c.Id == _company.Id);
+        Assert.Equal("site/logo.webp", stored.SiteDraft!.LogoImage);
+
+        var published = await PublishAsync(editor.Value.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.EndsWith("/site/logo.webp", (await PublicSiteAsync()).Site.LogoUrl);
+    }
 }

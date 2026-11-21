@@ -3,6 +3,7 @@ import { BellRing, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import type { OrderRequest } from '@/features/customerSite/types';
+import { TakeawayBadge } from '@/features/orders/components/TakeawayBadge';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 
@@ -92,6 +93,7 @@ export default function CustomerOrderRequests({ requests, onChanged, canDecide =
                                     {item.kind === 'setMenu' && (
                                         <span className="ml-1.5 rounded-full bg-card px-2 py-0.5 align-middle text-xs font-semibold text-rb-text-sub">Menü</span>
                                     )}
+                                    {item.isTakeaway && <TakeawayBadge className="ml-1.5" />}
                                     {item.selections && item.selections.length > 0 && (
                                         <span className="block pl-7 text-sm text-foreground">{item.selections.join(' · ')}</span>
                                     )}

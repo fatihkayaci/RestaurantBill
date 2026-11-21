@@ -32,6 +32,8 @@ export interface OrderRequestItemInput {
     setMenuId?: string;
     quantity: number;
     note: string;
+    /** "Paket olsun": kalem paketlenip verilir. */
+    isTakeaway?: boolean;
     /** Menü: bölüm → ürün (varsayılanlar dahil); üründe boş. */
     selections?: { slotId: string; productId: string }[];
 }

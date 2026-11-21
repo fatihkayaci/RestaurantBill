@@ -20,6 +20,7 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { formatMinutes, formatPrice, prepCountdown } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import CancelOrderItemDialog from '@/features/orders/components/CancelOrderItemDialog';
+import { TakeawayBadge } from '@/features/orders/components/TakeawayBadge';
 import AddItemsView from './AddItemsView';
 import PaymentView, { type PaymentMode } from './PaymentView';
 import MoveTableView from './MoveTableView';
@@ -480,7 +481,10 @@ export default function TableWorkspace({
                                                         className={cn('flex min-w-0 flex-1 flex-col', canTakeOrders && 'cursor-text')}
                                                         onClick={() => { if (canTakeOrders && editingNoteId !== item.id) { setEditingNoteId(item.id); setNoteDraft(item.note); } }}
                                                     >
-                                                        <span className="truncate text-base font-semibold text-foreground">{item.productName}</span>
+                                                        <span className="flex min-w-0 items-center gap-1.5">
+                                                            <span className="truncate text-base font-semibold text-foreground">{item.productName}</span>
+                                                            {item.isTakeaway && <TakeawayBadge />}
+                                                        </span>
                                                         {editingNoteId === item.id ? (
                                                             <input
                                                                 autoFocus

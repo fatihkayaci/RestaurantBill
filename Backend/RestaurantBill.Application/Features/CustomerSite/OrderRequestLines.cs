@@ -60,6 +60,7 @@ public static class OrderRequestLines
             : [],
         Quantity = item.Quantity,
         UnitPrice = UnitPriceOf(item),
-        Note = item.Note
+        Note = item.Note,
+        IsTakeaway = item.IsTakeaway
     };
 }

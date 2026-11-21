@@ -18,6 +18,8 @@ public class OrderItemDto
     public DateTime CreatedAt { get; set; }
     /// <summary>Sipariş anındaki hazırlanma süresi (dk); null ise geri sayım yok.</summary>
     public int? PrepMinutes { get; set; }
+    /// <summary>Paket kalem: müşteri QR'da "Paket olsun" dedi (garson, kasa ve mutfak "PAKET" rozeti gösterir).</summary>
+    public bool IsTakeaway { get; set; }
 
     /// <summary>Menü satırıysa menünün Id'si.</summary>
     public Guid? SetMenuId { get; set; }

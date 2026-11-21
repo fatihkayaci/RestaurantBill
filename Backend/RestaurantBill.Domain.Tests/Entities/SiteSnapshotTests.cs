@@ -171,4 +171,32 @@ public class SiteSnapshotTests
         Assert.Equal("site/hakkimizda.webp", reverted.Content.AboutHero);
         Assert.Equal(["heroReservation"], reverted.ChangedFields(published));
     }
+
+    [Fact]
+    public void Logo_IsKeyField_ImageKey_AndRevertable()
+    {
+        SiteSnapshot published = SiteSnapshot.Empty;
+        SiteSnapshot draft = published.WithImage(SiteImageSlot.Logo, "site/logo.webp");
+
+        Assert.Equal("site/logo.webp", draft.LogoImage);
+        Assert.Equal(["logo"], draft.ChangedFields(published));
+        Assert.Contains("site/logo.webp", draft.ImageKeys());
+
+        SiteSnapshot reverted = draft.WithFieldFrom(published, "logo");
+        Assert.Equal(string.Empty, reverted.LogoImage);
+        Assert.Empty(reverted.ChangedFields(published));
+    }
+
+    [Fact]
+    public void Logo_PublishedWithDraft_AndFreedOnReset()
+    {
+        Company company = Company.Create("Logo Restoran", User.Create("Sahip", "sahip@test.com", "5551234567"));
+        company.SaveSiteDraft(company.GetSiteDraft().WithImage(SiteImageSlot.Logo, "site/logo.webp"), Now);
+        Assert.Equal(string.Empty, company.GetPublishedSite().LogoImage);
+
+        company.PublishSiteDraft(Now);
+        Assert.Equal("site/logo.webp", company.GetPublishedSite().LogoImage);
+
+        Assert.Contains("site/logo.webp", company.ResetSite());
+    }
 }

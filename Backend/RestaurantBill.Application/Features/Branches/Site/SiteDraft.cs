@@ -31,6 +31,7 @@ internal static class SiteEditor
 
     private static readonly Dictionary<string, (string Label, string Page)> Fields = new()
     {
+        ["logo"] = ("Logo", "Tema"),
         ["headline"] = ("Başlık", "Anasayfa"),
         ["tagline"] = ("Alt başlık", "Anasayfa"),
         ["coverImage"] = ("Kapak fotoğrafı", "Anasayfa"),
@@ -362,6 +363,7 @@ public enum SiteDraftImageTarget
     VenueHero = 9,
     ContactHero = 10,
     ReservationHero = 11,
+    Logo = 12,
 }
 
 /// <summary>
@@ -391,6 +393,8 @@ public class SetSiteDraftImageCommandHandler(
             or SiteDraftImageTarget.ContactHero or SiteDraftImageTarget.ReservationHero => 2000,
         SiteDraftImageTarget.Founder => 1000,
         SiteDraftImageTarget.Share => 1200,
+        // Logo QR menünün başlığında ve ürün yer tutucusunda küçük çizilir; WebP saydamlığı korur.
+        SiteDraftImageTarget.Logo => 512,
         SiteDraftImageTarget.Gallery => 1600,
         _ => 1400,
     };
@@ -399,6 +403,9 @@ public class SetSiteDraftImageCommandHandler(
     {
         if (!Enum.IsDefined(request.Target)) return Result<SiteEditorDto>.Failure("Geçersiz görsel alanı.");
         if (request.Content is not null && request.StockImageId is not null) return Result<SiteEditorDto>.Failure("Tek bir görsel seçin.");
+        // Hazır görsel kütüphanesinde logo yok: logo restoranın kendi dosyasıdır.
+        if (request.Target == SiteDraftImageTarget.Logo && request.StockImageId is not null)
+            return Result<SiteEditorDto>.Failure("Logo için kendi görselinizi yükleyin.");
 
         Company? company = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
         if (company is null) return Result<SiteEditorDto>.Failure(CompanySiteLoader.NotFoundMessage);
@@ -446,6 +453,7 @@ public class SetSiteDraftImageCommandHandler(
             {
                 SiteDraftImageTarget.Cover => draft.WithImage(SiteImageSlot.Cover, key),
                 SiteDraftImageTarget.About => draft.WithImage(SiteImageSlot.About, key),
+                SiteDraftImageTarget.Logo => draft.WithImage(SiteImageSlot.Logo, key),
                 SiteDraftImageTarget.Founder => draft.WithImage(SiteImageSlot.Founder, key),
                 SiteDraftImageTarget.Share => draft.WithImage(SiteImageSlot.Share, key),
                 SiteDraftImageTarget.MenuHero => draft.WithImage(SiteImageSlot.MenuHero, key),

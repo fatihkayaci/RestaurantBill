@@ -8,6 +8,7 @@ import { shiftService } from '@/features/cashier/api/shiftService';
 import { paymentService } from '@/features/cashier/api/paymentService';
 import { buildPayItems, describeLineDiscount, discountedQuantity, groupBillLines, lineDiscountAmount, round2, type BillLine, type LineDiscount } from '@/features/cashier/billLines';
 import { orderService } from '@/features/orders/api/orderService';
+import { TakeawayBadge } from '@/features/orders/components/TakeawayBadge';
 import type { Order } from '@/features/orders/types';
 import type { Shift, ShiftStartCandidate } from '@/features/cashier/types';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
@@ -423,7 +424,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 <div className="flex min-w-0 flex-1 items-start gap-3">
                                     <span className="text-sm text-muted-foreground mt-0.5 w-7 shrink-0 tabular-nums">×{line.quantity}</span>
                                     <div className="min-w-0">
-                                        <p className="text-sm font-medium text-foreground">{line.productName}</p>
+                                        <p className="text-sm font-medium text-foreground">{line.productName}{line.isTakeaway && <TakeawayBadge className="ml-1.5" />}</p>
                                         {line.components && line.components.length > 0 && (
                                             <p className="text-xs text-muted-foreground">{line.components.map(c => c.productName).join(' · ')}</p>
                                         )}

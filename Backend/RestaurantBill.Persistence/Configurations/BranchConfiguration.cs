@@ -171,7 +171,7 @@ internal static class SiteDraftJson
 {
     private sealed record Stored(
         string? Headline, string? Tagline, string? StoryTitle, string? About, string? Cover, string? AboutImage,
-        string? Opens, string? Closes, string? HoursNote, string? Instagram, string? Accent, SiteContentJson.Stored? Content);
+        string? Opens, string? Closes, string? HoursNote, string? Instagram, string? Accent, SiteContentJson.Stored? Content, string? Logo = null);
 
     private const string TimeFormat = "HH:mm";
 
@@ -181,7 +181,7 @@ internal static class SiteDraftJson
         => JsonSerializer.Serialize(new Stored(
             d.Headline, d.Tagline, d.StoryTitle, d.About, d.CoverImage, d.AboutImage,
             d.OpensAt?.ToString(TimeFormat, CultureInfo.InvariantCulture), d.ClosesAt?.ToString(TimeFormat, CultureInfo.InvariantCulture),
-            d.HoursNote, d.InstagramUrl, d.AccentColor, SiteContentJson.ToStored(d.Content)));
+            d.HoursNote, d.InstagramUrl, d.AccentColor, SiteContentJson.ToStored(d.Content), d.LogoImage));
 
     public static SiteSnapshot Deserialize(string json)
     {
@@ -194,6 +194,7 @@ internal static class SiteDraftJson
             About = s.About ?? string.Empty,
             CoverImage = s.Cover ?? string.Empty,
             AboutImage = s.AboutImage ?? string.Empty,
+            LogoImage = s.Logo ?? string.Empty,
             OpensAt = string.IsNullOrEmpty(s.Opens) ? null : TimeOnly.ParseExact(s.Opens, TimeFormat, CultureInfo.InvariantCulture),
             ClosesAt = string.IsNullOrEmpty(s.Closes) ? null : TimeOnly.ParseExact(s.Closes, TimeFormat, CultureInfo.InvariantCulture),
             HoursNote = s.HoursNote ?? string.Empty,
@@ -276,20 +277,23 @@ internal static class OnlineOrderSettingsJson
 // Saklanan şekil alan adlarıyla sabittir. Eksik alan (sonradan eklenen bir anahtar) açık sayılır.
 internal static class QrFeaturesJson
 {
-    private sealed record Stored(bool? Ordering, bool? CallWaiter, bool? BillRequest, bool? DeliveryLink, bool? ReservationLink);
+    // Featured ve Popular sonradan eklendi: eski kayıtta yok, varsayılan (öne çıkanlar açık, popüler kapalı).
+    private sealed record Stored(bool? Ordering, bool? CallWaiter, bool? BillRequest, bool? DeliveryLink, bool? ReservationLink,
+        bool? Featured = null, bool? Popular = null);
 
     public static string? SerializeOrNull(QrFeatures? features) => features is null ? null : Serialize(features);
 
     public static string Serialize(QrFeatures features)
         => JsonSerializer.Serialize(new Stored(
             features.OrderingEnabled, features.CallWaiterEnabled, features.BillRequestEnabled,
-            features.DeliveryLinkEnabled, features.ReservationLinkEnabled));
+            features.DeliveryLinkEnabled, features.ReservationLinkEnabled, features.FeaturedSectionEnabled, features.PopularSectionEnabled));
 
     public static QrFeatures Deserialize(string json)
     {
         Stored stored = JsonSerializer.Deserialize<Stored>(json)!;
         return QrFeatures.Create(
             stored.Ordering ?? true, stored.CallWaiter ?? true, stored.BillRequest ?? true,
-            stored.DeliveryLink ?? true, stored.ReservationLink ?? true);
+            stored.DeliveryLink ?? true, stored.ReservationLink ?? true,
+            stored.Featured ?? QrFeatures.Default.FeaturedSectionEnabled, stored.Popular ?? QrFeatures.Default.PopularSectionEnabled);
     }
 }

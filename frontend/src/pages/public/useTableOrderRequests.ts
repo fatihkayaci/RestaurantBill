@@ -9,7 +9,8 @@ export interface SentOrderRequest {
     status: number;
     sentAt: number;
     total: number;
-    items: { name: string; quantity: number; productId?: string; setMenuId?: string }[];
+    /** takeaway: müşteri "Paket olsun" dedi. */
+    items: { name: string; quantity: number; productId?: string; setMenuId?: string; takeaway?: boolean }[];
     /** Garson reddettiyse yazdığı neden (boş olabilir). */
     rejectReason?: string;
 }

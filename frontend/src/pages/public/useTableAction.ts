@@ -11,7 +11,8 @@ export type TableActionState =
 
 // Karşılama ekranının "Garson çağır" / "Hesap iste" düğmesi: gönderir, sunucunun bildirdiği bekleme süresini sayar.
 // Bekleme sunucuda da uygulanır (masa başına 60 sn); burada yalnızca düğmeyi kapatıp kalan süreyi göstermek için.
-export function useTableAction(run: () => Promise<TableActionResult>, fallbackError: string) {
+// onDone: sunucu yanıt verince (gönderildi ya da az önce yapılmış) sonucu bildirir; masa sayfası kısa şeritte yazar.
+export function useTableAction(run: () => Promise<TableActionResult>, fallbackError: string, onDone?: (result: TableActionResult) => void) {
     const [state, setState] = useState<TableActionState>({ status: 'idle' });
     const [now, setNow] = useState(() => Date.now());
 
@@ -36,12 +37,13 @@ export function useTableAction(run: () => Promise<TableActionResult>, fallbackEr
                 status: 'done', sent: result.sent, until: start + result.retryAfterSeconds * 1000, at: start,
                 window: result.retryAfterSeconds, billTotal: result.billTotal ?? null,
             });
+            onDone?.(result);
             return true;
         } catch (err) {
             setState({ status: 'error', message: getApiErrorMessage(err, fallbackError) });
             return false;
         }
-    }, [run, fallbackError]);
+    }, [run, fallbackError, onDone]);
 
     const remainingSeconds = until ? Math.max(0, Math.ceil((until - now) / 1000)) : 0;
     return { state, remainingSeconds, trigger };

@@ -97,9 +97,9 @@ public static class ApplyRequestToTableOrder
                     decimal taxRate = setMenu.Category?.TaxRate ?? setMenu.Branch.TaxRate;
                     Dictionary<Guid, Guid> selections = DeliveryScope.ParseSelections(item.SelectionsJson);
                     if (item.UnitPrice is decimal menuPrice)
-                        order.AddSetMenuAtPrice(setMenu, selections, menuPrice, item.Quantity, taxRate, item.Note);
+                        order.AddSetMenuAtPrice(setMenu, selections, menuPrice, item.Quantity, taxRate, item.Note, item.IsTakeaway);
                     else
-                        order.AddSetMenu(setMenu, selections, item.Quantity, taxRate, item.Note);
+                        order.AddSetMenu(setMenu, selections, item.Quantity, taxRate, item.Note, item.IsTakeaway);
                     continue;
                 }
 
@@ -108,9 +108,9 @@ public static class ApplyRequestToTableOrder
                     return Result<TableOrderTarget>.Failure(ProductMissingMessage);
 
                 if (item.UnitPrice is decimal unitPrice)
-                    order.AddItemAtPrice(product, unitPrice, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
+                    order.AddItemAtPrice(product, unitPrice, item.Quantity, product.GetEffectiveTaxRate(), item.Note, item.IsTakeaway);
                 else
-                    order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
+                    order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note, item.IsTakeaway);
             }
         }
         catch (DomainException ex)

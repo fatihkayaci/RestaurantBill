@@ -14,6 +14,8 @@ export interface BillLine {
     taxRate: number;
     note: string;
     categoryName: string;
+    /** Paket kalem ("Paket olsun"); masadaki aynı ürünle aynı satırda toplanmaz. */
+    isTakeaway: boolean;
     components?: OrderItem[];
     /** Satırı oluşturan sipariş kalemleri, siparişteki sırayla. */
     items: OrderItem[];
@@ -46,7 +48,7 @@ export function groupBillLines(items: OrderItem[]): BillLine[] {
     for (const item of items) {
         const key = [
             item.setMenuId ?? '', item.productId, item.unitPrice, item.taxRate,
-            item.note ?? '', item.setMenuNote ?? '', componentSignature(item),
+            item.note ?? '', item.setMenuNote ?? '', componentSignature(item), item.isTakeaway ? 'paket' : '',
         ].join('|');
         const line = lines.get(key);
         if (line) {
@@ -61,6 +63,7 @@ export function groupBillLines(items: OrderItem[]): BillLine[] {
                 taxRate: item.taxRate,
                 note: item.note,
                 categoryName: item.categoryName,
+                isTakeaway: !!item.isTakeaway,
                 components: item.components,
                 items: [item],
             });

@@ -19,7 +19,7 @@ import {
     COMPLETENESS_TARGETS, EDIT_TABS, buildPreviewSite, getText, popoverKind, relativeTime, tabByPath, tabPath, textFieldLabel,
     withListOp, withText, type EditorTab, type ListOp,
 } from './editorModel';
-import { ContactFields, DesignFields, ExternalList, FontFields, HoursFields, PopoverBody, RatingFields, SeoFields, ThemeFields } from './EditorSections';
+import { ContactFields, DesignFields, ExternalList, FontFields, HoursFields, LogoFields, PopoverBody, RatingFields, SeoFields, ThemeFields } from './EditorSections';
 import { ed } from './editorStyles';
 import { StockGrid, UploadDrop } from './PhotoPicker';
 import { PreviewApp } from './PreviewApp';
@@ -633,6 +633,7 @@ function AnchoredPopover({ stage, frame, scale, anchor, photo, wide, onClose, ch
 const SETTINGS_SECTIONS = [
     { id: 'genel-saat', label: 'Çalışma saatleri' },
     { id: 'genel-iletisim', label: 'İletişim ve sosyal' },
+    { id: 'genel-logo', label: 'Logo' },
     { id: 'genel-tasarim', label: 'Tasarımlar' },
     { id: 'genel-yazi', label: 'Yazı tipi' },
     { id: 'genel-tema', label: 'Tema ve renk' },
@@ -677,6 +678,7 @@ function GeneralSettingsDialog({ open, ctx, base, onClose }: { open: boolean; ct
                             <RatingFields ctx={ctx} idPrefix="g-" />
                         </div>
                     ))}
+                    {section('genel-logo', 'Logo', <LogoFields ctx={ctx} />)}
                     {section('genel-tasarim', 'Tasarımlar', <DesignFields ctx={ctx} />)}
                     {section('genel-yazi', 'Yazı tipi', <FontFields ctx={ctx} />)}
                     {section('genel-tema', 'Tema ve renk', <ThemeFields ctx={ctx} />)}

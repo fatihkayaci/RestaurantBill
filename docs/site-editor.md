@@ -94,7 +94,7 @@ Bütün uçlar `Authorize(Roles = "Owner,Admin")` ve oturumdaki şubeye bağlıd
 | DELETE | `api/company/site/draft/regions/{regionId}/image` | – | hayır | `SiteEditor` |
 | GET | `api/stock-images?q=` | – | – | `[{ id, title, group, url }]` (mevcut, en çok 48) |
 
-- `{slot}`: `cover` | `about` | `founder` | `share` | `hero-menu` | `hero-hakkimizda` | `hero-mekan` | `hero-iletisim` |
+- `{slot}`: `cover` | `about` | `founder` | `share` | `logo` | `hero-menu` | `hero-hakkimizda` | `hero-mekan` | `hero-iletisim` |
   `hero-rezervasyon` (alt sayfaların kendi kapakları, bkz. "Alt sayfa kapakları").
 - Galeri `?index=N`: o sıradaki fotoğrafı değiştirir (sıra korunur). Verilmezse fotoğraf sona eklenir (en çok 12).
 - Yükleme: en çok 10 MB, yalnız JPEG/PNG/WebP. Dosya sunucuda küçültülür: kapak 2000 px, galeri 1600, hikâye ve bölüm
@@ -215,6 +215,7 @@ Gövde, eski `PUT api/branch/site` ile aynı alanları ve üç ek alanı taşır
 | Galeri ekle / değiştir / sil / sırala | `POST …/gallery`, `POST …/gallery/stock`, `?index=N`, `DELETE …/gallery/{i}`, `PUT …/gallery/order` | Galeri en çok 12. Sınır yüklemeden önce denetlenir. |
 | Bölüm fotoğrafı | `…/regions/{id}/image` (+ `/stock`, DELETE) | |
 | Paylaşım görseli | `…/image/share` (+ `/stock`, DELETE) | DELETE = otomatiğe dön (kapak). |
+| Logo | `…/image/logo` (DELETE; `/stock` reddedilir) | Yükleme 512 px WebP (saydamlık korunur). Yayında `site.logoUrl`: QR menü başlığı ve fotoğrafsız ürünlerin yer tutucusu. Alan anahtarı `logo`. |
 | Alt sayfa kapağı | `…/image/hero-menu` (+ `/stock`, DELETE); `hero-hakkimizda`, `hero-mekan`, `hero-iletisim`, `hero-rezervasyon` | DELETE = sitenin kapağına dön. Yükleme 2000 px. |
 | Yayınla | `POST …/publish { version }` | Yayından kalkan restoran dosyaları silinir; `shared/` asla. Denetim kaydı `SitePublished` ("… N değişikliği yayınladı (Kapak fotoğrafı, Alt başlık)."). |
 | Değişiklikleri at | `POST …/discard { version }` | Yalnız taslağa yüklenmiş dosyalar silinir. Denetim kaydı `SiteDraftDiscarded`. |

@@ -972,8 +972,8 @@ export default function Menu() {
                                     onChange={e => setForm({ ...form, isFeatured: e.target.checked })}
                                 />
                                 <span className="flex flex-col">
-                                    <span className="text-sm font-medium text-foreground">Sitede öne çıkar</span>
-                                    <span className="text-xs text-muted-foreground">Restoran sitesinin ana sayfasında "Ustanın seçtikleri" bölümünde gösterilir.</span>
+                                    <span className="text-sm font-medium text-foreground">Sitede ve QR menüde öne çıkar</span>
+                                    <span className="text-xs text-muted-foreground">Restoran sitesinin ana sayfasında "Ustanın seçtikleri" bölümünde ve masa QR menüsünün başındaki "Öne Çıkanlar" bölümünde gösterilir.</span>
                                 </span>
                             </label>
                         </form>
