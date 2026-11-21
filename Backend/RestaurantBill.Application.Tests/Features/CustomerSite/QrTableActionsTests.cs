@@ -148,6 +148,7 @@ public class QrTableActionsTests : ApplicationTestBase
 
         var result = await new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications).Handle(new CreateOrderRequestCommand
         {
+            DeviceTokenHash = DeviceHash,
             TableId = table.Id,
             Items = [new OrderRequestItemInput { ProductId = product.Id, Quantity = 1 }]
         }, CancellationToken.None);

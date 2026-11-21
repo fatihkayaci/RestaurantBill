@@ -105,7 +105,7 @@ public class QrSetMenuOrderRequestTests : ApplicationTestBase
 
     private Task<Result<RestaurantBill.Application.DTOs.CustomerSite.OrderRequestStatusDto>> SendAsync(params OrderRequestItemInput[] items)
         => new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications)
-            .Handle(new CreateOrderRequestCommand { TableId = _table.Id, Items = [.. items] }, CancellationToken.None);
+            .Handle(new CreateOrderRequestCommand { DeviceTokenHash = DeviceHash, TableId = _table.Id, Items = [.. items] }, CancellationToken.None);
 
     private Task<Result> ApproveAsync(Guid id)
         => new ApproveOrderRequestCommandHandler(Db, CurrentUser, _tableNotifications, _cashierNotifications)

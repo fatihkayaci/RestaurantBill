@@ -52,6 +52,8 @@ export interface Order {
     createdByUserName: string;
     /** Garson hesabı istediyse istek anı; yoksa null. */
     billRequestedAt?: string | null;
+    /** Hesap masa QR'ında bir telefona bağlı: yalnız o telefon QR'dan sipariş verir ve hesabı görür. */
+    qrLocked?: boolean;
     orderItems: OrderItem[];
 }
 

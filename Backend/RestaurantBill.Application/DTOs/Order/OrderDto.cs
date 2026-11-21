@@ -24,5 +24,7 @@ public class OrderDto
     public string CreatedByUserName { get; set; } = string.Empty;
     /// <summary>Garson hesabı istediyse istek anı (UTC), yoksa null.</summary>
     public DateTime? BillRequestedAt { get; set; }
+    /// <summary>Hesap masa QR'ında bir telefona bağlı: yalnız o telefon QR'dan sipariş verir ve hesabı görür.</summary>
+    public bool QrLocked { get; set; }
     public ICollection<OrderItemDto> OrderItems { get; set; } = new List<OrderItemDto>();
 }

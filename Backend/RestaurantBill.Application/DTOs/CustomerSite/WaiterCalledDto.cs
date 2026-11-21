@@ -8,4 +8,6 @@ public class WaiterCalledDto
     public Guid RegionId { get; set; }
     public string RegionName { get; set; } = string.Empty;
     public DateTime CalledAt { get; set; }
+    /// <summary>Çağrı anında masada açık hesap yoktu: QR dışarıdan (fotoğraftan) kullanılmış olabilir.</summary>
+    public bool TableLooksEmpty { get; set; }
 }

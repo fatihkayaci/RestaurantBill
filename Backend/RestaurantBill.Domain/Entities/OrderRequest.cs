@@ -23,12 +23,16 @@ namespace RestaurantBill.Domain.Entities
 
         public const int RejectReasonMaxLength = 300;
 
+        // QR talebini gönderen telefonun cihaz anahtarının özeti. Masada açık hesap yokken masanın "sahibi" bekleyen
+        // talebin telefonudur; garson onaylayınca açılan hesaba geçer. Ön siparişte ve eski taleplerde null.
+        public string? DeviceTokenHash { get; private set; }
+
         private readonly List<OrderRequestItem> _items = new();
         public IReadOnlyCollection<OrderRequestItem> Items => _items.AsReadOnly();
 
         protected OrderRequest() { }
 
-        public static OrderRequest Create(Guid tableId, string? note)
+        public static OrderRequest Create(Guid tableId, string? note, string? deviceTokenHash = null)
         {
             if (tableId == Guid.Empty)
                 throw new DomainException("Geçersiz masa.");
@@ -37,8 +41,15 @@ namespace RestaurantBill.Domain.Entities
             {
                 TableId = tableId,
                 Note = note?.Trim() ?? string.Empty,
-                Status = OrderRequestStatus.Pending
+                Status = OrderRequestStatus.Pending,
+                DeviceTokenHash = string.IsNullOrWhiteSpace(deviceTokenHash) ? null : deviceTokenHash
             };
+        }
+
+        /// <summary>"QR kilidini aç": bekleyen talep masayı artık o telefona bağlamaz (talep yine garsonda bekler).</summary>
+        public void ClearDeviceToken()
+        {
+            DeviceTokenHash = null;
         }
 
         /// <summary>Rezervasyonun ön siparişi: rezervasyonun masasına yazılır, misafir gelene kadar Pending kalır.</summary>
