@@ -387,7 +387,7 @@ export default function QuickAccessPanel() {
             <aside
                 aria-label="Hızlı erişim"
                 className={cn(
-                    'hidden md:flex shrink-0 flex-col border-l border-border bg-card transition-[width] duration-300 ease-in-out',
+                    'hidden lg:flex shrink-0 flex-col border-l border-border bg-card transition-[width] duration-300 ease-in-out',
                     open ? 'w-[300px]' : 'w-11'
                 )}
             >
@@ -427,13 +427,13 @@ export default function QuickAccessPanel() {
                 type="button"
                 onClick={() => setMobileOpen(true)}
                 aria-label={openLabel}
-                className="md:hidden fixed bottom-5 right-5 z-40 flex h-12 items-center gap-2 rounded-full border border-rb-gold/50 bg-card px-4 text-sm font-semibold text-foreground shadow-lg"
+                className="lg:hidden fixed bottom-5 right-5 z-40 flex h-12 items-center gap-2 rounded-full border border-rb-gold/50 bg-card px-4 text-sm font-semibold text-foreground shadow-lg"
             >
                 <Zap className="h-4 w-4 text-rb-amber" aria-hidden="true" />
                 {allDone ? 'Hızlı Erişim' : `Kurulum ${doneCount}/${steps.length}`}
             </button>
             {mobileOpen && (
-                <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/50" onClick={() => setMobileOpen(false)}>
+                <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/50" onClick={() => setMobileOpen(false)}>
                     <div
                         className="flex max-h-[85vh] flex-col rounded-t-2xl bg-card animate-in slide-in-from-bottom duration-200"
                         onClick={e => e.stopPropagation()}

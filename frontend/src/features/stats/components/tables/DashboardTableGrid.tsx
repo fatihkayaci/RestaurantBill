@@ -7,7 +7,7 @@ import { tableHref, tableLine, tableTone } from './tableUi';
 
 // "Zengin kartlar": bölge bölge, her masa kendi kartında her şeyi söyler:
 // durum + süre + tutar, kırmızı gecikme şeridi, "x/y servis edildi" ilerlemesi, hazır / hesap / QR etiketleri.
-// Telefonda tek sütun, 420 px'ten sonra iki, geniş ekranda altıya kadar.
+// Sütun sayısı alan genişliğine göre: kart en az 10rem (160 px); telefonda tek, geniş ekranda altı-yedi sütun.
 export default function DashboardTableGrid({ regions, now }: { regions: LiveRegion[]; now: number }) {
     return (
         <div className="flex flex-col gap-5">
@@ -19,7 +19,7 @@ export default function DashboardTableGrid({ regions, now }: { regions: LiveRegi
                             {region.tables.filter(t => t.kind === 'busy').length}/{region.tables.length} dolu
                         </span>
                     </h3>
-                    <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,10rem),1fr))] gap-2">
                         {region.tables.map(t => (
                             <Link
                                 key={t.id}

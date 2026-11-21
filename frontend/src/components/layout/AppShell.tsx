@@ -23,6 +23,7 @@ import StaffSoundToggle from './StaffSoundToggle';
 import OnlineOrderAlerts from './OnlineOrderAlerts';
 import HeaderThemeToggle from './HeaderThemeToggle';
 import HeaderLogoutButton from './HeaderLogoutButton';
+import HeaderUserMenu from './HeaderUserMenu';
 import { useUnreadContactMessages } from './useUnreadContactMessages';
 import { useSiteHasDraft } from '@/features/customerSite/siteDraftStatus';
 import { useIsDesktop, useSidebarGroups } from './useSidebarGroups';
@@ -241,10 +242,10 @@ export default function AppShell() {
 
     return (
         <div className="flex h-screen bg-background">
-            {/* Mobil arkaplan */}
+            {/* Telefon/tablet (lg altı): kenar çubuğu çekmece; arkaplan */}
             {mobileOpen && (
                 <div
-                    className="md:hidden fixed inset-0 z-40 bg-black/50 animate-in fade-in duration-200"
+                    className="lg:hidden fixed inset-0 z-40 bg-black/50 animate-in fade-in duration-200"
                     onClick={() => setMobileOpen(false)}
                 />
             )}
@@ -252,19 +253,19 @@ export default function AppShell() {
             <aside
                 ref={asideRef}
                 className={cn(
-                    'fixed md:relative inset-y-0 left-0 z-50 flex flex-col bg-sidebar transition-all duration-300 ease-in-out motion-reduce:transition-none',
+                    'fixed lg:relative inset-y-0 left-0 z-50 flex max-w-[85vw] flex-col bg-sidebar transition-all duration-300 ease-in-out motion-reduce:transition-none',
                     'w-68',
-                    collapsed ? 'md:w-20' : 'md:w-68',
-                    mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+                    collapsed ? 'lg:w-20' : 'lg:w-68',
+                    mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                 )}
             >
                 {/* Logo */}
                 <div className="relative flex h-20 shrink-0 items-center justify-center px-5">
-                    <img src={sophramLogo} alt="Sophram" className={cn('h-14 w-auto shrink-0 transition-all duration-300', collapsed && 'md:h-10')} />
+                    <img src={sophramLogo} alt="Sophram" className={cn('h-14 w-auto shrink-0 transition-all duration-300', collapsed && 'lg:h-10')} />
                     <button
                         onClick={() => setMobileOpen(false)}
                         aria-label="Menüyü kapat"
-                        className={cn('md:hidden absolute right-4 top-1/2 -translate-y-1/2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground', focusRing)}
+                        className={cn('lg:hidden absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground', focusRing)}
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -360,7 +361,7 @@ export default function AppShell() {
                     )}
 
                     {companyMode && (
-                        <p className={cn('mx-3 mt-4 rounded-lg bg-white/5 px-2.5 py-2 text-xs leading-relaxed text-sidebar-foreground/60', collapsed && 'md:hidden')}>
+                        <p className={cn('mx-3 mt-4 rounded-lg bg-white/5 px-2.5 py-2 text-xs leading-relaxed text-sidebar-foreground/60', collapsed && 'lg:hidden')}>
                             Menü, masa, kasa ve personel için bir şube seçin.
                         </p>
                     )}
@@ -378,7 +379,7 @@ export default function AppShell() {
                 )}
 
                 {/* Alt: kullanıcı satırı (profil) ve daraltma. Şube, tema ve çıkış üst barda. */}
-                <div className={cn('flex flex-col gap-0.5 border-t border-[#3A322B] px-3 py-2.5', companyMode && 'hidden md:flex')}>
+                <div className={cn('flex flex-col gap-0.5 border-t border-[#3A322B] px-3 py-2.5', companyMode && 'hidden lg:flex')}>
                     {!companyMode && (
                         <NavLink
                             to="/admin/profile"
@@ -409,7 +410,7 @@ export default function AppShell() {
                         aria-label={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
                         {...tipHandlers('Menüyü genişlet')}
                         className={cn(
-                            'hidden md:flex h-10 w-full items-center gap-3 rounded-[10px] px-3 text-[13px] text-[#9A8F80] transition-colors hover:bg-white/5 hover:text-sidebar-foreground',
+                            'hidden lg:flex h-10 w-full items-center gap-3 rounded-[10px] px-3 text-[13px] text-[#9A8F80] transition-colors hover:bg-white/5 hover:text-sidebar-foreground',
                             focusRing,
                             iconOnly && 'justify-center px-0'
                         )}
@@ -421,56 +422,84 @@ export default function AppShell() {
             </aside>
 
             <div className="flex flex-1 min-w-0 flex-col">
-                {/* Üst bar: şube seçici solda; tema, profil ve çıkış sağda */}
-                <header className="flex h-14 md:h-16 shrink-0 items-center gap-2 sm:gap-3 border-b border-white/10 bg-sidebar px-3 sm:px-5">
-                    <button
-                        onClick={() => setMobileOpen(true)}
-                        aria-label="Menüyü aç"
-                        className="md:hidden flex h-11 w-11 -ml-2 shrink-0 items-center justify-center text-sidebar-foreground/70 hover:text-sidebar-foreground"
-                    >
-                        <Menu className="w-5 h-5" />
-                    </button>
-
-                    <div className="min-w-0 w-full max-w-60">
-                        <BranchSwitcher
-                            branches={branches}
-                            isOwner={isOwner}
-                            companyMode={companyMode}
-                            singleBranch={singleBranch}
-                            activeBranchId={companyMode ? null : (session?.restaurantId ?? null)}
-                            activeBranchName={currentUser?.branchName ?? currentUser?.restaurantName}
-                            collapsed={false}
-                        />
-                    </div>
-
-                    <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-                        {!companyMode && <OnlineOrderAlerts boardPath="/admin/online-orders" />}
-                        {!companyMode && <StaffSoundToggle />}
-                        <HeaderThemeToggle />
-
-                        <div className="hidden sm:block w-px h-6.5 bg-white/10 shrink-0" />
-
+                {/* Üst bar. Kırılımlar ekran değil barın kendi genişliğine göre (@container): sağ panel açıkken ya da
+                    kenar çubuğu daraltılmışken de doğru davranır. Bar genişliği (iç):
+                    < @xl (576 px): menü, şube, Paket ve hesap menüsü; sesler, tema, profil, çıkış hesap menüsünde.
+                    @xl – @4xl (896 px): ses düğmeleri de açıkta. @4xl+: tema, profil adı ve Çıkış da açıkta, menü yok.
+                    @[72rem]+: ses ve tema düğmelerinin yazıları da görünür. */}
+                <header className="@container flex h-14 md:h-16 shrink-0 items-center border-b border-white/10 bg-sidebar px-3 sm:px-5">
+                    <div className="flex w-full min-w-0 items-center gap-2 @xl:gap-3">
                         <button
-                            type="button"
-                            onClick={() => { if (!companyMode) navigate('/admin/profile'); }}
-                            disabled={companyMode}
-                            className={cn(
-                                "flex items-center gap-2.5 rounded-xl px-1.5 py-1 lg:pr-3 transition-colors",
-                                !companyMode && "hover:bg-white/10"
-                            )}
-                            title={companyMode ? displayName : "Profil"}
-                            aria-label={companyMode ? displayName : "Profil"}
+                            onClick={() => setMobileOpen(true)}
+                            aria-label="Menüyü aç"
+                            aria-expanded={mobileOpen}
+                            className={cn('lg:hidden flex h-11 w-11 -ml-2 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground', focusRing)}
                         >
-                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", isOwner ? "bg-rb-gold" : "bg-rb-amber")}>
-                                <span className={cn("text-sm font-bold", isOwner ? "text-rb-gold-foreground" : "text-rb-amber-foreground")}>{initials}</span>
-                            </div>
-                            <div className="hidden lg:block min-w-0 max-w-44 text-left">
-                                <p className="text-sidebar-foreground text-sm font-medium leading-tight truncate">{displayName}</p>
-                                <p className="text-sidebar-foreground/60 text-xs leading-tight truncate">{roleLabel}</p>
-                            </div>
+                            <Menu className="w-5 h-5" />
                         </button>
 
-                        <HeaderLogoutButton onClick={handleLogout} />
+                        <div className="min-w-0 flex-1 max-w-60">
+                            <BranchSwitcher
+                                branches={branches}
+                                isOwner={isOwner}
+                                companyMode={companyMode}
+                                singleBranch={singleBranch}
+                                activeBranchId={companyMode ? null : (session?.restaurantId ?? null)}
+                                activeBranchName={currentUser?.branchName ?? currentUser?.restaurantName}
+                                collapsed={false}
+                                iconClassName="hidden @[22rem]:flex"
+                            />
+                        </div>
+
+                        <div className="ml-auto flex shrink-0 items-center gap-2 @xl:gap-3">
+                            {/* Paket düğmesi hep açıkta (yeni sipariş rozeti); paket sesi düğmesi dar barda hesap menüsünde. */}
+                            {!companyMode && <OnlineOrderAlerts boardPath="/admin/online-orders" soundToggleClassName="hidden @xl:flex" />}
+                            {!companyMode && (
+                                <div className="hidden @xl:flex">
+                                    <StaffSoundToggle labelClassName="hidden @[72rem]:inline" />
+                                </div>
+                            )}
+
+                            <div className="hidden @4xl:flex items-center gap-3">
+                                <HeaderThemeToggle labelClassName="hidden @[72rem]:inline" />
+
+                                <div className="w-px h-6.5 bg-white/10 shrink-0" />
+
+                                <button
+                                    type="button"
+                                    onClick={() => { if (!companyMode) navigate('/admin/profile'); }}
+                                    disabled={companyMode}
+                                    className={cn(
+                                        "flex items-center gap-2.5 rounded-xl px-1.5 py-1 pr-3 transition-colors",
+                                        focusRing,
+                                        !companyMode && "hover:bg-white/10"
+                                    )}
+                                    title={companyMode ? displayName : "Profil"}
+                                    aria-label={companyMode ? displayName : "Profil"}
+                                >
+                                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", avatarColors)}>
+                                        <span className="text-sm font-bold">{initials}</span>
+                                    </div>
+                                    <div className="min-w-0 max-w-44 text-left">
+                                        <p className="text-sidebar-foreground text-sm font-medium leading-tight truncate">{displayName}</p>
+                                        <p className="text-sidebar-foreground/60 text-xs leading-tight truncate">{roleLabel}</p>
+                                    </div>
+                                </button>
+
+                                <HeaderLogoutButton onClick={handleLogout} />
+                            </div>
+
+                            <HeaderUserMenu
+                                className="@4xl:hidden"
+                                initials={initials}
+                                displayName={displayName}
+                                roleLabel={roleLabel}
+                                avatarClassName={avatarColors}
+                                companyMode={companyMode}
+                                onProfile={() => navigate('/admin/profile')}
+                                onLogout={handleLogout}
+                            />
+                        </div>
                     </div>
                 </header>
 
@@ -478,7 +507,7 @@ export default function AppShell() {
                 <div id="online-order-strip-slot" />
 
                 {/* Restoran sitesi düzenleyicisi ekranın tamamını kullanır (kendi kaydırması var). */}
-                <main className={cn('flex-1', pathname === '/owner/site' ? 'min-h-0 overflow-hidden' : 'overflow-auto p-6 pb-24 md:pb-6')}>
+                <main className={cn('flex-1', pathname === '/owner/site' ? 'min-h-0 overflow-hidden' : 'overflow-auto px-4 pt-4 pb-24 sm:px-6 sm:pt-6 lg:pb-6')}>
                     <Outlet />
                 </main>
             </div>

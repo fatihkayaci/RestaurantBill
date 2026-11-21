@@ -2,7 +2,7 @@ import { useTheme } from 'next-themes';
 import { Moon, Sun } from 'lucide-react';
 import { SwitchTrack } from '@/components/ui/switch';
 
-export default function HeaderThemeToggle({ large = false }: { large?: boolean }) {
+export default function HeaderThemeToggle({ large = false, labelClassName = 'hidden md:inline' }: { large?: boolean; labelClassName?: string }) {
     const { resolvedTheme, setTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
 
@@ -13,10 +13,10 @@ export default function HeaderThemeToggle({ large = false }: { large?: boolean }
             aria-checked={isDark}
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
             aria-label="Koyu tema"
-            className={`flex items-center gap-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors ${large ? 'min-h-11 px-3' : 'px-2.5 py-1.5'}`}
+            className={`flex items-center gap-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors ${large ? 'min-h-11 px-3' : 'min-h-10 px-2.5'}`}
         >
             {isDark ? <Moon className={`${large ? 'w-5 h-5' : 'w-4 h-4'} text-sidebar-foreground/60`} /> : <Sun className={`${large ? 'w-5 h-5' : 'w-4 h-4'} text-sidebar-foreground/60`} />}
-            <span className={`hidden md:inline font-medium text-sidebar-foreground/70 whitespace-nowrap ${large ? 'text-sm' : 'text-xs'}`}>
+            <span className={`${labelClassName} font-medium text-sidebar-foreground/70 whitespace-nowrap ${large ? 'text-sm' : 'text-xs'}`}>
                 {isDark ? 'Koyu Tema' : 'Açık Tema'}
             </span>
             <SwitchTrack checked={isDark} onClassName="bg-rb-accent" offClassName="bg-white/20" />
