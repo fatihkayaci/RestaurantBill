@@ -11,6 +11,10 @@ export const tableService = {
         const response = await api.get<Table>(`/table/${tableId}`);
         return response.data;
     },
+    /** Bir bölgedeki masaların sırası: ilk id garson, kasa ve yönetici ekranlarında ilk görünür. */
+    reorderTables: async (regionId: string, orderedTableIds: string[]) => {
+        await api.post('/table/reorder', { RegionId: regionId, OrderedTableIds: orderedTableIds });
+    },
     deleteTable: async (id: string) => {
         await api.delete(`/table/${id}`);
     },

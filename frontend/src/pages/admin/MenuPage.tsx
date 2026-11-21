@@ -21,6 +21,8 @@ import { Switch } from '@/components/ui/switch';
 import { Modal, ModalTitle } from '@/components/ui/modal';
 import { inputClass, labelClass } from '@/lib/formStyles';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { SortModeButton } from '@/components/dnd/SortMode';
+import MenuOrderPanel from './components/MenuOrderPanel';
 
 
 // Hazırlanma süresi ve KDV metin olarak tutulur: boş alan "yok / kategori varsayılanı" demektir.
@@ -46,6 +48,7 @@ export default function Menu() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loaded, setLoaded] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
+    const [sorting, setSorting] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editProduct, setEditProduct] = useState<ProductWithCost | null>(null);
@@ -392,21 +395,45 @@ export default function Menu() {
         }
     };
 
+    const header = (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h1 className="text-2xl font-serif font-bold text-foreground">Yemeklerimiz</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">{activeCount} aktif ürün</p>
+            </div>
+            <div className="flex items-center gap-2">
+                {categories.length > 0 && <SortModeButton active={sorting} onToggle={() => setSorting(v => !v)} />}
+                {!sorting && (
+                    <button
+                        onClick={openCreateModal}
+                        className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    >
+                        + Ürün Ekle
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
+    // Sıralama modu: kartlar ve düzenleme düğmeleri yerine sürüklenebilir kategori/ürün listeleri.
+    if (sorting) {
+        return (
+            <div className="space-y-5">
+                {header}
+                <MenuOrderPanel
+                    categories={categories}
+                    products={products}
+                    initialCategoryId={selectedCategory === 'all' ? null : selectedCategory}
+                    onCategoriesChange={setCategories}
+                    onProductsChange={setProducts}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-5">
-            {/* Header */}
-            <div className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Yemeklerimiz</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">{activeCount} aktif ürün</p>
-                </div>
-                <button
-                    onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                >
-                    + Ürün Ekle
-                </button>
-            </div>
+            {header}
 
             {/* Applied Tax Rate Info */}
             {(() => {

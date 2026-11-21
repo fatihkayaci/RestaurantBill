@@ -12,7 +12,10 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, QrCode, Image as ImageIcon, ArrowUp, ArrowDown, LayoutGrid, Trash2, Layers } from 'lucide-react';
+import { Check, X, Pencil, QrCode, Image as ImageIcon, LayoutGrid, Trash2, Layers } from 'lucide-react';
+import { SortModeButton } from '@/components/dnd/SortMode';
+import { DraggableTable, TableDragTransferProvider } from '@/features/tables/components/TableDragTransfer';
+import TableOrderPanel from './components/TableOrderPanel';
 import { EmptyState, SearchEmptyState } from '@/components/ui/empty-state';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from "@/lib/utils";
@@ -115,6 +118,7 @@ export default function Tables() {
     const [tableDeleteError, setTableDeleteError] = useState<string | null>(null);
 
     const [regions, setRegions] = useState<Region[]>([]);
+    const [sorting, setSorting] = useState(false);
     const [selectedRegionId, setSelectedRegionId] = useState<string | 'all'>('all');
     const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
     const [isAddingRegion, setIsAddingRegion] = useState(false);
@@ -183,22 +187,6 @@ export default function Tables() {
     const refreshRegions = async () => {
         const updated = await regionService.getRegions();
         setRegions(updated);
-    };
-
-    const moveRegion = async (index: number, direction: -1 | 1) => {
-        const targetIndex = index + direction;
-        if (targetIndex < 0 || targetIndex >= regions.length) return;
-
-        const reordered = [...regions];
-        [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
-        setRegions(reordered);
-
-        try {
-            await regionService.reorderRegions(reordered.map(r => r.id));
-        } catch {
-            toast.error('Bölge sırası kaydedilemedi.');
-            await refreshRegions();
-        }
     };
 
     const loadOrderRequests = () => {
@@ -665,16 +653,16 @@ export default function Tables() {
                 ? ['new-order', 'reservation']
                 : ['orders', 'new-order'];
 
-    return (
-        <div className="space-y-5">
-            {/* Header */}
-            <div className="flex items-start justify-between">
+    const canSort = regions.length > 1 || tables.length > 1;
+    const header = (
+            <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-serif font-bold text-foreground">Masalar</h1>
                     <p className="text-sm text-muted-foreground mt-0.5">{tables.length} masa</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    {tables.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                    {canSort && <SortModeButton active={sorting} onToggle={() => setSorting(v => !v)} />}
+                    {!sorting && tables.length > 0 && (
                         <button
                             onClick={() => setBulkQrOpen(true)}
                             className="flex items-center gap-1.5 border border-border bg-card hover:bg-muted text-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
@@ -683,7 +671,7 @@ export default function Tables() {
                             Toplu QR
                         </button>
                     )}
-                    {regions.length > 0 && (
+                    {!sorting && regions.length > 0 && (
                         <button
                             onClick={() => setBulkCreateOpen(true)}
                             className="flex items-center gap-1.5 border border-border bg-card hover:bg-muted text-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
@@ -692,14 +680,31 @@ export default function Tables() {
                             Toplu Masa Ekle
                         </button>
                     )}
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                    >
-                        + Masa Ekle
-                    </button>
+                    {!sorting && (
+                        <button
+                            onClick={openCreateModal}
+                            className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                        >
+                            + Masa Ekle
+                        </button>
+                    )}
                 </div>
             </div>
+    );
+
+    // Sıralama modu: masa kartları yerine sürüklenebilir bölge ve masa listeleri. Normal modda sürükleme masa taşımadır.
+    if (sorting) {
+        return (
+            <div className="space-y-5">
+                {header}
+                <TableOrderPanel regions={regions} tables={tables} onRegionsChange={setRegions} onTablesChange={setTables} />
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-5">
+            {header}
 
             <CustomerOrderRequests requests={orderRequests} onChanged={() => { loadOrderRequests(); void refreshTables(); }} />
 
@@ -815,30 +820,22 @@ export default function Tables() {
             )}
 
             {/* Table Grid — bölgelere göre gruplanmış, waiter tarafındaki tasarımla aynı renk/hover davranışı */}
-            {tables.length > 0 && tableGroups.map(group => {
-                const regionIndex = group.region ? regions.findIndex(r => r.id === group.region!.id) : -1;
+            {/* Dolu masayı başka masanın üstüne sürükleyince taşı / birleştir / yer değiştir sorulur. */}
+            {tables.length > 0 && tables.some(t => t.status === 2) && (
+                <p className="text-xs text-muted-foreground">
+                    İpucu: dolu masayı tutup başka masanın üstüne bırakın (telefonda basılı tutun); taşıma, birleştirme ya da yer değiştirme sorulur. Sırayı değiştirmek için "Sırala".
+                </p>
+            )}
+            {tables.length > 0 && (
+            <TableDragTransferProvider tables={tables} enabled onDone={() => { void refreshTables(); }}>
+            <div className="space-y-5">
+            {tableGroups.map(group => {
                 return (
                 <div key={group.region?.id ?? 'all'} className="space-y-3">
                     {showRegionSections && (
-                        <div className="flex items-center gap-1">
-                            <h2 className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
-                                {group.region?.name} ({group.tables.length})
-                            </h2>
-                            <button
-                                onClick={() => moveRegion(regionIndex, -1)}
-                                disabled={regionIndex <= 0}
-                                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                                <ArrowUp className="h-3 w-3" />
-                            </button>
-                            <button
-                                onClick={() => moveRegion(regionIndex, 1)}
-                                disabled={regionIndex === -1 || regionIndex >= regions.length - 1}
-                                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                                <ArrowDown className="h-3 w-3" />
-                            </button>
-                        </div>
+                        <h2 className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
+                            {group.region?.name} ({group.tables.length})
+                        </h2>
                     )}
                     {group.tables.length === 0 && (
                         <SearchEmptyState
@@ -857,8 +854,8 @@ export default function Tables() {
                             // Kartın "yanması" (index.css: .table-alert-glow): QR sipariş altın, çağrı kırmızı, hesap mavi.
                             const glow = qrCount > 0 ? 'qr' : alertKind;
                             return (
+                                <DraggableTable key={table.id} table={table} className="grid rounded-2xl">
                                 <div
-                                    key={table.id}
                                     onClick={() => handleTableClick(table)}
                                     data-glow={glow ?? undefined}
                                     className={cn(
@@ -965,12 +962,16 @@ export default function Tables() {
                                         )}
                                     </div>
                                 </div>
+                                </DraggableTable>
                             );
                         })}
                     </div>
                 </div>
                 );
             })}
+            </div>
+            </TableDragTransferProvider>
+            )}
 
             {/* Masa Ekle / Düzenle Modal */}
             {isModalOpen && (

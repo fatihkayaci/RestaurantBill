@@ -21,7 +21,8 @@ public abstract class SetMenuInput
     public bool IsActive { get; set; } = true;
     /// <summary>"Chef's recommendation" flag; null keeps the current value (older clients do not send it).</summary>
     public bool? IsFeatured { get; set; }
-    public int SortOrder { get; set; }
+    /// <summary>Liste sırası; null: yeni menü sona eklenir, düzenlemede mevcut sıra korunur (sıra sürükle-bırakla değişir).</summary>
+    public int? SortOrder { get; set; }
     /// <summary>İsteğe bağlı gösterim kategorisi (raporda menü bu kategori altında görünür; KDV oranı da ondan gelir).</summary>
     public Guid? CategoryId { get; set; }
     public List<SetMenuSlotInput> Slots { get; set; } = [];

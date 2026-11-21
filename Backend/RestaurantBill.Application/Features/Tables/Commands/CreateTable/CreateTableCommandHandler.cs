@@ -35,6 +35,8 @@ namespace RestaurantBill.Application.Features.Tables.Commands.CreateTable
             Table table = Table.Create(request.Name, string.Empty, request.RegionId);
             table.AssignRegion(request.RegionId);
             table.SetCapacity(request.Capacity);
+            // Yeni masa bölgesinin sonuna eklenir; yönetici sonra yerini değiştirir.
+            table.SetSortOrder(await TableSortOrder.EndOfRegionAsync(_db, request.RegionId, cancellationToken));
             _db.Tables.Add(table);
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);

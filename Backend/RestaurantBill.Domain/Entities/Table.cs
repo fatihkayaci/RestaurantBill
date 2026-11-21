@@ -12,6 +12,8 @@ namespace RestaurantBill.Domain.Entities
         public TableStatus Status { get; private set; } = TableStatus.Available;
         // Masaya en fazla kaç kişi oturur; rezervasyonda kişi sayısına uymayan masa soluklaşır. Girilmemişse null.
         public int? Capacity { get; private set; }
+        // Bölge içindeki sıra (küçük önce). Masa ekranlarında bu sırayla, eşitse ada göre (Masa 2, Masa 10) listelenir.
+        public int SortOrder { get; private set; }
 
         public const int MaxCapacity = 50;
 
@@ -49,6 +51,11 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"Masa kapasitesi 1 ile {MaxCapacity} kişi arasında olmalı.");
 
             Capacity = capacity;
+        }
+
+        public void SetSortOrder(int sortOrder)
+        {
+            SortOrder = sortOrder;
         }
 
         public void AssignRegion(Guid regionId)

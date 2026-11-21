@@ -68,7 +68,8 @@ export interface SetMenuInput {
     isActive: boolean;
     /** Gönderilmezse sunucu mevcut değeri korur. */
     isFeatured?: boolean;
-    sortOrder: number;
+    /** Gönderilmezse yeni menü sona eklenir, mevcut menünün sırası korunur (sıra "Sırala" modunda sürüklenerek değişir). */
+    sortOrder?: number;
     categoryId: string | null;
     slots: {
         /** Mevcut bölümün id'si; yeni bölümde yok. */
@@ -98,7 +99,6 @@ export function toSetMenuInput(menu: SetMenu): SetMenuInput {
         discountValue: menu.discountValue,
         isActive: menu.isActive,
         isFeatured: menu.isFeatured,
-        sortOrder: menu.sortOrder,
         categoryId: menu.categoryId,
         slots: menu.slots.map(slot => ({
             id: slot.id,

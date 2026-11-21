@@ -229,7 +229,6 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
             discountValue: menuDiscount,
             isActive,
             isFeatured,
-            sortOrder: menu?.sortOrder ?? 0,
             categoryId: categoryId || null,
             slots: slots.map(slot => ({
                 id: slot.id,

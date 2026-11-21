@@ -47,8 +47,14 @@ namespace RestaurantBill.Application.Features.Tables.Commands.BulkCreateTables
             if (result.CreatedNames.Count == 0)
                 return Result<BulkCreateTablesResultDto>.Failure("Bu isimlerin hepsi bu bölgede zaten mevcut.");
 
+            // Yeni masalar bölgenin sonuna, verilen numara sırasıyla eklenir.
+            int nextSortOrder = await TableSortOrder.EndOfRegionAsync(_db, request.RegionId, cancellationToken);
             foreach (string name in result.CreatedNames)
-                _db.Tables.Add(Table.Create(name, string.Empty, request.RegionId));
+            {
+                Table table = Table.Create(name, string.Empty, request.RegionId);
+                table.SetSortOrder(nextSortOrder++);
+                _db.Tables.Add(table);
+            }
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(
