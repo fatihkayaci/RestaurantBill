@@ -125,6 +125,11 @@ public static class ApplyRequestToTableOrder
         if (!string.IsNullOrWhiteSpace(requestNote))
             order.UpdateNote(string.IsNullOrWhiteSpace(order.Note) ? requestNote : $"{order.Note} / {requestNote}");
 
+        // Garsonun onayladığı QR talebinin telefonu hesaba bağlanır (QrTableLock): artık o telefon masanın hesabını görür.
+        // Hesap zaten başka bir telefona bağlıysa (kilit açılmadan önce gelmiş eski talep) bağ değişmez.
+        if (orderRequest.Kind == OrderRequestKind.TableQr && orderRequest.DeviceTokenHash is { } deviceHash && order.QrOwnerTokenHash is null)
+            order.SetQrOwner(deviceHash);
+
         orderRequest.Approve();
         return target;
     }

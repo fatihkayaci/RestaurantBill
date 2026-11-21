@@ -916,6 +916,10 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<string>("QrOwnerTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -1028,6 +1032,10 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<Guid>("CreatedUser")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("DeviceTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");

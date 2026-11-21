@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { getTenantSlug } from '@/lib/tenant';
 import type {
-    Availability, DaySlot, OrderRequestStatus, PublicSite, PublicTableInfo, ReservationDetail, ReservationStatusInfo,
+    Availability, DaySlot, OrderRequestStatus, PublicSite, PublicTableBill, PublicTableInfo, ReservationDetail, ReservationStatusInfo,
     TableActionResult,
 } from '../types';
 import type { TableIbanPayment } from '../tableIbanPayment';
+import { deviceTokenHeader } from '../deviceToken';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5077';
 
@@ -56,7 +57,13 @@ export const publicService = {
     },
     getTable: async (tableId: string) => {
         // ibanPayment: restoran "IBAN ile öde"yi açmadıysa null.
-        const response = await publicApi.get<PublicTableInfo & { ibanPayment?: TableIbanPayment | null }>(`/table/${tableId}`);
+        // orderLock: bu telefonun masadaki durumu (cihaz anahtarına göre); sayfayı açmak masayı kilitlemez.
+        const response = await publicApi.get<PublicTableInfo & { ibanPayment?: TableIbanPayment | null }>(`/table/${tableId}`, { headers: deviceTokenHeader() });
+        return response.data;
+    },
+    /** "Masanın hesabı": yalnız masanın bağlı olduğu telefonda döner; diğerlerinde 403. */
+    getTableBill: async (tableId: string) => {
+        const response = await publicApi.get<PublicTableBill>(`/table/${tableId}/bill`, { headers: deviceTokenHeader() });
         return response.data;
     },
     getAvailability: async (branchId: string, date: string, time: string) => {
@@ -68,7 +75,8 @@ export const publicService = {
         return response.data;
     },
     createOrderRequest: async (tableId: string, items: OrderRequestItemInput[], note: string) => {
-        const response = await publicApi.post<OrderRequestStatus>('/order-requests', { tableId, items, note });
+        // İlk talebi gönderen telefon masayı tutar; masa başka telefona bağlıysa sunucu talebi garsona hiç iletmez.
+        const response = await publicApi.post<OrderRequestStatus>('/order-requests', { tableId, items, note }, { headers: deviceTokenHeader() });
         return response.data;
     },
     /** Masaya bakan garsonlara canlı uyarı; aynı masadan 60 sn içinde tekrar bildirilmez. */
@@ -76,9 +84,9 @@ export const publicService = {
         const response = await publicApi.post<TableActionResult>(`/table/${tableId}/call-waiter`);
         return response.data;
     },
-    /** Masanın açık hesabı için hesap isteği; açık hesap yoksa hata döner. */
+    /** Masanın açık hesabı için hesap isteği; açık hesap yoksa hata döner. Tutar yalnız masanın telefonuna döner. */
     requestBill: async (tableId: string) => {
-        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/request-bill`);
+        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/request-bill`, undefined, { headers: deviceTokenHeader() });
         return response.data;
     },
     getOrderRequestStatus: async (id: string) => {

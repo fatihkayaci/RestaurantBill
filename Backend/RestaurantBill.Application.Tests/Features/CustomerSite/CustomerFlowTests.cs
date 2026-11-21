@@ -67,6 +67,7 @@ public class CustomerFlowTests : ApplicationTestBase
     private Task<Result<OrderRequestStatusDto>> SendOrderRequestAsync(params Product[] products)
         => new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications).Handle(new CreateOrderRequestCommand
         {
+            DeviceTokenHash = DeviceHash,
             TableId = _table.Id,
             Items = products.Select(p => new OrderRequestItemInput { ProductId = p.Id, Quantity = 1 }).ToList()
         }, CancellationToken.None);
@@ -235,11 +236,13 @@ public class CustomerFlowTests : ApplicationTestBase
         await SeedAsync();
         Order order = Order.Create(_table.Id, CurrentUser.BranchId);
         order.AddItem(_product, 2);
+        // Tutar yalnız hesabın bağlı olduğu telefona döner (QrTableLock).
+        order.SetQrOwner(DeviceHash);
         DbContext.Orders.Add(order);
         await DbContext.SaveChangesAsync();
 
         var result = await new RequestTableBillCommandHandler(Db, _tenant, _tableNotifications, _cashierNotifications, new TableActionCooldown(_clock), _clock)
-            .Handle(new RequestTableBillCommand { TableId = _table.Id }, CancellationToken.None);
+            .Handle(new RequestTableBillCommand { TableId = _table.Id, DeviceTokenHash = DeviceHash }, CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
         Assert.Equal(440m, result.Value!.BillTotal);

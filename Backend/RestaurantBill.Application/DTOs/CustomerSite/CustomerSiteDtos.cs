@@ -136,6 +136,11 @@ public class PublicTableInfoDto
     public bool AcceptsOnlineOrders { get; set; }
     /// <summary>"IBAN ile öde" penceresinin bilgileri; restoran açmadıysa ya da IBAN geçerli değilse null (hiç gönderilmez).</summary>
     public TableIbanPaymentDto? IbanPayment { get; set; }
+    /// <summary>
+    /// Masa QR'ında bu telefonun durumu (X-Device-Token): "none" masa kimseye bağlı değil, "mine" bu telefona bağlı,
+    /// "other" başka bir telefondan sipariş veriliyor (sepet kapalı). Sayfayı açmak masayı kilitlemez.
+    /// </summary>
+    public string OrderLock { get; set; } = "none";
 }
 
 // "IBAN ile öde" bilgileri: masa QR sayfası ve online paket sipariş (ödeme adımı ve takip sayfası). Misafir IBAN'ı
@@ -212,8 +217,32 @@ public class TableActionResultDto
     public bool Sent { get; set; }
     /// <summary>Bu masadan aynı istek kaç saniye sonra tekrar yapılabilir.</summary>
     public int RetryAfterSeconds { get; set; }
-    /// <summary>Yalnız "Hesap iste": masanın açık hesabında ödenecek kalan; garson çağırmada null.</summary>
+    /// <summary>Yalnız "Hesap iste" ve yalnız hesabın bağlı olduğu telefonda: ödenecek kalan; diğer durumlarda null.</summary>
     public decimal? BillTotal { get; set; }
+}
+
+/// <summary>Masanın açık hesabı; yalnız hesabın bağlı olduğu telefona (QrTableLock) döner.</summary>
+public class PublicTableBillDto
+{
+    /// <summary>false: telefon masayı ilk talebiyle tuttu ama garson henüz onaylamadı; hesap yok ya da gösterilmez.</summary>
+    public bool HasBill { get; set; }
+    public List<PublicTableBillLineDto> Items { get; set; } = [];
+    public decimal Total { get; set; }
+    /// <summary>Tutar girerek alınmış ödemeler.</summary>
+    public decimal Paid { get; set; }
+    public decimal Remaining { get; set; }
+    public DateTime? BillRequestedAt { get; set; }
+}
+
+public class PublicTableBillLineDto
+{
+    public string Name { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal LineTotal { get; set; }
+    /// <summary>Menü satırının içindeki ürünler ("Adana", "Ayran").</summary>
+    public List<string> Details { get; set; } = [];
+    public string Note { get; set; } = string.Empty;
 }
 
 public class AvailabilityDto

@@ -29,6 +29,10 @@ namespace RestaurantBill.Domain.Entities
         // Ürünler masada kalır; kalan tutar = TotalPrice - PaidOnAccount. Hesap kapanırken sıfırlanır.
         public decimal PaidOnAccount { get; private set; }
         public decimal RemainingAmount => TotalPrice - PaidOnAccount;
+        // Masa QR'ından bu hesaba sipariş veren telefonun cihaz anahtarının özeti (SHA-256, hex). Yalnız o telefon QR'dan
+        // sipariş verebilir ve hesabı görür. Kilit siparişe bağlıdır: hesap kapanınca (ödendi/iptal) kendiliğinden düşer,
+        // sipariş masa taşımada siparişle birlikte gider. null: masa QR'da kimseye bağlı değil.
+        public string? QrOwnerTokenHash { get; private set; }
         private readonly List<OrderItem> _orderItems = new();
         public IReadOnlyCollection<OrderItem> OrderItems => _orderItems.AsReadOnly();
 
@@ -440,6 +444,26 @@ namespace RestaurantBill.Domain.Entities
         public void ClearBillRequest()
         {
             BillRequestedAt = null;
+        }
+
+        /// <summary>Hesabı QR'dan sipariş veren telefona bağlar (özet; anahtarın kendisi saklanmaz).</summary>
+        public void SetQrOwner(string tokenHash)
+        {
+            EnsureHasTable();
+
+            if (string.IsNullOrWhiteSpace(tokenHash))
+                throw new DomainException("Geçersiz cihaz anahtarı.");
+
+            if (IsClosed())
+                throw new DomainException("Kapanmış bir hesap telefona bağlanamaz.");
+
+            QrOwnerTokenHash = tokenHash;
+        }
+
+        /// <summary>Personelin "QR kilidini aç"ı: masada başka bir telefon sipariş verebilir.</summary>
+        public void ClearQrOwner()
+        {
+            QrOwnerTokenHash = null;
         }
 
         public void MoveToTable(Guid newTableId)

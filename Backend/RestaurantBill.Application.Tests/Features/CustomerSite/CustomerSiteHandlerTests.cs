@@ -47,6 +47,7 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
         var handler = new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications);
         var result = await handler.Handle(new CreateOrderRequestCommand
         {
+            DeviceTokenHash = DeviceHash,
             TableId = table.Id,
             Items = [new OrderRequestItemInput { ProductId = product.Id, Quantity = quantity, Note = "az tuzlu" }]
         }, CancellationToken.None);
@@ -109,6 +110,7 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
         var handler = new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications);
         var result = await handler.Handle(new CreateOrderRequestCommand
         {
+            DeviceTokenHash = DeviceHash,
             TableId = table.Id,
             Items = [new OrderRequestItemInput { ProductId = Guid.NewGuid(), Quantity = 1 }]
         }, CancellationToken.None);
@@ -129,6 +131,7 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
         var handler = new CreateOrderRequestCommandHandler(Db, _tenant, new OrderPricingService(Db), _tableNotifications);
         var result = await handler.Handle(new CreateOrderRequestCommand
         {
+            DeviceTokenHash = DeviceHash,
             TableId = table.Id,
             Items = [new OrderRequestItemInput { ProductId = otherProduct.Id, Quantity = 1 }]
         }, CancellationToken.None);
@@ -145,6 +148,7 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
         var handler = new CreateOrderRequestCommandHandler(Db, new FakeTenantResolver { Slug = "baska-restoran" }, new OrderPricingService(Db), _tableNotifications);
         var result = await handler.Handle(new CreateOrderRequestCommand
         {
+            DeviceTokenHash = DeviceHash,
             TableId = table.Id,
             Items = [new OrderRequestItemInput { ProductId = product.Id, Quantity = 1 }]
         }, CancellationToken.None);

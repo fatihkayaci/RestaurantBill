@@ -131,6 +131,8 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
 public class GetPublicTableQuery : IRequest<Result<PublicTableInfoDto>>
 {
     public Guid TableId { get; set; }
+    /// <summary>Telefonun cihaz anahtarının özeti (X-Device-Token); yalnız OrderLock için okunur, hiçbir şey kilitlemez.</summary>
+    public string? DeviceTokenHash { get; set; }
 }
 
 public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant)
@@ -160,6 +162,7 @@ public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant
         table.QrFeatures = QrFeaturesDto.From(branch.GetQrFeatures());
         table.AcceptsOnlineOrders = branch.AcceptsOnlineOrders;
         table.IbanPayment = TableIbanPaymentDto.From(branch);
+        table.OrderLock = QrTableLock.ToWire(await QrTableLock.StateAsync(db, table.Id, request.DeviceTokenHash, cancellationToken));
         return Result<PublicTableInfoDto>.Success(table);
     }
 }

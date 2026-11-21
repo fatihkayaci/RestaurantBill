@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RestaurantBill.Application.Features.ContactMessages.Public;
+using RestaurantBill.Application.Features.CustomerSite;
 using RestaurantBill.Application.Features.CustomerSite.Public;
 using RestaurantBill.Application.Features.CustomerSite.Seo;
 using RestaurantBill.Application.Features.Delivery;
@@ -23,6 +24,10 @@ public class PublicController : BaseController
     {
         _mediator = mediator;
     }
+
+    // Masa QR sayfasının telefona özgü rastgele anahtarı (QrTableLock). Başlıkta gelir ki adreslere ve erişim loglarına
+    // düşmesin; komutlara yalnız özeti verilir (yavaş istek logu komutu olduğu gibi yazar).
+    private string? DeviceTokenHash => QrTableLock.HashToken(Request.Headers[QrTableLock.HeaderName].FirstOrDefault());
 
     /// <summary>Restoran hizmet veriyor mu: sahibi hesabı kapattıysa müşteri sayfaları nötr bir ekran gösterir.</summary>
     [EnableRateLimiting("public-read")]
@@ -59,8 +64,22 @@ public class PublicController : BaseController
     [HttpGet("table/{tableId:guid}")]
     public async Task<IActionResult> GetTable([FromRoute] Guid tableId, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetPublicTableQuery { TableId = tableId }, cancellationToken);
+        var result = await _mediator.Send(new GetPublicTableQuery { TableId = tableId, DeviceTokenHash = DeviceTokenHash }, cancellationToken);
         return HandleResult(result);
+    }
+
+    /// <summary>
+    /// "Masanın hesabı": açık hesabın kalemleri ve kalan. Yalnız masanın bağlı olduğu telefona (X-Device-Token) döner;
+    /// diğerlerine 403 ve tarafsız bir mesaj, veri yok.
+    /// </summary>
+    [EnableRateLimiting("public-read")]
+    [HttpGet("table/{tableId:guid}/bill")]
+    public async Task<IActionResult> GetTableBill([FromRoute] Guid tableId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetTableBillQuery { TableId = tableId, DeviceTokenHash = DeviceTokenHash }, cancellationToken);
+        if (result.IsFailure)
+            return StatusCode(StatusCodes.Status403Forbidden, new { result.Error });
+        return Ok(result.Value);
     }
 
     /// <summary>Masaya bakan garsonlara canlı "garson çağırıyor" uyarısı. Sent=false: bu masadan az önce çağrılmış.</summary>
@@ -77,7 +96,7 @@ public class PublicController : BaseController
     [HttpPost("table/{tableId:guid}/request-bill")]
     public async Task<IActionResult> RequestBill([FromRoute] Guid tableId, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new RequestTableBillCommand { TableId = tableId }, cancellationToken);
+        var result = await _mediator.Send(new RequestTableBillCommand { TableId = tableId, DeviceTokenHash = DeviceTokenHash }, cancellationToken);
         return HandleResult(result);
     }
 
@@ -102,6 +121,7 @@ public class PublicController : BaseController
     [HttpPost("order-requests")]
     public async Task<IActionResult> CreateOrderRequest([FromBody] CreateOrderRequestCommand command, CancellationToken cancellationToken)
     {
+        command.DeviceTokenHash = DeviceTokenHash;
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }

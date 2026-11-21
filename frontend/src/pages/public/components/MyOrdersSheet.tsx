@@ -1,5 +1,5 @@
 import { BellRing, X } from 'lucide-react';
-import { ORDER_REQUEST_APPROVED, ORDER_REQUEST_REJECTED } from '@/features/customerSite/types';
+import { ORDER_REQUEST_APPROVED, ORDER_REQUEST_REJECTED, type PublicTableBill } from '@/features/customerSite/types';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { serif } from '../site/siteParts';
@@ -8,6 +8,8 @@ import type { SentOrderRequest } from '../useTableOrderRequests';
 
 interface Props {
     requests: SentOrderRequest[];
+    /** Masa bu telefona bağlıysa masanın açık hesabı (garsonun eklediği kalemler ve menüler dahil); yoksa null. */
+    bill?: PublicTableBill | null;
     onClose: () => void;
     /** Menüdeyken "Menüye dön" yalnız pencereyi kapatır; karşılamadayken menüyü açar. */
     onBackToMenu?: () => void;
@@ -28,8 +30,10 @@ const timeOf = (sentAt: number) => new Date(sentAt).toLocaleTimeString('tr-TR', 
 // Bu masadan gönderilen siparişler ve garsonun kararı. Kalemler müşterinin telefonundan gelir. Reddedilen siparişte
 // garsonun yazdığı neden alıntı olarak durur ve bir sonraki adım (menüye dön / garson çağır) gösterilir.
 // Görünüm (Renkli): krem pencere, her sipariş kum zeminli yuvarlak kutu; durum hapı (hardal: bekliyor, yeşil: mutfakta).
-export default function MyOrdersSheet({ requests, onClose, onBackToMenu, onCallWaiter }: Props) {
+// Masa bu telefona bağlıysa en üstte "Masanın hesabı": açık hesabın bütün kalemleri ve kalan (useTableBill yoklaması).
+export default function MyOrdersSheet({ requests, bill = null, onClose, onBackToMenu, onCallWaiter }: Props) {
     const anyRejected = requests.some(r => r.status === ORDER_REQUEST_REJECTED);
+    const showBill = !!bill?.hasBill;
     return (
         <div className={sheetBackdrop} onClick={onClose}>
             <div
@@ -42,7 +46,7 @@ export default function MyOrdersSheet({ requests, onClose, onBackToMenu, onCallW
                 <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-3 pt-6">
                     <div className="min-w-0">
                         <p className={cn(eyebrowAccent, 'm-0')}>Bu masadan</p>
-                        <h2 className={cn(serif, 'm-0 mt-1 text-[34px] leading-none')}>Siparişlerim</h2>
+                        <h2 className={cn(serif, 'm-0 mt-1 text-[34px] leading-none')}>{showBill ? 'Masanın hesabı' : 'Siparişlerim'}</h2>
                     </div>
                     <button type="button" onClick={onClose} aria-label="Siparişlerimi kapat" className={closeCircle}>
                         <X className="h-5 w-5" aria-hidden="true" />
@@ -50,6 +54,10 @@ export default function MyOrdersSheet({ requests, onClose, onBackToMenu, onCallW
                 </div>
 
                 <ul className="m-0 flex min-h-0 flex-1 list-none flex-col gap-2.5 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2" aria-live="polite">
+                    {showBill && bill && <TableBillCard bill={bill} />}
+                    {showBill && requests.length > 0 && (
+                        <li className={cn(eyebrowAccent, 'mt-2 px-1')}>Gönderdiğim siparişler</li>
+                    )}
                     {requests.map(request => {
                         const badge = statusBadge(request.status);
                         const rejected = request.status === ORDER_REQUEST_REJECTED;
@@ -88,5 +96,43 @@ export default function MyOrdersSheet({ requests, onClose, onBackToMenu, onCallW
                 )}
             </div>
         </div>
+    );
+}
+
+/** Masanın açık hesabı: kalemler (menünün içindekiler altında), ödenen ve kalan. */
+function TableBillCard({ bill }: { bill: PublicTableBill }) {
+    return (
+        <li className="rounded-[20px] bg-[var(--site-bg)] p-4">
+            {bill.items.length === 0 ? (
+                <p className="m-0 text-[15px] text-[var(--site-sub)]">Hesapta henüz ürün yok.</p>
+            ) : (
+                <ul className="m-0 flex list-none flex-col divide-y divide-[var(--site-border)] p-0">
+                    {bill.items.map((item, i) => (
+                        <li key={`${item.name}-${i}`} className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                            <span className="min-w-0 flex-1">
+                                <span className={cn(serif, 'block break-words text-[18px] leading-tight')}>
+                                    <span className="font-[family-name:var(--site-sans,Manrope,system-ui,sans-serif)] text-[15px] font-extrabold tabular-nums tracking-normal text-[var(--site-accent-text)]">{item.quantity}×</span> {item.name}
+                                </span>
+                                {item.details.length > 0 && (
+                                    <span className="mt-0.5 block break-words text-sm leading-snug text-[var(--site-sub)]">{item.details.join(' · ')}</span>
+                                )}
+                                {item.note && <span className="mt-0.5 block break-words text-sm text-[var(--site-sub)]">Not: {item.note}</span>}
+                            </span>
+                            <span className="shrink-0 text-[15px] font-extrabold tabular-nums">{formatPrice(item.lineTotal)} ₺</span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {bill.paid > 0 && (
+                <p className="m-0 mt-3 flex items-baseline justify-between gap-3 text-sm font-bold text-[var(--site-ok)]">
+                    <span>Ödenen</span>
+                    <span className="tabular-nums">{formatPrice(bill.paid)} ₺</span>
+                </p>
+            )}
+            <p className="m-0 mt-3 flex items-baseline justify-between gap-3 border-t border-dashed border-[var(--site-border-strong)] pt-3">
+                <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--site-muted)]">{bill.paid > 0 ? 'Kalan' : 'Toplam'}</span>
+                <span className={cn(serif, 'text-[28px] leading-none tabular-nums')}>{formatPrice(bill.remaining)} ₺</span>
+            </p>
+        </li>
     );
 }

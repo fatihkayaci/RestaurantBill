@@ -32,6 +32,7 @@ import type { OrderRequest } from '@/features/customerSite/types';
 import { countRequestsByTable, useOrderRequestSignals } from '@/features/customerSite/useOrderRequestSignals';
 import { TABLE_ALERT_EVENT, type TableAlertDetail, type TableAlertKind } from '../waiter/waiterEvents';
 import { formatPrice, formatElapsed } from '@/lib/format';
+import { getApiErrorMessage } from "@/lib/apiError";
 import { inputClass, labelClass } from '@/lib/formStyles';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
@@ -557,6 +558,21 @@ export default function Tables() {
             toast.error('Sipariş gönderilemedi.');
         } finally {
             setIsSendingOrder(false);
+        }
+    };
+
+    const [unlockingQr, setUnlockingQr] = useState(false);
+    const handleUnlockQr = async () => {
+        if (!selectedTable || unlockingQr) return;
+        setUnlockingQr(true);
+        try {
+            await customerRequestService.unlockQrTable(selectedTable.id.toString());
+            setTableOrder(prev => prev ? { ...prev, qrLocked: false } : prev);
+            toast.success('QR kilidi açıldı. Masadan ilk sipariş veren telefon yeni sahibi olur.');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'QR kilidi açılamadı.'));
+        } finally {
+            setUnlockingQr(false);
         }
     };
 
@@ -1532,6 +1548,25 @@ export default function Tables() {
                                             </div>
                                         )}
                                     </>
+                                )}
+
+                                {/* Hesap masa QR'ında bir telefona bağlı: yalnız o telefon sipariş verir ve hesabı görür. Müşteri
+                                    telefon değiştirdiyse ya da masayı dışarıdan biri tuttuysa kilit buradan açılır. */}
+                                {tableOrder?.qrLocked && (
+                                    <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-3.5 py-2.5">
+                                        <span className="min-w-0 text-sm">
+                                            <span className="flex items-center gap-1.5 font-semibold text-foreground"><QrCode className="h-4 w-4 shrink-0" aria-hidden="true" />QR: telefona bağlı</span>
+                                            <span className="block text-xs text-muted-foreground">QR'dan yalnız bu masanın telefonu sipariş verir.</span>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleUnlockQr()}
+                                            disabled={unlockingQr}
+                                            className="min-h-11 shrink-0 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60 transition-colors"
+                                        >
+                                            {unlockingQr ? 'Açılıyor…' : 'QR kilidini aç'}
+                                        </button>
+                                    </div>
                                 )}
 
                                 {/* Masayı Taşı · Ödeme Al · Siparişi İptal Et — tek satır, panelin altına yapışık.

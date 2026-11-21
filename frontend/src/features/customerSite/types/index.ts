@@ -267,6 +267,37 @@ export interface PublicTableInfo {
     qrFeatures: QrFeatures;
     /** Şube şu an online paket sipariş alıyor mu (ayarda açık ve durdurulmamış). */
     acceptsOnlineOrders: boolean;
+    /**
+     * Bu telefonun masadaki durumu: none masa kimseye bağlı değil, mine bu telefondan sipariş veriliyor, other başka bir
+     * telefondan veriliyor (sepet kapalı). Eski sunucu göndermezse none sayılır.
+     */
+    orderLock?: TableOrderLock;
+}
+
+export type TableOrderLock = 'none' | 'mine' | 'other';
+
+/** Masa başka telefona bağlıyken gösterilen mesaj (sunucunun reddiyle aynı metin). */
+export const TABLE_LOCKED_MESSAGE = 'Bu masanın siparişleri başka bir telefondan veriliyor. Siparişinizi garsonumuza verebilirsiniz.';
+
+/** "Masanın hesabı": açık hesabın kalemleri (garsonun ekledikleri ve menüler dahil). */
+export interface PublicTableBill {
+    /** false: ilk sipariş henüz garson onayında; hesap gösterilmez. */
+    hasBill: boolean;
+    items: PublicTableBillLine[];
+    total: number;
+    paid: number;
+    remaining: number;
+    billRequestedAt: string | null;
+}
+
+export interface PublicTableBillLine {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+    /** Menü satırının içindeki ürünler. */
+    details: string[];
+    note: string;
 }
 
 /** Masa QR karşılama ekranının anahtarları; admin "QR menü özellikleri" de aynı şekli kullanır. */
@@ -282,7 +313,7 @@ export interface QrFeatures {
 export interface TableActionResult {
     sent: boolean;
     retryAfterSeconds: number;
-    /** Yalnız "Hesap iste": masanın açık hesabında ödenecek kalan. */
+    /** Yalnız "Hesap iste" ve yalnız masanın bağlı olduğu telefonda: ödenecek kalan. */
     billTotal?: number | null;
 }
 
