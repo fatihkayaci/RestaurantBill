@@ -141,10 +141,10 @@ public class PublicTableInfoDto
     /// <summary>"IBAN ile öde" penceresinin bilgileri; restoran açmadıysa ya da IBAN geçerli değilse null (hiç gönderilmez).</summary>
     public TableIbanPaymentDto? IbanPayment { get; set; }
     /// <summary>
-    /// Masa QR'ında bu telefonun durumu (X-Device-Token): "none" masa kimseye bağlı değil, "mine" bu telefona bağlı,
-    /// "other" başka bir telefondan sipariş veriliyor (sepet kapalı). Sayfayı açmak masayı kilitlemez.
+    /// Personel bu masada QR'dan siparişi kilitledi: menü, garson çağırma, hesap isteme ve hesap açık; sepet ve sipariş
+    /// gönderme kapalı (sunucu da reddeder).
     /// </summary>
-    public string OrderLock { get; set; } = "none";
+    public bool QrOrderingLocked { get; set; }
     /// <summary>
     /// "Popüler" bölümünün ürünleri, çok satandan aza (en çok 8). Bölüm kapalıysa ya da son 30 günde yeterli satış yoksa
     /// (3 üründen az) boş: bölüm gösterilmez.
@@ -232,14 +232,17 @@ public class TableActionResultDto
     public bool Sent { get; set; }
     /// <summary>Bu masadan aynı istek kaç saniye sonra tekrar yapılabilir.</summary>
     public int RetryAfterSeconds { get; set; }
-    /// <summary>Yalnız "Hesap iste" ve yalnız hesabın bağlı olduğu telefonda: ödenecek kalan; diğer durumlarda null.</summary>
+    /// <summary>Yalnız "Hesap iste"de: masanın açık hesabında ödenecek kalan; diğer durumlarda null.</summary>
     public decimal? BillTotal { get; set; }
 }
 
-/// <summary>Masanın açık hesabı; yalnız hesabın bağlı olduğu telefona (QrTableLock) döner.</summary>
+/// <summary>
+/// Masanın hesabı. Açık hesap masanın QR'ını açan her telefona döner; ödenen hesap yalnız o hesaba talebi yazılan
+/// telefonlara (GetTableBillQuery).
+/// </summary>
 public class PublicTableBillDto
 {
-    /// <summary>false: telefon masayı ilk talebiyle tuttu ama garson henüz onaylamadı; hesap yok ya da gösterilmez.</summary>
+    /// <summary>false: masada açık hesap yok (ya da bu telefonun görebileceği ödenen hesap yok).</summary>
     public bool HasBill { get; set; }
     public List<PublicTableBillLineDto> Items { get; set; } = [];
     public decimal Total { get; set; }
@@ -256,6 +259,8 @@ public class PublicTableBillDto
     public DateTime? PaidAt { get; set; }
     /// <summary>Ödenen hesapta uygulanan iskonto toplamı.</summary>
     public decimal Discount { get; set; }
+    /// <summary>Personel masada QR siparişini kilitledi (PublicTableInfoDto.QrOrderingLocked ile aynı; sayfa yoklamada günceller).</summary>
+    public bool QrOrderingLocked { get; set; }
 }
 
 public class PublicTableBillLineDto

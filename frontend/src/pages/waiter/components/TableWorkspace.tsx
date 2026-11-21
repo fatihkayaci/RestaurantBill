@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
     AlertCircle, ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, Clock, CreditCard, Gift, MoreHorizontal, Percent, Plus,
-    QrCode, ReceiptText, Undo2, X, XCircle,
+    ReceiptText, Undo2, X, XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -9,7 +9,6 @@ import {
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { orderService } from '@/features/orders/api/orderService';
-import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Order, OrderItem } from '@/features/orders/types';
 import type { Reservation, Table } from '@/features/tables/types';
@@ -26,6 +25,7 @@ import PaymentView, { type PaymentMode } from './PaymentView';
 import MoveTableView from './MoveTableView';
 import BottomSheet, { SheetItem } from './BottomSheet';
 import CustomerOrderRequests from './CustomerOrderRequests';
+import QrOrderingToggle from '@/features/tables/components/QrOrderingToggle';
 import { STATE_STYLE, clockTime, minutesSince, tableState } from '../waiterUi';
 
 export type WorkspaceView = 'detail' | 'add' | 'pay' | 'move' | 'reserve';
@@ -85,7 +85,7 @@ export default function TableWorkspace({
     table, tables, permissions, variant, initialView = 'detail', now, onClose, onTablePatch, onRefreshTables,
     orderRequests = [], onOrderRequestsChanged,
 }: Props) {
-    const { canTakeOrders, canTakePayment, canCancelAndDiscount, canTransferAndReserve } = permissions;
+    const { canTakeOrders, canTakePayment, canCancelAndDiscount, canTransferAndReserve, canLockQr } = permissions;
     const [view, setView] = useState<WorkspaceView>(initialView);
     // Masa doğrudan ürün eklemeyle açıldıysa "geri" geldiği yere, masa listesine döner (telefonda
     // ızgara, tablette panel kapanır). Detaya bir kez geçilince "geri" artık detaya döner.
@@ -165,13 +165,6 @@ export default function TableWorkspace({
         onTablePatch(table.id, { billRequestedAt: at });
         toast.success(cancel ? 'Hesap isteği geri alındı.' : 'Hesap istendi, kasaya bildirildi.');
     }, 'Hesap istenemedi.');
-
-    // Hesap QR'da bir telefona bağlıyken bağı kaldırır (müşteri telefon değiştirdi ya da masayı dışarıdan biri tuttu).
-    const unlockQr = () => run('qr-unlock', async () => {
-        await customerRequestService.unlockQrTable(String(table.id));
-        setOrder(prev => prev ? { ...prev, qrLocked: false } : prev);
-        toast.success('QR kilidi açıldı. Masadan ilk sipariş veren telefon yeni sahibi olur.');
-    }, 'QR kilidi açılamadı.');
 
     const serveItem = (item: OrderItem) => run(`serve-${item.id}`, async () => {
         if (!order) return;
@@ -320,7 +313,6 @@ export default function TableWorkspace({
         hasItems && canTakePayment && canCancelAndDiscount && 'discount',
         hasItems && (canTakePayment || billRequested) && 'bill',
         canReserve && 'reserve',
-        !!order?.qrLocked && 'qr-unlock',
         // Tutar girerek ödeme alınmış hesap iptal edilemez (sunucu da reddeder).
         !!order && canCancelAndDiscount && paidOnAccount === 0 && 'cancel',
     ].filter(Boolean) as string[];
@@ -376,6 +368,11 @@ export default function TableWorkspace({
                         onChanged={() => { onOrderRequestsChanged?.(); void loadOrder(); }}
                         canDecide={canTransferAndReserve}
                     />
+                )}
+                {/* "QR siparişi: Açık / Kilitli": yalnız yetkili kullanıcıda (Owner/Admin, yetkili garson). */}
+                {view === 'detail' && canLockQr && (
+                    <QrOrderingToggle tableId={String(table.id)} tableName={table.name} locked={!!table.qrOrderingLocked}
+                        onChanged={locked => onTablePatch(table.id, { qrOrderingLocked: locked })} />
                 )}
                 {loading ? (
                     <div className="flex flex-col gap-2">{[...Array(4)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted" />)}</div>
@@ -533,14 +530,7 @@ export default function TableWorkspace({
                         })}
                         <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-3">
                             <div className="flex justify-between text-[13px] text-rb-text-sub">
-                                <span className="flex items-center gap-2">
-                                    {itemCount} ürün
-                                    {order?.qrLocked && (
-                                        <span className="inline-flex items-center gap-1 font-semibold text-foreground" title="QR'dan yalnız bu masanın telefonu sipariş verir">
-                                            <QrCode className="size-3.5" aria-hidden="true" />QR: telefona bağlı
-                                        </span>
-                                    )}
-                                </span>
+                                <span>{itemCount} ürün</span>
                                 {billRequested && order?.billRequestedAt && <span className="font-semibold text-rb-accent">Hesap istendi · {clockTime(order.billRequestedAt)}</span>}
                             </div>
                             <div className="flex items-baseline justify-between">
@@ -621,9 +611,6 @@ export default function TableWorkspace({
                     ) : (
                         <SheetItem icon={<ReceiptText className="size-5.5" />} title="Hesap iste" hint='Masayı "hesap istendi" işaretle, kasaya bildir' onClick={() => { setSheetOpen(false); void requestBill(false); }} />
                     ))}
-                    {moreItems.includes('qr-unlock') && (
-                        <SheetItem icon={<QrCode className="size-5.5" />} title="QR kilidini aç" hint="Masanın QR'ından başka bir telefon sipariş verebilsin" onClick={() => { setSheetOpen(false); void unlockQr(); }} />
-                    )}
                     {moreItems.includes('reserve') && (
                         <SheetItem icon={<CalendarDays className="size-5.5" />} title="Rezervasyon" hint="Masayı bir saat için ayır" onClick={() => { setSheetOpen(false); setView('reserve'); }} />
                     )}

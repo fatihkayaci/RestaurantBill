@@ -23,9 +23,12 @@ namespace RestaurantBill.Domain.Entities
 
         public const int RejectReasonMaxLength = 300;
 
-        // QR talebini gönderen telefonun cihaz anahtarının özeti. Masada açık hesap yokken masanın "sahibi" bekleyen
-        // talebin telefonudur; garson onaylayınca açılan hesaba geçer. Ön siparişte ve eski taleplerde null.
+        // QR talebini gönderen telefonun cihaz anahtarının özeti (SHA-256, hex; anahtarın kendisi saklanmaz). Telefon kendi
+        // taleplerini ve katıldığı hesabı bununla tanır. Ön siparişte ve eski taleplerde null.
         public string? DeviceTokenHash { get; private set; }
+        // Talebin yazıldığı hesap (onayda ya da ön siparişin masaya geçişinde). Hesap ödendikten sonra "Ödendi" fişi
+        // yalnız bu hesaba talebi yazılan telefonlarda görünür. Bekleyen/reddedilen talepte ve eski kayıtlarda null.
+        public Guid? OrderId { get; private set; }
 
         private readonly List<OrderRequestItem> _items = new();
         public IReadOnlyCollection<OrderRequestItem> Items => _items.AsReadOnly();
@@ -44,12 +47,6 @@ namespace RestaurantBill.Domain.Entities
                 Status = OrderRequestStatus.Pending,
                 DeviceTokenHash = string.IsNullOrWhiteSpace(deviceTokenHash) ? null : deviceTokenHash
             };
-        }
-
-        /// <summary>"QR kilidini aç": bekleyen talep masayı artık o telefona bağlamaz (talep yine garsonda bekler).</summary>
-        public void ClearDeviceToken()
-        {
-            DeviceTokenHash = null;
         }
 
         /// <summary>Rezervasyonun ön siparişi: rezervasyonun masasına yazılır, misafir gelene kadar Pending kalır.</summary>
@@ -105,10 +102,28 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException("Birim fiyat negatif olamaz.");
         }
 
-        public void Approve()
+        /// <summary>Talep onaylandı ve kalemleri <paramref name="orderId"/> hesabına yazıldı.</summary>
+        public void Approve(Guid orderId)
         {
             EnsurePending();
+
+            if (orderId == Guid.Empty)
+                throw new DomainException("Geçersiz sipariş.");
+
             Status = OrderRequestStatus.Approved;
+            OrderId = orderId;
+        }
+
+        /// <summary>Hesap başka bir hesapla birleşti (masa birleştirme): talep artık birleşen hesabın parçasıdır.</summary>
+        public void MoveToOrder(Guid orderId)
+        {
+            if (orderId == Guid.Empty)
+                throw new DomainException("Geçersiz sipariş.");
+
+            if (Status != OrderRequestStatus.Approved)
+                throw new DomainException("Yalnızca onaylanmış talep başka hesaba taşınabilir.");
+
+            OrderId = orderId;
         }
 
         public void Reject(string? reason = null)

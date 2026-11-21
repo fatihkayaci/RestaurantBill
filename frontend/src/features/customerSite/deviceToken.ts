@@ -1,6 +1,6 @@
-// Masa QR sayfasının telefona özgü rastgele anahtarı. Sunucu masayı ilk sipariş talebini gönderen telefona bağlar;
-// sonra yalnız o telefon sipariş verir ve masanın hesabını görür. Anahtar kimseyi tanımlamaz: yalnızca "aynı telefon mu"
-// sorusunun cevabıdır. Sunucu özetini saklar. Özel pencerede localStorage yoksa anahtar bu sekmede bellekte kalır.
+// Masa QR sayfasının telefona özgü rastgele anahtarı. Sunucu bununla telefonun kendi sipariş taleplerini ve katıldığı
+// hesabı tanır (hesap ödendikten sonra "Ödendi" fişi yalnız ona sipariş veren telefonlarda görünür). Anahtar kimseyi
+// tanımlamaz: yalnızca "aynı telefon mu" sorusunun cevabıdır. Sunucu özetini saklar. Özel pencerede localStorage yoksa anahtar bu sekmede bellekte kalır.
 const STORAGE_KEY = 'rb:device-token';
 
 let memoryToken: string | null = null;

@@ -42,6 +42,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
                         Capacity = t.Capacity,
                         SortOrder = t.SortOrder,
                         Status = t.Status,
+                        QrOrderingLocked = t.QrOrderingLocked,
                         RegionId = t.RegionId,
                         RegionName = t.Region.Name
                     }

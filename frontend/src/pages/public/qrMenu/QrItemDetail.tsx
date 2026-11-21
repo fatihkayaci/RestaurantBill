@@ -13,7 +13,7 @@ import { column, displayTitle, fieldClass, focusRing, overlayPage, primaryButton
 interface Props {
     item: QrItem;
     onClose: () => void;
-    /** null: eklenebilir; değilse alt çubukta neden yazılır (kapalı, masa başka telefonda, sipariş kapalı). */
+    /** null: eklenebilir; değilse alt çubukta neden yazılır (kapalı, QR siparişi kilitli, sipariş kapalı). */
     blockedReason: string | null;
     /** takeaway: "Paket olsun" (kalem paketlenip verilir). */
     onAddProduct: (product: PublicProduct, quantity: number, note: string, takeaway: boolean) => void;

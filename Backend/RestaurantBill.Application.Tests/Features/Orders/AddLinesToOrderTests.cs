@@ -196,7 +196,7 @@ public class AddLinesToOrderTests : ApplicationTestBase
     public async Task WaiterWithoutTakeOrders_IsDenied_NothingSaved()
     {
         var (order, _, menu) = await SeedAsync();
-        FakeCurrentUserService waiter = await SeedWaiterAsync(m => m.SetWaiterPermissions(false, false, false, false));
+        FakeCurrentUserService waiter = await SeedWaiterAsync(m => m.SetWaiterPermissions(false, false, false, false, false));
 
         Result result = await Handler(new FakeCashierNotificationService(), waiter).Handle(Command(order, menu), CancellationToken.None);
 

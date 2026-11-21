@@ -16,6 +16,8 @@ public class OrderRequestConfiguration : IEntityTypeConfiguration<OrderRequest>
         builder.Property(r => r.DeviceTokenHash).HasMaxLength(64);
         builder.HasIndex(r => new { r.TableId, r.Status });
         builder.HasIndex(r => new { r.ReservationId, r.Status });
+        // "Ödendi" fişi: hesaba talebi yazılan telefonlar. Yabancı anahtar yok; hesap silinse de talep kaydı kalır.
+        builder.HasIndex(r => r.OrderId);
 
         // Rezervasyon silinirse ön siparişi de gider.
         builder.HasOne(r => r.Reservation)

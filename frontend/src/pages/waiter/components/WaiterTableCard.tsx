@@ -1,4 +1,4 @@
-import { AlertCircle, BellRing, Clock, HandPlatter, NotebookPen, QrCode, Receipt } from 'lucide-react';
+import { AlertCircle, BellRing, Clock, HandPlatter, Lock, NotebookPen, QrCode, Receipt } from 'lucide-react';
 import type { Table } from '@/features/tables/types';
 import { formatMinutes, formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -47,7 +47,7 @@ export default function WaiterTableCard({ table, now, selected, qrCount, reserva
             onClick={onClick}
             aria-pressed={selected}
             data-glow={glow ?? undefined}
-            aria-label={`${table.name}, ${style.label}${amount ? `, ${amount}` : ''}${overdue ? ', gecikme var' : ''}${qrCount ? `, ${qrCount} yeni QR sipariş onay bekliyor` : ''}${called ? ', garson çağırıyor' : ''}${billAlert ? ', hesap istiyor' : ''}${ready ? ', ürün hazır' : ''}${draft ? ', gönderilmemiş taslak var' : ''}`}
+            aria-label={`${table.name}, ${style.label}${amount ? `, ${amount}` : ''}${overdue ? ', gecikme var' : ''}${qrCount ? `, ${qrCount} yeni QR sipariş onay bekliyor` : ''}${called ? ', garson çağırıyor' : ''}${billAlert ? ', hesap istiyor' : ''}${ready ? ', ürün hazır' : ''}${draft ? ', gönderilmemiş taslak var' : ''}${table.qrOrderingLocked ? ', QR siparişi kilitli' : ''}`}
             className={cn(
                 'flex flex-col gap-2 rounded-[18px] p-3 pl-3.5 text-left text-foreground transition-transform active:scale-[0.98]',
                 large ? 'min-h-37 gap-2.5 px-4 py-3.5' : 'min-h-32',
@@ -95,9 +95,17 @@ export default function WaiterTableCard({ table, now, selected, qrCount, reserva
                     )}
                 </div>
             </div>
-            <span className={cn('inline-flex items-center gap-1.5 self-start rounded-full px-2 py-0.5 text-xs font-bold', style.pill)}>
-                <span className={cn('size-1.5 rounded-full', style.dot)} aria-hidden="true" />
-                {style.label}
+            <span className="flex items-center gap-1.5 self-start">
+                <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-bold', style.pill)}>
+                    <span className={cn('size-1.5 rounded-full', style.dot)} aria-hidden="true" />
+                    {style.label}
+                </span>
+                {/* Personel masada QR siparişini kilitledi. */}
+                {table.qrOrderingLocked && (
+                    <span title="QR siparişi kilitli" className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-1.5 py-0.5 text-xs font-bold text-foreground">
+                        <Lock className="size-3" strokeWidth={2.6} aria-hidden="true" />QR
+                    </span>
+                )}
             </span>
             <div className="mt-auto flex w-full items-end justify-between gap-2">
                 <span className={cn('inline-flex min-w-0 items-center gap-1 text-[13px] font-medium', overdue ? 'text-rb-red' : 'text-rb-text-sub')}>

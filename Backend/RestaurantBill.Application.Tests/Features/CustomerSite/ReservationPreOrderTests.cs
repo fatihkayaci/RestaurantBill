@@ -399,7 +399,7 @@ public class ReservationPreOrderTests : ApplicationTestBase
         DbContext.Users.Add(waiterUser);
         UserBranch membership = UserBranch.Create(waiterUser, _branch, "garsongul", null, UserRole.Waiter);
         membership.SetRegions([terrace.Id]);
-        membership.SetWaiterPermissions(true, false, false, true);
+        membership.SetWaiterPermissions(true, false, false, true, false);
         DbContext.UserBranches.Add(membership);
         await DbContext.SaveChangesAsync();
         var waiter = new FakeCurrentUserService { BranchId = CurrentUser.BranchId, CompanyId = CurrentUser.CompanyId, UserId = waiterUser.Id, Role = "Waiter" };

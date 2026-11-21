@@ -11,6 +11,8 @@ public class TableDto
     /// <summary>Bölge içindeki sıra (küçük önce); liste zaten bu sırayla gelir.</summary>
     public int SortOrder { get; set; }
     public TableStatus Status { get; set; }
+    /// <summary>Personel bu masada QR'dan siparişi kilitledi.</summary>
+    public bool QrOrderingLocked { get; set; }
     public decimal ActiveOrderTotal { get; set; }
     /// <summary>Açık siparişten tutar girerek alınmış ödemeler.</summary>
     public decimal PaidAmount { get; set; }

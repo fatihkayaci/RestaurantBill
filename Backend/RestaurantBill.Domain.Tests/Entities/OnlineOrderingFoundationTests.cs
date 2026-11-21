@@ -150,4 +150,25 @@ public class OnlineOrderingFoundationTests
         qr.Reject("Ürün kalmadı");
         Assert.Equal("Ürün kalmadı", qr.RejectReason);
     }
+
+    [Fact]
+    public void OrderRequest_Approve_LinksTheOrder_AndCanMoveToAMergedOrder()
+    {
+        OrderRequest request = OrderRequest.Create(Guid.NewGuid(), null, "hash");
+        Guid orderId = Guid.NewGuid();
+        Guid mergedId = Guid.NewGuid();
+
+        Assert.Throws<DomainException>(() => request.MoveToOrder(mergedId));
+        Assert.Throws<DomainException>(() => request.Approve(Guid.Empty));
+
+        request.Approve(orderId);
+        Assert.Equal(OrderRequestStatus.Approved, request.Status);
+        Assert.Equal(orderId, request.OrderId);
+        Assert.Equal("hash", request.DeviceTokenHash);
+
+        request.MoveToOrder(mergedId);
+        Assert.Equal(mergedId, request.OrderId);
+        Assert.Throws<DomainException>(() => request.Approve(orderId));
+    }
 }
+

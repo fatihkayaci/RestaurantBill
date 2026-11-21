@@ -12,7 +12,7 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, QrCode, Image as ImageIcon, LayoutGrid, Trash2, Layers, Minus, Plus, MoreHorizontal } from 'lucide-react';
+import { Check, X, Pencil, QrCode, Image as ImageIcon, LayoutGrid, Trash2, Layers, Lock, Minus, Plus, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SortModeButton } from '@/components/dnd/SortMode';
 import { DraggableTable, TableDragTransferProvider } from '@/features/tables/components/TableDragTransfer';
@@ -34,11 +34,11 @@ import { REGION_SUGGESTIONS } from '@/features/regions/constants';
 import { SuggestedChips } from '@/components/ui/suggested-chips';
 import CustomerOrderRequests from '../waiter/components/CustomerOrderRequests';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
+import QrOrderingToggle from '@/features/tables/components/QrOrderingToggle';
 import type { OrderRequest } from '@/features/customerSite/types';
 import { countRequestsByTable, useOrderRequestSignals } from '@/features/customerSite/useOrderRequestSignals';
 import { TABLE_ALERT_EVENT, type TableAlertDetail, type TableAlertKind } from '../waiter/waiterEvents';
 import { formatPrice, formatElapsed } from '@/lib/format';
-import { getApiErrorMessage } from "@/lib/apiError";
 import { inputClass, labelClass } from '@/lib/formStyles';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
@@ -252,6 +252,9 @@ export default function Tables() {
             }
         });
         connection.on("CustomerRequestsChanged", loadOrderRequests);
+        connection.on("TableQrLockChanged", (changedTableId: string, locked: boolean) => {
+            setTables(prev => prev.map(t => t.id === changedTableId ? { ...t, qrOrderingLocked: locked } : t));
+        });
         connection.start().catch((err: Error) => {
             if (!err.message.includes("stopped during negotiation")) console.error("SignalR Connection Error:", err);
         });
@@ -554,21 +557,6 @@ export default function Tables() {
             toast.error('Sipariş gönderilemedi.');
         } finally {
             setIsSendingOrder(false);
-        }
-    };
-
-    const [unlockingQr, setUnlockingQr] = useState(false);
-    const handleUnlockQr = async () => {
-        if (!selectedTable || unlockingQr) return;
-        setUnlockingQr(true);
-        try {
-            await customerRequestService.unlockQrTable(selectedTable.id.toString());
-            setTableOrder(prev => prev ? { ...prev, qrLocked: false } : prev);
-            toast.success('QR kilidi açıldı. Masadan ilk sipariş veren telefon yeni sahibi olur.');
-        } catch (err) {
-            toast.error(getApiErrorMessage(err, 'QR kilidi açılamadı.'));
-        } finally {
-            setUnlockingQr(false);
         }
     };
 
@@ -960,8 +948,13 @@ export default function Tables() {
                                         </div>
                                     </div>
 
-                                    {(qrCount > 0 || alertKind) && (
+                                    {(qrCount > 0 || alertKind || table.qrOrderingLocked) && (
                                         <div className="flex flex-wrap gap-1">
+                                            {table.qrOrderingLocked && (
+                                                <span title="QR siparişi kilitli" className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-bold text-foreground">
+                                                    <Lock className="h-3 w-3" aria-hidden="true" />QR kilitli
+                                                </span>
+                                            )}
                                             {qrCount > 0 && (
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-rb-gold px-2 py-0.5 text-xs font-bold text-rb-gold-foreground shadow-sm">
                                                     <QrCode className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1233,6 +1226,9 @@ export default function Tables() {
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
+                            {/* "QR siparişi: Açık / Kilitli" (bu sayfa yalnız Owner/Admin'e açık). */}
+                            <QrOrderingToggle className="mt-3" tableId={selectedTable.id} tableName={selectedTable.name} locked={!!selectedTable.qrOrderingLocked}
+                                onChanged={locked => setTables(prev => prev.map(t => t.id === selectedTable.id ? { ...t, qrOrderingLocked: locked } : t))} />
                         </div>
 
                         {/* Bu masanın onay bekleyen QR siparişleri: panelin en üstünde Onayla/Reddet. */}
@@ -1605,25 +1601,6 @@ export default function Tables() {
                                             </div>
                                         )}
                                     </>
-                                )}
-
-                                {/* Hesap masa QR'ında bir telefona bağlı: yalnız o telefon sipariş verir ve hesabı görür. Müşteri
-                                    telefon değiştirdiyse ya da masayı dışarıdan biri tuttuysa kilit buradan açılır. */}
-                                {tableOrder?.qrLocked && (
-                                    <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-3.5 py-2.5">
-                                        <span className="min-w-0 text-sm">
-                                            <span className="flex items-center gap-1.5 font-semibold text-foreground"><QrCode className="h-4 w-4 shrink-0" aria-hidden="true" />QR: telefona bağlı</span>
-                                            <span className="block text-xs text-muted-foreground">QR'dan yalnız bu masanın telefonu sipariş verir.</span>
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => void handleUnlockQr()}
-                                            disabled={unlockingQr}
-                                            className="min-h-11 shrink-0 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60 transition-colors"
-                                        >
-                                            {unlockingQr ? 'Açılıyor…' : 'QR kilidini aç'}
-                                        </button>
-                                    </div>
                                 )}
 
                                 {/* Masayı Taşı · Ödeme Al · Siparişi İptal Et — tek satır, panelin altına yapışık.

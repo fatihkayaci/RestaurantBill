@@ -58,12 +58,14 @@ export const publicService = {
         return response.data;
     },
     getTable: async (tableId: string) => {
-        // ibanPayment: restoran "IBAN ile öde"yi açmadıysa null.
-        // orderLock: bu telefonun masadaki durumu (cihaz anahtarına göre); sayfayı açmak masayı kilitlemez.
-        const response = await publicApi.get<PublicTableInfo & { ibanPayment?: TableIbanPayment | null }>(`/table/${tableId}`, { headers: deviceTokenHeader() });
+        // ibanPayment: restoran "IBAN ile öde"yi açmadıysa null. qrOrderingLocked: personel QR siparişini kilitledi.
+        const response = await publicApi.get<PublicTableInfo & { ibanPayment?: TableIbanPayment | null }>(`/table/${tableId}`);
         return response.data;
     },
-    /** "Masanın hesabı": yalnız masanın bağlı olduğu telefonda döner; diğerlerinde 403. */
+    /**
+     * "Masanın hesabı": açık hesap masadaki her telefona döner. Cihaz anahtarı gider ki hesap ödendikten sonra ona
+     * sipariş veren telefon "Ödendi" fişini görsün; diğer telefonlara hasBill=false.
+     */
     getTableBill: async (tableId: string) => {
         const response = await publicApi.get<PublicTableBill>(`/table/${tableId}/bill`, { headers: deviceTokenHeader() });
         return response.data;
@@ -77,7 +79,7 @@ export const publicService = {
         return response.data;
     },
     createOrderRequest: async (tableId: string, items: OrderRequestItemInput[], note: string) => {
-        // İlk talebi gönderen telefon masayı tutar; masa başka telefona bağlıysa sunucu talebi garsona hiç iletmez.
+        // Cihaz anahtarı telefonun kendi taleplerini tanıtır. Personel masada QR'ı kilitlediyse sunucu talebi garsona iletmez.
         const response = await publicApi.post<OrderRequestStatus>('/order-requests', { tableId, items, note }, { headers: deviceTokenHeader() });
         return response.data;
     },
@@ -86,9 +88,9 @@ export const publicService = {
         const response = await publicApi.post<TableActionResult>(`/table/${tableId}/call-waiter`);
         return response.data;
     },
-    /** Masanın açık hesabı için hesap isteği; açık hesap yoksa hata döner. Tutar yalnız masanın telefonuna döner. */
+    /** Masanın açık hesabı için hesap isteği; açık hesap yoksa hata döner. Ödenecek kalan da döner. */
     requestBill: async (tableId: string) => {
-        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/request-bill`, undefined, { headers: deviceTokenHeader() });
+        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/request-bill`);
         return response.data;
     },
     getOrderRequestStatus: async (id: string) => {

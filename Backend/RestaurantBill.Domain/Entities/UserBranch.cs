@@ -29,6 +29,8 @@ namespace RestaurantBill.Domain.Entities
         public bool CanTakePayment { get; private set; }
         public bool CanCancelAndDiscount { get; private set; }
         public bool CanTransferAndReserve { get; private set; }
+        // Masada QR'dan siparişi kilitleyip açabilir ("QR siparişini kilitleme"). Yeni ve mevcut garsonlarda kapalı.
+        public bool CanLockQr { get; private set; }
         // Kasiyer yetkileri; diğer rollerde yok sayılır. Kasiyer bugüne kadar bunların hepsini yapabiliyordu,
         // varsayılan bu yüzden açık ve indirim sınırı %100 (sınırsız).
         public bool CanApplyDiscount { get; private set; } = true;
@@ -105,8 +107,9 @@ namespace RestaurantBill.Domain.Entities
             CategoryIds = (categoryIds ?? []).Where(id => id != Guid.Empty).Distinct().ToList();
         }
 
-        public void SetWaiterPermissions(bool canTakeOrders, bool canTakePayment, bool canCancelAndDiscount, bool canTransferAndReserve)
+        public void SetWaiterPermissions(bool canTakeOrders, bool canTakePayment, bool canCancelAndDiscount, bool canTransferAndReserve, bool canLockQr)
         {
+            CanLockQr = canLockQr;
             CanTakeOrders = canTakeOrders;
             CanTakePayment = canTakePayment;
             CanCancelAndDiscount = canCancelAndDiscount;

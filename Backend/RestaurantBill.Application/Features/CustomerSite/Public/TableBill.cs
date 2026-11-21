@@ -12,16 +12,17 @@ using RestaurantBill.Domain.Shared;
 namespace RestaurantBill.Application.Features.CustomerSite.Public;
 
 // ── "Masanın hesabı" ────────────────────────────────────────────────────────────────────────────
-// Masanın sahibi telefon (QrTableLock) açık hesabın bütün kalemlerini görür: garsonun eklediği ürünler ve menüler dahil,
-// adet, fiyat ve kalan. Başka telefona (ya da anahtarsız isteğe) hiçbir veri dönmez; mesaj tarafsızdır.
+// Masanın açık hesabı, masanın QR'ını açan her telefonda görünür: garsonun eklediği ürünler ve menüler dahil, adet,
+// fiyat, ödenen ve kalan. Masadaki herkes aynı hesabı paylaşır.
 //
-// Hesap ödenip kapanınca kilit düşer (masa yeni misafirlere açılır) ama aynı telefon kapanan hesabını bir süre daha
-// "Ödendi" olarak görür (PaidBillVisibleFor). Ödenen kalemler ödeme satırlarından (PaymentLineItem) okunur, çünkü ödenen
-// sipariş kalemi hesaptan silinir. İptal edilen hesap gösterilmez.
+// Hesap ödenip kapanınca masa yeni misafirlere açılır. Kapanan hesap bir süre (PaidBillVisibleFor) "Ödendi" olarak
+// yalnız o hesaba QR talebi yazılan telefonlarda görünür (OrderRequest.OrderId + DeviceTokenHash); diğer ve yeni
+// telefonlar "açık hesap yok" görür, böylece önceki misafirlerin hesabı sonrakilere gösterilmez. Ödenen kalemler ödeme
+// satırlarından (PaymentLineItem) okunur, çünkü ödenen sipariş kalemi hesaptan silinir. İptal edilen hesap gösterilmez.
 public class GetTableBillQuery : IRequest<Result<PublicTableBillDto>>
 {
     public Guid TableId { get; set; }
-    /// <summary>Telefonun cihaz anahtarının özeti (X-Device-Token → QrTableLock.HashToken).</summary>
+    /// <summary>Telefonun cihaz anahtarının özeti (X-Device-Token → QrTableAccess.HashToken); yalnız ödenen hesap için okunur.</summary>
     public string? DeviceTokenHash { get; set; }
 }
 
@@ -36,42 +37,34 @@ public class GetTableBillQueryValidator : AbstractValidator<GetTableBillQuery>
 public class GetTableBillQueryHandler(IAppDbContext db, ITenantResolver tenant, TimeProvider clock)
     : IRequestHandler<GetTableBillQuery, Result<PublicTableBillDto>>
 {
-    /// <summary>Kapanan hesap, kapandıktan sonra bu süre boyunca sahibi telefonda "Ödendi" olarak görünür.</summary>
+    /// <summary>Kapanan hesap, kapandıktan sonra bu süre boyunca katılan telefonlarda "Ödendi" olarak görünür.</summary>
     public static readonly TimeSpan PaidBillVisibleFor = TimeSpan.FromHours(3);
 
     public async Task<Result<PublicTableBillDto>> Handle(GetTableBillQuery request, CancellationToken cancellationToken)
     {
-        string? tokenHash = request.DeviceTokenHash;
-        if (tokenHash is null)
-            return Result<PublicTableBillDto>.Failure(QrTableLock.NotOwnerMessage);
-
         Table? table = await CustomerSiteScope.ResolveTableAsync(db, tenant, request.TableId, cancellationToken);
         if (table is null)
-            return Result<PublicTableBillDto>.Failure(QrTableLock.NotOwnerMessage);
+            return Result<PublicTableBillDto>.Failure(CustomerSiteScope.TableNotFoundMessage);
 
         Order? order = await WithItems(db.Orders.AsNoTracking())
             .Where(o => o.TableId == table.Id && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled)
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        QrLockState state = QrTableLock.StateOf(await QrTableLock.OwnerHashAsync(db, table.Id, order, cancellationToken), tokenHash);
-        Order? paidOrder = await FindRecentPaidOrderAsync(table.Id, tokenHash, cancellationToken);
+        string? tokenHash = request.DeviceTokenHash;
+        Order? paidOrder = tokenHash is null ? null : await FindRecentPaidOrderAsync(table.Id, tokenHash, cancellationToken);
         DateTime? paidAt = paidOrder is null ? null : PaidAtOf(paidOrder);
 
-        // Açık hesap bu telefona bağlı: canlı hesap.
-        if (state == QrLockState.Mine && order is not null && QrTableLock.StateOf(order.QrOwnerTokenHash, tokenHash) == QrLockState.Mine)
-            return Result<PublicTableBillDto>.Success(OpenBill(order, paidAt));
+        // Masada açık hesap var: masadaki her telefon görür. Telefonun önceki (ödenen) hesabının kapanış anı da gider ki
+        // telefon o andan önce onaylanan taleplerini "Ödendi" gösterebilsin.
+        PublicTableBillDto bill = order is not null ? OpenBill(order, paidAt)
+            // Bu telefonun katıldığı, az önce ödenen hesap.
+            : paidOrder is not null ? await PaidBillAsync(paidOrder, paidAt!.Value, cancellationToken)
+            : new PublicTableBillDto { HasBill = false };
 
-        // Bu telefonun az önce ödenen hesabı: masa artık başka telefona bağlı olsa da kendi hesabını görür.
-        if (paidOrder is not null)
-            return Result<PublicTableBillDto>.Success(await PaidBillAsync(paidOrder, paidAt!.Value, cancellationToken));
-
-        // Hesap yalnız garsonun onayladığı talebin telefonuna bağlanır; bekleyen ilk talep masayı tutar ama hesabı
-        // göstermez (dışarıdan gelen talep reddedilene kadar masadakilerin hesabı görünmesin).
-        if (state == QrLockState.Mine)
-            return Result<PublicTableBillDto>.Success(new PublicTableBillDto { HasBill = false });
-
-        return Result<PublicTableBillDto>.Failure(QrTableLock.NotOwnerMessage);
+        // Sayfa hesabı yoklarken personelin QR kilidini de buradan öğrenir (ayrı yoklama yok).
+        bill.QrOrderingLocked = table.QrOrderingLocked;
+        return Result<PublicTableBillDto>.Success(bill);
     }
 
     private static IQueryable<Order> WithItems(IQueryable<Order> query)
@@ -82,13 +75,13 @@ public class GetTableBillQueryHandler(IAppDbContext db, ITenantResolver tenant, 
     // Kapanan sipariş en son kapanışta değişir; UpdatedAt kayıtta (SaveChanges) yazılır.
     private static DateTime PaidAtOf(Order order) => order.UpdatedAt ?? order.CreatedAt;
 
-    /// <summary>Bu telefona bağlı, masada en son ödenen ve görünme süresi dolmamış hesap.</summary>
+    /// <summary>Bu telefonun QR talebi yazılan, masada en son ödenen ve görünme süresi dolmamış hesap.</summary>
     private Task<Order?> FindRecentPaidOrderAsync(Guid tableId, string tokenHash, CancellationToken cancellationToken)
     {
         DateTime since = clock.GetUtcNow().UtcDateTime - PaidBillVisibleFor;
         return WithItems(db.Orders.AsNoTracking())
-            .Where(o => o.TableId == tableId && o.Status == OrderStatus.Paid && o.QrOwnerTokenHash == tokenHash
-                && (o.UpdatedAt ?? o.CreatedAt) >= since)
+            .Where(o => o.TableId == tableId && o.Status == OrderStatus.Paid && (o.UpdatedAt ?? o.CreatedAt) >= since
+                && db.OrderRequests.Any(r => r.OrderId == o.Id && r.Kind == OrderRequestKind.TableQr && r.DeviceTokenHash == tokenHash))
             .OrderByDescending(o => o.UpdatedAt ?? o.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
     }

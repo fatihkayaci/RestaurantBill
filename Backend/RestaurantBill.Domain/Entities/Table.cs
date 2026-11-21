@@ -14,6 +14,9 @@ namespace RestaurantBill.Domain.Entities
         public int? Capacity { get; private set; }
         // Bölge içindeki sıra (küçük önce). Masa ekranlarında bu sırayla, eşitse ada göre (Masa 2, Masa 10) listelenir.
         public int SortOrder { get; private set; }
+        // Personel bu masada QR'dan siparişi kapattı: müşteri menüye bakar, garson çağırır, hesap ister, hesabı görür;
+        // ama QR'dan sipariş talebi gönderemez. Varsayılan açık.
+        public bool QrOrderingLocked { get; private set; }
 
         public const int MaxCapacity = 50;
 
@@ -56,6 +59,18 @@ namespace RestaurantBill.Domain.Entities
         public void SetSortOrder(int sortOrder)
         {
             SortOrder = sortOrder;
+        }
+
+        /// <summary>Masada QR'dan siparişi kapatır.</summary>
+        public void LockQrOrdering()
+        {
+            QrOrderingLocked = true;
+        }
+
+        /// <summary>Masada QR'dan siparişi yeniden açar.</summary>
+        public void UnlockQrOrdering()
+        {
+            QrOrderingLocked = false;
         }
 
         public void AssignRegion(Guid regionId)

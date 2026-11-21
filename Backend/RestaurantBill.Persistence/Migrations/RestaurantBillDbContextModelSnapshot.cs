@@ -927,10 +927,6 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<string>("QrOwnerTokenHash")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -1066,6 +1062,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("character varying(500)")
                         .HasDefaultValue("");
 
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("RejectReason")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -1086,6 +1085,8 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
 
                     b.HasIndex("ReservationId", "Status");
 
@@ -1898,6 +1899,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("QrOrderingLocked")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("RegionId")
                         .HasColumnType("uuid");
 
@@ -1990,6 +1994,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("CanCancelAndDiscount")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanLockQr")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("CanTakeOrders")

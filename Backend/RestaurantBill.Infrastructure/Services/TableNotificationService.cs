@@ -41,6 +41,11 @@ namespace RestaurantBill.Infrastructure.Services
             await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("BillRequestChanged", tableId, billRequestedAt);
         }
 
+        public async Task SendTableQrLockChangedAsync(Guid restaurantId, Guid tableId, bool locked)
+        {
+            await _hubContext.Clients.Group(HubGroups.Restaurant(restaurantId)).SendAsync("TableQrLockChanged", tableId, locked);
+        }
+
         // Masanın bölgesine tamamen bakan garsonlar + bu masayı seçmiş garsonlar + bölgesi boş (tüm bölgelere bakan)
         // garsonlar. Bir garson bu gruplardan yalnızca birinde olabilir (bkz. HubGroups.ForWaiter), bu yüzden aynı olayı
         // iki kez almaz. Masanın bölgesi her zaman vardır (Table.RegionId zorunlu). Kasiyer, yönetici ve mutfak bu olayı almaz.

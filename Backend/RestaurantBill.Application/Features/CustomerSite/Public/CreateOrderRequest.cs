@@ -21,7 +21,7 @@ public class CreateOrderRequestCommand : IRequest<Result<OrderRequestStatusDto>>
     public List<OrderRequestItemInput> Items { get; set; } = [];
     public string? Note { get; set; }
     /// <summary>
-    /// Telefonun cihaz anahtarının özeti (QrTableLock.HashToken). Gövdeden değil X-Device-Token başlığından gelir; controller
+    /// Telefonun cihaz anahtarının özeti (QrTableAccess.HashToken). Gövdeden değil X-Device-Token başlığından gelir; controller
     /// özetler ki anahtarın kendisi hiçbir yere (yavaş istek logu dahil) düşmesin.
     /// </summary>
     [System.Text.Json.Serialization.JsonIgnore]
@@ -110,15 +110,14 @@ public class CreateOrderRequestCommandHandler(
         if (!features.OrderingEnabled)
             return Result<OrderRequestStatusDto>.Failure(CustomerSiteScope.OrderingDisabledMessage);
 
-        // Masa sahibi telefon kuralı (QrTableLock): masa başka bir telefona bağlıysa talep garsona hiç düşmez.
+        // Personel masada QR siparişini kilitlediyse talep garsona hiç düşmez.
+        if (table.QrOrderingLocked)
+            return Result<OrderRequestStatusDto>.Failure(QrTableAccess.OrderingLockedMessage);
+
+        // Masadaki her telefon sipariş verebilir; cihaz anahtarı telefonun kendi taleplerini ve katıldığı hesabı tanıtır.
         string? tokenHash = request.DeviceTokenHash;
         if (tokenHash is null)
-            return Result<OrderRequestStatusDto>.Failure(QrTableLock.MissingTokenMessage);
-
-        Order? openOrder = await QrTableLock.FindOpenOrderAsync(db, table.Id, track: false, cancellationToken);
-        string? ownerHash = await QrTableLock.OwnerHashAsync(db, table.Id, openOrder, cancellationToken);
-        if (QrTableLock.StateOf(ownerHash, tokenHash) == QrLockState.Other)
-            return Result<OrderRequestStatusDto>.Failure(QrTableLock.OtherDeviceMessage);
+            return Result<OrderRequestStatusDto>.Failure(QrTableAccess.MissingTokenMessage);
 
         int pendingCount = await db.OrderRequests
             .CountAsync(r => r.TableId == table.Id && r.Status == OrderRequestStatus.Pending && r.Kind == OrderRequestKind.TableQr, cancellationToken);
@@ -155,7 +154,7 @@ public class CreateOrderRequestCommandHandler(
             pricedMenus = priced.Value!.Lines;
         }
 
-        // Masa kimseye bağlı değilse bu talep masayı bu telefona bağlar; hesaba bağlanma garson onaylayınca olur.
+        // Talep hesaba garson onaylayınca yazılır (OrderRequest.OrderId); telefon o zaman hesabın katılımcısı olur.
         OrderRequest orderRequest = OrderRequest.Create(table.Id, request.Note, tokenHash);
         int menuIndex = 0;
         try

@@ -20,6 +20,12 @@ public class FakeTableNotificationService : ITableNotificationService
         BillRequestChanges.Add((tableId, billRequestedAt));
         return Task.CompletedTask;
     }
+    public List<(Guid TableId, bool Locked)> QrLockChanges { get; } = [];
+    public Task SendTableQrLockChangedAsync(Guid restaurantId, Guid tableId, bool locked)
+    {
+        QrLockChanges.Add((tableId, locked));
+        return Task.CompletedTask;
+    }
     public List<(Guid BranchId, ItemsReadyDto Payload)> ItemsReadySent { get; } = [];
     public Task SendItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload)
     {

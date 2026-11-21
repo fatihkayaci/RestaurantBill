@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { Info, Lock, Moon, UtensilsCrossed, WifiOff, X } from 'lucide-react';
 import { publicService } from '@/features/customerSite/api/publicService';
 import {
-    ORDER_REQUEST_PENDING, TABLE_LOCKED_MESSAGE, type PublicProduct, type PublicSite, type PublicTableInfo, type TableActionResult,
+    ORDER_REQUEST_PENDING, TABLE_QR_LOCKED_MESSAGE, type PublicProduct, type PublicSite, type PublicTableInfo, type TableActionResult,
 } from '@/features/customerSite/types';
 import {
     addLine, changeQuantity, defaultSelections, estimatedSubtotal, itemCount as countItems, pruneUnavailable,
@@ -33,6 +33,7 @@ import { formatPrice } from '@/lib/format';
 import { column, displayTitle, focusRing, outlineButton, primaryButton } from './qrMenu/qrUi';
 import { useTableOrderRequests } from './useTableOrderRequests';
 import { useTableAction } from './useTableAction';
+import { useDelayedAction } from './qrMenu/tableAction';
 import { useTableBill } from './useTableBill';
 
 // Adres çubuğundaki sekme adı (?sekme=sepet, ?sekme=hesap); menü sekmesinde parametre yok. Eski "Siparişlerim"
@@ -86,8 +87,9 @@ function restoreLines(lines: DeliveryCartLine[], site: PublicSite): { lines: Del
 // Sepet telefonda saklanır (qrCartStore: yenileyince geri gelir), garsona gönderilir, garson onaylayınca mutfağa
 // gider. Ekleme geri bildirimi pencere değil: "+" → "✓", sepet çubuğu nabzı ve alttan kısa "Sepete eklendi" şeridi.
 // Restoran kapalıyken menü yalnız göz atmalıktır.
-// Masa sahibi telefon: QR'ı okutan herkes menüyü görür, garson çağırır ve hesap ister; ilk sipariş talebini gönderen
-// telefon masayı tutar. Yalnız o telefon sipariş verir ve "Masanın hesabı"nı görür; diğerlerinde sepet kapalıdır.
+// Paylaşımlı masa: QR'ı okutan her telefon sipariş verir (garson onayıyla) ve masanın açık hesabını görür; "Gönderdiğim
+// siparişler" telefona özeldir. Personel masada QR siparişini kilitleyebilir: menü, garson çağırma, hesap isteme ve hesap
+// açık kalır, sepet ve gönderim kapanır.
 // Renkler sitenin temasından (--site-*): vurgu düğmeler ve seçili çipler, kartlar ve zemin temanın açık tonları.
 export default function TableOrderPage() {
     const { tableId = '' } = useParams();
@@ -124,7 +126,8 @@ export default function TableOrderPage() {
     const cartRestored = useRef(false);
     const online = useOnline();
     const { requests, addRequest } = useTableOrderRequests(tableId);
-    const tableBill = useTableBill(tableId, table?.orderLock);
+    const pendingRequests = requests.some(r => r.status === ORDER_REQUEST_PENDING);
+    const tableBill = useTableBill(tableId, table?.qrOrderingLocked, pendingRequests);
 
     const callWaiterRun = useCallback(() => publicService.callWaiter(tableId), [tableId]);
     const billRequestRun = useCallback(() => publicService.requestBill(tableId), [tableId]);
@@ -136,7 +139,8 @@ export default function TableOrderPage() {
     const onBillRequested = useCallback((result: TableActionResult) => showToast(
         `${result.sent ? 'Hesap istendi' : 'Hesap az önce istendi'}${result.billTotal ? ` · Masa toplamı ${formatPrice(result.billTotal)} ₺` : ''}`,
         'info'), [showToast]);
-    const callWaiter = useTableAction(callWaiterRun, 'Garson çağrılamadı. Lütfen tekrar deneyin.', onWaiterCalled);
+    // Garson çağır 3 sn geri sayar (yanlışlıkla dokunmaya karşı); iptal edilmezse gönderilir. Hesap iste hemen gider.
+    const callWaiter = useDelayedAction(useTableAction(callWaiterRun, 'Garson çağrılamadı. Lütfen tekrar deneyin.', onWaiterCalled));
     const billRequest = useTableAction(billRequestRun, 'Hesap istenemedi. Lütfen tekrar deneyin ya da garsona haber verin.', onBillRequested);
     // "IBAN ile öde"deki tutar: son "Hesap iste"nin bildirdiği masa toplamı (bekleme süresi bitince de hatırlanır).
     const [lastBillTotal, setLastBillTotal] = useState<number | null>(null);
@@ -337,7 +341,7 @@ export default function TableOrderPage() {
                     takeaway: line.takeaway === true,
                 })),
             });
-            tableBill.markMine();
+            tableBill.refresh();
             setCart([]);
             setOrderNote('');
             clearTableCart(tableId);
@@ -345,8 +349,8 @@ export default function TableOrderPage() {
         } catch (err) {
             const message = getApiErrorMessage(err, 'Sipariş gönderilemedi. Lütfen tekrar deneyin ya da garsona haber verin.');
             setSendError(message);
-            // Masa bu arada başka telefona bağlanmış olabilir: durum yeniden sorulur.
-            if (message === TABLE_LOCKED_MESSAGE) void tableBill.refreshLock();
+            // Personel bu arada masada QR siparişini kilitlemiş olabilir: durum yeniden sorulur.
+            if (message === TABLE_QR_LOCKED_MESSAGE) tableBill.refresh();
             void refreshMenu(table.branchId);
         } finally {
             setSending(false);
@@ -403,16 +407,15 @@ export default function TableOrderPage() {
         ? site.branchName : [site.district, site.city].filter(Boolean).join(', ');
     const closed = site.isOpenNow === false;
     const reopen = opensText(site.site.opensAt);
-    // Masa başka telefona bağlı: menü göz atmalık, sepet ve gönderim kapalı (sunucu da reddeder).
-    const lockedOut = tableBill.lock === 'other';
-    const canOrder = features.orderingEnabled && !closed && !lockedOut;
+    // Personel masada QR siparişini kilitledi: menü göz atmalık, sepet ve gönderim kapalı (sunucu da reddeder).
+    const qrLocked = tableBill.locked;
+    const canOrder = features.orderingEnabled && !closed && !qrLocked;
     const blockedReason = canOrder ? null
         : closed ? `Restoran şu an kapalı${reopen ? `, ${reopen} açılıyor` : ''}. Sipariş gönderilemez.`
             : !features.orderingEnabled ? 'Bu masadan telefonla sipariş kapalı. Siparişinizi garsona verebilirsiniz.'
-                : TABLE_LOCKED_MESSAGE;
-    // Açık hesap yalnız masa bu telefona bağlıyken; ödenen hesap kilit düştükten sonra da (sunucu yalnız sahibine döner).
-    // İkinci aşamada hesap masadaki herkese açılacak; Hesabım ekranı şimdiden masanın ortak hesabı olarak çizili.
-    const bill = tableBill.bill?.hasBill && (tableBill.lock === 'mine' || tableBill.bill.isPaid) ? tableBill.bill : null;
+                : TABLE_QR_LOCKED_MESSAGE;
+    // Masanın ortak hesabı: açık hesap masadaki her telefonda; ödenen hesap yalnız ona sipariş veren telefonlarda (sunucu süzer).
+    const bill = tableBill.bill?.hasBill ? tableBill.bill : null;
     const openBill = bill && !bill.isPaid ? bill : null;
     const waiterAction = features.callWaiterEnabled ? callWaiter : null;
     const billAction = features.billRequestEnabled ? billRequest : null;
@@ -453,8 +456,8 @@ export default function TableOrderPage() {
         </Notice>
     ) : !features.orderingEnabled ? (
         <Notice icon={<UtensilsCrossed className="h-4 w-4" />}>Siparişinizi garsona verebilirsiniz; menü yalnız göz atmak için.</Notice>
-    ) : lockedOut ? (
-        <Notice icon={<Lock className="h-4 w-4" />}>{TABLE_LOCKED_MESSAGE}</Notice>
+    ) : qrLocked ? (
+        <Notice icon={<Lock className="h-4 w-4" />}>{TABLE_QR_LOCKED_MESSAGE}</Notice>
     ) : null;
     const notice = (
         <>
@@ -466,7 +469,7 @@ export default function TableOrderPage() {
     );
 
     const content: ReactNode = tab === 'account' ? (
-        <AccountTab tableName={table.name} regionName={table.regionName} bill={bill} lock={tableBill.lock} requests={requests}
+        <AccountTab tableName={table.name} regionName={table.regionName} bill={bill} requests={requests}
             onOpenMenu={() => selectTab('menu')} billRequest={billAction} callWaiter={waiterAction} paymentMethods={paymentMethods} />
     ) : tab === 'cart' ? (
         <QrCart
@@ -500,8 +503,8 @@ export default function TableOrderPage() {
 
     return root(
         <QrBrandContext.Provider value={{ name: restaurant, logoUrl: site.site.logoUrl ?? '' }}>
-            {/* Sepetim alt boşluğunu kendi verir (yapışık sipariş paneli alt çubuğun arkasına kadar iner). */}
-            <main className={tab === 'cart' ? undefined : showCartBar ? 'pb-[calc(148px+env(safe-area-inset-bottom))]' : 'pb-[calc(96px+env(safe-area-inset-bottom))]'}>
+            {/* Sepetim ve Hesabım alt boşluğunu kendi verir (yapışık panel alt çubuğun arkasına kadar iner). */}
+            <main className={tab === 'cart' || tab === 'account' ? undefined : showCartBar ? 'pb-[calc(148px+env(safe-area-inset-bottom))]' : 'pb-[calc(96px+env(safe-area-inset-bottom))]'}>
                 {content}
             </main>
 

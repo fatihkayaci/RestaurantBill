@@ -34,7 +34,7 @@ interface Props {
     onOpenFilters: () => void;
     onClearFilters: () => void;
     bind: BindItem;
-    /** Kapalı / masa başka telefonda / sipariş kapalı / bağlantı yok bilgisi. */
+    /** Kapalı / QR siparişi kilitli / sipariş kapalı / bağlantı yok bilgisi. */
     notice: ReactNode;
     /** Menü boşken gösterilecek içerik. */
     empty: ReactNode;

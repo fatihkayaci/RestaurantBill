@@ -14,18 +14,29 @@ export function WaiterCallButton({ action, variant = 'primary', className }: {
     const { state, remainingSeconds } = action;
     const waiting = isWaiting(action);
     const repeat = state.status === 'done' && !state.sent;
+    const countdown = action.countdown ?? null;
     return (
         <div className={cn('flex flex-col', className)}>
+            {/* Geri sayımda (useDelayedAction) yalnız yanındaki "İptal" iptal eder; duyuru alt çubuktaki Garson Çağır'da. */}
             <button type="button" onClick={() => void action.trigger()} disabled={state.status === 'sending' || waiting}
+                aria-label={countdown != null ? `Garson ${countdown} saniye içinde çağrılacak` : undefined}
                 className={cn(variant === 'primary' ? primaryButton : outlineButton, 'w-full',
                     waiting && 'border-[var(--site-ok-line)] bg-[var(--site-ok-bg)] text-[var(--site-ok)] shadow-none disabled:opacity-100')}>
-                {waiting ? <Check className="h-5 w-5" strokeWidth={2.75} aria-hidden="true" /> : <BellRing className="h-5 w-5" aria-hidden="true" />}
-                <span role="status">
-                    {state.status === 'sending' ? 'Çağrılıyor…'
+                {waiting ? <Check className="h-5 w-5" strokeWidth={2.75} aria-hidden="true" />
+                    : <BellRing className={cn('h-5 w-5', countdown != null && 'motion-safe:animate-pulse')} aria-hidden="true" />}
+                <span role="status" aria-hidden={countdown != null || undefined}>
+                    {countdown != null ? <>Çağrılıyor… <span className="tabular-nums">{countdown}</span></>
+                        : state.status === 'sending' ? 'Çağrılıyor…'
                         : waiting ? <>{repeat ? 'Garson az önce çağrıldı' : 'Garson çağrıldı'}<span className="font-bold tabular-nums"> · {formatClock(remainingSeconds)} sonra tekrar</span></>
                             : 'Garson çağır'}
                 </span>
             </button>
+            {countdown != null && action.cancel && (
+                <button type="button" onClick={action.cancel}
+                    className={cn(outlineButton, 'mt-2 w-full')}>
+                    İptal
+                </button>
+            )}
             {state.status === 'error' && <ActionError message={state.message} />}
         </div>
     );

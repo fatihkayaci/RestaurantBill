@@ -283,10 +283,10 @@ export interface PublicTableInfo {
     /** Şube şu an online paket sipariş alıyor mu (ayarda açık ve durdurulmamış). */
     acceptsOnlineOrders: boolean;
     /**
-     * Bu telefonun masadaki durumu: none masa kimseye bağlı değil, mine bu telefondan sipariş veriliyor, other başka bir
-     * telefondan veriliyor (sepet kapalı). Eski sunucu göndermezse none sayılır.
+     * Personel bu masada QR'dan siparişi kilitledi: menü, garson çağırma, hesap isteme ve hesap açık; sepet ve gönderim
+     * kapalı (sunucu da reddeder). Eski sunucu göndermezse açık sayılır.
      */
-    orderLock?: TableOrderLock;
+    qrOrderingLocked?: boolean;
     /**
      * "Popüler" bölümünün ürün kimlikleri, çok satandan aza (en çok 8). Bölüm kapalıysa ya da yeterli satış yoksa boş;
      * eski sunucu göndermez.
@@ -294,26 +294,29 @@ export interface PublicTableInfo {
     popularProductIds?: string[];
 }
 
-export type TableOrderLock = 'none' | 'mine' | 'other';
+/** Personel masada QR siparişini kilitlediğinde gösterilen mesaj (sunucunun reddiyle aynı metin). */
+export const TABLE_QR_LOCKED_MESSAGE = 'Bu masada QR ile sipariş şu an kapalı. Siparişinizi garsonumuza verebilirsiniz.';
 
-/** Masa başka telefona bağlıyken gösterilen mesaj (sunucunun reddiyle aynı metin). */
-export const TABLE_LOCKED_MESSAGE = 'Bu masanın siparişleri başka bir telefondan veriliyor. Siparişinizi garsonumuza verebilirsiniz.';
-
-/** "Masanın hesabı": açık hesabın kalemleri (garsonun ekledikleri ve menüler dahil). */
+/**
+ * "Masanın hesabı": açık hesabın kalemleri (garsonun ekledikleri ve menüler dahil). Açık hesap masadaki her telefonda
+ * görünür; ödenen hesap yalnız ona sipariş veren telefonlarda bir süre.
+ */
 export interface PublicTableBill {
-    /** false: ilk sipariş henüz garson onayında; hesap gösterilmez. */
+    /** false: masada açık hesap yok (ya da bu telefonun görebileceği ödenen hesap yok). */
     hasBill: boolean;
     items: PublicTableBillLine[];
     total: number;
     paid: number;
     remaining: number;
     billRequestedAt: string | null;
-    /** true: hesap ödenip kapandı; kalemler ödenenlerdir, kalan 0. Sunucu bunu yalnız hesabın telefonuna bir süre gösterir. */
+    /** true: hesap ödenip kapandı; kalemler ödenenlerdir, kalan 0. Sunucu bunu yalnız hesaba sipariş veren telefonlara bir süre gösterir. */
     isPaid: boolean;
     /** Bu telefonun masadaki son ödenen hesabının kapanış anı; açık hesapta önceki hesabınki olabilir, yoksa null. */
     paidAt: string | null;
     /** Ödenen hesapta uygulanan iskonto. */
     discount: number;
+    /** Personel masada QR siparişini kilitledi (yoklamada güncellenir); eski sunucu göndermez. */
+    qrOrderingLocked?: boolean;
 }
 
 export interface PublicTableBillLine {
@@ -345,7 +348,7 @@ export interface QrFeatures {
 export interface TableActionResult {
     sent: boolean;
     retryAfterSeconds: number;
-    /** Yalnız "Hesap iste" ve yalnız masanın bağlı olduğu telefonda: ödenecek kalan. */
+    /** Yalnız "Hesap iste"de: masanın açık hesabında ödenecek kalan. */
     billTotal?: number | null;
 }
 

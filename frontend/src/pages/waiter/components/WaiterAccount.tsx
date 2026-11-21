@@ -17,6 +17,7 @@ const PERMISSION_ROWS: { key: keyof WaiterPermissions; label: string }[] = [
     { key: 'canTakePayment', label: 'Ödeme alma' },
     { key: 'canCancelAndDiscount', label: 'İptal, indirim ve ikram' },
     { key: 'canTransferAndReserve', label: 'Masa taşıma, rezervasyon ve QR onayı' },
+    { key: 'canLockQr', label: 'QR siparişini kilitleme' },
 ];
 
 // Garson · Hesabım: kim olduğu, yetkileri, bölgeleri; tema ve çıkış.

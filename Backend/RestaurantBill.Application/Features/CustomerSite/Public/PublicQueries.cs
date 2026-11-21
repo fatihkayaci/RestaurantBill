@@ -134,8 +134,6 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
 public class GetPublicTableQuery : IRequest<Result<PublicTableInfoDto>>
 {
     public Guid TableId { get; set; }
-    /// <summary>Telefonun cihaz anahtarının özeti (X-Device-Token); yalnız OrderLock için okunur, hiçbir şey kilitlemez.</summary>
-    public string? DeviceTokenHash { get; set; }
 }
 
 public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant, IMemoryCache cache, TimeProvider clock)
@@ -151,7 +149,7 @@ public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant
             .Where(t => t.Id == request.TableId
                 && t.Region.Branch.CompanyId == company.Id
                 && t.Status != TableStatus.OutOfService)
-            .Select(t => new PublicTableInfoDto { Id = t.Id, Name = t.Name, RegionName = t.Region.Name, BranchId = t.Region.BranchId })
+            .Select(t => new PublicTableInfoDto { Id = t.Id, Name = t.Name, RegionName = t.Region.Name, BranchId = t.Region.BranchId, QrOrderingLocked = t.QrOrderingLocked })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (table is null)
@@ -165,7 +163,6 @@ public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant
         table.QrFeatures = QrFeaturesDto.From(branch.GetQrFeatures());
         table.AcceptsOnlineOrders = branch.AcceptsOnlineOrders;
         table.IbanPayment = TableIbanPaymentDto.From(branch);
-        table.OrderLock = QrTableLock.ToWire(await QrTableLock.StateAsync(db, table.Id, request.DeviceTokenHash, cancellationToken));
         if (branch.GetQrFeatures().PopularSectionEnabled)
             table.PopularProductIds = await PopularProducts.GetAsync(db, cache, branch.Id, clock.GetUtcNow().UtcDateTime, cancellationToken);
         return Result<PublicTableInfoDto>.Success(table);

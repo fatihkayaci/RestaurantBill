@@ -107,7 +107,6 @@ public static class MappingExtensions
         Status = o.Status,
         CreatedAt = o.CreatedAt,
         BillRequestedAt = o.BillRequestedAt,
-        QrLocked = o.QrOwnerTokenHash != null,
         OrderItems = o.OrderItems.Where(i => !i.IsSetMenuComponent).Select(i => i.ToLineDto(o)).ToList()
     };
 
@@ -226,6 +225,7 @@ public static class MappingExtensions
         Name = t.Name,
         Note = t.Note,
         Status = t.Status,
+        QrOrderingLocked = t.QrOrderingLocked,
         RegionId = t.RegionId,
         RegionName = t.Region.Name
     };
@@ -268,6 +268,8 @@ public static class MappingExtensions
         CanTakePayment = ub.Role != UserRole.Waiter || ub.CanTakePayment,
         CanCancelAndDiscount = ub.Role != UserRole.Waiter || ub.CanCancelAndDiscount,
         CanTransferAndReserve = ub.Role != UserRole.Waiter || ub.CanTransferAndReserve,
+        // QR siparişini kilitleme: yöneticiler her zaman, garson yetkisi varsa; kasiyer, mutfak ve kurye hiç.
+        CanLockQr = ub.Role is UserRole.Owner or UserRole.Admin || (ub.Role == UserRole.Waiter && ub.CanLockQr),
         CanApplyDiscount = ub.Role != UserRole.Cashier || ub.CanApplyDiscount,
         MaxDiscountPercent = ub.Role == UserRole.Cashier ? ub.MaxDiscountPercent : 100,
         CanTransferTables = ub.Role != UserRole.Cashier || ub.CanTransferTables,

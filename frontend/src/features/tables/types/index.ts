@@ -6,6 +6,8 @@ export interface Table {
     /** Bölge içindeki sıra (küçük önce); liste sunucudan bu sırayla gelir. */
     sortOrder?: number;
     status: number;
+    /** Personel bu masada QR'dan siparişi kilitledi (müşteri menüye bakar, sipariş gönderemez). Eski sunucu: yok. */
+    qrOrderingLocked?: boolean;
     activeOrderTotal: number;
     /** Açık siparişten tutar girerek alınmış ödemeler. */
     paidAmount?: number;

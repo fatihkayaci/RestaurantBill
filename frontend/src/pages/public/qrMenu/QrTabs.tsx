@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import {
-    Armchair, ArrowRight, BellRing, Check, ChevronDown, ChevronRight, Receipt, ReceiptText, ShoppingBasket, UserRound, UtensilsCrossed, Wallet, X,
+    Armchair, ArrowRight, BellRing, Check, ChevronDown, ChevronRight, Receipt, ReceiptText, ShoppingBasket, UtensilsCrossed, Wallet, X,
 } from 'lucide-react';
-import { ORDER_REQUEST_PENDING, ORDER_REQUEST_REJECTED, type PublicTableBill, type TableOrderLock } from '@/features/customerSite/types';
+import { ORDER_REQUEST_PENDING, ORDER_REQUEST_REJECTED, type PublicTableBill } from '@/features/customerSite/types';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { formatClock, type TableActionState } from '../useTableAction';
@@ -10,8 +10,9 @@ import type { SentOrderRequest } from '../useTableOrderRequests';
 import { parsePaidAt, timeOf } from './qrModel';
 import type { QrPaymentMethod } from './qrPayments';
 import { BillLines, RequestList, StatusChip } from './QrOrders';
-import { isWaiting, type TableAction } from './tableAction';
+import { isCounting, isWaiting, type TableAction } from './tableAction';
 import { BillRequestButton, WaiterCallButton } from './TableActionButton';
+import { DockedPanel } from './QrDock';
 import Sheet from '../delivery/Sheet';
 import { card, column, displayTitle, focusRing, primaryButton } from './qrUi';
 
@@ -36,9 +37,8 @@ function EmptyState({ icon, title, text, action }: { icon: ReactNode; title: str
 interface AccountTabProps {
     tableName: string;
     regionName: string;
-    /** Masanın hesabı (bugün yalnız masa bu telefondaysa ya da hesap az önce ödendiyse); yoksa null. */
+    /** Masanın ortak hesabı (açık hesap; ya da bu telefonun sipariş verdiği, az önce ödenen hesap); yoksa null. */
     bill: PublicTableBill | null;
-    lock: TableOrderLock;
     requests: SentOrderRequest[];
     onOpenMenu: () => void;
     /** Kapalıysa (admin ayarı) null. */
@@ -49,39 +49,54 @@ interface AccountTabProps {
 }
 
 // Hesabım tek bir adisyon: (varsa) üstte onay bekleyen / onaylanmayan siparişlerin ince şeridi; masanın hesabı kâğıt
-// fiş olarak (masa ve durum, kalemler, kesik çizgi, toplam; kısmen ödendiyse Ödenen ve Kalan); hemen altında tek işlem
-// satırı "Hesap iste" ve "Öde" (yöntem penceresi). Hesap görünmüyorsa tek sade kart.
-export function AccountTab({ tableName, regionName, bill, lock, requests, onOpenMenu, billRequest, callWaiter, paymentMethods }: AccountTabProps) {
+// fiş olarak (masa ve durum, kalemler, kesik çizgi, toplam; kısmen ödendiyse Ödenen ve Kalan). İşlemler alt çubuğun
+// üstündeki yapışık panelde: kısa Toplam / Kalan satırı, "Hesap iste" ve "Öde" (yöntem penceresi); tek işlem varsa tam
+// genişlik, işlem yoksa (hesap ödendi, ya da hesap görünmüyor ve istenemiyor) panel yok. Hesap görünmüyorsa tek sade kart.
+export function AccountTab({ tableName, regionName, bill, requests, onOpenMenu, billRequest, callWaiter, paymentMethods }: AccountTabProps) {
     const paidAtMs = parsePaidAt(bill?.paidAt);
     const tableLabel = regionName ? `${tableName} · ${regionName}` : tableName;
     const paid = !!bill?.isPaid;
     const [payOpen, setPayOpen] = useState(false);
-    // Hesap varken ya da masa başka telefondayken garsondan hesap istenebilir.
-    const showBillRequest = !!billRequest && !paid && (!!bill || lock === 'other');
+    // Masada açık hesap varken masadaki her telefon garsondan hesap isteyebilir.
+    const showBillRequest = !!billRequest && !paid && !!bill;
     const showPay = !!bill && !paid && paymentMethods.length > 0;
 
+    const docked = !paid && (showBillRequest || showPay);
+    const partlyPaid = !!bill && bill.paid > 0;
+
     return (
-        <div className={cn(column, 'flex flex-col gap-4 px-4 pb-4 pt-5')}>
+        // Yapışık panel varken sütun en az ekran boyu; panel alt çubuğun arkasına kadar iner ve alt boşluğu kendi verir.
+        <div className={cn(column, 'flex flex-col gap-4 px-4 pt-5', docked ? 'min-h-dvh' : 'pb-[calc(112px+env(safe-area-inset-bottom))]')}>
             <h1 className={cn(displayTitle, 'text-[28px]')}>Hesabım</h1>
 
             <RequestBanner requests={requests} paidAtMs={paidAtMs} callWaiter={callWaiter} />
 
             {bill ? <BillReceipt tableLabel={tableLabel} bill={bill} paidAtMs={paidAtMs} />
-                : <NoBill tableLabel={tableLabel} lock={lock} hasRequests={requests.length > 0} onOpenMenu={onOpenMenu} />}
+                : <NoBill tableLabel={tableLabel} hasRequests={requests.length > 0} onOpenMenu={onOpenMenu} />}
 
-            {paid ? (
+            {paid && (
                 <p className="m-0 flex items-center justify-center gap-2 text-[15px] font-semibold text-[var(--site-sub)]">
                     <Check className="h-4 w-4 shrink-0 text-[var(--site-ok)]" strokeWidth={3} aria-hidden="true" />Hesabınız ödendi, teşekkürler.
                 </p>
-            ) : (showBillRequest || showPay) && (
-                <div className={cn('grid gap-2.5', showBillRequest && showPay && 'grid-cols-2')}>
-                    {showBillRequest && billRequest && <BillRequestButton action={billRequest} variant="outline" compact={showPay} />}
-                    {showPay && (
-                        <button type="button" onClick={() => setPayOpen(true)} aria-haspopup="dialog" className={cn(primaryButton, 'w-full px-3')}>
-                            <Wallet className="h-5 w-5" aria-hidden="true" />Öde
-                        </button>
+            )}
+
+            {docked && (
+                <DockedPanel label="Hesap işlemleri">
+                    {bill && (
+                        <p className="m-0 flex items-baseline justify-between gap-3 pb-2.5 pt-0.5">
+                            <span className="text-[15px] font-bold">{partlyPaid ? 'Kalan' : 'Toplam'}</span>
+                            <span className="text-[22px] font-extrabold leading-none tabular-nums">{formatPrice(partlyPaid ? bill.remaining : bill.total)} ₺</span>
+                        </p>
                     )}
-                </div>
+                    <div className={cn('grid gap-2.5', showBillRequest && showPay && 'grid-cols-2')}>
+                        {showBillRequest && billRequest && <BillRequestButton action={billRequest} variant="outline" compact={showPay} />}
+                        {showPay && (
+                            <button type="button" onClick={() => setPayOpen(true)} aria-haspopup="dialog" className={cn(primaryButton, 'w-full px-3')}>
+                                <Wallet className="h-5 w-5" aria-hidden="true" />Öde
+                            </button>
+                        )}
+                    </div>
+                </DockedPanel>
             )}
 
             {payOpen && <PaySheet methods={paymentMethods} onClose={() => setPayOpen(false)} />}
@@ -215,27 +230,23 @@ function TotalRow({ label, value, big = false, ok = false }: { label: string; va
     );
 }
 
-/** Hesap görünmüyorsa tek sade kart: henüz hesap yok ya da masa başka telefonda. */
-function NoBill({ tableLabel, lock, hasRequests, onOpenMenu }: { tableLabel: string; lock: TableOrderLock; hasRequests: boolean; onOpenMenu: () => void }) {
-    const other = lock === 'other';
+/** Masada açık hesap yoksa tek sade kart. */
+function NoBill({ tableLabel, hasRequests, onOpenMenu }: { tableLabel: string; hasRequests: boolean; onOpenMenu: () => void }) {
     return (
         <section aria-label="Masanın hesabı" className={cn(card, 'flex items-start gap-3 px-4 py-4')}>
             <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--site-alt)] text-[var(--site-sub)]">
-                {other ? <UserRound className="h-5 w-5" /> : <Receipt className="h-5 w-5" />}
+                <Receipt className="h-5 w-5" />
             </span>
             <div className="min-w-0 text-[15px] leading-relaxed text-[var(--site-sub)]">
                 <p className="m-0 text-[13px] font-semibold">{tableLabel}</p>
-                <p className="m-0 font-extrabold text-[var(--site-text)]">{other ? 'Hesap bu telefonda görünmüyor' : 'Henüz açık hesap yok'}</p>
+                <p className="m-0 font-extrabold text-[var(--site-text)]">Henüz açık hesap yok</p>
                 <p className="m-0">
-                    {other ? 'Hesap, masanın ilk siparişini veren telefonda görünür. Garsondan da isteyebilirsiniz.'
-                        : hasRequests ? 'Siparişiniz garson onaylayınca burada görünür.' : 'Onaylanan siparişler burada görünür.'}
+                    {hasRequests ? 'Siparişiniz garson onaylayınca burada görünür.' : 'Masanın onaylanan siparişleri burada görünür.'}
                 </p>
-                {!other && (
-                    <button type="button" onClick={onOpenMenu}
-                        className={cn('-ml-1 mt-1 inline-flex min-h-11 items-center gap-1 rounded-xl px-1 text-[15px] font-bold text-[var(--site-accent-text)]', focusRing)}>
-                        Menüye göz at<ChevronRight className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                )}
+                <button type="button" onClick={onOpenMenu}
+                    className={cn('-ml-1 mt-1 inline-flex min-h-11 items-center gap-1 rounded-xl px-1 text-[15px] font-bold text-[var(--site-accent-text)]', focusRing)}>
+                    Menüye göz at<ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </button>
             </div>
         </section>
     );
@@ -268,13 +279,24 @@ export function BottomBar({ tab, onTab, cartCount, pendingCount, cart, toast, ca
     const failed = callWaiter && callWaiter.state.status === 'error' && callWaiter.state !== dismissed ? callWaiter : null;
     const errorMessage = failed?.state.status === 'error' ? failed.state.message : null;
     const bump = toast && toast.kind !== 'info' ? toast : null;
+    // Garson çağır geri sayımı (3 sn): sürerken üstte "Garson çağrılıyor… 3 · İptal" şeridi; iptal edilince kısa "İptal edildi".
+    const counting = callWaiter && isCounting(callWaiter) ? callWaiter : null;
+    const cancelledNote = !!callWaiter?.cancelled && !counting;
     const columns = 3 + Number(!!callWaiter);
 
     return (
         <div className="fixed inset-x-0 bottom-0 z-30">
             {/* Ekran okuyucu bildirimi her zaman yerinde; görünen şerit yalnız bildirim varken. Dokunuşları engellemez. */}
             <div className={cn(column, 'pointer-events-none flex justify-center px-3 pb-2')} aria-live="polite" role="status">
-                {toast && !errorMessage && (
+                {cancelledNote && !errorMessage && (
+                    <p className="qr-toast m-0 flex max-w-full items-center gap-2 rounded-full bg-[var(--site-text)] py-2 pl-2.5 pr-4 text-sm font-bold text-[var(--site-bg)] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.45)]">
+                        <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--site-bg)_18%,transparent)]">
+                            <X className="h-3.5 w-3.5" strokeWidth={3.25} />
+                        </span>
+                        <span className="min-w-0 truncate">Garson çağrısı iptal edildi</span>
+                    </p>
+                )}
+                {toast && !errorMessage && !counting && !cancelledNote && (
                     <p key={toast.id} className="qr-toast m-0 flex max-w-full items-center gap-2 rounded-full bg-[var(--site-text)] py-2 pl-2.5 pr-4 text-sm font-bold text-[var(--site-bg)] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.45)]">
                         <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--site-ok)] text-[var(--site-ok-bg)]">
                             <Check className="h-3.5 w-3.5" strokeWidth={3.25} />
@@ -283,6 +305,20 @@ export function BottomBar({ tab, onTab, cartCount, pendingCount, cart, toast, ca
                     </p>
                 )}
             </div>
+            {counting && (
+                <div className={cn(column, 'px-3 pb-2')}>
+                    <div className="flex items-center gap-3 rounded-2xl bg-[var(--site-text)] py-1.5 pl-4 pr-1.5 text-[var(--site-bg)] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.45)]">
+                        <BellRing className="h-5 w-5 shrink-0 motion-safe:animate-pulse" aria-hidden="true" />
+                        <p className="m-0 min-w-0 flex-1 text-[15px] font-bold" aria-hidden="true">
+                            Garson çağrılıyor… <span className="tabular-nums">{counting.countdown}</span>
+                        </p>
+                        <button type="button" onClick={counting.cancel}
+                            className={cn('min-h-11 shrink-0 rounded-xl bg-[color-mix(in_srgb,var(--site-bg)_18%,transparent)] px-5 text-[15px] font-extrabold', focusRing)}>
+                            İptal<span className="sr-only"> (garson çağrısı)</span>
+                        </button>
+                    </div>
+                </div>
+            )}
             {errorMessage && failed && (
                 <div className={cn(column, 'px-3 pb-2')}>
                     <p role="alert" className="m-0 flex items-start gap-2 rounded-2xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] py-2 pl-3.5 pr-1 text-sm font-semibold text-[var(--site-error)] shadow-[0_8px_20px_-10px_rgba(0,0,0,0.35)]">
@@ -324,7 +360,8 @@ export function BottomBar({ tab, onTab, cartCount, pendingCount, cart, toast, ca
                     {callWaiter && (
                         <li>
                             <ActionButton action={callWaiter} icon={<BellRing className="h-[22px] w-[22px]" />} label="Garson Çağır"
-                                busyLabel="Çağrılıyor…" doneLabel="Çağrıldı" announce={{ sent: 'Garson çağrıldı.', repeat: 'Garson az önce çağrıldı.' }} />
+                                busyLabel="Çağrılıyor…" countingLabel="Çağrılıyor" doneLabel="Çağrıldı"
+                                announce={{ sent: 'Garson çağrıldı.', repeat: 'Garson az önce çağrıldı.', countdown: `Garson ${COUNTDOWN_SECONDS} saniye içinde çağrılacak.` }} />
                         </li>
                     )}
                     <li>
@@ -362,32 +399,59 @@ function TabButton({ active, onClick, icon, label, badge = null, srExtra }: {
 
 // Garson Çağır: sekme değil, işlem. Gönderilince simge yeşil onaya döner, altında "0:45" bekleme süresi sayar; süre
 // boyunca kapalıdır. Hata olursa simgede kırmızı nokta, metni çubuğun üstündeki şeritte.
-function ActionButton({ action, icon, label, busyLabel, doneLabel, announce }: {
-    action: TableAction; icon: ReactNode; label: string; busyLabel: string; doneLabel: string;
-    announce: { sent: string; repeat: string };
+function ActionButton({ action, icon, label, busyLabel, countingLabel, doneLabel, announce }: {
+    action: TableAction; icon: ReactNode; label: string; busyLabel: string; countingLabel: string; doneLabel: string;
+    announce: { sent: string; repeat: string; countdown: string };
 }) {
     const { state, remainingSeconds } = action;
     const waiting = isWaiting(action);
     const sending = state.status === 'sending';
     const failed = state.status === 'error';
     const done = waiting && state.status === 'done' ? state : null;
-    const status = sending ? busyLabel : done ? (done.sent ? announce.sent : announce.repeat) : '';
+    const countdown = action.countdown ?? null;
+    // Geri sayım başlarken bir kez okunur (metin süre boyunca aynı kalır, her saniye okunmaz).
+    const status = countdown != null ? `${announce.countdown} İptal etmek için İptal'e basın.`
+        : sending ? busyLabel : done ? (done.sent ? announce.sent : announce.repeat) : '';
     return (
         <>
             <button type="button" onClick={() => void action.trigger()} disabled={sending || waiting}
-                aria-label={waiting ? `${status} ${remainingSeconds} saniye sonra tekrar` : label}
-                className={cn(barItem, waiting ? 'text-[var(--site-ok)]' : 'text-[var(--site-text)] hover:bg-[var(--site-alt)]', sending && 'opacity-60')}>
-                <span aria-hidden="true" className={cn('relative flex h-[22px] items-center justify-center', waiting && 'w-[22px] rounded-full bg-[var(--site-ok)] text-[var(--site-ok-bg)]')}>
-                    {waiting ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : icon}
+                aria-label={countdown != null ? `${label}: ${countdown} saniye içinde çağrılacak, iptal etmek için İptal'e basın`
+                    : waiting ? `${status} ${remainingSeconds} saniye sonra tekrar` : label}
+                className={cn(barItem, countdown != null ? 'bg-[var(--site-accent-soft)] text-[var(--site-accent-text)]'
+                    : waiting ? 'text-[var(--site-ok)]' : 'text-[var(--site-text)] hover:bg-[var(--site-alt)]', sending && 'opacity-60')}>
+                <span aria-hidden="true" className={cn('relative flex h-[22px] items-center justify-center', (waiting || countdown != null) && 'w-[22px] rounded-full',
+                    waiting && 'bg-[var(--site-ok)] text-[var(--site-ok-bg)]')}>
+                    {countdown != null ? <CountdownRing value={countdown} total={COUNTDOWN_SECONDS} />
+                        : waiting ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : icon}
                     {failed && <span className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--site-error)] ring-2 ring-[var(--site-card)]" />}
                 </span>
                 <span aria-hidden="true" className="max-w-full truncate">
-                    {sending ? busyLabel : waiting ? <>{doneLabel} <span className="tabular-nums">{formatClock(remainingSeconds)}</span></> : label}
+                    {countdown != null ? countingLabel : sending ? busyLabel : waiting ? <>{doneLabel} <span className="tabular-nums">{formatClock(remainingSeconds)}</span></> : label}
                 </span>
             </button>
             {/* Geri sayım okunmaz; yalnız sonuç bir kez bildirilir. */}
             <span className="sr-only" role="status" aria-live="polite">{status}</span>
         </>
+    );
+}
+
+/** useDelayedAction'ın varsayılan süresi (Garson çağır). */
+const COUNTDOWN_SECONDS = 3;
+
+/** Geri sayım halkası: ortada kalan saniye, halka her saniye bir dilim azalır (azaltılmış harekette geçişsiz). */
+function CountdownRing({ value, total }: { value: number; total: number }) {
+    const r = 10;
+    const length = 2 * Math.PI * r;
+    return (
+        <span className="relative flex h-[22px] w-[22px] items-center justify-center">
+            <svg viewBox="0 0 24 24" className="absolute inset-0 h-full w-full -rotate-90">
+                <circle cx="12" cy="12" r={r} fill="none" stroke="currentColor" strokeOpacity={0.2} strokeWidth={2.5} />
+                <circle cx="12" cy="12" r={r} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
+                    strokeDasharray={length} strokeDashoffset={length * (1 - value / total)}
+                    className="transition-[stroke-dashoffset] duration-1000 ease-linear motion-reduce:transition-none" />
+            </svg>
+            <span className="text-[11px] font-extrabold tabular-nums">{value}</span>
+        </span>
     );
 }
 

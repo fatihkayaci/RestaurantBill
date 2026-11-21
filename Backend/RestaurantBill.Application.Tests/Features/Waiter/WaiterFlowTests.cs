@@ -48,7 +48,7 @@ public abstract class WaiterTestBase : ApplicationTestBase
         User waiter = User.Create(name, $"{Guid.NewGuid():N}@test.com", "5550000000");
         DbContext.Users.Add(waiter);
         UserBranch membership = UserBranch.Create(waiter, Branch, "garson" + Guid.NewGuid().ToString("N")[..6], null, UserRole.Waiter);
-        membership.SetWaiterPermissions(true, canTakePayment, false, false);
+        membership.SetWaiterPermissions(true, canTakePayment, false, false, false);
         membership.SetRegions(regionIds);
         DbContext.UserBranches.Add(membership);
         await DbContext.SaveChangesAsync();

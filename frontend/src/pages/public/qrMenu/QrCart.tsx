@@ -11,6 +11,7 @@ import type { QrItem } from './qrModel';
 import { QrImage } from './QrParts';
 import type { TableAction } from './tableAction';
 import { WaiterCallButton } from './TableActionButton';
+import { DockedPanel } from './QrDock';
 import { card, column, displayTitle, fieldClass, focusRing, iconButton, outlineButton, primaryButton } from './qrUi';
 
 interface Props {
@@ -30,7 +31,7 @@ interface Props {
     onSend: () => void;
     sending: boolean;
     sendError: string | null;
-    /** Gönderim kapandıysa (masa başka telefona geçti, restoran kapandı, bağlantı yok) nedeni; düğme kapalı, üstünde yazar. */
+    /** Gönderim kapandıysa (personel masada QR siparişini kilitledi, restoran kapandı, bağlantı yok) nedeni; düğme kapalı, üstünde yazar. */
     blockedReason: string | null;
     /** Az önce gönderilen talep: sepet yerine "Siparişiniz garsona iletildi" (durumu canlı). */
     sent: SentOrderRequest | null;
@@ -122,39 +123,19 @@ function MyCart({ lines, total, itemsById, orderNote, onOrderNote, onChange, onR
     );
 }
 
-/** Alt gezinme çubuğunun yüksekliği (QrTabs BottomBar: 60 px düğme + 16 px dolgu + 1 px çizgi). */
-const NAV_SPACE = 'calc(77px + env(safe-area-inset-bottom))';
-
 /**
- * Sepetin altına yapışık sipariş paneli: alt çubuğun hemen üstünde, üst köşeleri yuvarlak, vurgu tonuyla hafif
- * renklenmiş ayrı yüzey. Sırasıyla tek satırlık "Garsona not" (dokununca alan açılır), "Ara Toplam" ve tek ana işlem
- * "Siparişi Garsona Gönder". Panel alt çubuğun arkasına kadar uzanır; yüksekliği sayfanın scroll-padding-bottom'ı olur,
- * böylece odaklanan satır notu panelin altında kalmaz.
+ * Sepetin altına yapışık sipariş paneli (DockedPanel): sırasıyla tek satırlık "Garsona not" (dokununca alan açılır),
+ * "Ara Toplam" ve tek ana işlem "Siparişi Garsona Gönder".
  */
 function CheckoutPanel({ count, total, orderNote, onOrderNote, onSend, sending, sendError, blockedReason }: {
     count: number; total: number; orderNote: string; onOrderNote: (note: string) => void;
     onSend: () => void; sending: boolean; sendError: string | null; blockedReason: string | null;
 }) {
     const [noteOpen, setNoteOpen] = useState(false);
-    const panelRef = useRef<HTMLElement>(null);
     const note = orderNote.trim();
 
-    useEffect(() => {
-        const panel = panelRef.current;
-        if (!panel) return;
-        const html = document.documentElement;
-        const apply = () => { html.style.scrollPaddingBottom = `${panel.offsetHeight + 12}px`; };
-        apply();
-        const observer = new ResizeObserver(apply);
-        observer.observe(panel);
-        return () => { observer.disconnect(); html.style.scrollPaddingBottom = ''; };
-    }, []);
-
     return (
-        <section ref={panelRef} aria-label="Sipariş özeti" style={{ paddingBottom: `calc(${NAV_SPACE} + 14px)` }}
-            className="sticky bottom-0 z-20 -mx-4 mt-auto rounded-t-[28px] border-t border-[var(--site-accent-line)] bg-[color-mix(in_srgb,var(--site-accent-soft)_45%,var(--site-card))] px-4 pt-2 shadow-[0_-14px_30px_-20px_rgba(0,0,0,0.45)]">
-            <span aria-hidden="true" className="mx-auto mb-1 block h-1 w-10 rounded-full bg-[var(--site-accent-line)] opacity-60" />
-
+        <DockedPanel label="Sipariş özeti">
             {noteOpen ? (
                 <div className="flex items-center gap-2 py-0.5">
                     <label htmlFor="siparis-notu" className="sr-only">Garsona not (isteğe bağlı)</label>
@@ -207,7 +188,7 @@ function CheckoutPanel({ count, total, orderNote, onOrderNote, onSend, sending, 
                     <Info className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />Garson onaylayınca masa hesabına eklenir.
                 </p>
             )}
-        </section>
+        </DockedPanel>
     );
 }
 

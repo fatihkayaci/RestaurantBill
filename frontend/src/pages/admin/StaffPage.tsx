@@ -31,18 +31,19 @@ const accessTabLabel: Record<number, string> = { [WAITER]: 'Bölge ve Yetkiler',
 // Bölge/masa açıklamalarında rolün adı: "Garson yalnızca ...", "Kasiyer yalnızca ...".
 const scopedRoleNoun = (role: number) => (role === CASHIER ? 'Kasiyer' : 'Garson');
 
-type PermissionKey = 'canTakeOrders' | 'canTakePayment' | 'canCancelAndDiscount' | 'canTransferAndReserve';
+type PermissionKey = 'canTakeOrders' | 'canTakePayment' | 'canCancelAndDiscount' | 'canTransferAndReserve' | 'canLockQr';
 
 const WAITER_PERMISSIONS: { key: PermissionKey; label: string; short: string; hint: string }[] = [
     { key: 'canTakeOrders', label: 'Masa aç / sipariş al', short: 'Sipariş', hint: 'Boş masada sipariş başlatır, siparişe ürün ekler.' },
     { key: 'canTakePayment', label: 'Hesap al (ödeme)', short: 'Ödeme', hint: 'Masanın hesabını kapatır; nakit, kart, IBAN ödeme alır.' },
     { key: 'canCancelAndDiscount', label: 'İptal ve indirim', short: 'İptal/İndirim', hint: 'Gönderilmiş ürünü ya da siparişi iptal eder, indirim/ikram uygular.' },
     { key: 'canTransferAndReserve', label: 'Masa taşı ve rezervasyon', short: 'Taşıma/Rezervasyon', hint: 'Masa taşır/birleştirir, rezervasyonları ve QR sipariş taleplerini yönetir.' },
+    { key: 'canLockQr', label: 'QR siparişini kilitleme', short: 'QR kilidi', hint: 'Masada QR ile siparişi kapatır ya da yeniden açar; müşteri menüye bakar, hesabı görür ama sipariş gönderemez.' },
 ];
 
 // Yeni garson yalnızca sipariş alabilir; diğer yetkileri yönetici açar.
 const DEFAULT_WAITER_PERMISSIONS: Record<PermissionKey, boolean> = {
-    canTakeOrders: true, canTakePayment: false, canCancelAndDiscount: false, canTransferAndReserve: false,
+    canTakeOrders: true, canTakePayment: false, canCancelAndDiscount: false, canTransferAndReserve: false, canLockQr: false,
 };
 
 type CashierPermissionKey = 'canApplyDiscount' | 'canTransferTables' | 'canViewDelivery';
@@ -203,6 +204,7 @@ export default function StaffPage() {
                 canTakePayment: user.canTakePayment ?? false,
                 canCancelAndDiscount: user.canCancelAndDiscount ?? false,
                 canTransferAndReserve: user.canTransferAndReserve ?? false,
+                canLockQr: user.canLockQr ?? false,
             }
             : DEFAULT_WAITER_PERMISSIONS;
         const cashierPermissions = user.role === CASHIER
@@ -303,6 +305,7 @@ export default function StaffPage() {
             canTakePayment: isWaiter ? form.canTakePayment : undefined,
             canCancelAndDiscount: isWaiter ? form.canCancelAndDiscount : undefined,
             canTransferAndReserve: isWaiter ? form.canTransferAndReserve : undefined,
+            canLockQr: isWaiter ? form.canLockQr : undefined,
             canApplyDiscount: isCashier ? form.canApplyDiscount : undefined,
             maxDiscountPercent: limitsDiscount ? maxDiscountPercent : undefined,
             canTransferTables: isCashier ? form.canTransferTables : undefined,

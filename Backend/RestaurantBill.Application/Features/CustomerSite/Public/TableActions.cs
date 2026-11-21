@@ -50,7 +50,7 @@ public class CallWaiterCommandHandler(IAppDbContext db, ITenantResolver tenant, 
 
         // QR adresi sabit: masa dışından (fotoğraftan) çağrı gelebilir. Açık hesabı olmayan masadan gelen çağrı garsona
         // "Masa boş görünüyor" etiketiyle gider.
-        bool tableLooksEmpty = await QrTableLock.FindOpenOrderAsync(db, table.Id, track: false, cancellationToken) is null;
+        bool tableLooksEmpty = await QrTableAccess.FindOpenOrderAsync(db, table.Id, track: false, cancellationToken) is null;
 
         await tableNotifications.SendWaiterCalledAsync(branchId, new WaiterCalledDto
         {
@@ -73,8 +73,6 @@ public class CallWaiterCommandHandler(IAppDbContext db, ITenantResolver tenant, 
 public class RequestTableBillCommand : IRequest<Result<TableActionResultDto>>
 {
     public Guid TableId { get; set; }
-    /// <summary>Telefonun cihaz anahtarının özeti (X-Device-Token → QrTableLock.HashToken); yalnız masanın sahibi telefona tutar (BillTotal) döner.</summary>
-    public string? DeviceTokenHash { get; set; }
 }
 
 public class RequestTableBillCommandValidator : AbstractValidator<RequestTableBillCommand>
@@ -110,10 +108,8 @@ public class RequestTableBillCommandHandler(IAppDbContext db, ITenantResolver te
         if (order is null)
             return Result<TableActionResultDto>.Failure(NoOpenBillMessage);
 
-        // Hesap isteği herkese açık; ödenecek tutar yalnız hesabın bağlı olduğu telefona söylenir (QrTableLock).
-        decimal? billTotal = QrTableLock.StateOf(order.QrOwnerTokenHash, request.DeviceTokenHash) == QrLockState.Mine
-            ? order.RemainingAmount
-            : null;
+        // Masanın açık hesabı masadaki her telefonda görünür; ödenecek kalan da söylenir.
+        decimal billTotal = order.RemainingAmount;
 
         if (cooldown.TryStart(TableAction.BillRequest, table.Id) is TimeSpan remaining)
             return Result<TableActionResultDto>.Success(new TableActionResultDto { Sent = false, RetryAfterSeconds = TableActionCooldown.Seconds(remaining), BillTotal = billTotal });
@@ -161,7 +157,7 @@ public class RequestTableBillCommandHandler(IAppDbContext db, ITenantResolver te
         {
             Sent = true,
             RetryAfterSeconds = TableActionCooldown.Seconds(TableActionCooldown.Window),
-            // Karşılama ekranındaki "Hesabınız geliyor" penceresinde ödenecek kalan gösterilir (yalnız sahibi telefonda).
+            // Karşılama ekranındaki "Hesabınız geliyor" penceresinde ödenecek kalan gösterilir.
             BillTotal = billTotal
         });
     }

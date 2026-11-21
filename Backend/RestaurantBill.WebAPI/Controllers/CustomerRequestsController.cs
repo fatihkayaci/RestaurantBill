@@ -42,14 +42,6 @@ public class OrderRequestController : BaseController
     }
 
     public sealed record RejectOrderRequestBody(string? Reason);
-
-    /// <summary>"QR kilidini aç": masa QR'da artık bir telefona bağlı değil; sonraki ilk talebi gönderen telefon sahip olur.</summary>
-    [HttpPost("table/{tableId:guid}/qr-unlock")]
-    public async Task<IActionResult> UnlockQrTable([FromRoute] Guid tableId, CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new UnlockQrTableCommand { TableId = tableId }, cancellationToken);
-        return HandleResult(result);
-    }
 }
 
 // Müşterinin siteden gönderdiği rezervasyon taleplerinin personel tarafı.

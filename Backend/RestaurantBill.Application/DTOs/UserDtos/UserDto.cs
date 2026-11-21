@@ -30,6 +30,7 @@ public class UserDto
     public bool CanTakePayment { get; set; }
     public bool CanCancelAndDiscount { get; set; }
     public bool CanTransferAndReserve { get; set; }
+    public bool CanLockQr { get; set; }
     // Kasiyer yetkileri ve indirim sınırı (100 = sınırsız); diğer rollerde hep açık / 100.
     public bool CanApplyDiscount { get; set; }
     public int MaxDiscountPercent { get; set; }
