@@ -90,13 +90,13 @@ export default function ProductPreview() {
 }
 
 const TABLES = [
-    { name: "Masa 1", status: "Dolu", amount: "₺640", since: "42 dk", color: C.orange },
+    { name: "Masa 1", status: "Dolu", amount: "640 ₺", since: "42 dk", color: C.orange },
     { name: "Masa 2", status: "Boş", color: C.green },
-    { name: "Masa 3", status: "Dolu", amount: "₺385", since: "18 dk", note: "● 2 ürün hazır", color: C.orange },
+    { name: "Masa 3", status: "Dolu", amount: "385 ₺", since: "18 dk", note: "● 2 ürün hazır", color: C.orange },
     { name: "Masa 4", status: "Rezerve", note: "20:30 · 4 kişi", color: C.amber },
-    { name: "Masa 5", status: "Dolu", amount: "₺1.120", since: "1 sa 5 dk", color: C.orange },
+    { name: "Masa 5", status: "Dolu", amount: "1.120 ₺", since: "1 sa 5 dk", color: C.orange },
     { name: "Masa 6", status: "Boş", color: C.green },
-    { name: "Bahçe 1", status: "Dolu", amount: "₺290", since: "9 dk", color: C.orange },
+    { name: "Bahçe 1", status: "Dolu", amount: "290 ₺", since: "9 dk", color: C.orange },
     { name: "Bahçe 2", status: "Boş", color: C.green },
     { name: "Bahçe 3", status: "Rezerve", note: "21:00 · 2 kişi", color: C.amber },
 ];
@@ -209,7 +209,7 @@ const BILL_LINES = [
 function CashierMock() {
     const subtotal = BILL_LINES.reduce((s, l) => s + l.price, 0);
     const discount = 115;
-    const fmt = (n: number) => `₺${n.toLocaleString("tr-TR")}`;
+    const fmt = (n: number) => `${n.toLocaleString("tr-TR")} ₺`;
     return (
         <div className="h-full grid grid-cols-5 gap-2">
             <div className="col-span-3 rounded-lg p-2.5 flex flex-col gap-1.5 min-w-0" style={{ background: C.faint }}>

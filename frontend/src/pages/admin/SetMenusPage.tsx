@@ -16,12 +16,14 @@ import { Switch } from '@/components/ui/switch';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { SortableList, SortableRow } from '@/components/dnd/SortableList';
+import { SortModeBanner, SortModeButton } from '@/components/dnd/SortMode';
 
-// "İçecek: Ayran / Kola (+₺10)" — kartta menünün içeriği tek bakışta.
+// "İçecek: Ayran / Kola (+10 ₺)" — kartta menünün içeriği tek bakışta.
 function slotSummary(menu: SetMenu): string[] {
     return menu.slots.map(slot => {
         const options = slot.options
-            .map(o => `${o.productName}${o.isProductActive ? '' : ' (satış dışı)'}${o.surcharge > 0 ? ` (+₺${formatPrice(o.surcharge)})` : ''}`)
+            .map(o => `${o.productName}${o.isProductActive ? '' : ' (satış dışı)'}${o.surcharge > 0 ? ` (+${formatPrice(o.surcharge)} ₺)` : ''}`)
             .join(' / ');
         return slot.isFixed ? options : `${slot.name}: ${options}`;
     });
@@ -33,6 +35,7 @@ export default function SetMenusPage() {
     const [products, setProducts] = useState<ProductWithCost[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loaded, setLoaded] = useState(false);
+    const [sorting, setSorting] = useState(false);
     // undefined: kapalı, null: yeni menü.
     const [editing, setEditing] = useState<SetMenu | null | undefined>(undefined);
     const [deleteTarget, setDeleteTarget] = useState<SetMenu | null>(null);
@@ -89,24 +92,71 @@ export default function SetMenusPage() {
 
     const activeCount = menus.filter(m => m.isActive).length;
 
+    // Sürükle-bırak sonrası sıra hemen kaydedilir; hata olursa eski sıra geri gelir.
+    const handleReorder = async (next: SetMenu[]) => {
+        const previous = menus;
+        setMenus(next);
+        try {
+            await setMenuService.reorderSetMenus(next.map(m => m.id));
+            toast.success('Menü sırası kaydedildi.');
+        } catch (err) {
+            setMenus(previous);
+            toast.error(getApiErrorMessage(err, 'Menü sırası kaydedilemedi.'));
+        }
+    };
+
     return (
         <div className="space-y-5">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-serif font-bold text-foreground">Set menüler</h1>
                     <p className="mt-0.5 text-sm text-muted-foreground">{activeCount} aktif menü</p>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => setEditing(null)}
-                    disabled={products.length === 0}
-                    className="flex items-center gap-1.5 rounded-lg bg-rb-gold px-4 py-2 text-sm font-medium text-rb-gold-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-                >
-                    + Menü Ekle
-                </button>
+                <div className="flex items-center gap-2">
+                    {menus.length > 1 && <SortModeButton active={sorting} onToggle={() => setSorting(v => !v)} />}
+                    {!sorting && (
+                        <button
+                            type="button"
+                            onClick={() => setEditing(null)}
+                            disabled={products.length === 0}
+                            className="flex items-center gap-1.5 rounded-lg bg-rb-gold px-4 py-2 text-sm font-medium text-rb-gold-foreground transition-colors hover:opacity-90 disabled:opacity-50"
+                        >
+                            + Menü Ekle
+                        </button>
+                    )}
+                </div>
             </div>
 
-            {!loaded ? null : menus.length === 0 ? (
+            {sorting && menus.length > 1 ? (
+                <div className="space-y-4">
+                    <SortModeBanner>
+                        Menüleri tutamaktan tutup sürükleyin (telefonda basılı tutun). Bırakınca sıra kaydedilir; restoran sitesinde,
+                        QR menüde, online siparişte ve garson ekranında bu sırayla görünür.
+                    </SortModeBanner>
+                    <SortableList
+                        items={menus}
+                        getName={m => m.name}
+                        onReorder={next => void handleReorder(next)}
+                        className="flex max-w-2xl flex-col gap-2"
+                        renderItem={(menu, state) => (
+                            <SortableRow state={state} label={`${menu.name} menüsünü taşı`}>
+                                <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                                    {menu.imageUrl
+                                        ? <img src={menu.imageUrl} alt="" loading="lazy" draggable={false} className="size-full object-cover" />
+                                        : <ImageIcon className="size-4 text-muted-foreground" aria-hidden="true" />}
+                                </div>
+                                <div className="flex min-w-0 flex-1 flex-col">
+                                    <span className={cn('truncate text-sm font-semibold', menu.isActive ? 'text-foreground' : 'text-muted-foreground')}>{menu.name}</span>
+                                    <span className="truncate text-xs text-muted-foreground">
+                                        {menu.isActive ? (menu.categoryName ?? 'Set menü') : 'Satış dışı'}
+                                    </span>
+                                </div>
+                                <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatPrice(menu.price)} ₺</span>
+                            </SortableRow>
+                        )}
+                    />
+                </div>
+            ) : !loaded ? null : menus.length === 0 ? (
                 <EmptyState
                     icon={Layers}
                     title={products.length === 0 ? 'Önce yemek ekleyin' : 'Henüz menü yok'}
@@ -136,7 +186,7 @@ export default function SetMenusPage() {
                                     </div>
                                     <div className="flex shrink-0 items-center gap-1.5">
                                         <span className={cn(
-                                            'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                                            'rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide',
                                             menu.isActive ? 'bg-rb-green-bg text-rb-green' : 'bg-muted text-muted-foreground'
                                         )}>
                                             {menu.isActive ? 'Aktif' : 'Pasif'}
@@ -174,10 +224,10 @@ export default function SetMenusPage() {
 
                                 <div className="mt-auto space-y-3">
                                     <div className="flex items-baseline justify-between gap-2">
-                                        <p className="text-lg font-bold text-foreground">₺{formatPrice(menu.price)}</p>
+                                        <p className="text-lg font-bold text-foreground">{formatPrice(menu.price)} ₺</p>
                                         {margin && (
                                             <p className={cn('truncate text-xs', margin.isLoss ? 'text-destructive' : 'text-muted-foreground')}
-                                                title={`Tahmini maliyet ₺${formatPrice(menu.estimatedCost ?? 0)} (varsayılan seçeneklerle)`}>
+                                                title={`Tahmini maliyet ${formatPrice(menu.estimatedCost ?? 0)} ₺ (varsayılan seçeneklerle)`}>
                                                 {margin.text}
                                             </p>
                                         )}

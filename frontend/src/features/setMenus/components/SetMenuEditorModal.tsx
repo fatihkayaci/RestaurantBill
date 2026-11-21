@@ -106,7 +106,7 @@ interface SetMenuEditorModalProps {
 
 // Menü düzenleyici. Her bölüm bir kategoridir; o kategorinin ürünleri resimli kartlarla seçilir. Bölümde tek ürün
 // varsa sabittir, birden çok ürün varsa garson seçer. Fiyat elle girilmez: ürün fiyatları − ürün indirimleri toplanır,
-// üstüne menü indirimi uygulanır. Seçenekler arasındaki fiyat farkı ek ücret olur (Ayran 30, Kola 40 → Kola +₺10).
+// üstüne menü indirimi uygulanır. Seçenekler arasındaki fiyat farkı ek ücret olur (Ayran 30, Kola 40 → Kola +10 ₺).
 export default function SetMenuEditorModal({ menu, products, categories, onClose, onSaved }: SetMenuEditorModalProps) {
     const [name, setName] = useState(menu?.name ?? '');
     const [description, setDescription] = useState(menu?.description ?? '');
@@ -229,7 +229,6 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
             discountValue: menuDiscount,
             isActive,
             isFeatured,
-            sortOrder: menu?.sortOrder ?? 0,
             categoryId: categoryId || null,
             slots: slots.map(slot => ({
                 id: slot.id,
@@ -402,13 +401,13 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
                                                                     : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
                                                             </div>
                                                             {!p.isActive && (
-                                                                <span className="absolute left-1.5 top-1.5 rounded-full bg-foreground/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-background">
+                                                                <span className="absolute left-1.5 top-1.5 rounded-full bg-foreground/80 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-background">
                                                                     Satış dışı
                                                                 </span>
                                                             )}
                                                             <div className={cn('px-2 py-1.5', !p.isActive && 'opacity-60')}>
                                                                 <p className={cn('truncate text-sm font-medium text-foreground', !p.isActive && 'line-through decoration-muted-foreground/60')}>{p.name}</p>
-                                                                <p className="text-xs text-muted-foreground">₺{formatPrice(p.price)}</p>
+                                                                <p className="text-xs text-muted-foreground">{formatPrice(p.price)} ₺</p>
                                                             </div>
                                                             {selected && (
                                                                 <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-rb-gold text-rb-gold-foreground">
@@ -435,13 +434,13 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
                                                                 <p className="truncate text-sm font-medium text-foreground">
                                                                     {product?.name ?? 'Silinmiş ürün'}
                                                                     {product && !product.isActive && (
-                                                                        <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Satış dışı</span>
+                                                                        <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 align-middle text-xs font-bold uppercase tracking-wide text-muted-foreground">Satış dışı</span>
                                                                     )}
                                                                 </p>
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    {discounted && <span className="mr-1 line-through">₺{formatPrice(product.price)}</span>}
-                                                                    <span className="font-semibold text-foreground">₺{formatPrice(price)}</span>
-                                                                    {slot.options.length > 1 && surcharge > 0 && <span className="ml-1.5 text-rb-accent">+₺{formatPrice(surcharge)} ek ücret</span>}
+                                                                    {discounted && <span className="mr-1 line-through">{formatPrice(product.price)} ₺</span>}
+                                                                    <span className="font-semibold text-foreground">{formatPrice(price)} ₺</span>
+                                                                    {slot.options.length > 1 && surcharge > 0 && <span className="ml-1.5 text-rb-accent">+{formatPrice(surcharge)} ₺ ek ücret</span>}
                                                                 </p>
                                                             </div>
                                                             <DiscountInput
@@ -477,7 +476,7 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
                                                 })}
                                                 {slot.options.length > 1 && (
                                                     <p className="text-xs text-muted-foreground">
-                                                        Menü fiyatına {slot.options.some(o => o.isDefault) ? 'varsayılan' : 'en ucuz'} ürün girer (₺{formatPrice(base)}); daha pahalı seçenek farkı ek ücret olarak alır.
+                                                        Menü fiyatına {slot.options.some(o => o.isDefault) ? 'varsayılan' : 'en ucuz'} ürün girer ({formatPrice(base)} ₺); daha pahalı seçenek farkı ek ücret olarak alır.
                                                     </p>
                                                 )}
                                             </div>
@@ -500,7 +499,7 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
                         <div className="space-y-3 rounded-xl bg-muted/50 px-4 py-3 text-sm">
                             <div className="flex items-center justify-between gap-3">
                                 <span className="text-muted-foreground">Ürünlerin toplamı</span>
-                                <span className="font-medium text-foreground">₺{formatPrice(listPrice)}</span>
+                                <span className="font-medium text-foreground">{formatPrice(listPrice)} ₺</span>
                             </div>
                             <div className="flex flex-wrap items-center justify-between gap-2">
                                 <span className="text-muted-foreground">Menü indirimi</span>
@@ -513,12 +512,12 @@ export default function SetMenuEditorModal({ menu, products, categories, onClose
                             </div>
                             <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
                                 <span className="font-semibold text-foreground">Menü fiyatı</span>
-                                <span className="text-lg font-bold text-foreground">₺{formatPrice(menuPrice)}</span>
+                                <span className="text-lg font-bold text-foreground">{formatPrice(menuPrice)} ₺</span>
                             </div>
                             <div className="flex flex-wrap items-end justify-between gap-3">
                                 <div>
                                     <p className="text-muted-foreground">
-                                        Tahmini maliyet: <span className="font-semibold text-foreground">₺{formatPrice(estimatedCost)}</span>
+                                        Tahmini maliyet: <span className="font-semibold text-foreground">{formatPrice(estimatedCost)} ₺</span>
                                     </p>
                                     {margin && <p className={cn('text-xs', margin.isLoss ? 'text-destructive' : 'text-muted-foreground')}>{margin.text}</p>}
                                     <p className="text-xs text-muted-foreground">Ürün fiyatı değişince menü fiyatı kendiliğinden güncellenir. Maliyeti yalnızca yöneticiler görür.</p>

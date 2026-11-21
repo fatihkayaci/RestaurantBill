@@ -27,7 +27,7 @@ function Head({ title, hint }: { title: string; hint?: ReactNode }) {
                 <b className="text-[15px] text-foreground">{title}</b>
                 {hint && (
                     <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label="Açıklama"
-                        className="flex h-5 w-5 items-center justify-center rounded-full border border-border text-[11px] font-bold text-muted-foreground hover:text-foreground">?</button>
+                        className="flex h-5 w-5 items-center justify-center rounded-full border border-border text-xs font-bold text-muted-foreground hover:text-foreground">?</button>
                 )}
             </span>
             {hint && open && <span className="text-[13px] leading-snug text-muted-foreground">{hint}</span>}

@@ -163,7 +163,7 @@ export default function CourierDashboardPage() {
             setDeliverTarget(null);
             setFocusId(null);
             // Yanlış düğmeye basıldıysa: bildirimde 20 sn "Geri al" durur; 2 dk dolana kadar listede de düğme var.
-            toast.success(`PAKET #${order.number} teslim edildi · ${methodWord(method)} ₺${formatPrice(order.total)}`, {
+            toast.success(`PAKET #${order.number} teslim edildi · ${methodWord(method)} ${formatPrice(order.total)} ₺`, {
                 duration: UNDO_TOAST_MS,
                 action: { label: 'Geri al', onClick: () => { void undoDeliver(order); } },
             });
@@ -206,7 +206,7 @@ export default function CourierDashboardPage() {
             <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-3 px-3 pt-3 pb-4 sm:px-4">
                 {/* Üst satır: sıra bilgisi, üzerindeki nakit ve yenile */}
                 <div className="flex items-center justify-between gap-2">
-                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[.16em] text-muted-foreground">
+                    <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[.16em] text-muted-foreground">
                         {active.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-rb-accent" aria-hidden="true" />}
                         {active.length > 0 ? `Sıradaki · 1 / ${active.length}` : 'Siparişlerim'}
                     </p>
@@ -216,7 +216,7 @@ export default function CourierDashboardPage() {
                             title="Kasaya teslim edeceğiniz nakit"
                         >
                             <Banknote className="h-4 w-4" aria-hidden="true" />
-                            ₺{formatPrice(summary?.outstandingCash ?? 0)} üzerimde
+                            {formatPrice(summary?.outstandingCash ?? 0)} ₺ üzerimde
                         </span>
                         <button
                             type="button"
@@ -249,7 +249,7 @@ export default function CourierDashboardPage() {
 
                         {later.length > 0 && (
                             <section aria-label="Sonraki siparişler" className="flex flex-col gap-2">
-                                <p className="pt-1 text-[11px] font-bold uppercase tracking-[.16em] text-muted-foreground">Sonra</p>
+                                <p className="pt-1 text-xs font-bold uppercase tracking-[.16em] text-muted-foreground">Sonra</p>
                                 {later.map((order, index) => (
                                     <LaterRow
                                         key={order.id}
@@ -267,11 +267,11 @@ export default function CourierDashboardPage() {
                 {(delivered.length > 0 || (summary?.deliveredTodayCount ?? 0) > 0) && (
                     <section className="mt-3" aria-labelledby="courier-delivered-title">
                         <div className="mb-2 flex items-baseline justify-between gap-2">
-                            <h2 id="courier-delivered-title" className="text-[11px] font-bold uppercase tracking-[.16em] text-muted-foreground">
+                            <h2 id="courier-delivered-title" className="text-xs font-bold uppercase tracking-[.16em] text-muted-foreground">
                                 Bugün teslim ettiklerim · {summary?.deliveredTodayCount ?? delivered.length}
                             </h2>
                             {(summary?.outstandingCard ?? 0) > 0 && (
-                                <span className="text-xs font-semibold text-muted-foreground">Kart/IBAN ₺{formatPrice(summary?.outstandingCard ?? 0)}</span>
+                                <span className="text-xs font-semibold text-muted-foreground">Kart/IBAN {formatPrice(summary?.outstandingCard ?? 0)} ₺</span>
                             )}
                         </div>
                         {delivered.length > 0 && (
@@ -286,7 +286,7 @@ export default function CourierDashboardPage() {
                                             </p>
                                         </div>
                                         <div className="flex shrink-0 items-center gap-2">
-                                            <span className="text-lg font-black tabular-nums text-foreground">₺{formatPrice(order.collectedAmount ?? order.total)}</span>
+                                            <span className="text-lg font-black tabular-nums text-foreground">{formatPrice(order.collectedAmount ?? order.total)} ₺</span>
                                             {canUndo(order, now) && (
                                                 <button
                                                     type="button"
@@ -411,7 +411,7 @@ function NextJobCard({ order, now }: { order: CourierOrder; now: number }) {
                     </p>
                     {promise && <p className={cn('text-[13px]', late ? 'font-bold text-rb-red' : 'text-muted-foreground')}>{promise}</p>}
                 </div>
-                <p className="shrink-0 text-[30px] font-black tabular-nums text-foreground">₺{formatPrice(order.total)}</p>
+                <p className="shrink-0 text-[30px] font-black tabular-nums text-foreground">{formatPrice(order.total)} ₺</p>
             </div>
 
             <details className="group border-t border-border">
@@ -452,7 +452,7 @@ function LaterRow({ order, position, now, onFocus }: { order: CourierOrder; posi
                 <span className="block truncate font-bold text-foreground">{order.zoneName} · #{order.number}</span>
                 <span className="block truncate text-sm text-muted-foreground">{doorPaymentLabel(order.paymentPreference)} · {state}</span>
             </span>
-            <span className="shrink-0 text-lg font-black tabular-nums text-foreground">₺{formatPrice(order.total)}</span>
+            <span className="shrink-0 text-lg font-black tabular-nums text-foreground">{formatPrice(order.total)} ₺</span>
         </button>
     );
 }
@@ -589,7 +589,7 @@ function DeliverSheet({ order, busy, onClose, onConfirm }: DeliverSheetProps) {
                     <p className="text-sm text-muted-foreground">Tercih: {methodWord(order.paymentPreference)}</p>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-1">
-                <p className="mt-1 text-[40px] font-black leading-none tabular-nums text-foreground">₺{formatPrice(order.total)}</p>
+                <p className="mt-1 text-[40px] font-black leading-none tabular-nums text-foreground">{formatPrice(order.total)} ₺</p>
 
                 <div className={cn('mt-3 grid gap-2', options3 ? 'grid-cols-3' : 'grid-cols-2')} role="radiogroup" aria-label="Ödeme türü">
                     {methodOptions.map(([value, label, Icon]) => {
@@ -637,7 +637,7 @@ function DeliverSheet({ order, busy, onClose, onConfirm }: DeliverSheetProps) {
                         <p className="mt-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Müşteri ne verdi?</p>
                         <div className="mt-2 grid grid-cols-4 gap-2">
                             {chip(order.total, 'Tam')}
-                            {options.map(v => chip(v, `₺${formatPrice(v)}`))}
+                            {options.map(v => chip(v, `${formatPrice(v)} ₺`))}
                         </div>
                         <input
                             type="number"
@@ -648,18 +648,18 @@ function DeliverSheet({ order, busy, onClose, onConfirm }: DeliverSheetProps) {
                             onChange={e => setCustom(e.target.value)}
                             placeholder="Başka tutar"
                             aria-label="Müşterinin verdiği tutar"
-                            className="mt-2 h-12 w-full rounded-xl border border-border bg-background px-3 text-base tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                            className="mt-2 h-12 w-full rounded-xl border border-border bg-background px-3 text-base tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                         {change !== null && (
                             change >= 0 ? (
                                 <div className="mt-3 flex items-center justify-between rounded-2xl bg-rb-amber-bg px-4 py-3">
                                     <span className="text-[15px] font-semibold text-foreground">{change === 0 ? 'Para üstü yok' : 'Para üstü verin'}</span>
-                                    <span className="text-2xl font-black tabular-nums text-foreground">₺{formatPrice(change)}</span>
+                                    <span className="text-2xl font-black tabular-nums text-foreground">{formatPrice(change)} ₺</span>
                                 </div>
                             ) : (
                                 <div className="mt-3 flex items-center justify-between rounded-2xl bg-rb-red-bg px-4 py-3">
                                     <span className="text-[15px] font-semibold text-rb-red">Eksik ödeme</span>
-                                    <span className="text-2xl font-black tabular-nums text-rb-red">₺{formatPrice(-change)}</span>
+                                    <span className="text-2xl font-black tabular-nums text-rb-red">{formatPrice(-change)} ₺</span>
                                 </div>
                             )
                         )}
@@ -677,7 +677,7 @@ function DeliverSheet({ order, busy, onClose, onConfirm }: DeliverSheetProps) {
                         cash ? 'bg-rb-green text-rb-green-foreground' : method === DoorPayment.Iban ? 'bg-rb-purple text-white' : 'bg-rb-accent text-rb-accent-foreground'
                     )}
                 >
-                    {busy ? 'Kaydediliyor…' : `Teslim ettim · ${methodWord(method)} ₺${formatPrice(order.total)}`}
+                    {busy ? 'Kaydediliyor…' : `Teslim ettim · ${methodWord(method)} ${formatPrice(order.total)} ₺`}
                 </button>
                 <div className="mt-2 flex items-center justify-between gap-3">
                     <p className="text-xs text-muted-foreground">Yanlış seçerseniz 2 dk içinde “Geri al” çıkar.</p>

@@ -21,6 +21,8 @@ import { Switch } from '@/components/ui/switch';
 import { Modal, ModalTitle } from '@/components/ui/modal';
 import { inputClass, labelClass } from '@/lib/formStyles';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { SortModeButton } from '@/components/dnd/SortMode';
+import MenuOrderPanel from './components/MenuOrderPanel';
 
 
 // Hazırlanma süresi ve KDV metin olarak tutulur: boş alan "yok / kategori varsayılanı" demektir.
@@ -36,7 +38,7 @@ function profitHint(price: number, cost: number): { text: string; isLoss: boolea
     const profit = price - cost;
     const margin = Math.round((Math.abs(profit) / price) * 100);
     return {
-        text: `${profit < 0 ? 'Zarar' : 'Kâr'}: ₺${formatPrice(Math.abs(profit))} (%${margin})`,
+        text: `${profit < 0 ? 'Zarar' : 'Kâr'}: ${formatPrice(Math.abs(profit))} ₺ (%${margin})`,
         isLoss: profit < 0,
     };
 }
@@ -46,6 +48,7 @@ export default function Menu() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loaded, setLoaded] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
+    const [sorting, setSorting] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editProduct, setEditProduct] = useState<ProductWithCost | null>(null);
@@ -392,21 +395,45 @@ export default function Menu() {
         }
     };
 
+    const header = (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h1 className="text-2xl font-serif font-bold text-foreground">Yemeklerimiz</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">{activeCount} aktif ürün</p>
+            </div>
+            <div className="flex items-center gap-2">
+                {categories.length > 0 && <SortModeButton active={sorting} onToggle={() => setSorting(v => !v)} />}
+                {!sorting && (
+                    <button
+                        onClick={openCreateModal}
+                        className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    >
+                        + Ürün Ekle
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
+    // Sıralama modu: kartlar ve düzenleme düğmeleri yerine sürüklenebilir kategori/ürün listeleri.
+    if (sorting) {
+        return (
+            <div className="space-y-5">
+                {header}
+                <MenuOrderPanel
+                    categories={categories}
+                    products={products}
+                    initialCategoryId={selectedCategory === 'all' ? null : selectedCategory}
+                    onCategoriesChange={setCategories}
+                    onProductsChange={setProducts}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-5">
-            {/* Header */}
-            <div className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-2xl font-serif font-bold text-foreground">Yemeklerimiz</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">{activeCount} aktif ürün</p>
-                </div>
-                <button
-                    onClick={openCreateModal}
-                    className="flex items-center gap-1.5 bg-rb-gold hover:opacity-90 text-rb-gold-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                >
-                    + Ürün Ekle
-                </button>
-            </div>
+            {header}
 
             {/* Applied Tax Rate Info */}
             {(() => {
@@ -669,12 +696,12 @@ export default function Menu() {
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
                                     {product.isOutOfStock && (
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-rb-red-bg text-rb-red">
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-rb-red-bg text-rb-red">
                                             Tükendi
                                         </span>
                                     )}
                                     <span className={cn(
-                                        "px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase",
+                                        "px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase",
                                         product.isActive ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground"
                                     )}>
                                         {product.isActive ? 'Aktif' : 'Pasif'}
@@ -693,7 +720,7 @@ export default function Menu() {
                                 olsa da olmasa da aynı satırdaki kartlarda fiyat ve çizgi hizalı kalır. */}
                             <div className="mt-auto space-y-3">
                                 <div className="flex items-baseline justify-between gap-2">
-                                    <p className="text-lg font-bold text-foreground">₺{formatPrice(product.price)}</p>
+                                    <p className="text-lg font-bold text-foreground">{formatPrice(product.price)} ₺</p>
                                     {(() => {
                                         const hint = profitHint(product.price, product.cost);
                                         return hint && (

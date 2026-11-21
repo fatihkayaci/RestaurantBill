@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
     AlertCircle, ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, Clock, CreditCard, Gift, MoreHorizontal, Percent, Plus,
-    ReceiptText, Undo2, X, XCircle,
+    QrCode, ReceiptText, Undo2, X, XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -9,6 +9,7 @@ import {
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { orderService } from '@/features/orders/api/orderService';
+import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Order, OrderItem } from '@/features/orders/types';
 import type { Reservation, Table } from '@/features/tables/types';
@@ -18,6 +19,7 @@ import { createHubConnection } from '@/lib/signalrConnection';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatMinutes, formatPrice, prepCountdown } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import CancelOrderItemDialog from '@/features/orders/components/CancelOrderItemDialog';
 import AddItemsView from './AddItemsView';
 import PaymentView, { type PaymentMode } from './PaymentView';
 import MoveTableView from './MoveTableView';
@@ -95,6 +97,8 @@ export default function TableWorkspace({
     const [confirm, setConfirm] = useState<'cancel-order' | 'cancel-reservation' | null>(null);
     const [busy, setBusy] = useState<string | null>(null);
     const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+    // Ürün bazlı iptal penceresinin satırı (3 ayrandan 1'i ya da tamamı).
+    const [cancelItem, setCancelItem] = useState<OrderItem | null>(null);
     const [noteDraft, setNoteDraft] = useState('');
     const [resName, setResName] = useState('');
     const [resContact, setResContact] = useState('');
@@ -160,6 +164,13 @@ export default function TableWorkspace({
         onTablePatch(table.id, { billRequestedAt: at });
         toast.success(cancel ? 'Hesap isteği geri alındı.' : 'Hesap istendi, kasaya bildirildi.');
     }, 'Hesap istenemedi.');
+
+    // Hesap QR'da bir telefona bağlıyken bağı kaldırır (müşteri telefon değiştirdi ya da masayı dışarıdan biri tuttu).
+    const unlockQr = () => run('qr-unlock', async () => {
+        await customerRequestService.unlockQrTable(String(table.id));
+        setOrder(prev => prev ? { ...prev, qrLocked: false } : prev);
+        toast.success('QR kilidi açıldı. Masadan ilk sipariş veren telefon yeni sahibi olur.');
+    }, 'QR kilidi açılamadı.');
 
     const serveItem = (item: OrderItem) => run(`serve-${item.id}`, async () => {
         if (!order) return;
@@ -308,6 +319,7 @@ export default function TableWorkspace({
         hasItems && canTakePayment && canCancelAndDiscount && 'discount',
         hasItems && (canTakePayment || billRequested) && 'bill',
         canReserve && 'reserve',
+        !!order?.qrLocked && 'qr-unlock',
         // Tutar girerek ödeme alınmış hesap iptal edilemez (sunucu da reddeder).
         !!order && canCancelAndDiscount && paidOnAccount === 0 && 'cancel',
     ].filter(Boolean) as string[];
@@ -376,18 +388,18 @@ export default function TableWorkspace({
                             <label key={label} className="flex flex-col gap-1.5">
                                 <span className="text-[13px] font-semibold text-rb-text-sub">{label}</span>
                                 <input type={type} value={value} onChange={e => set(e.target.value)} placeholder={placeholder}
-                                    className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-rb-gold" />
+                                    className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-ring" />
                             </label>
                         ))}
                         <label className="flex flex-col gap-1.5">
                             <span className="text-[13px] font-semibold text-rb-text-sub">Saat</span>
                             <input inputMode="numeric" maxLength={5} value={resTime} onChange={e => setResTime(formatTimeDigits(e.target.value))} placeholder="19:30"
-                                className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-rb-gold" />
+                                className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-ring" />
                         </label>
                         <label className="flex flex-col gap-1.5">
                             <span className="text-[13px] font-semibold text-rb-text-sub">Not (isteğe bağlı)</span>
                             <input value={resNote} onChange={e => setResNote(e.target.value)} placeholder="Doğum günü, özel istek…"
-                                className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-rb-gold" />
+                                className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-ring" />
                         </label>
                     </div>
                 ) : table.status === 3 && !order ? (
@@ -478,7 +490,7 @@ export default function TableWorkspace({
                                                                 onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                                                 placeholder="Ürün notu"
                                                                 aria-label={`${item.productName} notu`}
-                                                                className="mt-1 h-9 rounded-lg border border-border bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-rb-gold"
+                                                                className="mt-1 h-9 rounded-lg border border-border bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                                                             />
                                                         ) : (
                                                             <span className={cn('truncate text-[13px]', sub.late ? 'font-semibold text-rb-red' : 'text-rb-text-sub')}>{sub.text}</span>
@@ -495,7 +507,18 @@ export default function TableWorkspace({
                                                             {busy === `serve-${item.id}` ? '…' : 'Servis et'}
                                                         </button>
                                                     ) : (
-                                                        <span className="shrink-0 text-[15px] font-semibold tabular-nums text-foreground">₺{formatPrice(item.unitPrice * item.quantity)}</span>
+                                                        <span className="shrink-0 text-[15px] font-semibold tabular-nums text-foreground">{formatPrice(item.unitPrice * item.quantity)} ₺</span>
+                                                    )}
+                                                    {canCancelAndDiscount && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCancelItem(item)}
+                                                            disabled={!!busy}
+                                                            aria-label={`${item.productName} iptal et`}
+                                                            className="min-h-11 shrink-0 rounded-xl border border-rb-red/30 px-3 text-sm font-semibold text-rb-red hover:bg-rb-red-bg disabled:opacity-60"
+                                                        >
+                                                            İptal
+                                                        </button>
                                                     )}
                                                 </li>
                                             );
@@ -506,17 +529,24 @@ export default function TableWorkspace({
                         })}
                         <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-3">
                             <div className="flex justify-between text-[13px] text-rb-text-sub">
-                                <span>{itemCount} ürün</span>
+                                <span className="flex items-center gap-2">
+                                    {itemCount} ürün
+                                    {order?.qrLocked && (
+                                        <span className="inline-flex items-center gap-1 font-semibold text-foreground" title="QR'dan yalnız bu masanın telefonu sipariş verir">
+                                            <QrCode className="size-3.5" aria-hidden="true" />QR: telefona bağlı
+                                        </span>
+                                    )}
+                                </span>
                                 {billRequested && order?.billRequestedAt && <span className="font-semibold text-rb-accent">Hesap istendi · {clockTime(order.billRequestedAt)}</span>}
                             </div>
                             <div className="flex items-baseline justify-between">
                                 <span className="text-base font-semibold text-foreground">Toplam</span>
-                                <span className="text-[24px] font-bold tabular-nums text-foreground">₺{formatPrice(total)}</span>
+                                <span className="text-[24px] font-bold tabular-nums text-foreground">{formatPrice(total)} ₺</span>
                             </div>
                             {paidOnAccount > 0 && (
                                 <div className="flex items-baseline justify-between border-t border-border pt-1.5 text-[15px]">
-                                    <span className="font-semibold text-rb-green">Ödenen ₺{formatPrice(paidOnAccount)}</span>
-                                    <span className="font-bold tabular-nums text-foreground">Kalan ₺{formatPrice(due)}</span>
+                                    <span className="font-semibold text-rb-green">Ödenen {formatPrice(paidOnAccount)} ₺</span>
+                                    <span className="font-bold tabular-nums text-foreground">Kalan {formatPrice(due)} ₺</span>
                                 </div>
                             )}
                         </div>
@@ -556,7 +586,7 @@ export default function TableWorkspace({
                             {hasItems && (canTakePayment ? (
                                 <button type="button" onClick={() => openPay('normal')} className="flex h-16 items-center justify-between rounded-2xl bg-foreground px-5 text-background">
                                     <span className="flex items-center gap-2.5 text-[17px] font-bold"><CreditCard className="size-5.5 text-rb-gold" aria-hidden="true" />Ödeme al</span>
-                                    <span className="text-xl font-bold tabular-nums">{paidOnAccount > 0 && <span className="mr-1 text-[13px] font-semibold opacity-70">kalan</span>}₺{formatPrice(due)}</span>
+                                    <span className="text-xl font-bold tabular-nums">{paidOnAccount > 0 && <span className="mr-1 text-[13px] font-semibold opacity-70">kalan</span>}{formatPrice(due)} ₺</span>
                                 </button>
                             ) : (
                                 <button type="button" onClick={() => void requestBill(false)} disabled={busy === 'bill'}
@@ -566,7 +596,7 @@ export default function TableWorkspace({
                                         <span className="flex items-center gap-2.5 text-[17px] font-bold"><ReceiptText className="size-5.5" aria-hidden="true" />{billRequested ? 'Hesap istendi' : 'Hesap iste'}</span>
                                         {billRequested && <span className="text-[12px] font-medium opacity-80">Kasaya yeniden bildirmek için dokunun</span>}
                                     </span>
-                                    <span className="text-xl font-bold tabular-nums">₺{formatPrice(due)}</span>
+                                    <span className="text-xl font-bold tabular-nums">{formatPrice(due)} ₺</span>
                                 </button>
                             ))}
                         </>
@@ -587,6 +617,9 @@ export default function TableWorkspace({
                     ) : (
                         <SheetItem icon={<ReceiptText className="size-5.5" />} title="Hesap iste" hint='Masayı "hesap istendi" işaretle, kasaya bildir' onClick={() => { setSheetOpen(false); void requestBill(false); }} />
                     ))}
+                    {moreItems.includes('qr-unlock') && (
+                        <SheetItem icon={<QrCode className="size-5.5" />} title="QR kilidini aç" hint="Masanın QR'ından başka bir telefon sipariş verebilsin" onClick={() => { setSheetOpen(false); void unlockQr(); }} />
+                    )}
                     {moreItems.includes('reserve') && (
                         <SheetItem icon={<CalendarDays className="size-5.5" />} title="Rezervasyon" hint="Masayı bir saat için ayır" onClick={() => { setSheetOpen(false); setView('reserve'); }} />
                     )}
@@ -597,6 +630,15 @@ export default function TableWorkspace({
                         </>
                     )}
                 </BottomSheet>
+            )}
+
+            {order && (
+                <CancelOrderItemDialog
+                    order={order}
+                    item={cancelItem}
+                    onClose={() => setCancelItem(null)}
+                    onCancelled={() => { void loadOrder(); onRefreshTables(); }}
+                />
             )}
 
             <AlertDialog open={confirm !== null} onOpenChange={open => !open && setConfirm(null)}>
@@ -659,7 +701,7 @@ function OrderStrip({ order, onOpen }: { order: Order | null; onOpen: () => void
                 )}
                 {order?.billRequestedAt && <span className="truncate font-semibold text-rb-accent">Hesap istendi</span>}
                 {order ? (
-                    <span className="truncate tabular-nums">{itemCount} ürün · <strong className="text-foreground">₺{formatPrice(order.totalPrice)}</strong></span>
+                    <span className="truncate tabular-nums">{itemCount} ürün · <strong className="text-foreground">{formatPrice(order.totalPrice)} ₺</strong></span>
                 ) : <span>…</span>}
             </span>
             <ChevronRight className="size-5 shrink-0 text-rb-text-sub" aria-hidden="true" />

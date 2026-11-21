@@ -40,13 +40,13 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
 
         var categories = await db.Categories.AsNoTracking()
             .Where(c => c.BranchId == branch.Id)
-            .OrderBy(c => c.CreatedAt)
+            .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
             .Select(c => new PublicCategoryDto { Id = c.Id, Name = c.Name })
             .ToListAsync(cancellationToken);
 
         var products = await db.Products.AsNoTracking()
             .Where(p => p.Category.BranchId == branch.Id && p.IsActive)
-            .OrderBy(p => p.Name)
+            .OrderBy(p => p.SortOrder).ThenBy(p => p.Name)
             .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.PrepMinutes, p.IsOutOfStock })
             .ToListAsync(cancellationToken);
 
@@ -77,14 +77,14 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
 
         var tables = await db.Tables.AsNoTracking()
             .Where(t => t.Region.BranchId == branch.Id && t.Status != TableStatus.OutOfService)
-            .OrderBy(t => t.Name)
-            .Select(t => new { t.Id, t.Name, t.RegionId, t.Capacity })
+            .Select(t => new { t.Id, t.Name, t.RegionId, t.Capacity, t.SortOrder })
             .ToListAsync(cancellationToken);
 
         foreach (PublicRegionDto region in regions)
         {
             region.Tables = tables
                 .Where(t => t.RegionId == region.Id)
+                .OrderInRegion(t => t.SortOrder, t => t.Name)
                 .Select(t => new PublicTableDto { Id = t.Id, Name = t.Name, Capacity = t.Capacity })
                 .ToList();
             // Bölümün sitedeki fotoğrafı ve açıklaması (Restoran sitesi ayarı).
@@ -131,6 +131,8 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
 public class GetPublicTableQuery : IRequest<Result<PublicTableInfoDto>>
 {
     public Guid TableId { get; set; }
+    /// <summary>Telefonun cihaz anahtarının özeti (X-Device-Token); yalnız OrderLock için okunur, hiçbir şey kilitlemez.</summary>
+    public string? DeviceTokenHash { get; set; }
 }
 
 public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant)
@@ -160,6 +162,7 @@ public class GetPublicTableQueryHandler(IAppDbContext db, ITenantResolver tenant
         table.QrFeatures = QrFeaturesDto.From(branch.GetQrFeatures());
         table.AcceptsOnlineOrders = branch.AcceptsOnlineOrders;
         table.IbanPayment = TableIbanPaymentDto.From(branch);
+        table.OrderLock = QrTableLock.ToWire(await QrTableLock.StateAsync(db, table.Id, request.DeviceTokenHash, cancellationToken));
         return Result<PublicTableInfoDto>.Success(table);
     }
 }

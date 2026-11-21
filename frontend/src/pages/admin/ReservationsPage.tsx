@@ -220,7 +220,7 @@ export default function ReservationsPage() {
                             onChange={e => setQuery(e.target.value)}
                             placeholder="Kod (K7M-2QP), ad ya da telefon"
                             autoComplete="off"
-                            className="h-10 w-full rounded-[10px] border border-border bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-rb-text-sub focus:outline-none focus:ring-2 focus:ring-rb-gold"
+                            className="h-10 w-full rounded-[10px] border border-border bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-rb-text-sub focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                     </div>
                     {query.trim() && visible.length === 0 && (

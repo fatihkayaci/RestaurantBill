@@ -34,7 +34,21 @@ namespace RestaurantBill.Application.Features.Orders.Queries.GetActiveOrderByTab
                 return Result<OrderDto?>.Failure(accessError);
 
             var order = await _orderQueries.GetActiveOrderByTableIdAsync(request.TableId, trackChanges: false, cancellationToken);
-            return Result<OrderDto?>.Success(order?.ToDto());
+            if (order is null)
+                return Result<OrderDto?>.Success(null);
+
+            // Sorgu masayı ve siparişi açanı yüklemez (taşıma komutu da aynı sorguyu izlenen hâliyle kullanır);
+            // ödeme ekranı başlığı masa adını ve açanı buradan alır.
+            OrderDto dto = order.ToDto();
+            dto.TableName = await _db.Tables.AsNoTracking()
+                .Where(t => t.Id == request.TableId)
+                .Select(t => t.Name)
+                .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+            dto.CreatedByUserName = await _db.Users.AsNoTracking()
+                .Where(u => u.Id == order.CreatedUser)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+            return Result<OrderDto?>.Success(dto);
         }
     }
 }

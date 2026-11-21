@@ -17,7 +17,7 @@ export const STATE_STYLE: Record<TableState, { label: string; pill: string; dot:
         label: 'Boş',
         pill: 'bg-rb-green-bg text-rb-green',
         dot: 'bg-rb-green',
-        card: 'bg-transparent border-[1.5px] border-dashed border-[#C9BDA6] dark:border-rb-border',
+        card: 'bg-transparent border-[1.5px] border-dashed border-rb-neutral/75 dark:border-rb-neutral/60', // kenarlık zemine karşı ≥3:1
     },
     occ: {
         label: 'Dolu',

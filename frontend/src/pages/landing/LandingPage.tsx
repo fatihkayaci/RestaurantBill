@@ -4,6 +4,7 @@ import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
 import ProductPreview from "./ProductPreview";
+import { formatTL } from "@/lib/format";
 import {
     BILLING_PERIODS,
     FAQ,
@@ -42,7 +43,7 @@ export default function LandingPage() {
 function SectionHeading({ eyebrow, title, desc }: { eyebrow: string; title: ReactNode; desc?: string }) {
     return (
         <div className="text-center mb-10 md:mb-14 flex flex-col items-center gap-3">
-            <span className="rounded-full px-3.5 py-1 text-[11px] font-bold tracking-[0.6px] uppercase bg-rb-gold-bg text-[#9A7B3F] dark:text-rb-gold">
+            <span className="rounded-full px-3.5 py-1 text-xs font-bold tracking-[0.6px] uppercase bg-rb-gold-bg text-rb-gold">
                 {eyebrow}
             </span>
             <h2 className="font-serif text-[32px] md:text-[44px] font-bold leading-[1.1] text-balance">{title}</h2>
@@ -54,7 +55,7 @@ function SectionHeading({ eyebrow, title, desc }: { eyebrow: string; title: Reac
 function Hero() {
     return (
         <section
-            className={`${SECTION_X} pt-14 md:pt-20 pb-16 md:pb-24 relative overflow-hidden`}
+            className={`rb-on-dark ${SECTION_X} pt-14 md:pt-20 pb-16 md:pb-24 relative overflow-hidden`}
             style={{ background: "linear-gradient(160deg, #120E0A 0%, #241A12 55%, #120E0A 100%)" }}
         >
             <div
@@ -64,7 +65,7 @@ function Hero() {
             />
             <div className="max-w-300 mx-auto grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-12 lg:gap-14 items-center relative">
                 <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <span className="inline-flex items-center gap-2 self-start rounded-full px-3.5 py-1.5 bg-[rgba(200,169,110,0.12)] border border-[rgba(200,169,110,0.25)] text-[11px] font-bold tracking-[0.4px] text-rb-gold">
+                    <span className="inline-flex items-center gap-2 self-start rounded-full px-3.5 py-1.5 bg-[rgba(200,169,110,0.12)] border border-[rgba(200,169,110,0.25)] text-xs font-bold tracking-[0.4px] text-rb-gold">
                         <span className="w-1.5 h-1.5 rounded-full bg-rb-gold animate-pulse" />
                         RESTORAN YÖNETİM SİSTEMİ
                     </span>
@@ -120,7 +121,7 @@ function Highlights() {
                         key={title}
                         className={`flex flex-col sm:flex-row gap-3 py-6 sm:py-8 px-2 sm:px-5 ${i % 2 === 1 ? "border-l" : ""} ${i >= 2 ? "border-t lg:border-t-0" : ""} ${i === 2 ? "lg:border-l" : ""} border-[#e8e0d0] dark:border-[#3d3528]`}
                     >
-                        <span className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center bg-rb-gold-bg text-[#9A7B3F] dark:text-rb-gold">
+                        <span className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center bg-rb-gold-bg text-rb-gold">
                             <Icon size={19} />
                         </span>
                         <div>
@@ -159,12 +160,12 @@ function OrderFlow() {
                             >
                                 <Icon size={24} />
                             </span>
-                            <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rb-gold text-[#1c1510] text-[11px] font-bold flex items-center justify-center">
+                            <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rb-gold text-[#1c1510] text-xs font-bold flex items-center justify-center">
                                 {i + 1}
                             </span>
                         </div>
                         <div className="flex flex-col gap-1 lg:items-center">
-                            <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: TONE[tone].color }}>{who}</span>
+                            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: TONE[tone].color }}>{who}</span>
                             <span className="font-serif text-xl font-bold">{title}</span>
                             <span className="text-[13px] leading-relaxed text-rb-text-sub max-w-60">{desc}</span>
                         </div>
@@ -313,7 +314,7 @@ function Pricing() {
                             >
                                 {period.label}
                                 {period.discountLabel && (
-                                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${selected ? "bg-[#45C87A] text-[#0e0b08]" : "bg-rb-green-bg text-rb-green"}`}>
+                                    <span className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${selected ? "bg-[#45C87A] text-[#0e0b08]" : "bg-rb-green-bg text-rb-green"}`}>
                                         −{period.discountLabel}
                                     </span>
                                 )}
@@ -324,7 +325,7 @@ function Pricing() {
             </div>
 
             <div className="max-w-md mx-auto">
-                <div className="relative overflow-hidden rounded-3xl p-8 flex flex-col gap-5 bg-[#1c1510] dark:bg-[#0e0b08] border border-[rgba(200,169,110,0.4)] shadow-[0_24px_60px_rgba(28,21,16,0.25)]">
+                <div className="rb-on-dark relative overflow-hidden rounded-3xl p-8 flex flex-col gap-5 bg-[#1c1510] dark:bg-[#0e0b08] border border-[rgba(200,169,110,0.4)] shadow-[0_24px_60px_rgba(28,21,16,0.25)]">
                     <div
                         aria-hidden
                         className="absolute -top-24 -right-24 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none"
@@ -337,14 +338,14 @@ function Pricing() {
 
                     <div>
                         <div className="flex items-baseline gap-1 text-[#f2ede4]">
-                            <span className="text-xl font-semibold">₺</span>
                             <span className="font-serif text-[56px] font-bold leading-none">{billing.priceMonthlyEquivalent.toLocaleString("tr-TR")}</span>
+                            <span className="text-xl font-semibold">₺</span>
                             <span className="text-sm text-[rgba(242,237,228,0.5)]">/ ay</span>
                         </div>
                         <div className="text-[12px] mt-1.5 text-[rgba(242,237,228,0.5)]">
                             {billing.months === 1
                                 ? "Her ay faturalandırılır"
-                                : `${billing.label} peşin · toplam ₺${billing.priceTotal.toLocaleString("tr-TR")}`}
+                                : `${billing.label} peşin · toplam ${formatTL(billing.priceTotal)}`}
                         </div>
                     </div>
 
@@ -406,7 +407,7 @@ function Faq() {
 
 function FinalCta() {
     return (
-        <section className={`${SECTION_X} py-20 md:py-24 text-center bg-[#1c1510] dark:bg-[#0e0b08] relative overflow-hidden`}>
+        <section className={`rb-on-dark ${SECTION_X} py-20 md:py-24 text-center bg-[#1c1510] dark:bg-[#0e0b08] relative overflow-hidden`}>
             <div
                 aria-hidden
                 className="absolute left-1/2 -translate-x-1/2 -bottom-60 w-160 h-120 rounded-full blur-3xl opacity-20 pointer-events-none"

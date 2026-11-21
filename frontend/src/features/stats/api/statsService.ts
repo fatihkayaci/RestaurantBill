@@ -15,6 +15,16 @@ export const statsService = {
         const response = await api.put<DashboardCardId[]>('/stats/dashboard-layout', { cards });
         return response.data;
     },
+    /** Şirket Genel Bakış kart sırası (kullanıcı başına). Sunucu yeni kartları sona ekler. */
+    getOwnerDashboardLayout: async () => {
+        const response = await api.get<string[]>('/stats/owner-dashboard-layout');
+        return response.data;
+    },
+    /** null: varsayılan sıraya dön. */
+    saveOwnerDashboardLayout: async (widgets: string[] | null) => {
+        const response = await api.put<string[]>('/stats/owner-dashboard-layout', { widgets });
+        return response.data;
+    },
     getOverview: async () => {
         const response = await api.get<OverviewStats>('/stats/overview');
         return response.data;

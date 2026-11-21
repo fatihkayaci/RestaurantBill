@@ -117,7 +117,7 @@ function Story({ site }: { site: PublicSite }) {
                             const cell = (
                                 <div className="flex h-full flex-col items-center gap-2 px-3 pt-9 text-center">
                                     <dd className={cn(elSerif, 'order-1 m-0 text-[48px] leading-none md:text-[60px]')}>{f.value}</dd>
-                                    <dt className="order-2 text-[11px] uppercase tracking-[0.24em] text-[var(--site-muted)]">{f.label}</dt>
+                                    <dt className="order-2 text-xs uppercase tracking-[0.24em] text-[var(--site-muted)]">{f.label}</dt>
                                 </div>
                             );
                             return (

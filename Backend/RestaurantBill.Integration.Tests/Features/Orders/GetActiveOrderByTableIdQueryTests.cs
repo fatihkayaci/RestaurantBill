@@ -38,6 +38,31 @@ public class GetActiveOrderByTableIdQueryTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Handle_ReturnsTableNameAndCreatorName()
+    {
+        // Ödeme ekranı başlığı ("Masa 8 · Hesap") masa adını ve siparişi açanı bu yanıttan alır.
+        User waiter = User.Create("Garson Ali", "ali@test.com", "05000000001");
+        DbContext.Users.Add(waiter);
+        DbContext.Entry(waiter).Property(u => u.Id).CurrentValue = UserId;
+        var table = Table.Create("Masa 8", "", RestaurantId);
+        table.AssignRegion(DefaultRegionId);
+        await DbContext.Tables.AddAsync(table);
+        await DbContext.SaveChangesAsync();
+
+        await DbContext.Orders.AddAsync(CreateOrder(table));
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        var result = await _handler.Handle(
+            new GetActiveOrderByTableIdQuery { TableId = table.Id },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Masa 8", result.Value!.TableName);
+        Assert.Equal("Garson Ali", result.Value.CreatedByUserName);
+    }
+
+    [Fact]
     public async Task Handle_WhenMultipleTablesExist_ReturnsOrderForCorrectTable()
     {
         var table1 = Table.Create("Masa 1", "", RestaurantId);

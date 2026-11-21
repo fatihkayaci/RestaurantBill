@@ -39,7 +39,7 @@ namespace RestaurantBill.Application.Features.Restaurants.Commands.DeleteBranch
                     && _db.Users.Any(u => u.Id == ub.UserId && !u.IsDeleted), cancellationToken);
             int openOrders = await _db.Orders
                 .CountAsync(o => o.BranchId == branchId && !o.IsDeleted
-                    && o.OrderType != OrderType.Delivery
+                    && o.OrderType != OrderType.Delivery && o.OrderType != OrderType.Takeaway
                     && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled, cancellationToken);
             int openShifts = await _db.Shifts
                 .CountAsync(s => s.BranchId == branchId && s.Status == ShiftStatus.Open, cancellationToken);

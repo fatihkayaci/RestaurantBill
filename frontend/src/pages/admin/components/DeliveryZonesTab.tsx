@@ -51,15 +51,15 @@ function describeChanges(row: Row, before: Row): string[] {
     const name = before.name || 'Adsız bölge';
     const out: string[] = [];
     if (row.name !== before.name) out.push(`${name} adı → ${row.name.trim() || '(boş)'}`);
-    if (row.fee !== before.fee) out.push(`${name} ücreti ₺${num(before.fee)} → ₺${num(row.fee)}`);
-    if (row.minOrderAmount !== before.minOrderAmount) out.push(`${name} en az sepeti ₺${num(before.minOrderAmount)} → ₺${num(row.minOrderAmount)}`);
+    if (row.fee !== before.fee) out.push(`${name} ücreti ${num(before.fee)} ₺ → ${num(row.fee)} ₺`);
+    if (row.minOrderAmount !== before.minOrderAmount) out.push(`${name} en az sepeti ${num(before.minOrderAmount)} ₺ → ${num(row.minOrderAmount)} ₺`);
     if (row.estimatedMinutes !== before.estimatedMinutes) out.push(`${name} süresi ${num(before.estimatedMinutes)} → ${num(row.estimatedMinutes)} dk`);
     if (row.isActive !== before.isActive) out.push(`${name} ${row.isActive ? 'açıldı' : 'kapatıldı'}`);
     return out;
 }
 
 function zoneSummary(row: DeliveryZoneInput): string {
-    const parts = `₺${num(row.fee)} teslimat · en az ₺${num(row.minOrderAmount)} · ~${num(row.estimatedMinutes)} dk`;
+    const parts = `${num(row.fee)} ₺ teslimat · en az ${num(row.minOrderAmount)} ₺ · ~${num(row.estimatedMinutes)} dk`;
     return row.isActive ? parts : `Kapalı · ${parts}`;
 }
 
@@ -254,7 +254,7 @@ export default function DeliveryZonesTab({ onDirtyChange }: Props) {
             <div className="hidden overflow-hidden rounded-2xl border border-border bg-card md:block">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="border-b border-border text-left text-[11px] uppercase tracking-widest text-muted-foreground">
+                        <tr className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
                             <th className="w-24 px-4 py-2.5 font-semibold">Sıra</th>
                             <th className="px-2 py-2.5 font-semibold">Mahalle</th>
                             <th className="w-32 px-2 py-2.5 font-semibold">Ücret</th>
@@ -365,7 +365,7 @@ export default function DeliveryZonesTab({ onDirtyChange }: Props) {
                                 <span className="block truncate font-semibold text-foreground">{row.name || 'Adsız bölge'}</span>
                                 <span className="block truncate text-xs text-muted-foreground tabular-nums">{zoneSummary(row)}</span>
                             </span>
-                            {changed && <span className="text-[11px] font-semibold text-rb-gold">Değişti</span>}
+                            {changed && <span className="text-xs font-semibold text-rb-gold">Değişti</span>}
                             <span className={cn('h-2 w-2 shrink-0 rounded-full', row.isActive ? 'bg-rb-green' : 'bg-border')} aria-label={row.isActive ? 'Açık' : 'Kapalı'} />
                             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                         </button>

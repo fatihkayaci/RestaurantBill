@@ -109,7 +109,12 @@ export default function OrderRequestAlerts({ variant }: Props) {
                 </h2>
                 <div id="staff-blocking-alert-desc" className="mt-4">
                     {single ? (
-                        <p className="m-0 text-lg text-muted-foreground">{single.detail}</p>
+                        <>
+                            {single.warning && (
+                                <p className="m-0 mb-2 inline-flex rounded-full bg-rb-amber-bg px-3 py-1 text-base font-bold text-rb-amber">{single.warning}</p>
+                            )}
+                            <p className="m-0 text-lg text-muted-foreground">{single.detail}</p>
+                        </>
                     ) : (
                         <ul className="m-0 flex max-h-[45vh] list-none flex-col gap-2 overflow-y-auto p-0 text-left">
                             {alerts.map(a => (
@@ -122,6 +127,7 @@ export default function OrderRequestAlerts({ variant }: Props) {
                                         <span className="min-w-0 flex-1">
                                             <span className="block text-lg font-bold">{a.tableName}</span>
                                             <span className={cn('block text-sm font-semibold', KIND_UI[a.kind].text)}>{KIND_UI[a.kind].label}</span>
+                                            {a.warning && <span className="block text-sm font-bold text-rb-amber">{a.warning}</span>}
                                         </span>
                                     </button>
                                 </li>

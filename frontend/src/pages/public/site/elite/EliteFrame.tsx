@@ -93,7 +93,7 @@ export function EliteHeader({ site, current, overlay, sticky }: { site: PublicSi
                             className={cn('inline-flex min-h-11 items-center gap-2.5 text-xs uppercase tracking-[0.22em] text-[var(--site-on-paper)] no-underline hover:opacity-75', orderX.className)}>
                             <span className="hidden sm:inline">Sepet</span>
                             <svg aria-hidden="true" className="sm:hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 7h12l-1 13H7L6 7z" /><path d="M9 7a3 3 0 0 1 6 0" /></svg>
-                            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-[var(--site-accent-on-dark)] px-1.5 text-[11px] tracking-normal tabular-nums text-[var(--site-accent-on-dark)]">{cart.count}</span>
+                            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-[var(--site-accent-on-dark)] px-1.5 text-xs tracking-normal tabular-nums text-[var(--site-accent-on-dark)]">{cart.count}</span>
                         </Link>
                     )}
                     {canReserve ? (
@@ -180,10 +180,10 @@ export function EliteFooter({ site, bottomBar, visit }: { site: PublicSite; bott
     const showContact = visit && (Boolean(site.phone) || hasSocial);
     const cols = [showAddress, showHours, showContact].filter(Boolean).length + 1;
 
-    const label = cn(elLabel, 'm-0 text-[11px] tracking-[0.34em] text-[var(--site-accent-on-dark)]');
+    const label = cn(elLabel, 'm-0 text-xs tracking-[0.34em] text-[var(--site-accent-on-dark)]');
     const muted = 'text-[var(--site-footer-muted)]';
     const col = 'flex min-w-0 flex-col gap-4 border-[color-mix(in_srgb,var(--site-accent-on-dark)_25%,transparent)] py-8 first:pt-0 md:py-0 lg:px-9 lg:first:pl-0 lg:last:pr-0';
-    const underline = 'inline-flex min-h-11 items-center border-b border-[var(--site-accent-on-dark)] text-[11px] uppercase tracking-[0.26em] text-[var(--site-on-footer)] no-underline hover:opacity-75';
+    const underline = 'inline-flex min-h-11 items-center border-b border-[var(--site-accent-on-dark)] text-xs uppercase tracking-[0.26em] text-[var(--site-on-footer)] no-underline hover:opacity-75';
     const pageLink = 'inline-flex min-h-11 items-center self-start text-xs uppercase tracking-[0.22em] text-[var(--site-on-footer)] no-underline hover:opacity-75';
 
     return (
@@ -207,7 +207,7 @@ export function EliteFooter({ site, bottomBar, visit }: { site: PublicSite; bott
                         </div>
                         <div className="flex flex-wrap gap-3">
                             {buttons.map((b, i) => (
-                                <Link key={b.key} to={b.to} className={cn(i === 0 ? elButton.gold : elButton.ghost, 'min-h-12 px-7 text-[11px] tracking-[0.28em] md:min-h-12')}>{b.label}</Link>
+                                <Link key={b.key} to={b.to} className={cn(i === 0 ? elButton.gold : elButton.ghost, 'min-h-12 px-7 text-xs tracking-[0.28em] md:min-h-12')}>{b.label}</Link>
                             ))}
                         </div>
                     </div>
@@ -224,7 +224,7 @@ export function EliteFooter({ site, bottomBar, visit }: { site: PublicSite; bott
                                 {site.openAddress && (site.district || site.city) && <><br />{[site.district, site.city].filter(Boolean).join(', ')}</>}
                             </p>
                             {content.directionsNote && <p className={cn('m-0 text-sm leading-relaxed', muted)}>{content.directionsNote}</p>}
-                            <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cn('inline-flex min-h-11 items-center self-start text-[11px] uppercase tracking-[0.28em] no-underline hover:opacity-75', muted)}>Yol tarifi →</a>
+                            <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className={cn('inline-flex min-h-11 items-center self-start text-xs uppercase tracking-[0.28em] no-underline hover:opacity-75', muted)}>Yol tarifi →</a>
                         </div>
                     )}
                     {showHours && rows && (
@@ -265,7 +265,7 @@ export function EliteFooter({ site, bottomBar, visit }: { site: PublicSite; bott
                 </div>
             </div>
 
-            <div className="mx-auto mt-16 flex max-w-[1280px] flex-wrap justify-between gap-x-6 border-t border-[color-mix(in_srgb,var(--site-on-footer)_10%,transparent)] px-4 pb-4 pt-3 text-[11px] uppercase tracking-[0.22em] text-[var(--site-footer-muted)] sm:px-10">
+            <div className="mx-auto mt-16 flex max-w-[1280px] flex-wrap justify-between gap-x-6 border-t border-[color-mix(in_srgb,var(--site-on-footer)_10%,transparent)] px-4 pb-4 pt-3 text-xs uppercase tracking-[0.22em] text-[var(--site-footer-muted)] sm:px-10">
                 <span {...fixedX} className={cn('inline-flex min-h-11 items-center', fixedX.className)}>© {new Date().getFullYear()} {name} ·&nbsp;<span className="text-[var(--site-on-footer)]">Sophram</span>&nbsp;ile hazırlandı</span>
                 <div className="flex flex-wrap gap-x-6">
                     <Link to="/gizlilik-politikasi" {...fixedX} className={cn('inline-flex min-h-11 min-w-11 items-center justify-center text-[var(--site-footer-muted)] no-underline hover:text-[var(--site-on-footer)]', fixedX.className)}>KVKK</Link>

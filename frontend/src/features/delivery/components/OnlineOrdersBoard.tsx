@@ -13,13 +13,14 @@ import { formatAmount, formatElapsed, formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { deliveryService, type OnlineOrderingStatus } from '../api/deliveryService';
 import {
-    ETA_CHOICES, boardColumnOf, countdownText, courierLoadText, deliveryLateness, mergeBoardOrders, orderTitle, type BoardColumnKey,
+    ETA_CHOICES, PICKUP_ETA_CHOICES, boardColumnOf, countdownText, courierLoadText, deliveryLateness, mergeBoardOrders, orderTitle, type BoardColumnKey,
 } from '../deliveryStatus';
 import { onlineOrderSound } from '../onlineOrderSound';
 import { markOnlineOrderSeen, subscribeOnlineOrders } from '../onlineOrdersHub';
 import { DeliveryStatus, DoorPayment, doorPaymentWord, type DeliveryOrder } from '../types';
 import CourierPicker from './CourierPicker';
 import DeliveryOrderDetail from './DeliveryOrderDetail';
+import PickupBadge from './PickupBadge';
 import LatenessBadge from './LatenessBadge';
 
 interface Props {
@@ -64,8 +65,13 @@ const FOCUS_DARK = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus
 /** "Teslim edildi" bölümünde kasaya alınmışlardan kaç tanesi açık durur; gerisi "Tümünü göster" ile. */
 const SETTLED_VISIBLE = 6;
 
-const canAssignCourier = (status: DeliveryOrder['status']) =>
-    status === DeliveryStatus.Accepted || status === DeliveryStatus.Preparing || status === DeliveryStatus.Ready;
+// Gel al siparişine kurye atanmaz; müşteri restorandan alır.
+const canAssignCourier = (order: DeliveryOrder) => !order.isPickup
+    && (order.status === DeliveryStatus.Accepted || order.status === DeliveryStatus.Preparing || order.status === DeliveryStatus.Ready);
+
+/** Gel al: onaylanmış, müşteriye henüz verilmemiş (mutfak "hazır" demeden de müşteri gelebilir). */
+const canHandOverPickup = (order: DeliveryOrder) => !!order.isPickup
+    && (order.status === DeliveryStatus.Accepted || order.status === DeliveryStatus.Preparing || order.status === DeliveryStatus.Ready);
 
 function timeOf(iso?: string | null): string {
     return iso ? new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '';
@@ -92,20 +98,27 @@ const isUrgent = (order: DeliveryOrder, now: number) =>
     !!order.autoRejectAt && new Date(order.autoRejectAt).getTime() - now < 2 * 60_000;
 
 function etaChoicesFor(order: DeliveryOrder): number[] {
+    const choices: readonly number[] = order.isPickup ? PICKUP_ETA_CHOICES : ETA_CHOICES;
     const suggested = order.suggestedEtaMinutes > 0 ? order.suggestedEtaMinutes : 30;
-    return (ETA_CHOICES as readonly number[]).includes(suggested)
-        ? [...ETA_CHOICES]
-        : [...ETA_CHOICES, suggested].sort((a, b) => a - b).slice(-4);
+    return choices.includes(suggested)
+        ? [...choices]
+        : [...choices, suggested].sort((a, b) => a - b).slice(-4);
 }
 
-/** Kapıda ödeme şekli: kuryenin ne tahsil edeceği. IBAN'da müşteri havale yapar, kurye para almaz. */
+/**
+ * Ödeme şekli: kuryenin kapıda ne tahsil edeceği; gel al'da kasada ne alınacağı. IBAN'da müşteri havale yapar, kurye
+ * para almaz.
+ */
 function paymentInfo(order: DeliveryOrder) {
+    // Gel al'da tercih yoksa müşteri restoranda öder; yöntem "Müşteri aldı"da seçilir.
+    if (order.paymentPreference == null)
+        return { Icon: Wallet, label: 'Restoranda ödeyecek', note: null, tone: 'text-muted-foreground' };
     const cash = order.paymentPreference === DoorPayment.Nakit;
     const iban = order.paymentPreference === DoorPayment.Iban;
     return {
         Icon: cash ? Banknote : iban ? Landmark : CreditCard,
-        label: iban ? 'IBAN (havale)' : `Kapıda ${cash ? 'nakit' : 'kart'}`,
-        note: iban ? 'kurye para almaz' : null,
+        label: iban ? 'IBAN (havale)' : `${order.isPickup ? 'Kasada' : 'Kapıda'} ${cash ? 'nakit' : 'kart'}`,
+        note: iban ? (order.isPickup ? 'havaleyi kontrol edin' : 'kurye para almaz') : null,
         tone: cash ? 'text-rb-green' : iban ? 'text-rb-purple' : 'text-rb-accent',
     };
 }
@@ -389,8 +402,10 @@ export default function OnlineOrdersBoard({ canBlockPhone, className, title, set
                                 label={lane.label}
                                 hint={lane.key === 'ready'
                                     ? (() => {
-                                        const waiting = columns.ready.filter(o => !o.courierUserId).length;
-                                        return waiting > 0 ? `${waiting} paket kuryesiz` : undefined;
+                                        const waiting = columns.ready.filter(o => !o.isPickup && !o.courierUserId).length;
+                                        const pickups = columns.ready.filter(o => o.isPickup).length;
+                                        const parts = [waiting > 0 ? `${waiting} paket kuryesiz` : null, pickups > 0 ? `${pickups} gel al bekliyor` : null];
+                                        return parts.filter(Boolean).join(' · ') || undefined;
                                     })()
                                     : lane.hint}
                                 empty={lane.empty}
@@ -489,7 +504,7 @@ function BoardHeader({ title, settingsHref, status, pausing, onSetOpen, stats, s
                 {title && <h1 className="font-serif text-[32px] font-semibold leading-none text-foreground">{title}</h1>}
                 <p className="text-sm text-muted-foreground">
                     Bugün <b className="tabular-nums text-foreground">{stats.todayCount} teslim</b>
-                    {' · '}<b className="tabular-nums text-foreground">₺{formatPrice(stats.todayTotal)}</b>
+                    {' · '}<b className="tabular-nums text-foreground">{formatPrice(stats.todayTotal)} ₺</b>
                     {stats.avgMinutes !== null && <>{' · '}ort. <b className="tabular-nums text-foreground">{stats.avgMinutes} dk</b></>}
                     {stats.late > 0 && <>{' · '}<b className="tabular-nums text-rb-red">{stats.late} geciken</b></>}
                 </p>
@@ -554,7 +569,7 @@ function BoardHeader({ title, settingsHref, status, pausing, onSetOpen, stats, s
                 </div>
 
                 <button type="button" onClick={onOpenKasa} className={cn(ctl, 'border-rb-gold/60 bg-rb-gold-bg text-foreground hover:bg-rb-gold/20')}>
-                    <Bike className="h-4 w-4" aria-hidden="true" />Kurye kasası · <b className="tabular-nums">₺{formatPrice(courierCash)}</b>
+                    <Bike className="h-4 w-4" aria-hidden="true" />Kurye kasası · <b className="tabular-nums">{formatPrice(courierCash)} ₺</b>
                 </button>
 
                 <button
@@ -645,7 +660,7 @@ function Inbox({ orders, active, now, paused, soundOn, onPick, eta, onEta, busy,
                                                 <span className="min-w-0 flex-1 text-sm">
                                                     <b className="block truncate">{o.customerName}</b>
                                                     <span className="block truncate text-xs text-muted-foreground">
-                                                        {[o.zoneName, `${itemCount(o)} ürün`, `₺${formatPrice(o.total)}`].filter(Boolean).join(' · ')}
+                                                        {[o.isPickup ? 'Gel al' : o.zoneName, `${itemCount(o)} ürün`, `${formatPrice(o.total)} ₺`].filter(Boolean).join(' · ')}
                                                     </span>
                                                 </span>
                                                 {o.autoRejectAt && (
@@ -696,7 +711,7 @@ function CountdownRing({ order, now }: { order: DeliveryOrder; now: number }) {
             </svg>
             <span className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
                 <b className={cn('text-lg tabular-nums leading-tight', urgent && 'text-rb-red')}>{text}</b>
-                <span className="text-[9px] tracking-[.12em] text-muted-foreground">{has ? 'YANITLA' : 'BEKLİYOR'}</span>
+                <span className="text-xs tracking-[.12em] text-muted-foreground">{has ? 'YANITLA' : 'BEKLİYOR'}</span>
             </span>
         </div>
     );
@@ -723,7 +738,13 @@ function InboxCard({ order, now, eta, onEta, busy, onAccept, onReject, onOpen }:
                 </div>
             </div>
 
-            {(order.zoneName || order.address) && (
+            {order.isPickup && (
+                <div className="mt-4 flex items-center gap-2 rounded-xl bg-foreground/[.06] px-3.5 py-3 text-sm leading-relaxed">
+                    <PickupBadge />
+                    <span className="min-w-0 break-words">Müşteri restorana gelip alacak · kurye yok</span>
+                </div>
+            )}
+            {!order.isPickup && (order.zoneName || order.address) && (
                 <div className="mt-4 flex items-start gap-2 rounded-xl bg-foreground/[.06] px-3.5 py-3 text-sm leading-relaxed">
                     <MapPin className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <span className="min-w-0 break-words">
@@ -743,7 +764,7 @@ function InboxCard({ order, now, eta, onEta, busy, onAccept, onReject, onOpen }:
                             {line.selections.length > 0 && <span className="block text-xs text-muted-foreground">{line.selections.join(', ')}</span>}
                             {line.note && <span className="block text-xs font-semibold text-rb-amber">Not: {line.note}</span>}
                         </span>
-                        <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">₺{formatAmount(line.lineTotal)}</span>
+                        <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">{formatAmount(line.lineTotal)} ₺</span>
                     </li>
                 ))}
             </ul>
@@ -756,7 +777,7 @@ function InboxCard({ order, now, eta, onEta, busy, onAccept, onReject, onOpen }:
             )}
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3.5">
-                <span className="font-serif text-[30px] font-semibold leading-none tabular-nums">₺{formatPrice(order.total)}</span>
+                <span className="font-serif text-[30px] font-semibold leading-none tabular-nums">{formatPrice(order.total)} ₺</span>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground/20 px-2.5 py-1 text-xs font-semibold">
                     <PayIcon className={cn('h-3.5 w-3.5', pay.tone)} aria-hidden="true" />
                     {pay.label}{pay.note && <span className="text-muted-foreground">· {pay.note}</span>}
@@ -768,7 +789,7 @@ function InboxCard({ order, now, eta, onEta, busy, onAccept, onReject, onOpen }:
                 Tüm ayrıntılar · numara engelleme
             </button>
 
-            <p id={`eta-${order.id}`} className="mt-2 text-[11px] font-semibold uppercase tracking-[.14em] text-muted-foreground">Müşteriye söylenecek süre</p>
+            <p id={`eta-${order.id}`} className="mt-2 text-xs font-semibold uppercase tracking-[.14em] text-muted-foreground">Müşteriye söylenecek süre</p>
             <div className="mt-2 flex gap-1.5" role="radiogroup" aria-labelledby={`eta-${order.id}`}>
                 {etaChoicesFor(order).map(m => (
                     <button
@@ -834,8 +855,8 @@ function CourierStrip({ couriers, onOpen }: { couriers: CourierCashSummary[]; on
                                 <span className={cn('block truncate text-xs', onRoad ? 'text-rb-amber' : free ? 'text-rb-green' : 'text-rb-accent')}>{courierLoadText(c)}</span>
                             </span>
                             <span className="shrink-0 text-right">
-                                <b className="block text-[15px] tabular-nums text-foreground">₺{formatPrice(c.outstandingCash)}</b>
-                                <span className={cn('text-[11px]', old ? 'font-semibold text-rb-red' : 'text-muted-foreground')}>
+                                <b className="block text-[15px] tabular-nums text-foreground">{formatPrice(c.outstandingCash)} ₺</b>
+                                <span className={cn('text-xs', old ? 'font-semibold text-rb-red' : 'text-muted-foreground')}>
                                     {old ? 'önceki günden kalan' : 'kuryede nakit'}
                                 </span>
                             </span>
@@ -925,7 +946,7 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
     const pay = paymentInfo(order);
     const isReady = order.status === DeliveryStatus.Ready;
     const onTheWay = order.status === DeliveryStatus.OnTheWay;
-    const needsCourier = isReady && !order.courierUserId;
+    const needsCourier = isReady && !order.isPickup && !order.courierUserId;
     const detailsId = `flow-${order.id}`;
 
     const summary = [
@@ -945,7 +966,22 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
                 </span>
             </span>
         );
-    } else if (canAssignCourier(order.status)) {
+    } else if (canHandOverPickup(order)) {
+        // Gel al: kurye yok; müşteri gelince ödemeyi alıp "Müşteri aldı" (detayda kasa ve ödeme seçilir).
+        action = (
+            <button
+                type="button"
+                onClick={() => onOpen(order.id)}
+                className={cn(
+                    'flex h-11 w-full items-center justify-center gap-1.5 rounded-[10px] px-3 text-sm font-semibold transition-colors',
+                    isReady ? 'bg-foreground text-background hover:opacity-90' : 'border border-border bg-card text-foreground hover:border-rb-gold',
+                    FOCUS
+                )}
+            >
+                Müşteri aldı →
+            </button>
+        );
+    } else if (canAssignCourier(order)) {
         action = (
             <button
                 type="button"
@@ -973,13 +1009,13 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
     }
 
     return (
-        <li className={cn(needsCourier && 'bg-rb-purple-bg/60')}>
+        <li className={cn((needsCourier || (order.isPickup && isReady)) && 'bg-rb-purple-bg/60')}>
             <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/40 @3xl:grid @3xl:grid-cols-[150px_minmax(0,1fr)_130px_190px]">
                 <span className="order-1"><TimePill order={order} now={now} /></span>
                 <span className="order-2 ml-auto text-right text-[13px] leading-tight @3xl:order-3 @3xl:ml-0">
-                    <b className="block text-base tabular-nums text-foreground">₺{formatPrice(order.total)}</b>
+                    <b className="block text-base tabular-nums text-foreground">{formatPrice(order.total)} ₺</b>
                     <span className={cn('font-semibold', pay.tone)}>{pay.label}</span>
-                    {pay.note && <span className="block text-[11px] text-muted-foreground">{pay.note}</span>}
+                    {pay.note && <span className="block text-xs text-muted-foreground">{pay.note}</span>}
                 </span>
                 <button
                     type="button"
@@ -991,7 +1027,9 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
                     <span className="block truncate text-[15px] font-semibold text-foreground">
                         <span className="mr-1.5 font-serif text-lg font-bold tabular-nums">#{order.number}</span>
                         {order.customerName}
-                        {order.zoneName && <span className="font-normal text-muted-foreground"> · {order.zoneName}</span>}
+                        {order.isPickup
+                            ? <PickupBadge className="ml-1.5" />
+                            : order.zoneName && <span className="font-normal text-muted-foreground"> · {order.zoneName}</span>}
                     </span>
                     <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                         <span className="min-w-0 truncate">{summary}</span>
@@ -1004,9 +1042,11 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
             {expanded && (
                 <div id={detailsId} className="grid gap-4 px-4 pb-4 text-[13px] leading-relaxed motion-safe:animate-in motion-safe:fade-in @3xl:grid-cols-2 @3xl:pl-[180px]">
                     <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Adres</p>
+                        <p className="text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">{order.isPickup ? 'Teslim' : 'Adres'}</p>
                         <p className="break-words text-foreground">
-                            {order.zoneName && <b>{order.zoneName}</b>}{order.zoneName && order.address ? ' · ' : ''}{order.address}
+                            {order.isPickup
+                                ? 'Gel al · müşteri restorandan alacak'
+                                : <>{order.zoneName && <b>{order.zoneName}</b>}{order.zoneName && order.address ? ' · ' : ''}{order.address}</>}
                         </p>
                         {order.addressDirections && <p className="text-muted-foreground">Tarif: {order.addressDirections}</p>}
                         <a href={telUrl(order.customerPhone)} className={cn('inline-flex min-h-9 items-center gap-1.5 rounded font-semibold tabular-nums text-rb-accent', FOCUS)}>
@@ -1019,7 +1059,7 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
                         )}
                     </div>
                     <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Ürünler · {itemCount(order)}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Ürünler · {itemCount(order)}</p>
                         <ul>
                             {order.lines.map((line, i) => (
                                 <li key={i} className="break-words text-foreground">
@@ -1039,7 +1079,7 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
                 </div>
             )}
 
-            {pickerOpen && canAssignCourier(order.status) && (
+            {pickerOpen && canAssignCourier(order) && (
                 <div className="px-4 pb-4 motion-safe:animate-in motion-safe:fade-in @3xl:pl-[180px]">
                     <p className="mb-2 text-xs font-semibold text-muted-foreground">Kurye seç</p>
                     <div className="max-w-md">
@@ -1076,7 +1116,7 @@ function DeliveredSection({ unsettled, unsettledTotal, settled, now, onOpen, wid
                         <span className="flex items-center gap-1">
                             <Wallet className="h-3.5 w-3.5" aria-hidden="true" />Kasaya teslim edilmedi · {unsettled.length}
                         </span>
-                        <span className="tabular-nums">₺{formatPrice(unsettledTotal)}</span>
+                        <span className="tabular-nums">{formatPrice(unsettledTotal)} ₺</span>
                     </p>
                     <div className={grid}>
                         {unsettled.map(order => <DeliveredRow key={order.id} order={order} now={now} onOpen={() => onOpen(order.id)} />)}
@@ -1110,7 +1150,8 @@ function DeliveredSection({ unsettled, unsettledTotal, settled, now, onOpen, wid
 // Teslim edilmiş sipariş: tek satır; dokununca detay açılır.
 function DeliveredRow({ order, now, onOpen }: { order: DeliveryOrder; now: number; onOpen: () => void }) {
     const amount = order.collectedAmount ?? order.total;
-    const method = doorPaymentWord(order.collectedMethod ?? order.paymentPreference);
+    const paidWith = order.collectedMethod ?? order.paymentPreference;
+    const method = paidWith == null ? '' : doorPaymentWord(paidWith);
     return (
         <button
             type="button"
@@ -1119,10 +1160,10 @@ function DeliveredRow({ order, now, onOpen }: { order: DeliveryOrder; now: numbe
         >
             <span className="flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate text-sm font-bold text-foreground">{orderTitle(order)}</span>
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">₺{formatPrice(amount)} <span className="text-[10px] font-bold uppercase text-muted-foreground">{method}</span></span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatPrice(amount)} ₺ <span className="text-xs font-bold uppercase text-muted-foreground">{method}</span></span>
             </span>
-            <span className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                <span className="min-w-0 truncate">{timeOf(order.deliveredAt)}{order.courierName ? ` · ${order.courierName}` : ''}</span>
+            <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span className="min-w-0 truncate">{timeOf(order.deliveredAt)}{order.isPickup ? ' · müşteri aldı' : order.courierName ? ` · ${order.courierName}` : ''}</span>
                 <LatenessBadge order={order} now={now} className="py-0" />
             </span>
         </button>
@@ -1234,7 +1275,7 @@ function ListView({ orders, now, couriers, pickerFor, onTogglePicker, assigning,
                         );
                     })}
                 </div>
-                <label className="flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-rb-accent lg:ml-auto lg:w-64">
+                <label className="flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-ring lg:ml-auto lg:w-64">
                     <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
                     <input
                         type="search"
@@ -1253,7 +1294,7 @@ function ListView({ orders, now, couriers, pickerFor, onTogglePicker, assigning,
                 </p>
             ) : (
                 <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                    <div className="hidden grid-cols-[minmax(0,1.6fr)_120px_90px_130px_110px_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 border-b border-border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground lg:grid">
+                    <div className="hidden grid-cols-[minmax(0,1.6fr)_120px_90px_130px_110px_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 border-b border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground lg:grid">
                         <span>Sipariş</span><span>Durum</span><span>Süre</span><span>Söz</span><span className="text-right">Tutar</span><span>Kurye</span><span />
                     </div>
                     <ul className="divide-y divide-border">
@@ -1301,7 +1342,7 @@ function ListRow({ order, now, couriers, pickerOpen, onTogglePicker, assigning, 
     const pill = STATUS_TONE[key];
     const isNew = order.status === DeliveryStatus.Received;
     const urgent = isNew && isUrgent(order, now);
-    const canAssign = canAssignCourier(order.status);
+    const canAssign = canAssignCourier(order);
     const cash = order.paymentPreference === DoorPayment.Nakit;
 
     return (
@@ -1317,10 +1358,14 @@ function ListRow({ order, now, couriers, pickerOpen, onTogglePicker, assigning, 
                 </span>
                 <span className="min-w-0">{isNew ? <span className="text-sm text-muted-foreground">—</span> : <LatenessBadge order={order} now={now} />}</span>
                 <span className="ml-auto text-right font-serif text-lg font-bold tabular-nums text-foreground lg:ml-0">
-                    ₺{formatPrice(order.total)}{' '}
-                    <span className={cn('font-sans text-[10px] font-bold', cash ? 'text-rb-green' : order.paymentPreference === DoorPayment.Iban ? 'text-rb-purple' : 'text-rb-accent')}>
-                        {cash ? 'NAKİT' : order.paymentPreference === DoorPayment.Iban ? 'IBAN' : 'KART'}
-                    </span>
+                    {formatPrice(order.total)} ₺{' '}
+                    {order.paymentPreference == null ? (
+                        <span className="font-sans text-xs font-bold text-muted-foreground">KASADA</span>
+                    ) : (
+                        <span className={cn('font-sans text-xs font-bold', cash ? 'text-rb-green' : order.paymentPreference === DoorPayment.Iban ? 'text-rb-purple' : 'text-rb-accent')}>
+                            {cash ? 'NAKİT' : order.paymentPreference === DoorPayment.Iban ? 'IBAN' : 'KART'}
+                        </span>
+                    )}
                 </span>
                 <span className="min-w-0">
                     {canAssign ? (
@@ -1339,11 +1384,19 @@ function ListRow({ order, now, couriers, pickerOpen, onTogglePicker, assigning, 
                             </span>
                             <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', pickerOpen && 'rotate-180')} aria-hidden="true" />
                         </button>
+                    ) : order.isPickup ? (
+                        <PickupBadge />
                     ) : (
                         <span className="text-sm font-semibold text-foreground">{order.courierName ?? <span className="text-muted-foreground">—</span>}</span>
                     )}
                 </span>
                 <span className="flex w-full justify-end gap-2 lg:w-auto">
+                    {canHandOverPickup(order) && (
+                        <button type="button" onClick={onOpen}
+                            className="flex h-10 items-center rounded-lg border border-border px-3 text-xs font-semibold text-foreground hover:border-rb-gold">
+                            Müşteri aldı →
+                        </button>
+                    )}
                     {isNew && (
                         <>
                             <button type="button" onClick={onReject} disabled={busy}

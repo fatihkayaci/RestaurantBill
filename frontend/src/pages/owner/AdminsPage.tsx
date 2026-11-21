@@ -225,7 +225,7 @@ export default function AdminsPage() {
                                     </div>
                                     <div className="flex items-center gap-1.5 shrink-0">
                                         <span className={cn(
-                                            "px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase",
+                                            "px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase",
                                             admin.isActive ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground"
                                         )}>
                                             {admin.isActive ? 'Aktif' : 'Pasif'}

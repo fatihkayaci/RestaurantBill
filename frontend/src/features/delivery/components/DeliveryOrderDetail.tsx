@@ -1,17 +1,21 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, Ban, Banknote, CreditCard, Landmark, MapPin, Phone, X, XCircle } from 'lucide-react';
+import { AlertTriangle, Ban, Banknote, CreditCard, Landmark, MapPin, Phone, Wallet, X, XCircle } from 'lucide-react';
 import { Modal, ModalTitle } from '@/components/ui/modal';
+import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
+import { shiftService } from '@/features/cashier/api/shiftService';
+import type { OpenRegister } from '@/features/cashier/types';
 import type { CourierCashSummary } from '@/features/courier/types';
 import { mapsUrl, telUrl } from '@/features/courier/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatAmount, formatElapsed } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { deliveryService } from '../api/deliveryService';
-import { CANCEL_REASONS, ETA_CHOICES, REJECT_REASONS, boardColumnOf, countdownText, deliveryLateness, orderTitle, type BoardColumnKey } from '../deliveryStatus';
+import { CANCEL_REASONS, ETA_CHOICES, PICKUP_ETA_CHOICES, REJECT_REASONS, boardColumnOf, countdownText, deliveryLateness, orderTitle, type BoardColumnKey } from '../deliveryStatus';
 import CourierPicker from './CourierPicker';
 import LatenessBadge from './LatenessBadge';
-import { DeliveryStatus, DoorPayment, doorPaymentWord, type DeliveryOrder } from '../types';
+import PickupBadge from './PickupBadge';
+import { DeliveryStatus, DoorPayment, doorPaymentWord, type DeliveryOrder, type DoorPaymentMethod } from '../types';
 
 interface Props {
     order: DeliveryOrder;
@@ -44,13 +48,14 @@ function timeOf(iso?: string | null): string {
 
 /** Bölüm başlığı: küçük, soluk, büyük harf. */
 function SectionLabel({ children }: { children: ReactNode }) {
-    return <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[.14em] text-muted-foreground">{children}</h3>;
+    return <h3 className="mb-2 text-xs font-semibold uppercase tracking-[.14em] text-muted-foreground">{children}</h3>;
 }
 
 // Online siparişin detayı ve işlemleri. Düzen yukarıdan aşağı: başlık (numara, durum, saat/söz, toplam ve ödeme) →
 // müşteri → ürünler ve tutar dökümü → durum ve kurye → altta tek işlem alanı (o adımın ana işi; iptal ve numara
 // engelleme ayrı ve sessiz). Gerekçe adımları (ret, iptal, engelleme) işlem alanının yerine açılır.
-// Yola çıkmış siparişe ürün eklenmez; bu ekranda ürün ekleme yoktur.
+// Yola çıkmış siparişe ürün eklenmez; bu ekranda ürün ekleme yoktur. Gel al siparişinde kurye ve adres yoktur; müşteri
+// gelince işlem alanında kasa ve ödeme seçilip "Müşteri aldı" denir (ödeme o anda kasaya yazılır, sipariş kapanır).
 export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, now, onClose, onChanged, initialStep = 'main' }: Props) {
     const [step, setStep] = useState<Step>(initialStep);
     const [busy, setBusy] = useState(false);
@@ -58,17 +63,23 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
     const [eta, setEta] = useState<number>(suggested);
     const [reason, setReason] = useState('');
 
-    const etaChoices = (ETA_CHOICES as readonly number[]).includes(suggested)
-        ? [...ETA_CHOICES]
-        : [...ETA_CHOICES, suggested].sort((a, b) => a - b);
+    const isPickup = !!order.isPickup;
+    const baseEta: readonly number[] = isPickup ? PICKUP_ETA_CHOICES : ETA_CHOICES;
+    const etaChoices = baseEta.includes(suggested)
+        ? [...baseEta]
+        : [...baseEta, suggested].sort((a, b) => a - b);
 
     const isNew = order.status === DeliveryStatus.Received;
-    const canAssign = order.status === DeliveryStatus.Accepted || order.status === DeliveryStatus.Preparing || order.status === DeliveryStatus.Ready;
-    const canCancel = canAssign || order.status === DeliveryStatus.OnTheWay;
+    const inProgress = order.status === DeliveryStatus.Accepted || order.status === DeliveryStatus.Preparing || order.status === DeliveryStatus.Ready;
+    const canAssign = inProgress && !isPickup;
+    const canHandOver = inProgress && isPickup;
+    const canCancel = inProgress || order.status === DeliveryStatus.OnTheWay;
     const canBlock = canBlockPhone && !order.isPhoneBlocked;
     const cash = order.paymentPreference === DoorPayment.Nakit;
     const iban = order.paymentPreference === DoorPayment.Iban;
-    const PayIcon = cash ? Banknote : iban ? Landmark : CreditCard;
+    // Gel al'da tercih yoksa müşteri restoranda öder; yöntem "Müşteri aldı"da seçilir.
+    const atCounter = order.paymentPreference == null;
+    const PayIcon = atCounter ? Wallet : cash ? Banknote : iban ? Landmark : CreditCard;
     const column = boardColumnOf(order.status);
     const urgent = !!order.autoRejectAt && new Date(order.autoRejectAt).getTime() - now < 2 * 60_000;
     const hasLateness = !!deliveryLateness(order, now);
@@ -102,6 +113,37 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
         courierUserId ? 'Kurye atandı.' : 'Kurye ataması kaldırıldı.', 'Kurye atanamadı.');
 
     const openStep = (next: Step) => { setReason(''); setStep(next); };
+
+    // ── Gel al: "Müşteri aldı" ──
+    // Kasiyer kendi açık vardiyasının kasasına alır; vardiyası olmayan (yönetici) açık günü olan kasalardan seçer.
+    const { shift } = useActiveShift();
+    const ownRegisterId = shift?.cashRegisterId ?? null;
+    const [openRegisters, setOpenRegisters] = useState<OpenRegister[] | null>(null);
+    const [pickedRegisterId, setPickedRegisterId] = useState('');
+    const [pickupMethod, setPickupMethod] = useState<DoorPaymentMethod>(order.paymentPreference ?? DoorPayment.Nakit);
+    useEffect(() => {
+        if (!canHandOver || ownRegisterId) return;
+        shiftService.getOpenRegisters()
+            .then(list => {
+                setOpenRegisters(list);
+                setPickedRegisterId(current => current || list[0]?.cashRegisterId || '');
+            })
+            .catch(() => setOpenRegisters([]));
+    }, [canHandOver, ownRegisterId]);
+    const registerId = ownRegisterId ?? (pickedRegisterId || null);
+    // Kasada her yöntem alınabilir (müşteri orada da havale yapabilir); IBAN'ı önceden seçtiyse o öne gelir.
+    const pickupMethods: DoorPaymentMethod[] = order.paymentPreference === DoorPayment.Iban
+        ? [DoorPayment.Iban, DoorPayment.Nakit, DoorPayment.Kart]
+        : [DoorPayment.Nakit, DoorPayment.Kart, DoorPayment.Iban];
+    const completePickup = () => {
+        if (!registerId) {
+            toast.error(ownRegisterId === null ? 'Ödemeyi almak için açık günü olan bir kasa seçin.' : 'Ödemeyi almak için açık bir vardiyanız olmalı.');
+            return;
+        }
+        return run(() => deliveryService.completePickup(order.id, registerId, pickupMethod),
+            `${orderTitle(order)} müşteriye verildi · ${doorPaymentWord(pickupMethod)} ${formatAmount(order.total)} ₺ kasaya alındı.`,
+            'Sipariş teslim edilemedi.', true);
+    };
 
     const reasonStep = (title: string, presets: readonly string[], warning: string | null, confirmLabel: string, onConfirm: () => void, required: boolean) => (
         <div className="flex flex-col gap-3">
@@ -153,10 +195,15 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
     const timeline: [string, ReactNode][] = [];
     if (order.acceptedAt) timeline.push(['Kabul', <>{timeOf(order.acceptedAt)}{order.estimatedMinutes ? ` · müşteriye ${order.estimatedMinutes} dk söylendi` : ''}</>]);
     if (order.dispatchedAt) timeline.push(['Yola çıktı', timeOf(order.dispatchedAt)]);
-    if (order.deliveredAt) {
+    if (order.deliveredAt && isPickup) {
+        timeline.push(['Müşteri aldı', <>
+            {timeOf(order.deliveredAt)}
+            {order.collectedMethod ? ` · ${doorPaymentWord(order.collectedMethod)} ${formatAmount(order.collectedAmount ?? 0)} ₺ kasaya alındı` : ''}
+        </>]);
+    } else if (order.deliveredAt) {
         timeline.push(['Teslim', <>
             {timeOf(order.deliveredAt)}
-            {order.collectedMethod ? ` · ${doorPaymentWord(order.collectedMethod)} ₺${formatAmount(order.collectedAmount ?? 0)}` : ''}
+            {order.collectedMethod ? ` · ${doorPaymentWord(order.collectedMethod)} ${formatAmount(order.collectedAmount ?? 0)} ₺` : ''}
         </>]);
         timeline.push(['Kasa', order.settledAt
             ? 'Kasaya alındı'
@@ -203,7 +250,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                     <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
                         <div className="flex min-w-0 flex-col gap-1.5 text-sm text-muted-foreground">
                             <span className="tabular-nums">
-                                {order.zoneName && <b className="font-semibold text-foreground">{order.zoneName} · </b>}
+                                {isPickup ? <PickupBadge className="mr-1.5" /> : order.zoneName && <b className="font-semibold text-foreground">{order.zoneName} · </b>}
                                 {timeOf(order.createdAt)} geldi · {formatElapsed(order.createdAt, now)} önce
                             </span>
                             {isNew && order.autoRejectAt ? (
@@ -213,11 +260,11 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                             ) : hasLateness && <LatenessBadge order={order} now={now} className="px-2.5 py-1 text-xs" />}
                         </div>
                         <div className="text-right">
-                            <p className="font-serif text-[28px] font-bold leading-none tabular-nums text-foreground">₺{formatAmount(order.total)}</p>
-                            <p className={cn('mt-1 flex items-center justify-end gap-1 text-xs font-semibold', cash ? 'text-rb-green' : iban ? 'text-rb-purple' : 'text-rb-accent')}>
+                            <p className="font-serif text-[28px] font-bold leading-none tabular-nums text-foreground">{formatAmount(order.total)} ₺</p>
+                            <p className={cn('mt-1 flex items-center justify-end gap-1 text-xs font-semibold', atCounter ? 'text-muted-foreground' : cash ? 'text-rb-green' : iban ? 'text-rb-purple' : 'text-rb-accent')}>
                                 <PayIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                                {iban ? 'IBAN (havale)' : `Kapıda ${cash ? 'nakit' : 'kart'}`}
-                                {iban && <span className="font-normal text-muted-foreground">· kurye para almaz</span>}
+                                {atCounter ? 'Restoranda ödeyecek' : iban ? 'IBAN (havale)' : `${isPickup ? 'Kasada' : 'Kapıda'} ${cash ? 'nakit' : 'kart'}`}
+                                {iban && !isPickup && <span className="font-normal text-muted-foreground">· kurye para almaz</span>}
                             </p>
                         </div>
                     </div>
@@ -229,12 +276,17 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                         <SectionLabel>Müşteri</SectionLabel>
                         <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-foreground">
                             {order.customerName}
-                            {order.isPhoneBlocked && <span className="rounded bg-rb-red-bg px-1.5 py-0.5 text-[10px] font-bold text-rb-red">ENGELLİ NUMARA</span>}
+                            {order.isPhoneBlocked && <span className="rounded bg-rb-red-bg px-1.5 py-0.5 text-xs font-bold text-rb-red">ENGELLİ NUMARA</span>}
                         </p>
                         <a href={telUrl(order.customerPhone)}
                             className={cn('-ml-1 mt-0.5 inline-flex min-h-11 items-center gap-2 rounded-lg px-1 text-sm font-semibold tabular-nums text-rb-accent hover:underline', FOCUS)}>
                             <Phone className="h-4 w-4" aria-hidden="true" />{order.customerPhone}
                         </a>
+                        {isPickup ? (
+                            <p className="flex min-h-11 items-center gap-2 text-sm text-foreground">
+                                <PickupBadge />Müşteri restorana gelip alacak · kurye yok
+                            </p>
+                        ) : (
                         <a href={mapsUrl([order.address, order.zoneName].filter(Boolean).join(', '))} target="_blank" rel="noreferrer"
                             className={cn('-ml-1 flex min-h-11 items-start gap-2 rounded-lg px-1 py-1.5 text-sm text-foreground hover:underline', FOCUS)}>
                             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -243,6 +295,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                                 {order.addressDirections && <span className="mt-0.5 block text-muted-foreground">Tarif: {order.addressDirections}</span>}
                             </span>
                         </a>
+                        )}
                         {order.note && (
                             <p className="mt-2 rounded-r-lg border-l-[3px] border-rb-gold bg-rb-gold-bg px-3 py-2 text-sm text-foreground">
                                 <span className="font-semibold text-muted-foreground">Not: </span>{order.note}
@@ -262,14 +315,16 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                                         {line.selections.length > 0 && <span className="block text-xs text-muted-foreground">{line.selections.join(', ')}</span>}
                                         {line.note && <span className="block text-xs text-rb-amber">Not: {line.note}</span>}
                                     </span>
-                                    <span className="text-right tabular-nums text-foreground">₺{formatAmount(line.lineTotal)}</span>
+                                    <span className="text-right tabular-nums text-foreground">{formatAmount(line.lineTotal)} ₺</span>
                                 </li>
                             ))}
                         </ul>
                         <dl className="mt-3 space-y-1 border-t border-border pt-3 pl-10 text-sm">
-                            <div className="flex justify-between text-muted-foreground"><dt>Ara toplam</dt><dd className="tabular-nums">₺{formatAmount(order.subtotal)}</dd></div>
-                            <div className="flex justify-between text-muted-foreground"><dt>Teslimat</dt><dd className="tabular-nums">₺{formatAmount(order.deliveryFee)}</dd></div>
-                            <div className="flex justify-between font-semibold text-foreground"><dt>Toplam</dt><dd className="tabular-nums">₺{formatAmount(order.total)}</dd></div>
+                            <div className="flex justify-between text-muted-foreground"><dt>Ara toplam</dt><dd className="tabular-nums">{formatAmount(order.subtotal)} ₺</dd></div>
+                            {isPickup
+                                ? <div className="flex justify-between text-muted-foreground"><dt>Gel al</dt><dd>teslimat ücreti yok</dd></div>
+                                : <div className="flex justify-between text-muted-foreground"><dt>Teslimat</dt><dd className="tabular-nums">{formatAmount(order.deliveryFee)} ₺</dd></div>}
+                            <div className="flex justify-between font-semibold text-foreground"><dt>Toplam</dt><dd className="tabular-nums">{formatAmount(order.total)} ₺</dd></div>
                         </dl>
                     </section>
 
@@ -309,7 +364,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                 </div>
 
                 {/* Tek işlem alanı: gerekçe adımı ya da o adımın ana işi; iptal ve engelleme altta ayrı */}
-                {(step !== 'main' || isNew || secondary) && (
+                {(step !== 'main' || isNew || canHandOver || secondary) && (
                     <footer className="space-y-3 border-t border-border bg-muted/40 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:rounded-b-2xl">
                         {step === 'reject' && reasonStep('Neden reddediyorsunuz?', REJECT_REASONS,
                             'Gerekçe müşterinin takip sayfasında görünür.', 'Reddet', reject, true)}
@@ -322,7 +377,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                         {step === 'main' && isNew && (
                             <>
                                 <div>
-                                    <p id="detail-eta" className="mb-1.5 text-[11px] font-semibold uppercase tracking-[.14em] text-muted-foreground">Müşteriye söylenecek süre</p>
+                                    <p id="detail-eta" className="mb-1.5 text-xs font-semibold uppercase tracking-[.14em] text-muted-foreground">Müşteriye söylenecek süre</p>
                                     <div className="flex gap-1.5" role="radiogroup" aria-labelledby="detail-eta">
                                         {etaChoices.map(m => (
                                             <button
@@ -353,6 +408,50 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                                     </button>
                                 </div>
                             </>
+                        )}
+
+                        {step === 'main' && canHandOver && (
+                            <div className="flex flex-col gap-3">
+                                <p className="text-sm font-semibold text-foreground">
+                                    {order.status === DeliveryStatus.Ready ? 'Sipariş hazır. Müşteri gelince ödemeyi alıp teslim edin.' : 'Müşteri geldiyse ödemeyi alıp teslim edin.'}
+                                </p>
+                                {ownRegisterId === null && (
+                                    openRegisters === null ? (
+                                        <p className="text-sm text-muted-foreground">Kasalar yükleniyor…</p>
+                                    ) : openRegisters.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">Açık günü olan kasa yok. Önce bir kasada gün başlatın.</p>
+                                    ) : (
+                                        <label className="flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
+                                            Hangi kasaya alınsın
+                                            <select value={pickedRegisterId} onChange={e => setPickedRegisterId(e.target.value)} disabled={busy}
+                                                className="h-11 rounded-lg border border-border bg-card px-2.5 text-sm font-normal text-foreground">
+                                                {openRegisters.map(r => (
+                                                    <option key={r.cashRegisterId} value={r.cashRegisterId}>
+                                                        {r.cashRegisterName}{r.shiftOwnerName ? ` · ${r.shiftOwnerName}` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    )
+                                )}
+                                <div className="flex gap-1.5" role="radiogroup" aria-label="Ödeme şekli">
+                                    {pickupMethods.map(m => {
+                                        const Icon = m === DoorPayment.Nakit ? Banknote : m === DoorPayment.Iban ? Landmark : CreditCard;
+                                        return (
+                                            <button key={m} type="button" role="radio" aria-checked={pickupMethod === m} onClick={() => setPickupMethod(m)}
+                                                className={cn('flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[10px] border text-sm font-bold transition-colors',
+                                                    pickupMethod === m ? 'border-rb-gold bg-rb-gold text-rb-gold-foreground' : 'border-border bg-card text-foreground hover:border-rb-gold', FOCUS)}>
+                                                <Icon className="h-4 w-4" aria-hidden="true" />
+                                                {m === DoorPayment.Nakit ? 'Nakit' : m === DoorPayment.Iban ? 'IBAN geldi' : 'Kart'}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <button type="button" onClick={completePickup} disabled={busy || !registerId}
+                                    className={cn('min-h-12 w-full rounded-xl bg-rb-gold text-base font-bold text-rb-gold-foreground hover:brightness-105 disabled:opacity-50', FOCUS)}>
+                                    {busy ? 'Kaydediliyor…' : `Müşteri aldı · ${formatAmount(order.total)} ₺ ${doorPaymentWord(pickupMethod)}`}
+                                </button>
+                            </div>
                         )}
 
                         {secondary}

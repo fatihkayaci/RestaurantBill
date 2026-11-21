@@ -18,7 +18,7 @@ export default function HeaderClock({ large = false }: { large?: boolean }) {
             <span className={`font-serif font-bold leading-none text-sidebar-foreground ${large ? 'text-2xl' : 'text-lg'}`}>
                 {pad(now.getHours())}:{pad(now.getMinutes())}
             </span>
-            <span className={`text-sidebar-foreground/40 whitespace-nowrap ${large ? 'text-xs' : 'text-[9.5px]'}`}>
+            <span className={`text-sidebar-foreground/60 whitespace-nowrap ${large ? 'text-xs' : 'text-xs'}`}>
                 {now.getDate()} {MONTHS[now.getMonth()]} · {DAYS[now.getDay()]}
             </span>
         </div>

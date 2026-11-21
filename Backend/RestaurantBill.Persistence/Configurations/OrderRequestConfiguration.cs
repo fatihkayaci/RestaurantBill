@@ -12,6 +12,8 @@ public class OrderRequestConfiguration : IEntityTypeConfiguration<OrderRequest>
         builder.Property(r => r.Note).HasMaxLength(500).HasDefaultValue(string.Empty);
         builder.Property(r => r.RejectReason).HasMaxLength(OrderRequest.RejectReasonMaxLength).HasDefaultValue(string.Empty);
         builder.Property(r => r.Kind).HasDefaultValue(OrderRequestKind.TableQr);
+        // SHA-256 özeti (64 hex).
+        builder.Property(r => r.DeviceTokenHash).HasMaxLength(64);
         builder.HasIndex(r => new { r.TableId, r.Status });
         builder.HasIndex(r => new { r.ReservationId, r.Status });
 

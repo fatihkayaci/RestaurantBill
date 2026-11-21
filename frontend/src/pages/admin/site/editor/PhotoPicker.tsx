@@ -117,15 +117,15 @@ export function StockGrid({ currentUrl, markLabel, actionHint, busy, onPick, lar
                                         onClick={() => { setPicked(image.id); onPick(image); }}
                                         className="group flex w-full flex-col gap-1 text-left focus-visible:outline-none disabled:cursor-wait">
                                         <span className={cn('relative block w-full overflow-hidden rounded-[9px] bg-muted', thumb,
-                                            inUse ? 'ring-2 ring-[#C8A96E]' : isPicked ? 'ring-[3px] ring-[#2B7FFF]' : 'group-hover:ring-2 group-hover:ring-[#2B7FFF]/60 group-focus-visible:ring-2 group-focus-visible:ring-[#2B7FFF]')}>
+                                            inUse ? 'ring-2 ring-[#C8A96E]' : isPicked ? 'ring-[3px] ring-[#2B7FFF]' : 'group-hover:ring-2 group-hover:ring-[#2B7FFF]/60 group-focus-visible:ring-2 group-focus-visible:ring-ring')}>
                                             <img src={image.url} alt="" loading="lazy" className="h-full w-full object-cover" />
-                                            {inUse && <span className="absolute left-1.5 top-1.5 rounded-[5px] bg-[#C8A96E] px-1.5 py-0.5 text-[11px] font-bold text-[#1C1510]">{markLabel}</span>}
+                                            {inUse && <span className="absolute left-1.5 top-1.5 rounded-[5px] bg-[#C8A96E] px-1.5 py-0.5 text-xs font-bold text-[#1C1510]">{markLabel}</span>}
                                             {isPicked && (
                                                 <span className="absolute right-1.5 top-1.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-[#2B7FFF] text-white">
                                                     {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Check className="h-3.5 w-3.5" aria-hidden="true" />}
                                                 </span>
                                             )}
-                                            <span className="absolute bottom-1.5 left-1.5 rounded bg-black/50 px-1.5 py-px text-[10px] font-semibold text-white">Temsili görsel</span>
+                                            <span className="absolute bottom-1.5 left-1.5 rounded bg-black/50 px-1.5 py-px text-xs font-semibold text-white">Temsili görsel</span>
                                         </span>
                                         <span className="truncate text-xs font-semibold text-foreground">
                                             {image.title}

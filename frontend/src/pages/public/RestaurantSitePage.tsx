@@ -16,8 +16,8 @@ import {
     RESERVATION_PATH, averagePrepMinutes, cardButton, dativeSuffix, foldText, formatRating, hasAboutPage, productCount,
     serif, sinceYear, untilTime,
 } from './site/siteParts';
-import { formatSitePrice, resolveDesign, resolveFont, splitAccent, telHref } from './site/siteTheme';
-import EliteHome from './site/elite/EliteHome';
+import { formatSitePrice, resolveFont, splitAccent, telHref } from './site/siteTheme';
+import { designLayout } from './site/designs/registry';
 import { useSiteDesign } from './site/siteDesign';
 import { restaurantName, useMyReservations, useSite, weekSchedule } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
@@ -60,7 +60,9 @@ export default function RestaurantSitePage() {
     if (!site) {
         return <SiteShell><SiteStatus error={error} /></SiteShell>;
     }
-    if (resolveDesign(site.site.design) === 'elit') return <EliteHome site={site} mine={mine} />;
+    // Tasarımın kendi ana sayfası (tasarım kaydı: Elit, Meyhane Gecesi…); yoksa ortak düzen.
+    const { Home } = designLayout(site.site.design);
+    if (Home) return <Home site={site} mine={mine} />;
 
     return (
         <SitePage site={site} current="home">
@@ -92,7 +94,10 @@ interface StripCell { key: string; node: ReactNode; wrap?: (node: ReactNode) => 
 
 function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
     const edit = useSiteEdit();
-    const sade = useSiteDesign() === 'sade';
+    const design = useSiteDesign();
+    const sade = design === 'sade';
+    // Dev adın genişliği yazı tipinin harf genişliğine göre: yeni tasarımlar kendi çiftiyle ölçülür (eskiler değişmez).
+    const widthDesign = design === 'meyhane' || design === 'esnaf' || design === 'bahce' ? design : sade ? 'sade' : 'renkli';
     const showEmpty = Boolean(edit?.showEmpty);
     const content = site.site;
     const name = restaurantName(site);
@@ -116,7 +121,7 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
     if (actions.length < 2 && site.phone) actions.push({ key: 'ara', label: 'Hemen ara', href: telHref(site.phone) });
 
     // Alt şerit: durum + bugünün saatleri · paket sipariş · hazırlık · en az sipariş. Verisi olmayan hücre çizilmez.
-    const cellLabel = cn('text-[11px] font-extrabold uppercase tracking-[0.16em]', mustard);
+    const cellLabel = cn('text-xs font-extrabold uppercase tracking-[0.16em]', mustard);
     const cellValue = cn(serif, 'text-2xl leading-[1.1]');
     const cells: StripCell[] = [];
     const today = weekSchedule(site)?.find(r => r.isToday) ?? null;
@@ -209,7 +214,7 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                             </span>
                         )}
                         {/* Ad Ayarlar'dan gelir; kapak adsız boş görünmesin diye düzenleyicide de yazılır (tıklanmaz). */}
-                        <h1 id="ev-ad" className={cn(serif, 'm-0 max-w-full break-words', sade ? 'leading-[0.92] tracking-[-0.015em]' : 'leading-[0.95] tracking-[-0.025em]')} style={heroNameStyle([first, accent], sade, resolveFont(content.font, sade ? 'sade' : 'renkli').charWidth[sade ? 'regular' : 'bold'])}>
+                        <h1 id="ev-ad" className={cn(serif, 'm-0 max-w-full break-words', sade ? 'leading-[0.92] tracking-[-0.015em]' : 'leading-[0.95] tracking-[-0.025em]')} style={heroNameStyle([first, accent], sade, resolveFont(content.font, widthDesign).charWidth[sade ? 'regular' : 'bold'])}>
                             {first && <>{first}<br /></>}<em className="rb-accent italic">{accent}</em>
                         </h1>
                         {(lead || showEmpty) && (

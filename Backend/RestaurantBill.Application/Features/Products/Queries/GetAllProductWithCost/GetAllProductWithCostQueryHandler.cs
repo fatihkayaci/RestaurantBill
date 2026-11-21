@@ -28,7 +28,7 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProductWith
             var products = await _db.Products
                 .AsNoTracking()
                 .Where(p => p.Category.BranchId == restaurantId)
-                .OrderBy(p => p.Name)
+                .OrderBy(p => p.Category.SortOrder).ThenBy(p => p.Category.Name).ThenBy(p => p.SortOrder).ThenBy(p => p.Name)
                 .Select(p => new ProductWithCostDto
                 {
                     Id = p.Id,

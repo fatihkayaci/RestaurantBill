@@ -127,7 +127,7 @@ export default function CustomerOrderRequests({ requests, onChanged, canDecide =
                                     rows={2}
                                     maxLength={REASON_MAX}
                                     placeholder="ör. Künefe bu akşam bitti, katmer önerebiliriz."
-                                    className="w-full rounded-xl border-[1.5px] border-border bg-background px-3 py-2 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-rb-gold"
+                                    className="w-full rounded-xl border-[1.5px] border-border bg-background px-3 py-2 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                 />
                                 <div className="grid grid-cols-2 gap-2.5">
                                     <button type="button" onClick={() => setRejectingId(null)} disabled={busyId !== null}

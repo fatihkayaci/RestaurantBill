@@ -68,6 +68,9 @@ public class SiteContentTests
     [InlineData("sade", "sade")]
     [InlineData(" Elit ", "elit")]
     [InlineData(" Sicak ", "sicak")]
+    [InlineData("meyhane", "meyhane")]
+    [InlineData(" Esnaf ", "esnaf")]
+    [InlineData("BAHCE", "bahce")]
     public void KnownDesign_IsNormalized(string design, string expected)
         => Assert.Equal(expected, Texts(new SiteContentTexts { Design = design }).Design);
 

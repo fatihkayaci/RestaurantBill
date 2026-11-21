@@ -12,6 +12,8 @@ export interface BlockingAlert {
     tableName: string;
     /** Ör. "3 ürün · Salon · onayınızı bekliyor". */
     detail: string;
+    /** Dikkat etiketi, ör. "Masa boş görünüyor" (QR masa dışından kullanılmış olabilir). */
+    warning?: string;
 }
 
 let alerts: BlockingAlert[] = [];

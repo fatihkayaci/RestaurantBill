@@ -79,27 +79,27 @@ export default function RestaurantInfoTab() {
                                 {branch?.branchName || (loading ? "Yükleniyor..." : "—")}
                             </p>
                             {branch && (
-                                <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded bg-rb-green-bg text-rb-green">
+                                <span className="text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded bg-rb-green-bg text-rb-green">
                                     Aktif
                                 </span>
                             )}
                         </div>
-                        <p className="text-sidebar-foreground/50 text-xs mt-0.5">{branchLocation || "—"}</p>
+                        <p className="text-sidebar-foreground/60 text-xs mt-0.5">{branchLocation || "—"}</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-6 sm:gap-8 sm:border-l sm:border-white/10 sm:pl-6">
                     <div className="text-center">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch?.tableCount ?? "—"}</p>
-                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Masa</p>
+                        <p className="text-xs uppercase tracking-widest text-sidebar-foreground/60 mt-0.5">Masa</p>
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch?.staffCount ?? "—"}</p>
-                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Çalışan</p>
+                        <p className="text-xs uppercase tracking-widest text-sidebar-foreground/60 mt-0.5">Çalışan</p>
                     </div>
                     <div className="text-center border-l border-white/10 pl-6 sm:pl-8">
                         <p className="font-serif text-xl font-bold text-sidebar-foreground tabular-nums">{branch ? formatTL(branch.revenue) : "—"}</p>
-                        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 mt-0.5">Toplam Ciro</p>
+                        <p className="text-xs uppercase tracking-widest text-sidebar-foreground/60 mt-0.5">Toplam Ciro</p>
                     </div>
                 </div>
             </div>

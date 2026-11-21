@@ -3,6 +3,8 @@ export interface Table {
     name: string;
     /** En fazla kaç kişi (rezervasyonda gösterilir); girilmemişse null. */
     capacity?: number | null;
+    /** Bölge içindeki sıra (küçük önce); liste sunucudan bu sırayla gelir. */
+    sortOrder?: number;
     status: number;
     activeOrderTotal: number;
     /** Açık siparişten tutar girerek alınmış ödemeler. */

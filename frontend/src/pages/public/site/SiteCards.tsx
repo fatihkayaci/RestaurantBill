@@ -120,7 +120,7 @@ export function HoursBlock({ site, compact = false, weekHref, valueClassName }: 
                 {rows.map(r => (
                     <tr key={r.day} className={cn('border-t border-[var(--site-border)] first:border-t-0', r.isToday && 'font-semibold')}>
                         <th scope="row" className={cn('py-2 pr-3 text-left font-[inherit]', r.isToday ? 'text-[var(--site-text)]' : 'text-[var(--site-sub)]')}>
-                            {r.label}{r.isToday && <span className="ml-1.5 rounded-full bg-[var(--site-accent-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-accent-text)]">bugün</span>}
+                            {r.label}{r.isToday && <span className="ml-1.5 rounded-full bg-[var(--site-accent-soft)] px-2 py-0.5 text-xs font-bold text-[var(--site-accent-text)]">bugün</span>}
                         </th>
                         <td className={cn('py-2 text-right tabular-nums', !r.isOpen && 'text-[var(--site-muted)]')}>{r.text}</td>
                     </tr>

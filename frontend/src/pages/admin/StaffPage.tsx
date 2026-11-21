@@ -56,7 +56,7 @@ const CASHIER_PERMISSIONS: { key: CashierPermissionKey; label: string; short: st
 // Kasiyer bugüne kadar hepsini yapabiliyordu; yeni kasiyer de aynı yetkilerle başlar, indirim sınırı yoktur (%100).
 const DEFAULT_CASHIER_PERMISSIONS = { canApplyDiscount: true, maxDiscountPercent: 100, canTransferTables: true, canViewDelivery: true };
 
-const byTableName = (a: Table, b: Table) => a.name.localeCompare(b.name, 'tr', { numeric: true });
+// Masalar sunucudan yöneticinin verdiği sırayla gelir (bölge → masa sırası → doğal ad); burada yeniden sıralanmaz.
 
 // "Masa 1", "Masa 2", "Masa 5" → "Masa 1, 2, 5". Adlar aynı ön ek + numara biçiminde değilse olduğu gibi yazılır.
 function compactTableNames(names: string[]): string {
@@ -77,7 +77,7 @@ function waiterCoverage(regionIds: string[], restrictedRegionIds: string[], tabl
     return regionIds.map(regionId => ({
         regionId,
         restricted: restrictedRegionIds.includes(regionId),
-        tables: tables.filter(t => t.regionId === regionId && picked.has(t.id)).sort(byTableName),
+        tables: tables.filter(t => t.regionId === regionId && picked.has(t.id)),
     }));
 }
 
@@ -410,7 +410,7 @@ export default function StaffPage() {
                                     </div>
                                     <div className="flex items-center gap-1.5 shrink-0">
                                         <span className={cn(
-                                            "px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase",
+                                            "px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase",
                                             isActive ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground"
                                         )}>
                                             {isActive ? 'Aktif' : 'Pasif'}
@@ -425,7 +425,7 @@ export default function StaffPage() {
                                 </div>
 
                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                    <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase", style.badge)}>
+                                    <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase", style.badge)}>
                                         {roleMap[user.role] ?? 'Bilinmiyor'}
                                     </span>
                                     {usesRegions(user.role) && (user.regionIds?.length ?? 0) === 0 && (
@@ -443,7 +443,7 @@ export default function StaffPage() {
                                             <span
                                                 key={c.regionId}
                                                 className={cn(
-                                                    "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                                                    "px-1.5 py-0.5 rounded text-xs font-medium",
                                                     c.restricted && c.tables.length === 0 ? "bg-rb-amber-bg text-rb-amber" : "bg-rb-accent-bg text-rb-accent"
                                                 )}
                                             >
@@ -456,7 +456,7 @@ export default function StaffPage() {
                                 {usesCategories(user.role) && (user.categoryIds?.length ?? 0) > 0 && (
                                     <div className="flex flex-wrap gap-1" aria-label="Mutfak kategorileri">
                                         {(user.categoryIds ?? []).map(id => (
-                                            <span key={id} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-rb-amber-bg text-rb-amber">
+                                            <span key={id} className="px-1.5 py-0.5 rounded text-xs font-medium bg-rb-amber-bg text-rb-amber">
                                                 {categoryNameById.get(id) ?? '—'}
                                             </span>
                                         ))}
@@ -472,7 +472,7 @@ export default function StaffPage() {
                                                     key={p.key}
                                                     title={`${p.label}: ${on ? 'açık' : 'kapalı'}`}
                                                     className={cn(
-                                                        "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                                                        "px-1.5 py-0.5 rounded text-xs font-medium",
                                                         on ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground line-through"
                                                     )}
                                                 >
@@ -492,7 +492,7 @@ export default function StaffPage() {
                                                     key={p.key}
                                                     title={`${p.label}: ${on ? 'açık' : 'kapalı'}`}
                                                     className={cn(
-                                                        "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                                                        "px-1.5 py-0.5 rounded text-xs font-medium",
                                                         on ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground line-through"
                                                     )}
                                                 >
@@ -501,7 +501,7 @@ export default function StaffPage() {
                                             );
                                         })}
                                         {(user.canApplyDiscount ?? true) && (user.maxDiscountPercent ?? 100) < 100 && (
-                                            <span title="Bir ödemede uygulanabilecek en yüksek indirim" className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-rb-amber-bg text-rb-amber">
+                                            <span title="Bir ödemede uygulanabilecek en yüksek indirim" className="px-1.5 py-0.5 rounded text-xs font-medium bg-rb-amber-bg text-rb-amber">
                                                 En fazla %{user.maxDiscountPercent}
                                             </span>
                                         )}
@@ -779,7 +779,7 @@ export default function StaffPage() {
                                         ) : (
                                             <div className="space-y-2">
                                                 {waiterCoverage(form.regionIds ?? [], form.restrictedRegionIds ?? [], form.tableIds ?? [], tables).map(({ regionId, restricted, tables: picked }) => {
-                                                    const regionTables = tables.filter(t => t.regionId === regionId).sort(byTableName);
+                                                    const regionTables = tables.filter(t => t.regionId === regionId);
                                                     return (
                                                         <div key={regionId} className="rounded-lg border border-border p-3 space-y-2">
                                                             <div className="flex flex-wrap items-center justify-between gap-2">

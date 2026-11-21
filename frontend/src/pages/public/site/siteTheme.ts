@@ -1,4 +1,8 @@
 import type { CSSProperties } from 'react';
+// Yeni tasarımların (Meyhane Gecesi, Esnaf Tabelası, Bahçe Kahvaltısı) tasarıma özgü çizgileri; yalnız kökünde
+// `data-site-design` o tasarım olan sayfada etkilidir.
+import './siteThemes.css';
+import { designTraits, type SiteDesignTraits } from './designs/designTraits';
 
 // Restoranın müşteri sitesinin görünümü. Restoran önce TASARIMI ("Renkli ve sıcak" ya da "Sade"), sonra o tasarımın
 // içinde RENGİ (hazır tema ya da özel vurgu rengi) seçer. Her ikisi de tek yerde, CSS değişkeni olarak tanımlıdır:
@@ -14,6 +18,16 @@ import type { CSSProperties } from 'react';
 // - Sıcak: şeftali/krem zemin #FFF3E6, şeftali bant #FDE4CB, beyaz kutular (ince turuncu-ten çizgi), parlak turuncu vurgu,
 //   neredeyse siyah koyu bantlar #1E1915; Montserrat 700 başlık + Poppins gövde. Tema yalnız VURGU rengini seçer; kapak
 //   açık şeftali (koyu yazı), menü kutusu ve alt bilgi koyu.
+// - Meyhane Gecesi (koyu): kömür zemin #14110E, kart #1F1A15, krem yazı #F3EADB, kehribar vurgu #E9A23B (üstünde koyu
+//   yazı); Young Serif + Figtree. Sitenin TEK koyu tasarımı: palette `dark: true` → tarayıcı denetimleri koyu
+//   (color-scheme), durum renkleri koyu zemin için açık tonlar, açık zemin varsayan sabit renkler siteThemes.css'te
+//   düzeltilir. Tema yalnız vurguyu ve kapak rengini seçer.
+// - Esnaf Tabelası: krem zemin #FFF8EC, mürekkep #1A1A1A, tabela kırmızısı #C8102E, çini mavisi #1D4E89, sarı #F2C230;
+//   Anton (dar, kalın, BÜYÜK HARF başlık) + Archivo. Kalın çizgiler, köşeli kartlar; fotoğrafsız ürün de dolu görünür.
+// - Bahçe Kahvaltısı: açık yeşil-beyaz zemin #F7FBF4, adaçayı #45613E kapak, domates #C2410C vurgu, tereyağı #FFD978
+//   kutu; Bricolage Grotesque + Figtree. Yuvarlak köşeler, başlıkta tereyağı işaretleyici.
+// Yeni üç tasarımın tasarıma özgü çizgileri (köşe, başlık harfi, menü satırı, desen) siteThemes.css'te, kökteki
+// `data-site-design` özniteliğine bağlı; renkler yine yalnız bu dosyadaki değişkenlerden.
 //
 // Renkli kutuların (kapak, menü kutusu, hikâye, zeytin, kiremit, hardal, alt bilgi) her biri zemin + üstündeki yazı
 // değişkeniyle gelir (`--site-cover-bg` / `--site-on-cover` …). Sayfa bu çiftleri kullanır; tasarım değerlerini değiştirir.
@@ -25,7 +39,7 @@ import type { CSSProperties } from 'react';
 // Özel vurgu renginde düğme yazısı ve açık zemindeki vurgu yazısı okunurluk (WCAG AA, 4.5:1) için otomatik ayarlanır.
 
 /** Sitenin tasarımları (backend: SiteContent.DesignKeys). Boş/bilinmeyen = varsayılan (renkli). */
-export const SITE_DESIGN_KEYS = ['renkli', 'sade', 'elit', 'sicak'] as const;
+export const SITE_DESIGN_KEYS = ['renkli', 'sade', 'elit', 'sicak', 'meyhane', 'esnaf', 'bahce'] as const;
 export type SiteDesignKey = (typeof SITE_DESIGN_KEYS)[number];
 export const DEFAULT_DESIGN: SiteDesignKey = 'renkli';
 
@@ -51,11 +65,17 @@ const CORMORANT = 'family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1
 const LATO = 'family=Lato:wght@300;400;700;900';
 const GROTESK = 'family=Space+Grotesk:wght@300..700';
 const POPPINS = 'family=Poppins:wght@300;400;500;600;700';
+// Yeni tasarımların çiftleri (Google Fonts latin-ext dosyalarında ğ Ğ ş Ş ı İ ç Ç ö Ö ü Ü var; cmap ile denetlendi).
+const YOUNG_SERIF = 'family=Young+Serif';
+const FIGTREE = 'family=Figtree:wght@400;500;600;700;800';
+const ANTON = 'family=Anton';
+const ARCHIVO = 'family=Archivo:wght@400;500;600;700;800';
+const BRICOLAGE = 'family=Bricolage+Grotesque:opsz,wght@12..96,400..800';
 const fontsUrl = (...families: string[]) => `https://fonts.googleapis.com/css2?${families.join('&')}&display=swap`;
 
 export const SITE_FONT_KEYS = [
     'fraunces-manrope', 'instrument-manrope', 'bodoni-montserrat', 'playfair-inter', 'dmserif-dmsans', 'cormorant-lato', 'grotesk-inter',
-    'montserrat-poppins',
+    'montserrat-poppins', 'youngserif-figtree', 'anton-archivo', 'bricolage-figtree',
 ] as const;
 export type SiteFontKey = (typeof SITE_FONT_KEYS)[number];
 
@@ -71,6 +91,8 @@ export interface SiteFontPair {
     bodyWeight?: number;
     /** Başlık yazı tipinin tek ağırlığı var (Instrument Serif, DM Serif Display): sahte kalın çizilmesin. */
     singleWeight?: boolean;
+    /** Başlık yazı tipinin italiği yok (Young Serif, Anton, Bricolage): italik vurgu sahte eğik çizilmesin, dik kalır. */
+    noItalic?: boolean;
     /** Başlıkta harf başına ortalama genişlik (em; ince 400 ve kalın 700), ana sayfadaki dev adın sığması için. Tarayıcıda
      *  ölçüldü (canvas measureText, Türkçe örnek ad) ve Fraunces kalının eski 0,6 katsayısına göre ölçeklendi. */
     charWidth: { regular: number; bold: number };
@@ -81,6 +103,7 @@ export interface SiteFontPair {
 const fontPair = (p: Omit<SiteFontPair, 'href'>, ...families: string[]): SiteFontPair => ({ ...p, href: fontsUrl(...families) });
 const MANROPE_STACK = 'Manrope, system-ui, sans-serif';
 const INTER_STACK = 'Inter, system-ui, sans-serif';
+const FIGTREE_STACK = 'Figtree, system-ui, sans-serif';
 
 export const SITE_FONTS: Record<SiteFontKey, SiteFontPair> = {
     'fraunces-manrope': fontPair({
@@ -116,6 +139,20 @@ export const SITE_FONTS: Record<SiteFontKey, SiteFontPair> = {
         key: 'montserrat-poppins', label: 'Montserrat + Poppins', heading: 'Montserrat, system-ui, sans-serif', tracking: '-0.02em',
         body: 'Poppins, system-ui, sans-serif', charWidth: { regular: 0.66, bold: 0.72 },
     }, MONTSERRAT, POPPINS),
+    // Genişlikler tahmin (Young Serif Fraunces'ten biraz geniş; Anton dar ama Esnaf'ta başlıklar büyük harf; Bricolage
+    // Space Grotesk'e yakın).
+    'youngserif-figtree': fontPair({
+        key: 'youngserif-figtree', label: 'Young Serif + Figtree', heading: "'Young Serif', Georgia, serif", tracking: '-0.01em',
+        body: FIGTREE_STACK, singleWeight: true, noItalic: true, charWidth: { regular: 0.62, bold: 0.62 },
+    }, YOUNG_SERIF, FIGTREE),
+    'anton-archivo': fontPair({
+        key: 'anton-archivo', label: 'Anton + Archivo', heading: "Anton, Impact, 'Arial Narrow', sans-serif", tracking: '0.01em',
+        body: 'Archivo, system-ui, sans-serif', singleWeight: true, noItalic: true, charWidth: { regular: 0.5, bold: 0.5 },
+    }, ANTON, ARCHIVO),
+    'bricolage-figtree': fontPair({
+        key: 'bricolage-figtree', label: 'Bricolage Grotesque + Figtree', heading: "'Bricolage Grotesque', system-ui, sans-serif", tracking: '-0.025em',
+        body: FIGTREE_STACK, noItalic: true, charWidth: { regular: 0.58, bold: 0.62 },
+    }, BRICOLAGE, FIGTREE),
 };
 
 /** Seçilen yazı tipi çifti; boş/bilinmeyen = tasarımın kendi çifti. */
@@ -130,9 +167,10 @@ export function siteFontsHref(design?: string | null, font?: string | null): str
 }
 
 /** Tasarımı bilmeyen sayfalar için tasarımların kendi yazı tipleri birlikte (tarayıcı yalnız kullanılan dosyayı indirir). */
-export const SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, POPPINS);
+export const SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, POPPINS, YOUNG_SERIF, FIGTREE, ANTON, ARCHIVO, BRICOLAGE);
 /** Bütün çiftler birlikte (yalnız admin'deki yazı tipi seçici). */
-export const ALL_SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, PLAYFAIR, INTER, DM_SERIF, DM_SANS, CORMORANT, LATO, GROTESK, POPPINS);
+export const ALL_SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, PLAYFAIR, INTER, DM_SERIF, DM_SANS, CORMORANT, LATO, GROTESK, POPPINS,
+    YOUNG_SERIF, FIGTREE, ANTON, ARCHIVO, BRICOLAGE);
 
 export interface SiteThemePreset {
     key: string;
@@ -194,7 +232,27 @@ export interface SitePalette {
     font: SiteFontKey;
     /** Başlıkların ağırlığı (`--site-serif-weight`; Renkli kalın, Sade ve Elit ince). */
     headingWeight: number;
+    /** Koyu tasarım (Meyhane Gecesi): zemin koyu, yazı açık. Özel vurgunun düğme yazısı koyu zemin rengi, vurgu yazısı
+     *  kutulara göre AÇILIR, tarayıcı denetimleri koyu (color-scheme: dark). Yoksa açık. */
+    dark?: boolean;
+    /** Çizgi saydamlıkları (`--site-border` / `-line` / `-border-mid` / `-border-strong`); yoksa 0.12 / 0.1 / 0.2 / 0.3. */
+    lines?: [number, number, number, number];
+    /** Durum renkleri (onay ve hata kutusu, yazısı, çizgisi; hata düğmesinin yazısı); yoksa açık zemin değerleri. */
+    status?: SiteStatusColors;
 }
+
+export interface SiteStatusColors {
+    okBg: string; okLine: string; ok: string;
+    errorBg: string; errorLine: string; error: string;
+    /** `--site-error` zeminli düğmenin yazısı. */
+    onError: string;
+}
+
+/** Açık tasarımların durum renkleri (eski sabit değerler). */
+const LIGHT_STATUS: SiteStatusColors = {
+    okBg: '#E3F1E6', okLine: '#9CCBA9', ok: '#1B6A43',
+    errorBg: '#FDECE7', errorLine: '#F0B4A3', error: '#A3301A', onError: '#FFFFFF',
+};
 
 const RENKLI: SitePalette = {
     bg: '#EFE2CC',
@@ -379,6 +437,160 @@ const SICAK: SitePalette = {
     headingWeight: 700,
 };
 
+/** Meyhane Gecesi paleti: tek koyu tasarım. Zemin kömür, kartlar bir ton açık, koyu panel (sepet, çağrı kartı) bir ton
+ *  daha açık ki koyu zeminde ayrılsın. Hardal kutu kehribar (üstünde koyu yazı; siteThemes.css kutunun içindeki yazı
+ *  değişkenlerini koyulaştırır). Kontrastlar (WCAG): krem yazı zeminde 15.8, kartta 14.5; ikincil #CFC2B0 kartta 9.9;
+ *  soluk #ADA08F kartta 6.7, menü kartında 6.4; kehribar zeminde 8.7, kartta 8.0, panelde 7.2; kehribar üstünde koyu yazı 8.7. */
+const MEYHANE: SitePalette = {
+    bg: '#14110E',
+    fg: '#F3EADB',
+    alt: '#1B1713',
+    card: '#1F1A15',
+    text2: '#CFC2B0',
+    muted: '#ADA08F',
+    wordmark: '#211B16',
+    placeholder: '#29221B',
+    rgb: '243,234,219',
+    heroOverlay: 'rgba(20,17,14,0.80)',
+    disabled: '#6E6357',
+    paper: '#29221B',
+    onPaper: '#F3EADB',
+    onPaperSub: '#CDBFAD',
+    paperRgb: '243,234,219',
+    mustard: '#E9A23B',
+    mustardText: null,
+    onHero: '#F3EADB',
+    onMenuBox: '#F3EADB',
+    onMenuBoxSub: '#CDBFAD',
+    heroAccent: null,
+    menuCard: '#14110E',
+    dotOk: '#7FD6A0',
+    dotBad: '#F08F7A',
+    pop: null,
+    onPop: '#14110E',
+    story: '#3A1712',
+    olive: '#22291F',
+    // Kiremit kutu (seçili gün, "Özel günler"): krem yazı 5.7, yumuşak şeftali yazı 4.8; koyu zeminde kiremit yazı 7.0.
+    terracotta: '#A63B29',
+    onTerracotta: '#FBF1E4',
+    terracottaText: '#E8826E',
+    onTerracottaSoft: '#FFD9A8',
+    footer: '#0E0C0A',
+    onFooter: '#F3EADB',
+    footerMuted: '#BDB0A0',
+    footerLabel: null,
+    footerMap: '#1E1A15',
+    footerRoad: '#2C251E',
+    footerWater: '#162229',
+    font: 'youngserif-figtree',
+    headingWeight: 400,
+    dark: true,
+    lines: [0.12, 0.1, 0.2, 0.32],
+    // Koyu zeminde durum renkleri: açık yazı koyu kutuda (onay 9.1, hata 7.3); hata düğmesinde koyu yazı (8.0).
+    status: {
+        okBg: '#13261A', okLine: '#2F6B45', ok: '#7FD6A0',
+        errorBg: '#2A1512', errorLine: '#7A3328', error: '#F08F7A', onError: '#14110E',
+    },
+};
+
+/** Esnaf Tabelası paleti: krem zemin, mürekkep yazı, kalın çizgiler; koyu panel mürekkep, menü kutusu temaya göre
+ *  (çini mavisi / kırmızı), hardal kutu tabela sarısı. Kontrastlar: mürekkep zeminde 16.5, ara bantta 14.8; ikincil
+ *  #3F3933 ara bantta 9.7; soluk #5A5249 ara bantta 6.5; çini mavisi üstünde krem 8.0, sarı 5.0; sarı üstünde mürekkep 10.4. */
+const ESNAF: SitePalette = {
+    bg: '#FFF8EC',
+    fg: '#1A1A1A',
+    alt: '#F7EBD6',
+    card: '#FFFFFF',
+    text2: '#3F3933',
+    muted: '#5A5249',
+    wordmark: '#F2E4CC',
+    placeholder: '#F1E3CB',
+    rgb: '26,26,26',
+    heroOverlay: 'rgba(255,248,236,0.84)',
+    disabled: '#A59A8C',
+    paper: '#1A1A1A',
+    onPaper: '#FFF8EC',
+    onPaperSub: '#CFC6B8',
+    paperRgb: '255,248,236',
+    mustard: '#F2C230',
+    mustardText: '#F2C230',
+    onHero: '#FFF8EC',
+    onMenuBox: '#FFF8EC',
+    onMenuBoxSub: '#E4DCCF',
+    // Kapaktaki vurgu yazısı: açık sarı (kırmızı kapakta 4.8, mavide 6.9, kara tahtada 12.2).
+    heroAccent: '#FFE7A3',
+    menuCard: '#FFF8EC',
+    dotOk: '#7BE0A2',
+    dotBad: '#FFB4A3',
+    pop: '#F2C230',
+    onPop: '#1A1A1A',
+    story: '#1D4E89',
+    olive: '#14365F',
+    terracotta: '#C8102E',
+    onTerracotta: '#FFFFFF',
+    terracottaText: '#B00E28',
+    onTerracottaSoft: '#FFE7A3',
+    footer: '#1A1A1A',
+    onFooter: '#FFF8EC',
+    footerMuted: '#CFC6B8',
+    footerLabel: '#F2C230',
+    footerMap: '#262626',
+    footerRoad: '#3A3A3A',
+    footerWater: '#1D3550',
+    font: 'anton-archivo',
+    headingWeight: 400,
+    // Pano çizgileri daha belirgin.
+    lines: [0.2, 0.16, 0.34, 0.6],
+};
+
+/** Bahçe Kahvaltısı paleti: açık yeşil-beyaz zemin, beyaz kartlar, koyu orman yeşili panel, tereyağı kutu.
+ *  Kontrastlar: yazı zeminde 14.3, ara bantta 13.0; ikincil #3E4A39 ara bantta 8.2; soluk #55604F ara bantta 5.8;
+ *  tereyağı üstünde koyu yazı 11.0; orman yeşili panelde krem 10.4, tereyağı 8.0. */
+const BAHCE: SitePalette = {
+    bg: '#F7FBF4',
+    fg: '#1F2A1C',
+    alt: '#EAF2E4',
+    card: '#FFFFFF',
+    text2: '#3E4A39',
+    muted: '#55604F',
+    wordmark: '#E3EEDC',
+    placeholder: '#E2ECDA',
+    rgb: '31,42,28',
+    heroOverlay: 'rgba(247,251,244,0.82)',
+    disabled: '#9DA996',
+    paper: '#2F4229',
+    onPaper: '#F7FBF4',
+    onPaperSub: '#CFDCC8',
+    paperRgb: '247,251,244',
+    mustard: '#FFD978',
+    mustardText: '#FFD978',
+    onHero: '#FFFFFF',
+    onMenuBox: '#F7FBF4',
+    onMenuBoxSub: '#E2EBDC',
+    // Kapakta açık tereyağı (adaçayında 5.5, domateste 5.2, zeytinde 7.2).
+    heroAccent: '#FFE39A',
+    menuCard: '#F7FBF4',
+    dotOk: '#9BE6B0',
+    dotBad: '#FFB4A3',
+    pop: '#FFD978',
+    onPop: '#1F2A1C',
+    story: '#8A3510',
+    olive: '#3B5234',
+    terracotta: null,
+    onTerracotta: null,
+    terracottaText: null,
+    onTerracottaSoft: null,
+    footer: '#26351F',
+    onFooter: '#F7FBF4',
+    footerMuted: '#C9D6C1',
+    footerLabel: '#FFD978',
+    footerMap: '#2F4229',
+    footerRoad: '#3E5536',
+    footerWater: '#2A4A4A',
+    font: 'bricolage-figtree',
+    headingWeight: 700,
+};
+
 type PresetInput = Omit<SiteThemePreset, 'bg' | 'card' | 'border' | 'text' | 'muted'>;
 
 function presets(p: SitePalette, list: PresetInput[]): Record<string, SiteThemePreset> {
@@ -396,7 +608,7 @@ const RENKLI_THEMES = presets(RENKLI, [
     { key: 'terracotta', label: 'Kiremit · hardal', description: 'Kiremit kapak, hardal vurgu. Ocakbaşı, ızgara.', ...MUSTARD, ...KIREMIT, menuBox: RENKLI.olive },
     { key: 'zeytin', label: 'Zeytin', description: 'Zeytin yeşili kapak, turuncu vurgu. Ege, meyhane, kahvaltı.', ...ORANGE, hero: RENKLI.olive, heroDeep: '#2F3926', menuBox: '#8C3317' },
     { key: 'lacivert', label: 'Lacivert', description: 'Gece mavisi kapak, hardal vurgu. Balık, deniz kenarı.', ...MUSTARD, hero: '#1F3550', heroDeep: '#172839', menuBox: RENKLI.olive },
-    { key: 'bordo', label: 'Bordo', description: 'Şarap rengi kapak, hardal vurgu. Akşam yemeği, steakhouse.', ...MUSTARD, hero: '#7A2232', heroDeep: '#5E1A27', menuBox: RENKLI.olive },
+    { key: 'bordo', label: 'Bordo', description: 'Bordo kapak, hardal vurgu. Akşam yemeği, steakhouse.', ...MUSTARD, hero: '#7A2232', heroDeep: '#5E1A27', menuBox: RENKLI.olive },
     { key: 'komur', label: 'Kömür', description: 'Koyu kahve kapak, hardal vurgu. Bar, gece mekânı.', ...MUSTARD, hero: RENKLI.fg, heroDeep: '#17100A', menuBox: RENKLI.olive },
     { key: 'beyaz', label: 'Toprak', description: 'Toprak rengi kapak, turuncu vurgu. Sade ve sıcak.', ...ORANGE, hero: '#4A3C30', heroDeep: '#3A2F25', menuBox: RENKLI.olive },
 ]);
@@ -408,7 +620,7 @@ const WHITE = { hero: SADE.paper, heroDeep: '#2A2622', cover: SADE.card, coverDe
 const ESPRESSO = { onAccent: ELIT.paper, hero: ELIT.paper, heroDeep: '#221A14', cover: ELIT.paper, coverDeep: '#221A14', menuBox: ELIT.paper };
 const ELIT_THEMES = presets(ELIT, [
     { key: 'altin', label: 'Altın', description: 'Altın çizgiler ve düğmeler. Varsayılan.', accent: '#C8A35F', accentText: '#7A5F2B', ...ESPRESSO },
-    { key: 'bordo', label: 'Bordo', description: 'Gül kurusu süsler, şarap rengi yazılar. Akşam yemeği, steakhouse.', accent: '#D4A0A0', accentText: '#7A2F3A', ...ESPRESSO },
+    { key: 'bordo', label: 'Bordo', description: 'Gül kurusu süsler, bordo yazılar. Akşam yemeği, steakhouse.', accent: '#D4A0A0', accentText: '#7A2F3A', ...ESPRESSO },
     { key: 'zeytin', label: 'Zeytin', description: 'Adaçayı süsler, zeytin yeşili yazılar. Ege, meyhane.', accent: '#B9BD8E', accentText: '#56622F', ...ESPRESSO },
     { key: 'lacivert', label: 'Lacivert', description: 'Buz mavisi süsler, lacivert yazılar. Balık, deniz kenarı.', accent: '#A9B8D0', accentText: '#2F4A75', ...ESPRESSO },
     { key: 'komur', label: 'Kömür', description: 'Taş rengi süsler, kömür yazılar. Bar, gece mekânı.', accent: '#CFC6B8', accentText: '#4A443C', ...ESPRESSO },
@@ -419,7 +631,7 @@ const SADE_THEMES = presets(SADE, [
     { key: 'terracotta', label: 'Terracotta', description: 'Kiremit turuncusu vurgu. Ocakbaşı, ızgara, pide.', accent: '#E2683C', onAccent: SADE.fg, accentText: '#A63F17', ...WHITE },
     { key: 'zeytin', label: 'Zeytin', description: 'Adaçayı yeşili vurgu. Ege, meyhane, kahvaltı.', accent: '#9DBF8E', onAccent: SADE.fg, accentText: '#3F6B34', ...WHITE },
     { key: 'lacivert', label: 'Lacivert', description: 'Koyu lacivert vurgu. Balık, deniz kenarı.', accent: '#2F4F8F', onAccent: '#FFFFFF', accentText: '#2F4F8F', ...WHITE },
-    { key: 'bordo', label: 'Bordo', description: 'Şarap rengi vurgu. Akşam yemeği, steakhouse.', accent: '#A8354A', onAccent: '#FFFFFF', accentText: '#8E2433', ...WHITE },
+    { key: 'bordo', label: 'Bordo', description: 'Bordo vurgu. Akşam yemeği, steakhouse.', accent: '#A8354A', onAccent: '#FFFFFF', accentText: '#8E2433', ...WHITE },
     { key: 'komur', label: 'Kömür', description: 'Kömür siyahı vurgu. Bar, gece mekânı; sade ve güçlü.', accent: '#2A2622', onAccent: SADE.bg, accentText: '#2A2622', ...WHITE },
     { key: 'beyaz', label: 'Sade gri', description: 'Serin gri vurgu. Sade ve modern.', accent: '#9AA5B1', onAccent: SADE.fg, accentText: '#4A5563', ...WHITE },
 ]);
@@ -431,8 +643,38 @@ const SICAK_THEMES = presets(SICAK, [
     { key: 'altin', label: 'Turuncu', description: 'Parlak turuncu vurgu, şeftali zemin. Varsayılan.', accent: '#D9660B', onAccent: SICAK.fg, accentText: '#A34A06', ...PEACH },
     { key: 'terracotta', label: 'Kırmızı biber', description: 'Biber kırmızısı vurgu. Ocakbaşı, ızgara, burger.', accent: '#C8341E', onAccent: '#FFFFFF', accentText: '#A62A16', ...PEACH },
     { key: 'zeytin', label: 'Zeytin', description: 'Zeytin yeşili vurgu. Ege, kahvaltı, salata.', accent: '#6B7A2E', onAccent: '#FFFFFF', accentText: '#56622F', ...PEACH },
-    { key: 'bordo', label: 'Bordo', description: 'Şarap rengi vurgu. Akşam yemeği, steakhouse.', accent: '#8E2433', onAccent: '#FFFFFF', accentText: '#8E2433', ...PEACH },
+    { key: 'bordo', label: 'Bordo', description: 'Bordo vurgu. Akşam yemeği, steakhouse.', accent: '#8E2433', onAccent: '#FFFFFF', accentText: '#8E2433', ...PEACH },
     { key: 'komur', label: 'Kömür', description: 'Kömür siyahı vurgu. Bar, gece mekânı; sade ve güçlü.', accent: SICAK.fg, onAccent: SICAK.bg, accentText: SICAK.fg, ...PEACH },
+]);
+
+// Meyhane Gecesi: tema vurguyu ve kapağın rengini seçer (kapak hep koyu). Vurgular koyu zemin için açık tonlar; düğme
+// yazısı koyu zemin rengi. Kontrast (zeminde / kartta / üstünde koyu yazı): kehribar 8.7 / 8.0 / 8.7; süt beyazı
+// 14.8 / 13.6 / 14.8; buz mavisi 10.1 / 9.3 / 10.1; gül 8.9 / 8.2 / 8.9; zeytin 10.6 / 9.7 / 10.6.
+const NIGHT = { onAccent: MEYHANE.bg, menuBox: '#2A1C14' };
+const MEYHANE_THEMES = presets(MEYHANE, [
+    { key: 'altin', label: 'Kehribar', description: 'Kehribar ışık, kömür zemin. Varsayılan.', accent: '#E9A23B', accentText: '#E9A23B', hero: '#0D0B09', heroDeep: '#080706', ...NIGHT },
+    { key: 'beyaz', label: 'Süt beyazı', description: 'Süt beyazı vurgu, sade ve loş. Meze, ocakbaşı.', accent: '#ECE3D3', accentText: '#ECE3D3', hero: '#0D0B09', heroDeep: '#080706', ...NIGHT },
+    { key: 'lacivert', label: 'Gece mavisi', description: 'Buz mavisi vurgu, lacivert kapak. Balık, deniz kenarı.', accent: '#9EC1EA', accentText: '#9EC1EA', hero: '#0F1826', heroDeep: '#0A111C', ...NIGHT },
+    { key: 'bordo', label: 'Bordo', description: 'Gül kurusu vurgu, bordo kapak. Steakhouse, akşam yemeği.', accent: '#E8A0A0', accentText: '#E8A0A0', hero: '#2B1016', heroDeep: '#1F0B10', ...NIGHT },
+    { key: 'zeytin', label: 'Zeytinlik', description: 'Zeytin yeşili vurgu, koyu yeşil kapak. Ege, ocakbaşı.', accent: '#B9C98A', accentText: '#B9C98A', hero: '#161D14', heroDeep: '#10160F', ...NIGHT },
+]);
+
+// Esnaf Tabelası: tema kapağın ve menü kutusunun rengini, vurguyu seçer. Kırmızı #C8102E krem zeminde 5.6 (yazıda
+// #B00E28, ara bantta 6.1), üstünde beyaz 5.9; sarı vurguda düğme yazısı mürekkep (10.4), açık zeminde yazı #7A5C00 (5.3).
+const ESNAF_THEMES = presets(ESNAF, [
+    { key: 'altin', label: 'Tabela kırmızısı', description: 'Kırmızı kapak, çini mavisi menü kutusu. Varsayılan.', accent: '#C8102E', onAccent: '#FFFFFF', accentText: '#B00E28', hero: '#C8102E', heroDeep: '#A00D25', menuBox: '#1D4E89' },
+    { key: 'lacivert', label: 'Çini mavisi', description: 'Çini mavisi kapak, kırmızı vurgu. Pide, lahmacun, fırın.', accent: '#C8102E', onAccent: '#FFFFFF', accentText: '#B00E28', hero: '#1D4E89', heroDeep: '#163D6B', menuBox: '#A00D25' },
+    { key: 'komur', label: 'Kara tahta', description: 'Kara tahta kapak, sarı vurgu. Esnaf lokantası, büfe.', accent: '#F2C230', onAccent: '#1A1A1A', accentText: '#7A5C00', hero: '#1F2A24', heroDeep: '#18211C', menuBox: '#1D4E89' },
+    { key: 'terracotta', label: 'Közlenmiş biber', description: 'Koyu kırmızı kapak, sarı vurgu. Kebap, ocakbaşı, döner.', accent: '#F2C230', onAccent: '#1A1A1A', accentText: '#7A5C00', hero: '#8E0B21', heroDeep: '#70091A', menuBox: '#1A1A1A' },
+]);
+
+// Bahçe Kahvaltısı: tema kapağın ve menü kutusunun rengini, vurguyu seçer. Domates #C2410C zeminde 4.95 (yazıda
+// #AE3A0B, ara bantta 5.4), üstünde beyaz 5.2; adaçayı vurgu #4E6B46 üstünde beyaz 6.0, yazıda #3F5A38 (6.7).
+const GARDEN_TOMATO = { accent: '#C2410C', onAccent: '#FFFFFF', accentText: '#AE3A0B' };
+const BAHCE_THEMES = presets(BAHCE, [
+    { key: 'altin', label: 'Adaçayı', description: 'Adaçayı kapak, domates vurgu. Varsayılan.', ...GARDEN_TOMATO, hero: '#45613E', heroDeep: '#3A5234', menuBox: '#8A3510' },
+    { key: 'terracotta', label: 'Domates', description: 'Domates kapak, adaçayı vurgu. Serpme kahvaltı, menemen.', accent: '#4E6B46', onAccent: '#FFFFFF', accentText: '#3F5A38', hero: '#A8380B', heroDeep: '#8E2F09', menuBox: '#2F4229' },
+    { key: 'zeytin', label: 'Zeytin', description: 'Zeytin yeşili kapak, domates vurgu. Ege kahvaltısı, köy sofrası.', ...GARDEN_TOMATO, hero: '#4D4A22', heroDeep: '#3F3C1B', menuBox: '#2F4229' },
 ]);
 
 export interface SiteDesignInfo {
@@ -466,7 +708,31 @@ export const SITE_DESIGNS: Record<SiteDesignKey, SiteDesignInfo> = {
         key: 'sicak', label: 'Sıcak', description: 'Şeftali ve krem zemin, turuncu vurgu, yuvarlak tabak fotoğrafları.',
         palette: SICAK, themes: SICAK_THEMES,
     },
+    meyhane: {
+        key: 'meyhane', label: 'Meyhane Gecesi', description: 'Koyu kömür zemin, kehribar ışık; menü, basılı meyhane kartı gibi noktalı fiyat satırları.',
+        palette: MEYHANE, themes: MEYHANE_THEMES,
+    },
+    esnaf: {
+        key: 'esnaf', label: 'Esnaf Tabelası', description: 'Tabela kırmızısı ve çini mavisi, kalın büyük harf başlıklar; ürün fotoğrafı olmasa da dolu.',
+        palette: ESNAF, themes: ESNAF_THEMES,
+    },
+    bahce: {
+        key: 'bahce', label: 'Bahçe Kahvaltısı', description: 'Adaçayı, domates ve tereyağı; ferah zemin, yuvarlak köşeler, sabah ışığı.',
+        palette: BAHCE, themes: BAHCE_THEMES,
+    },
 };
+
+/** Koyu tasarım mı (Meyhane Gecesi). */
+export function isDarkDesign(design?: string | null): boolean {
+    return SITE_DESIGNS[resolveDesign(design)].palette.dark === true;
+}
+
+/** Menünün sunumu (DeliveryMenu `variant`), tasarım kaydından (designs/designTraits.ts): Meyhane Gecesi basılı menü
+ *  satırı ve meze tepsisi, Esnaf Tabelası pano satırı; öteki tasarımlar kart ('default'; Sıcak'ın tabak kartı yalnız
+ *  paket sipariş sayfasında ayrıca seçilir). */
+export function lineMenuVariant(design?: string | null): SiteDesignTraits['menuVariant'] {
+    return designTraits(resolveDesign(design)).menuVariant;
+}
 
 /** Renkli tasarımın temaları (geriye dönük ad). */
 export const SITE_THEMES = RENKLI_THEMES;
@@ -555,10 +821,13 @@ export function resolveSiteColors(accentColor?: string | null, theme?: string | 
     const P = SITE_DESIGNS[d].palette;
     const t = resolveTheme(theme, d);
     const custom = isHex(accentColor) && accentColor.toUpperCase() !== t.accent.toUpperCase();
-    const pair = custom ? accentPair(accentColor, P.fg) : { accent: t.accent, onAccent: t.onAccent };
+    // Koyu tasarımda düğme yazısının koyu seçeneği zemin rengi (yazı rengi açık).
+    const pair = custom ? accentPair(accentColor, P.dark ? P.bg : P.fg) : { accent: t.accent, onAccent: t.onAccent };
     // Vurgu yazısı hem zeminde hem kutularda okunmalı: zemin ve ara bandın koyusuna göre (Renkli: kum zemin; Sade ve
-    // Elit: ara bant).
-    const accentText = custom ? ensureContrast(accentColor, luminance(P.alt) < luminance(P.bg) ? P.alt : P.bg) : t.accentText;
+    // Elit: ara bant). Koyu tasarımda en açık yüzeye (kart) göre açılır.
+    const accentText = !custom ? t.accentText
+        : P.dark ? ensureContrast(accentColor, P.card)
+            : ensureContrast(accentColor, luminance(P.alt) < luminance(P.bg) ? P.alt : P.bg);
     // Koyu panelde (sepet, çağrı kartı) vurgu: koyu vurgular açılır.
     const accentOnDark = ensureContrast(pair.accent, P.paper);
     const cover = t.cover ?? t.hero;
@@ -589,6 +858,8 @@ export function siteRootStyle(accentColor?: string | null, theme?: string | null
     const { palette: P, theme: t } = c;
     const f = resolveFont(font, c.design);
     const line = (a: number) => `rgba(${P.rgb},${a})`;
+    const [lineBorder, lineSoft, lineMid, lineStrong] = P.lines ?? [0.12, 0.1, 0.2, 0.3];
+    const status = P.status ?? LIGHT_STATUS;
     return {
         '--site-sans': f.body,
         '--site-serif': f.heading,
@@ -645,27 +916,32 @@ export function siteRootStyle(accentColor?: string | null, theme?: string | null
         '--site-sub': P.text2,
         '--site-muted': P.muted,
         '--site-wordmark': P.wordmark,
-        '--site-border': line(0.12),
-        '--site-line': line(0.1),
-        '--site-border-mid': line(0.2),
-        '--site-border-strong': line(0.3),
+        '--site-border': line(lineBorder),
+        '--site-line': line(lineSoft),
+        '--site-border-mid': line(lineMid),
+        '--site-border-strong': line(lineStrong),
         '--site-disabled': P.disabled,
         '--site-paper': P.paper,
         '--site-on-paper': P.onPaper,
         '--site-on-paper-sub': P.onPaperSub,
         '--site-paper-line': `rgba(${P.paperRgb},0.14)`,
         '--site-paper-line-strong': `rgba(${P.paperRgb},0.28)`,
-        '--site-ok-bg': '#E3F1E6',
-        '--site-ok-line': '#9CCBA9',
-        '--site-ok': '#1B6A43',
-        '--site-error-bg': '#FDECE7',
-        '--site-error-line': '#F0B4A3',
-        '--site-error': '#A3301A',
-        colorScheme: 'light',
+        '--site-ok-bg': status.okBg,
+        '--site-ok-line': status.okLine,
+        '--site-ok': status.ok,
+        '--site-error-bg': status.errorBg,
+        '--site-error-line': status.errorLine,
+        '--site-error': status.error,
+        '--site-on-error': status.onError,
+        // Odak halkası (yeni tasarımlar, siteThemes.css): vurgunun okunur tonu (koyu tasarımda açık, açıkta koyu).
+        '--site-focus': c.accentText,
+        colorScheme: P.dark ? 'dark' : 'light',
         fontFamily: f.body,
         fontWeight: f.bodyWeight,
         // Tek ağırlıklı başlık yazı tipi (Instrument Serif, DM Serif Display): kalın sınıflar sahte kalın çizmesin.
         fontSynthesisWeight: f.singleWeight ? 'none' : undefined,
+        // İtalği olmayan başlık yazı tipi (Young Serif, Anton, Bricolage): italik vurgu sahte eğik çizilmesin, dik kalır.
+        fontSynthesisStyle: f.noItalic ? 'none' : undefined,
         backgroundColor: 'var(--site-bg)',
         color: 'var(--site-text)',
     } as CSSProperties;

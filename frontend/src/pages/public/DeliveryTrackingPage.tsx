@@ -4,7 +4,7 @@ import { ArrowLeft, BadgeCheck, ClipboardCheck, Flame, House, MapPin, Package, P
 import { isAxiosError } from 'axios';
 import { publicDeliveryService } from '@/features/delivery/api/publicDeliveryService';
 import { forgetOrder, rememberOrder } from '@/features/delivery/deliveryCart';
-import { TRACKING_STEPS, isFinalStatus, trackingStepIndex } from '@/features/delivery/deliveryStatus';
+import { isFinalStatus, trackingStepIndex, trackingSteps } from '@/features/delivery/deliveryStatus';
 import { DeliveryStatus, DoorPayment, type DeliveryTracking } from '@/features/delivery/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
@@ -38,9 +38,17 @@ const STEP_HEADLINE: Record<number, string> = {
     [DeliveryStatus.Delivered]: 'Teslim edildi',
 };
 
+/** Gel al siparişinde hazır ve teslim adımlarının başlığı. */
+const PICKUP_STEP_HEADLINE: Record<number, string> = {
+    [DeliveryStatus.Ready]: 'Hazır · gelip alabilirsiniz',
+    [DeliveryStatus.Delivered]: 'Teslim alındı',
+};
+
 function paymentText(order: DeliveryTracking): string {
     if (order.paymentPreference === DoorPayment.Iban) return 'IBAN ile havale';
-    return `Kapıda ${order.paymentPreference === DoorPayment.Nakit ? 'nakit' : 'kart'}`;
+    // Gel al'da tercih yok: müşteri restoranda öder, yöntemi orada seçer.
+    if (order.paymentPreference == null) return 'Restoranda ödeme';
+    return `${order.isPickup ? 'Restoranda' : 'Kapıda'} ${order.paymentPreference === DoorPayment.Nakit ? 'nakit' : 'kart'}`;
 }
 
 // Paket siparişin takip sayfası (/siparis/takip/:token). Anahtar siparişte verilen rastgele token'dır; sayfa açılınca
@@ -148,7 +156,7 @@ export default function DeliveryTrackingPage() {
     // Elit: köşesiz, ince serif giydirme (rb-el-flow) ve duruma göre değişmeyen koyu espresso kapak.
     const elit = resolveDesign(order?.design) === 'elit';
     const root = (children: ReactNode) => (
-        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design, font: order?.font })} className={cn('flex min-h-screen flex-col overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', elit && 'rb-el-flow')}>
+        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design, font: order?.font })} data-site-design={resolveDesign(order?.design)} className={cn('flex min-h-screen flex-col overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', elit && 'rb-el-flow')}>
             <EliteFlowStyle design={order?.design} />
             <link rel="stylesheet" href={customerFontsHref(order)} precedence="default" />
             {children}
@@ -178,7 +186,11 @@ export default function DeliveryTrackingPage() {
         );
     }
 
-    const step = trackingStepIndex(order.status);
+    const isPickup = !!order.isPickup;
+    const steps = trackingSteps(isPickup);
+    // Gel al'da "Yolda" adımı (kamyon) yoktur.
+    const stepIcons = isPickup ? STEP_ICONS.filter((_, i) => i !== 4) : STEP_ICONS;
+    const step = trackingStepIndex(order.status, isPickup);
     const failed = order.status === DeliveryStatus.Rejected || order.status === DeliveryStatus.Cancelled;
     const rejected = order.status === DeliveryStatus.Rejected;
     const delivered = order.status === DeliveryStatus.Delivered;
@@ -197,20 +209,26 @@ export default function DeliveryTrackingPage() {
         ? <>#{order.number}{order.deliveredAt && <> · {timeOfDay(order.deliveredAt)}&apos;de teslim edildi · {minutesBetween(order.createdAt, order.deliveredAt)} dk</>}. Bizi tercih ettiğiniz için teşekkürler.</>
         : failed
             ? <>Ödeme alınmadı. Sepetiniz duruyor, {rejected ? 'biraz sonra yeniden deneyebilirsiniz.' : 'dilediğinizde yeniden gönderebilirsiniz.'}</>
-            : order.statusDescription || (eta ? `${timeOfDay(eta)} civarında kapınızda.` : 'Restoran birazdan onaylayıp teslim saatini yazacak.');
+            : order.statusDescription || (eta
+                ? (isPickup ? `${timeOfDay(eta)} civarında hazır olur.` : `${timeOfDay(eta)} civarında kapınızda.`)
+                : 'Restoran birazdan onaylayıp teslim saatini yazacak.');
 
     // Sağdaki daire: kalan dakika (yoksa tahmini saat); teslimde teslim saati.
     const badge: { label: string; value: string; sub: string } | null = delivered
         ? (order.deliveredAt ? { label: 'Teslim', value: timeOfDay(order.deliveredAt), sub: 'bugün' } : null)
         : failed ? null
+            : isPickup && order.status === DeliveryStatus.Ready ? { label: 'Sipariş', value: 'Hazır', sub: 'gelip alabilirsiniz' }
             : approx ? { label: onTheWay ? 'Varış' : 'Kalan', value: String(approx), sub: eta ? `dakika · ${timeOfDay(eta)}` : 'dakika' }
                 : eta ? { label: 'Tahmini', value: timeOfDay(eta), sub: 'civarında' } : null;
 
     const stampOf = (i: number): string => {
-        const at = [order.createdAt, order.acceptedAt, null, null, order.dispatchedAt, order.deliveredAt][i];
+        const at = (isPickup
+            ? [order.createdAt, order.acceptedAt, null, null, order.deliveredAt]
+            : [order.createdAt, order.acceptedAt, null, null, order.dispatchedAt, order.deliveredAt])[i];
         if (at) return timeOfDay(at);
         if (i === step && !delivered) return 'Şimdi';
-        if (i === TRACKING_STEPS.length - 1 && eta) return `~${timeOfDay(eta)}`;
+        // Gel al'da süre "hazır" adımına aittir; adrese teslimde son adıma.
+        if (i === (isPickup ? 3 : steps.length - 1) && eta) return `~${timeOfDay(eta)}`;
         return '';
     };
 
@@ -235,7 +253,7 @@ export default function DeliveryTrackingPage() {
                                 </Link>
                             )}
                             <span className="text-xs font-extrabold uppercase tracking-[0.24em]">
-                                Sipariş #{order.number} · {order.zoneName || 'Paket servis'}
+                                Sipariş #{order.number} · {isPickup ? 'Gel al' : order.zoneName || 'Paket servis'}
                             </span>
                             <h1 id="takip-baslik" className={cn(serif, 'm-0 break-words text-[44px] font-extrabold leading-[0.92] tracking-[-0.025em] sm:text-[56px] md:text-[clamp(56px,6.4vw,100px)]')}>
                                 {title.lead}<br /><em className={cn('font-semibold italic', tone.em)}>{title.accent}</em>
@@ -247,7 +265,7 @@ export default function DeliveryTrackingPage() {
                         </div>
                         {badge && (
                             <div className={cn('flex h-[150px] w-[150px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full text-center md:h-[210px] md:w-[210px]', tone.badge)}>
-                                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] md:text-xs">{badge.label}</span>
+                                <span className="text-xs font-extrabold uppercase tracking-[0.16em] md:text-xs">{badge.label}</span>
                                 <span className={cn(serif, 'font-extrabold leading-none tabular-nums', badge.value.length > 3 ? 'text-[38px] md:text-[52px]' : 'text-[48px] md:text-[64px]')}>{badge.value}</span>
                                 <span className="text-xs font-bold md:text-[13px]">{badge.sub}</span>
                             </div>
@@ -256,11 +274,11 @@ export default function DeliveryTrackingPage() {
 
                     {step >= 0 && (
                         <div className="relative flex flex-col gap-3">
-                            <ol aria-label="Sipariş adımları" className="m-0 grid list-none grid-cols-6 p-0">
-                                {TRACKING_STEPS.map((label, i) => {
+                            <ol aria-label="Sipariş adımları" className={cn('m-0 grid list-none p-0', isPickup ? 'grid-cols-5' : 'grid-cols-6')}>
+                                {steps.map((label, i) => {
                                     const done = i < step;
                                     const current = i === step;
-                                    const Icon = STEP_ICONS[i];
+                                    const Icon = stepIcons[i];
                                     return (
                                         <li key={label} aria-current={current ? 'step' : undefined} className="flex min-w-0 flex-col gap-2 sm:gap-3">
                                             <div className="flex items-center">
@@ -272,7 +290,7 @@ export default function DeliveryTrackingPage() {
                                                     <Icon className="relative h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" strokeWidth={2} />
                                                 </span>
                                                 <span aria-hidden="true" className={cn('mx-1 h-[3px] min-w-0 flex-1 rounded-sm sm:mx-2.5',
-                                                    i === TRACKING_STEPS.length - 1 ? 'opacity-0' : done ? 'bg-[var(--trk-fg)]' : 'bg-[color-mix(in_srgb,var(--trk-fg)_25%,transparent)]')} />
+                                                    i === steps.length - 1 ? 'opacity-0' : done ? 'bg-[var(--trk-fg)]' : 'bg-[color-mix(in_srgb,var(--trk-fg)_25%,transparent)]')} />
                                             </div>
                                             <span className="pr-1 text-[15px] font-extrabold leading-tight max-sm:sr-only md:text-base">
                                                 {label}{done && <span className="sr-only"> (tamamlandı)</span>}
@@ -283,7 +301,7 @@ export default function DeliveryTrackingPage() {
                                 })}
                             </ol>
                             <p className="m-0 text-sm font-bold sm:hidden">
-                                Adım {step + 1}/{TRACKING_STEPS.length} · {STEP_HEADLINE[order.status] ?? order.statusLabel}
+                                Adım {step + 1}/{steps.length} · {(isPickup ? PICKUP_STEP_HEADLINE[order.status] : undefined) ?? STEP_HEADLINE[order.status] ?? order.statusLabel}
                                 {stampOf(step) && stampOf(step) !== 'Şimdi' ? ` · ${stampOf(step)}` : ''}
                             </p>
                         </div>
@@ -316,7 +334,7 @@ export default function DeliveryTrackingPage() {
                                     <li key={i} className="flex items-center gap-3 border-b border-[var(--site-line)] py-4 sm:gap-3.5">
                                         <span className="flex h-[34px] min-w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[var(--site-bg)] px-2 font-extrabold tabular-nums">{line.quantity}×</span>
                                         <div className="hidden h-12 w-12 shrink-0 sm:block">
-                                            <ImageSlot src={image} alt="" restaurant={brand} className="h-full rounded-xl" logoTextClassName="text-[9px]" />
+                                            <ImageSlot src={image} alt="" restaurant={brand} className="h-full rounded-xl" logoTextClassName="text-xs" />
                                         </div>
                                         <span className="min-w-0 flex-1">
                                             <span className={cn(serif, 'block break-words text-[19px] leading-tight md:text-[22px]')}>{line.name}</span>
@@ -330,7 +348,9 @@ export default function DeliveryTrackingPage() {
                         </ul>
                         <dl className="m-0 flex flex-col gap-2 text-[15px]">
                             <div className="flex justify-between gap-3"><dt className="text-[var(--site-muted)]">Ara toplam</dt><dd className="m-0 font-bold tabular-nums">{formatPrice(order.subtotal)} ₺</dd></div>
-                            <div className="flex justify-between gap-3"><dt className="text-[var(--site-muted)]">Teslimat{order.zoneName ? ` · ${order.zoneName}` : ''}</dt><dd className="m-0 font-bold tabular-nums">{order.deliveryFee > 0 ? `${formatPrice(order.deliveryFee)} ₺` : 'Ücretsiz'}</dd></div>
+                            {isPickup
+                                ? <div className="flex justify-between gap-3"><dt className="text-[var(--site-muted)]">Gel al</dt><dd className="m-0 font-bold">Teslimat ücreti yok</dd></div>
+                                : <div className="flex justify-between gap-3"><dt className="text-[var(--site-muted)]">Teslimat{order.zoneName ? ` · ${order.zoneName}` : ''}</dt><dd className="m-0 font-bold tabular-nums">{order.deliveryFee > 0 ? `${formatPrice(order.deliveryFee)} ₺` : 'Ücretsiz'}</dd></div>}
                             <div className="flex items-baseline justify-between gap-3 border-t border-dashed border-[var(--site-border-mid)] pt-3">
                                 <dt className="font-extrabold">Toplam</dt>
                                 <dd className={cn(serif, 'm-0 text-[34px] font-extrabold leading-none tabular-nums text-[var(--site-terracotta-text)] md:text-[40px]')}>{formatPrice(order.total)} ₺</dd>
@@ -339,8 +359,12 @@ export default function DeliveryTrackingPage() {
                         <div className="flex items-start gap-3.5 rounded-[20px] bg-[var(--site-bg)] px-5 py-[18px]">
                             <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[var(--site-terracotta-text)]" aria-hidden="true" />
                             <div className="flex min-w-0 flex-col gap-0.5">
-                                <span className="font-extrabold">Teslimat{order.zoneName ? ` · ${order.zoneName}` : ''}</span>
-                                <span className="text-sm text-[var(--site-sub)]">{order.customerName} · {byIban ? 'IBAN ile havale/EFT' : `${paymentText(order).toLocaleLowerCase('tr-TR')} ödeme`}</span>
+                                <span className="font-extrabold">{isPickup ? `Gel al · ${order.branchName}` : `Teslimat${order.zoneName ? ` · ${order.zoneName}` : ''}`}</span>
+                                {isPickup && order.pickupAddress && (
+                                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.pickupAddress)}`} target="_blank" rel="noreferrer"
+                                        className="text-sm text-[var(--site-sub)] underline underline-offset-2">{order.pickupAddress}</a>
+                                )}
+                                <span className="text-sm text-[var(--site-sub)]">{order.customerName} · {byIban ? 'IBAN ile havale/EFT' : order.paymentPreference == null ? 'ödeme restoranda' : `${paymentText(order).toLocaleLowerCase('tr-TR')} ödeme`}</span>
                             </div>
                         </div>
 

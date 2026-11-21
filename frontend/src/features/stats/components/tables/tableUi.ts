@@ -22,7 +22,7 @@ export function tableTone(t: LiveTable): string {
     return 'border-border bg-background';
 }
 
-/** Dolu masada "1 sa 5 dk · ₺840", rezervede saat ve isim, boşta sıradaki rezervasyon. */
+/** Dolu masada "1 sa 5 dk · 840 ₺", rezervede saat ve isim, boşta sıradaki rezervasyon. */
 export function tableLine(t: LiveTable, now: number): string {
     if (t.kind === 'busy') {
         const open = t.occupiedSince ? formatElapsed(t.occupiedSince, now) : 'Açık';

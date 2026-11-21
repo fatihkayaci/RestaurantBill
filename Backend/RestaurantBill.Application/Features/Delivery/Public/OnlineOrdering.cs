@@ -64,6 +64,10 @@ public class GetOnlineOrderingQueryHandler(
             PaymentMethods = DeliveryScope.PaymentMethodsOf(branch),
             IbanPayment = branch.AcceptsIbanForDelivery ? TableIbanPaymentDto.ForPayment(branch) : null,
             RequiresPhoneVerification = PublicDeliveryContext.RequiresPhoneVerification(settings, sms),
+            PickupEnabled = branch.OffersPickup,
+            PickupEtaMinutes = settings.PickupEtaMinutes,
+            PickupAddress = branch.OffersPickup ? DeliveryScope.PickupAddressOf(branch) : string.Empty,
+            PickupDirections = branch.OffersPickup ? branch.GetSiteContent().DirectionsNote : string.Empty,
             Branches = enabledBranches.Select(b => new OnlineBranchDto { Id = b.Id, Name = b.BranchName, District = b.District }).ToList()
         };
 
@@ -88,13 +92,13 @@ public class GetOnlineOrderingQueryHandler(
 
         List<OnlineMenuCategoryDto> categories = await db.Categories.AsNoTracking()
             .Where(c => c.BranchId == branch.Id && !c.IsDeleted)
-            .OrderBy(c => c.CreatedAt)
+            .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
             .Select(c => new OnlineMenuCategoryDto { Id = c.Id, Name = c.Name })
             .ToListAsync(cancellationToken);
 
         var products = await db.Products.AsNoTracking()
             .Where(p => p.Category.BranchId == branch.Id && p.IsActive && !p.IsDeleted)
-            .OrderBy(p => p.Name)
+            .OrderBy(p => p.SortOrder).ThenBy(p => p.Name)
             .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.IsOutOfStock })
             .ToListAsync(cancellationToken);
 
@@ -132,6 +136,8 @@ public class QuoteDeliveryOrderCommand : IRequest<Result<DeliveryQuoteDto>>
     public Guid? BranchId { get; set; }
     /// <summary>Mahalle seçilmeden de istenebilir; o zaman ücret ve en az tutar uygulanmaz.</summary>
     public Guid? ZoneId { get; set; }
+    /// <summary>Gel al: bölge yok sayılır, teslimat ücreti ve en az tutar uygulanmaz; süre gel al hazır olma süresidir.</summary>
+    public bool Pickup { get; set; }
     public List<CartLineInput> Lines { get; set; } = [];
 }
 
@@ -153,9 +159,11 @@ public class QuoteDeliveryOrderCommandHandler(IAppDbContext db, ITenantResolver 
             return Result<DeliveryQuoteDto>.Failure(DeliveryScope.RestaurantNotFoundMessage);
         if (!branch.GetOnlineOrderSettings().Enabled)
             return Result<DeliveryQuoteDto>.Failure(DeliveryScope.DisabledMessage);
+        if (request.Pickup && !branch.OffersPickup)
+            return Result<DeliveryQuoteDto>.Failure(DeliveryScope.PickupDisabledMessage);
 
         DeliveryZone? zone = null;
-        if (request.ZoneId is Guid zoneId)
+        if (!request.Pickup && request.ZoneId is Guid zoneId)
         {
             zone = await db.DeliveryZones.AsNoTracking()
                 .FirstOrDefaultAsync(z => z.Id == zoneId && z.BranchId == branch.Id && z.IsActive && !z.IsDeleted, cancellationToken);
@@ -164,9 +172,13 @@ public class QuoteDeliveryOrderCommandHandler(IAppDbContext db, ITenantResolver 
         }
 
         Result<PricedCart> priced = await pricing.PriceCartAsync(branch.Id, request.Lines, zone, cancellationToken);
-        return priced.IsFailure
-            ? Result<DeliveryQuoteDto>.Failure(priced.Error!)
-            : Result<DeliveryQuoteDto>.Success(priced.Value!.ToQuoteDto());
+        if (priced.IsFailure)
+            return Result<DeliveryQuoteDto>.Failure(priced.Error!);
+
+        DeliveryQuoteDto quote = priced.Value!.ToQuoteDto();
+        if (request.Pickup)
+            quote.EstimatedMinutes = branch.GetOnlineOrderSettings().PickupEtaMinutes;
+        return Result<DeliveryQuoteDto>.Success(quote);
     }
 }
 

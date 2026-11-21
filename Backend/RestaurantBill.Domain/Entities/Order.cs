@@ -29,6 +29,10 @@ namespace RestaurantBill.Domain.Entities
         // Ürünler masada kalır; kalan tutar = TotalPrice - PaidOnAccount. Hesap kapanırken sıfırlanır.
         public decimal PaidOnAccount { get; private set; }
         public decimal RemainingAmount => TotalPrice - PaidOnAccount;
+        // Masa QR'ından bu hesaba sipariş veren telefonun cihaz anahtarının özeti (SHA-256, hex). Yalnız o telefon QR'dan
+        // sipariş verebilir ve hesabı görür. Kilit siparişe bağlıdır: hesap kapanınca (ödendi/iptal) kendiliğinden düşer,
+        // sipariş masa taşımada siparişle birlikte gider. null: masa QR'da kimseye bağlı değil.
+        public string? QrOwnerTokenHash { get; private set; }
         private readonly List<OrderItem> _orderItems = new();
         public IReadOnlyCollection<OrderItem> OrderItems => _orderItems.AsReadOnly();
 
@@ -73,7 +77,27 @@ namespace RestaurantBill.Domain.Entities
             return order;
         }
 
+        /// <summary>Kabul edilen online gel al siparişin mutfak/hesap kaydı: masası ve teslimat ücreti yoktur.</summary>
+        public static Order CreatePickup(Guid branchId, string? note = null)
+        {
+            if (branchId == Guid.Empty)
+                throw new DomainException("Geçersiz şube.");
+
+            Order order = new()
+            {
+                BranchId = branchId,
+                OrderType = OrderType.Takeaway,
+                Note = note?.Trim() ?? string.Empty,
+                Status = OrderStatus.Active
+            };
+            order.RecalculateTotal();
+            return order;
+        }
+
         public bool HasTable => TableId is not null;
+
+        /// <summary>Online paket (adrese teslim) ya da gel al: bir DeliveryOrder'a bağlı, masasız sipariş.</summary>
+        public bool IsPackageOrder => OrderType is OrderType.Delivery or OrderType.Takeaway;
 
         /// <summary>Masa taşıma, birleştirme, hesap isteme gibi yalnızca masada anlamı olan işlemlerin koruması.</summary>
         public void EnsureHasTable()
@@ -219,6 +243,39 @@ namespace RestaurantBill.Domain.Entities
         public void UpdateOrderItemQuantity(Guid orderItemId, int quantity)
         {
             ChangeLineQuantity(FindLine(orderItemId, "Güncellemek istediğiniz ürün bu siparişte yok."), quantity);
+        }
+
+        /// <summary>
+        /// Satırın verilen adedini iptal eder (3 ayrandan 1'i); adet satırın tamamıysa satır çıkar. Mutfağa geçmiş
+        /// (hazırlanan, hazır, servis edilmiş) ürün de iptal edilebilir. Menü satırında menünün adedi düşer, içindeki
+        /// ürünler de aynı adet kadar azalır; menüdeki tek bir ürün iptal edilemez. Ödenmiş adetler satırda kalmaz
+        /// (SettleItem düşer), "Tutar gir" ile alınmış ödeme varsa hesap o tutarın altına inemez.
+        /// </summary>
+        /// <returns>İptal edilen satır (adı ve birim fiyatı kayıt için; satır çıkarıldıysa artık siparişte değildir).</returns>
+        public OrderItem CancelOrderItem(Guid orderItemId, int quantity)
+        {
+            if (IsClosed())
+                throw new DomainException("Kapanmış bir siparişte ürün iptal edilemez.");
+
+            OrderItem item = FindLine(orderItemId, "İptal etmek istediğiniz ürün zaten bu siparişte yok.");
+
+            if (quantity <= 0)
+                throw new DomainException("İptal edilecek adet 0'dan büyük olmalı.");
+
+            if (quantity > item.Quantity)
+                throw new DomainException($"İptal edilecek adet, satırdaki ödenmemiş adetten ({item.Quantity}) fazla olamaz.");
+
+            if (quantity == item.Quantity)
+            {
+                RemoveLine(item);
+                return item;
+            }
+
+            EnsureTotalCoversPaidOnAccount(TotalPrice - item.UnitPrice * quantity);
+            foreach (OrderItem line in GetSetMenuComponents(item).Append(item))
+                line.ReduceQuantity(quantity);
+            RecalculateTotal();
+            return item;
         }
 
         // Hesapta görünen satır: tek ürün ya da menü. Menü içeriği tek başına iptal edilemez, adedi değiştirilemez.
@@ -440,6 +497,26 @@ namespace RestaurantBill.Domain.Entities
         public void ClearBillRequest()
         {
             BillRequestedAt = null;
+        }
+
+        /// <summary>Hesabı QR'dan sipariş veren telefona bağlar (özet; anahtarın kendisi saklanmaz).</summary>
+        public void SetQrOwner(string tokenHash)
+        {
+            EnsureHasTable();
+
+            if (string.IsNullOrWhiteSpace(tokenHash))
+                throw new DomainException("Geçersiz cihaz anahtarı.");
+
+            if (IsClosed())
+                throw new DomainException("Kapanmış bir hesap telefona bağlanamaz.");
+
+            QrOwnerTokenHash = tokenHash;
+        }
+
+        /// <summary>Personelin "QR kilidini aç"ı: masada başka bir telefon sipariş verebilir.</summary>
+        public void ClearQrOwner()
+        {
+            QrOwnerTokenHash = null;
         }
 
         public void MoveToTable(Guid newTableId)

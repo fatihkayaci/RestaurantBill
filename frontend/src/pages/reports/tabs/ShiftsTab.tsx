@@ -53,7 +53,7 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
         <div className="space-y-4 mt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="rounded-xl border border-border bg-card p-4">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Toplam Fark</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Toplam Fark</p>
                     <p className={cn(
                         'text-2xl font-bold mt-2 font-serif',
                         (data?.totalDifference ?? 0) === 0 ? 'text-foreground' : (data?.totalDifference ?? 0) < 0 ? 'text-rb-red' : 'text-rb-amber'
@@ -62,15 +62,15 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                     </p>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Sayım Bekleyen</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Sayım Bekleyen</p>
                     <p className="text-2xl font-bold mt-2 font-serif text-foreground">{data?.uncountedCount ?? 0}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Sistem Kapattı</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Sistem Kapattı</p>
                     <p className="text-2xl font-bold mt-2 font-serif text-foreground">{data?.autoClosedCount ?? 0}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Onay Bekleyen</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Onay Bekleyen</p>
                     <p className="text-2xl font-bold mt-2 font-serif text-foreground">{data?.pendingReviewCount ?? 0}</p>
                 </div>
             </div>
@@ -80,11 +80,11 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                     <table className="w-full min-w-[640px] text-sm">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Vardiya Sayısı</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Toplam Fark</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sayım Bekleyen</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sistem Kapattı</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Vardiya Sayısı</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Toplam Fark</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sayım Bekleyen</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sistem Kapattı</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -122,13 +122,13 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                         <table className="w-full min-w-[720px] text-sm">
                             <thead>
                                 <tr className="border-b border-border">
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kasa</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Açan / Kapatan</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Açıldı / Kapandı</th>
-                                    <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Beklenen</th>
-                                    <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sayılan</th>
-                                    <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Fark</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kasa</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Açan / Kapatan</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Açıldı / Kapandı</th>
+                                    <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Beklenen</th>
+                                    <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sayılan</th>
+                                    <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Fark</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -154,15 +154,15 @@ export default function ShiftsTab({ data, loading, role, showBranchSummary }: Pr
                                                     {s.closedAt && (<><br /><span className="text-xs">→ {new Date(s.closedAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></>)}
                                                 </td>
                                                 <td className="px-4 py-3.5 text-right font-serif text-foreground whitespace-nowrap">
-                                                    ₺{formatAmount(expected)}
+                                                    {formatAmount(expected)} ₺
                                                     <br />
-                                                    <span className="text-[10px] font-sans uppercase tracking-wide text-muted-foreground">{isOpen ? 'açılış' : 'kapanış'}</span>
+                                                    <span className="text-xs font-sans uppercase tracking-wide text-muted-foreground">{isOpen ? 'açılış' : 'kapanış'}</span>
                                                 </td>
                                                 <td className="px-4 py-3.5 text-right font-serif text-foreground whitespace-nowrap">
-                                                    {counted != null ? `₺${formatAmount(counted)}` : '—'}
+                                                    {counted != null ? `${formatAmount(counted)} ₺` : '—'}
                                                 </td>
                                                 <td className={cn('px-4 py-3.5 text-right font-serif whitespace-nowrap', !hasDifference ? 'text-muted-foreground' : diff! < 0 ? 'text-rb-red' : 'text-rb-amber')}>
-                                                    {hasDifference ? `₺${formatAmount(diff!)}` : '—'}
+                                                    {hasDifference ? `${formatAmount(diff!)} ₺` : '—'}
                                                 </td>
                                                 <td className="px-4 py-3.5">
                                                     <div className="flex flex-col gap-1 items-start">

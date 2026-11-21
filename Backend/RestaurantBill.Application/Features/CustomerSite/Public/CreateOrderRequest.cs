@@ -20,6 +20,12 @@ public class CreateOrderRequestCommand : IRequest<Result<OrderRequestStatusDto>>
     public Guid TableId { get; set; }
     public List<OrderRequestItemInput> Items { get; set; } = [];
     public string? Note { get; set; }
+    /// <summary>
+    /// Telefonun cihaz anahtarının özeti (QrTableLock.HashToken). Gövdeden değil X-Device-Token başlığından gelir; controller
+    /// özetler ki anahtarın kendisi hiçbir yere (yavaş istek logu dahil) düşmesin.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? DeviceTokenHash { get; set; }
 }
 
 /// <summary>
@@ -102,6 +108,16 @@ public class CreateOrderRequestCommandHandler(
         if (!features.OrderingEnabled)
             return Result<OrderRequestStatusDto>.Failure(CustomerSiteScope.OrderingDisabledMessage);
 
+        // Masa sahibi telefon kuralı (QrTableLock): masa başka bir telefona bağlıysa talep garsona hiç düşmez.
+        string? tokenHash = request.DeviceTokenHash;
+        if (tokenHash is null)
+            return Result<OrderRequestStatusDto>.Failure(QrTableLock.MissingTokenMessage);
+
+        Order? openOrder = await QrTableLock.FindOpenOrderAsync(db, table.Id, track: false, cancellationToken);
+        string? ownerHash = await QrTableLock.OwnerHashAsync(db, table.Id, openOrder, cancellationToken);
+        if (QrTableLock.StateOf(ownerHash, tokenHash) == QrLockState.Other)
+            return Result<OrderRequestStatusDto>.Failure(QrTableLock.OtherDeviceMessage);
+
         int pendingCount = await db.OrderRequests
             .CountAsync(r => r.TableId == table.Id && r.Status == OrderRequestStatus.Pending && r.Kind == OrderRequestKind.TableQr, cancellationToken);
         if (pendingCount >= CustomerSiteScope.MaxPendingOrderRequestsPerTable)
@@ -137,7 +153,8 @@ public class CreateOrderRequestCommandHandler(
             pricedMenus = priced.Value!.Lines;
         }
 
-        OrderRequest orderRequest = OrderRequest.Create(table.Id, request.Note);
+        // Masa kimseye bağlı değilse bu talep masayı bu telefona bağlar; hesaba bağlanma garson onaylayınca olur.
+        OrderRequest orderRequest = OrderRequest.Create(table.Id, request.Note, tokenHash);
         int menuIndex = 0;
         try
         {

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Features.CustomerSite;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Tests.Fakes;
 using RestaurantBill.Domain.Entities;
@@ -11,6 +12,9 @@ public abstract class ApplicationTestBase : IDisposable
     protected readonly RestaurantBillDbContext DbContext;
     protected readonly IAppDbContext Db;
     protected readonly FakeCurrentUserService CurrentUser;
+
+    // Masa QR'ından sipariş veren test telefonunun cihaz anahtarı özeti (QrTableLock).
+    protected static readonly string DeviceHash = QrTableLock.HashToken("test-device-0000000001")!;
 
     protected ApplicationTestBase()
     {

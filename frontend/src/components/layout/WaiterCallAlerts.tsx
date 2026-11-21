@@ -14,6 +14,8 @@ export interface WaiterCalledEvent {
     regionId: string;
     regionName: string;
     calledAt: string;
+    /** Çağrı anında masada açık hesap yoktu: QR masa dışından (fotoğraftan) kullanılmış olabilir. */
+    tableLooksEmpty?: boolean;
 }
 
 interface Props {
@@ -44,6 +46,7 @@ export default function WaiterCallAlerts({ variant }: Props) {
                 tableId: event.tableId,
                 tableName: event.tableName,
                 detail: event.regionName ? `${event.regionName} · müşteri QR menüden çağırdı` : 'Müşteri QR menüden çağırdı',
+                warning: event.tableLooksEmpty ? 'Masa boş görünüyor' : undefined,
             });
         });
 

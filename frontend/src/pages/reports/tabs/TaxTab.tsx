@@ -7,7 +7,7 @@ interface Props {
 }
 
 const formatCurrency = (value: number, decimals = 2) =>
-    `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+    `${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })} ₺`;
 
 export default function TaxTab({ data, loading }: Props) {
     if (loading && !data) {
@@ -18,16 +18,16 @@ export default function TaxTab({ data, loading }: Props) {
         <div className="space-y-4 mt-4">
             <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-border">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">KDV Oranı Bazlı Döküm</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">KDV Oranı Bazlı Döküm</p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">KDV Oranı</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Matrah</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">KDV</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Toplam</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">KDV Oranı</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Matrah</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">KDV</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Toplam</th>
                             </tr>
                         </thead>
                         <tbody>

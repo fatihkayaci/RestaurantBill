@@ -94,7 +94,7 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
     ) : showEmpty ? <span>+ Saat ekle</span> : null;
 
     const bottom = (
-        <div className="relative z-[1] grid grid-cols-1 items-end gap-3 px-4 pb-7 text-[11px] uppercase tracking-[0.2em] sm:grid-cols-[1fr_auto_1fr] sm:px-8 md:pb-[34px] md:text-xs lg:px-14">
+        <div className="relative z-[1] grid grid-cols-1 items-end gap-3 px-4 pb-7 text-xs uppercase tracking-[0.2em] sm:grid-cols-[1fr_auto_1fr] sm:px-8 md:pb-[34px] md:text-xs lg:px-14">
             <div className="justify-self-center sm:justify-self-start">
                 {status && <EditableBlock target="hours" label="Çalışma saatleri">{status}</EditableBlock>}
             </div>
@@ -208,7 +208,7 @@ function StorySummary({ site }: { site: PublicSite }) {
                         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
                             <EditableText field="founderName" value={c.founderName} placeholder="Ustanın adı" className={cn(elItalic, 'text-[30px] leading-tight md:text-[34px]')} />
                             {(c.founderTitle || showEmpty) && (
-                                <EditableText field="founderTitle" value={c.founderTitle} placeholder="Unvanı" className="text-[11px] uppercase tracking-[0.3em] text-[var(--site-muted)]" />
+                                <EditableText field="founderTitle" value={c.founderTitle} placeholder="Unvanı" className="text-xs uppercase tracking-[0.3em] text-[var(--site-muted)]" />
                             )}
                         </div>
                     )}
@@ -218,7 +218,7 @@ function StorySummary({ site }: { site: PublicSite }) {
                                 const cell = (
                                     <div className={cn('flex h-full flex-col gap-1.5 py-6', i > 0 && 'border-l border-[color-mix(in_srgb,var(--site-text)_18%,transparent)] pl-4 sm:pl-6')}>
                                         <dd className={cn(elSerif, 'order-1 m-0 text-[38px] leading-none md:text-[48px]')}>{f.value}</dd>
-                                        <dt className="order-2 text-[11px] uppercase tracking-[0.2em] text-[var(--site-muted)] sm:tracking-[0.26em]">{f.label}</dt>
+                                        <dt className="order-2 text-xs uppercase tracking-[0.2em] text-[var(--site-muted)] sm:tracking-[0.26em]">{f.label}</dt>
                                     </div>
                                 );
                                 return <div key={f.key} className="min-w-0">{f.wrap ? f.wrap(cell) : cell}</div>;
@@ -297,7 +297,7 @@ function Signature({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                                         <div className="rb-el-belir-hizli -mt-2 flex flex-wrap items-center justify-between gap-4 pb-7 pl-[60px] md:pl-[66px]">
                                             {(d.description || d.menu) && (
                                                 <div className="flex max-w-[46ch] flex-col gap-1.5 text-[15px] leading-[1.7] text-[var(--site-on-paper-sub)] [--site-muted:var(--site-on-paper-sub)] [--site-accent-text:var(--site-accent-on-dark)]">
-                                                    {d.menu && <span className={cn(elLabel, 'text-[10px] tracking-[0.22em] text-[var(--site-accent-on-dark)]')}>Hazır menü</span>}
+                                                    {d.menu && <span className={cn(elLabel, 'text-xs tracking-[0.22em] text-[var(--site-accent-on-dark)]')}>Hazır menü</span>}
                                                     {d.description && <p className="m-0">{d.description}</p>}
                                                     {d.menu && <SlotsSummary menu={d.menu} />}
                                                 </div>
@@ -318,7 +318,7 @@ function Signature({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                                         i === index ? 'scale-100 opacity-100' : 'scale-[1.06] opacity-0')} />
                             ) : null)}
                             {!current.imageUrl && <span aria-hidden="true" className={cn('absolute inset-0', elPattern)} />}
-                            {current.isStockImage && current.imageUrl && <span className="absolute right-3 top-3 bg-black/45 px-1.5 py-0.5 text-[10px] text-white/90">Temsili görsel</span>}
+                            {current.isStockImage && current.imageUrl && <span className="absolute right-3 top-3 bg-black/45 px-1.5 py-0.5 text-xs text-white/90">Temsili görsel</span>}
                             <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,color-mix(in_srgb,var(--site-paper)_88%,transparent)_100%)]" />
                             <div className="absolute inset-x-6 bottom-6 flex items-end justify-between gap-4 md:inset-x-8 md:bottom-[30px]">
                                 <span className={cn(elItalic, 'text-[26px] leading-[1.1] md:text-[30px]')}>{current.name}</span>
@@ -390,7 +390,7 @@ function MenuTabs({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                             const on = t.id === selected.id;
                             return (
                                 <button key={t.id} type="button" aria-pressed={on} onClick={() => setTab(t.id)}
-                                    className={cn('min-h-12 border-b-2 bg-transparent px-0.5 text-[11px] font-medium uppercase tracking-[0.26em] transition-colors md:text-xs',
+                                    className={cn('min-h-12 border-b-2 bg-transparent px-0.5 text-xs font-medium uppercase tracking-[0.26em] transition-colors md:text-xs',
                                         on ? 'border-[var(--site-accent-text)] text-[var(--site-text)]' : 'border-transparent text-[var(--site-muted)] hover:text-[var(--site-text)]')}>
                                     {t.label}
                                 </button>
@@ -424,7 +424,7 @@ function SetMenuItem({ menu, cart }: { menu: OnlineSetMenu; cart: SiteCart }) {
     const found = cart.enabled ? cart.setMenuFor(menu.id) : undefined;
     const qty = cart.lines.filter(l => l.kind === 'setMenu' && l.setMenuId === menu.id).reduce((s, l) => s + l.quantity, 0);
     let action: ReactNode = null;
-    if (!menu.isAvailable) action = <span className="shrink-0 text-[11px] uppercase tracking-[0.22em] text-[var(--site-muted)]">Tükendi</span>;
+    if (!menu.isAvailable) action = <span className="shrink-0 text-xs uppercase tracking-[0.22em] text-[var(--site-muted)]">Tükendi</span>;
     else if (found?.menu.isAvailable) {
         action = found.needsChoice
             ? <Link to="/siparis" aria-label={`${menu.name}: seçerek sepete ekle`} className={cn(elButton.line, 'min-h-11 shrink-0 px-4 md:min-h-11')}>Seç</Link>
@@ -435,7 +435,7 @@ function SetMenuItem({ menu, cart }: { menu: OnlineSetMenu; cart: SiteCart }) {
             <EliteDishLine name={menu.name} size="lg" action={action}
                 price={<>{saving && <s className="mr-2 text-base font-normal text-[var(--site-muted)]"><span className="sr-only">Normal fiyatı </span>{formatSitePrice(menu.regularPrice)}</s>}{formatSitePrice(menu.price)}</>} />
             <div className="text-[13px] leading-relaxed tracking-[0.03em] text-[var(--site-muted)]">
-                {saving && <span className={cn(elLabel, 'mr-2 text-[10px] tracking-[0.22em] text-[var(--site-accent-text)]')}>{saving}</span>}
+                {saving && <span className={cn(elLabel, 'mr-2 text-xs tracking-[0.22em] text-[var(--site-accent-text)]')}>{saving}</span>}
                 <SlotsSummary menu={menu} className="inline" />
             </div>
         </div>

@@ -69,7 +69,7 @@ public class GetCourierOrdersQueryHandler(IAppDbContext db, ICurrentUserService 
                 Id = d.Id,
                 Number = d.Number,
                 Status = d.Status,
-                StatusLabel = DeliveryScope.StaffLabel(d.Status),
+                StatusLabel = DeliveryScope.StaffLabel(d.Status, d.IsPickup),
                 CustomerName = d.CustomerName,
                 CustomerPhone = d.CustomerPhone,
                 Address = d.Address,
@@ -81,7 +81,8 @@ public class GetCourierOrdersQueryHandler(IAppDbContext db, ICurrentUserService 
                 Subtotal = d.Subtotal,
                 DeliveryFee = d.DeliveryFee,
                 Total = d.Total,
-                PaymentPreference = d.PaymentPreference,
+                // Kuryeye yalnızca adrese teslim siparişi düşer; orada tercih her zaman doludur.
+                PaymentPreference = d.PaymentPreference ?? PaymentMethod.Nakit,
                 AcceptedAt = d.AcceptedAt,
                 EstimatedDeliveryAt = d.AcceptedAt is DateTime acceptedAt && d.EstimatedMinutes is int eta ? acceptedAt.AddMinutes(eta) : null,
                 DispatchedAt = d.DispatchedAt,

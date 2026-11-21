@@ -8,13 +8,13 @@ import { PageEmpty, SitePage } from './site/SiteFrame';
 import { DirectionsIcon, PhoneIcon, WhatsAppIcon } from './site/SiteCards';
 import { AmenityIcon, MapPanel, TablePlan, VenueGallery, WayIcon } from './site/VenueParts';
 import { RESERVATION_PATH, SITE_AMENITIES, hasVenuePage, serif } from './site/siteParts';
-import { directionsUrl, resolveDesign, splitAccent, telHref, whatsappHref } from './site/siteTheme';
+import { directionsUrl, splitAccent, telHref, whatsappHref } from './site/siteTheme';
 import { fullAddress, hoursLine, restaurantName, useSite } from './site/useSite';
 import { EditableBlock, EditableText, EmptySlot, ExternalHint } from './site/siteEdit';
 import { editTarget, useSiteEdit } from './site/siteEditContext';
 import { oliveBg, terracottaBg } from './site/renkliTones';
 import { heroPhoto, regionPhrase, seatCount, venuePhotos } from './site/venueData';
-import EliteVenue from './site/elite/EliteVenue';
+import { designLayout } from './site/designs/registry';
 
 // /mekan (tasarım: "Renkli ve sıcak — Mekân"). Kum sayfada krem, yuvarlak köşeli kutular: (1) zeytin kapak, krem yazı,
 // hardal üst satır ve italik: mekân fotoğrafı soldan zeytin geçişle (yoksa sağda krem çizgili, hardal noktalı masa planı), "Mekân", dev serif başlık, kısa tarif, "Masa ayırt" ve
@@ -30,7 +30,9 @@ export default function RestaurantVenuePage() {
     const { site, error } = useSite();
     const edit = useSiteEdit();
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
-    if (resolveDesign(site.site.design) === 'elit') return <EliteVenue site={site} />;
+    // Tasarımın kendi Mekân sayfası (tasarım kaydı); yoksa ortak düzen.
+    const { Venue } = designLayout(site.site.design);
+    if (Venue) return <Venue site={site} />;
 
     const showEmpty = Boolean(edit?.showEmpty);
 

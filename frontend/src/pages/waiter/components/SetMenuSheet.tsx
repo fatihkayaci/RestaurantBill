@@ -17,7 +17,7 @@ interface Props {
 }
 
 // Menü seçim penceresi (alttan). Sabit bölümler yalnızca gösterilir; seçmeli bölümlerde seçenekler büyük
-// düğmelerdir, ek ücret "+₺10" olarak yazar, satış dışı ürün seçilemez.
+// düğmelerdir, ek ücret "+10 ₺" olarak yazar, satış dışı ürün seçilemez.
 // Menüde tek seçmeli bölüm varsa seçime dokunmak yeter: pencere kapanır (yeni satırsa sepete eklenir).
 export default function SetMenuSheet({ setMenu, line, onChange, onAdd, onClose }: Props) {
     const [selections, setSelections] = useState<Selections>(() => line?.selections ?? presetSelections(setMenu));
@@ -58,7 +58,7 @@ export default function SetMenuSheet({ setMenu, line, onChange, onAdd, onClose }
                     className="flex h-14 w-full items-center justify-between rounded-2xl bg-foreground px-5 text-[17px] font-bold text-background disabled:opacity-50"
                 >
                     <span>{line ? 'Tamam' : complete ? 'Sepete ekle' : 'Seçim yapın'}</span>
-                    <span>₺{formatPrice(setUnitPrice(setMenu, selections))}</span>
+                    <span>{formatPrice(setUnitPrice(setMenu, selections))} ₺</span>
                 </button>
             )}
         >
@@ -90,7 +90,7 @@ export default function SetMenuSheet({ setMenu, line, onChange, onAdd, onClose }
                                         {!option.isProductActive ? (
                                             <span className="text-[13px] text-rb-text-sub">satış dışı</span>
                                         ) : option.surcharge > 0 && (
-                                            <span className="text-[13px] font-semibold text-rb-text-sub">+₺{formatPrice(option.surcharge)}</span>
+                                            <span className="text-[13px] font-semibold text-rb-text-sub">+{formatPrice(option.surcharge)} ₺</span>
                                         )}
                                     </button>
                                 );
@@ -106,7 +106,7 @@ export default function SetMenuSheet({ setMenu, line, onChange, onAdd, onClose }
                     maxLength={200}
                     placeholder="Not yaz (ör. acısız)"
                     aria-label={`${setMenu.name} notu`}
-                    className="h-12 w-full rounded-full border border-border bg-background px-4 text-base outline-none focus:ring-2 focus:ring-rb-gold"
+                    className="h-12 w-full rounded-full border border-border bg-background px-4 text-base outline-none focus:ring-2 focus:ring-ring"
                 />
             </div>
         </BottomSheet>

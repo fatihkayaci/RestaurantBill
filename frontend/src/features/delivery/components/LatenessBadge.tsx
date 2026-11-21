@@ -25,7 +25,7 @@ export default function LatenessBadge({ order, now, className }: { order: Delive
         <span
             title={`Müşteriye söz verilen teslim saati ${promised}`}
             className={cn(
-                'inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums',
+                'inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
                 lateness.level === 'late' ? 'bg-rb-red text-rb-red-foreground'
                     : lateness.level === 'soon' ? 'bg-rb-amber-bg text-rb-amber'
                         : 'bg-rb-green-bg text-rb-green',

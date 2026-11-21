@@ -162,23 +162,23 @@ export default function CashierDashboardPage() {
             {/* Dark stats bar */}
             <div className="bg-sidebar px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-2 gap-y-3 gap-x-6 sm:flex sm:items-center sm:gap-8 shrink-0">
                 <div>
-                    <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{formatAmount(shiftRevenue)}</p>
-                    <p className="text-[11px] text-sidebar-foreground/60 mt-0.5">Vardiya Cirosu</p>
+                    <p className="text-lg font-serif font-bold text-sidebar-foreground">{formatAmount(shiftRevenue)} ₺</p>
+                    <p className="text-xs text-sidebar-foreground/60 mt-0.5">Vardiya Cirosu</p>
                 </div>
                 <div className="hidden sm:block w-px h-8 bg-white/15" />
                 <div>
                     <p className="text-lg font-serif font-bold text-sidebar-foreground">{shiftTransactionCount}</p>
-                    <p className="text-[11px] text-sidebar-foreground/60 mt-0.5">İşlem</p>
+                    <p className="text-xs text-sidebar-foreground/60 mt-0.5">İşlem</p>
                 </div>
                 <div className="hidden sm:block w-px h-8 bg-white/15" />
                 <div>
-                    <p className="text-lg font-serif font-bold text-sidebar-foreground">₺{formatAmount(shiftAvgTicket)}</p>
-                    <p className="text-[11px] text-sidebar-foreground/60 mt-0.5">Ortalama</p>
+                    <p className="text-lg font-serif font-bold text-sidebar-foreground">{formatAmount(shiftAvgTicket)} ₺</p>
+                    <p className="text-xs text-sidebar-foreground/60 mt-0.5">Ortalama</p>
                 </div>
                 <div className="hidden sm:block w-px h-8 bg-white/15" />
                 <div>
-                    <p className="text-lg font-serif font-bold text-rb-green">₺{formatAmount(cashCollected)}</p>
-                    <p className="text-[11px] text-sidebar-foreground/60 mt-0.5">Nakit Tahsilat</p>
+                    <p className="text-lg font-serif font-bold text-rb-green">{formatAmount(cashCollected)} ₺</p>
+                    <p className="text-xs text-sidebar-foreground/60 mt-0.5">Nakit Tahsilat</p>
                 </div>
             </div>
 
@@ -249,20 +249,20 @@ export default function CashierDashboardPage() {
                                             {order.tableName}
                                         </span>
                                         {order.billRequestedAt && (
-                                            <span className="shrink-0 rounded-full bg-rb-accent-bg px-2 py-0.5 text-[11px] font-bold text-rb-accent">
+                                            <span className="shrink-0 rounded-full bg-rb-accent-bg px-2 py-0.5 text-xs font-bold text-rb-accent">
                                                 Hesap istendi · {formatElapsed(order.billRequestedAt, now)}
                                             </span>
                                         )}
                                     </div>
 
                                     <p className="text-2xl font-serif font-bold text-foreground">
-                                        ₺{formatAmount(order.totalPrice)}
+                                        {formatAmount(order.totalPrice)} ₺
                                     </p>
                                     {(order.paidAmount ?? 0) > 0 && (
                                         <p className="-mt-2 text-sm font-semibold tabular-nums">
-                                            <span className="text-rb-green">Ödenen ₺{formatAmount(order.paidAmount ?? 0)}</span>
+                                            <span className="text-rb-green">Ödenen {formatAmount(order.paidAmount ?? 0)} ₺</span>
                                             <span className="text-muted-foreground"> · </span>
-                                            <span className="text-foreground">Kalan ₺{formatAmount(order.remainingAmount ?? order.totalPrice)}</span>
+                                            <span className="text-foreground">Kalan {formatAmount(order.remainingAmount ?? order.totalPrice)} ₺</span>
                                         </p>
                                     )}
 
@@ -323,10 +323,10 @@ export default function CashierDashboardPage() {
                                                 </p>
                                             </div>
                                             <div className="flex flex-col items-end gap-1 shrink-0">
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${PAYMENT_METHOD_COLORS[txn.method]}`}>
+                                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${PAYMENT_METHOD_COLORS[txn.method]}`}>
                                                     {PAYMENT_METHOD_LABELS[txn.method]}
                                                 </span>
-                                                <span className="text-base font-serif font-bold text-foreground">₺{formatAmount(txn.amount)}</span>
+                                                <span className="text-base font-serif font-bold text-foreground">{formatAmount(txn.amount)} ₺</span>
                                             </div>
                                         </div>
 
@@ -352,7 +352,7 @@ export default function CashierDashboardPage() {
                         className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[3px] animate-in fade-in duration-200"
                         onClick={() => setSelectedOrder(null)}
                     />
-                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-190 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
+                    <div className="fixed top-0 right-0 bottom-0 z-30 w-full sm:w-190 lg:w-240 bg-[#FFFDF8] dark:bg-[#1C1712] border-l border-border shadow-[0_24px_64px_rgba(0,0,0,0.35)] animate-in slide-in-from-right duration-300">
                         <PaymentPanel
                             order={selectedOrder}
                             onClose={() => setSelectedOrder(null)}

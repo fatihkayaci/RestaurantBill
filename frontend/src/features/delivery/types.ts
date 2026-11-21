@@ -106,6 +106,14 @@ export interface OnlineOrdering {
     /** paymentMethods'ta IBAN varken ödeme adımında gösterilen hesap bilgileri; yoksa null. */
     ibanPayment?: TableIbanPayment | null;
     requiresPhoneVerification: boolean;
+    /** Müşteri "Gel al"ı seçebilir mi (şube ayarı). Eski sunucuda yok: kapalı sayılır. */
+    pickupEnabled?: boolean;
+    /** Gel al siparişinin yaklaşık hazır olma süresi (dakika). */
+    pickupEtaMinutes?: number;
+    /** Gel al için restoranın adresi. */
+    pickupAddress?: string;
+    /** Şubenin "nasıl gelinir" notu. */
+    pickupDirections?: string;
     categories: OnlineMenuCategory[];
     setMenus: OnlineSetMenu[];
     /** Online siparişi açık şubeler; birden fazlaysa şube seçici gösterilir. */
@@ -150,14 +158,18 @@ export interface DeliveryQuote {
 export interface SubmitDeliveryOrderInput {
     branchId?: string;
     clientRequestId: string;
-    zoneId: string;
+    /** Gel al: bölge ve adres gönderilmez, teslimat ücreti yok. */
+    pickup?: boolean;
+    /** Yalnızca adrese teslimde. */
+    zoneId?: string;
     lines: CartLineInput[];
     customerName: string;
     phone: string;
     address: string;
     addressDirections?: string;
     note?: string;
-    paymentMethod: DoorPaymentMethod;
+    /** Adrese teslimde zorunlu. Gel al'da gönderilmez (restoranda ödenir) ya da yalnızca IBAN. */
+    paymentMethod?: DoorPaymentMethod | null;
     expectedTotal: number;
     /** Bal küpü: insan doldurmaz. */
     website?: string;
@@ -196,10 +208,15 @@ export interface DeliveryTracking {
     status: DeliveryOrderStatus;
     statusLabel: string;
     statusDescription: string;
+    /** Gel al siparişi: "Yolda" adımı yok, restoranın adresi gösterilir. */
+    isPickup?: boolean;
+    /** Gel al siparişinde restoranın adresi. */
+    pickupAddress?: string;
     customerName: string;
     customerPhone: string;
     zoneName: string;
-    paymentPreference: DoorPaymentMethod;
+    /** Gel al'da null: ödeme restoranda, yöntem teslimde belli olur. */
+    paymentPreference: DoorPaymentMethod | null;
     /** IBAN tercihli, iptal/ret olmamış siparişte havale bilgileri; yoksa null. */
     ibanPayment?: TableIbanPayment | null;
     lines: DeliveryLine[];
@@ -242,6 +259,10 @@ export interface DeliveryOrder {
     number: number;
     status: DeliveryOrderStatus;
     statusLabel: string;
+    /** 2 adrese teslim, 3 gel al. */
+    orderType?: 2 | 3;
+    /** Gel al: adres, bölge ve kurye yok; müşteri restorandan alır, ödeme kasada alınır. */
+    isPickup?: boolean;
     customerName: string;
     customerPhone: string;
     address: string;
@@ -249,7 +270,8 @@ export interface DeliveryOrder {
     note: string;
     deliveryZoneId?: string | null;
     zoneName: string;
-    paymentPreference: DoorPaymentMethod;
+    /** Gel al'da null: müşteri restoranda öder, yöntem "Müşteri aldı"da seçilir. */
+    paymentPreference: DoorPaymentMethod | null;
     lines: DeliveryLine[];
     subtotal: number;
     deliveryFee: number;
@@ -317,6 +339,10 @@ export interface OnlineOrderSettings {
     smsConfigured: boolean;
     preOrderEnabled: boolean;
     preOrderLeadMinutes: number;
+    /** "Gel al": müşteri online sipariş verip restorandan kendisi alır. */
+    pickupEnabled: boolean;
+    /** Gel al siparişinin yaklaşık hazır olma süresi (dakika). */
+    pickupEtaMinutes: number;
     isCustomized: boolean;
 }
 

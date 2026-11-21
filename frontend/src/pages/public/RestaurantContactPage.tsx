@@ -6,12 +6,12 @@ import { cn } from '@/lib/utils';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
 import { SitePage } from './site/SiteFrame';
 import { instagramHandle, serif, untilTime } from './site/siteParts';
-import { directionsUrl, resolveDesign, telHref, whatsappHref } from './site/siteTheme';
+import { directionsUrl, telHref, whatsappHref } from './site/siteTheme';
 import { fullAddress, useSite, weekSchedule } from './site/useSite';
 import ContactForm from './site/ContactForm';
 import { visibleFaqs } from './site/siteFaqs';
 import FaqEditorBox from './site/FaqEditorBox';
-import EliteContact from './site/elite/EliteContact';
+import { designLayout } from './site/designs/registry';
 import { EditableBlock, EditableText, EmptySlot, ExternalHint } from './site/siteEdit';
 import { useSiteEdit } from './site/siteEditContext';
 import { oliveBg } from './site/renkliTones';
@@ -206,7 +206,9 @@ export default function RestaurantContactPage() {
     const { site, error } = useSite();
     const edit = useSiteEdit();
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
-    if (resolveDesign(site.site.design) === 'elit') return <EliteContact site={site} />;
+    // Tasarımın kendi İletişim sayfası (tasarım kaydı); yoksa ortak düzen.
+    const { Contact } = designLayout(site.site.design);
+    if (Contact) return <Contact site={site} />;
 
     return (
         <SitePage site={site} current="iletisim">

@@ -7,6 +7,13 @@ import { StockImageLabel } from '../components/StockImageLabel';
 import { ImageSlot } from '../site/SiteChrome';
 import { headingFont } from '../site/siteTheme';
 import { scCard } from '../site/sicak/sicakParts';
+import { MezeTray } from '../site/designs/meyhane/MezeTray';
+import { MeyhaneCategoryHeader } from '../site/designs/meyhane/MeyhaneMenuParts';
+import { isMezeCategory, meyhaneTabClass } from '../site/designs/meyhane/meyhaneParts';
+import { BahceCategoryHeader, BahceItems } from '../site/designs/bahce/BahceMenuParts';
+import { bahceTabClass } from '../site/designs/bahce/bahceParts';
+import { EsnafCategoryHeader } from '../site/designs/esnaf/EsnafMenuParts';
+import { ESNAF_BOARD_WALL, esnafPanelClass, esnafTabClass } from '../site/designs/esnaf/esnafParts';
 
 /** Kartın ürünü: paket menüsünün ürünü; masa menüsü hazırlanma süresini de verir. */
 export type MenuCardProduct = OnlineMenuProduct & { prepMinutes?: number | null };
@@ -35,8 +42,12 @@ interface Props<P extends MenuCardProduct> {
     canAddSetMenu?: (menu: OnlineSetMenu) => boolean;
     /** Menü boşken gösterilecek içerik (varsayılan: "Menü henüz hazırlanmadı"). */
     empty?: ReactNode;
-    /** "sicak": Sıcak tasarımın kartları (üstten taşan yuvarlak tabak fotoğrafı, ortalı ad, küçük turuncu düğme). */
-    variant?: 'default' | 'sicak';
+    /** "sicak": Sıcak tasarımın kartları (üstten taşan yuvarlak tabak fotoğrafı, ortalı ad, küçük turuncu düğme).
+     *  "meyhane" / "esnaf": ürünler satır satır (basılı menü kartı / pano; lineMenuVariant), menüler yine kart. Meyhane'de
+     *  ayrıca ortalı basılı bölüm başlığı, yazı sekmeli kategori şeridi ve meze kategorilerinde tepsi (designs/meyhane).
+     *  Esnaf'ta her kategori çini kenarlı bir fiyat panosu, panolar duvar gibi sütunlara dizilir (designs/esnaf).
+     *  "bahce": tabak simgeli bölüm başlığı, yuvarlak çip şeridi, yuvarlak tabak fotoğraflı kartlar (designs/bahce). */
+    variant?: 'default' | 'sicak' | 'meyhane' | 'esnaf' | 'bahce';
 }
 
 const SET_MENU_SECTION = 'menuler';
@@ -127,9 +138,13 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
 
     const current = active ?? sections[0].id;
     const sicak = variant === 'sicak';
+    const lines = variant === 'meyhane' || variant === 'esnaf';
+    const meyhane = variant === 'meyhane';
+    const bahce = variant === 'bahce';
+    const esnaf = variant === 'esnaf';
 
     return (
-        <div>
+        <div className={esnaf ? '@container' : undefined}>
             {sections.length > 1 && (
                 <nav aria-label="Menü kategorileri"
                     className={cn('sticky z-20 -mx-4 border-b backdrop-blur-[14px] md:-mx-6 lg:mx-0', stickyTopClass,
@@ -141,7 +156,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                 <a key={section.id} href={`#${sectionDomId(section.id)}`} data-section={section.id}
                                     onClick={e => goTo(e, section.id)}
                                     aria-current={selected ? 'true' : undefined}
-                                    className={cn(
+                                    className={meyhane ? meyhaneTabClass(selected) : esnaf ? esnafTabClass(selected) : bahce ? bahceTabClass(selected) : cn(
                                         sicak
                                             ? 'flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-semibold no-underline transition-colors'
                                             : 'flex h-11 shrink-0 items-center rounded-full border px-4 text-[15px] font-semibold no-underline transition-colors',
@@ -159,21 +174,71 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                 </nav>
             )}
 
-            <div className="flex flex-col gap-10 pb-6 pt-6 md:pt-8">
+            <div className={esnaf ? ESNAF_BOARD_WALL : 'flex flex-col gap-10 pb-6 pt-6 md:pt-8'}>
                 {sections.map(section => {
                     const featured = section.id === SET_MENU_SECTION;
                     const chefPicks = section.id === FEATURED_SECTION;
                     const total = section.menus.length + section.products.length;
                     return (
-                        <section key={section.id} id={sectionDomId(section.id)} aria-labelledby={`${sectionDomId(section.id)}-baslik`} className="scroll-mt-20">
-                            <div className="flex items-baseline justify-between gap-3">
-                                <h2 id={`${sectionDomId(section.id)}-baslik`} className={cn(headingFont, 'text-[24px] font-bold leading-tight md:text-[30px]')}>{section.name}</h2>
-                                <span className="shrink-0 text-sm font-medium text-[var(--site-sub)]">{total} çeşit</span>
-                            </div>
-                            {featured && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Birkaç lezzet bir arada, seçimi size kalsın.</p>}
-                            {chefPicks && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Mutfağın bugün önerdikleri.</p>}
+                        <section key={section.id} id={sectionDomId(section.id)} aria-labelledby={`${sectionDomId(section.id)}-baslik`} className={cn('scroll-mt-20', esnaf && esnafPanelClass(featured || chefPicks))}>
+                            {meyhane ? (
+                                <MeyhaneCategoryHeader id={`${sectionDomId(section.id)}-baslik`} name={section.name} total={total}
+                                    note={featured ? 'Birkaç lezzet bir arada, seçimi size kalsın.' : chefPicks ? 'Mutfağın bugün önerdikleri.' : undefined} />
+                            ) : esnaf ? (
+                                <EsnafCategoryHeader id={`${sectionDomId(section.id)}-baslik`} name={section.name} total={total}
+                                    note={featured ? 'Birkaç lezzet bir arada, seçimi size kalsın.' : chefPicks ? 'Mutfağın bugün önerdikleri.' : undefined} />
+                            ) : bahce ? (
+                                <BahceCategoryHeader id={`${sectionDomId(section.id)}-baslik`} name={section.name} total={total}
+                                    note={featured ? 'Birkaç lezzet bir arada, seçimi size kalsın.' : chefPicks ? 'Mutfağın bugün önerdikleri.' : undefined} />
+                            ) : (
+                                <>
+                                    {/* rb-menu-cat: tasarıma özgü kategori başlığı (Esnaf'ta tabela şeridi; siteThemes.css). */}
+                                    <div className="rb-menu-cat flex items-baseline justify-between gap-3">
+                                        <h2 id={`${sectionDomId(section.id)}-baslik`} className={cn(headingFont, 'text-[24px] font-bold leading-tight md:text-[30px]')}>{section.name}</h2>
+                                        <span className="shrink-0 text-sm font-medium text-[var(--site-sub)]">{total} çeşit</span>
+                                    </div>
+                                    {featured && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Birkaç lezzet bir arada, seçimi size kalsın.</p>}
+                                    {chefPicks && <p className="mt-0.5 text-sm text-[var(--site-sub)]">Mutfağın bugün önerdikleri.</p>}
+                                </>
+                            )}
 
-                            {sicak ? (
+                            {meyhane && !featured && !chefPicks && section.menus.length === 0 && isMezeCategory(section.name) ? (
+                                // Meyhane: meze kategorisi tepside, küçük kâseler gibi.
+                                <MezeTray className="mt-4" restaurant={restaurant} items={section.products.map(product => {
+                                    const qty = productQuantity(product.id);
+                                    return {
+                                        id: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl, isStockImage: product.isStockImage,
+                                        description: product.description, soldOut: product.isOutOfStock, featured: product.isFeatured, quantity: qty,
+                                        readOnly: readOnly || (qty === 0 && !canAddProduct(product)),
+                                        onAdd: () => onAddProduct(product), onRemove: () => onRemoveProduct(product),
+                                    };
+                                })} />
+                            ) : bahce && !featured ? (
+                                // Bahçe: yuvarlak tabak fotoğraflı kartlar; kategorisi olan menüler yine menü kartı.
+                                <>
+                                    {section.menus.length > 0 && (
+                                        <ul className="mt-4 grid gap-3 md:grid-cols-2">
+                                            {section.menus.map(menu => (
+                                                <li key={menu.id}>
+                                                    <SetMenuRow menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly || !canAddSetMenu(menu)} onOpen={() => onOpenSetMenu(menu)}
+                                                        onRemove={onRemoveSetMenu && !readOnly ? () => onRemoveSetMenu(menu) : undefined} />
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {section.products.length > 0 && (
+                                        <BahceItems className="mt-4" restaurant={restaurant} items={section.products.map(product => {
+                                            const qty = productQuantity(product.id);
+                                            return {
+                                                id: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl, isStockImage: product.isStockImage,
+                                                description: product.description, soldOut: product.isOutOfStock, featured: product.isFeatured, prepMinutes: product.prepMinutes,
+                                                quantity: qty, readOnly: readOnly || (qty === 0 && !canAddProduct(product)),
+                                                onAdd: () => onAddProduct(product), onRemove: () => onRemoveProduct(product),
+                                            };
+                                        })} />
+                                    )}
+                                </>
+                            ) : sicak ? (
                                 <ul className="mt-4 grid list-none gap-x-4 gap-y-[72px] p-0 pt-14 sm:grid-cols-2 xl:grid-cols-3">
                                     {section.menus.map(menu => (
                                         <li key={menu.id}>
@@ -202,7 +267,32 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                         );
                                     })}
                                 </ul>
+                            ) : lines && !featured ? (
+                                <>
+                                    {section.menus.length > 0 && (
+                                        <ul className="mt-4 grid gap-3 md:grid-cols-2">
+                                            {section.menus.map(menu => (
+                                                <li key={menu.id}>
+                                                    <SetMenuRow menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly || !canAddSetMenu(menu)} onOpen={() => onOpenSetMenu(menu)}
+                                                        onRemove={onRemoveSetMenu && !readOnly ? () => onRemoveSetMenu(menu) : undefined} />
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {section.products.length > 0 && (
+                                        <ul className={esnaf ? cn('m-0 list-none px-4 pb-1 pt-0 sm:px-5 [&>li:last-child_article]:border-b-0', chefPicks && '@3xl:grid @3xl:grid-cols-2 @3xl:gap-x-8') : 'm-0 mt-2 grid list-none p-0 md:grid-cols-2 md:gap-x-14'}>
+                                            {section.products.map(product => (
+                                                <li key={product.id}>
+                                                    <LineRow tone={variant === 'esnaf' ? 'esnaf' : 'meyhane'} product={product} restaurant={restaurant} quantity={productQuantity(product.id)}
+                                                        readOnly={readOnly || (productQuantity(product.id) === 0 && !canAddProduct(product))}
+                                                        onAdd={() => onAddProduct(product)} onRemove={() => onRemoveProduct(product)} />
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </>
                             ) : featured ? (
+                                <div className={esnaf ? 'px-4 pb-4 sm:px-5' : undefined}>
                                 <ul className="relative -mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
                                     {section.menus.map(menu => (
                                         <li key={menu.id} className={cn('shrink-0 snap-start md:w-auto', section.menus.length > 1 ? 'w-[84%]' : 'w-full')}>
@@ -211,6 +301,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                         </li>
                                     ))}
                                 </ul>
+                                </div>
                             ) : (
                                 <ul className="mt-4 grid gap-3 md:grid-cols-2">
                                     {section.menus.map(menu => (
@@ -258,11 +349,11 @@ function PlateCard({ name, image, stock, restaurant, description, soldOut, featu
             </div>
             {(kind || featured || inCart || soldOut) && (
                 <span className="mb-1.5 flex flex-wrap items-center justify-center gap-1">
-                    {soldOut ? <span className="rounded-md bg-[#1E1915] px-2 py-0.5 text-[11px] font-semibold text-[#FFF3E6]">Tükendi</span> : (
+                    {soldOut ? <span className="rounded-md bg-[#1E1915] px-2 py-0.5 text-xs font-semibold text-[#FFF3E6]">Tükendi</span> : (
                         <>
-                            {kind && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-[11px] font-semibold text-[var(--site-accent-text)]">{kind}</span>}
-                            {featured && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-[11px] font-semibold text-[var(--site-accent-text)]"><span aria-hidden="true">★ </span>Ustanın seçimi</span>}
-                            {inCart && <span className="rounded-md bg-[var(--site-accent)] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--site-on-accent)]">Sepette {quantity}</span>}
+                            {kind && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-xs font-semibold text-[var(--site-accent-text)]">{kind}</span>}
+                            {featured && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-xs font-semibold text-[var(--site-accent-text)]"><span aria-hidden="true">★ </span>Ustanın seçimi</span>}
+                            {inCart && <span className="rounded-md bg-[var(--site-accent)] px-2 py-0.5 text-xs font-bold tabular-nums text-[var(--site-on-accent)]">Sepette {quantity}</span>}
                         </>
                     )}
                 </span>
@@ -319,7 +410,7 @@ function Thumb({ src, alt, restaurant, soldOut, stock }: { src: string; alt: str
 
 function SoldOutBadge({ className }: { className?: string }) {
     return (
-        <span className={cn('rounded-full bg-[var(--site-paper)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--site-on-paper)]', className)}>
+        <span className={cn('rounded-full bg-[var(--site-paper)] px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-[var(--site-on-paper)]', className)}>
             Tükendi
         </span>
     );
@@ -371,7 +462,7 @@ function ProductCard({ product, restaurant, quantity, readOnly, onAdd, onRemove 
                     <span className="mb-1 flex flex-wrap items-center gap-1.5">
                         {quantity > 0 && <InCartBadge quantity={quantity} />}
                         {product.isFeatured && !soldOut && (
-                            <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Ustanın seçimi</span>
+                            <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-xs font-bold text-[var(--site-text)]">Ustanın seçimi</span>
                         )}
                     </span>
                 )}
@@ -401,6 +492,74 @@ function ProductCard({ product, restaurant, quantity, readOnly, onAdd, onRemove 
 }
 
 /**
+ * Satır menüsünün ürünü (Meyhane Gecesi ve Esnaf Tabelası). Fotoğraf yalnız varsa çizilir; yoksa satır yine dolu görünür.
+ * - meyhane: basılı meyhane menüsü gibi; serif ad, noktalı çizgiyle bağlı vurgu renginde fiyat, altında soluk açıklama,
+ *   fotoğraf varsa solda yuvarlak; ekleme düğmesi ince vurgu çizgili daire.
+ * - esnaf: lokanta panosu gibi; dar kalın büyük harf ad, sağa dayalı büyük fiyat, satırlar arası kalın çizgi, fotoğraf
+ *   varsa solda köşeli kare; ekleme düğmesi koyu dolu kare.
+ */
+function LineRow({ tone, product, restaurant, quantity, readOnly, onAdd, onRemove }: {
+    tone: 'meyhane' | 'esnaf'; product: MenuCardProduct; restaurant: string; quantity: number; readOnly: boolean;
+    onAdd: () => void; onRemove: () => void;
+}) {
+    const soldOut = product.isOutOfStock;
+    const description = product.description?.trim();
+    const prep = product.prepMinutes && product.prepMinutes > 0 ? product.prepMinutes : null;
+    const esnaf = tone === 'esnaf';
+    const meta = quantity > 0 || (product.isFeatured && !soldOut) || soldOut || prep;
+    return (
+        <article className={cn('flex h-full items-start gap-3.5 py-4',
+            esnaf ? 'border-b-2 border-[var(--site-border-strong)]' : 'border-b border-[var(--site-line)]')}>
+            {product.imageUrl && (
+                <div className={cn('relative shrink-0', esnaf ? 'h-[72px] w-[72px]' : 'h-16 w-16')}>
+                    <ImageSlot src={product.imageUrl} alt={product.name} restaurant={restaurant} logoTextClassName="text-[min(11px,13cqw)]"
+                        className={cn('h-full', esnaf ? 'rounded-md' : 'rounded-full', soldOut && 'opacity-60 grayscale')} />
+                    {product.isStockImage && <span className="sr-only"> (temsili görsel)</span>}
+                </div>
+            )}
+            <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                    <h3 className={cn(headingFont, 'min-w-0 leading-tight', esnaf ? 'text-[21px] md:text-[23px]' : 'text-[19px] md:text-[21px]', soldOut && 'text-[var(--site-sub)]')}>
+                        {product.name}
+                    </h3>
+                    <span aria-hidden="true" className={cn('min-w-6 flex-1', esnaf ? '' : '-translate-y-[5px] border-b-2 border-dotted border-[var(--site-border-strong)]')} />
+                    <span className={cn(headingFont, 'shrink-0 whitespace-nowrap tabular-nums',
+                        esnaf ? 'text-[24px] leading-none md:text-[26px]' : 'text-[19px] md:text-[21px]',
+                        soldOut ? 'text-[var(--site-sub)] line-through decoration-1' : 'text-[var(--site-accent-text)]')}>
+                        {formatPrice(product.price)} ₺
+                    </span>
+                </div>
+                {description && <p className="m-0 mt-1 line-clamp-2 text-sm leading-snug text-[var(--site-sub)]">{description}</p>}
+                {meta && (
+                    <p className="m-0 mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-[var(--site-sub)]">
+                        {soldOut && <span className="font-bold text-[var(--site-text)]">Bugünlük tükendi</span>}
+                        {quantity > 0 && <InCartBadge quantity={quantity} />}
+                        {product.isFeatured && !soldOut && <span className="font-bold text-[var(--site-accent-text)]"><span aria-hidden="true">★ </span>Ustanın seçimi</span>}
+                        {prep && !soldOut && (
+                            <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" aria-hidden="true" />~{prep} dk<span className="sr-only"> hazırlanma süresi</span></span>
+                        )}
+                    </p>
+                )}
+            </div>
+            {!readOnly && !(soldOut && quantity === 0) && (
+                <div className="shrink-0 self-center">
+                    {quantity > 0 ? (
+                        <QuantityStepper name={product.name} quantity={quantity} onRemove={onRemove} onAdd={onAdd} addDisabled={soldOut} />
+                    ) : (
+                        <button type="button" onClick={onAdd} aria-label={`${product.name} sepete ekle`}
+                            className={cn('flex h-11 w-11 items-center justify-center transition-colors',
+                                esnaf ? 'rounded-md bg-[var(--site-paper)] text-[var(--site-on-paper)] hover:opacity-90'
+                                    : 'rounded-full border border-[var(--site-accent-line)] text-[var(--site-accent-text)] hover:bg-[var(--site-accent)] hover:text-[var(--site-on-accent)]')}>
+                            <Plus className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
+                        </button>
+                    )}
+                </div>
+            )}
+        </article>
+    );
+}
+
+/**
  * Menünün fiyatı; indirimliyse yanında üstü çizili normal fiyat (temel ürünlerin tek tek fiyatı) ve "%N avantajlı" rozeti
  * (yüzde aşağı yuvarlanır). İndirim yoksa regularPrice fiyatla aynıdır, ek bir şey gösterilmez.
  */
@@ -417,7 +576,7 @@ export function SetMenuPrice({ menu, muted, className }: { menu: OnlineSetMenu; 
                         <span className="sr-only">Normal fiyatı </span>{formatPrice(regular)} ₺
                     </s>
                     {percent > 0 && (
-                        <span className="whitespace-nowrap rounded-full bg-[var(--site-ok-bg)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-ok)]">%{percent} avantajlı</span>
+                        <span className="whitespace-nowrap rounded-full bg-[var(--site-ok-bg)] px-2 py-0.5 text-xs font-bold text-[var(--site-ok)]">%{percent} avantajlı</span>
                     )}
                 </>
             )}
@@ -436,9 +595,9 @@ function SetMenuRow({ menu, restaurant, quantity, readOnly, onOpen, onRemove }: 
         <article className={cardClass(quantity > 0, soldOut)}>
             <div className="flex min-w-0 flex-1 flex-col">
                 <span className="mb-1 flex items-center gap-1.5">
-                    <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Menü</span>
+                    <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-xs font-bold text-[var(--site-text)]">Menü</span>
                     {menu.isFeatured && !soldOut && (
-                        <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Ustanın seçimi</span>
+                        <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-xs font-bold text-[var(--site-text)]">Ustanın seçimi</span>
                     )}
                     {quantity > 0 && <InCartBadge quantity={quantity} />}
                 </span>

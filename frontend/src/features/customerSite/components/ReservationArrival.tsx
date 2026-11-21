@@ -55,13 +55,13 @@ export function PreOrderPanel({ reservation }: { reservation: StaffReservation }
                             <span className="font-semibold tabular-nums">{item.quantity}×</span> {item.productName}
                             {item.note && <span className="text-rb-text-sub"> · {item.note}</span>}
                         </span>
-                        <span className="shrink-0 tabular-nums">₺{formatPrice(item.unitPrice * item.quantity)}</span>
+                        <span className="shrink-0 tabular-nums">{formatPrice(item.unitPrice * item.quantity)} ₺</span>
                     </li>
                 ))}
             </ul>
             <p className="flex justify-between border-t border-rb-gold/40 pt-1 font-bold">
                 <span>Toplam</span>
-                <span className="tabular-nums">₺{formatPrice(preOrder.total)}</span>
+                <span className="tabular-nums">{formatPrice(preOrder.total)} ₺</span>
             </p>
             {preOrder.note && <p><span className="font-semibold">Not:</span> {preOrder.note}</p>}
         </div>

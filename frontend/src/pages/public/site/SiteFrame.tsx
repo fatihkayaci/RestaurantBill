@@ -19,8 +19,7 @@ import { fullAddress, restaurantName, useSiteDocumentTitle, weekSchedule } from 
 import { EditableBlock, EmptySlot, ExternalHint } from './siteEdit';
 import { editExternal, useSiteEdit, useSiteWindow } from './siteEditContext';
 import { useSiteDesign } from './siteDesign';
-import { EliteFooter, EliteHeader } from './elite/EliteFrame';
-import { EliteFlowStyle } from './elite/EliteFlowStyle';
+import { designLayout } from './designs/registry';
 import { useHideOnScroll, useScrolled } from './useScrolled';
 
 // Restoran sitesinin ortak çerçevesi (tasarım: "Tema 2 · Açık"): ortalı başlık (solda sayfalar, ortada serif ad ve
@@ -66,13 +65,13 @@ function FlameIcon() {
  * yapışık kalır (kaydırınca arkası buzlanır); `sticky={false}` ise (akış sayfaları) sayfayla kayar.
  */
 export function SiteHeader({ site, current, sticky = true, overlay = false }: { site: PublicSite; current: SitePageKey; sticky?: boolean; overlay?: boolean }) {
-    // Elit: koyu üst menü; kapağı fotoğraflı sayfalarda (`overlay`) kapağın üstünde saydam. Tasarım site verisinden
-    // (SiteShell dışındaki akış sayfalarında da doğru tasarım).
-    if (resolveDesign(site.site.design) === 'elit') return <EliteHeader site={site} current={current} overlay={overlay} sticky={sticky} />;
-    return <ClassicHeader site={site} current={current} sticky={sticky} />;
+    // Tasarımın kendi üst menüsü (tasarım kaydı; Elit: koyu, kapağı fotoğraflı sayfalarda `overlay` ile kapağın üstünde
+    // saydam). Tasarım site verisinden (SiteShell dışındaki akış sayfalarında da doğru tasarım).
+    const { Header = ClassicHeader } = designLayout(site.site.design);
+    return <Header site={site} current={current} overlay={overlay} sticky={sticky} />;
 }
 
-function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: SitePageKey; sticky: boolean }) {
+function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: SitePageKey; sticky: boolean; overlay?: boolean }) {
     const scrolled = useScrolled(sticky);
     const win = useSiteWindow();
     const edit = useSiteEdit();
@@ -120,7 +119,7 @@ function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: S
                         <Link to="/" onClick={toTop} {...nameX}
                             className={cn('flex min-h-11 min-w-0 items-center gap-3 leading-none text-[var(--site-text)] no-underline', nameX.className)}>
                             <span className={cn(serif, 'min-w-0 truncate text-[26px] tracking-[-0.01em] sm:text-[30px]')}>{name}</span>
-                            {place && <span className="hidden shrink-0 whitespace-nowrap text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--site-accent-text)] xl:inline">{place}</span>}
+                            {place && <span className="hidden shrink-0 whitespace-nowrap text-xs font-extrabold uppercase tracking-[0.22em] text-[var(--site-accent-text)] xl:inline">{place}</span>}
                         </Link>
                     ) : (
                         <Link to="/" onClick={toTop} {...nameX}
@@ -128,7 +127,7 @@ function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: S
                             <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--site-hero-bg)] text-[var(--site-mustard)] sm:h-[46px] sm:w-[46px]"><FlameIcon /></span>
                             <span className="flex min-w-0 flex-col leading-none">
                                 <span className={cn(serif, 'truncate text-[19px] font-extrabold sm:text-[26px]')}>{name}</span>
-                                {place && <span className="mt-1 hidden truncate text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--site-accent-text)] sm:block">{place}</span>}
+                                {place && <span className="mt-1 hidden truncate text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--site-accent-text)] sm:block">{place}</span>}
                             </span>
                         </Link>
                     )}
@@ -214,8 +213,8 @@ export function FlowSiteHeader({ site, current, sticky = false }: { site: Public
 
 export function MobileActionBar({ actions }: { actions: MobileAction[] }) {
     const x = editExternal(useSiteEdit(), 'actions');
-    // Elit: köşesiz, büyük harfli düğmeler.
-    const elit = useSiteDesign() === 'elit';
+    // Elit: köşesiz, büyük harfli düğmeler (tasarım kaydı `mobileBar`).
+    const elit = designLayout(useSiteDesign()).mobileBar === 'square';
     if (actions.length === 0) return null;
     return (
         <nav aria-label="Hızlı eylemler" {...x}
@@ -223,7 +222,7 @@ export function MobileActionBar({ actions }: { actions: MobileAction[] }) {
             <ul className="m-0 flex list-none gap-2 p-0">
                 {actions.map(a => {
                     const cls = cn('flex h-12 w-full items-center justify-center gap-1.5 px-2 no-underline',
-                        elit ? 'text-[11px] font-medium uppercase tracking-[0.06em]' : 'rounded-full text-sm font-bold',
+                        elit ? 'text-xs font-medium uppercase tracking-[0.06em]' : 'rounded-full text-sm font-bold',
                         a.primary ? cn('bg-[var(--site-accent)] text-[var(--site-on-accent)]', elit ? 'bg-[var(--site-paper)] text-[var(--site-on-paper)]' : 'font-extrabold')
                             : 'border border-[var(--site-border-strong)] text-[var(--site-text)]');
                     return (
@@ -360,8 +359,8 @@ function InstagramIcon() {
  * `visit={false}`: adres/saat/iletişim sütunları yok (İletişim sayfası bunları zaten gösterir).
  */
 export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite; bottomBar: boolean; visit?: boolean }) {
-    if (resolveDesign(site.site.design) === 'elit') return <EliteFooter site={site} bottomBar={bottomBar} visit={visit} />;
-    return <ClassicFooter site={site} bottomBar={bottomBar} visit={visit} />;
+    const { Footer = ClassicFooter } = designLayout(site.site.design);
+    return <Footer site={site} bottomBar={bottomBar} visit={visit} />;
 }
 
 function ClassicFooter({ site, bottomBar, visit }: { site: PublicSite; bottomBar: boolean; visit: boolean }) {
@@ -380,7 +379,7 @@ function ClassicFooter({ site, bottomBar, visit }: { site: PublicSite; bottomBar
     const lastOrder = ordering?.state === 'open' && ordering.lastOrderAt ? timeOfDay(ordering.lastOrderAt) : null;
     const hasSocial = Boolean(content.whatsappPhone || content.instagramUrl);
 
-    const label = 'm-0 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--site-accent-on-sand)]';
+    const label = 'm-0 text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--site-accent-on-sand)]';
     const muted = 'text-[var(--site-footer-muted)]';
     const link = 'inline-flex min-h-11 items-center self-start text-[15px] no-underline hover:opacity-75';
     const roundIcon = 'flex h-11 w-11 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--site-on-footer)_30%,transparent)] text-[var(--site-on-footer)] transition-colors hover:border-[var(--site-on-footer)]';
@@ -514,11 +513,12 @@ export function SitePage({ site, current, className, stickyHeader = true, overla
     const actions = inFlow ? [] : mobileActions ?? defaults;
     // Adres · saatler · iletişim her sayfanın alt bilgisinde; İletişim sayfası aynı bilgileri zaten gösterir.
     const footerVisit = current !== 'iletisim';
+    const layout = designLayout(site.site.design);
     return (
         <SiteShell accent={site.site.accentColor} theme={site.site.theme} design={site.site.design} font={site.site.font}>
             <style>{MOTION_CSS}</style>
-            <EliteFlowStyle design={site.site.design} />
-            <div className={cn('rb-site relative flex min-h-screen flex-col overflow-x-clip', resolveDesign(site.site.design) === 'elit' && 'rb-el-flow', className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
+            {layout.flowCss && <style>{layout.flowCss}</style>}
+            <div className={cn('rb-site relative flex min-h-screen flex-col overflow-x-clip', layout.flowClass, className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
                 {/* Düzenleyicide yalnız burada değişen bölümler çizilir: başlık, alt bilgi ve alt çubuk yok. */}
                 {!edit && <SiteHeader site={site} current={current} sticky={stickyHeader} overlay={overlayHeader} />}
                 {children}

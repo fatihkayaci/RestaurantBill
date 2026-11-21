@@ -37,6 +37,9 @@ namespace RestaurantBill.Application.Features.Tables.Commands.UpdateTable
                 return Result.Failure("Böyle bir bölge bulunamadı.");
 
             table.Update(request.Name, table.Note);
+            // Başka bölgeye taşınan masa yeni bölgesinin sonuna eklenir.
+            if (table.RegionId != request.RegionId)
+                table.SetSortOrder(await TableSortOrder.EndOfRegionAsync(_db, request.RegionId, cancellationToken));
             table.AssignRegion(request.RegionId);
             table.SetCapacity(request.Capacity);
             if (request.Status.HasValue)

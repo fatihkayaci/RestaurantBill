@@ -12,8 +12,8 @@ import type { MobileAction } from './site/siteActions';
 import { BagIcon, CalendarIcon, DirectionsIcon, PhoneIcon } from './site/SiteCards';
 import { RESERVATION_PATH, serif } from './site/siteParts';
 import { FAST_MINUTES, useMenuView } from './site/useMenuView';
-import { directionsUrl, formatSitePrice, resolveDesign, telHref } from './site/siteTheme';
-import EliteMenu from './site/elite/EliteMenu';
+import { directionsUrl, formatSitePrice, lineMenuVariant, telHref } from './site/siteTheme';
+import { designLayout } from './site/designs/registry';
 import { fullAddress, restaurantName, useSite } from './site/useSite';
 import { EditableText, ExternalHint } from './site/siteEdit';
 import { useSiteEdit } from './site/siteEditContext';
@@ -39,7 +39,9 @@ export default function RestaurantMenuPage() {
     if (!site) {
         return <SiteShell><SiteStatus error={error} /></SiteShell>;
     }
-    if (resolveDesign(site.site.design) === 'elit') return <EliteMenu site={site} />;
+    // Tasarımın kendi Menü sayfası (tasarım kaydı); yoksa ortak düzen.
+    const { Menu } = designLayout(site.site.design);
+    if (Menu) return <Menu site={site} />;
 
     const name = restaurantName(site);
     const canReserve = canReserveOnline(site);
@@ -116,6 +118,7 @@ export default function RestaurantMenuPage() {
                                     onOpenSetMenu={setSetMenuOpen}
                                     onRemoveSetMenu={m => cart.removeSetMenu(m.id)}
                                     readOnly={readOnly}
+                                    variant={lineMenuVariant(site.site.design)}
                                     canAddProduct={p => { const d = cart.productFor(p.id); return !!d && !d.isOutOfStock; }}
                                     canAddSetMenu={m => !!cart.setMenuFor(m.id)?.menu.isAvailable}
                                     empty={nothingFound && (

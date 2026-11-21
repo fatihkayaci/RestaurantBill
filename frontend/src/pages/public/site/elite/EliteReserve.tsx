@@ -54,7 +54,7 @@ export default function EliteReserve({ site }: { site: PublicSite }) {
     const time = open.some(s => s.time === picked) ? picked : (open[0]?.time ?? null);
     const dayInfo = days.find(d => d.value === day) ?? days[0];
     const summary = time ? `${dayInfo.short}, ${time} · ${people} kişi` : `${dayInfo.short} · ${people} kişi`;
-    const field = cn(elLabel, 'text-[11px] text-[var(--site-muted)]');
+    const field = cn(elLabel, 'text-xs text-[var(--site-muted)]');
 
     return (
         <form className="flex min-w-0 flex-col gap-9"
@@ -74,7 +74,7 @@ export default function EliteReserve({ site }: { site: PublicSite }) {
                                     className={cn('flex min-h-[84px] flex-col items-center justify-center gap-2 bg-transparent px-1 transition-colors',
                                         !d.open ? 'cursor-not-allowed text-[var(--site-disabled)] line-through'
                                             : on ? 'text-[var(--site-text)] shadow-[inset_0_-2px_0_var(--site-accent-text)]' : 'text-[var(--site-muted)] hover:text-[var(--site-text)]')}>
-                                    <span className="text-[10px] font-medium uppercase tracking-[0.2em]">{d.top}</span>
+                                    <span className="text-xs font-medium uppercase tracking-[0.2em]">{d.top}</span>
                                     <span className={cn(elSerif, 'text-[28px] leading-none md:text-[30px]')}>{d.num}</span>
                                 </button>
                             );
@@ -113,7 +113,7 @@ export default function EliteReserve({ site }: { site: PublicSite }) {
                     <div role="group" aria-labelledby="el-rez-kisi" className="flex h-[54px] items-center justify-between border-b border-[color-mix(in_srgb,var(--site-text)_35%,transparent)]">
                         <button type="button" aria-label="Kişi azalt" disabled={people <= 1} onClick={() => setPeople(p => Math.max(1, p - 1))}
                             className="h-11 w-11 bg-transparent text-2xl font-light text-[var(--site-text)] disabled:opacity-35">−</button>
-                        <span aria-live="polite" className={cn(elSerif, 'text-[30px]')}>{people} <span className="font-[family-name:var(--site-sans)] text-[11px] uppercase not-italic tracking-[0.22em] text-[var(--site-muted)]">kişi</span></span>
+                        <span aria-live="polite" className={cn(elSerif, 'text-[30px]')}>{people} <span className="font-[family-name:var(--site-sans)] text-xs uppercase not-italic tracking-[0.22em] text-[var(--site-muted)]">kişi</span></span>
                         <button type="button" aria-label="Kişi artır" disabled={people >= maxParty} onClick={() => setPeople(p => Math.min(maxParty, p + 1))}
                             className="h-11 w-11 bg-transparent text-2xl font-light text-[var(--site-text)] disabled:opacity-35">+</button>
                     </div>

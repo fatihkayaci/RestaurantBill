@@ -129,7 +129,7 @@ public class ExportDataQueryHandler(IAppDbContext db, ICurrentUserService curren
                 Csv csv = File("paket-siparisler.csv", "Şube", "No", "Tarih", "Durum", "Müşteri", "Telefon", "Adres", "Bölge", "Ara toplam", "Teslimat", "Toplam", "Ödeme");
                 foreach (var d in rows)
                     csv.Add(branch, d.Number.ToString(Tr), Local(d.CreatedAt), d.Status.ToString(), d.CustomerName, d.CustomerPhone, d.Address, d.ZoneName,
-                        Money(d.Subtotal), Money(d.DeliveryFee), Money(d.Total), d.PaymentPreference.ToString());
+                        Money(d.Subtotal), Money(d.DeliveryFee), Money(d.Total), d.PaymentPreference?.ToString() ?? "Restoranda");
             }
 
             if (plan.Has(DataGroups.Messages))

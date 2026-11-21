@@ -32,7 +32,7 @@ export default function ProductsTab({ data, loading }: Props) {
             <div className="grid lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
                     <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">En Çok Satan Ürünler</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">En Çok Satan Ürünler</p>
                         <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
                             <button
                                 type="button"
@@ -54,11 +54,11 @@ export default function ProductsTab({ data, loading }: Props) {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border">
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ürün</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kategori</th>
-                                    <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Adet</th>
-                                    <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
-                                    <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ort. Birim</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ürün</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kategori</th>
+                                    <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Adet</th>
+                                    <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
+                                    <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ort. Birim</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -79,7 +79,7 @@ export default function ProductsTab({ data, loading }: Props) {
                 </div>
 
                 <div className="rounded-xl border border-border bg-card p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">Kategori Kırılımı</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-4">Kategori Kırılımı</p>
                     {(data?.categoryBreakdown.length ?? 0) === 0 ? (
                         <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">Veri yok.</div>
                     ) : (
@@ -113,7 +113,7 @@ export default function ProductsTab({ data, loading }: Props) {
 
             <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-border">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
                         Hiç Satmayan Aktif Ürünler ({(data?.neverSoldProducts ?? []).length})
                     </p>
                 </div>
@@ -124,9 +124,9 @@ export default function ProductsTab({ data, loading }: Props) {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border">
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ürün</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kategori</th>
-                                    <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Fiyat</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ürün</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kategori</th>
+                                    <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Fiyat</th>
                                 </tr>
                             </thead>
                             <tbody>

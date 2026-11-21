@@ -11,7 +11,8 @@ namespace RestaurantBill.Application.Features.Reports.Queries.GetSalesReport;
 
 public class GetSalesReportQueryHandler : IRequestHandler<GetSalesReportQuery, Result<SalesReportDto>>
 {
-    private record PaymentRow(DateTime CreatedAt, decimal TotalAmount, decimal Matrah, decimal TaxAmount, PaymentMethod PaymentMethod, Guid OrderId, bool IsDeliveryFee);
+    private record PaymentRow(DateTime CreatedAt, decimal TotalAmount, decimal Matrah, decimal TaxAmount, PaymentMethod PaymentMethod, Guid OrderId, bool IsDeliveryFee,
+        OrderType OrderType);
 
     private readonly IAppDbContext _db;
     private readonly IReportScopeResolver _scope;
@@ -36,7 +37,7 @@ public class GetSalesReportQueryHandler : IRequestHandler<GetSalesReportQuery, R
         bool isSingleDay = from == to;
         int periodLengthDays = to.DayNumber - from.DayNumber + 1;
 
-        decimal totalRevenue = 0, totalMatrah = 0, totalTax = 0, totalDeliveryFee = 0;
+        decimal totalRevenue = 0, totalMatrah = 0, totalTax = 0, totalDeliveryFee = 0, deliveryOrderRevenue = 0, pickupOrderRevenue = 0;
         int totalTransactionCount = 0;
         Dictionary<PaymentMethod, (decimal Amount, int Count)> methodTotals = [];
         Dictionary<string, (decimal Total, Dictionary<Guid, decimal> ByBranch)> trendBuckets = [];
@@ -51,7 +52,7 @@ public class GetSalesReportQueryHandler : IRequestHandler<GetSalesReportQuery, R
             List<PaymentRow> rows = await _db.Payments
                 .AsNoTracking()
                 .Where(p => p.CashRegister.BranchId == branch.Id && p.CreatedAt >= fromUtc && p.CreatedAt < toUtc)
-                .Select(p => new PaymentRow(p.CreatedAt, p.TotalAmount, p.Matrah, p.TaxAmount, p.PaymentMethod, p.OrderId, p.IsDeliveryFee))
+                .Select(p => new PaymentRow(p.CreatedAt, p.TotalAmount, p.Matrah, p.TaxAmount, p.PaymentMethod, p.OrderId, p.IsDeliveryFee, p.Order.OrderType))
                 .ToListAsync(cancellationToken);
 
             decimal branchRevenue = rows.Sum(r => r.TotalAmount);
@@ -61,6 +62,8 @@ public class GetSalesReportQueryHandler : IRequestHandler<GetSalesReportQuery, R
             totalMatrah += rows.Sum(r => r.Matrah);
             totalTax += rows.Sum(r => r.TaxAmount);
             totalDeliveryFee += rows.Where(r => r.IsDeliveryFee).Sum(r => r.TotalAmount);
+            deliveryOrderRevenue += rows.Where(r => r.OrderType == OrderType.Delivery).Sum(r => r.TotalAmount);
+            pickupOrderRevenue += rows.Where(r => r.OrderType == OrderType.Takeaway).Sum(r => r.TotalAmount);
             totalTransactionCount += branchTransactionCount;
 
             foreach (var group in rows.GroupBy(r => r.PaymentMethod))
@@ -141,6 +144,8 @@ public class GetSalesReportQueryHandler : IRequestHandler<GetSalesReportQuery, R
             TransactionCount = totalTransactionCount,
             AvgBasket = totalTransactionCount > 0 ? totalRevenue / totalTransactionCount : 0,
             DeliveryFeeRevenue = totalDeliveryFee,
+            DeliveryOrderRevenue = deliveryOrderRevenue,
+            PickupOrderRevenue = pickupOrderRevenue,
             Trend = trend,
             PaymentMethods = paymentMethods,
             Heatmap = heatmapPoints,

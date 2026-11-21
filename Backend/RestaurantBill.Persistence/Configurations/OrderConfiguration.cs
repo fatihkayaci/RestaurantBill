@@ -34,8 +34,12 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.HasIndex(o => new { o.BranchId, o.Status });
 
+        // SHA-256 özeti (64 hex).
+        builder.Property(o => o.QrOwnerTokenHash).HasMaxLength(64);
+
         // Hesaplanan değer (TotalPrice - PaidOnAccount); kolon değil.
         builder.Ignore(o => o.RemainingAmount);
         builder.Ignore(o => o.HasTable);
+        builder.Ignore(o => o.IsPackageOrder);
     }
 }

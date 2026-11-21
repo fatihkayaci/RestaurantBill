@@ -7,6 +7,8 @@ public class Category : BaseEntity
     public Branch Branch { get; private set; } = default!;
     public string Name { get; private set; } = string.Empty;
     public decimal? TaxRate { get; private set; }
+    // Şube içindeki sıra (küçük önce). Menüde, garsonda ve sitede bu sırayla listelenir; yeni kategori sona eklenir.
+    public int SortOrder { get; private set; }
 
     protected Category() { }
 
@@ -32,6 +34,11 @@ public class Category : BaseEntity
             throw new DomainException("Kategori adı boş olamaz.");
 
         Name = name;
+    }
+
+    public void SetSortOrder(int sortOrder)
+    {
+        SortOrder = sortOrder;
     }
 
     public void SetTaxRate(decimal? taxRate)

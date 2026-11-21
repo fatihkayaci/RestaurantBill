@@ -86,7 +86,7 @@ export default function RoleShell({
                             </p>
                             <p className={cn(
                                 'text-rb-amber font-semibold tracking-widest uppercase mt-0.5',
-                                large ? 'text-xs' : 'text-[10px]'
+                                large ? 'text-xs' : 'text-xs'
                             )}>
                                 {roleLabel}
                             </p>

@@ -17,7 +17,7 @@ export function Field({ id, label, hint, count, max, children }: { id: string; l
         <div>
             <div className="flex items-baseline justify-between gap-2">
                 <label htmlFor={id} className={labelClass}>{label}</label>
-                {max !== undefined && <span className="text-[11px] text-muted-foreground">{count}/{max}</span>}
+                {max !== undefined && <span className="text-xs text-muted-foreground">{count}/{max}</span>}
             </div>
             {children}
             {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
@@ -64,7 +64,10 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
                         className={cn('flex flex-col gap-2.5 rounded-xl border-2 p-2.5 text-left transition-colors',
                             on ? 'border-foreground' : 'border-border hover:border-foreground/40')}>
                         {key === 'elit' ? <EliteMock accent={c.pop} accentText={c.accentText} />
-                            : key === 'sicak' ? <SicakMock accent={c.accent} onAccent={c.onAccent} accentText={c.accentText} /> : (
+                            : key === 'sicak' ? <SicakMock accent={c.accent} onAccent={c.onAccent} accentText={c.accentText} />
+                            : key === 'meyhane' ? <MeyhaneMock accent={c.accent} accentText={c.accentText} cover={t.hero} />
+                            : key === 'esnaf' ? <EsnafMock accentText={c.accentText} cover={t.hero} menuBox={t.menuBox} />
+                            : key === 'bahce' ? <BahceMock accent={c.accent} accentText={c.accentText} cover={t.hero} /> : (
                         /* Küçük maket: üst menü, kapak (başlık + düğme), menü kutusu ve alt bilgi şeridi. */
                         <span aria-hidden="true" className="flex h-[148px] flex-col gap-1.5 overflow-hidden rounded-lg p-2" style={{ background: P.bg }}>
                             <span className="flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2" style={{ background: sade ? P.card : 'transparent' }}>
@@ -177,6 +180,159 @@ function SicakMock({ accent, onAccent, accentText }: { accent: string; onAccent:
 }
 
 /**
+ * Meyhane Gecesi maketi (kendi düzeni): kapak renginde gece kapağı, tepede lamba dizisi, ortada çift çizgili tabelada ad;
+ * altında "bu akşam" şeridi, meze tepsisi (yuvarlak kâseler) ve noktalı fiyat satırı; en altta krem adisyon fişi.
+ */
+function MeyhaneMock({ accent, accentText, cover }: { accent: string; accentText: string; cover: string }) {
+    const P = SITE_DESIGNS.meyhane.palette;
+    const font = SITE_FONTS[P.font];
+    return (
+        <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg" style={{ background: P.bg }}>
+            <span className="relative flex flex-[3] flex-col items-center justify-center"
+                style={{ background: `radial-gradient(110px 50px at 50% 0%, ${accentText}40, transparent 75%), ${cover}`, color: P.fg }}>
+                <span className="absolute inset-x-2 top-1.5 flex justify-between">
+                    {[0, 1, 2, 3, 4, 5, 6].map(i => (
+                        <span key={i} className="h-1.5 w-1 rounded-full" style={{ background: accentText, boxShadow: `0 0 6px 1px ${accentText}AA`, marginTop: [0, 3, 5, 6, 5, 3, 0][i] }} />
+                    ))}
+                </span>
+                <span className="mt-2 px-2 py-1 text-center text-[15px] leading-[0.95]"
+                    style={{ fontFamily: font.heading, letterSpacing: font.tracking, border: `1px solid ${accent}AA`, outline: `1px solid ${P.fg}33`, outlineOffset: 2 }}>
+                    Ocak <span style={{ color: accentText, textShadow: `0 0 10px ${accent}88` }}>Kadıköy</span>
+                </span>
+            </span>
+            <span className="flex flex-[3] flex-col justify-center gap-1.5 px-3">
+                <span className="flex justify-center gap-1.5">
+                    {[0, 1, 2, 3].map(i => <span key={i} className="h-4 w-4 rounded-full" style={{ background: P.placeholder, boxShadow: `0 0 0 1px ${P.fg}44` }} />)}
+                </span>
+                <span className="flex items-end gap-1">
+                    <span className="h-1.5 w-10 rounded-full" style={{ background: P.fg }} />
+                    <span className="mb-px flex-1 border-b border-dotted" style={{ borderColor: P.muted }} />
+                    <span className="h-1.5 w-5 rounded-full" style={{ background: accentText }} />
+                </span>
+            </span>
+            <span className="flex h-5 shrink-0 justify-center pt-1" style={{ background: P.footer }}>
+                <span className="h-full w-12" style={{ background: P.fg }} />
+            </span>
+        </span>
+    );
+}
+
+/**
+ * Esnaf Tabelası maketi (kendi düzeni): kapak renginde dükkân tabelası (dar kalın büyük harf ad, sağda telefon), çini
+ * şerit; tabela kapakta dev ad ve sarı düğme, yanında menü kutusu renginde "Bugün ne yesek?" panosu (sarı fiyatlar);
+ * altında kalın çerçeveli fiyat panoları (menü kutusu renginde başlık, fiyat vurgu renginde) ve çinili mürekkep tezgâh.
+ */
+function EsnafMock({ accentText, cover, menuBox }: { accentText: string; cover: string; menuBox: string }) {
+    const P = SITE_DESIGNS.esnaf.palette;
+    const font = SITE_FONTS[P.font];
+    const yellow = P.pop ?? P.mustard;
+    // Çini şerit: krem zeminde menü kutusu renginde kafes, tabela renginde benek.
+    const tiles = {
+        background: `radial-gradient(circle, ${cover} 0 1px, transparent 1.5px) center / 6px 6px, `
+            + `linear-gradient(45deg, transparent 40%, ${menuBox} 40% 60%, transparent 60%) center / 6px 6px, `
+            + `linear-gradient(-45deg, transparent 40%, ${menuBox} 40% 60%, transparent 60%) center / 6px 6px, ${P.onHero}`,
+        borderBlock: `1px solid ${P.fg}`,
+    };
+    const heading = { fontFamily: font.heading, letterSpacing: font.tracking };
+    return (
+        <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg" style={{ background: P.bg }}>
+            <span className="flex h-[20px] shrink-0 items-center justify-between gap-2 px-2" style={{ background: cover, color: P.onHero }}>
+                <span className="text-[11px] uppercase leading-none" style={heading}>Ocak Kebap</span>
+                <span className="h-1.5 w-9 rounded-sm" style={{ background: P.heroAccent ?? yellow }} />
+            </span>
+            <span className="h-1.5 shrink-0" style={tiles} />
+            <span className="flex min-h-0 flex-[3] items-center gap-2 px-2 py-1.5" style={{ background: cover, color: P.onHero }}>
+                <span className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-[21px] uppercase leading-[0.85]" style={heading}>Ocak<br />Kebap</span>
+                    <span className="h-3 w-12 rounded-sm" style={{ background: yellow }} />
+                </span>
+                <span className="flex w-[46%] flex-col gap-1 rounded-sm px-1.5 py-1.5" style={{ background: menuBox, border: `2px solid ${P.onHero}` }}>
+                    {[0, 1, 2].map(i => (
+                        <span key={i} className="flex items-center justify-between gap-1">
+                            <span className="h-1 w-3/5 rounded-sm" style={{ background: P.onMenuBox }} />
+                            <span className="h-1.5 w-4 rounded-sm" style={{ background: yellow }} />
+                        </span>
+                    ))}
+                </span>
+            </span>
+            <span className="h-1.5 shrink-0" style={tiles} />
+            <span className="flex min-h-0 flex-[2] gap-1.5 px-2 py-1.5">
+                {[0, 1].map(i => (
+                    <span key={i} className="flex flex-1 flex-col overflow-hidden rounded-sm" style={{ background: P.card, border: `1.5px solid ${P.fg}` }}>
+                        <span className="h-2 shrink-0" style={{ background: menuBox }} />
+                        <span className="flex flex-1 flex-col justify-center gap-1 px-1">
+                            {[0, 1].map(j => (
+                                <span key={j} className="flex items-center justify-between gap-1">
+                                    <span className="h-1 w-1/2 rounded-sm" style={{ background: P.fg }} />
+                                    <span className="h-1.5 w-3 rounded-sm" style={{ background: accentText }} />
+                                </span>
+                            ))}
+                        </span>
+                    </span>
+                ))}
+            </span>
+            <span className="h-1.5 shrink-0" style={tiles} />
+            <span className="h-2.5 shrink-0" style={{ background: P.footer }} />
+        </span>
+    );
+}
+
+/**
+ * Bahçe Kahvaltısı maketi (kendi düzeni): açık zeminde sabah güneşi, yüzen yuvarlak üst menü (güneş + ad + saat çipi),
+ * solda kalın ad ve vurgu düğmesi, sağda YUKARIDAN BAKILMIŞ SOFRA (kapak renginde yuvarlak masa, beyaz tabaklar, çay);
+ * altında vurgu renginde kareli masa örtüsü üstünde beyaz kart (yuvarlak tabaklı satır); çalı kenarlı yeşil alt bilgi.
+ */
+function BahceMock({ accent, accentText, cover }: { accent: string; accentText: string; cover: string }) {
+    const P = SITE_DESIGNS.bahce.palette;
+    const font = SITE_FONTS[P.font];
+    const plates: [number, number, number][] = [[50, 50, 40], [22, 26, 22], [78, 24, 20], [84, 64, 18], [62, 86, 20], [26, 76, 20], [50, 12, 10]];
+    return (
+        <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg"
+            style={{ background: `radial-gradient(120px 80px at 0% 0%, ${P.mustard}88, transparent 70%), ${P.bg}` }}>
+            <span className="mx-1.5 mt-1.5 flex h-4 shrink-0 items-center gap-1 rounded-full px-1.5" style={{ background: P.card, boxShadow: `0 0 0 1px ${P.fg}14` }}>
+                <span className="h-2 w-2 rounded-full" style={{ background: P.mustard }} />
+                <span className="h-1 w-7 rounded-full" style={{ background: P.fg }} />
+                <span className="h-1.5 w-6 rounded-full" style={{ background: P.alt }} />
+                <span className="ml-auto h-2.5 w-7 rounded-full" style={{ background: accent }} />
+            </span>
+            <span className="flex min-h-0 flex-[3] items-center gap-1 px-2.5">
+                <span className="flex flex-1 flex-col gap-1">
+                    <span className="text-[15px] leading-[0.9]" style={{ fontFamily: font.heading, fontWeight: 700, letterSpacing: font.tracking, color: P.fg }}>
+                        Ocak<br />Kadıköy
+                    </span>
+                    <span className="h-3 w-12 rounded-full" style={{ background: accent }} />
+                </span>
+                <span className="relative h-[66px] w-[66px] shrink-0">
+                    <span className="absolute inset-[3%] rounded-full" style={{ background: cover, boxShadow: `inset 0 0 0 3px ${P.fg}22` }} />
+                    {plates.map(([x, y, sz], i) => (
+                        <span key={i} className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+                            style={{ left: `${x}%`, top: `${y}%`, width: `${sz}%`, height: `${sz}%`,
+                                background: i === 6 ? accentText : i === 0 ? `radial-gradient(circle, ${P.mustard} 0 26%, ${P.card} 28%)` : P.card,
+                                boxShadow: i === 6 ? `0 0 0 1.5px ${P.card}` : `inset 0 0 0 1.5px ${P.alt}` }} />
+                    ))}
+                </span>
+            </span>
+            <span className="flex flex-[2] items-center px-1.5 py-1"
+                style={{ backgroundColor: P.card, backgroundImage: `linear-gradient(90deg, ${accent}26 50%, transparent 50%), linear-gradient(${accent}26 50%, transparent 50%)`, backgroundSize: '10px 10px' }}>
+                <span className="flex flex-1 items-center gap-1 rounded-lg px-1.5 py-1" style={{ background: P.card }}>
+                    <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: P.alt, boxShadow: `inset 0 0 0 2px ${P.card}, 0 0 0 1px ${P.fg}1F` }} />
+                    <span className="flex flex-1 flex-col gap-0.5">
+                        <span className="h-1 w-3/4 rounded-full" style={{ background: P.fg }} />
+                        <span className="h-1 w-1/3 rounded-full" style={{ background: accentText }} />
+                    </span>
+                    <span className="h-3 w-3 rounded-full" style={{ background: P.mustard }} />
+                </span>
+            </span>
+            <span className="relative h-3.5 shrink-0" style={{ background: P.footer }}>
+                <span className="absolute -top-1 inset-x-0 flex justify-around">
+                    {[0, 1, 2, 3, 4, 5].map(i => <span key={i} className="h-2.5 w-6 rounded-full" style={{ background: P.footer }} />)}
+                </span>
+            </span>
+        </span>
+    );
+}
+
+/**
  * Sitenin yazı tipi: ilk seçenek "Tasarımın yazı tipi" ("" kaydedilir; tasarım değişince onun çiftine geçer), altında hazır
  * başlık + gövde çiftleri. Her kart "Aa" ve kısa bir Türkçe örneği o çiftle çizer. Admin olduğu için bütün çiftler yüklenir.
  */
@@ -223,7 +379,25 @@ const ACCENT_OPTIONS: Record<SiteDesignKey, string[]> = {
     sade: ['#E8B04B', '#E2683C', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#2A2622', '#9AA5B1'],
     elit: ['#C8A35F', '#D4A0A0', '#B9BD8E', '#A9B8D0', '#CFC6B8', '#E79A9A', '#2F4F8F', '#A8354A'],
     sicak: ['#D9660B', '#C8341E', '#6B7A2E', '#8E2433', '#1E1915', '#EBB03F', '#2F4F8F', '#E2683C'],
+    // Koyu zemin: açık, parlak vurgular (koyu bir özel renk seçilirse yazısı kendiliğinden açılır).
+    meyhane: ['#E9A23B', '#ECE3D3', '#9EC1EA', '#E8A0A0', '#B9C98A', '#D9654F', '#F2C25E', '#C7A6E0'],
+    esnaf: ['#C8102E', '#1D4E89', '#F2C230', '#1A1A1A', '#2E7D32', '#E2683C', '#8E2433', '#0F766E'],
+    bahce: ['#C2410C', '#4E6B46', '#FFD978', '#E2683C', '#2F4F8F', '#A8354A', '#6B7A2E', '#1F2A1C'],
 };
+
+// Temanın kapak rengini / menü kutusu rengini de değiştirdiği tasarımlar (diğerlerinde yalnız vurgu değişir).
+const THEME_SETS_COVER: SiteDesignKey[] = ['renkli', 'meyhane', 'esnaf', 'bahce'];
+const THEME_SETS_MENU_BOX: SiteDesignKey[] = ['esnaf', 'bahce'];
+
+/** Tema kartında "Kapak ■" gibi küçük renk etiketi. */
+function ColorChip({ label, color }: { label: string; color: string }) {
+    return (
+        <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden="true" className="h-3.5 w-3.5 rounded-sm border border-border" style={{ background: color }} />
+            {label}
+        </span>
+    );
+}
 
 /** Seçili tasarımın hazır temaları ve isteğe bağlı özel vurgu rengi. Renkli: tema kapak rengini ve vurguyu seçer;
  *  Sade: yalnız vurguyu (kapak beyaz kutu); Elit: yalnız vurgu ailesini (koyu zeminde açık, kremde koyu ton);
@@ -240,6 +414,9 @@ export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
                 {key === 'sade' ? 'Sade tasarımda tema vurgu rengini seçer; kapak ve kutular beyaz kalır.'
                     : key === 'elit' ? 'Elit tasarımda tema yalnız vurgu ailesini seçer (çizgiler, süsler, düğmeler); zemin krem ve koyu espresso kalır.'
                         : key === 'sicak' ? 'Sıcak tasarımda tema vurgu rengini seçer (düğmeler, etiketler); zemin şeftali ve krem, koyu bantlar kalır.'
+                        : key === 'meyhane' ? 'Meyhane Gecesi koyu bir tasarımdır: tema vurgu rengini ve kapağın tonunu seçer; zemin her temada kömür kalır.'
+                        : key === 'esnaf' ? 'Esnaf Tabelası\'nda tema kapağın (tabela) ve menü kutusunun rengini, vurguyu seçer; zemin krem kalır.'
+                        : key === 'bahce' ? 'Bahçe Kahvaltısı\'nda tema kapağın ve menü kutusunun rengini, vurguyu seçer; zemin açık yeşil kalır.'
                         : 'Renkli tasarımda tema ana sayfa kapağının rengini ve vurguyu seçer.'}
             </p>
             <div role="radiogroup" aria-label="Site teması" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -264,12 +441,21 @@ export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
                                 {on && <Check className="h-4 w-4 text-foreground" aria-hidden="true" />}
                             </span>
                             <span className="text-xs leading-snug text-muted-foreground">{t.description}</span>
+                            {/* Temanın neyi boyadığı: yalnız bu tasarımda temayla değişen renkler. */}
+                            <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                {THEME_SETS_COVER.includes(key) && <ColorChip label="Kapak" color={cover} />}
+                                <ColorChip label="Vurgu" color={t.accent} />
+                                {THEME_SETS_MENU_BOX.includes(key) && t.menuBox && <ColorChip label="Menü kutusu" color={t.menuBox} />}
+                            </span>
                         </button>
                     );
                 })}
             </div>
             <div>
-                <p className={labelClass}>Vurgu rengi</p>
+                <p className={labelClass}>Vurgu rengi <span className="font-normal normal-case text-muted-foreground">(isteğe bağlı)</span></p>
+                <p className="mb-2 mt-0 text-xs text-muted-foreground">
+                    Düğmelerin, fiyatların ve etiketlerin rengi. Temanın vurgu rengini değiştirir; kapağa ve zemine dokunmaz.
+                </p>
                 <div role="radiogroup" aria-label="Vurgu rengi" className="flex flex-wrap items-center gap-2.5">
                     <button type="button" role="radio" aria-checked={!accent} onClick={() => onAccent('')}
                         className={cn('flex h-11 items-center gap-2 rounded-full border-2 px-3 text-sm font-medium', !accent ? 'border-foreground' : 'border-border')}>
@@ -291,7 +477,7 @@ export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
                         Özel
                     </label>
                 </div>
-                <p className="mt-1.5 text-xs text-muted-foreground">Düğmeler, rozetler ve süsler bu renkte olur. Okunurluk için düğme yazısı ve tonu kendiliğinden ayarlanır.</p>
+                <p className="mt-1.5 text-xs text-muted-foreground">Okunurluk için düğme yazısı ve tonu kendiliğinden ayarlanır.</p>
             </div>
         </div>
     );
@@ -396,7 +582,7 @@ export function GalleryManager({ urls, max, busy, onAdd, onRemove, onMove }: {
                         <li key={url} className="space-y-1.5">
                             <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
                                 <img src={url} alt={`Mekân fotoğrafı ${i + 1}`} className="h-full w-full object-cover" />
-                                {i === 0 && <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">Büyük</span>}
+                                {i === 0 && <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-xs font-semibold text-white">Büyük</span>}
                             </div>
                             <div className="flex items-center justify-between gap-1">
                                 <button type="button" aria-label="Öne al" disabled={busy || i === 0} onClick={() => onMove(i, i - 1)} className={cn(smallButton, 'h-8 px-2')}>

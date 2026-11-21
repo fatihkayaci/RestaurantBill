@@ -445,7 +445,7 @@ export default function SiteEditorPage() {
                 )}
                 {stageNode}
                 {!previewMode && !sheetContent && !editingText && !stockTarget && (
-                    <nav aria-label="Düzenleyici" className="mx-3 mb-3 mt-2 grid h-16 shrink-0 grid-cols-3 rounded-[20px] bg-[#1C1510] text-xs font-semibold text-[#E8E1D6] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
+                    <nav aria-label="Düzenleyici" className="rb-on-dark mx-3 mb-3 mt-2 grid h-16 shrink-0 grid-cols-3 rounded-[20px] bg-[#1C1510] text-xs font-semibold text-[#E8E1D6] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
                         <DockButton icon={<Settings2 className="h-5 w-5" />} label="Genel ayarlar" onClick={() => setSettingsOpen(true)} />
                         <DockButton icon={<Eye className="h-5 w-5" />} label="Tamamını gör" onClick={() => { closePopover(); setPreviewMode(true); }} />
                         <DockButton icon={<Sparkles className="h-5 w-5" />} label={completeness ? `Eksikler · ${missing.length}` : 'Eksikler'} onClick={() => setSheet('score')} />
@@ -878,7 +878,7 @@ function PreviewBar({ onBack, onPublish, canPublish, publishing, narrow = false 
     onBack: () => void; onPublish: () => void; canPublish: boolean; publishing: boolean; narrow?: boolean;
 }) {
     return (
-        <div className="flex h-14 shrink-0 items-center gap-3.5 bg-[#1C1510] pl-5 pr-3 text-[#F2EDE4]">
+        <div className="rb-on-dark flex h-14 shrink-0 items-center gap-3.5 bg-[#1C1510] pl-5 pr-3 text-[#F2EDE4]">
             <Eye className="h-[18px] w-[18px] shrink-0 text-rb-gold" aria-hidden="true" />
             <span className="min-w-0 truncate text-sm"><b>Sitenin tamamı</b>{!narrow && <> · Düzenlenmeyen bölümler de görünür. Yayınla'dan sonra müşteriler böyle görür.</>}</span>
             <div className="ml-auto flex shrink-0 gap-2">

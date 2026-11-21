@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantBill.Application.Features.Products.Commands.CreateProduct;
 using RestaurantBill.Application.Features.Products.Commands.DeleteProduct;
+using RestaurantBill.Application.Features.Products.Commands.ReorderProducts;
 using RestaurantBill.Application.Features.Products.Commands.SetProductStock;
 using RestaurantBill.Application.Features.Products.Commands.SetProductStockImage;
 using RestaurantBill.Application.Features.Products.Commands.UpdateProduct;
@@ -61,6 +62,15 @@ namespace RestaurantBill.WebAPI.Controllers
         [Authorize(Roles = "Owner,Admin,Kitchen")]
         [HttpPost]
         public async Task<IActionResult> CreateProduct([FromBody]CreateProductCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
+        /// <summary>Sets the order of the products in one category (first id is shown first).</summary>
+        [Authorize(Roles = "Owner,Admin")]
+        [HttpPost("reorder")]
+        public async Task<IActionResult> ReorderProducts([FromBody]ReorderProductsCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);

@@ -3,8 +3,8 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, BellRing, Check, ClipboardList, Landmark, Minus, Moon, Plus, Receipt, UtensilsCrossed, X } from 'lucide-react';
 import { publicService } from '@/features/customerSite/api/publicService';
 import {
-    ORDER_REQUEST_APPROVED, ORDER_REQUEST_PENDING, ORDER_REQUEST_REJECTED, canReserveOnline, type PublicProduct, type PublicSite,
-    type PublicTableInfo,
+    ORDER_REQUEST_APPROVED, ORDER_REQUEST_PENDING, ORDER_REQUEST_REJECTED, TABLE_LOCKED_MESSAGE, canReserveOnline, type PublicProduct,
+    type PublicSite, type PublicTableInfo,
 } from '@/features/customerSite/types';
 import {
     addLine, changeQuantity, defaultSelections, removeOneSetMenu, estimatedSubtotal, itemCount as countItems, productKey, pruneUnavailable,
@@ -25,7 +25,7 @@ import DeliveryMenu from './delivery/DeliveryMenu';
 import DeliverySetMenuSheet from './delivery/DeliverySetMenuSheet';
 import { ImageSlot } from './site/SiteChrome';
 import { serif } from './site/siteParts';
-import { resolveDesign } from './site/siteTheme';
+import { lineMenuVariant, resolveDesign } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import {
     accentItalic, closeCircle, creamBox, displayTitle, eyebrowAccent, fieldClass, heroBox, heroEyebrow, heroPattern, pillAccent, pillDark,
@@ -33,6 +33,7 @@ import {
 } from './table/tableUi';
 import { useTableOrderRequests, type SentOrderRequest } from './useTableOrderRequests';
 import { useTableAction } from './useTableAction';
+import { useTableBill } from './useTableBill';
 
 /** Seçim yapılacak bölümü yok (tüm bölümler tek seçenekli): pencere açılmadan doğrudan eklenir. */
 const hasChoices = (menu: OnlineSetMenu) => menu.slots.some(slot => !slot.isFixed && slot.options.length > 1);
@@ -44,6 +45,8 @@ const hasChoices = (menu: OnlineSetMenu) => menu.slots.some(slot => !slot.isFixe
 // onaylayınca mutfağa gider. Gönderimden sonra tam ekran "Siparişiniz garsonda" onayı açılır ve talebin durumunu
 // (useTableOrderRequests yoklaması) canlı gösterir. Restoran kapalıyken (isOpenNow=false) menü yalnız göz atmalıktır.
 // Telefonun geri tuşu ve menüdeki geri düğmesi karşılamaya döner; sepet korunur.
+// Masa sahibi telefon (useTableBill): QR'ı okutan herkes menüyü görür, garson çağırır ve hesap ister; ilk sipariş talebini
+// gönderen telefon masayı tutar. Yalnız o telefon sipariş verir ve "Masanın hesabı"nı görür; diğerlerinde sepet kapalıdır.
 export default function TableOrderPage() {
     const { tableId = '' } = useParams();
     const [params, setParams] = useSearchParams();
@@ -63,6 +66,7 @@ export default function TableOrderPage() {
     const [confirm, setConfirm] = useState<TableActionKind | null>(null);
     const [ibanOpen, setIbanOpen] = useState(false);
     const { requests, addRequest } = useTableOrderRequests(tableId);
+    const tableBill = useTableBill(tableId, table?.orderLock);
 
     const callWaiterRun = useCallback(() => publicService.callWaiter(tableId), [tableId]);
     const billRequestRun = useCallback(() => publicService.requestBill(tableId), [tableId]);
@@ -164,13 +168,20 @@ export default function TableOrderPage() {
                     setMenuId: line.setMenuId,
                 })),
             });
+            tableBill.markMine();
             setCart([]);
             setOrderNote('');
             setCartOpen(false);
             setSentId(result.id);
             window.scrollTo(0, 0);
         } catch (err) {
-            setSendError(getApiErrorMessage(err, 'Sipariş gönderilemedi. Lütfen tekrar deneyin ya da garsona haber verin.'));
+            const message = getApiErrorMessage(err, 'Sipariş gönderilemedi. Lütfen tekrar deneyin ya da garsona haber verin.');
+            setSendError(message);
+            // Masa bu arada başka telefona bağlanmış olabilir: durum yeniden sorulur, sepet kapanır.
+            if (message === TABLE_LOCKED_MESSAGE) {
+                setCartOpen(false);
+                void tableBill.refreshLock();
+            }
             void refreshMenu(table.branchId);
         } finally {
             setSending(false);
@@ -184,7 +195,7 @@ export default function TableOrderPage() {
 
     const root = (children: ReactNode) => (
         // Elit: köşesiz, ince serif giydirme (rb-el-flow); koyu kapak ve krem kutular temanın değişkenlerinden.
-        <div style={customerRootStyle(site?.site)} className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', resolveDesign(site?.site.design) === 'elit' && 'rb-el-flow')}>
+        <div style={customerRootStyle(site?.site)} data-site-design={resolveDesign(site?.site.design)} className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', resolveDesign(site?.site.design) === 'elit' && 'rb-el-flow')}>
             <EliteFlowStyle design={site?.site.design} />
             <link rel="stylesheet" href={customerFontsHref(site?.site)} precedence="default" />
             {children}
@@ -227,10 +238,15 @@ export default function TableOrderPage() {
     const features = table.qrFeatures;
     const restaurant = site.companyName || site.branchName;
     const closed = site.isOpenNow === false;
-    const canOrder = features.orderingEnabled && !closed;
+    // Masa başka telefona bağlı: menü göz atmalık, sepet ve gönderim kapalı (sunucu da reddeder).
+    const lockedOut = tableBill.lock === 'other';
+    const canOrder = features.orderingEnabled && !closed && !lockedOut;
+    // Açık hesap yalnız masa bu telefona bağlıyken; ödenen hesap kilit düştükten sonra da (sunucu yalnız sahibine döner).
+    const bill = tableBill.bill?.hasBill && (tableBill.lock === 'mine' || tableBill.bill.isPaid) ? tableBill.bill : null;
+    const openBill = bill && !bill.isPaid ? bill : null;
     const waiterAction = features.callWaiterEnabled ? callWaiter : null;
     const billAction = features.billRequestEnabled ? billRequest : null;
-    const myOrdersButton = requests.length > 0;
+    const myOrdersButton = requests.length > 0 || !!bill;
     const sent = sentId ? requests.find(r => r.id === sentId) ?? null : null;
     const ibanPayment = table.ibanPayment ?? null;
     const openIban = ibanPayment ? () => setIbanOpen(true) : null;
@@ -240,6 +256,7 @@ export default function TableOrderPage() {
             {myOrdersOpen && (
                 <MyOrdersSheet
                     requests={requests}
+                    bill={bill}
                     onClose={() => setMyOrdersOpen(false)}
                     onBackToMenu={inMenu ? undefined : () => showView(true)}
                     onCallWaiter={waiterAction ? () => void runAction('waiter') : undefined}
@@ -258,7 +275,7 @@ export default function TableOrderPage() {
                 />
             )}
             {ibanOpen && ibanPayment && (
-                <IbanPaySheet payment={ibanPayment} tableName={table.name} amount={lastBillTotal} onClose={() => setIbanOpen(false)} />
+                <IbanPaySheet payment={ibanPayment} tableName={table.name} amount={openBill?.remaining ?? (bill?.isPaid ? null : lastBillTotal)} onClose={() => setIbanOpen(false)} />
             )}
         </>
     );
@@ -288,7 +305,7 @@ export default function TableOrderPage() {
                     restaurantName={restaurant}
                     tableName={table.name}
                     regionName={table.regionName}
-                    orderingEnabled={features.orderingEnabled}
+                    orderingEnabled={features.orderingEnabled && !lockedOut}
                     onOpenMenu={() => showView(true)}
                     callWaiter={waiterAction}
                     billRequest={billAction}
@@ -296,7 +313,7 @@ export default function TableOrderPage() {
                     showDelivery={features.deliveryLinkEnabled && table.acceptsOnlineOrders}
                     deliveryHref={`/siparis?sube=${encodeURIComponent(table.branchId)}`}
                     showReservation={features.reservationLinkEnabled && canReserveOnline(site)}
-                    myOrders={myOrdersButton ? { count: requests.length, pendingCount, open: () => setMyOrdersOpen(true) } : null}
+                    myOrders={myOrdersButton ? { count: requests.length, pendingCount, open: () => setMyOrdersOpen(true), billRemaining: openBill?.remaining ?? null, billPaid: !!bill?.isPaid } : null}
                     onAction={kind => void runAction(kind)}
                     onShowConfirmation={setConfirm}
                 />
@@ -328,14 +345,14 @@ export default function TableOrderPage() {
                     <button
                         type="button"
                         onClick={() => setMyOrdersOpen(true)}
-                        aria-label={`Siparişlerim${pendingCount > 0 ? `, ${pendingCount} onay bekliyor` : ''}`}
+                        aria-label={`${bill ? 'Masanın hesabı' : 'Siparişlerim'}${pendingCount > 0 ? `, ${pendingCount} onay bekliyor` : ''}`}
                         className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-[var(--site-paper)] pl-3.5 pr-2 text-sm font-bold text-[var(--site-on-paper)] transition-opacity hover:opacity-90"
                     >
                         <ClipboardList className="h-4 w-4" aria-hidden="true" />
-                        <span className="hidden sm:inline">Siparişlerim</span>
+                        <span className="hidden sm:inline">{bill ? 'Masanın hesabı' : 'Siparişlerim'}</span>
                         <span aria-hidden="true" className={cn('flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[13px] font-extrabold tabular-nums',
                             pendingCount > 0 ? 'bg-[var(--site-mustard)] text-[var(--site-text)]' : 'bg-[rgba(251,244,232,0.15)]')}>
-                            {pendingCount > 0 ? pendingCount : requests.length}
+                            {pendingCount > 0 ? pendingCount : bill?.isPaid ? 'Ödendi' : bill ? `${formatPrice(bill.remaining)} ₺` : requests.length}
                         </span>
                     </button>
                 )}
@@ -365,6 +382,9 @@ export default function TableOrderPage() {
                         {!features.orderingEnabled && !closed && (
                             <p className="m-0 mt-4 rounded-[20px] bg-[var(--site-bg)] px-4 py-3 text-sm font-semibold">Siparişinizi garsonumuza verebilirsiniz.</p>
                         )}
+                        {features.orderingEnabled && !closed && lockedOut && (
+                            <p role="status" className="m-0 mt-4 rounded-[20px] bg-[var(--site-bg)] px-4 py-3 text-sm font-semibold leading-relaxed">{TABLE_LOCKED_MESSAGE}</p>
+                        )}
 
                         <DeliveryMenu
                             categories={site.categories}
@@ -378,6 +398,7 @@ export default function TableOrderPage() {
                             onRemoveSetMenu={menu => setCart(prev => removeOneSetMenu(prev, menu.id))}
                             featuredSection
                             readOnly={!canOrder}
+                            variant={lineMenuVariant(site.site.design)}
                             empty={(
                                 <div className="flex flex-col items-center py-14 text-center">
                                     <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-mustard)] text-[var(--site-text)]">

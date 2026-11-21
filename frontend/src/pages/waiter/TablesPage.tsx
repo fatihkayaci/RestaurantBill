@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import CustomerOrderRequests from './components/CustomerOrderRequests';
 import TableWorkspace, { type WorkspaceView } from './components/TableWorkspace';
 import WaiterTableCard from './components/WaiterTableCard';
+import { DraggableTable, TableDragTransferProvider } from '@/features/tables/components/TableDragTransfer';
 import WaiterReservations from './components/WaiterReservations';
 import WaiterAccount from './components/WaiterAccount';
 import { STATE_STYLE, tableState, useSplitLayout, type TableState } from './waiterUi';
@@ -312,7 +313,7 @@ export default function WaiterTablesPage() {
     const summaryTiles = (
         <div className="grid grid-cols-3 gap-2">
             <div className="flex flex-col rounded-[14px] bg-foreground px-3 py-2 text-background">
-                <span className="text-lg font-bold tabular-nums">₺{formatPrice(openTotal)}</span>
+                <span className="text-lg font-bold tabular-nums">{formatPrice(openTotal)} ₺</span>
                 <span className="text-xs opacity-75">açık hesap</span>
             </div>
             <div className="flex flex-col rounded-[14px] border border-border bg-card px-3 py-2">
@@ -334,9 +335,10 @@ export default function WaiterTablesPage() {
         </p>
     );
 
+    // Dolu masa başka masanın üstüne sürüklenince taşı / birleştir / yer değiştir sorulur (yetkisi olan garsona).
     const card = (t: Table) => (
+        <DraggableTable key={t.id} table={t} className="grid">
         <WaiterTableCard
-            key={t.id}
             table={t}
             now={now}
             large={split}
@@ -349,9 +351,10 @@ export default function WaiterTablesPage() {
             draft={hasDraft(t.id)}
             onClick={() => openTable(t)}
         />
+        </DraggableTable>
     );
 
-    const tablesBody = loading ? (
+    const tablesGrid = loading ? (
         <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] lg:gap-3">
             {[...Array(8)].map((_, i) => <div key={i} className="h-32 animate-pulse rounded-[18px] bg-muted" />)}
         </div>
@@ -370,6 +373,18 @@ export default function WaiterTablesPage() {
         </div>
     ) : (
         <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] lg:gap-3">{visible.map(card)}</div>
+    );
+
+    const canDragTransfer = permissions.canTransferAndReserve && tables.some(t => t.status === 2) && tables.length > 1;
+    const tablesBody = (
+        <TableDragTransferProvider tables={tables} enabled={canDragTransfer} onDone={loadTables}>
+            {tablesGrid}
+            {canDragTransfer && !loading && visible.length > 0 && (
+                <p className="mt-3 text-center text-xs text-rb-text-sub">
+                    İpucu: dolu masayı basılı tutup başka masanın üstüne bırakın; taşıma, birleştirme ya da yer değiştirme sorulur.
+                </p>
+            )}
+        </TableDragTransferProvider>
     );
 
     const otherTab = (
@@ -431,7 +446,7 @@ export default function WaiterTablesPage() {
                         ))}
                     </nav>
                     <div className="ml-auto flex items-center gap-5 text-sm text-rb-text-sub">
-                        <span><strong className="text-base text-foreground tabular-nums">₺{formatPrice(openTotal)}</strong> açık hesap</span>
+                        <span><strong className="text-base text-foreground tabular-nums">{formatPrice(openTotal)} ₺</strong> açık hesap</span>
                         <span><strong className="text-base text-foreground tabular-nums">{occupied}/{tables.length}</strong> dolu</span>
                         <span className={overdueCount > 0 ? 'text-rb-red' : ''}><strong className="text-base tabular-nums">{overdueCount}</strong> gecikme</span>
                     </div>
@@ -503,7 +518,7 @@ export default function WaiterTablesPage() {
                             <span className={cn('relative flex rounded-full px-4.5 py-1', on && 'bg-rb-gold-bg')}>
                                 {n.icon}
                                 {!!n.badge && (
-                                    <span className="absolute -top-0.5 right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-rb-red px-1 text-[11px] font-bold text-rb-red-foreground">
+                                    <span className="absolute -top-0.5 right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-rb-red px-1 text-xs font-bold text-rb-red-foreground">
                                         {n.badge}
                                     </span>
                                 )}

@@ -233,14 +233,15 @@ internal static class ReservationSettingsJson
     }
 }
 
-// Saklanan şekil alan adlarıyla sabittir; alan adları domain'den bağımsız tutulur. Iban sonradan eklendi: eski kayıtta yok, kapalı sayılır.
+// Saklanan şekil alan adlarıyla sabittir; alan adları domain'den bağımsız tutulur. Iban ve Pickup sonradan eklendi: eski kayıtta
+// yok, kapalı sayılır (gel al hazır olma süresi yoksa varsayılan).
 internal static class OnlineOrderSettingsJson
 {
     private sealed record StoredDay(int Day, bool Open, string Opens, string Closes);
 
     private sealed record Stored(bool Enabled, List<StoredDay> Days, int LastOrderMinutes, int EtaMinutes, int AutoRejectMinutes,
         int MaxOpenPerPhone, int MaxPerPhonePerDay, bool Cash, bool Card, bool RequirePhoneVerification, bool PreOrder, int PreOrderLeadMinutes,
-        bool Iban = false);
+        bool Iban = false, bool Pickup = false, int? PickupEtaMinutes = null);
 
     private const string TimeFormat = "HH:mm";
 
@@ -254,7 +255,8 @@ internal static class OnlineOrderSettingsJson
                 d.Closes.ToString(TimeFormat, CultureInfo.InvariantCulture))).ToList(),
             settings.LastOrderMinutesBeforeClose, settings.DefaultEtaMinutes, settings.AutoRejectAfterMinutes,
             settings.MaxOpenOrdersPerPhone, settings.MaxOrdersPerPhonePerDay, settings.AcceptCash, settings.AcceptCard,
-            settings.RequirePhoneVerification, settings.PreOrderEnabled, settings.PreOrderLeadMinutes, settings.AcceptIban));
+            settings.RequirePhoneVerification, settings.PreOrderEnabled, settings.PreOrderLeadMinutes, settings.AcceptIban,
+            settings.PickupEnabled, settings.PickupEtaMinutes));
 
     public static OnlineOrderSettings Deserialize(string json)
     {
@@ -266,7 +268,8 @@ internal static class OnlineOrderSettingsJson
                 TimeOnly.ParseExact(d.Closes, TimeFormat, CultureInfo.InvariantCulture))),
             stored.LastOrderMinutes, stored.EtaMinutes, stored.AutoRejectMinutes,
             stored.MaxOpenPerPhone, stored.MaxPerPhonePerDay, stored.Cash, stored.Card,
-            stored.RequirePhoneVerification, stored.PreOrder, stored.PreOrderLeadMinutes, stored.Iban);
+            stored.RequirePhoneVerification, stored.PreOrder, stored.PreOrderLeadMinutes, stored.Iban,
+            stored.Pickup, stored.PickupEtaMinutes ?? OnlineOrderSettings.DefaultPickupEta);
     }
 }
 

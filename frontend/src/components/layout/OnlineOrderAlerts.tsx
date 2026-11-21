@@ -145,7 +145,7 @@ export default function OnlineOrderAlerts({ boardPath }: Props) {
                     <p className="min-w-0 flex-1 text-sm leading-snug">
                         <b>
                             {pending.length === 1
-                                ? `Yeni paket siparişi ${orderTitle(urgent)} · ₺${formatAmount(urgent.total)}.`
+                                ? `Yeni paket siparişi ${orderTitle(urgent)} · ${formatAmount(urgent.total)} ₺.`
                                 : `${pending.length} paket sipariş onay bekliyor.`}
                         </b>
                         {countdown && (

@@ -15,14 +15,19 @@ export function formatPercentChange(value: number): string {
     return `${sign}%${Math.abs(value).toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
 }
 
-// Para: "₺1.234" (küsurat varsa en fazla 3 hane, toLocaleString varsayılanı). Kopyaları buraya toplandı.
+// Para gösterimi, uygulamanın tek kuralı: tutar önce, simge sonra ("1.250 ₺"). Türkçede tutar "1.250 TL" diye yazılır,
+// ₺ simgesi TL'nin yerini alır; müşteri sitesi de bu sırayı kullanıyor. Arada bölünmez boşluk var, satır sonunda
+// simge tek başına alt satıra düşmez. Elle yazılan JSX'te de aynı sıra kullanılır: {formatPrice(x)} ₺.
+const TL = ' ₺';
+
+// Para: "1.234 ₺" (küsurat varsa en fazla 3 hane, toLocaleString varsayılanı). Kopyaları buraya toplandı.
 export function formatTL(amount: number): string {
-    return `₺${amount.toLocaleString('tr-TR')}`;
+    return `${amount.toLocaleString('tr-TR')}${TL}`;
 }
 
-// Para, sabit ondalıkla: formatCurrency(1234.5) → "₺1.235", formatCurrency(1234.5, 2) → "₺1.234,50".
+// Para, sabit ondalıkla: formatCurrency(1234.5) → "1.235 ₺", formatCurrency(1234.5, 2) → "1.234,50 ₺".
 export function formatCurrency(value: number, decimals = 0): string {
-    return `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+    return `${value.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${TL}`;
 }
 
 // Geçen süre, tek biçim: 65 dk → "1 sa 5 dk", 7 dk → "7 dk".

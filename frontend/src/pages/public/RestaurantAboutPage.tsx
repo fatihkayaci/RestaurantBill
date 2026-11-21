@@ -5,9 +5,9 @@ import { StockImageLabel } from './components/StockImageLabel';
 import { SiteShell, SiteStatus } from './site/SiteChrome';
 import { PageEmpty, SitePage } from './site/SiteFrame';
 import { RESERVATION_PATH, hasAboutPage, serif, sinceYear } from './site/siteParts';
-import { initials, resolveDesign, splitAccent } from './site/siteTheme';
+import { initials, splitAccent } from './site/siteTheme';
 import { aboutStats as stats } from './site/aboutStats';
-import EliteAbout from './site/elite/EliteAbout';
+import { designLayout } from './site/designs/registry';
 import { hoursLine, restaurantName, useSite } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
 import { SITE_LIMITS, editTarget, useSiteEdit } from './site/siteEditContext';
@@ -30,7 +30,9 @@ export default function RestaurantAboutPage() {
     const { site, error } = useSite();
     const edit = useSiteEdit();
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
-    if (resolveDesign(site.site.design) === 'elit') return <EliteAbout site={site} />;
+    // Tasarımın kendi Hakkımızda sayfası (tasarım kaydı); yoksa ortak düzen.
+    const { About } = designLayout(site.site.design);
+    if (About) return <About site={site} />;
 
     const showEmpty = Boolean(edit?.showEmpty);
 

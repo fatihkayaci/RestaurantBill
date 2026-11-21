@@ -7,7 +7,7 @@ export default function HeaderStatCounter({ label, count, color }: { label: stri
             <span className={`font-serif text-xl font-bold leading-none ${color} ${live ? '' : 'opacity-55'}`}>{count}</span>
             <span className="flex items-center gap-1">
                 <span className={`w-1 h-1 rounded-full shrink-0 ${dotColor} ${live ? '' : 'opacity-50'}`} />
-                <span className={`text-[9px] font-bold tracking-widest uppercase whitespace-nowrap ${color} ${live ? '' : 'opacity-60'}`}>{label}</span>
+                <span className={`text-xs font-bold tracking-widest uppercase whitespace-nowrap ${color} ${live ? '' : 'opacity-60'}`}>{label}</span>
             </span>
         </div>
     );
