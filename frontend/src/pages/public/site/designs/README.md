@@ -93,7 +93,7 @@ Bordo/Kömür/Zeytin; yazı DM Serif Display + DM Sans.
   kapalı bölüm çizilmez. Admin: düzenleyicide "Genel ayarlar → Anasayfa bölümleri" ve önizlemedeki bölüm şeritleri.
 - `SophraMenu.tsx` (+ `SophraMenuParts.tsx`, `sophraMenuModel.ts`, `SophraCheckout.tsx`): menü sayfası online siparişi
   de alır (`/siparis` Sophra'da `/menu`ye yönlenir, `DeliveryOrderRoute.tsx`). Kategori görünümü `Category.MenuDisplay`
-  (otomatik/kart/liste), "Yeni" etiketi `Product.NewUntil`, "Popüler" `OnlineOrdering.popularProductIds` (varsa).
+  (varsayılan fotoğraflı kart; yönetici kategori için "Liste" seçebilir), "Yeni" etiketi `Product.NewUntil`, "Popüler" `OnlineOrdering.popularProductIds` (varsa).
   Sipariş durumu `features/delivery/useOrderSession.ts` (aynı sepet deposu), teklif `useDeliveryQuote.ts`, ödemenin
   ikinci adımı `/siparis`'in `DeliveryCheckout`'u.
 - Geliştirmede veritabanına dokunmadan denemek: `?tasarim=sophra` (yalnız `pnpm dev`, sekme boyunca).

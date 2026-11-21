@@ -43,9 +43,8 @@ export const SOPHRA_CSS = `
 @media (prefers-reduced-motion: reduce){.sp-slide{transition:none}}
 `;
 
-/** Üst menünün ana düğmesi: sipariş açıksa Menü'ye "Sipariş ver", değilse rezervasyon ya da menü. */
-export function primaryAction(site: PublicSite, canOrder: boolean): { label: string; to: string } {
-    if (canOrder) return { label: 'Sipariş ver', to: '/menu' };
-    if (canReserveOnline(site)) return { label: 'Masa ayırt', to: RESERVATION_PATH };
-    return { label: 'Menüyü incele', to: '/menu' };
+/** Üst menünün ana düğmesi: rezervasyon açıksa "Rezervasyon", değilse Menü'ye "Menüyü incele". */
+export function primaryAction(site: PublicSite): { label: string; to: string; reserve: boolean } {
+    if (canReserveOnline(site)) return { label: 'Rezervasyon', to: RESERVATION_PATH, reserve: true };
+    return { label: 'Menüyü incele', to: '/menu', reserve: false };
 }

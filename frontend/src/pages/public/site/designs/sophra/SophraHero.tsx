@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
-import { useSiteCart } from '@/features/delivery/useSiteCart';
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from '../../../components/StockImageLabel';
 import { RESERVATION_PATH, formatRating, serif, sinceYear } from '../../siteParts';
@@ -9,11 +8,11 @@ import { telHref } from '../../siteTheme';
 import { restaurantName, weekSchedule } from '../../useSite';
 import { EditableBlock, EditableText } from '../../siteEdit';
 import { editExternal, useSiteEdit, useSiteWindow } from '../../siteEditContext';
-import { ArrowGlyph, BagGlyph, MenuGlyph, StarGlyph } from './SophraIcons';
+import { ArrowGlyph, CalendarGlyph, MenuGlyph, StarGlyph } from './SophraIcons';
 import { spButton, spWrap } from './sophraParts';
 
 // Sophra kapağı: tam genişlik yemek fotoğrafı (kapak + ilk üç mekân fotoğrafı yavaşça geçer; tek fotoğrafta kaydırıcı
-// yok), solda koyu perde üstünde başlık, alt başlık, "Menüyü incele" ve "Sipariş ver" (sipariş kapalıysa rezervasyon ya da
+// yok), solda koyu perde üstünde başlık, alt başlık, "Menüyü incele" ve "Rezervasyon yap" (rezervasyon kapalıysa
 // telefon). Gerçek veri varsa: Google puanı ve yorum sayısı, "Şu an açık" + bugünün saatleri. Alt kenar yumuşak dalga.
 // Başlık ve alt başlık düzenleyicide yerinde yazılır; fotoğrafa tıklanınca kapak fotoğrafı değişir.
 
@@ -28,7 +27,6 @@ function slidesOf(site: PublicSite): string[] {
 export function SophraHero({ site, overlapNext }: { site: PublicSite; overlapNext: boolean }) {
     const edit = useSiteEdit();
     const win = useSiteWindow();
-    const cart = useSiteCart();
     const c = site.site;
     const name = restaurantName(site);
     const all = slidesOf(site);
@@ -52,9 +50,9 @@ export function SophraHero({ site, overlapNext }: { site: PublicSite; overlapNex
     const today = weekSchedule(site)?.find(r => r.isToday) ?? null;
     const canReserve = canReserveOnline(site);
     const actionsX = editExternal(edit, 'heroActions');
-    const second = cart.enabled ? { label: 'Sipariş ver', to: '/menu', icon: <BagGlyph className="h-[18px] w-[18px]" /> }
-        : canReserve ? { label: 'Masa ayırt', to: RESERVATION_PATH, icon: null }
-            : site.phone ? { label: 'Hemen ara', href: telHref(site.phone), icon: null } : null;
+    // İkinci düğme: rezervasyon açıksa "Rezervasyon yap", değilse telefon. ("Sipariş ver" yok; sipariş Menü'den.)
+    const second = canReserve ? { label: 'Rezervasyon yap', to: RESERVATION_PATH, icon: <CalendarGlyph className="h-[18px] w-[18px]" /> }
+        : site.phone ? { label: 'Hemen ara', href: telHref(site.phone), icon: null } : null;
     const showStatus = !edit && (site.isOpenNow !== null || today);
 
     return (

@@ -270,7 +270,7 @@ export default function SophraMenu({ site }: DesignPageProps) {
                                     </section>
                                 )}
                                 {groups.map(g => {
-                                    const layout = categoryLayout(g.category.menuDisplay, categories.find(c => c.id === g.category.id)?.products ?? g.category.products);
+                                    const layout = categoryLayout(g.category.menuDisplay);
                                     const list = g.items.map(p => items.get(`p:${p.id}`)!).filter(Boolean);
                                     return (
                                         <section key={g.id} id={g.id} aria-labelledby={`${g.id}-b`} className="flex scroll-mt-[140px] flex-col gap-4 lg:scroll-mt-[100px]">

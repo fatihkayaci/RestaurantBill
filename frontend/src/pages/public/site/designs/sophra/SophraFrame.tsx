@@ -10,13 +10,13 @@ import { fullAddress, restaurantName, weekSchedule } from '../../useSite';
 import { useSiteWindow } from '../../siteEditContext';
 import { useScrolled } from '../../useScrolled';
 import type { DesignFooterProps, DesignHeaderProps } from '../registry';
-import { BagGlyph, InstagramGlyph, PhoneGlyph, WhatsAppGlyph } from './SophraIcons';
+import { BagGlyph, CalendarGlyph, InstagramGlyph, PhoneGlyph, WhatsAppGlyph } from './SophraIcons';
 import { primaryAction, spWrap } from './sophraParts';
 
 // Sophra'nın üst menüsü ve alt bilgisi. Üst menü koyu bant (--site-paper): solda logo (yoksa baş harfler) + ad + konum,
-// ortada sayfalar, sağda telefon ve "Sipariş ver". Ana sayfada kapağın üstünde saydam başlar (`overlay`), kaydırınca koyu
-// zemin alır. "Sipariş ver" Menü'ye gider (sepet ve ödeme menünün sepet çubuğundan); online sipariş kapalıysa yerini
-// "Masa ayırt" ya da "Menüyü incele" alır. Alt bilgi koyu (--site-footer-*): marka + kısa tanım + sosyal, sayfalar,
+// ortada sayfalar, sağda telefon ve "Rezervasyon". Ana sayfada kapağın üstünde saydam başlar (`overlay`), kaydırınca koyu
+// zemin alır. Ana düğme "Rezervasyon" (rezervasyon kapalıysa "Menüyü incele"); sepette ürün varsa yanında küçük sepet
+// bağlantısı (Menü.deki sepete). Alt bilgi koyu (--site-footer-*): marka + kısa tanım + sosyal, sayfalar,
 // iletişim, saatler; altta telif, gizlilik ve kullanım koşulları. Verisi olmayan sütun çizilmez.
 
 /** Restoranın logosu (varsa) ya da baş harfleri altın halkada. */
@@ -44,7 +44,7 @@ export function SophraHeader({ site, current, sticky, overlay }: DesignHeaderPro
     const nav = siteNav(site);
     const place = [site.district, site.city].filter(Boolean).join(', ');
     const canReserve = canReserveOnline(site);
-    const action = primaryAction(site, cart.enabled);
+    const action = primaryAction(site);
     const clear = overlay && !scrolled && !open;
 
     useEffect(() => {
@@ -92,14 +92,19 @@ export function SophraHeader({ site, current, sticky, overlay }: DesignHeaderPro
                             <PhoneGlyph className="h-[18px] w-[18px] text-[var(--site-mustard-text)]" />{site.phone}
                         </a>
                     )}
-                    <Link to={action.to} className="hidden min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-[var(--site-accent)] px-5 text-[15px] font-bold text-[var(--site-on-accent)] no-underline ring-1 ring-[color-mix(in_srgb,var(--site-on-paper)_18%,transparent)] transition-opacity hover:opacity-90 sm:inline-flex">
-                        {cart.enabled && <BagGlyph className="h-[18px] w-[18px]" />}
-                        {action.label}
-                        {cart.enabled && cart.count > 0 && (
-                            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--site-mustard)] px-1.5 text-xs font-extrabold tabular-nums text-[var(--site-paper)]">
-                                <span className="sr-only">Sepette </span>{cart.count}<span className="sr-only"> ürün</span>
+                    {/* Sepette ürün varsa küçük sepet bağlantısı (Menü'deki sepete); ana düğme rezervasyon. */}
+                    {cart.enabled && cart.count > 0 && (
+                        <Link to="/menu" aria-label={`Sepet, ${cart.count} ürün`}
+                            className="relative inline-flex h-11 w-11 items-center justify-center rounded-full text-[var(--site-on-paper)] no-underline hover:text-[var(--site-mustard-text)]">
+                            <BagGlyph className="h-[20px] w-[20px]" />
+                            <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--site-mustard)] px-1 text-[11px] font-extrabold tabular-nums text-[var(--site-paper)]">
+                                {cart.count}
                             </span>
-                        )}
+                        </Link>
+                    )}
+                    <Link to={action.to} className="hidden min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-[var(--site-accent)] px-5 text-[15px] font-bold text-[var(--site-on-accent)] no-underline ring-1 ring-[color-mix(in_srgb,var(--site-on-paper)_18%,transparent)] transition-opacity hover:opacity-90 sm:inline-flex">
+                        {action.reserve && <CalendarGlyph className="h-[18px] w-[18px]" />}
+                        {action.label}
                     </Link>
                     <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={panelId} aria-label={open ? 'Menüyü kapat' : 'Menüyü aç'}
                         className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--site-paper-line-strong)] text-[var(--site-on-paper)] lg:hidden">

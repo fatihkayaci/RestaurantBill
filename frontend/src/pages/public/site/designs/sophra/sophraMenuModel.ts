@@ -53,11 +53,12 @@ export function setMenuItem(m: OnlineSetMenu): MenuItem {
     };
 }
 
-/** Kategorinin görünümü: admin seçtiyse o; otomatikte ürünlerin yarısından azında gerçek (hazır olmayan) fotoğraf varsa liste. */
-export function categoryLayout(display: MenuDisplay | undefined, products: MenuProductLike[]): 'cards' | 'list' {
-    if (display === 'cards' || display === 'list') return display;
-    const real = products.filter(p => p.imageUrl && !p.isStockImage).length;
-    return real * 2 < products.length ? 'list' : 'cards';
+/**
+ * Kategorinin görünümü: varsayılan fotoğraflı kartlar; yönetici kategori için "Liste" seçtiyse sıkı liste. Fotoğraf sayısına
+ * göre kendiliğinden listeye geçilmez (karar yöneticinin). Fotoğrafı olmayan ürün kartta yer tutucuyla çizilir.
+ */
+export function categoryLayout(display: MenuDisplay | undefined): 'cards' | 'list' {
+    return display === 'list' ? 'list' : 'cards';
 }
 
 /** Detay penceresinin taslağı (kapatıp açınca korunur, sepete eklenince silinir). */

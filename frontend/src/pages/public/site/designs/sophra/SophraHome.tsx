@@ -1,6 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
 import { canReserveOnline, type PublicSite } from '@/features/customerSite/types';
-import { useSiteCart } from '@/features/delivery/useSiteCart';
 import { cn } from '@/lib/utils';
 import { MyReservations } from '../../SiteChrome';
 import { SitePage } from '../../SiteFrame';
@@ -11,7 +10,7 @@ import {
 } from '../../homeSections';
 import type { DesignHomeProps } from '../registry';
 import { SophraHero } from './SophraHero';
-import { BagGlyph, CalendarGlyph, MenuGlyph, PhoneGlyph } from './SophraIcons';
+import { CalendarGlyph, MenuGlyph, PhoneGlyph } from './SophraIcons';
 import { AboutSection, CategoriesSection, ContactSection, FeaturedSection, FeaturesSection, GallerySection, ReviewsSection } from './SophraSections';
 import { SOPHRA_CSS, spWrap } from './sophraParts';
 import { telHref } from '../../siteTheme';
@@ -19,12 +18,11 @@ import { telHref } from '../../siteTheme';
 // Sophra ana sayfası (varsayılan tasarım). Kapak sabit en üstte; ardından restoranın sıraladığı ve açtığı bölümler
 // (homeSections: kategoriler, öne çıkanlar, hakkımızda, değerler ve olanaklar, galeri + Instagram, puan ve yorumlar,
 // iletişim). Kapalı ya da içeriği olmayan bölüm çizilmez, boşluk bırakmaz. Kategoriler kapağın hemen ardındaysa dalgaya
-// biner. Telefonda alt çubuk: Ara · (Masa ayırt) · Sipariş ver / Menü. Düzenleyicide gizli bölümler ve menüden gelen
+// biner. Telefonda alt çubuk: Ara · Menü · (Rezervasyon). Düzenleyicide gizli bölümler ve menüden gelen
 // bölümler ince bir şeritle görünür; tıklanınca "Anasayfa bölümleri" penceresi açılır.
 
 export default function SophraHome({ site, mine }: DesignHomeProps) {
     const edit = useSiteEdit();
-    const cart = useSiteCart();
     const order = resolveHomeSections(site.site.homeSections);
     const shown = order.filter(s => s.enabled && homeSectionHasContent(site, s.key));
     const overlap = !edit && shown[0]?.key === 'categories' && mine.length === 0;
@@ -42,7 +40,7 @@ export default function SophraHome({ site, mine }: DesignHomeProps) {
     };
 
     return (
-        <SitePage site={site} current="home" overlayHeader mobileActions={mobileActions(site, cart.enabled)}>
+        <SitePage site={site} current="home" overlayHeader mobileActions={mobileActions(site)}>
             <style>{SOPHRA_CSS}</style>
             <main className="flex flex-1 flex-col">
                 <SophraHero site={site} overlapNext={overlap} />
@@ -55,14 +53,13 @@ export default function SophraHome({ site, mine }: DesignHomeProps) {
     );
 }
 
-/** Telefonun alt çubuğu: Ara, rezervasyon açıksa Masa ayırt, ana düğme Menü'ye (sipariş açıksa "Sipariş ver"). */
-function mobileActions(site: PublicSite, canOrder: boolean): MobileAction[] {
+/** Telefonun alt çubuğu: Ara, Menü; rezervasyon açıksa ana düğme "Rezervasyon" (değilse Menü ana düğme). */
+function mobileActions(site: PublicSite): MobileAction[] {
     const actions: MobileAction[] = [];
+    const reserve = canReserveOnline(site);
     if (site.phone) actions.push({ key: 'ara', label: 'Ara', icon: <PhoneGlyph className="h-[18px] w-[18px]" />, href: telHref(site.phone) });
-    if (canReserveOnline(site)) actions.push({ key: 'rez', label: 'Masa ayırt', icon: <CalendarGlyph className="h-[18px] w-[18px]" />, to: '/rezervasyon' });
-    actions.push(canOrder
-        ? { key: 'siparis', label: 'Sipariş ver', icon: <BagGlyph className="h-[18px] w-[18px]" />, to: '/menu', primary: true }
-        : { key: 'menu', label: 'Menü', icon: <MenuGlyph className="h-[18px] w-[18px]" />, to: '/menu', primary: true });
+    actions.push({ key: 'menu', label: 'Menü', icon: <MenuGlyph className="h-[18px] w-[18px]" />, to: '/menu', primary: !reserve });
+    if (reserve) actions.push({ key: 'rez', label: 'Rezervasyon', icon: <CalendarGlyph className="h-[18px] w-[18px]" />, to: '/rezervasyon', primary: true });
     return actions;
 }
 

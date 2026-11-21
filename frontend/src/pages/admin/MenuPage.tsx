@@ -521,13 +521,12 @@ export default function Menu() {
                         {activeCat && (
                             <label className="ml-auto flex items-center gap-2 text-sm text-foreground">
                                 <span className="text-muted-foreground">Sitede görünüm</span>
-                                <select value={activeCat.menuDisplay ?? 0} disabled={menuDisplaySaving}
+                                <select value={activeCat.menuDisplay === 2 ? 2 : 1} disabled={menuDisplaySaving}
                                     onChange={e => saveMenuDisplay(activeCat, Number(e.target.value) as CategoryMenuDisplay)}
-                                    title="Sitenin menü sayfasında bu kategorinin ürünleri: otomatik (fotoğraflı ürün azsa liste), fotoğraflı kartlar ya da sıkı liste."
+                                    title="Sitenin menü sayfasında bu kategorinin ürünleri: fotoğraflı kartlar (varsayılan) ya da fotoğrafsız sıkı liste (ad, fiyat, ekle)."
                                     className="h-8 rounded-lg border border-border bg-background px-2 text-sm text-foreground disabled:opacity-50">
-                                    <option value={0}>Otomatik</option>
-                                    <option value={1}>Kart</option>
-                                    <option value={2}>Liste</option>
+                                    <option value={1}>Fotoğraflı kart</option>
+                                    <option value={2}>Liste (fotoğrafsız)</option>
                                 </select>
                             </label>
                         )}
