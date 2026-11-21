@@ -311,7 +311,7 @@ public class SiteContentHandlerTests : ApplicationTestBase
         Assert.True(site.IsSuccess, site.Error);
         Assert.Equal("sade", site.Value!.Site.Design);
 
-        // Boş = varsayılana (renkli) döner.
+        // Boş = varsayılana (sophra) döner.
         command.Design = "";
         var third = await UpdateAsync(command);
         Assert.True(third.IsSuccess, third.Error);

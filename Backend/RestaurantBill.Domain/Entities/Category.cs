@@ -1,3 +1,4 @@
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Domain.Entities;
@@ -9,6 +10,8 @@ public class Category : BaseEntity
     public decimal? TaxRate { get; private set; }
     // Şube içindeki sıra (küçük önce). Menüde, garsonda ve sitede bu sırayla listelenir; yeni kategori sona eklenir.
     public int SortOrder { get; private set; }
+    // Müşteri menüsünde ürünlerin görünümü (kart / liste); varsayılan otomatik (fotoğraf oranına göre).
+    public CategoryMenuDisplay MenuDisplay { get; private set; } = CategoryMenuDisplay.Auto;
 
     protected Category() { }
 
@@ -39,6 +42,13 @@ public class Category : BaseEntity
     public void SetSortOrder(int sortOrder)
     {
         SortOrder = sortOrder;
+    }
+
+    public void SetMenuDisplay(CategoryMenuDisplay display)
+    {
+        if (!Enum.IsDefined(display))
+            throw new DomainException("Geçersiz menü görünümü.");
+        MenuDisplay = display;
     }
 
     public void SetTaxRate(decimal? taxRate)

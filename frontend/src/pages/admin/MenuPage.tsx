@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import type { ProductWithCost } from "@/features/products/types";
-import type { Category } from "@/features/categories/types";
+import type { Category, CategoryMenuDisplay } from "@/features/categories/types";
 import ImageCropModal from "@/features/products/components/ImageCropModal";
 import StockImagePickerModal from "@/features/stockImages/components/StockImagePickerModal";
 import type { StockImage } from "@/features/stockImages/api/stockImageService";
@@ -27,7 +27,7 @@ import MenuOrderPanel from './components/MenuOrderPanel';
 
 // Hazırlanma süresi ve KDV metin olarak tutulur: boş alan "yok / kategori varsayılanı" demektir.
 const EMPTY_FORM = {
-    name: '', price: 0, cost: 0, categoryId: '', isActive: true, id: '', description: '', isFeatured: false,
+    name: '', price: 0, cost: 0, categoryId: '', isActive: true, id: '', description: '', isFeatured: false, isNew: false,
     prepMinutes: '', useCategoryTax: true, taxRate: '',
 };
 const PREP_MINUTES_MAX = 240;
@@ -112,6 +112,20 @@ export default function Menu() {
         setBannerTaxRateInput('');
     };
 
+    // Sitenin menü sayfasında kategorinin görünümü (otomatik / kart / liste): seçilince hemen kaydedilir.
+    const [menuDisplaySaving, setMenuDisplaySaving] = useState(false);
+    const saveMenuDisplay = async (cat: Category, menuDisplay: CategoryMenuDisplay) => {
+        setMenuDisplaySaving(true);
+        try {
+            await categoryService.updateCategory({ ...cat, menuDisplay });
+            setCategories(await categoryService.getCategories());
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) toast.error(err.response?.data?.error ?? err.response?.data?.message ?? 'Görünüm kaydedilemedi.');
+        } finally {
+            setMenuDisplaySaving(false);
+        }
+    };
+
     const saveBannerTaxRate = async (cat: Category) => {
         let taxRateValue: number | null = null;
         if (!bannerUseGeneralTaxRate) {
@@ -163,7 +177,7 @@ export default function Menu() {
         setEditProduct(product);
         setForm({
             name: product.name, price: product.price, cost: product.cost, categoryId: product.categoryId, isActive: product.isActive, id: product.id,
-            description: product.description ?? '', isFeatured: product.isFeatured ?? false,
+            description: product.description ?? '', isFeatured: product.isFeatured ?? false, isNew: product.isNew ?? false,
             prepMinutes: product.prepMinutes != null ? String(product.prepMinutes) : '',
             useCategoryTax: product.taxRate == null,
             taxRate: product.taxRate != null ? String(product.taxRate) : '',
@@ -354,12 +368,14 @@ export default function Menu() {
                 await productService.updateProduct({
                     id: form.id, name: form.name, price: form.price, cost: form.cost, categoryId: form.categoryId, isActive: currentIsActive,
                     description: form.description, isFeatured: form.isFeatured,
+                    // Yalnız değiştiyse gönderilir: açık kalan "Yeni" etiketinin 30 günü her kayıtta baştan başlamaz.
+                    isNew: form.isNew !== (editProduct.isNew ?? false) ? form.isNew : undefined,
                     prepMinutes, taxRate,
                 });
             } else {
                 await productService.createProduct({
                     name: form.name, price: form.price, cost: form.cost, categoryId: form.categoryId, isActive: true,
-                    description: form.description, isFeatured: form.isFeatured,
+                    description: form.description, isFeatured: form.isFeatured, isNew: form.isNew || undefined,
                     prepMinutes, taxRate,
                 });
                 const created = await productService.getProductsWithCost();
@@ -501,6 +517,19 @@ export default function Menu() {
                                     </button>
                                 )}
                             </>
+                        )}
+                        {activeCat && (
+                            <label className="ml-auto flex items-center gap-2 text-sm text-foreground">
+                                <span className="text-muted-foreground">Sitede görünüm</span>
+                                <select value={activeCat.menuDisplay ?? 0} disabled={menuDisplaySaving}
+                                    onChange={e => saveMenuDisplay(activeCat, Number(e.target.value) as CategoryMenuDisplay)}
+                                    title="Sitenin menü sayfasında bu kategorinin ürünleri: otomatik (fotoğraflı ürün azsa liste), fotoğraflı kartlar ya da sıkı liste."
+                                    className="h-8 rounded-lg border border-border bg-background px-2 text-sm text-foreground disabled:opacity-50">
+                                    <option value={0}>Otomatik</option>
+                                    <option value={1}>Kart</option>
+                                    <option value={2}>Liste</option>
+                                </select>
+                            </label>
                         )}
                     </div>
                 );
@@ -974,6 +1003,23 @@ export default function Menu() {
                                 <span className="flex flex-col">
                                     <span className="text-sm font-medium text-foreground">Sitede ve QR menüde öne çıkar</span>
                                     <span className="text-xs text-muted-foreground">Restoran sitesinin ana sayfasında "Ustanın seçtikleri" bölümünde ve masa QR menüsünün başındaki "Öne Çıkanlar" bölümünde gösterilir.</span>
+                                </span>
+                            </label>
+
+                            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border px-3 py-2.5">
+                                <input
+                                    type="checkbox"
+                                    className="mt-0.5 h-4 w-4 accent-[var(--rb-gold)]"
+                                    checked={form.isNew}
+                                    onChange={e => setForm({ ...form, isNew: e.target.checked })}
+                                />
+                                <span className="flex flex-col">
+                                    <span className="text-sm font-medium text-foreground">“Yeni” etiketi</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {editProduct?.isNew && editProduct.newUntil && form.isNew
+                                            ? `Sitenin menüsünde “Yeni” yazar; ${new Date(editProduct.newUntil).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihinde kendiliğinden kalkar.`
+                                            : 'Sitenin menüsünde “Yeni” yazar; 30 gün sonra kendiliğinden kalkar.'}
+                                    </span>
                                 </span>
                             </label>
                         </form>

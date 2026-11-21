@@ -15,6 +15,8 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
         public Guid CategoryId { get; set; }
         public string? Description { get; set; }
         public bool? IsFeatured { get; set; }
+        /// <summary>"Yeni" etiketi (30 gün sürer). null: değiştirme.</summary>
+        public bool? IsNew { get; set; }
         /// <summary>Hazırlanma süresi (dk). null: süre takibi yok. Her istekte tam değer gönderilir.</summary>
         public int? PrepMinutes { get; set; }
         /// <summary>Ürüne özel KDV. null: kategorinin oranı kullanılır. Her istekte tam değer gönderilir.</summary>

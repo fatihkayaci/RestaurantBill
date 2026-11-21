@@ -56,6 +56,7 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
             if (request.Cost is not null)
                 product.SetCost(request.Cost.Value);
             product.UpdateSiteDetails(request.Description, request.IsFeatured);
+            if (request.IsNew is bool isNew) product.SetNew(isNew, DateTime.UtcNow);
             product.SetPrepMinutes(request.PrepMinutes);
             product.SetTaxRate(request.TaxRate);
 

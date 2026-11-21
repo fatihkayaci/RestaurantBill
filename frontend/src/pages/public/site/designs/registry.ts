@@ -28,6 +28,9 @@ import EsnafAbout from './esnaf/EsnafAbout';
 import EsnafContact from './esnaf/EsnafContact';
 import EsnafReservation from './esnaf/EsnafReservation';
 import { EsnafFooter, EsnafHeader } from './esnaf/EsnafFrame';
+import SophraHome from './sophra/SophraHome';
+import SophraMenu from './sophra/SophraMenu';
+import { SophraFooter, SophraHeader } from './sophra/SophraFrame';
 
 // Tasarım kaydı: bir tasarımın KENDİ düzeni (sayfa bileşenleri, üst menü, alt bilgi, akış giydirmesi) tek yerde.
 // Yazılmayan her parça ortak bileşene düşer (Renkli/Sade/Sıcak'ın paylaştığı düzen): tasarım yalnız değiştirdiğini yazar.
@@ -65,6 +68,9 @@ type LayoutParts = Omit<SiteDesignLayout, keyof SiteDesignTraits>;
 // Değerler fonksiyonla döner: sayfa bileşenleri de bu dosyanın içe aktardıklarını (SiteFrame…) kullandığından modüller
 // döngülüdür; kayıt ilk çizimde okunur, yükleme sırasında değil.
 const LAYOUTS: Partial<Record<SiteDesignKey, () => LayoutParts>> = {
+    // Varsayılan tasarım: ana sayfa, menü (online sipariş dahil; /siparis buraya yönlenir) ve çerçeve kendine özgü;
+    // Hakkımızda, Mekân, İletişim, Rezervasyon ortak sayfalar (renkler Sophra paletinden).
+    sophra: () => ({ Home: SophraHome, Menu: SophraMenu, Header: SophraHeader, Footer: SophraFooter }),
     elit: () => ({
         Home: EliteHome, Menu: EliteMenu, About: EliteAbout, Contact: EliteContact, Venue: EliteVenue,
         Header: EliteHeader, Footer: EliteFooter, flowCss: ELITE_CSS + ELITE_FLOW_CSS,

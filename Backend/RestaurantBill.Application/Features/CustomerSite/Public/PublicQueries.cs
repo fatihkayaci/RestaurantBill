@@ -42,13 +42,14 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
         var categories = await db.Categories.AsNoTracking()
             .Where(c => c.BranchId == branch.Id)
             .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
-            .Select(c => new PublicCategoryDto { Id = c.Id, Name = c.Name })
+            .Select(c => new PublicCategoryDto { Id = c.Id, Name = c.Name, MenuDisplay = c.MenuDisplay == CategoryMenuDisplay.Cards ? "cards" : c.MenuDisplay == CategoryMenuDisplay.List ? "list" : "auto" })
             .ToListAsync(cancellationToken);
 
+        DateTime now = DateTime.UtcNow;
         var products = await db.Products.AsNoTracking()
             .Where(p => p.Category.BranchId == branch.Id && p.IsActive)
             .OrderBy(p => p.SortOrder).ThenBy(p => p.Name)
-            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.PrepMinutes, p.IsOutOfStock })
+            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.PrepMinutes, p.IsOutOfStock, p.NewUntil })
             .ToListAsync(cancellationToken);
 
         foreach (PublicCategoryDto category in categories)
@@ -64,6 +65,7 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
                     IsStockImage = StorageKeys.IsShared(p.ImageUrl),
                     Description = p.Description,
                     IsFeatured = p.IsFeatured,
+                    IsNew = p.NewUntil is DateTime until && until > now,
                     PrepMinutes = p.PrepMinutes,
                     IsOutOfStock = p.IsOutOfStock
                 })

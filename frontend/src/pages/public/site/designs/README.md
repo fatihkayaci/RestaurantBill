@@ -78,3 +78,23 @@ dosyalar; dokunmamak için bırakıldı).
 - `BahceMenu.tsx`, `BahceAbout.tsx`, `BahceContact.tsx`, `BahceReservation.tsx`: kendi sayfaları (Mekân ortak).
 - `BahceMenuParts.tsx`: ortak menünün Bahçe dalı (tabak simgeli başlık, yuvarlak tabaklı kartlar; site, QR, paket sipariş).
 - `BahceBits.tsx`, `bahceParts.ts`: çizimli tabaklar, saat çipi, hafta sonu saatleri (rezervasyon ayarından), düğmeler.
+
+## Sophra (varsayılan, `designs/sophra/`)
+
+Tasarım anahtarı `sophra`; boş tasarım = Sophra (BackfillExplicitSiteDesign göçü var olan sitelerin boş tasarımını
+"renkli" yaptı). Palet `siteTheme.ts` `SOPHRA` (fildişi, orman yeşili bantlar, altın), temalar Orman/Kiremit/Lacivert/
+Bordo/Kömür/Zeytin; yazı DM Serif Display + DM Sans.
+
+- `SophraFrame.tsx`: koyu üst menü (ana sayfada kapağın üstünde saydam, `overlay`), logo (`site.logoUrl`, yoksa baş
+  harfler), "Sipariş ver" Menü'ye gider; zengin koyu alt bilgi.
+- `SophraHome.tsx` + `SophraHero.tsx` + `SophraSections.tsx`: kapak (kapak + ilk 3 mekân fotoğrafı kaydırıcı, dalgalı alt
+  kenar) ve **sıralanıp gizlenebilen bölümler** (`homeSections.ts`; backend `SiteContent.HomeSections`): kategoriler,
+  öne çıkanlar, hakkımızda, değerler + olanaklar, galeri + Instagram, puan ve yorumlar, iletişim. İçeriği olmayan ya da
+  kapalı bölüm çizilmez. Admin: düzenleyicide "Genel ayarlar → Anasayfa bölümleri" ve önizlemedeki bölüm şeritleri.
+- `SophraMenu.tsx` (+ `SophraMenuParts.tsx`, `sophraMenuModel.ts`, `SophraCheckout.tsx`): menü sayfası online siparişi
+  de alır (`/siparis` Sophra'da `/menu`ye yönlenir, `DeliveryOrderRoute.tsx`). Kategori görünümü `Category.MenuDisplay`
+  (otomatik/kart/liste), "Yeni" etiketi `Product.NewUntil`, "Popüler" `OnlineOrdering.popularProductIds` (varsa).
+  Sipariş durumu `features/delivery/useOrderSession.ts` (aynı sepet deposu), teklif `useDeliveryQuote.ts`, ödemenin
+  ikinci adımı `/siparis`'in `DeliveryCheckout`'u.
+- Geliştirmede veritabanına dokunmadan denemek: `?tasarim=sophra` (yalnız `pnpm dev`, sekme boyunca).
+

@@ -1,3 +1,4 @@
+using FluentValidation.TestHelper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
@@ -152,7 +153,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
     {
         await SeedAsync();
         SiteEditorDto editor = (await GetAsync()).Value!;
-        Assert.Equal(string.Empty, editor.Draft.Design); // boş = renkli (ön yüz)
+        Assert.Equal(string.Empty, editor.Draft.Design); // boş = varsayılan tasarım (ön yüz: sophra)
 
         SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
         command.Design = " Sade ";
@@ -198,6 +199,60 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.True(keep.IsSuccess, keep.Error);
         Assert.Equal("sade", keep.Value!.Editor.Draft.Design);
         Assert.DoesNotContain(keep.Value.Editor.Changes, c => c.Field == "design");
+    }
+
+    [Fact]
+    public async Task HomeSections_DraftThenPublish_ReachPublicSite_AndNullKeepsThem()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Empty(editor.Draft.HomeSections); // boş = varsayılan sıra, hepsi açık
+
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Design = "sophra";
+        command.HomeSections = [new SiteHomeSectionDto { Key = "reviews", Enabled = false }, new SiteHomeSectionDto { Key = "featured", Enabled = true }];
+        var saved = await SaveAsync(command);
+
+        Assert.True(saved.IsSuccess, saved.Error);
+        SiteEditorDto after = saved.Value!.Editor;
+        Assert.Equal(["design", "homeSections"], after.Changes.Select(c => c.Field));
+        SiteChangeDto change = after.Changes[1];
+        Assert.Equal("Anasayfa bölümleri", change.Label);
+        Assert.Equal("Anasayfa", change.Page);
+        Assert.Equal(["reviews", "featured", "categories", "about", "features", "gallery", "contact"], after.Draft.HomeSections.Select(h => h.Key));
+        Assert.False(after.Draft.HomeSections[0].Enabled);
+        Assert.Empty((await PublicSiteAsync()).Site.HomeSections);
+
+        var published = await PublishAsync(after.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        BranchSiteDto live = (await PublicSiteAsync()).Site;
+        Assert.Equal("sophra", live.Design);
+        Assert.Equal("reviews", live.HomeSections[0].Key);
+        Assert.False(live.HomeSections[0].Enabled);
+
+        // Bölümleri göndermeyen kayıt (eski form, null) düzeni değiştirmez.
+        command = TextsFrom(published.Value!.Editor.Draft, published.Value.Editor.Version);
+        command.HomeSections = null;
+        command.Headline = "Yeni başlık";
+        var keep = await SaveAsync(command);
+        Assert.True(keep.IsSuccess, keep.Error);
+        Assert.Equal(7, keep.Value!.Editor.Draft.HomeSections.Count);
+        Assert.DoesNotContain(keep.Value.Editor.Changes, c => c.Field == "homeSections");
+    }
+
+    [Fact]
+    public void Validator_HomeSections_RejectsUnknownAndDuplicateKeys()
+    {
+        var validator = new SaveSiteDraftCommandValidator();
+        validator.TestValidate(new SaveSiteDraftCommand { HomeSections = [new SiteHomeSectionDto { Key = "hero" }] })
+            .ShouldHaveValidationErrorFor(x => x.HomeSections);
+        validator.TestValidate(new SaveSiteDraftCommand
+        {
+            HomeSections = [new SiteHomeSectionDto { Key = "about" }, new SiteHomeSectionDto { Key = " About ", Enabled = false }],
+        }).ShouldHaveValidationErrorFor(x => x.HomeSections);
+        validator.TestValidate(new SaveSiteDraftCommand { HomeSections = [new SiteHomeSectionDto { Key = " Gallery ", Enabled = false }] })
+            .ShouldNotHaveAnyValidationErrors();
+        validator.TestValidate(new SaveSiteDraftCommand { HomeSections = null }).ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]

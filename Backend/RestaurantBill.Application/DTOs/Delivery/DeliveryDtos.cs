@@ -138,6 +138,8 @@ namespace RestaurantBill.Application.DTOs.Delivery
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        /// <summary>Müşteri menüsündeki görünüm: "auto", "cards", "list".</summary>
+        public string MenuDisplay { get; set; } = "auto";
         public List<OnlineMenuProductDto> Products { get; set; } = [];
     }
 
@@ -151,6 +153,8 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public bool IsStockImage { get; set; }
         public string Description { get; set; } = string.Empty;
         public bool IsFeatured { get; set; }
+        /// <summary>Admin'in "Yeni" işareti hâlâ geçerli (30 gün).</summary>
+        public bool IsNew { get; set; }
         /// <summary>"Tükendi": listede görünür ama sepete eklenemez.</summary>
         public bool IsOutOfStock { get; set; }
     }
@@ -237,7 +241,7 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public string AccentColor { get; set; } = string.Empty;
         /// <summary>Sitenin hazır renk teması (SiteContent.ThemeKeys); boş = varsayılan.</summary>
         public string Theme { get; set; } = string.Empty;
-        /// <summary>Sitenin tasarımı (SiteContent.DesignKeys: "renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"); boş = varsayılan (renkli).</summary>
+        /// <summary>Sitenin tasarımı (SiteContent.DesignKeys); boş = varsayılan (sophra).</summary>
         public string Design { get; set; } = string.Empty;
         /// <summary>Sitenin yazı tipi çifti (SiteContent.FontKeys); boş = tasarımın kendi yazı tipi.</summary>
         public string Font { get; set; } = string.Empty;

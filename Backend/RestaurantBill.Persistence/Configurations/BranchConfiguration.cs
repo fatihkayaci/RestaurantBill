@@ -90,6 +90,7 @@ internal static class SiteContentJson
     internal sealed record StoredValue(string? Title, string? Text);
     internal sealed record StoredMilestone(int Year, string? Text);
     internal sealed record StoredRegion(Guid Id, string? Photo, string? Text);
+    internal sealed record StoredHomeSection(string? Key, bool On);
 
     internal sealed record Stored(
         string? Theme, List<string>? Gallery, List<StoredDay>? Week, string? Directions, string? Whatsapp, List<string>? Amenities,
@@ -98,7 +99,7 @@ internal static class SiteContentJson
         List<StoredValue>? Values, List<StoredMilestone>? Milestones, List<StoredRegion>? Regions,
         string? SeoTitle = null, string? SeoDescription = null, string? ShareImage = null,
         string? MenuHero = null, string? AboutHero = null, string? VenueHero = null, string? ContactHero = null, string? ReservationHero = null,
-        List<string>? HiddenFaqs = null, string? Design = null, string? Font = null);
+        List<string>? HiddenFaqs = null, string? Design = null, string? Font = null, List<StoredHomeSection>? HomeSections = null);
 
     private const string TimeFormat = "HH:mm";
 
@@ -122,7 +123,8 @@ internal static class SiteContentJson
             c.RegionDetails.Select(r => new StoredRegion(r.RegionId, r.PhotoKey, r.Description)).ToList(),
             c.SeoTitle, c.SeoDescription, c.ShareImage,
             c.MenuHero, c.AboutHero, c.VenueHero, c.ContactHero, c.ReservationHero,
-            [.. c.HiddenFaqs], c.Design, c.Font);
+            [.. c.HiddenFaqs], c.Design, c.Font,
+            c.HomeSections.Select(h => new StoredHomeSection(h.Key, h.Enabled)).ToList());
 
     public static SiteContent Deserialize(string json) => FromStored(JsonSerializer.Deserialize<Stored>(json)!);
 
@@ -141,6 +143,10 @@ internal static class SiteContentJson
             WhatsappPhone = s.Whatsapp ?? string.Empty,
             Amenities = s.Amenities ?? [],
             HiddenFaqs = s.HiddenFaqs ?? [],
+            // Bilinmeyen anahtar (kaldırılmış bölüm) atlanır; eksik anahtarları ön yüz varsayılan sırayla ekler.
+            HomeSections = (s.HomeSections ?? [])
+                .Where(h => h.Key is not null && SiteContent.HomeSectionKeys.Contains(h.Key))
+                .Select(h => new SiteHomeSection(h.Key!, h.On)).ToList(),
             Rating = s.Rating,
             ReviewCount = s.ReviewCount,
             ReviewsUrl = s.ReviewsUrl ?? string.Empty,

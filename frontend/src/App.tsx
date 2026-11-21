@@ -63,7 +63,7 @@ import ReservationsPage from './pages/admin/ReservationsPage';
 import SettingsPage, { LegacySettingsRedirect } from './pages/admin/SettingsPage';
 import OnlineOrdersPage from './pages/admin/OnlineOrdersPage';
 import ContactMessagesPage from './pages/admin/ContactMessagesPage';
-import DeliveryOrderPage from './pages/public/DeliveryOrderPage';
+import DeliveryOrderRoute from './pages/public/DeliveryOrderRoute';
 import DeliveryTrackingPage from './pages/public/DeliveryTrackingPage';
 
 function App() {
@@ -160,7 +160,7 @@ function App() {
                 <Route path="/rezervasyon/:token" element={<ClosedRestaurantGate><ReservationDetailPage /></ClosedRestaurantGate>} />
                 <Route path="/rezervasyon-sorgula" element={<ClosedRestaurantGate><ReservationLookupPage /></ClosedRestaurantGate>} />
                 <Route path="/masa/:tableId" element={<ClosedRestaurantGate><TableOrderPage /></ClosedRestaurantGate>} />
-                <Route path="/siparis" element={<ClosedRestaurantGate><DeliveryOrderPage /></ClosedRestaurantGate>} />
+                <Route path="/siparis" element={<ClosedRestaurantGate><DeliveryOrderRoute /></ClosedRestaurantGate>} />
                 <Route path="/siparis/takip/:token" element={<ClosedRestaurantGate><DeliveryTrackingPage /></ClosedRestaurantGate>} />
             </Routes>
             <Toaster position="top-right" richColors />

@@ -352,6 +352,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("MenuDisplay")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1346,6 +1349,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("NewUntil")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("PrepMinutes")
                         .HasColumnType("integer");

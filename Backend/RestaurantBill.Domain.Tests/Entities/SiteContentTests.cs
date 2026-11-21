@@ -71,6 +71,7 @@ public class SiteContentTests
     [InlineData("meyhane", "meyhane")]
     [InlineData(" Esnaf ", "esnaf")]
     [InlineData("BAHCE", "bahce")]
+    [InlineData(" Sophra ", "sophra")]
     public void KnownDesign_IsNormalized(string design, string expected)
         => Assert.Equal(expected, Texts(new SiteContentTexts { Design = design }).Design);
 
@@ -89,6 +90,32 @@ public class SiteContentTests
         Assert.Equal("playfair-inter", c.Font);
         c = c.WithTexts(new SiteContentTexts { Font = "" }, Year);
         Assert.Equal(string.Empty, c.Font);
+    }
+
+    [Fact]
+    public void HomeSections_Normalized_MissingKeysAppended_NullKeeps_EmptyResets()
+    {
+        SiteContent c = Texts(new SiteContentTexts
+        {
+            HomeSections = [new(" Gallery ", false), new("featured", true), new("CONTACT", false)],
+        });
+
+        Assert.Equal(
+            [new("gallery", false), new("featured", true), new("contact", false), new("categories", true), new("about", true),
+             new("features", true), new("reviews", true)],
+            c.HomeSections);
+
+        // Göndermeyen kayıt (eski form) düzeni korur; boş liste varsayılana döner.
+        Assert.Equal(c.HomeSections, c.WithTexts(new SiteContentTexts { HomeSections = null }, Year).HomeSections);
+        Assert.Empty(c.WithTexts(new SiteContentTexts { HomeSections = [] }, Year).HomeSections);
+        Assert.Empty(SiteContent.Empty.HomeSections);
+    }
+
+    [Fact]
+    public void HomeSections_UnknownOrDuplicateKey_Throws()
+    {
+        Assert.Throws<DomainException>(() => Texts(new SiteContentTexts { HomeSections = [new("hero", true)] }));
+        Assert.Throws<DomainException>(() => Texts(new SiteContentTexts { HomeSections = [new("about", true), new(" ABOUT ", false)] }));
     }
 
     [Fact]

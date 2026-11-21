@@ -44,7 +44,7 @@ export function toTexts(d: BranchSite): SiteDraftTexts {
         opensAt: d.opensAt, closesAt: d.closesAt, hoursNote: d.hoursNote ?? '', instagramUrl: d.instagramUrl ?? '',
         accentColor: d.accentColor ?? '', theme: d.theme ?? '', design: d.design ?? '', font: d.font ?? '', weeklyHours: d.weeklyHours ?? [],
         directionsNote: d.directionsNote ?? '', whatsappPhone: d.whatsappPhone ?? '', amenities: d.amenities ?? [],
-        hiddenFaqs: d.hiddenFaqs ?? [],
+        hiddenFaqs: d.hiddenFaqs ?? [], homeSections: d.homeSections ?? [],
         rating: d.rating ?? null, reviewCount: d.reviewCount ?? null, reviewsUrl: d.reviewsUrl ?? '',
         featuredReviews: d.featuredReviews ?? [], founderName: d.founderName ?? '', founderTitle: d.founderTitle ?? '',
         founderQuote: d.founderQuote ?? '', foundedYear: d.foundedYear ?? null, values: d.values ?? [], milestones: d.milestones ?? [],
@@ -206,7 +206,7 @@ export function isStockUrl(url: string): boolean {
 export function popoverKind(target: SiteEditTarget): 'photo' | 'editor' | 'external' | null {
     if (target.startsWith('photo:') || target.startsWith('gallery:') || target.startsWith('region:')) return 'photo';
     if (target.startsWith('external:')) return EXTERNAL_SOURCES[target.slice(9)] ? 'external' : null;
-    if (['hours', 'rating', 'contact', 'year', 'amenities'].includes(target)) return 'editor';
+    if (['hours', 'rating', 'contact', 'year', 'amenities', 'homeSections'].includes(target)) return 'editor';
     return null;
 }
 

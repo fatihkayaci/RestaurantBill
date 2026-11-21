@@ -120,7 +120,7 @@ public abstract class SiteTextsInput
 
     // Ek içerik (fotoğraflar ayrı uçlardan değişir).
     public string Theme { get; set; } = string.Empty;
-    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"; boş = renkli). null (eski form göndermez): değiştirme.</summary>
+    /// <summary>Sitenin tasarımı (SiteContent.DesignKeys; boş = varsayılan, sophra). null (eski form göndermez): değiştirme.</summary>
     public string? Design { get; set; }
     /// <summary>Yazı tipi çifti (SiteContent.FontKeys; boş = tasarımın kendi yazı tipi). null: değiştirme.</summary>
     public string? Font { get; set; }
@@ -131,6 +131,8 @@ public abstract class SiteTextsInput
     public List<string> Amenities { get; set; } = [];
     /// <summary>Gizlenen hazır soru anahtarları; null (eski form göndermez): değiştirme.</summary>
     public List<string>? HiddenFaqs { get; set; }
+    /// <summary>Anasayfa bölümlerinin sırası ve görünürlüğü; null (eski form göndermez): değiştirme. Boş: varsayılan.</summary>
+    public List<SiteHomeSectionDto>? HomeSections { get; set; }
     public decimal? Rating { get; set; }
     public int? ReviewCount { get; set; }
     public string ReviewsUrl { get; set; } = string.Empty;
@@ -179,6 +181,7 @@ public abstract class SiteTextsInput
             WhatsappPhone = WhatsappPhone ?? string.Empty,
             Amenities = Amenities ?? [],
             HiddenFaqs = HiddenFaqs,
+            HomeSections = HomeSections?.Select(h => new SiteHomeSection(h?.Key ?? string.Empty, h?.Enabled ?? true)).ToList(),
             Rating = Rating,
             ReviewCount = ReviewCount,
             ReviewsUrl = ReviewsUrl ?? string.Empty,
@@ -246,6 +249,12 @@ public abstract class SiteTextsValidator<T> : AbstractValidator<T> where T : Sit
             .When(x => x.HiddenFaqs is not null).WithMessage($"En fazla {SiteContent.HiddenFaqsMax} soru gizlenebilir.");
         RuleForEach(x => x.HiddenFaqs).Must(k => k is not null && SiteContent.FaqKeyPattern.IsMatch(k.Trim().ToLowerInvariant()))
             .When(x => x.HiddenFaqs is not null).WithMessage("Geçersiz soru anahtarı.");
+        RuleFor(x => x.HomeSections!.Count).LessThanOrEqualTo(SiteContent.HomeSectionKeys.Count)
+            .When(x => x.HomeSections is not null).WithMessage("Anasayfa bölümleri geçersiz.");
+        RuleForEach(x => x.HomeSections).Must(h => h is not null && SiteContent.HomeSectionKeys.Contains((h.Key ?? string.Empty).Trim().ToLowerInvariant()))
+            .When(x => x.HomeSections is not null).WithMessage("Geçersiz anasayfa bölümü.");
+        RuleFor(x => x.HomeSections).Must(list => list!.Select(h => (h?.Key ?? string.Empty).Trim().ToLowerInvariant()).Distinct().Count() == list!.Count)
+            .When(x => x.HomeSections is not null).WithMessage("Her anasayfa bölümü listede bir kez yer almalıdır.");
         RuleFor(x => x.Rating).InclusiveBetween(SiteContent.RatingMin, SiteContent.RatingMax)
             .When(x => x.Rating.HasValue).WithMessage("Puan 1 ile 5 arasında olmalıdır.");
         RuleFor(x => x.ReviewCount).InclusiveBetween(0, SiteContent.ReviewCountMax)

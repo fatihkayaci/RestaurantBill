@@ -17,7 +17,9 @@ export const categoryService = {
         await api.post('/category/update', {
             Id: data.id,
             Name: data.name,
-            TaxRate: data.taxRate
+            TaxRate: data.taxRate,
+            // Gönderilmezse sunucuda değişmez.
+            MenuDisplay: data.menuDisplay,
         });
     },
     /** Kategorilerin sırası: ilk id menüde, garsonda ve sitede ilk görünür. */
