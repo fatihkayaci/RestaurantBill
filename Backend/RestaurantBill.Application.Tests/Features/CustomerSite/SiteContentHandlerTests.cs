@@ -283,6 +283,9 @@ public class SiteContentHandlerTests : ApplicationTestBase
     [InlineData(" ELIT ")]
     [InlineData("sicak")]
     [InlineData(" SICAK ")]
+    [InlineData("meyhane")]
+    [InlineData(" Esnaf ")]
+    [InlineData("bahce")]
     public void Validator_Design_AcceptsKnownEmptyAndNull(string? design)
         => new SaveSiteDraftCommandValidator()
             .TestValidate(new SaveSiteDraftCommand { Design = design })
@@ -335,6 +338,9 @@ public class SiteContentHandlerTests : ApplicationTestBase
     [InlineData("cormorant-lato")]
     [InlineData(" Grotesk-Inter ")]
     [InlineData("montserrat-poppins")]
+    [InlineData("youngserif-figtree")]
+    [InlineData(" Anton-Archivo ")]
+    [InlineData("bricolage-figtree")]
     public void Validator_Font_AcceptsKnownEmptyAndNull(string? font)
         => new SaveSiteDraftCommandValidator()
             .TestValidate(new SaveSiteDraftCommand { Font = font })

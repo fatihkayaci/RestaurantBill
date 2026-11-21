@@ -47,7 +47,7 @@ namespace RestaurantBill.Domain.Entities
         public string? SeoDescription { get; init; }
         /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları; null: değiştirme (eski form bu alanı göndermez).</summary>
         public IReadOnlyList<string>? HiddenFaqs { get; init; }
-        /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak"); boş = varsayılan (renkli). null: değiştirme (eski form göndermez).</summary>
+        /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"); boş = varsayılan (renkli). null: değiştirme (eski form göndermez).</summary>
         public string? Design { get; init; }
         /// <summary>Yazı tipi çifti (<see cref="SiteContent.FontKeys"/>); boş = tasarımın kendi yazı tipi. null: değiştirme.</summary>
         public string? Font { get; init; }
@@ -93,12 +93,12 @@ namespace RestaurantBill.Domain.Entities
 
         /// <summary>Sitenin tasarımları; boş = varsayılan ("renkli"). Ön yüzdeki SITE_DESIGNS ile aynı anahtarlar.
         /// Tasarım ve renk teması ayrıdır: her tasarım bütün temaları (ve özel vurgu rengini) kendi paletiyle çizer.</summary>
-        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade", "elit", "sicak"];
+        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"];
 
         /// <summary>Başlık + gövde yazı tipi çiftleri; boş = tasarımın kendi çifti. Ön yüzdeki SITE_FONTS ile aynı anahtarlar.</summary>
         public static readonly IReadOnlyList<string> FontKeys =
             ["fraunces-manrope", "instrument-manrope", "bodoni-montserrat", "playfair-inter", "dmserif-dmsans", "cormorant-lato", "grotesk-inter",
-             "montserrat-poppins"];
+             "montserrat-poppins", "youngserif-figtree", "anton-archivo", "bricolage-figtree"];
 
         /// <summary>Mekânın olanakları: yalnız bu hazır listeden seçilir (uydurma beyan olmasın). Sırası sitedeki sıradır.</summary>
         public static readonly IReadOnlyList<string> AmenityKeys =

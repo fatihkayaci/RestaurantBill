@@ -154,7 +154,7 @@ export default function DeliveryTrackingPage() {
     // Elit: köşesiz, ince serif giydirme (rb-el-flow) ve duruma göre değişmeyen koyu espresso kapak.
     const elit = resolveDesign(order?.design) === 'elit';
     const root = (children: ReactNode) => (
-        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design, font: order?.font })} className={cn('flex min-h-screen flex-col overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', elit && 'rb-el-flow')}>
+        <div style={customerRootStyle({ accentColor: order?.accentColor, theme: order?.theme, design: order?.design, font: order?.font })} data-site-design={resolveDesign(order?.design)} className={cn('flex min-h-screen flex-col overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', elit && 'rb-el-flow')}>
             <EliteFlowStyle design={order?.design} />
             <link rel="stylesheet" href={customerFontsHref(order)} precedence="default" />
             {children}

@@ -12,7 +12,7 @@ import type { MobileAction } from './site/siteActions';
 import { BagIcon, CalendarIcon, DirectionsIcon, PhoneIcon } from './site/SiteCards';
 import { RESERVATION_PATH, serif } from './site/siteParts';
 import { FAST_MINUTES, useMenuView } from './site/useMenuView';
-import { directionsUrl, formatSitePrice, resolveDesign, telHref } from './site/siteTheme';
+import { directionsUrl, formatSitePrice, lineMenuVariant, resolveDesign, telHref } from './site/siteTheme';
 import EliteMenu from './site/elite/EliteMenu';
 import { fullAddress, restaurantName, useSite } from './site/useSite';
 import { EditableText, ExternalHint } from './site/siteEdit';
@@ -116,6 +116,7 @@ export default function RestaurantMenuPage() {
                                     onOpenSetMenu={setSetMenuOpen}
                                     onRemoveSetMenu={m => cart.removeSetMenu(m.id)}
                                     readOnly={readOnly}
+                                    variant={lineMenuVariant(site.site.design)}
                                     canAddProduct={p => { const d = cart.productFor(p.id); return !!d && !d.isOutOfStock; }}
                                     canAddSetMenu={m => !!cart.setMenuFor(m.id)?.menu.isAvailable}
                                     empty={nothingFound && (

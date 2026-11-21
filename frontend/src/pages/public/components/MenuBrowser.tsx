@@ -47,7 +47,7 @@ export default function MenuBrowser({
             <div className="flex flex-col gap-10 px-4 pb-6 pt-6 md:px-6 md:pt-8">
                 {categories.map(category => (
                     <section key={category.id} id={`kategori-${category.id}`} className="scroll-mt-32">
-                        <h3 className={cn(headingFont, 'text-[22px] font-bold leading-tight md:text-[28px]')}>{category.name}</h3>
+                        <h3 className={cn(headingFont, 'rb-menu-cat text-[22px] font-bold leading-tight md:text-[28px]')}>{category.name}</h3>
                         <ul className={cn('mt-1', !orderable && 'md:grid md:grid-cols-2 md:gap-x-16')}>
                             {category.products.map(product => orderable
                                 ? <OrderableRow key={product.id} product={product} quantity={quantities?.[product.id] ?? 0} onAdd={onAdd!} onRemove={onRemove!} />

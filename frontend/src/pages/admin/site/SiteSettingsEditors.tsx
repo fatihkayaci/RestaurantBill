@@ -64,7 +64,10 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
                         className={cn('flex flex-col gap-2.5 rounded-xl border-2 p-2.5 text-left transition-colors',
                             on ? 'border-foreground' : 'border-border hover:border-foreground/40')}>
                         {key === 'elit' ? <EliteMock accent={c.pop} accentText={c.accentText} />
-                            : key === 'sicak' ? <SicakMock accent={c.accent} onAccent={c.onAccent} accentText={c.accentText} /> : (
+                            : key === 'sicak' ? <SicakMock accent={c.accent} onAccent={c.onAccent} accentText={c.accentText} />
+                            : key === 'meyhane' ? <MeyhaneMock accent={c.accent} accentText={c.accentText} cover={t.hero} />
+                            : key === 'esnaf' ? <EsnafMock accentText={c.accentText} cover={t.hero} menuBox={t.menuBox} />
+                            : key === 'bahce' ? <BahceMock accent={c.accent} accentText={c.accentText} cover={t.hero} /> : (
                         /* Küçük maket: üst menü, kapak (başlık + düğme), menü kutusu ve alt bilgi şeridi. */
                         <span aria-hidden="true" className="flex h-[148px] flex-col gap-1.5 overflow-hidden rounded-lg p-2" style={{ background: P.bg }}>
                             <span className="flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2" style={{ background: sade ? P.card : 'transparent' }}>
@@ -177,6 +180,105 @@ function SicakMock({ accent, onAccent, accentText }: { accent: string; onAccent:
 }
 
 /**
+ * Meyhane Gecesi maketi: koyu kömür zemin, koyu kapakta kehribar ışık ve dik serif ad, altında basılı menü kartı gibi
+ * noktalı çizgiyle fiyata bağlanan satırlar, en altta neredeyse siyah alt bilgi.
+ */
+function MeyhaneMock({ accent, accentText, cover }: { accent: string; accentText: string; cover: string }) {
+    const P = SITE_DESIGNS.meyhane.palette;
+    const font = SITE_FONTS[P.font];
+    return (
+        <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg" style={{ background: P.bg }}>
+            <span className="relative flex flex-[3] items-center gap-2 px-2.5"
+                style={{ background: `radial-gradient(120px 70px at 20% 10%, ${accent}33, transparent 70%), ${cover}`, color: P.fg }}>
+                <span className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-[19px] leading-[0.95]" style={{ fontFamily: font.heading, letterSpacing: font.tracking }}>
+                        Ocak<br /><span style={{ color: accentText, textShadow: `0 0 12px ${accent}66` }}>Kadıköy</span>
+                    </span>
+                    <span className="h-3.5 w-14 rounded-full" style={{ background: accent, boxShadow: `0 4px 10px -4px ${accent}` }} />
+                </span>
+                <span className="h-14 w-14 shrink-0 rounded-full" style={{ background: `radial-gradient(circle at 40% 35%, ${accent}AA, ${P.paper} 70%)` }} />
+            </span>
+            <span className="flex flex-[2] flex-col justify-center gap-1.5 px-3">
+                {[0, 1].map(i => (
+                    <span key={i} className="flex items-end gap-1">
+                        <span className="h-1.5 w-10 rounded-full" style={{ background: P.fg }} />
+                        <span className="mb-px flex-1 border-b border-dotted" style={{ borderColor: P.muted }} />
+                        <span className="h-1.5 w-5 rounded-full" style={{ background: accentText }} />
+                    </span>
+                ))}
+            </span>
+            <span className="h-3 shrink-0" style={{ background: P.footer, borderTop: `1px solid ${accent}55` }} />
+        </span>
+    );
+}
+
+/**
+ * Esnaf Tabelası maketi: krem zeminde kapak renginde tabela şeridi (dar kalın büyük harf ad, sarı düğme), altında kalın
+ * çizgili pano satırları (fiyat sağda, vurgu renginde) ve menü kutusu renginde şerit; mürekkep alt bilgi.
+ */
+function EsnafMock({ accentText, cover, menuBox }: { accentText: string; cover: string; menuBox: string }) {
+    const P = SITE_DESIGNS.esnaf.palette;
+    const font = SITE_FONTS[P.font];
+    return (
+        <span aria-hidden="true" className="flex h-[148px] flex-col gap-1.5 overflow-hidden rounded-lg p-2" style={{ background: P.bg }}>
+            <span className="flex flex-[3] items-center justify-between gap-2 rounded px-2.5" style={{ background: cover, color: P.onHero, boxShadow: 'inset 0 -3px 0 rgba(0,0,0,0.2)' }}>
+                <span className="text-[20px] uppercase leading-[0.95]" style={{ fontFamily: font.heading, letterSpacing: font.tracking }}>
+                    Ocak<br /><span style={{ color: P.heroAccent ?? accentText }}>Kadıköy</span>
+                </span>
+                <span className="h-4 w-12 rounded-sm" style={{ background: P.pop ?? P.mustard }} />
+            </span>
+            <span className="flex flex-[2] flex-col justify-center gap-1 px-0.5">
+                {[0, 1].map(i => (
+                    <span key={i} className="flex items-center justify-between gap-1 pb-1" style={{ borderBottom: `2px solid ${P.fg}99` }}>
+                        <span className="h-1.5 w-14 rounded-sm" style={{ background: P.fg }} />
+                        <span className="h-2 w-6 rounded-sm" style={{ background: accentText }} />
+                    </span>
+                ))}
+                <span className="h-2.5 rounded-sm" style={{ background: menuBox }} />
+            </span>
+            <span className="h-3 shrink-0 rounded-sm" style={{ background: P.footer, borderTop: `2px solid ${P.mustard}` }} />
+        </span>
+    );
+}
+
+/**
+ * Bahçe Kahvaltısı maketi: açık yeşil zeminde sabah ışığı, adaçayı kapakta kalın ad ve tereyağı düğme, yanında yuvarlak
+ * tabak; altında yuvarlak köşeli beyaz kartlar (domates fiyat), orman yeşili alt bilgi.
+ */
+function BahceMock({ accent, accentText, cover }: { accent: string; accentText: string; cover: string }) {
+    const P = SITE_DESIGNS.bahce.palette;
+    const font = SITE_FONTS[P.font];
+    return (
+        <span aria-hidden="true" className="flex h-[148px] flex-col gap-1.5 overflow-hidden rounded-lg p-2"
+            style={{ background: `radial-gradient(140px 80px at 0% 0%, ${P.mustard}66, transparent 70%), ${P.bg}` }}>
+            <span className="flex flex-[3] items-center gap-2 rounded-xl px-2.5" style={{ background: cover, color: P.onHero }}>
+                <span className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-[18px] leading-[0.95]" style={{ fontFamily: font.heading, fontWeight: 700, letterSpacing: font.tracking }}>
+                        Ocak<br /><span style={{ color: P.heroAccent ?? accentText }}>Kadıköy</span>
+                    </span>
+                    <span className="h-3.5 w-14 rounded-full" style={{ background: P.pop ?? accent }} />
+                </span>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: P.card }}>
+                    <span className="h-8 w-8 rounded-full" style={{ background: `radial-gradient(circle at 35% 35%, ${P.mustard}, ${accent})` }} />
+                </span>
+            </span>
+            <span className="flex flex-[2] items-center gap-1.5">
+                {[0, 1].map(i => (
+                    <span key={i} className="flex flex-1 items-center gap-1 rounded-xl px-1.5 py-1.5" style={{ background: P.card }}>
+                        <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: P.placeholder }} />
+                        <span className="flex flex-1 flex-col gap-0.5">
+                            <span className="h-1 w-3/4 rounded-full" style={{ background: P.fg }} />
+                            <span className="h-1 w-1/3 rounded-full" style={{ background: accentText }} />
+                        </span>
+                    </span>
+                ))}
+            </span>
+            <span className="h-3 shrink-0 rounded-md" style={{ background: P.footer }} />
+        </span>
+    );
+}
+
+/**
  * Sitenin yazı tipi: ilk seçenek "Tasarımın yazı tipi" ("" kaydedilir; tasarım değişince onun çiftine geçer), altında hazır
  * başlık + gövde çiftleri. Her kart "Aa" ve kısa bir Türkçe örneği o çiftle çizer. Admin olduğu için bütün çiftler yüklenir.
  */
@@ -223,6 +325,10 @@ const ACCENT_OPTIONS: Record<SiteDesignKey, string[]> = {
     sade: ['#E8B04B', '#E2683C', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#2A2622', '#9AA5B1'],
     elit: ['#C8A35F', '#D4A0A0', '#B9BD8E', '#A9B8D0', '#CFC6B8', '#E79A9A', '#2F4F8F', '#A8354A'],
     sicak: ['#D9660B', '#C8341E', '#6B7A2E', '#8E2433', '#1E1915', '#EBB03F', '#2F4F8F', '#E2683C'],
+    // Koyu zemin: açık, parlak vurgular (koyu bir özel renk seçilirse yazısı kendiliğinden açılır).
+    meyhane: ['#E9A23B', '#ECE3D3', '#9EC1EA', '#E8A0A0', '#B9C98A', '#D9654F', '#F2C25E', '#C7A6E0'],
+    esnaf: ['#C8102E', '#1D4E89', '#F2C230', '#1A1A1A', '#2E7D32', '#E2683C', '#8E2433', '#0F766E'],
+    bahce: ['#C2410C', '#4E6B46', '#FFD978', '#E2683C', '#2F4F8F', '#A8354A', '#6B7A2E', '#1F2A1C'],
 };
 
 /** Seçili tasarımın hazır temaları ve isteğe bağlı özel vurgu rengi. Renkli: tema kapak rengini ve vurguyu seçer;
@@ -240,6 +346,9 @@ export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
                 {key === 'sade' ? 'Sade tasarımda tema vurgu rengini seçer; kapak ve kutular beyaz kalır.'
                     : key === 'elit' ? 'Elit tasarımda tema yalnız vurgu ailesini seçer (çizgiler, süsler, düğmeler); zemin krem ve koyu espresso kalır.'
                         : key === 'sicak' ? 'Sıcak tasarımda tema vurgu rengini seçer (düğmeler, etiketler); zemin şeftali ve krem, koyu bantlar kalır.'
+                        : key === 'meyhane' ? 'Meyhane Gecesi koyu bir tasarımdır: tema vurgu rengini ve kapağın tonunu seçer; zemin her temada kömür kalır.'
+                        : key === 'esnaf' ? 'Esnaf Tabelası\'nda tema kapağın (tabela) ve menü kutusunun rengini, vurguyu seçer; zemin krem kalır.'
+                        : key === 'bahce' ? 'Bahçe Kahvaltısı\'nda tema kapağın ve menü kutusunun rengini, vurguyu seçer; zemin açık yeşil kalır.'
                         : 'Renkli tasarımda tema ana sayfa kapağının rengini ve vurguyu seçer.'}
             </p>
             <div role="radiogroup" aria-label="Site teması" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">

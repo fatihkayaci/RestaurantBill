@@ -1,0 +1,244 @@
+/*
+ * Müşteri sitesinin yeni tasarımlarına özgü çizgiler: Meyhane Gecesi (koyu), Esnaf Tabelası, Bahçe Kahvaltısı.
+ * Renkler siteTheme.ts'teki --site-* değişkenlerinden gelir; burada yalnız tasarımın dili (köşe, başlık harfi, desen,
+ * ışık) ve koyu zeminde açık zemin varsayan birkaç sabit rengin düzeltmesi var. Her kural kökünde
+ * `data-site-design` özniteliği olan sayfaya bağlıdır (SiteShell, masa QR, paket sipariş, takip, rezervasyon): öteki
+ * dört tasarım bu dosyadan etkilenmez.
+ *
+ * Katmansız CSS, Tailwind'in @layer utilities sınıflarına üstün gelir; seçiciler o sınıfları adıyla hedefler
+ * (ör. `.bg-\[var\(--site-mustard\)\]`), bileşenlere dokunmadan.
+ */
+
+/* ── Hepsi ─────────────────────────────────────────────────────────────────────────────────────── */
+
+/* Hata düğmesi (iptal et) beyaz yazı yerine tasarımın hata-düğmesi yazısı (açık tasarımlarda yine beyaz). */
+[data-site-design] .bg-\[var\(--site-error\)\].text-white {
+    color: var(--site-on-error, #fff);
+}
+
+:is([data-site-design=meyhane], [data-site-design=esnaf], [data-site-design=bahce]) :focus-visible {
+    outline-color: var(--site-focus);
+}
+
+/* İtalik vurgular yeni yazı tiplerinde dik (sahte eğik yok, kök stil font-synthesis-style: none); vurgu rengi kalır. */
+:is([data-site-design=meyhane], [data-site-design=esnaf], [data-site-design=bahce]) :is(h1, h2, h3, blockquote) :is(.italic, em) {
+    font-style: normal;
+}
+
+/* ── Meyhane Gecesi (koyu) ─────────────────────────────────────────────────────────────────────── */
+
+/* Sayfanın kenarı (kaydırma sonu, iOS esnemesi) da koyu; tarayıcı denetimleri koyu. */
+html:has([data-site-design=meyhane]),
+html:has([data-site-design=meyhane]) body {
+    background-color: #14110E;
+    color-scheme: dark;
+}
+
+/* Lamba ışığı: sayfanın tepesinde vurgu renginde çok hafif sıcak hale (sabit değil, sayfayla kayar). */
+[data-site-design=meyhane],
+[data-site-design=meyhane] .rb-site {
+    background-image:
+        radial-gradient(1100px 560px at 12% -8%, color-mix(in srgb, var(--site-accent) 11%, transparent), transparent 62%),
+        radial-gradient(820px 460px at 100% 2%, color-mix(in srgb, var(--site-terracotta) 9%, transparent), transparent 60%);
+    background-repeat: no-repeat;
+}
+
+[data-site-design=meyhane] ::selection {
+    background: color-mix(in srgb, var(--site-accent) 38%, transparent);
+    color: var(--site-text);
+}
+
+/* Kehribar (hardal) kutular açık: içindeki yazı ve çizgi değişkenleri koyulaşır. Kutunun içindeki koyu yüzeyler
+   (kart, zemin, panel) yine açık yazıyla okunur. */
+[data-site-design=meyhane] .bg-\[var\(--site-mustard\)\] {
+    --site-text: #1A140D;
+    --site-sub: #3D2E1C;
+    --site-muted: #4A3620;
+    --site-line: rgba(26, 20, 13, 0.14);
+    --site-border: rgba(26, 20, 13, 0.16);
+    --site-border-mid: rgba(26, 20, 13, 0.26);
+    --site-border-strong: rgba(26, 20, 13, 0.42);
+    color-scheme: light;
+}
+[data-site-design=meyhane] .bg-\[var\(--site-mustard\)\] :is(.bg-\[var\(--site-card\)\], .bg-\[var\(--site-bg\)\], .bg-\[var\(--site-alt\)\], .bg-\[var\(--site-raised\)\]) {
+    --site-text: #F3EADB;
+    --site-sub: #CFC2B0;
+    --site-muted: #ADA08F;
+    --site-line: rgba(243, 234, 219, 0.1);
+    --site-border: rgba(243, 234, 219, 0.12);
+    --site-border-mid: rgba(243, 234, 219, 0.2);
+    --site-border-strong: rgba(243, 234, 219, 0.32);
+    color-scheme: dark;
+}
+
+/* Açık zemin için yazılmış sabit yazı renkleri (Hakkımızda, İletişim, SSS) → ikincil yazı. Kehribar kutu içinde
+   ikincil yazı zaten koyu. */
+[data-site-design=meyhane] :is(.text-\[\#4A3A2C\], .text-\[\#5A4A3C\], .text-\[\#3A2A1C\]) {
+    color: var(--site-sub);
+}
+[data-site-design=meyhane] :is(.text-\[\#7A4E0E\], .text-\[var\(--site-olive\)\]) {
+    color: var(--site-accent-text);
+}
+
+/* Seçili çip (saat, gün, kategori, ödeme seçeneği): açık tasarımlarda koyu panel rengi; koyu zeminde panel kartlardan
+   az ayrıldığı için seçili çip krem zemin, koyu yazı (13:1). */
+[data-site-design=meyhane] .bg-\[var\(--site-paper\)\].border-\[var\(--site-paper\)\] {
+    --site-paper: #F3EADB;
+    --site-on-paper: #14110E;
+    --site-on-paper-sub: #4A3E33;
+}
+
+/* Koyu mürekkep çizgiler (çipler, giriş alanları, SSS, ayraçlar) → sitenin açık çizgileri. */
+[data-site-design=meyhane] :is(.border-\[rgba\(36\,24\,15\,0\.12\)\], .border-\[rgba\(36\,24\,15\,0\.15\)\], .border-\[rgba\(30\,26\,22\,0\.07\)\], .border-\[rgba\(30\,26\,22\,0\.09\)\]) {
+    border-color: var(--site-border-mid);
+}
+[data-site-design=meyhane] :is(.border-\[rgba\(36\,24\,15\,0\.18\)\], .border-\[rgba\(36\,24\,15\,0\.2\)\], .border-\[rgba\(36\,24\,15\,0\.25\)\], .border-\[\#CFC5B4\]) {
+    border-color: var(--site-border-strong);
+}
+[data-site-design=meyhane] .hover\:border-\[rgba\(36\,24\,15\,0\.3\)\]:hover {
+    border-color: var(--site-border-strong);
+}
+[data-site-design=meyhane] :is(.bg-\[rgba\(36\,24\,15\,0\.18\)\], .bg-\[rgba\(30\,26\,22\,0\.15\)\], .bg-\[rgba\(36\,24\,15\,0\.3\)\]) {
+    background-color: var(--site-border-strong);
+}
+/* Dolu saat / gün çipi. */
+[data-site-design=meyhane] .bg-\[rgba\(36\,24\,15\,0\.08\)\] {
+    background-color: rgba(243, 234, 219, 0.05);
+}
+[data-site-design=meyhane] .text-\[rgba\(36\,24\,15\,0\.4\)\] {
+    color: rgba(243, 234, 219, 0.38);
+}
+[data-site-design=meyhane] .accent-\[var\(--site-paper\)\] {
+    accent-color: var(--site-accent);
+}
+
+/* Çizim haritası (İletişim, Mekân): açık kâğıt yerine alt bilginin koyu harita renkleri. */
+[data-site-design=meyhane] .bg-\[\#ECE4D7\] {
+    background-color: var(--site-footer-map);
+}
+[data-site-design=meyhane] .bg-\[\#FBF8F3\] {
+    background-color: var(--site-footer-road);
+}
+[data-site-design=meyhane] .bg-\[\#CBDAD3\] {
+    background-color: var(--site-footer-water);
+}
+
+/* Koyu zeminde gölge görünmez: ana düğmeler vurgu renginde hafif ışık saçar. */
+[data-site-design=meyhane] :is(a, button):is(.bg-\[var\(--site-accent\)\], .bg-\[var\(--site-pop\)\]) {
+    box-shadow: 0 10px 28px -14px color-mix(in srgb, var(--site-accent) 75%, transparent);
+}
+/* Alttan açılan pencereler: koyu sayfa üstünde koyu panel; üst kenarda ince ışık ve derin gölge ayırır. */
+[data-site-design=meyhane] [role=dialog] {
+    box-shadow: 0 -1px 0 rgba(243, 234, 219, 0.1), 0 -24px 60px -24px rgba(0, 0, 0, 0.7);
+}
+/* Kapaktaki ad mum ışığı gibi parlar. */
+[data-site-design=meyhane] h1 em.rb-accent {
+    text-shadow: 0 0 34px color-mix(in srgb, var(--site-accent) 42%, transparent);
+}
+/* Fotoğraflar koyu zeminde biraz yumuşar (beyaz tabak parlamaz). */
+[data-site-design=meyhane] img:not([src$=".svg"]) {
+    filter: brightness(0.94) saturate(1.04);
+}
+/* Fotoğrafsız yer tutucu: koyu kumaş dokusu. */
+[data-site-design=meyhane] .bg-\[var\(--site-placeholder\)\] {
+    background-image: repeating-linear-gradient(135deg, rgba(243, 234, 219, 0.035) 0 2px, transparent 2px 9px);
+}
+/* Menü kategori başlığı: altında kehribar ince çizgi ve küçük süs (basılı menü kartı). */
+[data-site-design=meyhane] .rb-menu-cat {
+    border-bottom: 1px solid var(--site-border-mid);
+    padding-bottom: 10px;
+    position: relative;
+}
+[data-site-design=meyhane] .rb-menu-cat::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 56px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--site-accent);
+}
+
+/* ── Esnaf Tabelası ────────────────────────────────────────────────────────────────────────────── */
+
+/* Başlıklar ve büyük fiyatlar (başlık yazı tipini kullanan her şey): dar, kalın, BÜYÜK HARF. Sayfa lang="tr":
+   i → İ doğru büyür. */
+[data-site-design=esnaf] [class*="family-name:var(--site-serif"] {
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+}
+/* Köşeler: yuvarlak kartlar yerine pano köşesi; haplar köşeli tabela düğmesi. */
+[data-site-design=esnaf] :is([class*="rounded-[2"], [class*="rounded-[3"], [class*="rounded-[18px]"], [class*="rounded-[14px]"], .rounded-2xl, .rounded-3xl) {
+    border-radius: 8px;
+}
+[data-site-design=esnaf] :is(a, button, label).rounded-full {
+    border-radius: 6px;
+}
+/* Kartların çizgisi kalın. */
+[data-site-design=esnaf] .border.border-\[var\(--site-border\)\] {
+    border-width: 2px;
+}
+/* Menü kategori başlığı: tam genişlikte tabela şeridi (kapak renginde, üstünde krem yazı ≥ 5.5:1). */
+[data-site-design=esnaf] .rb-menu-cat {
+    align-items: center;
+    background: var(--site-hero-bg);
+    color: var(--site-on-cover);
+    border-radius: 6px;
+    padding: 10px 16px;
+    box-shadow: inset 0 -4px 0 var(--site-hero-deep);
+    --site-sub: var(--site-on-cover);
+}
+/* Fotoğrafsız ürün: logolu düz kutu yerine silik çini deseni. */
+[data-site-design=esnaf] .bg-\[var\(--site-placeholder\)\] {
+    background-image:
+        radial-gradient(circle at 50% 50%, transparent 5px, color-mix(in srgb, #1D4E89 13%, transparent) 5px 6.5px, transparent 7px),
+        linear-gradient(45deg, transparent 46%, color-mix(in srgb, #1D4E89 10%, transparent) 46% 54%, transparent 54%),
+        linear-gradient(-45deg, transparent 46%, color-mix(in srgb, #C8102E 8%, transparent) 46% 54%, transparent 54%);
+    background-size: 22px 22px;
+}
+/* Kapaktaki ad: tabela harfi gibi hafif gölge. */
+[data-site-design=esnaf] h1 {
+    text-shadow: 0 3px 0 rgba(0, 0, 0, 0.18);
+}
+
+/* ── Bahçe Kahvaltısı ──────────────────────────────────────────────────────────────────────────── */
+
+/* Sabah ışığı: sol üstte tereyağı, sağ üstte adaçayı hale. */
+[data-site-design=bahce],
+[data-site-design=bahce] .rb-site {
+    background-image:
+        radial-gradient(900px 520px at -4% -6%, color-mix(in srgb, var(--site-mustard) 34%, transparent), transparent 66%),
+        radial-gradient(760px 480px at 104% 4%, color-mix(in srgb, #9DBF8E 22%, transparent), transparent 64%);
+    background-repeat: no-repeat;
+}
+/* Bölüm başlıklarının vurgu sözcüğü tereyağı işaretleyiciyle (büyük yazı: domates üstünde tereyağı 3.8:1 ≥ 3). */
+[data-site-design=bahce] h2 :is(.italic, em.rb-accent) {
+    background-image: linear-gradient(transparent 58%, color-mix(in srgb, var(--site-mustard) 85%, transparent) 58%, color-mix(in srgb, var(--site-mustard) 85%, transparent) 90%, transparent 90%);
+    padding-inline: 0.06em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+/* Koyu kutularda (kapak, hikâye, panel, menü kutusu, alt bilgi) işaretleyici yok: orada vurgu yazısı açık ton. */
+[data-site-design=bahce] :is(.bg-\[var\(--site-cover-bg\)\], .bg-\[var\(--site-hero-bg\)\], .bg-\[var\(--site-story\)\], .bg-\[var\(--site-olive\)\], .bg-\[var\(--site-paper\)\], .bg-\[var\(--site-menu-box\)\], .bg-\[var\(--site-footer-bg\)\], .bg-\[var\(--site-terracotta\)\], .bg-\[var\(--site-mustard\)\]) h2 :is(.italic, em.rb-accent) {
+    background-image: none;
+}
+/* Fotoğrafsız yer tutucu: silik yaprak benekleri. */
+[data-site-design=bahce] .bg-\[var\(--site-placeholder\)\] {
+    background-image:
+        radial-gradient(ellipse 7px 4px at 30% 40%, color-mix(in srgb, #4E6B46 16%, transparent) 98%, transparent),
+        radial-gradient(ellipse 6px 3px at 72% 72%, color-mix(in srgb, #C2410C 10%, transparent) 98%, transparent);
+    background-size: 34px 34px;
+}
+/* Menü kategori başlığı: solda küçük tereyağı nokta. */
+[data-site-design=bahce] :is(.rb-menu-cat h2, h3.rb-menu-cat)::before {
+    content: "";
+    display: inline-block;
+    width: 0.42em;
+    height: 0.42em;
+    margin-right: 0.35em;
+    border-radius: 999px;
+    background: var(--site-mustard);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--site-mustard) 35%, transparent);
+    vertical-align: 0.12em;
+}

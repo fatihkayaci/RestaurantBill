@@ -27,7 +27,7 @@ import { GlassStatusPill } from './site/SiteCards';
 import { ImageSlot } from './site/SiteChrome';
 import { FlowSiteHeader } from './site/SiteFrame';
 import { serif, siteCardDark } from './site/siteParts';
-import { headingFont, resolveDesign, telHref } from './site/siteTheme';
+import { headingFont, lineMenuVariant, resolveDesign, telHref } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import { isSicak, scCard, scDarkTone, scLine, scPageBg, scQtyTone } from './site/sicak/sicakParts';
 import { normalizeSite } from './site/useSite';
@@ -259,7 +259,7 @@ export default function DeliveryOrderPage() {
     const root = (children: ReactNode, withNav = true) => (
         // Elit: köşesiz, ince serif giydirme (rb-el-flow); düzen ve mantık aynı.
         <div style={{ ...customerRootStyle({ accentColor: site?.accent, theme: site?.theme, design: site?.design, font: site?.font }), ...(sicak ? scPageBg : {}) }}
-            className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)]', resolveDesign(site?.design) === 'elit' && 'rb-el-flow')}>
+            data-site-design={resolveDesign(site?.design)} className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)]', resolveDesign(site?.design) === 'elit' && 'rb-el-flow')}>
             <EliteFlowStyle design={site?.design} />
             <link rel="stylesheet" href={customerFontsHref(site)} precedence="default" />
             {withNav && siteData && <FlowSiteHeader site={siteData} current="siparis" />}
@@ -472,7 +472,7 @@ export default function DeliveryOrderPage() {
                             onRemoveProduct={removeProduct}
                             onOpenSetMenu={setSetMenuOpen}
                             onRemoveSetMenu={menu => setLines(prev => removeOneSetMenu(prev, menu.id))}
-                            variant={sicak ? 'sicak' : 'default'}
+                            variant={sicak ? 'sicak' : lineMenuVariant(site?.design)}
                         />
                         </div>
                     )}

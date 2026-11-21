@@ -92,7 +92,10 @@ interface StripCell { key: string; node: ReactNode; wrap?: (node: ReactNode) => 
 
 function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
     const edit = useSiteEdit();
-    const sade = useSiteDesign() === 'sade';
+    const design = useSiteDesign();
+    const sade = design === 'sade';
+    // Dev adın genişliği yazı tipinin harf genişliğine göre: yeni tasarımlar kendi çiftiyle ölçülür (eskiler değişmez).
+    const widthDesign = design === 'meyhane' || design === 'esnaf' || design === 'bahce' ? design : sade ? 'sade' : 'renkli';
     const showEmpty = Boolean(edit?.showEmpty);
     const content = site.site;
     const name = restaurantName(site);
@@ -209,7 +212,7 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
                             </span>
                         )}
                         {/* Ad Ayarlar'dan gelir; kapak adsız boş görünmesin diye düzenleyicide de yazılır (tıklanmaz). */}
-                        <h1 id="ev-ad" className={cn(serif, 'm-0 max-w-full break-words', sade ? 'leading-[0.92] tracking-[-0.015em]' : 'leading-[0.95] tracking-[-0.025em]')} style={heroNameStyle([first, accent], sade, resolveFont(content.font, sade ? 'sade' : 'renkli').charWidth[sade ? 'regular' : 'bold'])}>
+                        <h1 id="ev-ad" className={cn(serif, 'm-0 max-w-full break-words', sade ? 'leading-[0.92] tracking-[-0.015em]' : 'leading-[0.95] tracking-[-0.025em]')} style={heroNameStyle([first, accent], sade, resolveFont(content.font, widthDesign).charWidth[sade ? 'regular' : 'bold'])}>
                             {first && <>{first}<br /></>}<em className="rb-accent italic">{accent}</em>
                         </h1>
                         {(lead || showEmpty) && (

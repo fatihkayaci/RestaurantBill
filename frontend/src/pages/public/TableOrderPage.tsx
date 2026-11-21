@@ -25,7 +25,7 @@ import DeliveryMenu from './delivery/DeliveryMenu';
 import DeliverySetMenuSheet from './delivery/DeliverySetMenuSheet';
 import { ImageSlot } from './site/SiteChrome';
 import { serif } from './site/siteParts';
-import { resolveDesign } from './site/siteTheme';
+import { lineMenuVariant, resolveDesign } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import {
     accentItalic, closeCircle, creamBox, displayTitle, eyebrowAccent, fieldClass, heroBox, heroEyebrow, heroPattern, pillAccent, pillDark,
@@ -195,7 +195,7 @@ export default function TableOrderPage() {
 
     const root = (children: ReactNode) => (
         // Elit: köşesiz, ince serif giydirme (rb-el-flow); koyu kapak ve krem kutular temanın değişkenlerinden.
-        <div style={customerRootStyle(site?.site)} className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', resolveDesign(site?.site.design) === 'elit' && 'rb-el-flow')}>
+        <div style={customerRootStyle(site?.site)} data-site-design={resolveDesign(site?.site.design)} className={cn('min-h-screen overflow-x-clip bg-[var(--site-bg)] text-[var(--site-text)]', resolveDesign(site?.site.design) === 'elit' && 'rb-el-flow')}>
             <EliteFlowStyle design={site?.site.design} />
             <link rel="stylesheet" href={customerFontsHref(site?.site)} precedence="default" />
             {children}
@@ -398,6 +398,7 @@ export default function TableOrderPage() {
                             onRemoveSetMenu={menu => setCart(prev => removeOneSetMenu(prev, menu.id))}
                             featuredSection
                             readOnly={!canOrder}
+                            variant={lineMenuVariant(site.site.design)}
                             empty={(
                                 <div className="flex flex-col items-center py-14 text-center">
                                     <span aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--site-mustard)] text-[var(--site-text)]">
