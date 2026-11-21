@@ -19,8 +19,7 @@ import { fullAddress, restaurantName, useSiteDocumentTitle, weekSchedule } from 
 import { EditableBlock, EmptySlot, ExternalHint } from './siteEdit';
 import { editExternal, useSiteEdit, useSiteWindow } from './siteEditContext';
 import { useSiteDesign } from './siteDesign';
-import { EliteFooter, EliteHeader } from './elite/EliteFrame';
-import { EliteFlowStyle } from './elite/EliteFlowStyle';
+import { designLayout } from './designs/registry';
 import { useHideOnScroll, useScrolled } from './useScrolled';
 
 // Restoran sitesinin ortak çerçevesi (tasarım: "Tema 2 · Açık"): ortalı başlık (solda sayfalar, ortada serif ad ve
@@ -66,13 +65,13 @@ function FlameIcon() {
  * yapışık kalır (kaydırınca arkası buzlanır); `sticky={false}` ise (akış sayfaları) sayfayla kayar.
  */
 export function SiteHeader({ site, current, sticky = true, overlay = false }: { site: PublicSite; current: SitePageKey; sticky?: boolean; overlay?: boolean }) {
-    // Elit: koyu üst menü; kapağı fotoğraflı sayfalarda (`overlay`) kapağın üstünde saydam. Tasarım site verisinden
-    // (SiteShell dışındaki akış sayfalarında da doğru tasarım).
-    if (resolveDesign(site.site.design) === 'elit') return <EliteHeader site={site} current={current} overlay={overlay} sticky={sticky} />;
-    return <ClassicHeader site={site} current={current} sticky={sticky} />;
+    // Tasarımın kendi üst menüsü (tasarım kaydı; Elit: koyu, kapağı fotoğraflı sayfalarda `overlay` ile kapağın üstünde
+    // saydam). Tasarım site verisinden (SiteShell dışındaki akış sayfalarında da doğru tasarım).
+    const { Header = ClassicHeader } = designLayout(site.site.design);
+    return <Header site={site} current={current} overlay={overlay} sticky={sticky} />;
 }
 
-function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: SitePageKey; sticky: boolean }) {
+function ClassicHeader({ site, current, sticky }: { site: PublicSite; current: SitePageKey; sticky: boolean; overlay?: boolean }) {
     const scrolled = useScrolled(sticky);
     const win = useSiteWindow();
     const edit = useSiteEdit();
@@ -214,8 +213,8 @@ export function FlowSiteHeader({ site, current, sticky = false }: { site: Public
 
 export function MobileActionBar({ actions }: { actions: MobileAction[] }) {
     const x = editExternal(useSiteEdit(), 'actions');
-    // Elit: köşesiz, büyük harfli düğmeler.
-    const elit = useSiteDesign() === 'elit';
+    // Elit: köşesiz, büyük harfli düğmeler (tasarım kaydı `mobileBar`).
+    const elit = designLayout(useSiteDesign()).mobileBar === 'square';
     if (actions.length === 0) return null;
     return (
         <nav aria-label="Hızlı eylemler" {...x}
@@ -360,8 +359,8 @@ function InstagramIcon() {
  * `visit={false}`: adres/saat/iletişim sütunları yok (İletişim sayfası bunları zaten gösterir).
  */
 export function SiteFooter({ site, bottomBar, visit = true }: { site: PublicSite; bottomBar: boolean; visit?: boolean }) {
-    if (resolveDesign(site.site.design) === 'elit') return <EliteFooter site={site} bottomBar={bottomBar} visit={visit} />;
-    return <ClassicFooter site={site} bottomBar={bottomBar} visit={visit} />;
+    const { Footer = ClassicFooter } = designLayout(site.site.design);
+    return <Footer site={site} bottomBar={bottomBar} visit={visit} />;
 }
 
 function ClassicFooter({ site, bottomBar, visit }: { site: PublicSite; bottomBar: boolean; visit: boolean }) {
@@ -514,11 +513,12 @@ export function SitePage({ site, current, className, stickyHeader = true, overla
     const actions = inFlow ? [] : mobileActions ?? defaults;
     // Adres · saatler · iletişim her sayfanın alt bilgisinde; İletişim sayfası aynı bilgileri zaten gösterir.
     const footerVisit = current !== 'iletisim';
+    const layout = designLayout(site.site.design);
     return (
         <SiteShell accent={site.site.accentColor} theme={site.site.theme} design={site.site.design} font={site.site.font}>
             <style>{MOTION_CSS}</style>
-            <EliteFlowStyle design={site.site.design} />
-            <div className={cn('rb-site relative flex min-h-screen flex-col overflow-x-clip', resolveDesign(site.site.design) === 'elit' && 'rb-el-flow', className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
+            {layout.flowCss && <style>{layout.flowCss}</style>}
+            <div className={cn('rb-site relative flex min-h-screen flex-col overflow-x-clip', layout.flowClass, className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
                 {/* Düzenleyicide yalnız burada değişen bölümler çizilir: başlık, alt bilgi ve alt çubuk yok. */}
                 {!edit && <SiteHeader site={site} current={current} sticky={stickyHeader} overlay={overlayHeader} />}
                 {children}

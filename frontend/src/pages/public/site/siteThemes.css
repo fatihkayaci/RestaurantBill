@@ -143,21 +143,103 @@ html:has([data-site-design=meyhane]) body {
 [data-site-design=meyhane] .bg-\[var\(--site-placeholder\)\] {
     background-image: repeating-linear-gradient(135deg, rgba(243, 234, 219, 0.035) 0 2px, transparent 2px 9px);
 }
-/* Menü kategori başlığı: altında kehribar ince çizgi ve küçük süs (basılı menü kartı). */
-[data-site-design=meyhane] .rb-menu-cat {
-    border-bottom: 1px solid var(--site-border-mid);
-    padding-bottom: 10px;
-    position: relative;
+/* ── Meyhane Gecesi'nin kendi düzeni (designs/meyhane) ── */
+
+/* Lamba dizisinin ampulü (koyu zeminde okunur vurgu tonu, özel koyu vurgu da yansın): küçük cam, telden kısa bir sap, sıcak hale. */
+[data-site-design=meyhane] .rb-mh-bulb {
+    width: 11px;
+    height: 15px;
+    margin-left: -5.5px;
+    border-radius: 45% 45% 50% 50% / 38% 38% 62% 62%;
+    background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--site-accent-text) 35%, #fff), var(--site-accent-text) 62%);
+    box-shadow:
+        0 0 10px 3px color-mix(in srgb, var(--site-accent-text) 55%, transparent),
+        0 0 34px 10px color-mix(in srgb, var(--site-accent-text) 22%, transparent);
 }
-[data-site-design=meyhane] .rb-menu-cat::after {
+[data-site-design=meyhane] .rb-mh-bulb::before {
     content: "";
     position: absolute;
-    left: 0;
-    bottom: -2px;
-    width: 56px;
-    height: 3px;
-    border-radius: 2px;
-    background: var(--site-accent);
+    left: 50%;
+    bottom: 100%;
+    width: 1px;
+    height: 7px;
+    background: var(--site-border-strong);
+}
+@keyframes rb-mh-flicker {
+    0%, 46%, 56%, 100% { opacity: 1; }
+    48% { opacity: 0.55; }
+    50% { opacity: 0.95; }
+    53% { opacity: 0.7; }
+}
+[data-site-design=meyhane] .rb-mh-flicker {
+    animation: rb-mh-flicker 7s ease-in-out infinite;
+}
+[data-site-design=meyhane] .rb-mh-flicker:nth-child(8n + 4) {
+    animation-duration: 11s;
+    animation-delay: -3s;
+}
+@media (prefers-reduced-motion: reduce) {
+    [data-site-design=meyhane] .rb-mh-flicker { animation: none; }
+}
+
+/* Gece kapağı: fotoğrafın üstünde kapak renginden sayfa zeminine inen perde (alt kenarı sayfaya karışır). */
+[data-site-design=meyhane] .rb-mh-veil {
+    background:
+        radial-gradient(120% 80% at 50% 38%, transparent 0%, color-mix(in srgb, var(--site-hero-bg) 55%, transparent) 70%),
+        linear-gradient(180deg, color-mix(in srgb, var(--site-hero-bg) 72%, transparent) 0%, color-mix(in srgb, var(--site-hero-bg) 60%, transparent) 40%, color-mix(in srgb, var(--site-bg) 92%, transparent) 88%, var(--site-bg) 100%);
+}
+/* Fotoğrafsız kapak: silik çini (dört yapraklı) deseni, alta doğru kaybolur. */
+[data-site-design=meyhane] .rb-mh-tiles {
+    background-image:
+        radial-gradient(circle at 50% 0, color-mix(in srgb, var(--site-accent-text) 9%, transparent) 0 7px, transparent 7.5px),
+        radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--site-accent-text) 9%, transparent) 0 7px, transparent 7.5px),
+        radial-gradient(circle at 0 50%, color-mix(in srgb, var(--site-accent-text) 9%, transparent) 0 7px, transparent 7.5px),
+        radial-gradient(circle at 100% 50%, color-mix(in srgb, var(--site-accent-text) 9%, transparent) 0 7px, transparent 7.5px);
+    background-size: 44px 44px;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.5) 55%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.5) 55%, transparent 100%);
+}
+/* Lamba ışığı: tepeden inen sıcak hale ve sayfa zeminine geçiş. */
+[data-site-design=meyhane] .rb-mh-glow {
+    background:
+        radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--site-accent-text) 20%, transparent), transparent 70%),
+        linear-gradient(180deg, transparent 72%, var(--site-bg) 100%);
+}
+/* Bant (Masa ayırt): üst ve alt kenarı sayfa zeminine yumuşakça karışır (bölüm geçişi sert çizgi olmasın). */
+[data-site-design=meyhane] .rb-mh-band {
+    background-image: linear-gradient(180deg, var(--site-bg) 0%, transparent 22%, transparent 78%, var(--site-bg) 100%);
+}
+
+/* Meze tepsisi: koyu tepsi, kenarında ince ışık ve iç pervaz; kâseler (yuvarlak fotoğraf) yan yana. */
+[data-site-design=meyhane] .rb-mh-tray {
+    background:
+        radial-gradient(90% 70% at 50% 0%, color-mix(in srgb, var(--site-accent) 7%, transparent), transparent 70%),
+        var(--site-card);
+    box-shadow:
+        inset 0 0 0 1px var(--site-border-mid),
+        inset 0 0 0 7px color-mix(in srgb, var(--site-bg) 55%, transparent),
+        inset 0 0 0 8px var(--site-border),
+        0 34px 60px -42px rgba(0, 0, 0, 0.9);
+}
+[data-site-design=meyhane] .rb-mh-bowl {
+    box-shadow: 0 0 0 3px var(--site-card), 0 0 0 4px var(--site-border-strong), 0 14px 22px -12px rgba(0, 0, 0, 0.85);
+}
+
+/* Adisyon (alt bilgi): krem kâğıt fiş (sitenin yazı rengi zemin, zemin rengi yazı), alt kenarı dişli yırtık. Fişin
+   içinde odak halkası koyu. */
+[data-site-design=meyhane] .rb-mh-slip {
+    --tooth: 11px;
+    --site-focus: var(--site-bg);
+    -webkit-mask:
+        linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth)) no-repeat,
+        conic-gradient(from 135deg at 50% 0, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(2 * var(--tooth)) var(--tooth) repeat-x;
+    mask:
+        linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth)) no-repeat,
+        conic-gradient(from 135deg at 50% 0, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(2 * var(--tooth)) var(--tooth) repeat-x;
+}
+[data-site-design=meyhane] .rb-mh-slip ::selection {
+    background: color-mix(in srgb, var(--site-accent) 45%, transparent);
+    color: var(--site-bg);
 }
 
 /* ── Esnaf Tabelası ────────────────────────────────────────────────────────────────────────────── */

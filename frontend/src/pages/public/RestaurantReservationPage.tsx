@@ -10,6 +10,7 @@ import { heroOutlineLink } from './site/renkliTones';
 import { resolveDesign, telHref } from './site/siteTheme';
 import { EliteReservationHero } from './site/elite/EliteFlowParts';
 import { restaurantName, useMyReservations, useSite } from './site/useSite';
+import { designLayout } from './site/designs/registry';
 import { ExternalHint } from './site/siteEdit';
 import { editExternal, useSiteEdit } from './site/siteEditContext';
 
@@ -27,6 +28,9 @@ export default function RestaurantReservationPage() {
     const textX = editExternal(edit, 'reservationText');
 
     if (!site) return <SiteShell><SiteStatus error={error} /></SiteShell>;
+    // Tasarımın kendi rezervasyon sayfası (tasarım kaydı: Meyhane Gecesi); yoksa aşağıdaki ortak düzen (Elit kapağıyla).
+    const { Reservation } = designLayout(site.site.design);
+    if (Reservation) return <Reservation site={site} />;
 
     const name = restaurantName(site);
     // Elit: tam genişlik fotoğraf kapağı (üst menü üstünde saydam); akış altında krem zeminde.
