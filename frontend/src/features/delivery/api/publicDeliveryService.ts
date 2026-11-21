@@ -10,8 +10,9 @@ export const publicDeliveryService = {
         const response = await publicApi.get<OnlineOrdering>('/online-ordering', { params: branchId ? { branchId } : undefined });
         return response.data;
     },
-    quote: async (branchId: string, zoneId: string | null, lines: CartLineInput[]) => {
-        const response = await publicApi.post<DeliveryQuote>('/delivery-orders/quote', { branchId, zoneId, lines });
+    /** pickup: gel al (bölge yok sayılır, teslimat ücreti ve en az tutar yok). */
+    quote: async (branchId: string, zoneId: string | null, lines: CartLineInput[], pickup = false) => {
+        const response = await publicApi.post<DeliveryQuote>('/delivery-orders/quote', { branchId, zoneId: pickup ? null : zoneId, lines, pickup });
         return response.data;
     },
     /** 409 { error: "Fiyatlar güncellendi", quote }: sipariş açılmadı, quote güncel fiyatlardır. */

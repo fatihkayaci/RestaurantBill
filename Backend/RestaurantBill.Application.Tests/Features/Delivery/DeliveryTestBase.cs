@@ -55,12 +55,14 @@ public abstract class DeliveryTestBase : ApplicationTestBase
         => typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(entity, id);
 
     protected static OnlineOrderSettings Settings(bool enabled = true, bool allDaysOpen = true, int maxOpen = 2, int maxPerDay = 5,
-        bool requirePhoneVerification = false, bool acceptCash = true, bool acceptCard = true, int autoRejectMinutes = 10, bool acceptIban = false)
+        bool requirePhoneVerification = false, bool acceptCash = true, bool acceptCard = true, int autoRejectMinutes = 10, bool acceptIban = false,
+        bool pickupEnabled = false, int pickupEtaMinutes = 20)
         => OnlineOrderSettings.Create(enabled,
             ReservationSettings.WeekOrder.Select(d => new OnlineOrderDayHours(d, allDaysOpen, new TimeOnly(11, 0), new TimeOnly(22, 0))),
             lastOrderMinutesBeforeClose: 30, defaultEtaMinutes: 45, autoRejectAfterMinutes: autoRejectMinutes,
             maxOpenOrdersPerPhone: maxOpen, maxOrdersPerPhonePerDay: maxPerDay, acceptCash: acceptCash, acceptCard: acceptCard,
-            requirePhoneVerification: requirePhoneVerification, preOrderEnabled: false, preOrderLeadMinutes: 60, acceptIban: acceptIban);
+            requirePhoneVerification: requirePhoneVerification, preOrderEnabled: false, preOrderLeadMinutes: 60, acceptIban: acceptIban,
+            pickupEnabled: pickupEnabled, pickupEtaMinutes: pickupEtaMinutes);
 
     protected async Task SeedAsync(OnlineOrderSettings? settings = null)
     {

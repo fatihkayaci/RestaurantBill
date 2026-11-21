@@ -10,6 +10,7 @@ public static class MappingExtensions
     // Masası olmayan (paket) siparişin, etiketi (DeliveryScope.ApplyDeliveryLabel → "PAKET #123 · Moda") yüklenmediğinde
     // ekranlarda masa adı yerine görünen adı.
     public const string DeliveryTableName = "Paket";
+    public const string PickupTableName = "Gel al";
 
     public static AuditLogDto ToDto(this AuditLog log) => new()
     {
@@ -96,7 +97,7 @@ public static class MappingExtensions
     {
         Id = o.Id,
         TableId = o.TableId,
-        TableName = o.TableId is null ? DeliveryTableName : o.Table?.Name ?? string.Empty,
+        TableName = o.TableId is null ? (o.OrderType == OrderType.Takeaway ? PickupTableName : DeliveryTableName) : o.Table?.Name ?? string.Empty,
         OrderType = o.OrderType,
         Note = o.Note,
         TotalPrice = o.TotalPrice,

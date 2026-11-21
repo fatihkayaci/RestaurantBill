@@ -29,6 +29,10 @@ public class DeliveryOrderConfiguration : IEntityTypeConfiguration<DeliveryOrder
 
         builder.Ignore(d => d.IsOpen);
         builder.Ignore(d => d.IsSettled);
+        builder.Ignore(d => d.IsPickup);
+
+        // Adrese teslim (Delivery) ya da gel al (Takeaway); bu sütundan önceki siparişlerin hepsi adrese teslimdir.
+        builder.Property(d => d.OrderType).HasDefaultValue(RestaurantBill.Domain.Enums.OrderType.Delivery);
 
         builder.HasIndex(d => d.AccessToken).IsUnique();
         builder.HasIndex(d => new { d.BranchId, d.Number }).IsUnique();

@@ -27,7 +27,7 @@ export interface OrderItem {
     setMenuNote?: string | null;
 }
 
-/** Backend OrderType: 1 masa, 2 paket (online), 3 gel-al (henüz akışı yok). */
+/** Backend OrderType: 1 masa, 2 paket (online, adrese teslim), 3 gel al (online, müşteri restorandan alır). */
 export type OrderType = 1 | 2 | 3;
 
 export interface Order {

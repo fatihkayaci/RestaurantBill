@@ -55,11 +55,11 @@ public static class ItemsReadyNotification
         {
             var delivery = await db.DeliveryOrders.AsNoTracking()
                 .Where(d => d.OrderId == order.Id)
-                .Select(d => new { d.Number, d.ZoneName })
+                .Select(d => new { d.Number, d.ZoneName, d.OrderType })
                 .FirstOrDefaultAsync(cancellationToken);
             if (delivery is null)
                 return;
-            tableName = DeliveryScope.TicketName(delivery.Number, delivery.ZoneName);
+            tableName = DeliveryScope.TicketName(delivery.Number, delivery.ZoneName, delivery.OrderType == OrderType.Takeaway);
             regionId = Guid.Empty;
             tableId = Guid.Empty;
             deliveryNumber = delivery.Number;

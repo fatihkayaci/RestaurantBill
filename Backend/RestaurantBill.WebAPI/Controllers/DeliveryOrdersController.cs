@@ -117,6 +117,14 @@ public class DeliveryOrdersController : BaseController
         return HandleResult(result);
     }
 
+    /// <summary>Gel al "Müşteri aldı": { cashRegisterId, method }. Ödeme kasiyerin açık vardiyasına yazılır, sipariş kapanır.</summary>
+    [HttpPost("{id:guid}/complete-pickup")]
+    public async Task<IActionResult> CompletePickup([FromRoute] Guid id, [FromBody] PickupBody body, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new CompletePickupCommand { Id = id, CashRegisterId = body.CashRegisterId, Method = body.Method }, cancellationToken);
+        return HandleResult(result);
+    }
+
     [Authorize(Roles = "Owner,Admin")]
     [HttpPost("{id:guid}/block-phone")]
     public async Task<IActionResult> BlockPhone([FromRoute] Guid id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] ReasonBody? body, CancellationToken cancellationToken)
@@ -129,6 +137,7 @@ public class DeliveryOrdersController : BaseController
     public sealed record ReasonBody(string? Reason);
     public sealed record CourierBody(Guid? CourierUserId);
     public sealed record DeliverBody(PaymentMethod Method);
+    public sealed record PickupBody(Guid CashRegisterId, PaymentMethod Method);
     public sealed record HandoverBody(Guid CashRegisterId, List<Guid>? DeliveryOrderIds, decimal? CountedCash = null);
 }
 

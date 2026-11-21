@@ -54,9 +54,12 @@ export default function TicketCard({ ticket, now, busy, onToggleItem, onPass }: 
                         </span>
                     </div>
                     <p className={cn('mt-1 truncate text-sm font-semibold', 'text-muted-foreground')}>
-                        {/* Online paket sipariş: masaya değil kuryeye çıkar (paketlenir). */}
+                        {/* Online paket sipariş: masaya değil kuryeye çıkar (paketlenir). Gel al: müşteri kasadan alır (paketlenir). */}
                         {order.orderType === 2 && (
                             <span className="mr-1.5 rounded bg-rb-accent px-1.5 py-0.5 align-middle text-xs font-bold tracking-widest text-rb-accent-foreground">PAKET</span>
+                        )}
+                        {order.orderType === 3 && (
+                            <span className="mr-1.5 rounded bg-rb-gold px-1.5 py-0.5 align-middle text-xs font-bold tracking-widest text-rb-gold-foreground">GEL AL</span>
                         )}
                         {[order.createdByUserName, itemCountText(items)].filter(Boolean).join(' · ')}
                     </p>

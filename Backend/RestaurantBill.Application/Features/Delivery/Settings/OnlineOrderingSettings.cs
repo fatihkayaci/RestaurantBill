@@ -41,6 +41,8 @@ internal static class OnlineOrderSettingsMapping
             SmsConfigured = smsConfigured,
             PreOrderEnabled = s.PreOrderEnabled,
             PreOrderLeadMinutes = s.PreOrderLeadMinutes,
+            PickupEnabled = s.PickupEnabled,
+            PickupEtaMinutes = s.PickupEtaMinutes,
             IsCustomized = branch.OnlineOrderSettings is not null
         };
     }
@@ -81,6 +83,10 @@ public class UpdateOnlineOrderSettingsCommand : IRequest<Result<OnlineOrderSetti
     public bool RequirePhoneVerification { get; set; }
     public bool PreOrderEnabled { get; set; }
     public int PreOrderLeadMinutes { get; set; }
+    /// <summary>"Gel al" seçeneği; eski istemci göndermezse kayıtlı değer korunur.</summary>
+    public bool? PickupEnabled { get; set; }
+    /// <summary>Gel al hazır olma süresi (dakika); eski istemci göndermezse kayıtlı değer korunur.</summary>
+    public int? PickupEtaMinutes { get; set; }
     /// <summary>true: kayıtlı ayar silinir, şube varsayılanlara (online sipariş kapalı) döner; diğer alanlar yok sayılır.</summary>
     public bool ResetToDefaults { get; set; }
 }
@@ -129,6 +135,7 @@ public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentU
             if (request.AcceptIban && !branch.HasPayableIban)
                 return Result<OnlineOrderSettingsDto>.Failure(IbanMissingMessage);
 
+            OnlineOrderSettings current = branch.GetOnlineOrderSettings();
             try
             {
                 branch.SetOnlineOrderSettings(OnlineOrderSettings.Create(
@@ -148,7 +155,9 @@ public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentU
                     request.RequirePhoneVerification,
                     request.PreOrderEnabled,
                     request.PreOrderLeadMinutes,
-                    request.AcceptIban));
+                    request.AcceptIban,
+                    request.PickupEnabled ?? current.PickupEnabled,
+                    request.PickupEtaMinutes ?? current.PickupEtaMinutes));
             }
             catch (DomainException ex)
             {
@@ -167,7 +176,8 @@ public class UpdateOnlineOrderSettingsCommandHandler(IAppDbContext db, ICurrentU
             request.ResetToDefaults
                 ? $"{actor} {branch.BranchName} şubesinin online sipariş ayarlarını varsayılana döndürdü."
                 : $"{actor} {branch.BranchName} şubesinin online sipariş ayarlarını güncelledi " +
-                  $"({(effective.Enabled ? "açık" : "kapalı")}, otomatik ret {effective.AutoRejectAfterMinutes} dk).",
+                  $"({(effective.Enabled ? "açık" : "kapalı")}, gel al {(effective.PickupEnabled ? "açık" : "kapalı")}, " +
+                  $"otomatik ret {effective.AutoRejectAfterMinutes} dk).",
             nameof(Branch),
             branch.Id));
 

@@ -6,6 +6,6 @@ public enum OrderType
     DineIn = 1,
     // Online paket sipariş; masası yoktur, DeliveryOrder kabul edilince açılır.
     Delivery = 2,
-    // Gel-al: şimdilik akışı yok, değer ileride kullanılmak üzere ayrıldı.
+    // Online gel al: masası ve teslimat ücreti yoktur; müşteri restorana gelip alır. DeliveryOrder kabul edilince açılır.
     Takeaway = 3
 }

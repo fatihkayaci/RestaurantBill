@@ -656,6 +656,11 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<Guid?>("OrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("OrderType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(2);
+
                     b.Property<int>("PaymentPreference")
                         .HasColumnType("integer");
 

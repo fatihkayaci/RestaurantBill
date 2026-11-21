@@ -40,5 +40,6 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         // Hesaplanan değer (TotalPrice - PaidOnAccount); kolon değil.
         builder.Ignore(o => o.RemainingAmount);
         builder.Ignore(o => o.HasTable);
+        builder.Ignore(o => o.IsPackageOrder);
     }
 }

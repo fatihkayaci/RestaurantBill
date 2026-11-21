@@ -67,6 +67,9 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Şu an online sipariş alınıyor mu (saat kontrolü hariç): ayarda açık ve durdurulmamış.</summary>
         public bool AcceptsOnlineOrders => GetOnlineOrderSettings().Enabled && !OnlineOrdersPaused;
 
+        /// <summary>Online sipariş açıkken müşteri "Gel al"ı seçebilir mi (ayar). Durdurma ve saatler ayrıca uygulanır.</summary>
+        public bool OffersPickup => GetOnlineOrderSettings() is { Enabled: true, PickupEnabled: true };
+
         /// <summary>Admin'in kaydettiği masa QR özellikleri; null ise hiç ayarlanmamış (varsayılan: hepsi açık).</summary>
         public QrFeatures? QrFeatures { get; private set; }
 

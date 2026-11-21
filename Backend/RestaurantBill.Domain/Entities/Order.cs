@@ -77,7 +77,27 @@ namespace RestaurantBill.Domain.Entities
             return order;
         }
 
+        /// <summary>Kabul edilen online gel al siparişin mutfak/hesap kaydı: masası ve teslimat ücreti yoktur.</summary>
+        public static Order CreatePickup(Guid branchId, string? note = null)
+        {
+            if (branchId == Guid.Empty)
+                throw new DomainException("Geçersiz şube.");
+
+            Order order = new()
+            {
+                BranchId = branchId,
+                OrderType = OrderType.Takeaway,
+                Note = note?.Trim() ?? string.Empty,
+                Status = OrderStatus.Active
+            };
+            order.RecalculateTotal();
+            return order;
+        }
+
         public bool HasTable => TableId is not null;
+
+        /// <summary>Online paket (adrese teslim) ya da gel al: bir DeliveryOrder'a bağlı, masasız sipariş.</summary>
+        public bool IsPackageOrder => OrderType is OrderType.Delivery or OrderType.Takeaway;
 
         /// <summary>Masa taşıma, birleştirme, hesap isteme gibi yalnızca masada anlamı olan işlemlerin koruması.</summary>
         public void EnsureHasTable()
