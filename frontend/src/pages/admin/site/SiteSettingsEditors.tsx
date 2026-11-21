@@ -331,6 +331,20 @@ const ACCENT_OPTIONS: Record<SiteDesignKey, string[]> = {
     bahce: ['#C2410C', '#4E6B46', '#FFD978', '#E2683C', '#2F4F8F', '#A8354A', '#6B7A2E', '#1F2A1C'],
 };
 
+// Temanın kapak rengini / menü kutusu rengini de değiştirdiği tasarımlar (diğerlerinde yalnız vurgu değişir).
+const THEME_SETS_COVER: SiteDesignKey[] = ['renkli', 'meyhane', 'esnaf', 'bahce'];
+const THEME_SETS_MENU_BOX: SiteDesignKey[] = ['esnaf', 'bahce'];
+
+/** Tema kartında "Kapak ■" gibi küçük renk etiketi. */
+function ColorChip({ label, color }: { label: string; color: string }) {
+    return (
+        <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden="true" className="h-3.5 w-3.5 rounded-sm border border-border" style={{ background: color }} />
+            {label}
+        </span>
+    );
+}
+
 /** Seçili tasarımın hazır temaları ve isteğe bağlı özel vurgu rengi. Renkli: tema kapak rengini ve vurguyu seçer;
  *  Sade: yalnız vurguyu (kapak beyaz kutu); Elit: yalnız vurgu ailesini (koyu zeminde açık, kremde koyu ton);
  *  Sıcak: yalnız vurguyu (zemin şeftali, koyu bantlar). */
@@ -373,12 +387,21 @@ export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
                                 {on && <Check className="h-4 w-4 text-foreground" aria-hidden="true" />}
                             </span>
                             <span className="text-xs leading-snug text-muted-foreground">{t.description}</span>
+                            {/* Temanın neyi boyadığı: yalnız bu tasarımda temayla değişen renkler. */}
+                            <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                {THEME_SETS_COVER.includes(key) && <ColorChip label="Kapak" color={cover} />}
+                                <ColorChip label="Vurgu" color={t.accent} />
+                                {THEME_SETS_MENU_BOX.includes(key) && t.menuBox && <ColorChip label="Menü kutusu" color={t.menuBox} />}
+                            </span>
                         </button>
                     );
                 })}
             </div>
             <div>
-                <p className={labelClass}>Vurgu rengi</p>
+                <p className={labelClass}>Vurgu rengi <span className="font-normal normal-case text-muted-foreground">(isteğe bağlı)</span></p>
+                <p className="mb-2 mt-0 text-xs text-muted-foreground">
+                    Düğmelerin, fiyatların ve etiketlerin rengi. Temanın vurgu rengini değiştirir; kapağa ve zemine dokunmaz.
+                </p>
                 <div role="radiogroup" aria-label="Vurgu rengi" className="flex flex-wrap items-center gap-2.5">
                     <button type="button" role="radio" aria-checked={!accent} onClick={() => onAccent('')}
                         className={cn('flex h-11 items-center gap-2 rounded-full border-2 px-3 text-sm font-medium', !accent ? 'border-foreground' : 'border-border')}>
@@ -400,7 +423,7 @@ export function ThemePicker({ design, theme, accent, onTheme, onAccent }: {
                         Özel
                     </label>
                 </div>
-                <p className="mt-1.5 text-xs text-muted-foreground">Düğmeler, rozetler ve süsler bu renkte olur. Okunurluk için düğme yazısı ve tonu kendiliğinden ayarlanır.</p>
+                <p className="mt-1.5 text-xs text-muted-foreground">Okunurluk için düğme yazısı ve tonu kendiliğinden ayarlanır.</p>
             </div>
         </div>
     );
