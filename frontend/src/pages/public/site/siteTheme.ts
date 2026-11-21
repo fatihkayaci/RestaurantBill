@@ -607,7 +607,7 @@ const RENKLI_THEMES = presets(RENKLI, [
     { key: 'terracotta', label: 'Kiremit · hardal', description: 'Kiremit kapak, hardal vurgu. Ocakbaşı, ızgara.', ...MUSTARD, ...KIREMIT, menuBox: RENKLI.olive },
     { key: 'zeytin', label: 'Zeytin', description: 'Zeytin yeşili kapak, turuncu vurgu. Ege, meyhane, kahvaltı.', ...ORANGE, hero: RENKLI.olive, heroDeep: '#2F3926', menuBox: '#8C3317' },
     { key: 'lacivert', label: 'Lacivert', description: 'Gece mavisi kapak, hardal vurgu. Balık, deniz kenarı.', ...MUSTARD, hero: '#1F3550', heroDeep: '#172839', menuBox: RENKLI.olive },
-    { key: 'bordo', label: 'Bordo', description: 'Şarap rengi kapak, hardal vurgu. Akşam yemeği, steakhouse.', ...MUSTARD, hero: '#7A2232', heroDeep: '#5E1A27', menuBox: RENKLI.olive },
+    { key: 'bordo', label: 'Bordo', description: 'Bordo kapak, hardal vurgu. Akşam yemeği, steakhouse.', ...MUSTARD, hero: '#7A2232', heroDeep: '#5E1A27', menuBox: RENKLI.olive },
     { key: 'komur', label: 'Kömür', description: 'Koyu kahve kapak, hardal vurgu. Bar, gece mekânı.', ...MUSTARD, hero: RENKLI.fg, heroDeep: '#17100A', menuBox: RENKLI.olive },
     { key: 'beyaz', label: 'Toprak', description: 'Toprak rengi kapak, turuncu vurgu. Sade ve sıcak.', ...ORANGE, hero: '#4A3C30', heroDeep: '#3A2F25', menuBox: RENKLI.olive },
 ]);
@@ -619,7 +619,7 @@ const WHITE = { hero: SADE.paper, heroDeep: '#2A2622', cover: SADE.card, coverDe
 const ESPRESSO = { onAccent: ELIT.paper, hero: ELIT.paper, heroDeep: '#221A14', cover: ELIT.paper, coverDeep: '#221A14', menuBox: ELIT.paper };
 const ELIT_THEMES = presets(ELIT, [
     { key: 'altin', label: 'Altın', description: 'Altın çizgiler ve düğmeler. Varsayılan.', accent: '#C8A35F', accentText: '#7A5F2B', ...ESPRESSO },
-    { key: 'bordo', label: 'Bordo', description: 'Gül kurusu süsler, şarap rengi yazılar. Akşam yemeği, steakhouse.', accent: '#D4A0A0', accentText: '#7A2F3A', ...ESPRESSO },
+    { key: 'bordo', label: 'Bordo', description: 'Gül kurusu süsler, bordo yazılar. Akşam yemeği, steakhouse.', accent: '#D4A0A0', accentText: '#7A2F3A', ...ESPRESSO },
     { key: 'zeytin', label: 'Zeytin', description: 'Adaçayı süsler, zeytin yeşili yazılar. Ege, meyhane.', accent: '#B9BD8E', accentText: '#56622F', ...ESPRESSO },
     { key: 'lacivert', label: 'Lacivert', description: 'Buz mavisi süsler, lacivert yazılar. Balık, deniz kenarı.', accent: '#A9B8D0', accentText: '#2F4A75', ...ESPRESSO },
     { key: 'komur', label: 'Kömür', description: 'Taş rengi süsler, kömür yazılar. Bar, gece mekânı.', accent: '#CFC6B8', accentText: '#4A443C', ...ESPRESSO },
@@ -630,7 +630,7 @@ const SADE_THEMES = presets(SADE, [
     { key: 'terracotta', label: 'Terracotta', description: 'Kiremit turuncusu vurgu. Ocakbaşı, ızgara, pide.', accent: '#E2683C', onAccent: SADE.fg, accentText: '#A63F17', ...WHITE },
     { key: 'zeytin', label: 'Zeytin', description: 'Adaçayı yeşili vurgu. Ege, meyhane, kahvaltı.', accent: '#9DBF8E', onAccent: SADE.fg, accentText: '#3F6B34', ...WHITE },
     { key: 'lacivert', label: 'Lacivert', description: 'Koyu lacivert vurgu. Balık, deniz kenarı.', accent: '#2F4F8F', onAccent: '#FFFFFF', accentText: '#2F4F8F', ...WHITE },
-    { key: 'bordo', label: 'Bordo', description: 'Şarap rengi vurgu. Akşam yemeği, steakhouse.', accent: '#A8354A', onAccent: '#FFFFFF', accentText: '#8E2433', ...WHITE },
+    { key: 'bordo', label: 'Bordo', description: 'Bordo vurgu. Akşam yemeği, steakhouse.', accent: '#A8354A', onAccent: '#FFFFFF', accentText: '#8E2433', ...WHITE },
     { key: 'komur', label: 'Kömür', description: 'Kömür siyahı vurgu. Bar, gece mekânı; sade ve güçlü.', accent: '#2A2622', onAccent: SADE.bg, accentText: '#2A2622', ...WHITE },
     { key: 'beyaz', label: 'Sade gri', description: 'Serin gri vurgu. Sade ve modern.', accent: '#9AA5B1', onAccent: SADE.fg, accentText: '#4A5563', ...WHITE },
 ]);
@@ -642,19 +642,19 @@ const SICAK_THEMES = presets(SICAK, [
     { key: 'altin', label: 'Turuncu', description: 'Parlak turuncu vurgu, şeftali zemin. Varsayılan.', accent: '#D9660B', onAccent: SICAK.fg, accentText: '#A34A06', ...PEACH },
     { key: 'terracotta', label: 'Kırmızı biber', description: 'Biber kırmızısı vurgu. Ocakbaşı, ızgara, burger.', accent: '#C8341E', onAccent: '#FFFFFF', accentText: '#A62A16', ...PEACH },
     { key: 'zeytin', label: 'Zeytin', description: 'Zeytin yeşili vurgu. Ege, kahvaltı, salata.', accent: '#6B7A2E', onAccent: '#FFFFFF', accentText: '#56622F', ...PEACH },
-    { key: 'bordo', label: 'Bordo', description: 'Şarap rengi vurgu. Akşam yemeği, steakhouse.', accent: '#8E2433', onAccent: '#FFFFFF', accentText: '#8E2433', ...PEACH },
+    { key: 'bordo', label: 'Bordo', description: 'Bordo vurgu. Akşam yemeği, steakhouse.', accent: '#8E2433', onAccent: '#FFFFFF', accentText: '#8E2433', ...PEACH },
     { key: 'komur', label: 'Kömür', description: 'Kömür siyahı vurgu. Bar, gece mekânı; sade ve güçlü.', accent: SICAK.fg, onAccent: SICAK.bg, accentText: SICAK.fg, ...PEACH },
 ]);
 
 // Meyhane Gecesi: tema vurguyu ve kapağın rengini seçer (kapak hep koyu). Vurgular koyu zemin için açık tonlar; düğme
-// yazısı koyu zemin rengi. Kontrast (zeminde / kartta / üstünde koyu yazı): kehribar 8.7 / 8.0 / 8.7; rakı beyazı
+// yazısı koyu zemin rengi. Kontrast (zeminde / kartta / üstünde koyu yazı): kehribar 8.7 / 8.0 / 8.7; süt beyazı
 // 14.8 / 13.6 / 14.8; buz mavisi 10.1 / 9.3 / 10.1; gül 8.9 / 8.2 / 8.9; zeytin 10.6 / 9.7 / 10.6.
 const NIGHT = { onAccent: MEYHANE.bg, menuBox: '#2A1C14' };
 const MEYHANE_THEMES = presets(MEYHANE, [
     { key: 'altin', label: 'Kehribar', description: 'Kehribar ışık, kömür zemin. Varsayılan.', accent: '#E9A23B', accentText: '#E9A23B', hero: '#0D0B09', heroDeep: '#080706', ...NIGHT },
-    { key: 'beyaz', label: 'Rakı beyazı', description: 'Süt beyazı vurgu, sade ve loş. Meyhane, rakı sofrası.', accent: '#ECE3D3', accentText: '#ECE3D3', hero: '#0D0B09', heroDeep: '#080706', ...NIGHT },
+    { key: 'beyaz', label: 'Süt beyazı', description: 'Süt beyazı vurgu, sade ve loş. Meze, ocakbaşı.', accent: '#ECE3D3', accentText: '#ECE3D3', hero: '#0D0B09', heroDeep: '#080706', ...NIGHT },
     { key: 'lacivert', label: 'Gece mavisi', description: 'Buz mavisi vurgu, lacivert kapak. Balık, deniz kenarı.', accent: '#9EC1EA', accentText: '#9EC1EA', hero: '#0F1826', heroDeep: '#0A111C', ...NIGHT },
-    { key: 'bordo', label: 'Şarap', description: 'Gül kurusu vurgu, şarap rengi kapak. Steakhouse, şarap evi.', accent: '#E8A0A0', accentText: '#E8A0A0', hero: '#2B1016', heroDeep: '#1F0B10', ...NIGHT },
+    { key: 'bordo', label: 'Bordo', description: 'Gül kurusu vurgu, bordo kapak. Steakhouse, akşam yemeği.', accent: '#E8A0A0', accentText: '#E8A0A0', hero: '#2B1016', heroDeep: '#1F0B10', ...NIGHT },
     { key: 'zeytin', label: 'Zeytinlik', description: 'Zeytin yeşili vurgu, koyu yeşil kapak. Ege, ocakbaşı.', accent: '#B9C98A', accentText: '#B9C98A', hero: '#161D14', heroDeep: '#10160F', ...NIGHT },
 ]);
 
