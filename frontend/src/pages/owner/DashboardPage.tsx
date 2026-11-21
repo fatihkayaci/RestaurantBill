@@ -96,7 +96,7 @@ function StatCard({ icon: Icon, colorBg, colorText, label, value, change, captio
                 <div className={cn('w-11 h-11 rounded-lg flex items-center justify-center shrink-0', colorBg)}>
                     <Icon className={cn('w-5 h-5', colorText)} />
                 </div>
-                <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">{label}</p>
+                <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">{label}</p>
             </div>
             <p className="text-3xl font-bold text-foreground mt-3">{value}</p>
             <ChangeCaption value={change} caption={caption} />
@@ -251,7 +251,7 @@ export default function DashboardPage() {
                     <div className="w-11 h-11 rounded-lg bg-rb-orange-bg flex items-center justify-center shrink-0">
                         <Building2 className="w-5 h-5 text-rb-orange" />
                     </div>
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Aktif Şube Sayısı</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Aktif Şube Sayısı</p>
                 </div>
                 <p className="text-3xl font-bold text-foreground mt-3">{stats?.activeBranchCount ?? 0} / {stats?.totalBranchCount ?? 0}</p>
                 <p className="text-xs text-muted-foreground mt-1">%{activeRatio.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} aktiflik oranı</p>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
         trend: (
             <div className="rounded-xl border border-border bg-card p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Ciro Trendi</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Ciro Trendi</p>
                     <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
                         {([7, 30, 90] as const).map(d => (
                             <button
@@ -281,8 +281,8 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height={260}>
                     <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
+                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k ₺`} />
                         <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
                         {branchSeries.filter(series => !hiddenSeries.has(series.key)).map(series => (
                             <Line
@@ -318,7 +318,7 @@ export default function DashboardPage() {
         ),
         payments: (
             <div className="rounded-xl border border-border bg-card p-5">
-                <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">Ödeme Yöntemleri</p>
+                <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-4">Ödeme Yöntemleri</p>
                 {paymentMethods.length === 0 ? (
                     <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">
                         Bugün için ödeme verisi yok.
@@ -343,7 +343,7 @@ export default function DashboardPage() {
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                 <p className="text-lg font-bold text-foreground">{formatCurrency(paymentTotal)}</p>
-                                <p className="text-[10px] text-muted-foreground">Toplam Ciro</p>
+                                <p className="text-xs text-muted-foreground">Toplam Ciro</p>
                             </div>
                         </div>
                         <div className="space-y-2.5 mt-4">
@@ -367,19 +367,19 @@ export default function DashboardPage() {
         branchPerformance: (
             <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-border">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube Performansı ({selectedDayLabel})</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Şube Performansı ({selectedDayLabel})</p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sipariş</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ort. Sepet</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Çalışan</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Masa</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sipariş</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ort. Sepet</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Çalışan</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Masa</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -450,8 +450,8 @@ export default function DashboardPage() {
         liveStatus: (
             <div className="rounded-xl border border-border bg-card p-5">
                 <div className="flex items-center justify-between mb-3">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube Canlı Durumu</p>
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-rb-green">
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Şube Canlı Durumu</p>
+                    <span className="flex items-center gap-1 text-xs font-semibold text-rb-green">
                         <span className="h-1.5 w-1.5 rounded-full bg-rb-green animate-pulse" /> Canlı
                     </span>
                 </div>
@@ -478,7 +478,7 @@ export default function DashboardPage() {
         ),
         auditLogs: (
             <div className="rounded-xl border border-border bg-card p-5">
-                <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">Son Denetim Kayıtları</p>
+                <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">Son Denetim Kayıtları</p>
                 <div className="space-y-3">
                     {recentAuditLogs.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Henüz kayıt yok.</p>
@@ -487,7 +487,7 @@ export default function DashboardPage() {
                             <div className="min-w-0">
                                 <p className="text-foreground truncate">{log.message}</p>
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                    <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-semibold', SEVERITY_STYLE[log.severity])}>
+                                    <span className={cn('px-1.5 py-0.5 rounded text-xs font-semibold', SEVERITY_STYLE[log.severity])}>
                                         {SEVERITY_LABELS[log.severity]}
                                     </span>
                                     <span className="text-xs text-muted-foreground">{log.branchName}</span>

@@ -263,7 +263,7 @@ export default function DeliveryTrackingPage() {
                         </div>
                         {badge && (
                             <div className={cn('flex h-[150px] w-[150px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full text-center md:h-[210px] md:w-[210px]', tone.badge)}>
-                                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] md:text-xs">{badge.label}</span>
+                                <span className="text-xs font-extrabold uppercase tracking-[0.16em] md:text-xs">{badge.label}</span>
                                 <span className={cn(serif, 'font-extrabold leading-none tabular-nums', badge.value.length > 3 ? 'text-[38px] md:text-[52px]' : 'text-[48px] md:text-[64px]')}>{badge.value}</span>
                                 <span className="text-xs font-bold md:text-[13px]">{badge.sub}</span>
                             </div>
@@ -332,7 +332,7 @@ export default function DeliveryTrackingPage() {
                                     <li key={i} className="flex items-center gap-3 border-b border-[var(--site-line)] py-4 sm:gap-3.5">
                                         <span className="flex h-[34px] min-w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[var(--site-bg)] px-2 font-extrabold tabular-nums">{line.quantity}×</span>
                                         <div className="hidden h-12 w-12 shrink-0 sm:block">
-                                            <ImageSlot src={image} alt="" restaurant={brand} className="h-full rounded-xl" logoTextClassName="text-[9px]" />
+                                            <ImageSlot src={image} alt="" restaurant={brand} className="h-full rounded-xl" logoTextClassName="text-xs" />
                                         </div>
                                         <span className="min-w-0 flex-1">
                                             <span className={cn(serif, 'block break-words text-[19px] leading-tight md:text-[22px]')}>{line.name}</span>

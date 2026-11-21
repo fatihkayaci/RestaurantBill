@@ -96,7 +96,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                         <div className="w-11 h-11 rounded-lg bg-rb-green-bg flex items-center justify-center shrink-0">
                             <TrendingUp className="w-5 h-5 text-rb-green" />
                         </div>
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Ciro (KDV Dahil)</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Ciro (KDV Dahil)</p>
                     </div>
                     <p className="text-3xl font-bold text-foreground mt-3">{formatCurrency(data?.totalRevenue ?? 0, 2)}</p>
                     <div className="flex items-center gap-4 mt-3 pt-3 border-t border-dashed border-border text-sm">
@@ -120,7 +120,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                         <div className="w-11 h-11 rounded-lg bg-rb-accent-bg flex items-center justify-center shrink-0">
                             <ShoppingCart className="w-5 h-5 text-rb-accent" />
                         </div>
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">İşlem Sayısı</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">İşlem Sayısı</p>
                     </div>
                     <p className="text-3xl font-bold text-foreground mt-3">{(data?.transactionCount ?? 0).toLocaleString('tr-TR')}</p>
                 </div>
@@ -129,7 +129,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                         <div className="w-11 h-11 rounded-lg bg-rb-purple-bg flex items-center justify-center shrink-0">
                             <ShoppingBag className="w-5 h-5 text-rb-purple" />
                         </div>
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Ort. Sepet</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Ort. Sepet</p>
                     </div>
                     <p className="text-3xl font-bold text-foreground mt-3">{formatCurrency(data?.avgBasket ?? 0, 2)}</p>
                 </div>
@@ -137,7 +137,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
 
             <div className="grid lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-4">
                         {isSingleDay ? 'Saatlik Ciro' : 'Günlük Ciro'}
                     </p>
                     {!chartHasData ? (
@@ -147,16 +147,16 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                         {isSingleDay ? (
                             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
                                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                                <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={1} />
-                                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
+                                <XAxis dataKey="label" tick={{ fontSize: 12 }} interval={1} />
+                                <YAxis tick={{ fontSize: 12 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k ₺`} />
                                 <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
                                 <Bar dataKey="total" fill="var(--rb-accent)" radius={[3, 3, 0, 0]} />
                             </BarChart>
                         ) : (
                             <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
                                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₺${(v / 1000).toFixed(0)}k`} />
+                                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                                <YAxis tick={{ fontSize: 12 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k ₺`} />
                                 <Tooltip {...chartTooltipProps} formatter={(value) => formatCurrency(Number(value))} />
                                 {(showBranchComparison ? branchSeries : [{ key: 'total', label: 'Toplam', color: 'var(--rb-accent)' }])
                                     .filter(s => !hiddenSeries.has(s.key))
@@ -185,7 +185,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                 </div>
 
                 <div className="rounded-xl border border-border bg-card p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">Ödeme Yöntemleri</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-4">Ödeme Yöntemleri</p>
                     {(data?.paymentMethods.length ?? 0) === 0 ? (
                         <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">Bu aralıkta ödeme verisi yok.</div>
                     ) : (
@@ -201,7 +201,7 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                     <p className="text-base font-bold text-foreground">{formatCurrency(paymentTotal)}</p>
-                                    <p className="text-[10px] text-muted-foreground">Toplam</p>
+                                    <p className="text-xs text-muted-foreground">Toplam</p>
                                 </div>
                             </div>
                             <div className="space-y-2.5 mt-4">
@@ -224,18 +224,18 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
             </div>
 
             <div className="rounded-xl border border-border bg-card p-5">
-                <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">Saatlik Yoğunluk</p>
+                <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-4">Saatlik Yoğunluk</p>
                 {!heatmapHasData && <p className="-mt-2 mb-3 text-sm text-muted-foreground">Bu aralıkta işlem yok.</p>}
                 <div className={cn("overflow-x-auto", !heatmapHasData && "opacity-50")}>
                     <div className="min-w-[640px]">
                         <div className="grid grid-cols-[32px_repeat(24,1fr)] gap-[3px]">
                             <div />
                             {Array.from({ length: 24 }, (_, h) => (
-                                <div key={h} className="text-center text-[9px] text-muted-foreground">{h % 3 === 0 ? h : ''}</div>
+                                <div key={h} className="text-center text-xs text-muted-foreground">{h % 3 === 0 ? h : ''}</div>
                             ))}
                             {DOW_LABELS.map((label, dow) => (
                                 <div key={dow} className="contents">
-                                    <div className="text-[10px] text-muted-foreground flex items-center">{label}</div>
+                                    <div className="text-xs text-muted-foreground flex items-center">{label}</div>
                                     {Array.from({ length: 24 }, (_, hour) => {
                                         const cell = heatmapByCell.get(`${dow}-${hour}`);
                                         const intensity = cell ? Math.max(0.08, cell.amount / heatmapMax) : 0;
@@ -258,16 +258,16 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
             {showBranchComparison && (
                 <div className="rounded-xl border border-border bg-card overflow-hidden">
                     <div className="px-5 py-3.5 border-b border-border">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube Karşılaştırması</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Şube Karşılaştırması</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border">
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İşlem</th>
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ort. Sepet</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Şube</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İşlem</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ort. Sepet</th>
                                 </tr>
                             </thead>
                             <tbody>

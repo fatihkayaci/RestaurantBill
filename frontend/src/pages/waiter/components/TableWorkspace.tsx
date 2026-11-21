@@ -388,18 +388,18 @@ export default function TableWorkspace({
                             <label key={label} className="flex flex-col gap-1.5">
                                 <span className="text-[13px] font-semibold text-rb-text-sub">{label}</span>
                                 <input type={type} value={value} onChange={e => set(e.target.value)} placeholder={placeholder}
-                                    className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-rb-gold" />
+                                    className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-ring" />
                             </label>
                         ))}
                         <label className="flex flex-col gap-1.5">
                             <span className="text-[13px] font-semibold text-rb-text-sub">Saat</span>
                             <input inputMode="numeric" maxLength={5} value={resTime} onChange={e => setResTime(formatTimeDigits(e.target.value))} placeholder="19:30"
-                                className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-rb-gold" />
+                                className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-ring" />
                         </label>
                         <label className="flex flex-col gap-1.5">
                             <span className="text-[13px] font-semibold text-rb-text-sub">Not (isteğe bağlı)</span>
                             <input value={resNote} onChange={e => setResNote(e.target.value)} placeholder="Doğum günü, özel istek…"
-                                className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-rb-gold" />
+                                className="h-12 rounded-2xl border border-border bg-card px-3.5 text-base outline-none focus:ring-2 focus:ring-ring" />
                         </label>
                     </div>
                 ) : table.status === 3 && !order ? (
@@ -490,7 +490,7 @@ export default function TableWorkspace({
                                                                 onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                                                 placeholder="Ürün notu"
                                                                 aria-label={`${item.productName} notu`}
-                                                                className="mt-1 h-9 rounded-lg border border-border bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-rb-gold"
+                                                                className="mt-1 h-9 rounded-lg border border-border bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                                                             />
                                                         ) : (
                                                             <span className={cn('truncate text-[13px]', sub.late ? 'font-semibold text-rb-red' : 'text-rb-text-sub')}>{sub.text}</span>
@@ -507,7 +507,7 @@ export default function TableWorkspace({
                                                             {busy === `serve-${item.id}` ? '…' : 'Servis et'}
                                                         </button>
                                                     ) : (
-                                                        <span className="shrink-0 text-[15px] font-semibold tabular-nums text-foreground">₺{formatPrice(item.unitPrice * item.quantity)}</span>
+                                                        <span className="shrink-0 text-[15px] font-semibold tabular-nums text-foreground">{formatPrice(item.unitPrice * item.quantity)} ₺</span>
                                                     )}
                                                     {canCancelAndDiscount && (
                                                         <button
@@ -541,12 +541,12 @@ export default function TableWorkspace({
                             </div>
                             <div className="flex items-baseline justify-between">
                                 <span className="text-base font-semibold text-foreground">Toplam</span>
-                                <span className="text-[24px] font-bold tabular-nums text-foreground">₺{formatPrice(total)}</span>
+                                <span className="text-[24px] font-bold tabular-nums text-foreground">{formatPrice(total)} ₺</span>
                             </div>
                             {paidOnAccount > 0 && (
                                 <div className="flex items-baseline justify-between border-t border-border pt-1.5 text-[15px]">
-                                    <span className="font-semibold text-rb-green">Ödenen ₺{formatPrice(paidOnAccount)}</span>
-                                    <span className="font-bold tabular-nums text-foreground">Kalan ₺{formatPrice(due)}</span>
+                                    <span className="font-semibold text-rb-green">Ödenen {formatPrice(paidOnAccount)} ₺</span>
+                                    <span className="font-bold tabular-nums text-foreground">Kalan {formatPrice(due)} ₺</span>
                                 </div>
                             )}
                         </div>
@@ -586,7 +586,7 @@ export default function TableWorkspace({
                             {hasItems && (canTakePayment ? (
                                 <button type="button" onClick={() => openPay('normal')} className="flex h-16 items-center justify-between rounded-2xl bg-foreground px-5 text-background">
                                     <span className="flex items-center gap-2.5 text-[17px] font-bold"><CreditCard className="size-5.5 text-rb-gold" aria-hidden="true" />Ödeme al</span>
-                                    <span className="text-xl font-bold tabular-nums">{paidOnAccount > 0 && <span className="mr-1 text-[13px] font-semibold opacity-70">kalan</span>}₺{formatPrice(due)}</span>
+                                    <span className="text-xl font-bold tabular-nums">{paidOnAccount > 0 && <span className="mr-1 text-[13px] font-semibold opacity-70">kalan</span>}{formatPrice(due)} ₺</span>
                                 </button>
                             ) : (
                                 <button type="button" onClick={() => void requestBill(false)} disabled={busy === 'bill'}
@@ -596,7 +596,7 @@ export default function TableWorkspace({
                                         <span className="flex items-center gap-2.5 text-[17px] font-bold"><ReceiptText className="size-5.5" aria-hidden="true" />{billRequested ? 'Hesap istendi' : 'Hesap iste'}</span>
                                         {billRequested && <span className="text-[12px] font-medium opacity-80">Kasaya yeniden bildirmek için dokunun</span>}
                                     </span>
-                                    <span className="text-xl font-bold tabular-nums">₺{formatPrice(due)}</span>
+                                    <span className="text-xl font-bold tabular-nums">{formatPrice(due)} ₺</span>
                                 </button>
                             ))}
                         </>
@@ -701,7 +701,7 @@ function OrderStrip({ order, onOpen }: { order: Order | null; onOpen: () => void
                 )}
                 {order?.billRequestedAt && <span className="truncate font-semibold text-rb-accent">Hesap istendi</span>}
                 {order ? (
-                    <span className="truncate tabular-nums">{itemCount} ürün · <strong className="text-foreground">₺{formatPrice(order.totalPrice)}</strong></span>
+                    <span className="truncate tabular-nums">{itemCount} ürün · <strong className="text-foreground">{formatPrice(order.totalPrice)} ₺</strong></span>
                 ) : <span>…</span>}
             </span>
             <ChevronRight className="size-5 shrink-0 text-rb-text-sub" aria-hidden="true" />

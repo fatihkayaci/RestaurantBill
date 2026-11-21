@@ -48,7 +48,7 @@ function timeOf(iso?: string | null): string {
 
 /** Bölüm başlığı: küçük, soluk, büyük harf. */
 function SectionLabel({ children }: { children: ReactNode }) {
-    return <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[.14em] text-muted-foreground">{children}</h3>;
+    return <h3 className="mb-2 text-xs font-semibold uppercase tracking-[.14em] text-muted-foreground">{children}</h3>;
 }
 
 // Online siparişin detayı ve işlemleri. Düzen yukarıdan aşağı: başlık (numara, durum, saat/söz, toplam ve ödeme) →
@@ -138,7 +138,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
             return;
         }
         return run(() => deliveryService.completePickup(order.id, registerId, pickupMethod),
-            `${orderTitle(order)} müşteriye verildi · ${doorPaymentWord(pickupMethod)} ₺${formatAmount(order.total)} kasaya alındı.`,
+            `${orderTitle(order)} müşteriye verildi · ${doorPaymentWord(pickupMethod)} ${formatAmount(order.total)} ₺ kasaya alındı.`,
             'Sipariş teslim edilemedi.', true);
     };
 
@@ -195,12 +195,12 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
     if (order.deliveredAt && isPickup) {
         timeline.push(['Müşteri aldı', <>
             {timeOf(order.deliveredAt)}
-            {order.collectedMethod ? ` · ${doorPaymentWord(order.collectedMethod)} ₺${formatAmount(order.collectedAmount ?? 0)} kasaya alındı` : ''}
+            {order.collectedMethod ? ` · ${doorPaymentWord(order.collectedMethod)} ${formatAmount(order.collectedAmount ?? 0)} ₺ kasaya alındı` : ''}
         </>]);
     } else if (order.deliveredAt) {
         timeline.push(['Teslim', <>
             {timeOf(order.deliveredAt)}
-            {order.collectedMethod ? ` · ${doorPaymentWord(order.collectedMethod)} ₺${formatAmount(order.collectedAmount ?? 0)}` : ''}
+            {order.collectedMethod ? ` · ${doorPaymentWord(order.collectedMethod)} ${formatAmount(order.collectedAmount ?? 0)} ₺` : ''}
         </>]);
         timeline.push(['Kasa', order.settledAt
             ? 'Kasaya alındı'
@@ -257,7 +257,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                             ) : hasLateness && <LatenessBadge order={order} now={now} className="px-2.5 py-1 text-xs" />}
                         </div>
                         <div className="text-right">
-                            <p className="font-serif text-[28px] font-bold leading-none tabular-nums text-foreground">₺{formatAmount(order.total)}</p>
+                            <p className="font-serif text-[28px] font-bold leading-none tabular-nums text-foreground">{formatAmount(order.total)} ₺</p>
                             <p className={cn('mt-1 flex items-center justify-end gap-1 text-xs font-semibold', cash ? 'text-rb-green' : iban ? 'text-rb-purple' : 'text-rb-accent')}>
                                 <PayIcon className="h-3.5 w-3.5" aria-hidden="true" />
                                 {iban ? 'IBAN (havale)' : `${isPickup ? 'Kasada' : 'Kapıda'} ${cash ? 'nakit' : 'kart'}`}
@@ -273,7 +273,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                         <SectionLabel>Müşteri</SectionLabel>
                         <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-foreground">
                             {order.customerName}
-                            {order.isPhoneBlocked && <span className="rounded bg-rb-red-bg px-1.5 py-0.5 text-[10px] font-bold text-rb-red">ENGELLİ NUMARA</span>}
+                            {order.isPhoneBlocked && <span className="rounded bg-rb-red-bg px-1.5 py-0.5 text-xs font-bold text-rb-red">ENGELLİ NUMARA</span>}
                         </p>
                         <a href={telUrl(order.customerPhone)}
                             className={cn('-ml-1 mt-0.5 inline-flex min-h-11 items-center gap-2 rounded-lg px-1 text-sm font-semibold tabular-nums text-rb-accent hover:underline', FOCUS)}>
@@ -312,16 +312,16 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                                         {line.selections.length > 0 && <span className="block text-xs text-muted-foreground">{line.selections.join(', ')}</span>}
                                         {line.note && <span className="block text-xs text-rb-amber">Not: {line.note}</span>}
                                     </span>
-                                    <span className="text-right tabular-nums text-foreground">₺{formatAmount(line.lineTotal)}</span>
+                                    <span className="text-right tabular-nums text-foreground">{formatAmount(line.lineTotal)} ₺</span>
                                 </li>
                             ))}
                         </ul>
                         <dl className="mt-3 space-y-1 border-t border-border pt-3 pl-10 text-sm">
-                            <div className="flex justify-between text-muted-foreground"><dt>Ara toplam</dt><dd className="tabular-nums">₺{formatAmount(order.subtotal)}</dd></div>
+                            <div className="flex justify-between text-muted-foreground"><dt>Ara toplam</dt><dd className="tabular-nums">{formatAmount(order.subtotal)} ₺</dd></div>
                             {isPickup
                                 ? <div className="flex justify-between text-muted-foreground"><dt>Gel al</dt><dd>teslimat ücreti yok</dd></div>
-                                : <div className="flex justify-between text-muted-foreground"><dt>Teslimat</dt><dd className="tabular-nums">₺{formatAmount(order.deliveryFee)}</dd></div>}
-                            <div className="flex justify-between font-semibold text-foreground"><dt>Toplam</dt><dd className="tabular-nums">₺{formatAmount(order.total)}</dd></div>
+                                : <div className="flex justify-between text-muted-foreground"><dt>Teslimat</dt><dd className="tabular-nums">{formatAmount(order.deliveryFee)} ₺</dd></div>}
+                            <div className="flex justify-between font-semibold text-foreground"><dt>Toplam</dt><dd className="tabular-nums">{formatAmount(order.total)} ₺</dd></div>
                         </dl>
                     </section>
 
@@ -374,7 +374,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                         {step === 'main' && isNew && (
                             <>
                                 <div>
-                                    <p id="detail-eta" className="mb-1.5 text-[11px] font-semibold uppercase tracking-[.14em] text-muted-foreground">Müşteriye söylenecek süre</p>
+                                    <p id="detail-eta" className="mb-1.5 text-xs font-semibold uppercase tracking-[.14em] text-muted-foreground">Müşteriye söylenecek süre</p>
                                     <div className="flex gap-1.5" role="radiogroup" aria-labelledby="detail-eta">
                                         {etaChoices.map(m => (
                                             <button
@@ -446,7 +446,7 @@ export default function DeliveryOrderDetail({ order, couriers, canBlockPhone, no
                                 </div>
                                 <button type="button" onClick={completePickup} disabled={busy || !registerId}
                                     className={cn('min-h-12 w-full rounded-xl bg-rb-gold text-base font-bold text-rb-gold-foreground hover:brightness-105 disabled:opacity-50', FOCUS)}>
-                                    {busy ? 'Kaydediliyor…' : `Müşteri aldı · ₺${formatAmount(order.total)} ${doorPaymentWord(pickupMethod)}`}
+                                    {busy ? 'Kaydediliyor…' : `Müşteri aldı · ${formatAmount(order.total)} ₺ ${doorPaymentWord(pickupMethod)}`}
                                 </button>
                             </div>
                         )}

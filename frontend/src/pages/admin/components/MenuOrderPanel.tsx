@@ -132,7 +132,7 @@ export default function MenuOrderPanel({ categories, products, initialCategoryId
                                         </span>
                                         {!product.isActive && <span className="text-xs text-muted-foreground">Pasif</span>}
                                     </div>
-                                    <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">₺{formatPrice(product.price)}</span>
+                                    <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatPrice(product.price)} ₺</span>
                                 </SortableRow>
                             )}
                         />

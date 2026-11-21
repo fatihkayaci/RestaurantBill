@@ -357,7 +357,7 @@ export default function OnlineOrderingSettingsTab() {
                                                         {d.isOpen && (
                                                             <AllDayPill on={allDay} onToggle={on => toggleAllDay(d.day, on)} ariaLabel={`${name} 24 saat sipariş`} />
                                                         )}
-                                                        {overnight && <span className="rounded bg-rb-purple-bg px-1.5 py-0.5 text-[10px] font-bold text-rb-purple">ertesi gün</span>}
+                                                        {overnight && <span className="rounded bg-rb-purple-bg px-1.5 py-0.5 text-xs font-bold text-rb-purple">ertesi gün</span>}
                                                         <CopyToAllButton onClick={() => copyToAll(d)} />
                                                     </div>
                                                     {d.isOpen && !allDay && (

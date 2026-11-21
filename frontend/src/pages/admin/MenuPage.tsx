@@ -38,7 +38,7 @@ function profitHint(price: number, cost: number): { text: string; isLoss: boolea
     const profit = price - cost;
     const margin = Math.round((Math.abs(profit) / price) * 100);
     return {
-        text: `${profit < 0 ? 'Zarar' : 'Kâr'}: ₺${formatPrice(Math.abs(profit))} (%${margin})`,
+        text: `${profit < 0 ? 'Zarar' : 'Kâr'}: ${formatPrice(Math.abs(profit))} ₺ (%${margin})`,
         isLoss: profit < 0,
     };
 }
@@ -696,12 +696,12 @@ export default function Menu() {
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
                                     {product.isOutOfStock && (
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-rb-red-bg text-rb-red">
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-rb-red-bg text-rb-red">
                                             Tükendi
                                         </span>
                                     )}
                                     <span className={cn(
-                                        "px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase",
+                                        "px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase",
                                         product.isActive ? "bg-rb-green-bg text-rb-green" : "bg-muted text-muted-foreground"
                                     )}>
                                         {product.isActive ? 'Aktif' : 'Pasif'}
@@ -720,7 +720,7 @@ export default function Menu() {
                                 olsa da olmasa da aynı satırdaki kartlarda fiyat ve çizgi hizalı kalır. */}
                             <div className="mt-auto space-y-3">
                                 <div className="flex items-baseline justify-between gap-2">
-                                    <p className="text-lg font-bold text-foreground">₺{formatPrice(product.price)}</p>
+                                    <p className="text-lg font-bold text-foreground">{formatPrice(product.price)} ₺</p>
                                     {(() => {
                                         const hint = profitHint(product.price, product.cost);
                                         return hint && (

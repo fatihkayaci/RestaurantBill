@@ -226,7 +226,7 @@ export default function TableLanding({
                                         <ImageSlot src={pick.imageUrl} alt={pick.name} restaurant={restaurantName}
                                             logoTextClassName="text-[min(15px,13cqw)]" className="aspect-square rounded-[20px] border-[3px] border-[var(--site-mustard)]" />
                                         {pick.isSetMenu && (
-                                            <span className="absolute left-2 top-2 rounded-full bg-[var(--site-mustard)] px-2 py-0.5 text-[11px] font-extrabold text-[#24180F]">Menü</span>
+                                            <span className="absolute left-2 top-2 rounded-full bg-[var(--site-mustard)] px-2 py-0.5 text-xs font-extrabold text-[#24180F]">Menü</span>
                                         )}
                                     </span>
                                     <span className={cn(serif, 'line-clamp-2 text-[17px] leading-snug')}>{pick.name}</span>

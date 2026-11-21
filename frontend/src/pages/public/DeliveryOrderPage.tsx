@@ -789,7 +789,7 @@ function PickupCard({ data, compact }: { data: OnlineOrdering; compact: boolean 
     const address = data.pickupAddress ?? '';
     return (
         <section aria-label="Gel al">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--site-sub)]">Gel al · restorandan teslim</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--site-sub)]">Gel al · restorandan teslim</p>
             <p className={cn(serif, 'm-0 mt-0.5 break-words leading-[1.05]', compact ? 'text-[24px]' : 'text-[28px] md:text-[30px]')}>{data.branchName}</p>
             {address && (
                 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer"
@@ -847,7 +847,7 @@ function ZoneCard({ zones, zone, onPick, flat = false, compact = false }: {
         <section aria-label="Teslimat mahallesi" className={zoneShell}>
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--site-sub)]">Teslimat</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--site-sub)]">Teslimat</p>
                     <p className={cn(serif, 'm-0 mt-0.5 break-words leading-[1.05]', compact ? 'text-[24px]' : 'text-[28px] md:text-[30px]')}>{zone.name}</p>
                     <p className={cn('mt-1.5 text-sm text-[var(--site-sub)] md:hidden', compact && 'hidden')}>
                         {facts.time} · Teslimat {facts.fee}{zone.minOrderAmount > 0 ? ` · En az ${facts.minimum}` : ''}
@@ -1211,7 +1211,7 @@ function ClosedCard({ data, onBrowse, slim = false }: { data: OnlineOrdering; on
     }
     return (
         <section role="status" aria-label="Sipariş durumu" className={cn(siteCardDark, 'flex flex-col gap-3 p-5 md:p-6')}>
-            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--site-on-paper-sub)]">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--site-on-paper-sub)]">
                 <Clock className="h-3.5 w-3.5" aria-hidden="true" />{eyebrow}
             </p>
             <p className={cn(serif, 'm-0 text-[32px] leading-[1.02] md:text-[40px]')}>{title}</p>

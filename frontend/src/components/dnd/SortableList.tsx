@@ -150,7 +150,7 @@ export function DragHandle({ setNodeRef, attributes, listeners, label, className
             aria-label={label}
             className={cn(
                 'flex size-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground',
-                'hover:bg-muted hover:text-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rb-accent',
+                'hover:bg-muted hover:text-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 className,
             )}
         >

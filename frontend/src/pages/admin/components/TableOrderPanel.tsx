@@ -115,7 +115,7 @@ export default function TableOrderPanel({ regions, tables, onRegionsChange, onTa
                                     aria-label={`${table.name} masasını taşı`}
                                     className={cn(
                                         'flex min-h-16 cursor-grab touch-manipulation items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 select-none active:cursor-grabbing',
-                                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rb-accent',
+                                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                         state.isDragging && 'border-rb-accent shadow-[0_10px_30px_rgba(0,0,0,0.18)] ring-2 ring-rb-accent/30',
                                     )}
                                 >

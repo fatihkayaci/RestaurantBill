@@ -501,7 +501,7 @@ function BoardHeader({ title, settingsHref, status, pausing, onSetOpen, stats, s
                 {title && <h1 className="font-serif text-[32px] font-semibold leading-none text-foreground">{title}</h1>}
                 <p className="text-sm text-muted-foreground">
                     Bugün <b className="tabular-nums text-foreground">{stats.todayCount} teslim</b>
-                    {' · '}<b className="tabular-nums text-foreground">₺{formatPrice(stats.todayTotal)}</b>
+                    {' · '}<b className="tabular-nums text-foreground">{formatPrice(stats.todayTotal)} ₺</b>
                     {stats.avgMinutes !== null && <>{' · '}ort. <b className="tabular-nums text-foreground">{stats.avgMinutes} dk</b></>}
                     {stats.late > 0 && <>{' · '}<b className="tabular-nums text-rb-red">{stats.late} geciken</b></>}
                 </p>
@@ -566,7 +566,7 @@ function BoardHeader({ title, settingsHref, status, pausing, onSetOpen, stats, s
                 </div>
 
                 <button type="button" onClick={onOpenKasa} className={cn(ctl, 'border-rb-gold/60 bg-rb-gold-bg text-foreground hover:bg-rb-gold/20')}>
-                    <Bike className="h-4 w-4" aria-hidden="true" />Kurye kasası · <b className="tabular-nums">₺{formatPrice(courierCash)}</b>
+                    <Bike className="h-4 w-4" aria-hidden="true" />Kurye kasası · <b className="tabular-nums">{formatPrice(courierCash)} ₺</b>
                 </button>
 
                 <button
@@ -657,7 +657,7 @@ function Inbox({ orders, active, now, paused, soundOn, onPick, eta, onEta, busy,
                                                 <span className="min-w-0 flex-1 text-sm">
                                                     <b className="block truncate">{o.customerName}</b>
                                                     <span className="block truncate text-xs text-muted-foreground">
-                                                        {[o.isPickup ? 'Gel al' : o.zoneName, `${itemCount(o)} ürün`, `₺${formatPrice(o.total)}`].filter(Boolean).join(' · ')}
+                                                        {[o.isPickup ? 'Gel al' : o.zoneName, `${itemCount(o)} ürün`, `${formatPrice(o.total)} ₺`].filter(Boolean).join(' · ')}
                                                     </span>
                                                 </span>
                                                 {o.autoRejectAt && (
@@ -708,7 +708,7 @@ function CountdownRing({ order, now }: { order: DeliveryOrder; now: number }) {
             </svg>
             <span className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
                 <b className={cn('text-lg tabular-nums leading-tight', urgent && 'text-rb-red')}>{text}</b>
-                <span className="text-[9px] tracking-[.12em] text-muted-foreground">{has ? 'YANITLA' : 'BEKLİYOR'}</span>
+                <span className="text-xs tracking-[.12em] text-muted-foreground">{has ? 'YANITLA' : 'BEKLİYOR'}</span>
             </span>
         </div>
     );
@@ -761,7 +761,7 @@ function InboxCard({ order, now, eta, onEta, busy, onAccept, onReject, onOpen }:
                             {line.selections.length > 0 && <span className="block text-xs text-muted-foreground">{line.selections.join(', ')}</span>}
                             {line.note && <span className="block text-xs font-semibold text-rb-amber">Not: {line.note}</span>}
                         </span>
-                        <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">₺{formatAmount(line.lineTotal)}</span>
+                        <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">{formatAmount(line.lineTotal)} ₺</span>
                     </li>
                 ))}
             </ul>
@@ -774,7 +774,7 @@ function InboxCard({ order, now, eta, onEta, busy, onAccept, onReject, onOpen }:
             )}
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3.5">
-                <span className="font-serif text-[30px] font-semibold leading-none tabular-nums">₺{formatPrice(order.total)}</span>
+                <span className="font-serif text-[30px] font-semibold leading-none tabular-nums">{formatPrice(order.total)} ₺</span>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground/20 px-2.5 py-1 text-xs font-semibold">
                     <PayIcon className={cn('h-3.5 w-3.5', pay.tone)} aria-hidden="true" />
                     {pay.label}{pay.note && <span className="text-muted-foreground">· {pay.note}</span>}
@@ -786,7 +786,7 @@ function InboxCard({ order, now, eta, onEta, busy, onAccept, onReject, onOpen }:
                 Tüm ayrıntılar · numara engelleme
             </button>
 
-            <p id={`eta-${order.id}`} className="mt-2 text-[11px] font-semibold uppercase tracking-[.14em] text-muted-foreground">Müşteriye söylenecek süre</p>
+            <p id={`eta-${order.id}`} className="mt-2 text-xs font-semibold uppercase tracking-[.14em] text-muted-foreground">Müşteriye söylenecek süre</p>
             <div className="mt-2 flex gap-1.5" role="radiogroup" aria-labelledby={`eta-${order.id}`}>
                 {etaChoicesFor(order).map(m => (
                     <button
@@ -852,8 +852,8 @@ function CourierStrip({ couriers, onOpen }: { couriers: CourierCashSummary[]; on
                                 <span className={cn('block truncate text-xs', onRoad ? 'text-rb-amber' : free ? 'text-rb-green' : 'text-rb-accent')}>{courierLoadText(c)}</span>
                             </span>
                             <span className="shrink-0 text-right">
-                                <b className="block text-[15px] tabular-nums text-foreground">₺{formatPrice(c.outstandingCash)}</b>
-                                <span className={cn('text-[11px]', old ? 'font-semibold text-rb-red' : 'text-muted-foreground')}>
+                                <b className="block text-[15px] tabular-nums text-foreground">{formatPrice(c.outstandingCash)} ₺</b>
+                                <span className={cn('text-xs', old ? 'font-semibold text-rb-red' : 'text-muted-foreground')}>
                                     {old ? 'önceki günden kalan' : 'kuryede nakit'}
                                 </span>
                             </span>
@@ -1010,9 +1010,9 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
             <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/40 @3xl:grid @3xl:grid-cols-[150px_minmax(0,1fr)_130px_190px]">
                 <span className="order-1"><TimePill order={order} now={now} /></span>
                 <span className="order-2 ml-auto text-right text-[13px] leading-tight @3xl:order-3 @3xl:ml-0">
-                    <b className="block text-base tabular-nums text-foreground">₺{formatPrice(order.total)}</b>
+                    <b className="block text-base tabular-nums text-foreground">{formatPrice(order.total)} ₺</b>
                     <span className={cn('font-semibold', pay.tone)}>{pay.label}</span>
-                    {pay.note && <span className="block text-[11px] text-muted-foreground">{pay.note}</span>}
+                    {pay.note && <span className="block text-xs text-muted-foreground">{pay.note}</span>}
                 </span>
                 <button
                     type="button"
@@ -1039,7 +1039,7 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
             {expanded && (
                 <div id={detailsId} className="grid gap-4 px-4 pb-4 text-[13px] leading-relaxed motion-safe:animate-in motion-safe:fade-in @3xl:grid-cols-2 @3xl:pl-[180px]">
                     <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground">{order.isPickup ? 'Teslim' : 'Adres'}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">{order.isPickup ? 'Teslim' : 'Adres'}</p>
                         <p className="break-words text-foreground">
                             {order.isPickup
                                 ? 'Gel al · müşteri restorandan alacak'
@@ -1056,7 +1056,7 @@ function FlowRow({ order, now, couriers, expandedId, onToggleExpand, pickerFor, 
                         )}
                     </div>
                     <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Ürünler · {itemCount(order)}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Ürünler · {itemCount(order)}</p>
                         <ul>
                             {order.lines.map((line, i) => (
                                 <li key={i} className="break-words text-foreground">
@@ -1113,7 +1113,7 @@ function DeliveredSection({ unsettled, unsettledTotal, settled, now, onOpen, wid
                         <span className="flex items-center gap-1">
                             <Wallet className="h-3.5 w-3.5" aria-hidden="true" />Kasaya teslim edilmedi · {unsettled.length}
                         </span>
-                        <span className="tabular-nums">₺{formatPrice(unsettledTotal)}</span>
+                        <span className="tabular-nums">{formatPrice(unsettledTotal)} ₺</span>
                     </p>
                     <div className={grid}>
                         {unsettled.map(order => <DeliveredRow key={order.id} order={order} now={now} onOpen={() => onOpen(order.id)} />)}
@@ -1156,9 +1156,9 @@ function DeliveredRow({ order, now, onOpen }: { order: DeliveryOrder; now: numbe
         >
             <span className="flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate text-sm font-bold text-foreground">{orderTitle(order)}</span>
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">₺{formatPrice(amount)} <span className="text-[10px] font-bold uppercase text-muted-foreground">{method}</span></span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatPrice(amount)} ₺ <span className="text-xs font-bold uppercase text-muted-foreground">{method}</span></span>
             </span>
-            <span className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+            <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span className="min-w-0 truncate">{timeOf(order.deliveredAt)}{order.isPickup ? ' · müşteri aldı' : order.courierName ? ` · ${order.courierName}` : ''}</span>
                 <LatenessBadge order={order} now={now} className="py-0" />
             </span>
@@ -1271,7 +1271,7 @@ function ListView({ orders, now, couriers, pickerFor, onTogglePicker, assigning,
                         );
                     })}
                 </div>
-                <label className="flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-rb-accent lg:ml-auto lg:w-64">
+                <label className="flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-ring lg:ml-auto lg:w-64">
                     <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
                     <input
                         type="search"
@@ -1290,7 +1290,7 @@ function ListView({ orders, now, couriers, pickerFor, onTogglePicker, assigning,
                 </p>
             ) : (
                 <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                    <div className="hidden grid-cols-[minmax(0,1.6fr)_120px_90px_130px_110px_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 border-b border-border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground lg:grid">
+                    <div className="hidden grid-cols-[minmax(0,1.6fr)_120px_90px_130px_110px_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 border-b border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground lg:grid">
                         <span>Sipariş</span><span>Durum</span><span>Süre</span><span>Söz</span><span className="text-right">Tutar</span><span>Kurye</span><span />
                     </div>
                     <ul className="divide-y divide-border">
@@ -1354,8 +1354,8 @@ function ListRow({ order, now, couriers, pickerOpen, onTogglePicker, assigning, 
                 </span>
                 <span className="min-w-0">{isNew ? <span className="text-sm text-muted-foreground">—</span> : <LatenessBadge order={order} now={now} />}</span>
                 <span className="ml-auto text-right font-serif text-lg font-bold tabular-nums text-foreground lg:ml-0">
-                    ₺{formatPrice(order.total)}{' '}
-                    <span className={cn('font-sans text-[10px] font-bold', cash ? 'text-rb-green' : order.paymentPreference === DoorPayment.Iban ? 'text-rb-purple' : 'text-rb-accent')}>
+                    {formatPrice(order.total)} ₺{' '}
+                    <span className={cn('font-sans text-xs font-bold', cash ? 'text-rb-green' : order.paymentPreference === DoorPayment.Iban ? 'text-rb-purple' : 'text-rb-accent')}>
                         {cash ? 'NAKİT' : order.paymentPreference === DoorPayment.Iban ? 'IBAN' : 'KART'}
                     </span>
                 </span>

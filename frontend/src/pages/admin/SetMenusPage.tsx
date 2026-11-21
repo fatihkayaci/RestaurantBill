@@ -151,7 +151,7 @@ export default function SetMenusPage() {
                                         {menu.isActive ? (menu.categoryName ?? 'Set menü') : 'Satış dışı'}
                                     </span>
                                 </div>
-                                <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">₺{formatPrice(menu.price)}</span>
+                                <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatPrice(menu.price)} ₺</span>
                             </SortableRow>
                         )}
                     />

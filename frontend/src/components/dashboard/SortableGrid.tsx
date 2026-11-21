@@ -102,7 +102,7 @@ function SortableItem({ id, editing, label, className, radiusClassName, children
                     aria-label={`${label} kartını taşı`}
                     className={cn(
                         'absolute inset-0 cursor-grab touch-manipulation border-2 border-dashed border-rb-gold/60 bg-rb-gold/5 outline-none transition-shadow',
-                        'focus-visible:ring-2 focus-visible:ring-rb-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                         radiusClassName,
                         isDragging && 'cursor-grabbing border-solid border-rb-gold bg-rb-gold/10 shadow-2xl',
                     )}

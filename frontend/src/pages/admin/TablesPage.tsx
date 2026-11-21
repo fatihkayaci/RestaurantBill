@@ -12,7 +12,7 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, QrCode, Image as ImageIcon, LayoutGrid, Trash2, Layers } from 'lucide-react';
+import { Check, X, Pencil, QrCode, Image as ImageIcon, LayoutGrid, Trash2, Layers, Minus, Plus } from 'lucide-react';
 import { SortModeButton } from '@/components/dnd/SortMode';
 import { DraggableTable, TableDragTransferProvider } from '@/features/tables/components/TableDragTransfer';
 import TableOrderPanel from './components/TableOrderPanel';
@@ -912,13 +912,13 @@ export default function Tables() {
                                             >
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </button>
-                                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-md leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
+                                            <span className={cn("text-xs font-bold px-2 py-0.5 rounded-md leading-tight tracking-[0.6px] uppercase", cfg.badge)}>
                                                 {cfg.label}
                                             </span>
                                         </div>
                                     </div>
 
-                                    <span className="self-start text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                    <span className="self-start text-xs font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
                                         {table.regionName}
                                     </span>
 
@@ -940,42 +940,42 @@ export default function Tables() {
 
                                     <div className="flex-1 flex flex-col justify-end gap-1">
                                         {table.status === 1 && (
-                                            <span className={cn("text-[11px] tracking-[0.2px] mt-1", cfg.hint)}>
+                                            <span className={cn("text-xs tracking-[0.2px] mt-1", cfg.hint)}>
                                                 ↑ Sipariş oluştur
                                             </span>
                                         )}
                                         {table.status === 2 && (
                                             <>
                                                 {table.billRequestedAt && (
-                                                    <span className="self-start mt-1 rounded-md bg-rb-accent-bg px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.6px] text-rb-accent">
+                                                    <span className="self-start mt-1 rounded-md bg-rb-accent-bg px-2 py-0.5 text-xs font-bold uppercase tracking-[0.6px] text-rb-accent">
                                                         Hesap istendi · {formatElapsed(table.billRequestedAt, now)}
                                                     </span>
                                                 )}
                                                 <div className="flex items-center justify-between mt-1">
                                                     <span className={cn("text-xs", cfg.hint)}>Aktif sipariş</span>
-                                                    <span className="text-sm font-bold text-foreground">₺{formatPrice(table.activeOrderTotal)}</span>
+                                                    <span className="text-sm font-bold text-foreground">{formatPrice(table.activeOrderTotal)} ₺</span>
                                                 </div>
                                                 {(table.paidAmount ?? 0) > 0 && (
-                                                    <div className="flex items-center justify-between text-[11px] font-semibold">
-                                                        <span className="text-rb-green">Ödenen ₺{formatPrice(table.paidAmount ?? 0)}</span>
-                                                        <span className="text-foreground">Kalan ₺{formatPrice(table.activeOrderTotal - (table.paidAmount ?? 0))}</span>
+                                                    <div className="flex items-center justify-between text-xs font-semibold">
+                                                        <span className="text-rb-green">Ödenen {formatPrice(table.paidAmount ?? 0)} ₺</span>
+                                                        <span className="text-foreground">Kalan {formatPrice(table.activeOrderTotal - (table.paidAmount ?? 0))} ₺</span>
                                                     </div>
                                                 )}
                                                 {table.occupiedSince && (
-                                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">
+                                                    <div className="flex items-center justify-between text-xs text-muted-foreground/80">
                                                         <span>Açılış: {new Date(table.occupiedSince).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
                                                         <span>{formatElapsed(table.occupiedSince, now)}</span>
                                                     </div>
                                                 )}
                                                 {table.createdByUserName && (
-                                                    <div className="text-[10px] text-muted-foreground/80">
+                                                    <div className="text-xs text-muted-foreground/80">
                                                         Alan: {table.createdByUserName}
                                                     </div>
                                                 )}
                                             </>
                                         )}
                                         {table.status === 3 && (
-                                            <span className={cn("text-[11px]", cfg.hint)}>
+                                            <span className={cn("text-xs", cfg.hint)}>
                                                 Rezervasyon mevcut
                                             </span>
                                         )}
@@ -1186,7 +1186,7 @@ export default function Tables() {
                                 <div>
                                     <h2 className="text-2xl font-serif font-bold text-foreground">{selectedTable.name}</h2>
                                     <div className="mt-1.5">
-                                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${(PANEL_STATUS_CONFIG[selectedTable.status] ?? PANEL_STATUS_CONFIG[1]).cls}`}>
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${(PANEL_STATUS_CONFIG[selectedTable.status] ?? PANEL_STATUS_CONFIG[1]).cls}`}>
                                             {(PANEL_STATUS_CONFIG[selectedTable.status] ?? PANEL_STATUS_CONFIG[1]).label}
                                         </span>
                                     </div>
@@ -1301,7 +1301,7 @@ export default function Tables() {
                                                                 )}
                                                                 <div className="min-w-0">
                                                                     <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                                                                    <p className="text-xs text-muted-foreground mt-0.5">₺{formatPrice(product.price)}</p>
+                                                                    <p className="text-xs text-muted-foreground mt-0.5">{formatPrice(product.price)} ₺</p>
                                                                 </div>
                                                             </div>
                                                             {qty > 0 && (
@@ -1315,7 +1315,7 @@ export default function Tables() {
                                                                             onKeyDown={e => { if (e.key === 'Enter') setCartNoteEditorFor(null); }}
                                                                             onClick={e => e.stopPropagation()}
                                                                             placeholder="Ürün notu (örn. az pişmiş)"
-                                                                            className="w-full rounded-lg border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-rb-accent"
+                                                                            className="w-full rounded-lg border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
                                                                         />
                                                                     ) : cartItem?.note ? (
                                                                         <p className="text-xs text-rb-amber truncate">Not: {cartItem.note}</p>
@@ -1329,19 +1329,23 @@ export default function Tables() {
                                                             {qty > 0 && (
                                                                 <>
                                                                     <button
+                                                                        type="button"
                                                                         onClick={() => decreaseNewItem(product.id)}
-                                                                        className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-base font-bold text-muted-foreground hover:bg-muted transition-colors"
+                                                                        aria-label={`${product.name} adedini azalt`}
+                                                                        className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
                                                                     >
-                                                                        −
+                                                                        <Minus className="h-4 w-4" aria-hidden="true" />
                                                                     </button>
                                                                     <span className="w-5 text-center text-sm font-bold text-foreground">{qty}</span>
                                                                 </>
                                                             )}
                                                             <button
+                                                                type="button"
                                                                 onClick={() => increaseNewItem(product)}
-                                                                className="w-7 h-7 rounded-full bg-rb-gold flex items-center justify-center text-rb-gold-foreground text-xl font-bold hover:opacity-90 transition-colors"
+                                                                aria-label={`${product.name} ekle`}
+                                                                className="w-11 h-11 rounded-full bg-rb-gold flex items-center justify-center text-rb-gold-foreground hover:opacity-90 transition-colors"
                                                             >
-                                                                +
+                                                                <Plus className="h-5 w-5" aria-hidden="true" />
                                                             </button>
                                                         </div>
                                                     </div>
@@ -1361,14 +1365,14 @@ export default function Tables() {
                                         <>
                                             <div className="flex items-center justify-between mb-4">
                                                 <span className="text-sm text-muted-foreground">Sepet ({newItems.reduce((s, i) => s + i.quantity, 0)} ürün)</span>
-                                                <span className="font-bold text-foreground">₺{formatPrice(newItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0))}</span>
+                                                <span className="font-bold text-foreground">{formatPrice(newItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0))} ₺</span>
                                             </div>
                                             <textarea
                                                 value={orderNote}
                                                 onChange={e => setOrderNote(e.target.value)}
                                                 placeholder="Sipariş notu (isteğe bağlı) — örn. acısız, az pişmiş..."
                                                 rows={2}
-                                                className="w-full mb-3 rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-rb-accent shrink-0"
+                                                className="w-full mb-3 rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-ring shrink-0"
                                             />
                                             <Button
                                                 onClick={handleSendOrder}
@@ -1445,44 +1449,44 @@ export default function Tables() {
                                     </div>
 
                                     <div>
-                                        <label className="text-[11px] font-bold text-muted-foreground tracking-wide">AD SOYAD</label>
+                                        <label className="text-xs font-bold text-muted-foreground tracking-wide">AD SOYAD</label>
                                         <input
                                             value={reservationName}
                                             onChange={e => setReservationName(e.target.value)}
                                             placeholder="Misafir adı..."
-                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
+                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="text-[11px] font-bold text-muted-foreground tracking-wide">İLETİŞİM</label>
+                                        <label className="text-xs font-bold text-muted-foreground tracking-wide">İLETİŞİM</label>
                                         <input
                                             value={reservationContact}
                                             onChange={e => setReservationContact(e.target.value)}
                                             placeholder="Telefon numarası..."
-                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
+                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="text-[11px] font-bold text-muted-foreground tracking-wide">REZERVASYON SAATİ</label>
+                                        <label className="text-xs font-bold text-muted-foreground tracking-wide">REZERVASYON SAATİ</label>
                                         <input
                                             value={reservationTime}
                                             onChange={e => setReservationTime(formatTimeDigits(e.target.value))}
                                             placeholder="19:30"
                                             inputMode="numeric"
                                             maxLength={5}
-                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
+                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="text-[11px] font-bold text-muted-foreground tracking-wide">NOT (İSTEĞE BAĞLI)</label>
+                                        <label className="text-xs font-bold text-muted-foreground tracking-wide">NOT (İSTEĞE BAĞLI)</label>
                                         <input
                                             value={reservationNote}
                                             onChange={e => setReservationNote(e.target.value)}
                                             placeholder="Doğum günü, özel istek..."
-                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-accent"
+                                            className="mt-1.5 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
                                         />
                                     </div>
 
@@ -1529,7 +1533,7 @@ export default function Tables() {
                                                                 onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                                                 onClick={e => e.stopPropagation()}
                                                                 placeholder="Ürün notu ekle..."
-                                                                className="mt-1 w-full rounded-lg border bg-background px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-rb-accent"
+                                                                className="mt-1 w-full rounded-lg border bg-background px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-ring"
                                                             />
                                                         ) : item.note ? (
                                                             <p className="text-xs text-rb-amber mt-0.5 truncate">Not: {item.note}</p>
@@ -1537,7 +1541,7 @@ export default function Tables() {
                                                             <p className="text-xs text-muted-foreground/40 mt-0.5">Not eklemek için tıklayın</p>
                                                         )}
                                                     </div>
-                                                    <span className="text-sm font-semibold text-foreground shrink-0">₺{formatPrice(item.unitPrice * item.quantity)}</span>
+                                                    <span className="text-sm font-semibold text-foreground shrink-0">{formatPrice(item.unitPrice * item.quantity)} ₺</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => setCancelItem(item)}
@@ -1551,12 +1555,12 @@ export default function Tables() {
                                         </div>
                                         <div className="flex justify-between pt-4 mt-2 border-t font-bold text-foreground">
                                             <span>Ara Toplam</span>
-                                            <span>₺{formatPrice(tableOrder.totalPrice)}</span>
+                                            <span>{formatPrice(tableOrder.totalPrice)} ₺</span>
                                         </div>
                                         {(tableOrder.paidAmount ?? 0) > 0 && (
                                             <div className="flex justify-between pt-1.5 text-sm font-semibold">
-                                                <span className="text-rb-green">Ödenen ₺{formatPrice(tableOrder.paidAmount ?? 0)}</span>
-                                                <span className="text-foreground">Kalan ₺{formatPrice(tableOrder.remainingAmount ?? tableOrder.totalPrice)}</span>
+                                                <span className="text-rb-green">Ödenen {formatPrice(tableOrder.paidAmount ?? 0)} ₺</span>
+                                                <span className="text-foreground">Kalan {formatPrice(tableOrder.remainingAmount ?? tableOrder.totalPrice)} ₺</span>
                                             </div>
                                         )}
                                     </>

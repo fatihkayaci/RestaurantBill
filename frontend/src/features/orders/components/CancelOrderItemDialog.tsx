@@ -82,7 +82,7 @@ function CancelForm({ order, item, onClose, onCancelled }: Props & { item: Order
 
             {max === 0 ? (
                 <p className="rounded-xl bg-rb-amber-bg px-3.5 py-3 text-sm text-foreground">
-                    Bu hesaptan ₺{formatPrice(order.paidAmount ?? 0)} ödeme alınmış; bu ürün iptal edilirse hesap ödenen tutarın altına iner.
+                    Bu hesaptan {formatPrice(order.paidAmount ?? 0)} ₺ ödeme alınmış; bu ürün iptal edilirse hesap ödenen tutarın altına iner.
                 </p>
             ) : (
                 <div className="flex flex-col gap-4">
@@ -119,17 +119,17 @@ function CancelForm({ order, item, onClose, onCancelled }: Props & { item: Order
                             onChange={e => setReason(e.target.value)}
                             maxLength={200}
                             placeholder="Müşteri vazgeçti, yanlış girildi…"
-                            className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-rb-gold"
+                            className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                         />
                     </label>
                     {max < item.quantity && (
                         <p className="text-[13px] text-muted-foreground">
-                            Hesaptan ₺{formatPrice(order.paidAmount ?? 0)} ödeme alındığı için en fazla {max} adet iptal edilebilir.
+                            Hesaptan {formatPrice(order.paidAmount ?? 0)} ₺ ödeme alındığı için en fazla {max} adet iptal edilebilir.
                         </p>
                     )}
                     <div className="flex items-baseline justify-between border-t border-border pt-3 text-sm">
                         <span className="text-muted-foreground">Hesaptan düşecek</span>
-                        <span className="text-base font-bold tabular-nums text-foreground">₺{formatPrice(item.unitPrice * quantity)}</span>
+                        <span className="text-base font-bold tabular-nums text-foreground">{formatPrice(item.unitPrice * quantity)} ₺</span>
                     </div>
                 </div>
             )}
