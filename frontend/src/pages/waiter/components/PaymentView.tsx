@@ -16,18 +16,21 @@ import { cn } from '@/lib/utils';
 import BottomSheet from './BottomSheet';
 import { clockTime, readStoredRegister, shortName, storeRegister } from '../waiterUi';
 
-/** normal: ödeme · discount: indirim alanı açık · ikram: seçilen ürünler %100 indirimle kapanır. */
+/**
+ * normal: ödeme · discount: "İndirim uygula"dan gelindi (indirim, tamamı ödenirken sorulur) ·
+ * ikram: seçilen ürünler %100 indirimle kapanır.
+ */
 export type PaymentMode = 'normal' | 'discount' | 'ikram';
 
 type Method = 'cash' | 'card' | 'iban';
 const METHOD_VALUE: Record<Method, number> = { card: 1, cash: 2, iban: 4 };
 
-/** Tamamı: kalan hesap · Ürün seç: seçilen kalemler · Tutar gir: ürün seçmeden belirli bir tutar (ürünler masada kalır). */
-type Split = 'full' | 'items' | 'amount';
-const SPLITS: [Split, string][] = [['full', 'Tamamı'], ['items', 'Ürün seç'], ['amount', 'Tutar gir']];
+/** Tamamı: kalan hesap; tutar küçültülürse ürün seçmeden o kadarı alınır (ürünler masada kalır) · Ürün seç: seçilen kalemler. */
+type Split = 'full' | 'items';
+const SPLITS: [Split, string][] = [['full', 'Tamamı'], ['items', 'Ürün seç']];
 const AMOUNT_CHIPS: [string, number][] = [['½', 2], ['⅓', 3], ['¼', 4], ['Kalan', 1]];
-/** İndirim kapsamı: hesabın tamamına ya da yalnızca bazı ürünlere (kalanı tam fiyat). */
-type DiscountScope = 'bill' | 'items';
+/** Tutar alanının düz yazımı (binlik ayırıcısız): 1234.5 → "1234,5". */
+const amountText = (value: number) => String(value).replace('.', ',');
 /** Ürün indirimi girişi: tür, değer ve kaç adede (boşsa ödenen adetlerin tamamı). */
 type LineDiscountInput = { type: 'percent' | 'amount'; input: string; quantity?: number };
 
@@ -61,15 +64,19 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
     const [split, setSplit] = useState<Split>(mode === 'ikram' && !(order.paidAmount ?? 0) ? 'items' : 'full');
     // Ürün seç: birleşmiş satırın anahtarına göre bu ödemede ödenecek adet.
     const [selected, setSelected] = useState<Record<string, number>>({});
-    const [amountInput, setAmountInput] = useState('');
+    // Tamamı'ndaki tutar: null = kalanın tamamı (alan kalanla dolu gelir); yazılınca o tutar alınır.
+    const [amountInput, setAmountInput] = useState<string | null>(null);
     const [method, setMethod] = useState<Method>('cash');
     const [received, setReceived] = useState<number | 'exact'>('exact');
     const [customReceived, setCustomReceived] = useState('');
-    const [discountOpen, setDiscountOpen] = useState(mode !== 'normal');
+    // İkram: hesap indirimi %100 olarak ekranda açık gelir (Kaldır'la normal ödemeye döner).
+    const [ikramOpen, setIkramOpen] = useState(mode === 'ikram');
+    // Ürüne indirim: ana ekranda kalır; hesaba indirim ise tamamı ödenirken açılan adımda sorulur.
+    const [itemDiscountOpen, setItemDiscountOpen] = useState(false);
+    const [discountStep, setDiscountStep] = useState(false);
     const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent');
     const [discountInput, setDiscountInput] = useState(mode === 'ikram' ? '100' : '');
     const [discountNote, setDiscountNote] = useState(mode === 'ikram' ? 'İkram' : '');
-    const [discountScope, setDiscountScope] = useState<DiscountScope>('bill');
     const [lineDiscountInputs, setLineDiscountInputs] = useState<Record<string, LineDiscountInput>>({});
     const [submitting, setSubmitting] = useState(false);
 
@@ -108,6 +115,8 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
         setPrevOrder(order);
         setCurrent(order);
         setSelected({});
+        setAmountInput(null);
+        setDiscountStep(false);
         if ((order.paidAmount ?? 0) > 0 && split === 'items') setSplit('full');
     }
 
@@ -123,13 +132,16 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
     const due = current.remainingAmount ?? current.totalPrice;
     const itemsLocked = paid > 0;
     const selectedTotal = lines.reduce((sum, line) => sum + (selected[line.key] ?? 0) * line.unitPrice, 0);
-    const amountValue = round2(parseFloat(amountInput.replace(',', '.')) || 0);
-    const amountTooHigh = split === 'amount' && amountValue > due;
-    const base = split === 'full' ? due : split === 'items' ? selectedTotal : Math.min(amountValue, due);
+    const amountValue = amountInput === null ? due : round2(parseFloat(amountInput.replace(',', '.')) || 0);
+    const amountTooHigh = split === 'full' && amountValue > due;
+    // Tamamı'nda kalandan küçük tutar yazılırsa ürün seçmeden tutar ödemesi alınır (ürünler masada kalır).
+    // İkramda tutar alanı yoktur, kalanın tamamı ikram edilir.
+    const payKind: 'full' | 'items' | 'amount' = split === 'items' ? 'items' : !ikramOpen && amountValue < due ? 'amount' : 'full';
+    const base = payKind === 'full' ? due : payKind === 'items' ? selectedTotal : Math.max(amountValue, 0);
     // İndirim/ikram yalnızca ürünlerle kapanan ödemede: tutar girilen ödeme olduğu gibi tahsil edilir.
-    const discountAllowed = canDiscount && split !== 'amount';
+    const discountAllowed = canDiscount && payKind !== 'amount';
     const discountRaw = parseFloat(discountInput.replace(',', '.')) || 0;
-    const itemScope = discountAllowed && discountOpen && discountScope === 'items';
+    const itemScope = discountAllowed && !ikramOpen && itemDiscountOpen;
     const lineDiscounts: Record<string, LineDiscount> = {};
     if (itemScope) {
         for (const [key, value] of Object.entries(lineDiscountInputs)) {
@@ -138,10 +150,15 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
         }
     }
     const quantityOf = (line: BillLine) =>
-        split === 'full' ? line.quantity : split === 'items' ? selected[line.key] ?? 0 : 0;
+        payKind === 'full' ? line.quantity : payKind === 'items' ? selected[line.key] ?? 0 : 0;
     const plan = buildPayItems(lines, quantityOf, lineDiscounts);
     const itemDiscount = Math.min(plan.itemDiscount, base);
-    const billDiscount = discountAllowed && discountOpen && discountScope === 'bill'
+    // Hesap indirimi ürün indirimiyle birlikte kullanılmaz (ekran ikisini hiç birleştirmedi): ürüne indirim yazıldıysa
+    // indirim adımı açılmaz.
+    const needsDiscountStep = canDiscount && !ikramOpen && payKind === 'full' && itemDiscount === 0 && base > 0;
+    // Hesap indirimi: ikramda ekrandaki %100; değilse yalnızca tamamı ödenirken açılan "İndirim uygulansın mı?" adımında.
+    const billDiscountActive = discountAllowed && (ikramOpen || (discountStep && needsDiscountStep));
+    const billDiscount = billDiscountActive
         ? Math.min(discountType === 'percent' ? base * Math.min(discountRaw, 100) / 100 : discountRaw, base)
         : 0;
     const discount = round2(itemDiscount + billDiscount);
@@ -183,17 +200,36 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
 
     const canConfirm = !submitting && !!register && base > 0 && !amountTooHigh && !cashShort && (method !== 'iban' || hasIban || net === 0);
 
-    const confirm = async () => {
+    // İndirim yetkisi olan, tamamını öderken önce "İndirim uygulansın mı?" adımını görür; diğerleri doğrudan öder.
+    const startPayment = () => {
+        if (!canConfirm) return;
+        if (needsDiscountStep) setDiscountStep(true);
+        else void confirm(true);
+    };
+    const closeDiscountStep = () => {
+        setDiscountStep(false);
+        setDiscountType('percent');
+        setDiscountInput('');
+        setDiscountNote('');
+    };
+
+    /** withBillDiscount: hesap indirimi (ikram ya da adımda "İndirimle öde") gönderilir; "İndirimsiz öde"de gönderilmez. */
+    const confirm = async (withBillDiscount: boolean) => {
         if (!register || !canConfirm) return;
         // Birleşmiş satırın adetleri ve ürün indirimi, satırın sipariş kalemlerine dağıtılır.
-        const payItems = split === 'amount' ? [] : plan.items;
-        const hasDiscount = billDiscount > 0;
+        const payItems = payKind === 'amount' ? [] : plan.items;
+        const hasDiscount = withBillDiscount && billDiscount > 0;
+        const payNet = hasDiscount ? net : Math.max(0, round2(base - itemDiscount));
+        const payReceived = customReceived
+            ? parseFloat(customReceived.replace(',', '.')) || 0
+            : received === 'exact' ? payNet : received;
+        const payChange = Math.max(0, payReceived - payNet);
         try {
             setSubmitting(true);
             const fullyPaid: boolean = await paymentService.createPayment(
                 current.id,
                 register.cashRegisterId,
-                net === 0 ? METHOD_VALUE.cash : METHOD_VALUE[method],
+                payNet === 0 ? METHOD_VALUE.cash : METHOD_VALUE[method],
                 payItems,
                 hasDiscount
                     ? {
@@ -202,13 +238,13 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                         note: discountNote || undefined,
                     }
                     : undefined,
-                split === 'amount' ? amountValue : undefined,
+                payKind === 'amount' ? amountValue : undefined,
             );
             const remainingNote = !fullyPaid && remaining > 0 ? ` · kalan ${formatPrice(remaining)} ₺` : '';
-            if (net === 0) toast.success('İkram kaydedildi.');
-            else toast.success(method === 'cash' && change > 0
-                ? `${formatPrice(net)} ₺ alındı · para üstü ${formatPrice(change)} ₺${remainingNote}`
-                : `${formatPrice(net)} ₺ ödeme alındı${remainingNote}.`);
+            if (payNet === 0) toast.success('İkram kaydedildi.');
+            else toast.success(method === 'cash' && payChange > 0
+                ? `${formatPrice(payNet)} ₺ alındı · para üstü ${formatPrice(payChange)} ₺${remainingNote}`
+                : `${formatPrice(payNet)} ₺ ödeme alındı${remainingNote}.`);
             if (fullyPaid) {
                 onPaid(true);
                 return;
@@ -217,7 +253,9 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
             if (refreshed) setCurrent(refreshed);
             setSelected({});
             setLineDiscountInputs({});
-            setAmountInput('');
+            setAmountInput(null);
+            // İkram açıkken %100 ve "İkram" notu sonraki ödeme için korunur.
+            if (!ikramOpen) closeDiscountStep();
             setCustomReceived('');
             setReceived('exact');
             onPaid(false);
@@ -294,11 +332,15 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
         ? 'İşleniyor…'
         : !register ? 'Önce kasa seçin'
             : amountTooHigh ? 'Tutar kalandan fazla'
-            : base === 0 ? (split === 'amount' ? 'Tutar girin' : 'Ürün seçin')
+            : base === 0 ? (split === 'full' ? 'Tutar girin' : 'Ürün seçin')
                 : net === 0 ? 'İkram et · 0 ₺'
-                    : method === 'cash' ? `${formatPrice(net)} ₺ nakit al`
+                    // İndirim adımı gelecekse düğme henüz tahsilatı onaylamaz; kesin tutar adımda seçilir.
+                    : needsDiscountStep ? `${paid > 0 ? 'Kalanı' : 'Tümünü'} Öde (${formatPrice(net)} ₺)`
+                    // Tutar ödemesinde masada kalan da yazılır: "120 ₺ nakit al · kalan 45 ₺".
+                    : (method === 'cash' ? `${formatPrice(net)} ₺ nakit al`
                         : method === 'card' ? `Kart ödemesi alındı · ${formatPrice(net)} ₺`
-                            : 'Havale geldi, onayla';
+                            : `Havale geldi, onayla · ${formatPrice(net)} ₺`)
+                        + (payKind === 'amount' ? ` · kalan ${formatPrice(remaining)} ₺` : '');
 
     return (
         <div className="relative flex h-full min-h-0 flex-col bg-[#F5F0E8] dark:bg-background">
@@ -353,7 +395,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                 </div>
 
                 {/* Bölme */}
-                <div role="tablist" aria-label="Bölme" className="grid grid-cols-3 gap-1 rounded-2xl bg-[#EBE3D5] p-1 dark:bg-muted">
+                <div role="tablist" aria-label="Bölme" className="grid grid-cols-2 gap-1 rounded-2xl bg-[#EBE3D5] p-1 dark:bg-muted">
                     {SPLITS.map(([key, label]) => (
                         <button
                             key={key}
@@ -361,9 +403,9 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                             role="tab"
                             aria-selected={split === key}
                             disabled={key === 'items' && itemsLocked}
-                            onClick={() => setSplit(key)}
+                            onClick={() => { setSplit(key); setAmountInput(null); }}
                             className={cn(
-                                'min-h-11 rounded-xl text-sm font-semibold disabled:opacity-40',
+                                'min-h-11 rounded-xl text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40',
                                 split === key ? 'bg-card text-foreground shadow-[0_1px_3px_rgba(42,31,20,0.15)]' : 'text-rb-text-sub',
                             )}
                         >
@@ -373,11 +415,12 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                 </div>
                 {itemsLocked && (
                     <p className="-mt-1 text-[13px] text-rb-text-sub">
-                        Bu hesaptan {formatPrice(paid)} ₺ tutar girilerek ödendi; kalan, tutar girerek ya da tamamıyla ödenir.
+                        Bu hesaptan {formatPrice(paid)} ₺ tutar girilerek ödendi; bu yüzden ürün seçilemez, kalan Tamamı'ndan ödenir.
                     </p>
                 )}
 
-                {split === 'amount' && (
+                {/* Tamamı: tutar kalanla dolu gelir; küçültülürse o kadarı alınır, ürünler masada kalır. İkramda tutar yok. */}
+                {split === 'full' && !ikramOpen && (
                     <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-3.5">
                         <label className="flex flex-col gap-1.5">
                             <span className="text-sm font-semibold text-rb-text-sub">Bu ödemede alınacak tutar</span>
@@ -385,9 +428,9 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                 <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-lg font-bold text-rb-text-sub" aria-hidden="true">₺</span>
                                 <input
                                     inputMode="decimal"
-                                    value={amountInput}
+                                    value={amountInput ?? amountText(due)}
                                     onChange={e => setAmountInput(e.target.value.replace(/[^\d.,]/g, ''))}
-                                    placeholder={formatPrice(due)}
+                                    onFocus={e => e.target.select()}
                                     aria-label="Ödenecek tutar"
                                     aria-invalid={amountTooHigh}
                                     className={cn(
@@ -400,16 +443,16 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                         <div className="grid grid-cols-4 gap-1.5">
                             {AMOUNT_CHIPS.map(([label, parts]) => {
                                 const value = round2(due / parts);
-                                const on = amountInput !== '' && amountValue === value;
+                                const on = parts === 1 ? amountValue === due : amountValue === value;
                                 return (
                                     <button
                                         key={label}
                                         type="button"
                                         aria-pressed={on}
                                         aria-label={parts === 1 ? `Kalanın tamamı, ${formatPrice(value)} ₺` : `Kalanın ${label} kadarı, ${formatPrice(value)} ₺`}
-                                        onClick={() => setAmountInput(String(value).replace('.', ','))}
+                                        onClick={() => setAmountInput(parts === 1 ? null : amountText(value))}
                                         className={cn(
-                                            'flex min-h-12 flex-col items-center justify-center rounded-xl border text-sm font-bold leading-tight',
+                                            'flex min-h-12 flex-col items-center justify-center rounded-xl border text-sm font-bold leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                             on ? 'border-foreground bg-foreground text-background' : 'border-border bg-background text-foreground',
                                         )}
                                     >
@@ -422,7 +465,9 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                         <p className={cn('text-[13px]', amountTooHigh ? 'font-semibold text-rb-red' : 'text-rb-text-sub')}>
                             {amountTooHigh
                                 ? `Kalan tutardan (${formatPrice(due)} ₺) fazla olamaz.`
-                                : 'Ürünler masada kalır, tutar kalandan düşer. Kalan 0 olunca masa kapanır.'}
+                                : payKind === 'amount'
+                                    ? 'Ürünler masada kalır, tutar kalandan düşer. Kalan 0 olunca masa kapanır.'
+                                    : 'Kalanın tamamı alınır, masa kapanır. Bir kısmını almak için tutarı değiştirin.'}
                         </p>
                     </div>
                 )}
@@ -465,30 +510,23 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                     </ul>
                 )}
 
-                {/* İndirim / ikram */}
+                {/* İkram (ekranda %100 açık gelir) ya da ürüne indirim. Hesaba indirim burada değil, tamamı ödenirken sorulur. */}
                 {discountAllowed && (
-                    discountOpen ? (
+                    ikramOpen || itemDiscountOpen ? (
                         <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-3.5">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold text-foreground">{ikram ? 'İkram' : 'İndirim'}</span>
-                                <button type="button" onClick={() => { setDiscountOpen(false); setDiscountInput(''); setLineDiscountInputs({}); }} className="min-h-9 px-2 text-[13px] font-semibold text-rb-text-sub">Kaldır</button>
+                                <span className="text-sm font-bold text-foreground">{ikramOpen ? 'İkram' : 'Ürüne indirim'}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (ikramOpen) { setIkramOpen(false); setDiscountInput(''); setDiscountNote(''); }
+                                        else { setItemDiscountOpen(false); setLineDiscountInputs({}); }
+                                    }}
+                                    className="min-h-11 px-2 text-[13px] font-semibold text-rb-text-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    Kaldır
+                                </button>
                             </div>
-                            {!ikram && (
-                                <div role="tablist" aria-label="İndirim kapsamı" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
-                                    {([['bill', 'Tüm hesaba'], ['items', 'Ürüne']] as const).map(([key, label]) => (
-                                        <button
-                                            key={key}
-                                            type="button"
-                                            role="tab"
-                                            aria-selected={discountScope === key}
-                                            onClick={() => setDiscountScope(key)}
-                                            className={cn('min-h-10 rounded-lg text-sm font-semibold', discountScope === key ? 'bg-card text-foreground' : 'text-rb-text-sub')}
-                                        >
-                                            {label}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
                             {itemScope ? (
                                 paidLines.length === 0 ? (
                                     <p className="text-[13px] text-rb-text-sub">Önce bu ödemede ödenecek ürünleri seçin.</p>
@@ -581,24 +619,36 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                 />
                             </div>
                             )}
-                            <input
-                                value={discountNote}
-                                onChange={e => setDiscountNote(e.target.value)}
-                                maxLength={300}
-                                placeholder="Açıklama (ör. müdavim, gecikme)"
-                                aria-label="İndirim açıklaması"
-                                className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                            />
+                            {/* Açıklama hesap indirimiyle gider; ürün indiriminde sunucuya not alanı yok. */}
+                            {ikramOpen && (
+                                <input
+                                    value={discountNote}
+                                    onChange={e => setDiscountNote(e.target.value)}
+                                    maxLength={300}
+                                    placeholder="Açıklama (ör. müdavim, gecikme)"
+                                    aria-label="İkram açıklaması"
+                                    className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                                />
+                            )}
                         </div>
                     ) : (
                         <button
                             type="button"
-                            onClick={() => setDiscountOpen(true)}
-                            className="min-h-11 self-start rounded-full border border-dashed border-border px-4 text-sm font-semibold text-rb-text-sub"
+                            onClick={() => setItemDiscountOpen(true)}
+                            className="min-h-11 self-start rounded-full border border-dashed border-border px-4 text-sm font-semibold text-rb-text-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                            + İndirim / ikram
+                            + Ürüne indirim
                         </button>
                     )
+                )}
+                {mode === 'discount' && canDiscount && !ikramOpen && (
+                    <p className="-mt-1 text-[13px] text-rb-text-sub">
+                        {payKind === 'amount'
+                            ? 'Tutar ödemesinde indirim yok; indirim, kalanı kapatırken sorulur.'
+                            : payKind === 'full'
+                                ? (itemDiscount > 0 ? 'Ürün indirimi yazıldı; hesaba ayrıca indirim sorulmaz.' : 'Hesaba indirim, ödemeye basınca sorulur.')
+                                : 'Seçilen ürünlere indirim "Ürüne indirim"den yapılır.'}
+                    </p>
                 )}
 
                 {/* Yöntem */}
@@ -705,14 +755,101 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
             <div className="shrink-0 border-t border-border bg-card px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))]">
                 <button
                     type="button"
-                    onClick={register ? confirm : () => setPickerOpen(true)}
+                    onClick={register ? startPayment : () => setPickerOpen(true)}
                     disabled={register ? !canConfirm : false}
-                    className="flex h-16 w-full items-center justify-center gap-2 rounded-2xl bg-foreground text-[17px] font-bold text-background disabled:opacity-50"
+                    className="flex h-16 w-full items-center justify-center gap-2 rounded-2xl bg-foreground text-[17px] font-bold text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 >
                     <Check className="size-5.5" aria-hidden="true" />
                     {confirmLabel}
                 </button>
             </div>
+
+            {/* Tamamı ödenirken indirim yetkisi olana sorulur; hesaba indirim ana ekranda yoktur. */}
+            {discountStep && needsDiscountStep && (
+                <BottomSheet
+                    label="İndirim uygulansın mı?"
+                    onClose={closeDiscountStep}
+                    footer={
+                        <div className="flex flex-col gap-2">
+                            <button
+                                type="button"
+                                onClick={() => void confirm(true)}
+                                disabled={!canConfirm || billDiscount <= 0}
+                                className="flex h-14 w-full items-center justify-center rounded-2xl bg-foreground text-base font-bold text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                            >
+                                {billDiscount > 0 ? `İndirimle öde (${formatPrice(net)} ₺)` : 'İndirimle öde'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={closeDiscountStep}
+                                disabled={submitting}
+                                className="flex h-12 w-full items-center justify-center rounded-2xl text-[15px] font-semibold text-rb-text-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                            >
+                                Geri
+                            </button>
+                        </div>
+                    }
+                >
+                    <div className="flex flex-col gap-3 px-2 pb-1">
+                        <div>
+                            <h3 className="font-serif text-[22px] font-bold text-foreground">İndirim uygulansın mı?</h3>
+                            <p className="text-[13px] text-rb-text-sub">
+                                {paid > 0 ? 'Kalan' : 'Hesap'} {formatPrice(base)} ₺ · {method === 'cash' ? 'Nakit' : method === 'card' ? 'Kart' : 'IBAN'}
+                                {method === 'card' && ' · POS\'tan seçtiğiniz tutarı çekin'}
+                                {method === 'iban' && ' · havale seçtiğiniz tutar kadar olmalı'}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => void confirm(false)}
+                            disabled={submitting}
+                            className="flex h-14 w-full items-center justify-center rounded-2xl border-2 border-foreground bg-background text-base font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        >
+                            İndirimsiz öde ({formatPrice(base)} ₺)
+                        </button>
+                        <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-background p-3">
+                            <span id="waiter-discount-label" className="text-sm font-bold text-foreground">İndirim</span>
+                            <div className="flex gap-2">
+                                <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1" role="group" aria-label="İndirim türü">
+                                    {([['percent', '%'], ['amount', '₺']] as const).map(([key, label]) => (
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            aria-pressed={discountType === key}
+                                            onClick={() => { setDiscountType(key); setDiscountInput(''); }}
+                                            className={cn('h-11 w-11 rounded-lg text-base font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', discountType === key ? 'bg-card text-foreground' : 'text-rb-text-sub')}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <input
+                                    inputMode="decimal"
+                                    value={discountInput}
+                                    onChange={e => setDiscountInput(e.target.value.replace(/[^\d.,]/g, ''))}
+                                    placeholder={discountType === 'percent' ? 'Yüzde' : 'Tutar'}
+                                    aria-labelledby="waiter-discount-label"
+                                    className="h-13 min-w-0 flex-1 rounded-xl border border-border bg-card px-3 text-base outline-none focus:ring-2 focus:ring-ring"
+                                />
+                            </div>
+                            <input
+                                value={discountNote}
+                                onChange={e => setDiscountNote(e.target.value)}
+                                maxLength={300}
+                                placeholder="Açıklama (isteğe bağlı)"
+                                aria-label="İndirim açıklaması"
+                                className="h-11 rounded-xl border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                            />
+                            {billDiscount > 0 && (
+                                <p className="text-[13px] text-rb-text-sub tabular-nums">
+                                    {formatPrice(billDiscount)} ₺ indirim · ödenecek {formatPrice(net)} ₺
+                                    {method === 'cash' && change > 0 && ` · para üstü ${formatPrice(change)} ₺`}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </BottomSheet>
+            )}
 
             {pickerOpen && registers && (
                 <BottomSheet label="Kasa seç" onClose={() => setPickerOpen(false)}>
