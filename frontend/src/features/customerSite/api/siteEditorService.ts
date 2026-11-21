@@ -13,7 +13,7 @@ export type SiteDraftImageSlot = 'cover' | 'about' | 'founder' | 'share'
 /** Taslağın metin alanları: PUT tam yazımdır, hepsi gönderilir. Fotoğraflar ayrı uçlardan değişir. */
 export type SiteDraftTexts = Omit<BranchSite,
     'coverImageUrl' | 'aboutImageUrl' | 'founderPhotoUrl' | 'galleryImageUrls' | 'shareImageUrl' | 'regionDetails'
-    | 'menuHeroUrl' | 'aboutHeroUrl' | 'venueHeroUrl' | 'contactHeroUrl' | 'reservationHeroUrl'> & {
+    | 'menuHeroUrl' | 'aboutHeroUrl' | 'venueHeroUrl' | 'contactHeroUrl' | 'reservationHeroUrl' | 'logoUrl'> & {
     /** Yalnız regionId + description okunur. */
     regionDetails: { regionId: string; description: string }[];
 };

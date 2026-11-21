@@ -16,6 +16,11 @@ import { isOnlineOrderingAvailable, useOnlineOrdering } from './useOnlineOrderin
 const listeners = new Set<() => void>();
 let version = 0;
 
+/** Sepet başka bir yerden (Sophra menü sayfası) yazıldı: sitedeki sepet sayaçları yeniden okusun. */
+export function notifyCartChanged() {
+    notify();
+}
+
 function notify() {
     version++;
     listeners.forEach(l => l());
@@ -81,6 +86,7 @@ export function useSiteCart(): SiteCart {
         saveCart(branchId, {
             lines: next,
             zoneId: current?.zoneId ?? null,
+            pickup: current?.pickup,
             clientRequestId: current?.clientRequestId ?? newClientRequestId(),
         });
         // Çok şubeli restoranda sipariş sayfası aynı şubeyle açılsın (şube seçimi sorulmadan sepet görünsün).

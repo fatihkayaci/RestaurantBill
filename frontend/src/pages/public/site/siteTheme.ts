@@ -26,6 +26,10 @@ import { designTraits, type SiteDesignTraits } from './designs/designTraits';
 //   Anton (dar, kalın, BÜYÜK HARF başlık) + Archivo. Kalın çizgiler, köşeli kartlar; fotoğrafsız ürün de dolu görünür.
 // - Bahçe Kahvaltısı: açık yeşil-beyaz zemin #F7FBF4, adaçayı #45613E kapak, domates #C2410C vurgu, tereyağı #FFD978
 //   kutu; Bricolage Grotesque + Figtree. Yuvarlak köşeler, başlıkta tereyağı işaretleyici.
+// - Sophra (varsayılan): fildişi zemin #F7F3EA, beyaz kartlar, koyu orman yeşili bantlar #14241B (üst menü, kapak perdesi,
+//   alt bilgi), altın vurgu yazısı #E0BE78 koyu zeminde; DM Serif Display + DM Sans. Tema kapağın ve düğmenin rengini seçer
+//   (Orman, Kiremit, Lacivert, Bordo, Kömür, Zeytin). Ana sayfası bölüm bölüm (designs/sophra): restoran bölümleri
+//   gizleyip sıralayabilir (homeSections).
 // Yeni üç tasarımın tasarıma özgü çizgileri (köşe, başlık harfi, menü satırı, desen) siteThemes.css'te, kökteki
 // `data-site-design` özniteliğine bağlı; renkler yine yalnız bu dosyadaki değişkenlerden.
 //
@@ -38,10 +42,11 @@ import { designTraits, type SiteDesignTraits } from './designs/designTraits';
 //   akış sayfaları). Renkli: temanın kapak rengi (= cover); Sade: mürekkep rengi.
 // Özel vurgu renginde düğme yazısı ve açık zemindeki vurgu yazısı okunurluk (WCAG AA, 4.5:1) için otomatik ayarlanır.
 
-/** Sitenin tasarımları (backend: SiteContent.DesignKeys). Boş/bilinmeyen = varsayılan (renkli). */
-export const SITE_DESIGN_KEYS = ['renkli', 'sade', 'elit', 'sicak', 'meyhane', 'esnaf', 'bahce'] as const;
+/** Sitenin tasarımları (backend: SiteContent.DesignKeys), admin'deki sırayla. Boş/bilinmeyen = varsayılan (Sophra).
+ *  Boş değer eskiden Renkli demekti: var olan sitelerin boş tasarımı BackfillExplicitSiteDesign göçüyle "renkli" yazıldı. */
+export const SITE_DESIGN_KEYS = ['sophra', 'renkli', 'sade', 'elit', 'sicak', 'meyhane', 'esnaf', 'bahce'] as const;
 export type SiteDesignKey = (typeof SITE_DESIGN_KEYS)[number];
-export const DEFAULT_DESIGN: SiteDesignKey = 'renkli';
+export const DEFAULT_DESIGN: SiteDesignKey = 'sophra';
 
 export function resolveDesign(key?: string | null): SiteDesignKey {
     return (SITE_DESIGN_KEYS as readonly string[]).includes(key ?? '') ? key as SiteDesignKey : DEFAULT_DESIGN;
@@ -167,7 +172,8 @@ export function siteFontsHref(design?: string | null, font?: string | null): str
 }
 
 /** Tasarımı bilmeyen sayfalar için tasarımların kendi yazı tipleri birlikte (tarayıcı yalnız kullanılan dosyayı indirir). */
-export const SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, POPPINS, YOUNG_SERIF, FIGTREE, ANTON, ARCHIVO, BRICOLAGE);
+export const SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, POPPINS, YOUNG_SERIF, FIGTREE, ANTON, ARCHIVO, BRICOLAGE,
+    DM_SERIF, DM_SANS);
 /** Bütün çiftler birlikte (yalnız admin'deki yazı tipi seçici). */
 export const ALL_SITE_FONTS_HREF = fontsUrl(FRAUNCES, INSTRUMENT, BODONI, MANROPE, MONTSERRAT, PLAYFAIR, INTER, DM_SERIF, DM_SANS, CORMORANT, LATO, GROTESK, POPPINS,
     YOUNG_SERIF, FIGTREE, ANTON, ARCHIVO, BRICOLAGE);
@@ -591,6 +597,54 @@ const BAHCE: SitePalette = {
     headingWeight: 700,
 };
 
+/** Sophra paleti (varsayılan tasarım): fildişi zemin, beyaz kartlar, koyu orman yeşili bantlar, altın vurgu yazısı.
+ *  Kontrastlar: yazı zeminde 14.1, ara bantta 12.8; ikincil #46514A ara bantta 6.8; soluk #5B635C ara bantta 5.1;
+ *  koyu panelde fildişi 14.6, altın 9.1, ikincil 10.0; alt bilgide fildişi 15.2, soluk 8.8. */
+const SOPHRA: SitePalette = {
+    bg: '#F7F3EA',
+    fg: '#1A2620',
+    alt: '#EFE8DA',
+    card: '#FFFFFF',
+    text2: '#46514A',
+    muted: '#5B635C',
+    wordmark: '#E7DFCF',
+    placeholder: '#ECE5D6',
+    rgb: '26,38,32',
+    heroOverlay: 'rgba(247,243,234,0.84)',
+    disabled: '#A2A89F',
+    paper: '#14241B',
+    onPaper: '#F7F3EA',
+    onPaperSub: '#C5CEC3',
+    paperRgb: '247,243,234',
+    mustard: '#E0BE78',
+    mustardText: '#E0BE78',
+    onHero: '#F7F3EA',
+    onMenuBox: '#F7F3EA',
+    onMenuBoxSub: '#C5CEC3',
+    // Koyu kapakta altın (en açık kapakta, Orman'da 7.0).
+    heroAccent: '#E0BE78',
+    menuCard: '#FFFFFF',
+    dotOk: '#7FD39B',
+    dotBad: '#FFB4A3',
+    pop: '#E0BE78',
+    onPop: '#14241B',
+    story: '#1D3A2B',
+    olive: '#2B4535',
+    terracotta: null,
+    onTerracotta: null,
+    terracottaText: null,
+    onTerracottaSoft: null,
+    footer: '#12201A',
+    onFooter: '#F7F3EA',
+    footerMuted: '#B4BEB1',
+    footerLabel: '#E0BE78',
+    footerMap: '#1A2E23',
+    footerRoad: '#2A4335',
+    footerWater: '#1E3A44',
+    font: 'dmserif-dmsans',
+    headingWeight: 400,
+};
+
 type PresetInput = Omit<SiteThemePreset, 'bg' | 'card' | 'border' | 'text' | 'muted'>;
 
 function presets(p: SitePalette, list: PresetInput[]): Record<string, SiteThemePreset> {
@@ -677,6 +731,19 @@ const BAHCE_THEMES = presets(BAHCE, [
     { key: 'zeytin', label: 'Zeytin', description: 'Zeytin yeşili kapak, domates vurgu. Ege kahvaltısı, köy sofrası.', ...GARDEN_TOMATO, hero: '#4D4A22', heroDeep: '#3F3C1B', menuBox: '#2F4229' },
 ]);
 
+// Sophra: tema kapağın (koyu; üstünde fildişi yazı, altın vurgu) ve düğmenin rengini seçer. Düğmelerde beyaz yazı
+// (Orman 9.1, Kiremit 6.3, Lacivert 9.9, Bordo 10.2, Kömür 12.2, Zeytin 7.1); aynı renk açık zeminde yazı olarak 5.2+.
+const sophraTone = (accent: string, hero: string, heroDeep: string) =>
+    ({ accent, onAccent: '#FFFFFF', accentText: accent, hero, heroDeep, menuBox: hero });
+const SOPHRA_THEMES = presets(SOPHRA, [
+    { key: 'altin', label: 'Orman', description: 'Orman yeşili kapak ve düğme, altın vurgu. Varsayılan.', ...sophraTone('#24513A', '#1D3A2B', '#14241B') },
+    { key: 'terracotta', label: 'Kiremit', description: 'Koyu kiremit kapak, kiremit düğme. Ocakbaşı, ızgara.', ...sophraTone('#A3402A', '#5A281B', '#431D13') },
+    { key: 'lacivert', label: 'Lacivert', description: 'Gece mavisi kapak ve düğme. Balık, deniz kenarı.', ...sophraTone('#26446B', '#1B2A3F', '#131E2E') },
+    { key: 'bordo', label: 'Bordo', description: 'Bordo kapak ve düğme. Akşam yemeği, steakhouse.', ...sophraTone('#74243A', '#46202B', '#33161F') },
+    { key: 'komur', label: 'Kömür', description: 'Kömür kapak, koyu düğme. Bar, gece mekânı.', ...sophraTone('#3B342D', '#211D19', '#171411') },
+    { key: 'zeytin', label: 'Zeytin', description: 'Zeytin kapak ve düğme. Ege, kahvaltı, köy sofrası.', ...sophraTone('#545C2C', '#363A20', '#272A17') },
+]);
+
 export interface SiteDesignInfo {
     key: SiteDesignKey;
     label: string;
@@ -692,6 +759,11 @@ export function designFontKey(design?: string | null): SiteFontKey {
 }
 
 export const SITE_DESIGNS: Record<SiteDesignKey, SiteDesignInfo> = {
+    sophra: {
+        key: 'sophra', label: 'Sophra (varsayılan)',
+        description: 'Tam genişlik yemek fotoğrafı, kategori kartları, öne çıkanlar; bölümleri gizleyip sıralayabilirsiniz.',
+        palette: SOPHRA, themes: SOPHRA_THEMES,
+    },
     renkli: {
         key: 'renkli', label: 'Renkli ve sıcak', description: 'Kum zemin, renkli kapak ve kutular, kalın başlıklar.',
         palette: RENKLI, themes: RENKLI_THEMES,

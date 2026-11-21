@@ -20,6 +20,7 @@ export const productService = {
             CategoryId: form.categoryId,
             Description: form.description,
             IsFeatured: form.isFeatured,
+            IsNew: form.isNew,
             PrepMinutes: form.prepMinutes,
             TaxRate: form.taxRate,
             IdempotencyKey: crypto.randomUUID()
@@ -37,6 +38,7 @@ export const productService = {
             // undefined alanlar JSON'a yazılmaz; sunucu onları olduğu gibi bırakır.
             Description: form.description,
             IsFeatured: form.isFeatured,
+            IsNew: form.isNew,
             // Bu ikisi her zaman gönderilir; null "kaldır / kategori oranını kullan" demektir.
             PrepMinutes: form.prepMinutes,
             TaxRate: form.taxRate

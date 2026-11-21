@@ -41,13 +41,20 @@ export interface OnlineMenuProduct {
     isStockImage: boolean;
     description: string;
     isFeatured: boolean;
+    /** Admin'in "Yeni" etiketi (30 gün); eski sunucuda yok. */
+    isNew?: boolean;
     /** "Tükendi": listede görünür, sepete eklenemez. */
     isOutOfStock: boolean;
 }
 
+/** Kategorinin müşteri menüsündeki görünümü: "auto" (fotoğraflı ürün yarıdan azsa liste), "cards", "list". */
+export type MenuDisplay = 'auto' | 'cards' | 'list';
+
 export interface OnlineMenuCategory {
     id: string;
     name: string;
+    /** Eski sunucuda yok: otomatik. */
+    menuDisplay?: MenuDisplay;
     products: OnlineMenuProduct[];
 }
 
@@ -106,6 +113,9 @@ export interface OnlineOrdering {
     /** paymentMethods'ta IBAN varken ödeme adımında gösterilen hesap bilgileri; yoksa null. */
     ibanPayment?: TableIbanPayment | null;
     requiresPhoneVerification: boolean;
+    /** Şubenin popüler ürünleri (son 30 günün satışı; QR menünün PopularProducts'ı). Bu sürümde sunucu göndermez:
+     *  yoksa "Popüler" süzgeci gizlenir. */
+    popularProductIds?: string[];
     /** Müşteri "Gel al"ı seçebilir mi (şube ayarı). Eski sunucuda yok: kapalı sayılır. */
     pickupEnabled?: boolean;
     /** Gel al siparişinin yaklaşık hazır olma süresi (dakika). */

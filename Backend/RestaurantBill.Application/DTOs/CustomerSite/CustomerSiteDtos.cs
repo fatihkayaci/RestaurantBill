@@ -85,6 +85,8 @@ public class PublicCategoryDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    /// <summary>Müşteri menüsündeki görünüm: "auto" (fotoğraf oranına göre), "cards", "list".</summary>
+    public string MenuDisplay { get; set; } = "auto";
     public List<PublicProductDto> Products { get; set; } = [];
 }
 
@@ -98,6 +100,8 @@ public class PublicProductDto
     public bool IsStockImage { get; set; }
     public string Description { get; set; } = string.Empty;
     public bool IsFeatured { get; set; }
+    /// <summary>Admin'in "Yeni" işareti hâlâ geçerli (30 gün).</summary>
+    public bool IsNew { get; set; }
     /// <summary>Tahmini hazırlanma süresi (dk); null ise gösterilmez.</summary>
     public int? PrepMinutes { get; set; }
     /// <summary>"Tükendi": menüde görünür, masadan sipariş edilemez.</summary>

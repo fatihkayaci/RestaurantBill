@@ -39,7 +39,7 @@ export type SiteTextField =
  * Tıklanınca önizlemenin üstünde küçük bir pencere açan hedefler:
  * - `photo:cover|about|founder|share|hero-menu|hero-hakkimizda|hero-mekan|hero-iletisim|hero-rezervasyon`,
  *   `gallery:{i}`, `gallery:add`, `region:{id}` → fotoğraf menüsü (Yükle · Hazır görsellerden seç · Kaldır)
- * - `hours`, `rating`, `contact`, `year`, `amenities` → küçük düzenleyici
+ * - `hours`, `rating`, `contact`, `year`, `amenities`, `homeSections` → küçük düzenleyici
  * - `external:{kaynak}` → "Bu bilgi … sayfasından değişir" (EXTERNAL_SOURCES)
  * - yazı düzenlenirken `text:{alan}` (pencere yok)
  */
@@ -177,7 +177,7 @@ export function editExternal(edit: SiteEditApi | null, source: keyof typeof EXTE
 
 const TARGET_HOVER: Record<string, string> = {
     hours: 'Şube ayarlarında değişir', rating: 'Puanı değiştir', contact: 'Bağlantıyı değiştir', year: 'Yılı değiştir',
-    amenities: 'Olanakları seç', 'gallery:add': 'Fotoğraf ekle',
+    amenities: 'Olanakları seç', 'gallery:add': 'Fotoğraf ekle', homeSections: 'Bölümleri düzenle',
 };
 
 /** Üstüne gelince imlecin yanındaki etiket: ne olacağını söyler. `muted`: başka sayfadan gelen bilgi (gri). */

@@ -22,6 +22,7 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
         public async Task<Result<List<ProductDto>>> Handle(GetAllProductQuery request, CancellationToken cancellationToken)
         {
             Guid restaurantId = _currentUser.BranchId;
+            DateTime now = DateTime.UtcNow;
             if (restaurantId == Guid.Empty)
                 return Result<List<ProductDto>>.Failure("Geçersiz şube bilgisi.");
 
@@ -43,7 +44,9 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
                     PrepMinutes = p.PrepMinutes,
                     TaxRate = p.TaxRate,
                     EffectiveTaxRate = p.TaxRate ?? p.Category.TaxRate ?? p.Category.Branch.TaxRate,
-                    IsOutOfStock = p.IsOutOfStock
+                    IsOutOfStock = p.IsOutOfStock,
+                    NewUntil = p.NewUntil,
+                    IsNew = p.NewUntil != null && p.NewUntil > now
                 })
                 .ToListAsync(cancellationToken);
 

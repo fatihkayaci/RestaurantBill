@@ -25,8 +25,12 @@ namespace RestaurantBill.Domain.Entities
         public bool IsOutOfStock { get; private set; }
         // Kategori içindeki sıra (küçük önce). Menüde, garsonda ve sitede bu sırayla listelenir; yeni ürün sona eklenir.
         public int SortOrder { get; private set; }
+        // "Yeni" etiketinin bitişi (UTC). Admin işaretler, NewDays gün sonra kendiliğinden düşer; null: yeni değil.
+        // Oluşturma tarihinden türetilmez (ilk kurulumda bütün menü "yeni" görünmesin).
+        public DateTime? NewUntil { get; private set; }
 
         public const int DescriptionMaxLength = 160;
+        public const int NewDays = 30;
         public const int PrepMinutesMax = 240;
 
         protected Product() { }
@@ -45,6 +49,16 @@ namespace RestaurantBill.Domain.Entities
             if (isFeatured is not null)
                 IsFeatured = isFeatured.Value;
         }
+
+        /// <summary>"Yeni" etiketi: açılınca bugünden <see cref="NewDays"/> gün sürer (zaten yeniyse bitişi değişmez); kapatılınca düşer.</summary>
+        public void SetNew(bool isNew, DateTime nowUtc)
+        {
+            if (!isNew) { NewUntil = null; return; }
+            if (IsNewAt(nowUtc)) return;
+            NewUntil = nowUtc.AddDays(NewDays);
+        }
+
+        public bool IsNewAt(DateTime nowUtc) => NewUntil is DateTime until && until > nowUtc;
 
         public void SetPrepMinutes(int? prepMinutes)
         {

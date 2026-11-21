@@ -30,7 +30,8 @@ namespace RestaurantBill.Application.Features.Categories.Queries.GetAllCategorie
                     Id = c.Id,
                     Name = c.Name,
                     TaxRate = c.TaxRate,
-                    EffectiveTaxRate = c.TaxRate ?? c.Branch.TaxRate
+                    EffectiveTaxRate = c.TaxRate ?? c.Branch.TaxRate,
+                    MenuDisplay = c.MenuDisplay
                 })
                 .ToListAsync(cancellationToken);
 

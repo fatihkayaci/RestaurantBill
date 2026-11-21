@@ -82,7 +82,8 @@ public static class MappingExtensions
         Id = c.Id,
         Name = c.Name,
         TaxRate = c.TaxRate,
-        EffectiveTaxRate = c.GetEffectiveTaxRate()
+        EffectiveTaxRate = c.GetEffectiveTaxRate(),
+        MenuDisplay = c.MenuDisplay
     };
 
     public static RegionDto ToDto(this Region r) => new()
@@ -166,7 +167,9 @@ public static class MappingExtensions
         IsFeatured = p.IsFeatured,
         PrepMinutes = p.PrepMinutes,
         TaxRate = p.TaxRate,
-        IsOutOfStock = p.IsOutOfStock
+        IsOutOfStock = p.IsOutOfStock,
+        NewUntil = p.NewUntil,
+        IsNew = p.IsNewAt(DateTime.UtcNow)
     };
 
     public static MembershipDto ToDto(this Membership m) => new()

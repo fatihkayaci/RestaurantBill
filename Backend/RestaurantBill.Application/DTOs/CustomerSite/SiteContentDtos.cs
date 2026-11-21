@@ -22,7 +22,7 @@ public class BranchSiteDto
 
     /// <summary>Hazır renk teması ("terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"); boş = terracotta.</summary>
     public string Theme { get; set; } = string.Empty;
-    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"); boş = renkli. Renk teması her tasarımda ayrı çizilir.</summary>
+    /// <summary>Sitenin tasarımı (SiteContent.DesignKeys); boş = varsayılan (sophra). Renk teması her tasarımda ayrı çizilir.</summary>
     public string Design { get; set; } = string.Empty;
     /// <summary>Yazı tipi çifti (SiteContent.FontKeys, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi.</summary>
     public string Font { get; set; } = string.Empty;
@@ -37,6 +37,8 @@ public class BranchSiteDto
     public List<string> Amenities { get; set; } = [];
     /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları ("rezervasyon", "otopark"...); boş = hepsi görünür.</summary>
     public List<string> HiddenFaqs { get; set; } = [];
+    /// <summary>Anasayfa bölümlerinin sırası ve görünürlüğü (SiteContent.HomeSectionKeys); boş = varsayılan sıra, hepsi açık.</summary>
+    public List<SiteHomeSectionDto> HomeSections { get; set; } = [];
     public decimal? Rating { get; set; }
     public int? ReviewCount { get; set; }
     /// <summary>Google Haritalar (ya da başka) yorum sayfası.</summary>
@@ -91,6 +93,7 @@ public class BranchSiteDto
             WhatsappPhone = content.WhatsappPhone,
             Amenities = [.. content.Amenities],
             HiddenFaqs = [.. content.HiddenFaqs],
+            HomeSections = content.HomeSections.Select(h => new SiteHomeSectionDto { Key = h.Key, Enabled = h.Enabled }).ToList(),
             Rating = content.Rating,
             ReviewCount = content.ReviewCount,
             ReviewsUrl = content.ReviewsUrl,
@@ -121,6 +124,13 @@ public class SiteSeoDto
     public string Description { get; set; } = string.Empty;
     /// <summary>Tam adres; hiç fotoğraf yoksa boş.</summary>
     public string ShareImageUrl { get; set; } = string.Empty;
+}
+
+/// <summary>Anasayfanın bir bölümü ("categories", "featured", "about", "features", "gallery", "reviews", "contact") ve görünürlüğü.</summary>
+public class SiteHomeSectionDto
+{
+    public string Key { get; set; } = string.Empty;
+    public bool Enabled { get; set; } = true;
 }
 
 public class SiteDayHoursDto

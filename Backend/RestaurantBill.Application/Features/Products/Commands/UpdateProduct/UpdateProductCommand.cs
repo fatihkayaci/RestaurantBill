@@ -18,6 +18,8 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
         public string? Description { get; set; }
         /// <summary>null: değiştirme.</summary>
         public bool? IsFeatured { get; set; }
+        /// <summary>"Yeni" etiketi (30 gün sürer). null: değiştirme.</summary>
+        public bool? IsNew { get; set; }
         /// <summary>Hazırlanma süresi (dk). null: süre takibi yok. Her istekte tam değer gönderilir.</summary>
         public int? PrepMinutes { get; set; }
         /// <summary>Ürüne özel KDV. null: kategorinin oranı kullanılır. Her istekte tam değer gönderilir.</summary>

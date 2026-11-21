@@ -49,6 +49,7 @@ internal static class SiteEditor
         ["gallery"] = ("Mekân fotoğrafları", "Mekân"),
         ["amenities"] = ("Olanaklar", "Mekân"),
         ["hiddenFaqs"] = ("Sık sorulanlar", "İletişim"),
+        ["homeSections"] = ("Anasayfa bölümleri", "Anasayfa"),
         ["rating"] = ("Google puanı", "Anasayfa"),
         ["reviewCount"] = ("Yorum sayısı", "Anasayfa"),
         ["reviewsUrl"] = ("Yorum bağlantısı", "Anasayfa"),

@@ -9,6 +9,8 @@ export interface PublicProduct {
     isStockImage: boolean;
     description: string;
     isFeatured: boolean;
+    /** Admin'in "Yeni" etiketi (30 gün); eski sunucuda yok. */
+    isNew?: boolean;
     /** Tahmini hazırlanma süresi (dk); null ise gösterilmez. */
     prepMinutes: number | null;
     /** "Tükendi": menüde görünür, masadan sipariş edilemez. */
@@ -33,8 +35,13 @@ export interface BranchSite {
     accentColor: string;
     /** Hazır renk teması (tasarımın temalarından biri; Renkli'de vurgu + kapak, Sade'de yalnız vurgu); boş = varsayılan. */
     theme: string;
-    /** Sitenin tasarımı ("renkli" | "sade"); boş = renkli. Eski API yanıtında yoksa da renkli. */
+    /** Sitenin tasarımı (SITE_DESIGN_KEYS); boş = varsayılan (Sophra). */
     design?: string;
+    /** Anasayfa bölümlerinin sırası ve görünürlüğü (HOME_SECTION_KEYS); boş = varsayılan sıra, hepsi açık. Yalnız bölüm
+     *  düzenini kullanan tasarım (Sophra) okur. */
+    homeSections: SiteHomeSection[];
+    /** Restoranın logosu (şirket sitesinin logosu; eski sunucuda yok). Yoksa ad ya da baş harfler çizilir. */
+    logoUrl?: string | null;
     /** Yazı tipi çifti (SITE_FONTS anahtarı, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi. */
     font?: string;
     /** Mekân fotoğrafları, sitedeki sırayla (en çok 12). */
@@ -127,6 +134,12 @@ export interface SiteDayHours {
     closes: string;
 }
 
+/** Anasayfanın bir bölümü: "categories" | "featured" | "about" | "features" | "gallery" | "reviews" | "contact". */
+export interface SiteHomeSection {
+    key: string;
+    enabled: boolean;
+}
+
 export interface SiteReview {
     author: string;
     text: string;
@@ -175,6 +188,8 @@ export interface SiteChecklistItem {
 export interface PublicCategory {
     id: string;
     name: string;
+    /** Müşteri menüsündeki görünüm ("auto" | "cards" | "list"); eski sunucuda yok: otomatik. */
+    menuDisplay?: 'auto' | 'cards' | 'list';
     products: PublicProduct[];
 }
 

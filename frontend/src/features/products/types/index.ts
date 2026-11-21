@@ -18,6 +18,10 @@ export interface Product {
     effectiveTaxRate: number;
     /** "Tükendi": masada satılır, online siparişte seçilemez. */
     isOutOfStock?: boolean;
+    /** Admin'in "Yeni" etiketi hâlâ geçerli (işaretlendikten 30 gün sonra kendiliğinden düşer). */
+    isNew?: boolean;
+    /** "Yeni" etiketinin bitişi (UTC ISO); yoksa null. */
+    newUntil?: string | null;
 }
 
 /** Yalnızca Admin/Owner menü ekranı: maliyet garson, mutfak ve kasaya hiç gönderilmez. */
@@ -34,6 +38,8 @@ export interface CreateProduct {
     categoryId: string;
     description?: string;
     isFeatured?: boolean;
+    /** "Yeni" etiketi (30 gün). */
+    isNew?: boolean;
     prepMinutes: number | null;
     taxRate: number | null;
 }
@@ -49,6 +55,8 @@ export interface UpdateProduct {
     /** Gönderilmezse sunucuda değişmez (ör. "Satışta" düğmesi açıklamayı silmez). */
     description?: string;
     isFeatured?: boolean;
+    /** "Yeni" etiketi: true 30 gün sürer (zaten yeniyse uzamaz), false kaldırır; gönderilmezse değişmez. */
+    isNew?: boolean;
     /** Her güncellemede tam değer gönderilir: null süreyi kaldırır. */
     prepMinutes: number | null;
     /** null: kategorinin oranını kullan. */

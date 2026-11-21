@@ -107,6 +107,24 @@ public class SiteSnapshotTests
     }
 
     [Fact]
+    public void HomeSections_AreAChangedField_AndRevertable()
+    {
+        Company company = NewCompany();
+        SiteSnapshot published = company.GetPublishedSite();
+        SiteSnapshot draft = published with
+        {
+            Content = published.Content with { HomeSections = SiteContent.NormalizeHomeSections([new("reviews", false)]) },
+        };
+
+        Assert.Equal(["homeSections"], draft.ChangedFields(published));
+        Assert.False(draft.Content.HomeSections[0].Enabled);
+
+        SiteSnapshot reverted = draft.WithFieldFrom(published, "homeSections");
+        Assert.Empty(reverted.Content.HomeSections);
+        Assert.Empty(reverted.ChangedFields(published));
+    }
+
+    [Fact]
     public void Publish_CopiesDraftToSite_BumpsVersion_ClearsDraft()
     {
         Company company = NewCompany();

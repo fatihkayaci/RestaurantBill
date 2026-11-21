@@ -9,6 +9,7 @@ using RestaurantBill.Application.Features.CustomerSite;
 using RestaurantBill.Application.Features.SetMenus;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Delivery.Public;
@@ -93,13 +94,14 @@ public class GetOnlineOrderingQueryHandler(
         List<OnlineMenuCategoryDto> categories = await db.Categories.AsNoTracking()
             .Where(c => c.BranchId == branch.Id && !c.IsDeleted)
             .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
-            .Select(c => new OnlineMenuCategoryDto { Id = c.Id, Name = c.Name })
+            .Select(c => new OnlineMenuCategoryDto { Id = c.Id, Name = c.Name, MenuDisplay = c.MenuDisplay == CategoryMenuDisplay.Cards ? "cards" : c.MenuDisplay == CategoryMenuDisplay.List ? "list" : "auto" })
             .ToListAsync(cancellationToken);
 
+        DateTime nowUtc = clock.GetUtcNow().UtcDateTime;
         var products = await db.Products.AsNoTracking()
             .Where(p => p.Category.BranchId == branch.Id && p.IsActive && !p.IsDeleted)
             .OrderBy(p => p.SortOrder).ThenBy(p => p.Name)
-            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.IsOutOfStock })
+            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.IsOutOfStock, p.NewUntil })
             .ToListAsync(cancellationToken);
 
         foreach (OnlineMenuCategoryDto category in categories)
@@ -115,6 +117,7 @@ public class GetOnlineOrderingQueryHandler(
                     IsStockImage = StorageKeys.IsShared(p.ImageUrl),
                     Description = p.Description,
                     IsFeatured = p.IsFeatured,
+                    IsNew = p.NewUntil is DateTime until && until > nowUtc,
                     IsOutOfStock = p.IsOutOfStock
                 })
                 .ToList();

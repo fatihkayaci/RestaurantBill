@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { EXTERNAL_SOURCES, SITE_LIMITS, type SiteEditTarget } from '@/pages/public/site/siteEditContext';
 import { SITE_AMENITIES } from '@/pages/public/site/siteParts';
 import { restaurantName } from '@/pages/public/site/useSite';
-import { DesignPicker, FontPicker, ThemePicker } from '../SiteSettingsEditors';
+import { DesignPicker, FontPicker, HomeSectionsEditor, ThemePicker } from '../SiteSettingsEditors';
 import { photoTarget, type EditorCtx } from './editorActions';
 import { isStockUrl, tooBig } from './editorModel';
 import { ed } from './editorStyles';
@@ -221,6 +221,7 @@ export function PopoverBody({ ctx, target, onDone }: { ctx: EditorCtx; target: S
         case 'contact': return <><Head title="Instagram" /><ContactFields ctx={ctx} /></>;
         case 'year': return <YearField ctx={ctx} />;
         case 'amenities': return <><Head title="Olanaklar" /><AmenitiesFields ctx={ctx} /></>;
+        case 'homeSections': return <><Head title="Anasayfa bölümleri" hint="Sırayı sürükleyerek ya da oklarla değiştirin; kapatılan ya da içeriği olmayan bölüm sitede görünmez." /><HomeSectionsFields ctx={ctx} /></>;
     }
     return <PhotoMenu ctx={ctx} target={target} onDone={onDone} />;
 }
@@ -233,6 +234,14 @@ export function DesignFields({ ctx }: { ctx: EditorCtx }) {
     return (
         <DesignPicker design={t.design ?? ''} theme={t.theme} accent={t.accentColor}
             onDesign={design => ctx.state.updateTexts(x => ({ ...x, design }))} />
+    );
+}
+
+/** "Anasayfa bölümleri": sıra ve aç/kapa; taslağa ve önizlemeye hemen gider. */
+export function HomeSectionsFields({ ctx }: { ctx: EditorCtx }) {
+    return (
+        <HomeSectionsEditor site={ctx.site} design={ctx.texts.design ?? ''} sections={ctx.texts.homeSections}
+            onChange={homeSections => ctx.state.updateTexts(x => ({ ...x, homeSections }))} />
     );
 }
 

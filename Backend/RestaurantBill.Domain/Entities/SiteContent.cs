@@ -17,6 +17,9 @@ namespace RestaurantBill.Domain.Entities
     /// <summary>Hakkımızda'daki zaman çizelgesinin bir satırı.</summary>
     public sealed record SiteMilestone(int Year, string Text);
 
+    /// <summary>Anasayfanın bir bölümü ve görünürlüğü (<see cref="SiteContent.HomeSectionKeys"/>); listedeki sıra sitedeki sıradır.</summary>
+    public sealed record SiteHomeSection(string Key, bool Enabled);
+
     /// <summary>Oturma bölümünün sitedeki fotoğrafı (depo anahtarı) ve kısa açıklaması.</summary>
     public sealed record SiteRegionDetail(Guid RegionId, string PhotoKey, string Description);
 
@@ -47,10 +50,12 @@ namespace RestaurantBill.Domain.Entities
         public string? SeoDescription { get; init; }
         /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları; null: değiştirme (eski form bu alanı göndermez).</summary>
         public IReadOnlyList<string>? HiddenFaqs { get; init; }
-        /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"); boş = varsayılan (renkli). null: değiştirme (eski form göndermez).</summary>
+        /// <summary>Sitenin tasarımı (<see cref="SiteContent.DesignKeys"/>); boş = varsayılan (sophra). null: değiştirme (eski form göndermez).</summary>
         public string? Design { get; init; }
         /// <summary>Yazı tipi çifti (<see cref="SiteContent.FontKeys"/>); boş = tasarımın kendi yazı tipi. null: değiştirme.</summary>
         public string? Font { get; init; }
+        /// <summary>Anasayfa bölümlerinin sırası ve görünürlüğü; boş = varsayılan sıra, hepsi açık. null: değiştirme (eski form göndermez).</summary>
+        public IReadOnlyList<SiteHomeSection>? HomeSections { get; init; }
     }
 
     /// <summary>
@@ -91,9 +96,14 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Sitenin hazır renk temaları; boş = varsayılan (terracotta). Ön yüzdeki SITE_THEMES ile aynı anahtarlar.</summary>
         public static readonly IReadOnlyList<string> ThemeKeys = ["terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"];
 
-        /// <summary>Sitenin tasarımları; boş = varsayılan ("renkli"). Ön yüzdeki SITE_DESIGNS ile aynı anahtarlar.
-        /// Tasarım ve renk teması ayrıdır: her tasarım bütün temaları (ve özel vurgu rengini) kendi paletiyle çizer.</summary>
-        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"];
+        /// <summary>Sitenin tasarımları; boş = varsayılan ("sophra"; BackfillExplicitSiteDesign göçünden önce kaydedilmiş boş
+        /// değerler "renkli"ye çevrildi). Ön yüzdeki SITE_DESIGNS ile aynı anahtarlar. Tasarım ve renk teması ayrıdır: her
+        /// tasarım bütün temaları (ve özel vurgu rengini) kendi paletiyle çizer.</summary>
+        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce", "sophra"];
+
+        /// <summary>Anasayfanın sıralanıp gizlenebilen bölümleri (ön yüzde HOME_SECTION_KEYS; kapak ve alt bilgi sabittir).
+        /// Varsayılan sıra budur. Yalnız bölüm düzenini kullanan tasarımlar (Sophra) okur.</summary>
+        public static readonly IReadOnlyList<string> HomeSectionKeys = ["categories", "featured", "about", "features", "gallery", "reviews", "contact"];
 
         /// <summary>Başlık + gövde yazı tipi çiftleri; boş = tasarımın kendi çifti. Ön yüzdeki SITE_FONTS ile aynı anahtarlar.</summary>
         public static readonly IReadOnlyList<string> FontKeys =
@@ -108,8 +118,11 @@ namespace RestaurantBill.Domain.Entities
         public static SiteContent Empty { get; } = new();
 
         public string Theme { get; init; } = string.Empty;
-        /// <summary>Sitenin tasarımı (<see cref="DesignKeys"/>); boş = varsayılan (renkli).</summary>
+        /// <summary>Sitenin tasarımı (<see cref="DesignKeys"/>); boş = varsayılan (sophra).</summary>
         public string Design { get; init; } = string.Empty;
+        /// <summary>Anasayfa bölümlerinin sırası ve görünürlüğü; boş = varsayılan (<see cref="HomeSectionKeys"/> sırası, hepsi açık).
+        /// Doluysa her anahtar bir kez; sonradan eklenen anahtar sona, açık olarak eklenir.</summary>
+        public IReadOnlyList<SiteHomeSection> HomeSections { get; init; } = [];
         /// <summary>Yazı tipi çifti (<see cref="FontKeys"/>); boş = tasarımın kendi yazı tipi.</summary>
         public string Font { get; init; } = string.Empty;
         /// <summary>Mekân fotoğraflarının depo anahtarları, sitedeki sırayla.</summary>
@@ -246,6 +259,7 @@ namespace RestaurantBill.Domain.Entities
             milestones = milestones.OrderBy(m => m.Year).ToList();
 
             IReadOnlyList<string> hiddenFaqs = texts.HiddenFaqs is null ? HiddenFaqs : NormalizeFaqKeys(texts.HiddenFaqs);
+            IReadOnlyList<SiteHomeSection> homeSections = texts.HomeSections is null ? HomeSections : NormalizeHomeSections(texts.HomeSections);
 
             List<SiteRegionDetail> regions = [];
             foreach ((Guid regionId, string rawDescription) in texts.RegionDescriptions)
@@ -282,6 +296,7 @@ namespace RestaurantBill.Domain.Entities
                 SeoTitle = texts.SeoTitle is null ? SeoTitle : Limit(texts.SeoTitle, SeoTitleMaxLength, "Sayfa başlığı"),
                 SeoDescription = texts.SeoDescription is null ? SeoDescription : Limit(texts.SeoDescription, SeoDescriptionMaxLength, "Açıklama"),
                 HiddenFaqs = hiddenFaqs,
+                HomeSections = homeSections,
             };
         }
 
@@ -304,6 +319,25 @@ namespace RestaurantBill.Domain.Entities
                 if (!result.Contains(key)) result.Add(key);
             }
             if (result.Count > HiddenFaqsMax) throw new DomainException($"En fazla {HiddenFaqsMax} soru gizlenebilir.");
+            return result;
+        }
+
+        /// <summary>
+        /// Anasayfa bölümleri: anahtar kırpılır ve küçük harfe çevrilir; bilinmeyen ya da iki kez geçen anahtar hata verir.
+        /// Boş liste varsayılandır (boş döner); doluysa listede olmayan anahtarlar varsayılan sırayla sona, açık olarak eklenir.
+        /// </summary>
+        public static IReadOnlyList<SiteHomeSection> NormalizeHomeSections(IReadOnlyList<SiteHomeSection> sections)
+        {
+            if (sections.Count == 0) return [];
+            List<SiteHomeSection> result = [];
+            foreach (SiteHomeSection? section in sections)
+            {
+                string key = (section?.Key ?? string.Empty).Trim().ToLowerInvariant();
+                if (!HomeSectionKeys.Contains(key)) throw new DomainException("Geçersiz anasayfa bölümü.");
+                if (result.Any(r => r.Key == key)) throw new DomainException("Her anasayfa bölümü listede bir kez yer almalıdır.");
+                result.Add(new SiteHomeSection(key, section!.Enabled));
+            }
+            result.AddRange(HomeSectionKeys.Where(k => result.All(r => r.Key != k)).Select(k => new SiteHomeSection(k, true)));
             return result;
         }
 
