@@ -22,6 +22,12 @@ import BahceAbout from './bahce/BahceAbout';
 import BahceContact from './bahce/BahceContact';
 import BahceReservation from './bahce/BahceReservation';
 import { BahceFooter, BahceHeader } from './bahce/BahceFrame';
+import EsnafHome from './esnaf/EsnafHome';
+import EsnafMenu from './esnaf/EsnafMenu';
+import EsnafAbout from './esnaf/EsnafAbout';
+import EsnafContact from './esnaf/EsnafContact';
+import EsnafReservation from './esnaf/EsnafReservation';
+import { EsnafFooter, EsnafHeader } from './esnaf/EsnafFrame';
 
 // Tasarım kaydı: bir tasarımın KENDİ düzeni (sayfa bileşenleri, üst menü, alt bilgi, akış giydirmesi) tek yerde.
 // Yazılmayan her parça ortak bileşene düşer (Renkli/Sade/Sıcak'ın paylaştığı düzen): tasarım yalnız değiştirdiğini yazar.
@@ -70,6 +76,10 @@ const LAYOUTS: Partial<Record<SiteDesignKey, () => LayoutParts>> = {
     bahce: () => ({
         Home: BahceHome, Menu: BahceMenu, About: BahceAbout, Contact: BahceContact, Reservation: BahceReservation,
         Header: BahceHeader, Footer: BahceFooter,
+    }),
+    esnaf: () => ({
+        Home: EsnafHome, Menu: EsnafMenu, About: EsnafAbout, Contact: EsnafContact, Reservation: EsnafReservation,
+        Header: EsnafHeader, Footer: EsnafFooter,
     }),
 };
 
