@@ -228,10 +228,19 @@ public class PublicTableBillDto
     public bool HasBill { get; set; }
     public List<PublicTableBillLineDto> Items { get; set; } = [];
     public decimal Total { get; set; }
-    /// <summary>Tutar girerek alınmış ödemeler.</summary>
+    /// <summary>Açık hesapta tutar girerek alınmış ödemeler; ödenen hesapta tahsil edilen toplam (iskonto düşülmüş).</summary>
     public decimal Paid { get; set; }
     public decimal Remaining { get; set; }
     public DateTime? BillRequestedAt { get; set; }
+    /// <summary>true: hesap ödenip kapandı; kalemler ödeme kayıtlarından gelir, kalan 0.</summary>
+    public bool IsPaid { get; set; }
+    /// <summary>
+    /// Bu telefonun masadaki son ödenen hesabının kapanış anı (UTC); yoksa null. Açık hesapta da dolu olabilir (önceki
+    /// hesap): telefon bu andan önce onaylanan taleplerini "Ödendi" gösterir.
+    /// </summary>
+    public DateTime? PaidAt { get; set; }
+    /// <summary>Ödenen hesapta uygulanan iskonto toplamı.</summary>
+    public decimal Discount { get; set; }
 }
 
 public class PublicTableBillLineDto

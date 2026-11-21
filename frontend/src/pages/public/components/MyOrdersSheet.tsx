@@ -8,7 +8,10 @@ import type { SentOrderRequest } from '../useTableOrderRequests';
 
 interface Props {
     requests: SentOrderRequest[];
-    /** Masa bu telefona bağlıysa masanın açık hesabı (garsonun eklediği kalemler ve menüler dahil); yoksa null. */
+    /**
+     * Bu telefonun masa hesabı (garsonun eklediği kalemler ve menüler dahil): açık hesap ya da az önce ödenen hesap
+     * (isPaid); yoksa null.
+     */
     bill?: PublicTableBill | null;
     onClose: () => void;
     /** Menüdeyken "Menüye dön" yalnız pencereyi kapatır; karşılamadayken menüyü açar. */
@@ -17,23 +20,36 @@ interface Props {
     onCallWaiter?: () => void;
 }
 
-function statusBadge(status: number) {
-    if (status === ORDER_REQUEST_APPROVED)
+const paidBadgeClass = 'bg-[var(--site-paper)] text-[var(--site-on-paper)]';
+
+// paidAtMs: bu telefonun son ödenen hesabının kapanışı. Ondan önce onaylanan talep o hesapla ödenmiştir.
+function statusBadge(request: SentOrderRequest, paidAtMs: number | null) {
+    if (request.status === ORDER_REQUEST_APPROVED) {
+        if (paidAtMs != null && request.sentAt <= paidAtMs) return { label: 'Ödendi', className: paidBadgeClass };
         return { label: 'Mutfakta', className: 'bg-[var(--site-ok-bg)] text-[var(--site-ok)]' };
-    if (status === ORDER_REQUEST_REJECTED)
+    }
+    if (request.status === ORDER_REQUEST_REJECTED)
         return { label: 'Onaylanmadı', className: 'bg-[var(--site-error-bg)] text-[var(--site-error)]' };
     return { label: 'Garson onayı bekliyor', className: 'bg-[var(--site-mustard)] text-[var(--site-text)]' };
 }
 
 const timeOf = (sentAt: number) => new Date(sentAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
+const parsePaidAt = (paidAt: string | null | undefined) => {
+    if (!paidAt) return null;
+    const ms = Date.parse(paidAt);
+    return Number.isNaN(ms) ? null : ms;
+};
+
 // Bu masadan gönderilen siparişler ve garsonun kararı. Kalemler müşterinin telefonundan gelir. Reddedilen siparişte
 // garsonun yazdığı neden alıntı olarak durur ve bir sonraki adım (menüye dön / garson çağır) gösterilir.
 // Görünüm (Renkli): krem pencere, her sipariş kum zeminli yuvarlak kutu; durum hapı (hardal: bekliyor, yeşil: mutfakta).
 // Masa bu telefona bağlıysa en üstte "Masanın hesabı": açık hesabın bütün kalemleri ve kalan (useTableBill yoklaması).
+// Hesap ödendiyse kart "Ödendi" olur (ödenen kalemler ve tutar, kalan yok) ve o hesapla ödenen talepler de "Ödendi" der.
 export default function MyOrdersSheet({ requests, bill = null, onClose, onBackToMenu, onCallWaiter }: Props) {
     const anyRejected = requests.some(r => r.status === ORDER_REQUEST_REJECTED);
     const showBill = !!bill?.hasBill;
+    const paidAtMs = parsePaidAt(bill?.paidAt);
     return (
         <div className={sheetBackdrop} onClick={onClose}>
             <div
@@ -47,6 +63,11 @@ export default function MyOrdersSheet({ requests, bill = null, onClose, onBackTo
                     <div className="min-w-0">
                         <p className={cn(eyebrowAccent, 'm-0')}>Bu masadan</p>
                         <h2 className={cn(serif, 'm-0 mt-1 text-[34px] leading-none')}>{showBill ? 'Masanın hesabı' : 'Siparişlerim'}</h2>
+                        {showBill && bill?.isPaid && (
+                            <span className={cn('mt-2 inline-flex rounded-full px-3 py-1 text-[13px] font-extrabold', paidBadgeClass)}>
+                                Ödendi{paidAtMs != null && ` · ${timeOf(paidAtMs)}`}
+                            </span>
+                        )}
                     </div>
                     <button type="button" onClick={onClose} aria-label="Siparişlerimi kapat" className={closeCircle}>
                         <X className="h-5 w-5" aria-hidden="true" />
@@ -59,7 +80,7 @@ export default function MyOrdersSheet({ requests, bill = null, onClose, onBackTo
                         <li className={cn(eyebrowAccent, 'mt-2 px-1')}>Gönderdiğim siparişler</li>
                     )}
                     {requests.map(request => {
-                        const badge = statusBadge(request.status);
+                        const badge = statusBadge(request, paidAtMs);
                         const rejected = request.status === ORDER_REQUEST_REJECTED;
                         return (
                             <li key={request.id} className="rounded-[20px] bg-[var(--site-bg)] p-4">
@@ -99,7 +120,7 @@ export default function MyOrdersSheet({ requests, bill = null, onClose, onBackTo
     );
 }
 
-/** Masanın açık hesabı: kalemler (menünün içindekiler altında), ödenen ve kalan. */
+/** Masanın hesabı: kalemler (menünün içindekiler altında); açık hesapta ödenen ve kalan, ödenen hesapta ödenen tutar. */
 function TableBillCard({ bill }: { bill: PublicTableBill }) {
     return (
         <li className="rounded-[20px] bg-[var(--site-bg)] p-4">
@@ -123,16 +144,44 @@ function TableBillCard({ bill }: { bill: PublicTableBill }) {
                     ))}
                 </ul>
             )}
-            {bill.paid > 0 && (
-                <p className="m-0 mt-3 flex items-baseline justify-between gap-3 text-sm font-bold text-[var(--site-ok)]">
-                    <span>Ödenen</span>
-                    <span className="tabular-nums">{formatPrice(bill.paid)} ₺</span>
-                </p>
+            {bill.isPaid ? <PaidTotals bill={bill} /> : (
+                <>
+                    {bill.paid > 0 && (
+                        <p className="m-0 mt-3 flex items-baseline justify-between gap-3 text-sm font-bold text-[var(--site-ok)]">
+                            <span>Ödenen</span>
+                            <span className="tabular-nums">{formatPrice(bill.paid)} ₺</span>
+                        </p>
+                    )}
+                    <p className="m-0 mt-3 flex items-baseline justify-between gap-3 border-t border-dashed border-[var(--site-border-strong)] pt-3">
+                        <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--site-muted)]">{bill.paid > 0 ? 'Kalan' : 'Toplam'}</span>
+                        <span className={cn(serif, 'text-[28px] leading-none tabular-nums')}>{formatPrice(bill.remaining)} ₺</span>
+                    </p>
+                </>
+            )}
+        </li>
+    );
+}
+
+/** Ödenen hesap: (iskonto varsa) toplam ve indirim, altta ödenen tutar; kalan gösterilmez. */
+function PaidTotals({ bill }: { bill: PublicTableBill }) {
+    return (
+        <>
+            {bill.discount > 0 && (
+                <>
+                    <p className="m-0 mt-3 flex items-baseline justify-between gap-3 text-sm font-bold text-[var(--site-sub)]">
+                        <span>Toplam</span>
+                        <span className="tabular-nums">{formatPrice(bill.total)} ₺</span>
+                    </p>
+                    <p className="m-0 mt-1 flex items-baseline justify-between gap-3 text-sm font-bold text-[var(--site-sub)]">
+                        <span>İndirim</span>
+                        <span className="tabular-nums">−{formatPrice(bill.discount)} ₺</span>
+                    </p>
+                </>
             )}
             <p className="m-0 mt-3 flex items-baseline justify-between gap-3 border-t border-dashed border-[var(--site-border-strong)] pt-3">
-                <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--site-muted)]">{bill.paid > 0 ? 'Kalan' : 'Toplam'}</span>
-                <span className={cn(serif, 'text-[28px] leading-none tabular-nums')}>{formatPrice(bill.remaining)} ₺</span>
+                <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--site-ok)]">Ödenen</span>
+                <span className={cn(serif, 'text-[28px] leading-none tabular-nums')}>{formatPrice(bill.paid)} ₺</span>
             </p>
-        </li>
+        </>
     );
 }

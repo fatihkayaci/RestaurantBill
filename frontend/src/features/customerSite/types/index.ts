@@ -288,6 +288,12 @@ export interface PublicTableBill {
     paid: number;
     remaining: number;
     billRequestedAt: string | null;
+    /** true: hesap ödenip kapandı; kalemler ödenenlerdir, kalan 0. Sunucu bunu yalnız hesabın telefonuna bir süre gösterir. */
+    isPaid: boolean;
+    /** Bu telefonun masadaki son ödenen hesabının kapanış anı; açık hesapta önceki hesabınki olabilir, yoksa null. */
+    paidAt: string | null;
+    /** Ödenen hesapta uygulanan iskonto. */
+    discount: number;
 }
 
 export interface PublicTableBillLine {

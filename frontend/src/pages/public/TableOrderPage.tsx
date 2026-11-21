@@ -241,7 +241,9 @@ export default function TableOrderPage() {
     // Masa başka telefona bağlı: menü göz atmalık, sepet ve gönderim kapalı (sunucu da reddeder).
     const lockedOut = tableBill.lock === 'other';
     const canOrder = features.orderingEnabled && !closed && !lockedOut;
-    const bill = tableBill.lock === 'mine' && tableBill.bill?.hasBill ? tableBill.bill : null;
+    // Açık hesap yalnız masa bu telefona bağlıyken; ödenen hesap kilit düştükten sonra da (sunucu yalnız sahibine döner).
+    const bill = tableBill.bill?.hasBill && (tableBill.lock === 'mine' || tableBill.bill.isPaid) ? tableBill.bill : null;
+    const openBill = bill && !bill.isPaid ? bill : null;
     const waiterAction = features.callWaiterEnabled ? callWaiter : null;
     const billAction = features.billRequestEnabled ? billRequest : null;
     const myOrdersButton = requests.length > 0 || !!bill;
@@ -273,7 +275,7 @@ export default function TableOrderPage() {
                 />
             )}
             {ibanOpen && ibanPayment && (
-                <IbanPaySheet payment={ibanPayment} tableName={table.name} amount={bill?.remaining ?? lastBillTotal} onClose={() => setIbanOpen(false)} />
+                <IbanPaySheet payment={ibanPayment} tableName={table.name} amount={openBill?.remaining ?? (bill?.isPaid ? null : lastBillTotal)} onClose={() => setIbanOpen(false)} />
             )}
         </>
     );
@@ -311,7 +313,7 @@ export default function TableOrderPage() {
                     showDelivery={features.deliveryLinkEnabled && table.acceptsOnlineOrders}
                     deliveryHref={`/siparis?sube=${encodeURIComponent(table.branchId)}`}
                     showReservation={features.reservationLinkEnabled && canReserveOnline(site)}
-                    myOrders={myOrdersButton ? { count: requests.length, pendingCount, open: () => setMyOrdersOpen(true), billRemaining: bill?.remaining ?? null } : null}
+                    myOrders={myOrdersButton ? { count: requests.length, pendingCount, open: () => setMyOrdersOpen(true), billRemaining: openBill?.remaining ?? null, billPaid: !!bill?.isPaid } : null}
                     onAction={kind => void runAction(kind)}
                     onShowConfirmation={setConfirm}
                 />
@@ -350,7 +352,7 @@ export default function TableOrderPage() {
                         <span className="hidden sm:inline">{bill ? 'Masanın hesabı' : 'Siparişlerim'}</span>
                         <span aria-hidden="true" className={cn('flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[13px] font-extrabold tabular-nums',
                             pendingCount > 0 ? 'bg-[var(--site-mustard)] text-[var(--site-text)]' : 'bg-[rgba(251,244,232,0.15)]')}>
-                            {pendingCount > 0 ? pendingCount : bill ? `${formatPrice(bill.remaining)} ₺` : requests.length}
+                            {pendingCount > 0 ? pendingCount : bill?.isPaid ? 'Ödendi' : bill ? `${formatPrice(bill.remaining)} ₺` : requests.length}
                         </span>
                     </button>
                 )}

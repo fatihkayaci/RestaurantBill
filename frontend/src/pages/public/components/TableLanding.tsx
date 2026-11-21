@@ -45,6 +45,8 @@ interface Props {
         count: number; pendingCount: number; open: () => void;
         /** Masa bu telefona bağlıysa masanın hesabında kalan (garsonun eklediği kalemler dahil); yoksa null. */
         billRemaining?: number | null;
+        /** Bu telefonun masa hesabı az önce ödendi: "Masanın hesabı · Ödendi". */
+        billPaid?: boolean;
     } | null;
     /** Karoya dokunuldu: istek gönderilir, başarılıysa onay penceresi açılır (TableOrderPage). */
     onAction: (kind: TableActionKind) => void;
@@ -190,10 +192,11 @@ export default function TableLanding({
                     className={cn(creamBox, 'flex min-h-[72px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-[var(--site-alt)] sm:px-5')}>
                     <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--site-paper)] text-[var(--site-on-paper)]"><ClipboardList className="h-5 w-5" /></span>
                     <span className="min-w-0 flex-1">
-                        <span className={cn(serif, 'block text-[20px] leading-tight')}>{myOrders.billRemaining != null ? 'Masanın hesabı' : 'Siparişlerim'}</span>
+                        <span className={cn(serif, 'block text-[20px] leading-tight')}>{myOrders.billRemaining != null || myOrders.billPaid ? 'Masanın hesabı' : 'Siparişlerim'}</span>
                         <span className="block text-sm text-[var(--site-sub)]">
                             {myOrders.pendingCount > 0 ? `${myOrders.pendingCount} sipariş garson onayı bekliyor`
                                 : myOrders.billRemaining != null ? `Kalan ${formatPrice(myOrders.billRemaining)} ₺`
+                                    : myOrders.billPaid ? 'Ödendi'
                                     : `${myOrders.count} sipariş gönderildi`}
                         </span>
                     </span>

@@ -1,10 +1,12 @@
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.Features.CustomerSite;
 using RestaurantBill.Application.Features.CustomerSite.Public;
 using RestaurantBill.Application.Features.CustomerSite.Staff;
 using RestaurantBill.Application.Features.Orders.Commands.TransferOrder;
 using RestaurantBill.Application.Features.Orders.Queries;
+using RestaurantBill.Application.Features.Payments.Commands.CreatePayment;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Application.Tests.Fakes;
 using RestaurantBill.Application.Tests.Infrastructure;
@@ -26,6 +28,14 @@ public class QrTableLockTests : ApplicationTestBase
     private readonly FakeTableNotificationService _tableNotifications = new();
     private readonly FakeCashierNotificationService _cashierNotifications = new();
     private readonly TableActionCooldown _cooldown = new(TimeProvider.System);
+    private readonly ManualClock _clock = new();
+
+    // UpdatedAt kayıtta gerçek saatle yazılır; saat gerçek andan başlar, süre dolmasını denemek için ileri alınır.
+    private sealed class ManualClock : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
 
     private Branch _branch = default!;
     private Table _table = default!;
@@ -70,7 +80,7 @@ public class QrTableLockTests : ApplicationTestBase
             .Handle(new RejectOrderRequestCommand { Id = id }, CancellationToken.None);
 
     private Task<Result<PublicTableBillDto>> BillAsync(string? deviceHash, Guid? tableId = null)
-        => new GetTableBillQueryHandler(Db, _tenant)
+        => new GetTableBillQueryHandler(Db, _tenant, _clock)
             .Handle(new GetTableBillQuery { TableId = tableId ?? _table.Id, DeviceTokenHash = deviceHash }, CancellationToken.None);
 
     private async Task<string> LockOfAsync(string? deviceHash, Guid? tableId = null)
@@ -273,7 +283,8 @@ public class QrTableLockTests : ApplicationTestBase
         await DbContext.SaveChangesAsync();
 
         Assert.Equal("none", await LockOfAsync(OtherHash));
-        Assert.False((await BillAsync(DeviceHash)).IsSuccess);
+        Assert.Equal("none", await LockOfAsync(DeviceHash));
+        Assert.False((await BillAsync(OtherHash)).IsSuccess);
         Assert.True((await SendAsync(OtherHash)).IsSuccess);
         Assert.Equal("mine", await LockOfAsync(OtherHash));
     }
@@ -302,7 +313,11 @@ public class QrTableLockTests : ApplicationTestBase
         await DbContext.SaveChangesAsync();
 
         Assert.Equal("none", await LockOfAsync(DeviceHash));
-        Assert.False((await BillAsync(DeviceHash)).IsSuccess);
+        // Önceki telefon yalnız kendi ödenen hesabını görür, yeni hesabı görmez.
+        var bill = await BillAsync(DeviceHash);
+        Assert.True(bill.IsSuccess, bill.Error);
+        Assert.True(bill.Value!.IsPaid);
+        Assert.Equal(220m, bill.Value.Total);
     }
 
     [Fact]
@@ -428,6 +443,159 @@ public class QrTableLockTests : ApplicationTestBase
         // Birleşen hesap başka misafirlerin de hesabı: kaynak telefona geçmez.
         Assert.Equal("none", await LockOfAsync(DeviceHash, destination.Id));
         Assert.False((await BillAsync(DeviceHash, destination.Id)).IsSuccess);
+    }
+
+    // ── Ödenen hesap ────────────────────────────────────────────────────────────────────────────
+
+    // Kasada "Tamamı" ile nakit ödeme: kalemler ödeme satırlarına yazılır, hesaptan silinir, hesap kapanır.
+    private async Task PayAllAsync(Order order, decimal? discountAmount = null)
+    {
+        if (!DbContext.CashRegisters.Any())
+        {
+            CashRegister register = CashRegister.Create("Ana Kasa", 0m, _branch.Id);
+            DbContext.CashRegisters.Add(register);
+            DbContext.Shifts.Add(Shift.Create(_branch.Id, register.Id, CurrentUser.UserId, 0m, 0m));
+            await DbContext.SaveChangesAsync();
+        }
+
+        var paid = await new CreatePaymentCommandHandler(Db, _tableNotifications, _cashierNotifications, CurrentUser)
+            .Handle(new CreatePaymentCommand
+            {
+                OrderId = order.Id,
+                CashRegisterId = DbContext.CashRegisters.Single().Id,
+                PaymentMethod = PaymentMethod.Nakit,
+                DiscountAmount = discountAmount,
+                Items = order.OrderItems.Where(i => !i.IsSetMenuComponent)
+                    .Select(i => new PaymentItemDto { OrderItemId = i.Id, Quantity = i.Quantity }).ToList(),
+            }, CancellationToken.None);
+        Assert.True(paid.IsSuccess, paid.Error);
+        Assert.Equal(OrderStatus.Paid, DbContext.Orders.Single(o => o.Id == order.Id).Status);
+    }
+
+    private async Task<Order> OwnedOrderWithWaiterItemAsync()
+    {
+        Order order = await OwnedOrderAsync(DeviceHash);
+        Product ayran = Product.Create("Ayran", 45m, "", await DefaultCategoryIdAsync());
+        DbContext.Products.Add(ayran);
+        order.AddItem(ayran, 2);
+        await DbContext.SaveChangesAsync();
+        return order;
+    }
+
+    [Fact]
+    public async Task PaidBill_StaysVisibleToOwner_MarkedAsPaid()
+    {
+        await SeedAsync();
+        Order order = await OwnedOrderWithWaiterItemAsync();
+
+        await PayAllAsync(order);
+        var bill = await BillAsync(DeviceHash);
+
+        Assert.True(bill.IsSuccess, bill.Error);
+        Assert.True(bill.Value!.HasBill);
+        Assert.True(bill.Value.IsPaid);
+        Assert.NotNull(bill.Value.PaidAt);
+        Assert.Equal(2, bill.Value.Items.Count);
+        Assert.Contains(bill.Value.Items, i => i.Name == "Künefe" && i.Quantity == 1 && i.LineTotal == 220m);
+        Assert.Contains(bill.Value.Items, i => i.Name == "Ayran" && i.Quantity == 2 && i.LineTotal == 90m);
+        Assert.Equal(310m, bill.Value.Total);
+        Assert.Equal(310m, bill.Value.Paid);
+        Assert.Equal(0m, bill.Value.Remaining);
+        // Ödenen hesap masayı tutmaz.
+        Assert.Equal("none", await LockOfAsync(DeviceHash));
+        Assert.Equal("none", await LockOfAsync(OtherHash));
+    }
+
+    [Fact]
+    public async Task PaidBill_ShowsDiscountAndCollectedAmount()
+    {
+        await SeedAsync();
+        Order order = await OwnedOrderWithWaiterItemAsync();
+
+        await PayAllAsync(order, discountAmount: 10m);
+        var bill = (await BillAsync(DeviceHash)).Value!;
+
+        Assert.True(bill.IsPaid);
+        Assert.Equal(310m, bill.Total);
+        Assert.Equal(10m, bill.Discount);
+        Assert.Equal(300m, bill.Paid);
+    }
+
+    [Fact]
+    public async Task PaidBill_IsNotVisibleToOtherPhones_AndDoesNotBlockThem()
+    {
+        await SeedAsync();
+        Order order = await OwnedOrderAsync(DeviceHash);
+        await PayAllAsync(order);
+
+        var other = await BillAsync(OtherHash);
+        Assert.False(other.IsSuccess);
+        Assert.Null(other.Value);
+        Assert.False((await BillAsync(null)).IsSuccess);
+
+        // Yeni misafir masayı alır; önceki telefon yine yalnız kendi ödenen hesabını görür.
+        Order next = await OwnedOrderAsync(OtherHash);
+        Assert.Equal("mine", await LockOfAsync(OtherHash));
+        Assert.Equal("other", await LockOfAsync(DeviceHash));
+        var mine = await BillAsync(DeviceHash);
+        Assert.True(mine.IsSuccess, mine.Error);
+        Assert.True(mine.Value!.IsPaid);
+        Assert.Equal(220m, mine.Value.Total);
+        var theirs = await BillAsync(OtherHash);
+        Assert.True(theirs.IsSuccess, theirs.Error);
+        Assert.False(theirs.Value!.IsPaid);
+        Assert.Equal(next.TotalPrice, theirs.Value.Total);
+    }
+
+    [Fact]
+    public async Task SamePhone_CanOrderAgainAfterPaying_AndTheNewBillTakesOver()
+    {
+        await SeedAsync();
+        Order order = await OwnedOrderAsync(DeviceHash);
+        await PayAllAsync(order);
+
+        var sent = await SendAsync(DeviceHash);
+        Assert.True(sent.IsSuccess, sent.Error);
+        Assert.Equal("mine", await LockOfAsync(DeviceHash));
+        // Yeni talep onay beklerken ödenen hesap görünmeye devam eder.
+        Assert.True((await BillAsync(DeviceHash)).Value!.IsPaid);
+
+        Assert.True((await ApproveAsync(sent.Value!.Id)).IsSuccess);
+        var bill = await BillAsync(DeviceHash);
+
+        Assert.True(bill.IsSuccess, bill.Error);
+        Assert.False(bill.Value!.IsPaid);
+        Assert.Equal(220m, bill.Value.Remaining);
+        // Önceki hesabın kapanış anı: telefon ondan önce onaylanan taleplerini "Ödendi" gösterir.
+        Assert.NotNull(bill.Value.PaidAt);
+    }
+
+    [Fact]
+    public async Task CancelledBill_IsNotShownAsPaid()
+    {
+        await SeedAsync();
+        Order order = await OwnedOrderAsync(DeviceHash);
+
+        order.Cancel();
+        await DbContext.SaveChangesAsync();
+
+        Assert.False((await BillAsync(DeviceHash)).IsSuccess);
+    }
+
+    [Fact]
+    public async Task PaidBill_DisappearsAfterTheVisibilityWindow()
+    {
+        await SeedAsync();
+        Order order = await OwnedOrderAsync(DeviceHash);
+        await PayAllAsync(order);
+
+        _clock.Now = DateTimeOffset.UtcNow + GetTableBillQueryHandler.PaidBillVisibleFor - TimeSpan.FromMinutes(5);
+        Assert.True((await BillAsync(DeviceHash)).Value!.IsPaid);
+
+        _clock.Now = DateTimeOffset.UtcNow + GetTableBillQueryHandler.PaidBillVisibleFor + TimeSpan.FromMinutes(5);
+        var expired = await BillAsync(DeviceHash);
+        Assert.False(expired.IsSuccess);
+        Assert.Equal(QrTableLock.NotOwnerMessage, expired.Error);
     }
 
     // ── Garson çağır ────────────────────────────────────────────────────────────────────────────
