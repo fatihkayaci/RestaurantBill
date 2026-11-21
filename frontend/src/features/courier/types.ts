@@ -133,8 +133,14 @@ export interface CourierHandoverHistory {
     cashDifference: number | null;
 }
 
+/** Haritada konumu gösterir (admin sipariş detayı). */
 export function mapsUrl(query: string): string {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+/** Kuryenin "Yol tarifi": bulunduğu konumdan adrese araç rotasını doğrudan açar (Google Haritalar uygulaması varsa orada). */
+export function directionsUrl(destination: string): string {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
 }
 
 /** "+905321234567" → "tel:+905321234567". */

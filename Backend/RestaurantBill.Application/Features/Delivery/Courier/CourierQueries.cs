@@ -27,9 +27,29 @@ internal static class CourierScope
         return businessDay.ToUtcRange(branch, today, today).FromUtc;
     }
 
-    /// <summary>Harita araması: adres, bölge ve şubenin şehri ("Moda Cad. No:1, Moda, İstanbul").</summary>
-    public static string MapsQuery(DeliveryOrder order, string city)
-        => string.Join(", ", new[] { order.Address, order.ZoneName, city }.Where(part => !string.IsNullOrWhiteSpace(part)).Select(part => part.Trim()));
+    /// <summary>
+    /// Yol tarifi araması: adres (daire/kat parçaları çıkarılmış), bölge (mahalle), şubenin ilçesi ve şehri
+    /// ("Moda Cad. No:1, Moda, Kadıköy, İstanbul"). Daire/kat haritada aranamaz, bulmayı bozar; kurye ekranında adres tam kalır.
+    /// </summary>
+    public static string MapsQuery(DeliveryOrder order, string city, string district = "")
+        => string.Join(", ", new[] { StripUnitParts(order.Address), order.ZoneName, district, city }
+            .Where(part => !string.IsNullOrWhiteSpace(part)).Select(part => part.Trim())
+            .Distinct(StringComparer.CurrentCultureIgnoreCase));
+
+    // "D:3", "D.3", "Daire 5", "Kat:2", "K.2" gibi haritada karşılığı olmayan parçalar.
+    private static readonly System.Text.RegularExpressions.Regex UnitParts = new(
+        @"\b(?:d(?:aire)?|kat|k)\s*[:.]?\s*\d+\b|\b(?:daire|kat)\b",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    internal static string StripUnitParts(string? address)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+            return string.Empty;
+        string cleaned = UnitParts.Replace(address, " ");
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s*,\s*(,\s*)+", ", ");
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s{2,}", " ");
+        return cleaned.Trim(' ', ',', '/', '-');
+    }
 }
 
 // ── Kuryenin siparişleri: üzerindeki açık siparişler (kabulden yola kadar) + bugün teslim ettikleri ─────────
@@ -52,10 +72,12 @@ public class GetCourierOrdersQueryHandler(IAppDbContext db, ICurrentUserService 
                 || (d.Status == DeliveryOrderStatus.Delivered && d.DeliveredAt >= start))
             .ToListAsync(cancellationToken);
 
-        string city = await db.Branches.AsNoTracking()
+        var place = await db.Branches.AsNoTracking()
             .Where(b => b.Id == currentUser.BranchId)
-            .Select(b => b.City)
-            .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+            .Select(b => new { b.City, b.District })
+            .FirstOrDefaultAsync(cancellationToken);
+        string city = place?.City ?? string.Empty;
+        string district = place?.District ?? string.Empty;
         Dictionary<Guid, string> productNames = await db.LoadSelectionNamesAsync(orders, cancellationToken);
         DateTime now = clock.GetUtcNow().UtcDateTime;
 
@@ -76,7 +98,7 @@ public class GetCourierOrdersQueryHandler(IAppDbContext db, ICurrentUserService 
                 AddressDirections = d.AddressDirections,
                 ZoneName = d.ZoneName,
                 Note = d.Note,
-                MapsQuery = CourierScope.MapsQuery(d, city),
+                MapsQuery = CourierScope.MapsQuery(d, city, district),
                 Lines = DeliveryScope.ToLineDtos(d, productNames),
                 Subtotal = d.Subtotal,
                 DeliveryFee = d.DeliveryFee,
