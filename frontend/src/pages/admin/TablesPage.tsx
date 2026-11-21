@@ -842,7 +842,7 @@ export default function Tables() {
             {/* Dolu masayı başka masanın üstüne sürükleyince taşı / birleştir / yer değiştir sorulur. */}
             {tables.length > 0 && tables.some(t => t.status === 2) && (
                 <p className="text-xs text-muted-foreground">
-                    İpucu: dolu masayı tutup başka masanın üstüne bırakın (telefonda basılı tutun); taşıma, birleştirme ya da yer değiştirme sorulur. Sırayı değiştirmek için "Sırala".
+                    İpucu: dolu masayı tutup başka masanın üstüne bırakın (telefonda basılı tutun); taşıma, birleştirme ya da yer değiştirme sorulur. Sırayı değiştirmek için "Düzenle".
                 </p>
             )}
             {tables.length > 0 && (
