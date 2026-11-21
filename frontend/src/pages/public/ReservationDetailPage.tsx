@@ -21,7 +21,7 @@ import { reservationTone } from './reservationTone';
 import { SitePage } from './site/SiteFrame';
 import { ImageSlot } from './site/SiteChrome';
 import { reservationHref, serif } from './site/siteParts';
-import { directionsUrl, headingFont, telHref } from './site/siteTheme';
+import { directionsUrl, headingFont, resolveDesign, telHref } from './site/siteTheme';
 import { fullAddress, rememberReservationToken } from './site/useSite';
 
 interface CartLine {
@@ -216,7 +216,7 @@ export default function ReservationDetailPage() {
     };
 
     const root = (children: ReactNode) => (
-        <div style={customerRootStyle(site?.site)} className="min-h-screen text-[var(--site-text)]">
+        <div style={customerRootStyle(site?.site)} data-site-design={resolveDesign(site?.site.design)} className="min-h-screen text-[var(--site-text)]">
             <link rel="stylesheet" href={customerFontsHref(site?.site)} precedence="default" />
             {children}
         </div>
