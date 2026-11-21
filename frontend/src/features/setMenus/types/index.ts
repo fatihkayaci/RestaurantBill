@@ -68,7 +68,7 @@ export interface SetMenuInput {
     isActive: boolean;
     /** Gönderilmezse sunucu mevcut değeri korur. */
     isFeatured?: boolean;
-    /** Gönderilmezse yeni menü sona eklenir, mevcut menünün sırası korunur (sıra "Sırala" modunda sürüklenerek değişir). */
+    /** Gönderilmezse yeni menü sona eklenir, mevcut menünün sırası korunur (sıra "Düzenle" modunda sürüklenerek değişir). */
     sortOrder?: number;
     categoryId: string | null;
     slots: {
