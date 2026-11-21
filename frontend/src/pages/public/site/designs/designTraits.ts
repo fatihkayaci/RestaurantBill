@@ -6,7 +6,7 @@ import type { SiteDesignKey } from '../siteTheme';
 
 /** Ortak menünün (DeliveryMenu) ürün sunumu: kart, Sıcak'ın tabak kartı, Meyhane'nin basılı menü satırı + meze
  *  tepsisi, Esnaf'ın pano satırı. Site Menü sayfası, masa QR menüsü ve paket sipariş menüsü aynı değeri kullanır. */
-export type MenuVariant = 'default' | 'sicak' | 'meyhane' | 'esnaf';
+export type MenuVariant = 'default' | 'sicak' | 'meyhane' | 'esnaf' | 'bahce';
 
 export interface SiteDesignTraits {
     /** Menünün sunumu (site Menü sayfası ve masa QR menüsü). Paket sipariş sayfası Sıcak'ta ayrıca tabak kartını seçer. */
@@ -24,6 +24,7 @@ const TRAITS: Partial<Record<SiteDesignKey, Partial<SiteDesignTraits>>> = {
     elit: { flowClass: 'rb-el-flow', mobileBar: 'square' },
     meyhane: { menuVariant: 'meyhane' },
     esnaf: { menuVariant: 'esnaf' },
+    bahce: { menuVariant: 'bahce' },
 };
 
 /** Tasarımın özellikleri (anahtar `resolveDesign` ile çözülmüş olmalı). */
