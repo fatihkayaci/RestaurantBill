@@ -8,6 +8,22 @@ export interface NewOrderItem {
     note: string;
 }
 
+/** POST /order/add-lines gövdesindeki menü satırı. Seçim gönderilmeyen bölümde varsayılan seçenek kullanılır. */
+export interface NewSetMenuLine {
+    setMenuId: string;
+    quantity: number;
+    note?: string;
+    selections: { slotId: string; productId: string }[];
+}
+
+/** POST /order/add-lines gövdesi. */
+export interface AddLinesToOrder {
+    orderId: number | string;
+    note: string;
+    products: NewOrderItem[];
+    setMenus: NewSetMenuLine[];
+}
+
 export const orderService = {
     getAllOrdersToKitchen: async () => {
         const response = await api.get<Order[]>(`/order/kitchen`);
@@ -32,6 +48,14 @@ export const orderService = {
     /** Var olan siparişe satırları tek istekte ekler; sunucu yalnızca orderId, note ve orderItems bekler. */
     addItems: async (orderId: number, note: string, items: NewOrderItem[]) => {
         const response = await api.post<{ message: string }>(`/order/add-product`, { orderId, note, orderItems: items });
+        return response.data;
+    },
+    /**
+     * "Mutfağa gönder": ürünleri ve menüleri tek istekte ekler (POST /order/add-lines). Ya hepsi kaydedilir ya hiçbiri;
+     * bir satır eklenemezse sunucu o satırı belirten hatayla döner ve sipariş değişmez.
+     */
+    addLines: async (body: AddLinesToOrder) => {
+        const response = await api.post<{ message: string }>(`/order/add-lines`, body);
         return response.data;
     },
     createOrder: async (tableId: string) => {

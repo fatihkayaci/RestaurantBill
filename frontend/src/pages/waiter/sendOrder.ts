@@ -1,21 +1,17 @@
 import { orderService } from '@/features/orders/api/orderService';
-import { setMenuService } from '@/features/setMenus/api/setMenuService';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Order } from '@/features/orders/types';
-import { getApiErrorMessage } from '@/lib/apiError';
 import { lineNote, type CartLine } from './orderCart';
 
 // "Mutfağa gönder":
 //   1. Masada sipariş yoksa POST /table/open (dönen değer yeni siparişin kimliği). Bu adım başarısızsa hiçbir şey gitmez.
-//   2. Sipariş kimliği belli olunca aynı anda: ürünler tek addItems isteğinde, her menü satırı kendi
-//      addSetMenuToOrder isteğinde. Biri başarısız olsa da diğerleri kaydedilir; başarısızlar geri döner.
+//   2. Ürünler ve menüler tek POST /order/add-lines isteğinde gider: ya hepsi kaydedilir ya hiçbiri. (Eskiden ürünler ve
+//      her menü ayrı ve paralel isteklerdi; aynı siparişi aynı anda güncelledikleri için biri çakışıp kaybolabiliyordu.)
+// Hata olursa fırlatır; çağıran sepeti olduğu gibi bırakır.
 
 /** Gönderime hazır menü satırı (seçimler menünün güncel bölümlerine göre süzülmüş). */
 export interface SetLineToSend {
-    /** Sepetteki satırın id'si; başarısız olursa sepette bu satır kalır. */
-    lineId: string;
     setMenuId: string;
-    name: string;
     quantity: number;
     note: string;
     selections: { slotId: string; productId: string }[];
@@ -32,17 +28,7 @@ interface SendInput {
     onTableOpened: () => void;
 }
 
-export interface SendFailure {
-    /** "Ürünler" ya da menünün adı. */
-    label: string;
-    message: string;
-    /** Ürün isteği başarısızsa true (tüm ürün satırları sepette kalır). */
-    products: boolean;
-    /** Menü isteği başarısızsa sepetteki satırın id'si. */
-    setLineId?: string;
-}
-
-export async function sendToKitchen({ tableId, order, orderNote, lines, setLines, onTableOpened }: SendInput): Promise<SendFailure[]> {
+export async function sendToKitchen({ tableId, order, orderNote, lines, setLines, onTableOpened }: SendInput): Promise<void> {
     let orderId = order?.id;
     if (orderId == null) {
         // Masa başka bir garson tarafından az önce açıldıysa sunucu mevcut siparişi döner.
@@ -50,29 +36,19 @@ export async function sendToKitchen({ tableId, order, orderNote, lines, setLines
         onTableOpened();
     }
 
-    const productRequest = lines.length === 0 ? null : orderService.addItems(orderId, orderNote, lines.map(line => ({
-        productId: line.productId,
-        quantity: line.quantity,
-        note: lineNote(line),
-    })));
-    const setRequests = setLines.map(line => setMenuService.addSetMenuToOrder({
-        orderId: orderId,
-        setMenuId: line.setMenuId,
-        quantity: line.quantity,
-        note: line.note.trim() || undefined,
-        selections: line.selections,
-    }));
-
-    const [productResult, ...setResults] = await Promise.allSettled([productRequest, ...setRequests]);
-
-    const failures: SendFailure[] = [];
-    if (productResult.status === 'rejected') {
-        failures.push({ label: 'Ürünler', message: getApiErrorMessage(productResult.reason, 'Ürünler gönderilemedi.'), products: true });
-    }
-    setResults.forEach((result, index) => {
-        if (result.status === 'fulfilled') return;
-        const line = setLines[index];
-        failures.push({ label: line.name, message: getApiErrorMessage(result.reason, `${line.name} gönderilemedi.`), products: false, setLineId: line.lineId });
+    await orderService.addLines({
+        orderId,
+        note: orderNote,
+        products: lines.map(line => ({
+            productId: line.productId,
+            quantity: line.quantity,
+            note: lineNote(line),
+        })),
+        setMenus: setLines.map(line => ({
+            setMenuId: line.setMenuId,
+            quantity: line.quantity,
+            note: line.note.trim() || undefined,
+            selections: line.selections,
+        })),
     });
-    return failures;
 }

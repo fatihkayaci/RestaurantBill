@@ -30,6 +30,8 @@ function isOnBoard(boardPath: string, pathname: string, search: string): boolean
 interface Props {
     /** Panonun adresi; "?siparis=<id>" eklenerek siparişin detayı açılır. */
     boardPath: string;
+    /** Başlıktaki paket sesi düğmesinin görünürlüğü; dar barda gizlenip hesap menüsüne taşınır (AppShell). */
+    soundToggleClassName?: string;
 }
 
 // Yeni online paket siparişi: kasiyer ve yönetici ekranlarında başlığın hemen altında tek uyarı şeridi ("N paket sipariş
@@ -37,7 +39,7 @@ interface Props {
 // kabul/ret edene kadar 10 sn'de bir tekrar eden ses. Başlıkta onay bekleyen sipariş sayısı (rozet) ve yanında ses
 // açma/kapama düğmesi durur. Ses tercihi cihazda saklanır (lib/soundToggle); tarayıcı sesi ilk dokunuşa kadar kilitli
 // tutabilir: o zaman "Sesi aç" düğmeli ayrı bir şerit görünür.
-export default function OnlineOrderAlerts({ boardPath }: Props) {
+export default function OnlineOrderAlerts({ boardPath, soundToggleClassName }: Props) {
     const navigate = useNavigate();
     const location = useLocation();
     const [enabled, setEnabled] = useState<boolean | null>(null);
@@ -214,7 +216,7 @@ export default function OnlineOrderAlerts({ boardPath }: Props) {
     return (
         <div className="flex items-center gap-1.5">
             {strips}
-            <OnlineOrderSoundToggle />
+            <OnlineOrderSoundToggle className={soundToggleClassName} />
             <button
                 type="button"
                 onClick={() => navigate(boardPath)}
@@ -236,7 +238,7 @@ export default function OnlineOrderAlerts({ boardPath }: Props) {
 }
 
 // Başlıktaki ses düğmesi: paket sipariş sesini açar/kapatır. Tarayıcı sesi kilitliyse dokunuş sesi açar.
-function OnlineOrderSoundToggle() {
+function OnlineOrderSoundToggle({ className }: { className?: string }) {
     const state = useSyncExternalStore(onlineOrderSound.subscribe, onlineOrderSound.getState);
     const on = state === 'on';
     const label = on ? 'Paket sipariş sesini kapat' : 'Paket sipariş sesini aç';
@@ -252,7 +254,8 @@ function OnlineOrderSoundToggle() {
                 'flex min-h-10 items-center rounded-lg border px-2.5 transition-colors',
                 on
                     ? 'border-white/10 bg-white/[0.03] text-sidebar-foreground/75 hover:bg-white/[0.06]'
-                    : 'border-rb-gold/45 bg-rb-gold/15 text-rb-gold hover:bg-rb-gold/25'
+                    : 'border-rb-gold/45 bg-rb-gold/15 text-rb-gold hover:bg-rb-gold/25',
+                className
             )}
         >
             {on ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />}

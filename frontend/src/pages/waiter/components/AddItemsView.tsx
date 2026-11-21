@@ -78,6 +78,8 @@ function AddItemsScreen({ table, order, onBack, backLabel, onReserve, onSent, on
     const [query, setQuery] = useState('');
     const [notesFor, setNotesFor] = useState<string | null>(null);
     const [sending, setSending] = useState(false);
+    /** Son gönderim başarısızsa sunucunun mesajı; sepet korunur, "Tekrar gönder" gösterilir. */
+    const [sendError, setSendError] = useState<string | null>(null);
     const keyboardInset = useKeyboardInset();
 
     // Sepet her değiştiğinde masanın taslağı güncellenir (boşsa silinir).
@@ -178,49 +180,34 @@ function AddItemsScreen({ table, order, onBack, backLabel, onReserve, onSent, on
     const send = async () => {
         if (cartCount === 0 || sending) return;
         setSending(true);
+        setSendError(null);
         try {
             const toSend = mergeLines(cartLines);
             const setsToSend: SetLineToSend[] = cartSetLines.map(line => {
                 const setMenu = setMenuById.get(line.setMenuId)!;
                 return {
-                    lineId: line.id,
                     setMenuId: line.setMenuId,
-                    name: setMenu.name,
                     quantity: line.quantity,
                     note: line.note,
                     selections: selectionsToSend(setMenu, line.selections),
                 };
             });
-            const failures = await sendToKitchen({ tableId, order, orderNote, lines: toSend, setLines: setsToSend, onTableOpened });
+            await sendToKitchen({ tableId, order, orderNote, lines: toSend, setLines: setsToSend, onTableOpened });
 
-            // Gönderilenler sepetten çıkar; başarısız olanlar ve gönderim sürerken eklenenler kalır.
-            const productsFailed = failures.some(f => f.products);
-            const failedSetIds = new Set(failures.map(f => f.setLineId));
-            const sentProductLines = productsFailed ? [] : cartLines;
-            const sentSetLines = cartSetLines.filter(l => !failedSetIds.has(l.id));
-            const sentLineIds = new Set([...sentProductLines, ...sentSetLines].map(l => l.id));
+            // Hepsi tek seferde kaydedildi: gönderilenler sepetten çıkar; gönderim sürerken eklenenler kalır.
+            const sentLineIds = new Set([...cartLines, ...cartSetLines].map(l => l.id));
             setLines(prev => prev.filter(l => !sentLineIds.has(l.id)));
             changeSetMenuLines(prev => prev.filter(l => !sentLineIds.has(l.id)));
             bumpUsage([
-                ...(productsFailed ? [] : toSend.map(l => ({ id: l.productId, quantity: l.quantity }))),
-                ...sentSetLines.map(l => ({ id: l.setMenuId, quantity: l.quantity })),
+                ...toSend.map(l => ({ id: l.productId, quantity: l.quantity })),
+                ...cartSetLines.map(l => ({ id: l.setMenuId, quantity: l.quantity })),
             ]);
-            const sentCount = [...sentProductLines, ...sentSetLines].reduce((sum, l) => sum + l.quantity, 0);
-
-            if (failures.length === 0) {
-                clearDraft(tableId);
-                toast.success(`${table.name} → ${sentCount} ürün mutfağa gönderildi.`);
-                onSent();
-                return;
-            }
-            // Kısmi hata: ekranda kalınır; garson kalan satırları görüp yeniden gönderir.
-            if (sentCount > 0) toast.success(`${table.name} → ${sentCount} ürün mutfağa gönderildi.`);
-            toast.error(`Gönderilemedi: ${failures.map(f => f.label).join(', ')}. Sepette duruyor, tekrar deneyin.`, {
-                description: failures.map(f => f.message).join(' · '),
-            });
+            clearDraft(tableId);
+            toast.success(`${table.name} → ${cartCount} ürün mutfağa gönderildi.`);
+            onSent();
         } catch (err) {
-            // Masa açılamadı: hiçbir şey gitmedi, sepet olduğu gibi durur.
-            toast.error(getApiErrorMessage(err, 'Sipariş gönderilemedi. Sepet duruyor, tekrar deneyin.'));
+            // Hiçbir satır kaydedilmedi (ya masa açılamadı ya da istek bütünüyle reddedildi): sepet olduğu gibi durur.
+            setSendError(getApiErrorMessage(err, 'Bağlantı sorunu olabilir.'));
         } finally {
             setSending(false);
         }
@@ -325,8 +312,10 @@ function AddItemsScreen({ table, order, onBack, backLabel, onReserve, onSent, on
                 noteCount={noteCount}
                 total={cartTotal}
                 sending={sending}
+                error={sendError}
                 keyboardInset={keyboardInset}
                 onSend={() => void send()}
+                onDismissError={() => setSendError(null)}
             />
 
             {picker && pickerMenu && (

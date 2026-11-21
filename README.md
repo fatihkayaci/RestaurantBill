@@ -459,6 +459,8 @@ The frontend dev server runs on `http://localhost:5173`.
 | `GET` | `/api/Order/table/{tableId}` | Owner, Admin, Waiter, Kitchen | Active order for a table |
 | `POST` | `/api/Order` | Owner, Admin, Waiter | Create a new order |
 | `POST` | `/api/Order/add-product` | Owner, Admin, Waiter | Add items to an order |
+| `POST` | `/api/Order/add-set-menu` | Owner, Admin, Waiter | Add one set menu line to an order |
+| `POST` | `/api/Order/add-lines` | Owner, Admin, Waiter | Add products and set menus in one all-or-nothing request (waiter "send to kitchen") |
 | `POST` | `/api/Order/item/quantity` | Owner, Admin, Waiter | Update an order item's quantity |
 | `POST` | `/api/Order/item/remove` | Owner, Admin, Waiter | Remove an item from an order |
 | `POST` | `/api/Order/item/cancel` | Owner, Admin, Waiter | Cancel a quantity of one order line (product or set menu units), with optional reason |

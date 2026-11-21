@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { X, ChevronDown, CreditCard, QrCode, Minus, Plus, Landmark, Banknote, Copy, Tag } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { paymentSettingsService, type BranchPaymentSettings } from '@/features/branches/api/paymentSettingsService';
@@ -357,6 +357,10 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
         ].join('\n')
         : '';
     const isAdmin = ['Admin', 'Owner'].includes(getSession()?.role ?? '');
+    // Telefonda kasa ve yöntem seçimi ödeme düğmesinin çok üstünde kalabilir: düğmenin üstünde özet + "Değiştir".
+    const paymentOptionsRef = useRef<HTMLDivElement>(null);
+    const summaryRegisterName = cashRegisterMode === 'shift' ? activeShift?.cashRegisterName : selectedRegister?.cashRegisterName;
+    const summaryMethodLabel = PAYMENT_METHODS.find(m => m.key === paymentMethod)?.label;
 
     const copyIban = async () => {
         if (!ibanSettings?.iban) return;
@@ -392,7 +396,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
+            {/* Telefonda tek kaydırma alanı; scroll-pb: klavyeyle odaklanan alan yapışkan ödeme düğmesinin altında kalmasın. */}
+            <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden max-md:scroll-pb-40">
                 {/* Sol: Ürünler */}
                 <div className="min-w-0 md:flex-1 md:overflow-y-auto px-4 sm:px-6 py-5">
                     <div className="mb-3 flex items-baseline justify-between gap-3">
@@ -808,6 +813,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                             )}
                         </div>
 
+                        <div ref={paymentOptionsRef} className="space-y-4 scroll-mt-4">
                         {/* Kasa: fiziksel kasa/vardiya; ödeme yönteminden bağımsızdır (adı "Kart Kasa" olan kasaya nakit de alınır). */}
                         {cashRegisterMode === 'shift' ? (
                             // Kasiyer kasa seçmez: vardiyasını yönetici atadığı kasada açar, ödeme o kasaya yazılır.
@@ -846,8 +852,8 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isSelected ? 'bg-rb-accent text-rb-accent-foreground' : 'bg-muted'}`} aria-hidden="true">
                                                         <Landmark className="h-4 w-4" />
                                                     </div>
-                                                    <div className="min-w-0">
-                                                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-rb-accent' : ''}`}>{register.cashRegisterName}</p>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className={`text-sm font-semibold leading-snug wrap-break-word ${isSelected ? 'text-rb-accent' : ''}`}>{register.cashRegisterName}</p>
                                                         <p className={`text-xs ${!register.hasOpenShift && !openedHere && !(isSelected && ensuringShift) ? 'text-rb-amber font-medium' : 'text-muted-foreground'}`}>
                                                             {isSelected && ensuringShift
                                                                 ? (register.hasOpenShift ? 'Vardiya hazırlanıyor...' : 'Vardiya açılıyor...')
@@ -884,6 +890,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 );
                             })}
                         </div>
+                        </div>
                         {!hasIban && ibanSettings !== null && (
                             <p className="text-xs text-muted-foreground">
                                 IBAN ile ödeme kapalı: şubede IBAN tanımlı değil. {isAdmin ? 'Ayarlar → Ödeme sekmesinden ekleyebilirsin.' : 'Yöneticiniz Ayarlar → Ödeme sekmesinden ekleyebilir.'}
@@ -916,7 +923,24 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         )}
 
                         {/* Ödeme düğmesi uzun içerikte de görünür kalsın. */}
-                        <div className="sticky bottom-0 -mx-6 -mb-5 border-t border-border bg-[#FFFDF8] px-6 pt-3 pb-5 dark:bg-[#1C1712]">
+                        <div className="sticky bottom-0 -mx-6 -mb-5 border-t border-border bg-[#FFFDF8] px-6 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] dark:bg-[#1C1712]">
+                            {/* Telefonda: hangi kasaya, hangi yöntemle alınacağı düğmenin hemen üstünde. */}
+                            <div className="mb-2 flex items-center gap-2 text-sm md:hidden">
+                                <Landmark className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                                <p className="min-w-0 flex-1 truncate">
+                                    <span className={summaryRegisterName ? 'font-semibold text-foreground' : 'font-semibold text-rb-amber'}>
+                                        {summaryRegisterName ?? 'Kasa seçilmedi'}
+                                    </span>
+                                    <span className="text-muted-foreground"> · {summaryMethodLabel}</span>
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => paymentOptionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                                    className="min-h-11 shrink-0 rounded-lg px-3 text-sm font-semibold text-rb-accent transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    Değiştir
+                                </button>
+                            </div>
                             <button
                                 type="button"
                                 onClick={startPayment}

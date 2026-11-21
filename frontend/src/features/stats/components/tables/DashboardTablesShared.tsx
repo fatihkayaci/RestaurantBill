@@ -124,14 +124,15 @@ function Stat({ icon: Icon, label, value, sub, tone, wrapSub }: {
 
 /**
  * Masaya özgü olmayan bilgiler (eski "Şu an" kartı + gecikme toplamı + ciro dağılımı).
- * Masalardan önce okunur: masaüstünde tek satır, tablette üç, telefonda iki sütun.
+ * Masalardan önce okunur. Sütun sayısı kartın kendi genişliğine göre (@container): dar kartta iki, orta
+ * genişlikte üç (2 × 3), geniş kartta altı (tek satır); kutucuklar yazıyı kesecek kadar daralmaz.
  */
 export function SummaryBar({ summary, stats, now }: { summary: LiveSummary; stats: DashboardStats; now: number }) {
     const s = summary;
     const parts = revenueParts(stats.revenue).filter(p => p.amount > 0);
     return (
-        <div className="flex flex-col gap-2">
-            <div className="grid grid-cols-2 gap-2 text-foreground sm:grid-cols-3 lg:grid-cols-6">
+        <div className="@container flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2 text-foreground @lg:grid-cols-3 @[66rem]:grid-cols-6">
                 <Stat icon={Users} label="Dolu masa" value={<>{s.occupied}<span className="text-sm text-rb-text-sub">/{s.totalTables}</span></>} sub={`%${s.occupancyPct} doluluk`} />
                 <Stat icon={Receipt} label="Açık sipariş" value={s.openOrders} sub={`Masalarda ${formatCurrency(s.openTotal)}`} />
                 <Stat
