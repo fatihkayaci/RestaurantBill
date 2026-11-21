@@ -16,7 +16,7 @@ public static class DeliveryKitchenSync
     /// <summary>Durumu değiştiyse paket sipariş (kaydedilmemiş), değişmediyse ya da masa siparişiyse null.</summary>
     public static async Task<DeliveryOrder?> AdvanceDeliveryFromKitchenAsync(this IAppDbContext db, Order order, CancellationToken cancellationToken)
     {
-        if (order.OrderType != OrderType.Delivery)
+        if (!order.IsPackageOrder)
             return null;
 
         DeliveryOrder? delivery = await db.DeliveryOrders.FirstOrDefaultAsync(d => d.OrderId == order.Id, cancellationToken);
@@ -52,7 +52,7 @@ public static class DeliveryKitchenSync
     /// </summary>
     public static async Task<string?> CheckDeliveryAcceptsItemsAsync(this IAppDbContext db, Order order, CancellationToken cancellationToken)
     {
-        if (order.OrderType != OrderType.Delivery)
+        if (!order.IsPackageOrder)
             return null;
 
         DeliveryOrderStatus? status = await db.DeliveryOrders

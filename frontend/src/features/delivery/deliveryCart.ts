@@ -144,6 +144,8 @@ export interface StoredCart {
     /** Aynı sepetin tekrar gönderimi aynı siparişi döndürür (çift tıklama, bağlantı kopması). */
     clientRequestId: string;
     zoneId: string | null;
+    /** Müşteri "Gel al"ı seçtiyse true. */
+    pickup?: boolean;
     savedAt: number;
 }
 
@@ -256,13 +258,14 @@ export interface OrderSnapshot {
     branchId: string;
     lines: DeliveryCartLine[];
     zoneId: string | null;
+    pickup?: boolean;
     savedAt: number;
 }
 
 /** Sipariş gönderilince sepet silinmeden önce siparişin anahtarıyla saklanır (7 gün). */
-export function saveOrderSnapshot(token: string, branchId: string, lines: DeliveryCartLine[], zoneId: string | null) {
+export function saveOrderSnapshot(token: string, branchId: string, lines: DeliveryCartLine[], zoneId: string | null, pickup = false) {
     try {
-        localStorage.setItem(snapshotKey(token), JSON.stringify({ branchId, lines, zoneId, savedAt: Date.now() }));
+        localStorage.setItem(snapshotKey(token), JSON.stringify({ branchId, lines, zoneId, pickup, savedAt: Date.now() }));
     } catch { /* özel pencere: tekrar sipariş boş sepetle açılır */ }
 }
 

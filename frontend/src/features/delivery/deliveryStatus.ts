@@ -4,8 +4,16 @@ import { DeliveryStatus, type DeliveryOrder, type DeliveryOrderStatus } from './
 /** Takip sayfasının adımları: Alındı → Onaylandı → Hazırlanıyor → Hazır → Yolda → Teslim edildi. */
 export const TRACKING_STEPS = ['Alındı', 'Onaylandı', 'Hazırlanıyor', 'Hazır', 'Yolda', 'Teslim edildi'] as const;
 
-/** Durumun takip adımındaki yeri (0–5); reddedilen/iptal edilen için -1. */
-export function trackingStepIndex(status: DeliveryOrderStatus): number {
+/** Gel al siparişinin takip adımları: "Yolda" yoktur, son adım müşterinin teslim alması. */
+export const PICKUP_TRACKING_STEPS = ['Alındı', 'Onaylandı', 'Hazırlanıyor', 'Hazır', 'Teslim alındı'] as const;
+
+export function trackingSteps(isPickup = false): readonly string[] {
+    return isPickup ? PICKUP_TRACKING_STEPS : TRACKING_STEPS;
+}
+
+/** Durumun takip adımındaki yeri (0–5; gel al'da 0–4); reddedilen/iptal edilen için -1. */
+export function trackingStepIndex(status: DeliveryOrderStatus, isPickup = false): number {
+    if (isPickup && status === DeliveryStatus.Delivered) return 4;
     switch (status) {
         case DeliveryStatus.Received: return 0;
         case DeliveryStatus.Accepted: return 1;
@@ -55,8 +63,9 @@ export function mergeBoardOrders(active: DeliveryOrder[], today: DeliveryOrder[]
     return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-/** "#123 · Moda" */
-export function orderTitle(order: Pick<DeliveryOrder, 'number' | 'zoneName'>): string {
+/** "#123 · Moda"; gel al siparişinde "#123 · Gel al". */
+export function orderTitle(order: Pick<DeliveryOrder, 'number' | 'zoneName'> & { isPickup?: boolean }): string {
+    if (order.isPickup) return `#${order.number} · Gel al`;
     return order.zoneName ? `#${order.number} · ${order.zoneName}` : `#${order.number}`;
 }
 
@@ -73,6 +82,8 @@ export function boardOrderPath(boardPath: string, orderId: string): string {
 }
 
 export const ETA_CHOICES = [20, 30, 45, 60] as const;
+/** Gel al siparişinde müşteriye söylenecek hazır olma süreleri (kurye yolu yok, daha kısa). */
+export const PICKUP_ETA_CHOICES = [10, 15, 20, 30] as const;
 
 export const REJECT_REASONS = [
     'Yoğunluk nedeniyle şu an sipariş alamıyoruz.',

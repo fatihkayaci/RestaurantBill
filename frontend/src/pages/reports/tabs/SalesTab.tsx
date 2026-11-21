@@ -108,6 +108,12 @@ export default function SalesTab({ data, loading, isSingleDay, showBranchCompari
                             Teslimat ücreti dahil <span className="text-foreground font-medium">{formatCurrency(data?.deliveryFeeRevenue ?? 0, 2)}</span>
                         </p>
                     )}
+                    {((data?.deliveryOrderRevenue ?? 0) > 0 || (data?.pickupOrderRevenue ?? 0) > 0) && (
+                        <p className="mt-1 flex flex-wrap gap-x-4 text-sm text-muted-foreground">
+                            <span>Paket (adrese teslim) <span className="text-foreground font-medium">{formatCurrency(data?.deliveryOrderRevenue ?? 0, 2)}</span></span>
+                            <span>Gel al <span className="text-foreground font-medium">{formatCurrency(data?.pickupOrderRevenue ?? 0, 2)}</span></span>
+                        </p>
+                    )}
                 </div>
                 <div className="rounded-xl border border-border bg-card p-5">
                     <div className="flex items-center gap-3">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Banknote, CreditCard, Landmark } from 'lucide-react';
+import { Banknote, Clock, CreditCard, Landmark, MapPin } from 'lucide-react';
 import { publicDeliveryService } from '@/features/delivery/api/publicDeliveryService';
 import { formatPhoneInput, isCompletePhone, toCartInput, type DeliveryCartLine } from '@/features/delivery/deliveryCart';
 import {
@@ -15,7 +15,10 @@ import Sheet from './Sheet';
 
 interface Props {
     data: OnlineOrdering;
-    zone: DeliveryZone;
+    /** Adrese teslimde seçilen mahalle; gel al'da null. */
+    zone: DeliveryZone | null;
+    /** Gel al: adres istenmez, ödeme restoranda (ya da IBAN). */
+    pickup?: boolean;
     lines: DeliveryCartLine[];
     quote: DeliveryQuote;
     /** Sepet başına bir kez üretilir; yeniden denemede aynısı gider (sunucu aynı siparişi döndürür). */
@@ -34,9 +37,9 @@ interface SubmitProblem {
 }
 
 // Paket siparişin son adımı: ad, telefon (0xxx xxx xx xx), adres, tarif, not, ödeme (kapıda nakit/kart ya da IBAN ile
-// havale) ve gerekiyorsa SMS kodu. IBAN seçilince hesap bilgileri ve tutar kopyalanabilir kutuda gösterilir.
+// havale) ve gerekiyorsa SMS kodu. Gel al'da adres ve tarif yoktur; restoranın adresi gösterilir, ödeme restoranda yapılır. IBAN seçilince hesap bilgileri ve tutar kopyalanabilir kutuda gösterilir.
 // Gizli "website" alanı bot tuzağıdır. Fiyat değiştiyse (409) yeni toplam gösterilir, müşteri onaylayıp yeniden gönderir.
-export default function DeliveryCheckout({ data, zone, lines, quote, clientRequestId, onQuoteChanged, onSubmitted, onClose }: Props) {
+export default function DeliveryCheckout({ data, zone, pickup = false, lines, quote, clientRequestId, onQuoteChanged, onSubmitted, onClose }: Props) {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
@@ -74,7 +77,7 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
     const errors = {
         name: !name.trim() ? 'Adınızı ve soyadınızı yazın.' : null,
         phone: !phoneOk ? 'Telefon numaranızı 0xxx xxx xx xx biçiminde yazın.' : null,
-        address: !address.trim() ? 'Açık adresinizi yazın.' : null,
+        address: !pickup && !address.trim() ? 'Açık adresinizi yazın.' : null,
         payment: payment === null ? 'Ödeme yöntemini seçin.' : null,
     };
     const valid = !Object.values(errors).some(Boolean) && verified;
@@ -123,12 +126,13 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
             const result = await publicDeliveryService.submit({
                 branchId: data.branchId,
                 clientRequestId,
-                zoneId: zone.id,
+                pickup,
+                zoneId: pickup ? undefined : zone?.id,
                 lines: toCartInput(lines),
                 customerName: name.trim(),
                 phone,
-                address: address.trim(),
-                addressDirections: directions.trim() || undefined,
+                address: pickup ? '' : address.trim(),
+                addressDirections: pickup ? undefined : directions.trim() || undefined,
                 note: note.trim() || undefined,
                 paymentMethod: payment,
                 expectedTotal: quote.total,
@@ -177,17 +181,34 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
             <p className="mt-2 text-center text-xs text-[var(--site-muted)]">
                 {byIban
                     ? 'Restoran onaylayınca hazırlanır. IBAN bilgileri ve sipariş numaranız takip sayfasında da görünür.'
-                    : 'Restoran onaylayınca hazırlanır. Ödeme kapıda yapılır.'}
+                    : pickup ? 'Restoran onaylayınca hazırlanır. Hazır olunca takip sayfasında görürsünüz; ödeme restoranda yapılır.'
+                        : 'Restoran onaylayınca hazırlanır. Ödeme kapıda yapılır.'}
             </p>
         </>
     );
 
     return (
-        <Sheet title="Teslimat bilgileri" onClose={onClose} locked={submitting} footer={footer}>
+        <Sheet title={pickup ? 'Gel al bilgileri' : 'Teslimat bilgileri'} onClose={onClose} locked={submitting} footer={footer}>
             <form className="flex flex-col gap-4" onSubmit={e => { e.preventDefault(); submit(); }} noValidate>
-                <p className="rounded-2xl bg-[var(--site-raised)] px-4 py-3 text-sm">
-                    <span className="font-semibold">{zone.name}</span> · teslimat {formatPrice(quote.deliveryFee)} ₺ · yaklaşık {quote.estimatedMinutes || zone.estimatedMinutes} dk
-                </p>
+                {pickup ? (
+                    <div className="rounded-2xl bg-[var(--site-raised)] px-4 py-3 text-sm">
+                        <p><span className="font-semibold">Gel al</span> · {data.branchName} · teslimat ücreti yok</p>
+                        {data.pickupAddress && (
+                            <p className="mt-1 flex items-start gap-1.5 text-[var(--site-sub)]">
+                                <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />{data.pickupAddress}
+                            </p>
+                        )}
+                        {(quote.estimatedMinutes || data.pickupEtaMinutes) ? (
+                            <p className="mt-1 flex items-center gap-1.5 text-[var(--site-sub)]">
+                                <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />Onaydan sonra yaklaşık {quote.estimatedMinutes || data.pickupEtaMinutes} dk'da hazır
+                            </p>
+                        ) : null}
+                    </div>
+                ) : zone && (
+                    <p className="rounded-2xl bg-[var(--site-raised)] px-4 py-3 text-sm">
+                        <span className="font-semibold">{zone.name}</span> · teslimat {formatPrice(quote.deliveryFee)} ₺ · yaklaşık {quote.estimatedMinutes || zone.estimatedMinutes} dk
+                    </p>
+                )}
 
                 <label className="block">
                     <span className="text-sm font-semibold">Ad soyad</span>
@@ -250,6 +271,7 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
                     </div>
                 )}
 
+                {!pickup && <>
                 <label className="block">
                     <span className="text-sm font-semibold">Açık adres</span>
                     <textarea value={address} onChange={e => setAddress(e.target.value)} maxLength={400} rows={3} autoComplete="street-address"
@@ -262,6 +284,7 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
                     <input value={directions} onChange={e => setDirections(e.target.value)} maxLength={300} placeholder="ör. eczanenin üstü, zil çalışmıyor"
                         className={cn(fieldClass, 'mt-1.5 h-12')} />
                 </label>
+                </>}
 
                 <label className="block">
                     <span className="text-sm font-semibold">Sipariş notu <span className="font-normal text-[var(--site-sub)]">(isteğe bağlı)</span></span>
@@ -269,12 +292,13 @@ export default function DeliveryCheckout({ data, zone, lines, quote, clientReque
                 </label>
 
                 <fieldset>
-                    <legend className="text-sm font-semibold">{onlyDoor ? 'Kapıda ödeme' : 'Ödeme'}</legend>
+                    <legend className="text-sm font-semibold">{onlyDoor ? (pickup ? 'Restoranda ödeme' : 'Kapıda ödeme') : 'Ödeme'}</legend>
                     <div role="radiogroup" aria-label="Ödeme yöntemi" className="mt-1.5 grid grid-cols-2 gap-2">
                         {methods.map((method, index) => {
                             const checked = payment === method;
                             const Icon = method === DoorPayment.Nakit ? Banknote : method === DoorPayment.Iban ? Landmark : CreditCard;
-                            const label = method === DoorPayment.Nakit ? 'Kapıda nakit' : method === DoorPayment.Iban ? 'IBAN ile öde' : 'Kapıda kart';
+                            const where = pickup ? 'Restoranda' : 'Kapıda';
+                            const label = method === DoorPayment.Nakit ? `${where} nakit` : method === DoorPayment.Iban ? 'IBAN ile öde' : `${where} kart`;
                             return (
                                 <button
                                     key={method}

@@ -60,6 +60,7 @@ function validate(s: OnlineOrderSettings): string | null {
     const between = (v: number, min: number, max: number) => Number.isInteger(v) && v >= min && v <= max;
     if (!s.acceptCash && !s.acceptCard && !(s.acceptIban && s.hasIban)) return 'En az bir ödeme yöntemi (nakit, kart ya da IBAN) açık olmalı.';
     if (!between(s.defaultEtaMinutes, 10, 180)) return 'Varsayılan teslim süresi 10–180 dakika arasında olmalı.';
+    if (s.pickupEnabled && !between(s.pickupEtaMinutes, 10, 180)) return 'Gel al hazır olma süresi 10–180 dakika arasında olmalı.';
     if (!between(s.autoRejectAfterMinutes, 3, 60)) return 'Otomatik ret süresi 3–60 dakika arasında olmalı.';
     if (!between(s.maxOpenOrdersPerPhone, 1, 10)) return 'Bir numaranın açık sipariş sınırı 1–10 arasında olmalı.';
     if (!between(s.maxOrdersPerPhonePerDay, 1, 50)) return 'Bir numaranın günlük sipariş sınırı 1–50 arasında olmalı.';
@@ -133,6 +134,8 @@ export default function OnlineOrderingSettingsTab() {
                 // IBAN sonradan kaldırıldıysa eski açık kayıt gönderilmez (sunucu reddeder).
                 acceptIban: latest.acceptIban && latest.hasIban,
                 requirePhoneVerification: draft.requirePhoneVerification,
+                pickupEnabled: draft.pickupEnabled,
+                pickupEtaMinutes: draft.pickupEtaMinutes,
                 preOrderEnabled: latest.preOrderEnabled,
                 preOrderLeadMinutes: latest.preOrderLeadMinutes,
             });
@@ -259,7 +262,11 @@ export default function OnlineOrderingSettingsTab() {
                                             aria-label="Şu an sipariş alınıyor"
                                             label={<span className="w-20 text-xs text-muted-foreground">{draft.paused ? 'Durduruldu' : 'Açık'}</span>} />
                                     </Row>
-                                    <Row label="Kapıda ödeme" hint="Kart ile online ödeme yok; müşteri teslimatta öder.">
+                                    <Row label="Gel al" hint="Müşteri online sipariş verip restorana gelip kendisi alır: adres ve teslimat ücreti yok, bölgenin en az tutarı uygulanmaz. Siparişler panoda “GEL AL” rozetiyle gelir; müşteri gelince “Müşteri aldı” ile ödeme kasaya alınır.">
+                                        <Switch checked={draft.pickupEnabled} onCheckedChange={pickupEnabled => update({ pickupEnabled })} aria-label="Gel al"
+                                            label={<span className="w-12 text-xs text-muted-foreground">{draft.pickupEnabled ? 'Açık' : 'Kapalı'}</span>} />
+                                    </Row>
+                                    <Row label="Kapıda ödeme" hint="Kart ile online ödeme yok; müşteri teslimatta (gel al'da restoranda) öder.">
                                         <div className="flex flex-wrap gap-3">
                                             <Switch checked={draft.acceptCash} onCheckedChange={acceptCash => update({ acceptCash })} label={<span className="text-xs">Nakit</span>} />
                                             <Switch checked={draft.acceptCard} onCheckedChange={acceptCard => update({ acceptCard })} label={<span className="text-xs">Kart</span>} />
@@ -287,6 +294,10 @@ export default function OnlineOrderingSettingsTab() {
                                 <Card title="Süreler">
                                     <NumberField label="Varsayılan teslim süresi (dk)" hint="Bölgenin süresi yoksa kabulde önerilir. 10–180."
                                         value={draft.defaultEtaMinutes} min={10} max={180} onChange={defaultEtaMinutes => update({ defaultEtaMinutes })} />
+                                    {draft.pickupEnabled && (
+                                        <NumberField label="Gel al hazır olma süresi (dk)" hint="Sitede “yaklaşık N dk'da hazır” olarak görünür, kabulde önerilir. 10–180."
+                                            value={draft.pickupEtaMinutes} min={10} max={180} onChange={pickupEtaMinutes => update({ pickupEtaMinutes })} />
+                                    )}
                                     <NumberField label="Otomatik ret (dk)" hint="Bu sürede yanıtlanmayan sipariş reddedilir ve müşteriye bildirilir. 3–60."
                                         value={draft.autoRejectAfterMinutes} min={3} max={60} onChange={autoRejectAfterMinutes => update({ autoRejectAfterMinutes })} />
                                 </Card>

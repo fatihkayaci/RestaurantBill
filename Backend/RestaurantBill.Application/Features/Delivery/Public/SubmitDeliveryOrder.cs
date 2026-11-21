@@ -21,6 +21,9 @@ public class SubmitDeliveryOrderCommand : IRequest<Result<SubmitDeliveryOrderRes
     public Guid? BranchId { get; set; }
     /// <summary>İstemcinin sepet başına ürettiği anahtar; aynı anahtarla tekrar gönderim aynı siparişi döner.</summary>
     public Guid ClientRequestId { get; set; }
+    /// <summary>Gel al: müşteri restorandan alır; bölge ve adres istenmez, teslimat ücreti yoktur.</summary>
+    public bool Pickup { get; set; }
+    /// <summary>Yalnızca adrese teslimde zorunlu.</summary>
     public Guid ZoneId { get; set; }
     public List<CartLineInput> Lines { get; set; } = [];
     public string CustomerName { get; set; } = string.Empty;
@@ -41,7 +44,7 @@ public class SubmitDeliveryOrderCommandValidator : AbstractValidator<SubmitDeliv
     public SubmitDeliveryOrderCommandValidator()
     {
         RuleFor(x => x.ClientRequestId).NotEqual(Guid.Empty).WithMessage("Geçersiz istek. Sayfayı yenileyip tekrar deneyin.");
-        RuleFor(x => x.ZoneId).NotEqual(Guid.Empty).WithMessage("Teslimat bölgenizi seçin.");
+        RuleFor(x => x.ZoneId).NotEqual(Guid.Empty).When(x => !x.Pickup).WithMessage("Teslimat bölgenizi seçin.");
         RuleFor(x => x.Lines).CartRules();
         RuleFor(x => x.CustomerName)
             .NotEmpty().WithMessage("Adınızı ve soyadınızı girin.")
@@ -49,7 +52,7 @@ public class SubmitDeliveryOrderCommandValidator : AbstractValidator<SubmitDeliv
         RuleFor(x => x.Phone)
             .Must(TurkishPhone.IsValid).WithMessage("Geçerli bir telefon numarası girin.");
         RuleFor(x => x.Address)
-            .NotEmpty().WithMessage("Adresinizi girin.")
+            .NotEmpty().When(x => !x.Pickup).WithMessage("Adresinizi girin.")
             .MaximumLength(DeliveryOrder.AddressMaxLength).WithMessage($"Adres en fazla {DeliveryOrder.AddressMaxLength} karakter olabilir.");
         RuleFor(x => x.AddressDirections)
             .MaximumLength(DeliveryOrder.DirectionsMaxLength).WithMessage($"Adres tarifi en fazla {DeliveryOrder.DirectionsMaxLength} karakter olabilir.");
@@ -119,10 +122,20 @@ public class SubmitDeliveryOrderCommandHandler(
                 _ => "Bu restoran kapıda kartla ödeme almıyor; başka bir ödeme yöntemi seçin."
             });
 
-        DeliveryZone? zone = await db.DeliveryZones.AsNoTracking()
-            .FirstOrDefaultAsync(z => z.Id == request.ZoneId && z.BranchId == branch.Id && z.IsActive && !z.IsDeleted, cancellationToken);
-        if (zone is null)
-            return Fail(DeliveryPublicMessages.ZoneUnavailable);
+        // Gel al: bölge, teslimat ücreti ve bölgenin en az tutarı yoktur (en az tutar kurye maliyeti içindir).
+        DeliveryZone? zone = null;
+        if (request.Pickup)
+        {
+            if (!branch.OffersPickup)
+                return Fail(DeliveryScope.PickupDisabledMessage);
+        }
+        else
+        {
+            zone = await db.DeliveryZones.AsNoTracking()
+                .FirstOrDefaultAsync(z => z.Id == request.ZoneId && z.BranchId == branch.Id && z.IsActive && !z.IsDeleted, cancellationToken);
+            if (zone is null)
+                return Fail(DeliveryPublicMessages.ZoneUnavailable);
+        }
 
         string? limitError = await CheckLimitsAsync(branch.Id, phone, settings, now, cancellationToken);
         if (limitError is not null)
@@ -134,9 +147,14 @@ public class SubmitDeliveryOrderCommandHandler(
         PricedCart cart = pricedResult.Value!;
 
         if (cart.Total != request.ExpectedTotal)
-            return Result<SubmitDeliveryOrderResultDto>.Success(new SubmitDeliveryOrderResultDto { PriceChanged = true, Quote = cart.ToQuoteDto() });
+        {
+            DeliveryQuoteDto fresh = cart.ToQuoteDto();
+            if (request.Pickup)
+                fresh.EstimatedMinutes = settings.PickupEtaMinutes;
+            return Result<SubmitDeliveryOrderResultDto>.Success(new SubmitDeliveryOrderResultDto { PriceChanged = true, Quote = fresh });
+        }
 
-        if (!cart.MeetsMinimum)
+        if (zone is not null && !cart.MeetsMinimum)
             return Fail($"{zone.Name} için en az sipariş tutarı ₺{zone.MinOrderAmount:0.##}. Sepetinize ₺{cart.AmountToMinimum:0.##} daha ekleyin.");
 
         // Doğrulama anahtarı en son harcanır: sınır ya da fiyat hatasında müşteri yeniden kod istemek zorunda kalmasın.
@@ -180,15 +198,18 @@ public class SubmitDeliveryOrderCommandHandler(
         }
     }
 
-    private async Task<(DeliveryOrder, AuditLog)> BuildAsync(Guid branchId, string phone, DeliveryZone zone, PricedCart cart,
+    private async Task<(DeliveryOrder, AuditLog)> BuildAsync(Guid branchId, string phone, DeliveryZone? zone, PricedCart cart,
         SubmitDeliveryOrderCommand request, CancellationToken cancellationToken)
     {
         int lastNumber = await db.DeliveryOrders
             .Where(d => d.BranchId == branchId)
             .MaxAsync(d => (int?)d.Number, cancellationToken) ?? 0;
 
-        DeliveryOrder order = DeliveryOrder.Create(branchId, lastNumber + 1, request.ClientRequestId, request.CustomerName, phone,
-            request.Address, request.AddressDirections, request.Note, zone, request.PaymentMethod, client.IpAddress);
+        DeliveryOrder order = zone is null
+            ? DeliveryOrder.CreatePickup(branchId, lastNumber + 1, request.ClientRequestId, request.CustomerName, phone,
+                request.Note, request.PaymentMethod, client.IpAddress)
+            : DeliveryOrder.Create(branchId, lastNumber + 1, request.ClientRequestId, request.CustomerName, phone,
+                request.Address, request.AddressDirections, request.Note, zone, request.PaymentMethod, client.IpAddress);
 
         foreach (PricedLine line in cart.Lines)
         {
@@ -200,7 +221,9 @@ public class SubmitDeliveryOrderCommandHandler(
 
         db.DeliveryOrders.Add(order);
         AuditLog audit = AuditLog.Create(branchId, "Online müşteri", AuditLogCategory.Order, AuditLogSeverity.Info, "DeliveryOrderReceived",
-            $"Online paket sipariş #{order.Number} geldi ({order.ZoneName}, ₺{order.Total:0.##}).", nameof(DeliveryOrder), order.Id);
+            order.IsPickup
+                ? $"Online gel al sipariş #{order.Number} geldi (₺{order.Total:0.##})."
+                : $"Online paket sipariş #{order.Number} geldi ({order.ZoneName}, ₺{order.Total:0.##}).", nameof(DeliveryOrder), order.Id);
         db.AuditLogs.Add(audit);
         return (order, audit);
     }

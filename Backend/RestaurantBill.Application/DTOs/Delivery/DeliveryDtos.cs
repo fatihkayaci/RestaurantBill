@@ -113,6 +113,14 @@ namespace RestaurantBill.Application.DTOs.Delivery
         /// <summary>PaymentMethods'ta Iban varken ödeme adımında gösterilen IBAN bilgileri; yoksa null.</summary>
         public TableIbanPaymentDto? IbanPayment { get; set; }
         public bool RequiresPhoneVerification { get; set; }
+        /// <summary>Müşteri "Gel al"ı seçebilir mi (şube ayarı).</summary>
+        public bool PickupEnabled { get; set; }
+        /// <summary>Gel al siparişinin yaklaşık hazır olma süresi (dakika).</summary>
+        public int PickupEtaMinutes { get; set; }
+        /// <summary>Gel al için restoranın adresi (açık adres, ilçe, il); gel al kapalıysa boş.</summary>
+        public string PickupAddress { get; set; } = string.Empty;
+        /// <summary>Şubenin yol tarifi notu (site bilgileri); boş olabilir.</summary>
+        public string PickupDirections { get; set; } = string.Empty;
         public List<OnlineMenuCategoryDto> Categories { get; set; } = [];
         public List<OnlineSetMenuDto> SetMenus { get; set; } = [];
         /// <summary>Şirketin online siparişi açık şubeleri; birden fazlaysa şube seçici gösterilir.</summary>
@@ -192,6 +200,10 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public DeliveryOrderStatus Status { get; set; }
         public string StatusLabel { get; set; } = string.Empty;
         public string StatusDescription { get; set; } = string.Empty;
+        /// <summary>Gel al siparişi: takip adımlarında "Yolda" yoktur, restoranın adresi gösterilir.</summary>
+        public bool IsPickup { get; set; }
+        /// <summary>Gel al siparişinde restoranın adresi; adrese teslimde boş.</summary>
+        public string PickupAddress { get; set; } = string.Empty;
         /// <summary>"Ahmet Y."</summary>
         public string CustomerName { get; set; } = string.Empty;
         /// <summary>"0532 *** ** 67"</summary>
@@ -273,6 +285,9 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public int Number { get; set; }
         public DeliveryOrderStatus Status { get; set; }
         public string StatusLabel { get; set; } = string.Empty;
+        /// <summary>Delivery: adrese teslim; Takeaway: gel al (adres, bölge, kurye yok).</summary>
+        public OrderType OrderType { get; set; } = OrderType.Delivery;
+        public bool IsPickup { get; set; }
         public string CustomerName { get; set; } = string.Empty;
         public string CustomerPhone { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
@@ -366,6 +381,9 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public bool SmsConfigured { get; set; }
         public bool PreOrderEnabled { get; set; }
         public int PreOrderLeadMinutes { get; set; }
+        /// <summary>"Gel al": müşteri online sipariş verip restorandan alır (adres ve teslimat ücreti yok).</summary>
+        public bool PickupEnabled { get; set; }
+        public int PickupEtaMinutes { get; set; }
         /// <summary>Şube hiç kaydetmediyse false (varsayılanlar geçerli).</summary>
         public bool IsCustomized { get; set; }
     }

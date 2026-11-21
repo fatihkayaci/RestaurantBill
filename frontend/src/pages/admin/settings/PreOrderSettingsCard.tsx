@@ -56,6 +56,8 @@ export default function PreOrderSettingsCard() {
                 // IBAN sonradan kaldırıldıysa eski açık ayar kaydı engellemesin.
                 acceptIban: latest.acceptIban && latest.hasIban,
                 requirePhoneVerification: latest.requirePhoneVerification,
+                pickupEnabled: latest.pickupEnabled,
+                pickupEtaMinutes: latest.pickupEtaMinutes,
                 preOrderEnabled: draft.enabled,
                 preOrderLeadMinutes: lead,
             });

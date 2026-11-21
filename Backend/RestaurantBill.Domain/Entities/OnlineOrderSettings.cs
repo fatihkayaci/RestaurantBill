@@ -51,6 +51,7 @@ namespace RestaurantBill.Domain.Entities
         public const int DefaultMaxOpenOrdersPerPhone = 2;
         public const int DefaultMaxOrdersPerPhonePerDay = 5;
         public const int DefaultPreOrderLeadMinutes = 60;
+        public const int DefaultPickupEta = 20;
 
         private static readonly TimeOnly DefaultOpens = new(11, 0);
         private static readonly TimeOnly DefaultCloses = new(22, 0);
@@ -75,11 +76,20 @@ namespace RestaurantBill.Domain.Entities
         public bool PreOrderEnabled { get; }
         /// <summary>Ön sipariş, rezervasyon saatinden bu kadar dakika önce açılır.</summary>
         public int PreOrderLeadMinutes { get; }
+        /// <summary>
+        /// "Gel al": müşteri online sipariş verip restorandan kendisi alır (adres, bölge ve teslimat ücreti yok). Online sipariş
+        /// açıkken geçerlidir; varsayılan kapalı, işletme açar.
+        /// </summary>
+        public bool PickupEnabled { get; }
+        /// <summary>Gel al siparişinde kabulde önerilen hazır olma süresi (dakika); müşteriye "~N dk'da hazır" diye gösterilir.</summary>
+        public int PickupEtaMinutes { get; }
 
         private OnlineOrderSettings(bool enabled, IReadOnlyList<OnlineOrderDayHours> days, int lastOrderMinutesBeforeClose, int defaultEtaMinutes,
             int autoRejectAfterMinutes, int maxOpenOrdersPerPhone, int maxOrdersPerPhonePerDay, bool acceptCash, bool acceptCard, bool acceptIban,
-            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes)
+            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes, bool pickupEnabled, int pickupEtaMinutes)
         {
+            PickupEnabled = pickupEnabled;
+            PickupEtaMinutes = pickupEtaMinutes;
             Enabled = enabled;
             Days = days;
             LastOrderMinutesBeforeClose = lastOrderMinutesBeforeClose;
@@ -98,8 +108,11 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Admin'in kaydettiği ayarlar; kurallara uymayan değerde DomainException.</summary>
         public static OnlineOrderSettings Create(bool enabled, IEnumerable<OnlineOrderDayHours> days, int lastOrderMinutesBeforeClose, int defaultEtaMinutes,
             int autoRejectAfterMinutes, int maxOpenOrdersPerPhone, int maxOrdersPerPhonePerDay, bool acceptCash, bool acceptCard,
-            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes, bool acceptIban = false)
+            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes, bool acceptIban = false,
+            bool pickupEnabled = false, int pickupEtaMinutes = DefaultPickupEta)
         {
+            if (pickupEtaMinutes < EtaMin || pickupEtaMinutes > EtaMax)
+                throw new DomainException($"Gel al hazır olma süresi {EtaMin}–{EtaMax} dakika arasında olmalı.");
             if (lastOrderMinutesBeforeClose < 0 || lastOrderMinutesBeforeClose > LastOrderMinutesMax)
                 throw new DomainException($"Son sipariş süresi 0–{LastOrderMinutesMax} dakika arasında olmalı.");
             if (defaultEtaMinutes < EtaMin || defaultEtaMinutes > EtaMax)
@@ -126,20 +139,23 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"{ReservationSettings.DayName(sameHours.Day)}: açılış ve kapanış saati aynı olamaz.");
 
             return new OnlineOrderSettings(enabled, Ordered(list), lastOrderMinutesBeforeClose, defaultEtaMinutes, autoRejectAfterMinutes,
-                maxOpenOrdersPerPhone, maxOrdersPerPhonePerDay, acceptCash, acceptCard, acceptIban, requirePhoneVerification, preOrderEnabled, preOrderLeadMinutes);
+                maxOpenOrdersPerPhone, maxOrdersPerPhonePerDay, acceptCash, acceptCard, acceptIban, requirePhoneVerification, preOrderEnabled, preOrderLeadMinutes,
+                pickupEnabled, pickupEtaMinutes);
         }
 
         /// <summary>Yalnızca veritabanından okurken: kayıtlı değer, bugünkü sınırlar değişmiş olsa da olduğu gibi yüklenir.</summary>
         public static OnlineOrderSettings Restore(bool enabled, IEnumerable<OnlineOrderDayHours> days, int lastOrderMinutesBeforeClose, int defaultEtaMinutes,
             int autoRejectAfterMinutes, int maxOpenOrdersPerPhone, int maxOrdersPerPhonePerDay, bool acceptCash, bool acceptCard,
-            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes, bool acceptIban = false)
+            bool requirePhoneVerification, bool preOrderEnabled, int preOrderLeadMinutes, bool acceptIban = false,
+            bool pickupEnabled = false, int pickupEtaMinutes = DefaultPickupEta)
         {
             List<OnlineOrderDayHours> list = days.GroupBy(d => d.Day).Select(g => g.First()).ToList();
             // Eksik gün kapalı sayılır.
             foreach (DayOfWeek missing in ReservationSettings.WeekOrder.Where(d => list.All(x => x.Day != d)))
                 list.Add(new OnlineOrderDayHours(missing, false, DefaultOpens, DefaultCloses));
             return new OnlineOrderSettings(enabled, Ordered(list), lastOrderMinutesBeforeClose, defaultEtaMinutes, autoRejectAfterMinutes,
-                maxOpenOrdersPerPhone, maxOrdersPerPhonePerDay, acceptCash, acceptCard, acceptIban, requirePhoneVerification, preOrderEnabled, preOrderLeadMinutes);
+                maxOpenOrdersPerPhone, maxOrdersPerPhonePerDay, acceptCash, acceptCard, acceptIban, requirePhoneVerification, preOrderEnabled, preOrderLeadMinutes,
+                pickupEnabled, pickupEtaMinutes);
         }
 
         /// <summary>
@@ -156,7 +172,7 @@ namespace RestaurantBill.Domain.Entities
             List<OnlineOrderDayHours> days = ReservationSettings.WeekOrder.Select(d => new OnlineOrderDayHours(d, true, opens, closes)).ToList();
             return new OnlineOrderSettings(false, days, DefaultLastOrderMinutesBeforeClose, DefaultEta, DefaultAutoRejectAfterMinutes,
                 DefaultMaxOpenOrdersPerPhone, DefaultMaxOrdersPerPhonePerDay, acceptCash: true, acceptCard: true, acceptIban: false,
-                requirePhoneVerification: false, preOrderEnabled: false, DefaultPreOrderLeadMinutes);
+                requirePhoneVerification: false, preOrderEnabled: false, DefaultPreOrderLeadMinutes, pickupEnabled: false, DefaultPickupEta);
         }
 
         /// <summary>
@@ -169,7 +185,7 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException("Online paket siparişte tek ödeme yöntemi IBAN. Kapatmak için önce Online sipariş ayarlarından nakit ya da kartı açın.");
             return new OnlineOrderSettings(Enabled, Days, LastOrderMinutesBeforeClose, DefaultEtaMinutes, AutoRejectAfterMinutes,
                 MaxOpenOrdersPerPhone, MaxOrdersPerPhonePerDay, AcceptCash, AcceptCard, acceptIban, RequirePhoneVerification,
-                PreOrderEnabled, PreOrderLeadMinutes);
+                PreOrderEnabled, PreOrderLeadMinutes, PickupEnabled, PickupEtaMinutes);
         }
 
         public OnlineOrderDayHours For(DayOfWeek day) => Days.First(d => d.Day == day);

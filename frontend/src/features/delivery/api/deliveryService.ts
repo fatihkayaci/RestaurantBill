@@ -1,7 +1,7 @@
 import { api } from '@/lib/axiosInstance';
 import type { CourierCashSummary } from '@/features/courier/types';
 import type {
-    BlockedPhone, DeliveryOrder, DeliveryZone, DeliveryZoneInput, OnlineOrderSettings, OnlineOrderSettingsInput,
+    BlockedPhone, DeliveryOrder, DeliveryZone, DoorPaymentMethod, DeliveryZoneInput, OnlineOrderSettings, OnlineOrderSettingsInput,
 } from '../types';
 
 export interface OnlineOrderingStatus {
@@ -34,6 +34,10 @@ export const deliveryService = {
     /** courierUserId null: atama kaldırılır. */
     assignCourier: async (id: string, courierUserId: string | null) => {
         await api.post(`/delivery-orders/${id}/assign-courier`, { courierUserId });
+    },
+    /** Gel al "Müşteri aldı": ödeme seçilen kasanın açık vardiyasına yazılır, sipariş kapanır. */
+    completePickup: async (id: string, cashRegisterId: string, method: DoorPaymentMethod) => {
+        await api.post(`/delivery-orders/${id}/complete-pickup`, { cashRegisterId, method });
     },
     /** Yalnızca Owner/Admin. */
     blockPhone: async (id: string, reason?: string) => {

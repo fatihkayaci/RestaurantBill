@@ -37,6 +37,10 @@ export interface SalesReport {
     avgBasket: number;
     /** Ciroya dahil paket servis teslimat ücretleri. */
     deliveryFeeRevenue: number;
+    /** Online adrese teslim siparişlerin tahsilatı (teslimat ücreti dahil). */
+    deliveryOrderRevenue?: number;
+    /** Online gel al siparişlerin tahsilatı. */
+    pickupOrderRevenue?: number;
     trend: SalesTrendPoint[];
     paymentMethods: PaymentMethodBreakdown[];
     heatmap: SalesHeatmapPoint[];

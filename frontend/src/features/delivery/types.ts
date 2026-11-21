@@ -106,6 +106,14 @@ export interface OnlineOrdering {
     /** paymentMethods'ta IBAN varken ödeme adımında gösterilen hesap bilgileri; yoksa null. */
     ibanPayment?: TableIbanPayment | null;
     requiresPhoneVerification: boolean;
+    /** Müşteri "Gel al"ı seçebilir mi (şube ayarı). Eski sunucuda yok: kapalı sayılır. */
+    pickupEnabled?: boolean;
+    /** Gel al siparişinin yaklaşık hazır olma süresi (dakika). */
+    pickupEtaMinutes?: number;
+    /** Gel al için restoranın adresi. */
+    pickupAddress?: string;
+    /** Şubenin "nasıl gelinir" notu. */
+    pickupDirections?: string;
     categories: OnlineMenuCategory[];
     setMenus: OnlineSetMenu[];
     /** Online siparişi açık şubeler; birden fazlaysa şube seçici gösterilir. */
@@ -150,7 +158,10 @@ export interface DeliveryQuote {
 export interface SubmitDeliveryOrderInput {
     branchId?: string;
     clientRequestId: string;
-    zoneId: string;
+    /** Gel al: bölge ve adres gönderilmez, teslimat ücreti yok. */
+    pickup?: boolean;
+    /** Yalnızca adrese teslimde. */
+    zoneId?: string;
     lines: CartLineInput[];
     customerName: string;
     phone: string;
@@ -196,6 +207,10 @@ export interface DeliveryTracking {
     status: DeliveryOrderStatus;
     statusLabel: string;
     statusDescription: string;
+    /** Gel al siparişi: "Yolda" adımı yok, restoranın adresi gösterilir. */
+    isPickup?: boolean;
+    /** Gel al siparişinde restoranın adresi. */
+    pickupAddress?: string;
     customerName: string;
     customerPhone: string;
     zoneName: string;
@@ -242,6 +257,10 @@ export interface DeliveryOrder {
     number: number;
     status: DeliveryOrderStatus;
     statusLabel: string;
+    /** 2 adrese teslim, 3 gel al. */
+    orderType?: 2 | 3;
+    /** Gel al: adres, bölge ve kurye yok; müşteri restorandan alır, ödeme kasada alınır. */
+    isPickup?: boolean;
     customerName: string;
     customerPhone: string;
     address: string;
@@ -317,6 +336,10 @@ export interface OnlineOrderSettings {
     smsConfigured: boolean;
     preOrderEnabled: boolean;
     preOrderLeadMinutes: number;
+    /** "Gel al": müşteri online sipariş verip restorandan kendisi alır. */
+    pickupEnabled: boolean;
+    /** Gel al siparişinin yaklaşık hazır olma süresi (dakika). */
+    pickupEtaMinutes: number;
     isCustomized: boolean;
 }
 

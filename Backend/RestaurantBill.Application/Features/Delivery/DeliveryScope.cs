@@ -16,6 +16,7 @@ public static class DeliveryScope
     public const string TrackingNotFoundMessage = "Sipariş bulunamadı. Bağlantıyı kontrol edin.";
     public const string RestaurantNotFoundMessage = "Restoran bulunamadı.";
     public const string DisabledMessage = "Bu restoran şu an online sipariş almıyor.";
+    public const string PickupDisabledMessage = "Bu restoran şu an gel al siparişi almıyor. Adrese teslim seçin ya da restoranı arayın.";
     public const string PausedMessage = "Restoran şu an online sipariş almıyor. Lütfen biraz sonra tekrar deneyin ya da restoranı arayın.";
     public const string PriceChangedMessage = "Fiyatlar güncellendi";
     public const string WaiterDeniedMessage = "Paket siparişler garson ekranından yönetilemez.";
@@ -167,6 +168,13 @@ public static class DeliveryScope
         }
     }
 
+    /// <summary>Gel al için restoranın adresi: "Açık adres, İlçe / İl" (boş parçalar atlanır).</summary>
+    public static string PickupAddressOf(Branch branch)
+    {
+        string place = string.Join(" / ", new[] { branch.District, branch.City }.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p.Trim()));
+        return string.Join(", ", new[] { branch.OpenAddress?.Trim(), place }.Where(p => !string.IsNullOrWhiteSpace(p)));
+    }
+
     /// <summary>Müşterinin seçebileceği ödeme yöntemleri; IBAN yalnızca ayarda açık ve şubede geçerli IBAN varken.</summary>
     public static List<PaymentMethod> PaymentMethodsOf(Branch branch)
     {
@@ -188,8 +196,15 @@ public static class DeliveryScope
 
     // ── Durum adları ────────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>Müşterinin takip sayfasındaki kısa durum adı.</summary>
-    public static string CustomerLabel(DeliveryOrderStatus status) => status switch
+    /// <summary>Müşterinin takip sayfasındaki kısa durum adı; gel al siparişinde hazır ve teslim adımları farklı yazılır.</summary>
+    public static string CustomerLabel(DeliveryOrderStatus status, bool isPickup = false) => (status, isPickup) switch
+    {
+        (DeliveryOrderStatus.Ready, true) => "Hazır, gelip alabilirsiniz",
+        (DeliveryOrderStatus.Delivered, true) => "Teslim alındı",
+        _ => CustomerLabelOf(status)
+    };
+
+    private static string CustomerLabelOf(DeliveryOrderStatus status) => status switch
     {
         DeliveryOrderStatus.Received => "Onay bekliyor",
         DeliveryOrderStatus.Accepted => "Onaylandı",
@@ -203,7 +218,15 @@ public static class DeliveryScope
     };
 
     /// <summary>Takip sayfasında durum adının altındaki açıklama.</summary>
-    public static string CustomerDescription(DeliveryOrder order) => order.Status switch
+    public static string CustomerDescription(DeliveryOrder order) => (order.Status, order.IsPickup) switch
+    {
+        (DeliveryOrderStatus.Accepted, true) => "Restoran siparişinizi onayladı, birazdan hazırlanmaya başlayacak. Hazır olunca burada göreceksiniz.",
+        (DeliveryOrderStatus.Ready, true) => "Siparişiniz hazır. Restorana gelip sipariş numaranızı söyleyerek alabilirsiniz.",
+        (DeliveryOrderStatus.Delivered, true) => "Siparişinizi teslim aldınız. Afiyet olsun!",
+        _ => CustomerDescriptionOf(order)
+    };
+
+    private static string CustomerDescriptionOf(DeliveryOrder order) => order.Status switch
     {
         DeliveryOrderStatus.Received => "Siparişiniz restorana ulaştı. Restoran onayladığında burada göreceksiniz.",
         DeliveryOrderStatus.Accepted => "Restoran siparişinizi onayladı, birazdan hazırlanmaya başlayacak.",
@@ -218,8 +241,12 @@ public static class DeliveryScope
         _ => string.Empty
     };
 
-    /// <summary>Personel ekranındaki durum adı.</summary>
-    public static string StaffLabel(DeliveryOrderStatus status) => status switch
+    /// <summary>Personel ekranındaki durum adı; gel al siparişinin son adımı "Müşteri aldı".</summary>
+    public static string StaffLabel(DeliveryOrderStatus status, bool isPickup = false) => isPickup && status == DeliveryOrderStatus.Delivered
+        ? "Müşteri aldı"
+        : StaffLabelOf(status);
+
+    private static string StaffLabelOf(DeliveryOrderStatus status) => status switch
     {
         DeliveryOrderStatus.Received => "Yeni",
         DeliveryOrderStatus.Accepted => "Kabul edildi",
@@ -254,26 +281,28 @@ public static class DeliveryScope
 
     // ── Mutfak bileti ───────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>Mutfak ve kasa ekranında masa adı yerine: "PAKET #123 · Moda".</summary>
-    public static string TicketName(int number, string? zoneName)
-        => string.IsNullOrWhiteSpace(zoneName) ? $"PAKET #{number}" : $"PAKET #{number} · {zoneName}";
+    /// <summary>Mutfak ve kasa ekranında masa adı yerine: "PAKET #123 · Moda"; gel al siparişinde "GEL AL #123".</summary>
+    public static string TicketName(int number, string? zoneName, bool isPickup = false)
+        => isPickup ? $"GEL AL #{number}"
+            : string.IsNullOrWhiteSpace(zoneName) ? $"PAKET #{number}" : $"PAKET #{number} · {zoneName}";
 
-    public sealed record DeliveryLabel(int Number, string ZoneName);
+    public sealed record DeliveryLabel(int Number, string ZoneName, bool IsPickup = false);
 
     /// <summary>Paket siparişlerin (OrderId → numara, bölge) etiketleri; masa siparişleri sözlükte yer almaz.</summary>
     public static async Task<Dictionary<Guid, DeliveryLabel>> LoadDeliveryLabelsAsync(
         this IAppDbContext db, IEnumerable<Order> orders, CancellationToken cancellationToken)
     {
-        List<Guid> ids = orders.Where(o => o.OrderType == OrderType.Delivery).Select(o => o.Id).Distinct().ToList();
+        List<Guid> ids = orders.Where(o => o.IsPackageOrder).Select(o => o.Id).Distinct().ToList();
         if (ids.Count == 0)
             return [];
 
         var rows = await db.DeliveryOrders.AsNoTracking()
             .Where(d => d.OrderId != null && ids.Contains(d.OrderId.Value))
-            .Select(d => new { OrderId = d.OrderId!.Value, d.Number, d.ZoneName })
+            .Select(d => new { OrderId = d.OrderId!.Value, d.Number, d.ZoneName, d.OrderType })
             .ToListAsync(cancellationToken);
 
-        return rows.GroupBy(r => r.OrderId).ToDictionary(g => g.Key, g => new DeliveryLabel(g.First().Number, g.First().ZoneName));
+        return rows.GroupBy(r => r.OrderId).ToDictionary(g => g.Key,
+            g => new DeliveryLabel(g.First().Number, g.First().ZoneName, g.First().OrderType == OrderType.Takeaway));
     }
 
     /// <summary>Paket siparişin DTO'sunu "PAKET #123 · Moda" etiketiyle doldurur.</summary>
@@ -283,7 +312,7 @@ public static class DeliveryScope
             return;
         dto.DeliveryNumber = label.Number;
         dto.ZoneName = label.ZoneName;
-        dto.TableName = TicketName(label.Number, label.ZoneName);
+        dto.TableName = TicketName(label.Number, label.ZoneName, label.IsPickup);
     }
 
     // ── Eşleme ──────────────────────────────────────────────────────────────────────────────────────
@@ -350,7 +379,9 @@ public static class DeliveryScope
         BranchId = order.BranchId,
         Number = order.Number,
         Status = order.Status,
-        StatusLabel = StaffLabel(order.Status),
+        StatusLabel = StaffLabel(order.Status, order.IsPickup),
+        OrderType = order.OrderType,
+        IsPickup = order.IsPickup,
         CustomerName = order.CustomerName,
         CustomerPhone = order.CustomerPhone,
         Address = order.Address,
@@ -365,7 +396,7 @@ public static class DeliveryScope
         Total = order.Total,
         OrderId = order.OrderId,
         EstimatedMinutes = order.EstimatedMinutes,
-        SuggestedEtaMinutes = zoneEstimatedMinutes ?? settings.DefaultEtaMinutes,
+        SuggestedEtaMinutes = order.IsPickup ? settings.PickupEtaMinutes : zoneEstimatedMinutes ?? settings.DefaultEtaMinutes,
         CreatedAt = order.CreatedAt,
         AutoRejectAt = order.Status == DeliveryOrderStatus.Received ? order.CreatedAt.AddMinutes(settings.AutoRejectAfterMinutes) : null,
         AcceptedAt = order.AcceptedAt,

@@ -57,8 +57,8 @@ function fold(text: string): string {
 
 const MENU_ANCHOR = 'paket-menu';
 
-// Online paket sipariş sayfası (/siparis, restoranın alan adında). Sıra: şube (birden fazlaysa) → mahalle (ücret ve en az
-// tutar) → menü → sepet → teslimat bilgileri. Düzen: solda üstte sepetteki ürünler, altında menü; sağda (masaüstünde
+// Online paket sipariş sayfası (/siparis, restoranın alan adında). Sıra: şube (birden fazlaysa) → teslimat şekli (restoran
+// gel al'ı açtıysa "Adrese teslim" / "Gel al") → mahalle (ücret ve en az tutar; gel al'da yok) → menü → sepet → bilgiler. Düzen: solda üstte sepetteki ürünler, altında menü; sağda (masaüstünde
 // yapışkan) "Siparişiniz": teslimat mahallesi, ara toplam, teslimat ücreti, toplam ve "Devam et". Telefonda mahalle sepetin
 // altında, toplamlar alttaki çubuğun açtığı pencerede. Sepet, mahalle ve gönderim anahtarı (clientRequestId) cihazda şube başına
 // saklanır; gönderim anahtarı sipariş açılana kadar değişmez, bağlantı kopunca yeniden göndermek aynı siparişi döndürür.
@@ -98,6 +98,8 @@ export default function DeliveryOrderPage() {
 
     const [lines, setLines] = useState<DeliveryCartLine[]>([]);
     const [zoneId, setZoneId] = useState<string | null>(null);
+    // Gel al: mahalle, adres ve teslimat ücreti yok; müşteri restorandan alır.
+    const [pickup, setPickup] = useState(false);
     const [clientRequestId, setClientRequestId] = useState<string>(() => newClientRequestId());
     const [cartReady, setCartReady] = useState(false);
     const [prunedNames, setPrunedNames] = useState<string[]>([]);
@@ -140,6 +142,9 @@ export default function DeliveryOrderPage() {
                 const zones = result.zones;
                 const preferred = snapshot?.zoneId ?? stored?.zoneId;
                 setZoneId(preferred && zones.some(z => z.id === preferred) ? preferred : zones.length === 1 ? zones[0].id : null);
+                // Gel al kapalıysa hep adrese teslim; açıksa son seçim, teslimat bölgesi yoksa gel al.
+                const wantsPickup = snapshot?.pickup ?? stored?.pickup ?? zones.length === 0;
+                setPickup(!!result.pickupEnabled && wantsPickup);
                 setQuote(null);
                 setCartReady(true);
             })
@@ -165,24 +170,24 @@ export default function DeliveryOrderPage() {
     // ── Sepeti sakla ──
     useEffect(() => {
         if (!data || !cartReady) return;
-        saveCart(data.branchId, { lines, zoneId, clientRequestId });
-    }, [data, cartReady, lines, zoneId, clientRequestId]);
+        saveCart(data.branchId, { lines, zoneId, pickup, clientRequestId });
+    }, [data, cartReady, lines, zoneId, pickup, clientRequestId]);
 
     // ── Sunucu teklifi (fiyat, ücret, en az tutar) ──
     // Notlar fiyatı değiştirmez: not yazarken teklif yeniden istenmez.
     const quoteKey = useMemo(
-        () => JSON.stringify({ zoneId, lines: toCartInput(lines).map(l => ({ ...l, note: undefined })) }),
-        [zoneId, lines],
+        () => JSON.stringify({ zoneId: pickup ? null : zoneId, pickup, lines: toCartInput(lines).map(l => ({ ...l, note: undefined })) }),
+        [zoneId, pickup, lines],
     );
     const hasLines = lines.length > 0;
 
     useEffect(() => {
         if (!data || !hasLines) return;
         const seq = ++quoteSeq.current;
-        const request = JSON.parse(quoteKey) as { zoneId: string | null; lines: CartLineInput[] };
+        const request = JSON.parse(quoteKey) as { zoneId: string | null; pickup: boolean; lines: CartLineInput[] };
         const timer = setTimeout(() => {
             setQuoting(true);
-            publicDeliveryService.quote(data.branchId, request.zoneId, request.lines)
+            publicDeliveryService.quote(data.branchId, request.zoneId, request.lines, request.pickup)
                 .then(value => {
                     if (seq !== quoteSeq.current) return;
                     setQuote({ key: quoteKey, value });
@@ -223,7 +228,7 @@ export default function DeliveryOrderPage() {
     const onSubmitted = (result: SubmittedDeliveryOrder) => {
         if (!data) return;
         rememberOrder({ token: result.token, number: result.number, createdAt: new Date().toISOString() });
-        saveOrderSnapshot(result.token, data.branchId, lines, zoneId);
+        saveOrderSnapshot(result.token, data.branchId, lines, zoneId, pickup);
         clearCart(data.branchId);
         setLines([]);
         setClientRequestId(newClientRequestId());
@@ -319,26 +324,31 @@ export default function DeliveryOrderPage() {
     }
 
     const open = data.state === 'open';
-    const zone = data.zones.find(z => z.id === zoneId) ?? null;
+    // Gel al seçiliyken mahalle yok sayılır: ücret 0, en az tutar yok.
+    const isPickup = pickup && !!data.pickupEnabled;
+    const zone = isPickup ? null : data.zones.find(z => z.id === zoneId) ?? null;
     const count = itemCount(lines);
     const estimate = estimatedSubtotal(lines);
     const subtotal = currentQuote?.subtotal ?? estimate;
-    const fee = currentQuote?.deliveryFee ?? zone?.fee ?? 0;
+    const fee = isPickup ? 0 : currentQuote?.deliveryFee ?? zone?.fee ?? 0;
     const total = currentQuote?.total ?? subtotal + fee;
-    const amountToMinimum = currentQuote ? currentQuote.amountToMinimum : zone ? Math.max(0, zone.minOrderAmount - estimate) : 0;
-    const canCheckout = open && !!zone && !!currentQuote && currentQuote.meetsMinimum && !quoteError;
+    const amountToMinimum = isPickup ? 0 : currentQuote ? currentQuote.amountToMinimum : zone ? Math.max(0, zone.minOrderAmount - estimate) : 0;
+    const canCheckout = open && (isPickup || !!zone) && !!currentQuote && (isPickup || currentQuote.meetsMinimum) && !quoteError;
 
     // En az tutar kalmışsa metin yerine ilerleme çubuğu gösterilir.
     const minimum = open && zone && zone.minOrderAmount > 0 && amountToMinimum > 0
         ? { subtotal: Math.max(0, zone.minOrderAmount - amountToMinimum), target: zone.minOrderAmount, left: amountToMinimum }
         : null;
     const checkoutHint = !open ? 'Restoran şu an sipariş almıyor.'
-        : !zone ? 'Devam etmek için teslimat mahallenizi seçin.'
+        : !isPickup && !zone ? 'Devam etmek için teslimat mahallenizi seçin.'
         : lines.length === 0 ? 'Sepetiniz boş. Menüden ürün ekleyin.'
             : amountToMinimum > 0 ? null
                 : quoteError ?? (quoting || !currentQuote ? 'Tutar hesaplanıyor…' : null);
 
     const goToCheckout = () => { setCartOpen(false); setCheckoutOpen(true); };
+    const fulfillment = (opts: { onPick: () => void; flat?: boolean; compact?: boolean }) => (
+        <FulfillmentCard data={data} pickup={isPickup} onPickupChange={setPickup} zone={zone} {...opts} />
+    );
     // Sepet satırının görseli menüden (ürün ya da hazır menü); görseli yoksa restoranın yazı logosu.
     const productImages = new Map(data.categories.flatMap(c => c.products).map(p => [p.id, { src: p.imageUrl, stock: p.isStockImage }]));
     const menuImages = new Map((data.setMenus ?? []).map(m => [m.id, { src: m.imageUrl, stock: m.isStockImage }]));
@@ -354,7 +364,7 @@ export default function DeliveryOrderPage() {
     const available = data.categories.flatMap(c => c.products).filter(p => !p.isOutOfStock);
     const suggestions = (available.some(p => p.isFeatured) ? available.filter(p => p.isFeatured) : available).slice(0, 3);
     const cartTotals = (
-        <CartTotals subtotal={subtotal} fee={fee} total={total} zoneName={zone?.name ?? null} minimum={minimum}
+        <CartTotals subtotal={subtotal} fee={fee} total={total} zoneName={zone?.name ?? null} pickup={isPickup} minimum={minimum}
             hint={checkoutHint} hintIsError={!!quoteError} canCheckout={canCheckout} onCheckout={goToCheckout}
             closedLabel={open ? null : data.nextOpensAt ? `${opensText(data.nextOpensAt)}'da açılıyor` : 'Şu an sipariş alınmıyor'} />
     );
@@ -371,7 +381,7 @@ export default function DeliveryOrderPage() {
                 sicak={sicak}
                 restaurant={restaurant}
                 cover={site?.cover}
-                eyebrow={['Paket sipariş', zone?.name ?? (multiBranch ? data.branchName : site?.place)].filter(Boolean).join(' · ')}
+                eyebrow={['Paket sipariş', isPickup ? 'Gel al' : zone?.name ?? (multiBranch ? data.branchName : site?.place)].filter(Boolean).join(' · ')}
                 status={<GlassStatusPill tone="light" open={data.state === 'open'} className="border-0">{pillText}</GlassStatusPill>}
                 action={multiBranch ? (
                     <button type="button" onClick={() => setPickingBranch(true)}
@@ -386,7 +396,7 @@ export default function DeliveryOrderPage() {
                 <div className={cn('min-w-0', cartInPanel && 'flex flex-col gap-4')}>
                 {cartInPanel && (
                     <EliteBanner nav={nav} restaurant={restaurant} cover={site?.cover}
-                        eyebrow={['Paket sipariş', zone?.name ?? (multiBranch ? data.branchName : site?.place)].filter(Boolean).join(' · ')}
+                        eyebrow={['Paket sipariş', isPickup ? 'Gel al' : zone?.name ?? (multiBranch ? data.branchName : site?.place)].filter(Boolean).join(' · ')}
                         status={<GlassStatusPill tone="glass" open={data.state === 'open'}>{pillText}</GlassStatusPill>}
                         action={multiBranch ? (
                             <button type="button" onClick={() => setPickingBranch(true)}
@@ -413,14 +423,15 @@ export default function DeliveryOrderPage() {
 
                     {/* Elit, masaüstü: teslimat bilgi şeridi (süre, ücret, en az tutar, bölge). Telefonda yerine mahalle kartı. */}
                     {data.state !== 'disabled' && cartInPanel && (
-                        <DeliveryInfoStrip zone={zone} hasZones={data.zones.length > 0} onPick={() => setZonePickerOpen(true)} />
+                        <DeliveryInfoStrip zone={zone} hasZones={data.zones.length > 0} onPick={() => setZonePickerOpen(true)}
+                            pickup={isPickup ? data : null} />
                     )}
 
                     <div className={cn('flex flex-col gap-3 empty:hidden', cartInPanel ? 'lg:mt-3' : 'mt-3')}>
                         {/* Telefonda mahalle burada; masaüstünde sağdaki "Siparişiniz" kutusunda. */}
                         {data.state !== 'disabled' && (
                             <div className="lg:hidden">
-                                <ZoneCard zones={data.zones} zone={zone} onPick={() => setZonePickerOpen(true)} />
+                                {fulfillment({ onPick: () => setZonePickerOpen(true) })}
                             </div>
                         )}
 
@@ -482,7 +493,7 @@ export default function DeliveryOrderPage() {
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)]">
                             <div className="border-b border-[var(--site-border)] px-5 pb-4 pt-5">
-                                <ZoneCard zones={data.zones} zone={zone} onPick={() => setZonePickerOpen(true)} flat compact />
+                                {fulfillment({ onPick: () => setZonePickerOpen(true), flat: true, compact: true })}
                             </div>
                             <div className="px-5">{lines.length === 0
                                 ? <EmptyCart suggestions={suggestions} restaurant={restaurant} onAdd={addProduct} />
@@ -501,7 +512,7 @@ export default function DeliveryOrderPage() {
                             {count > 0 && <span className={cn('px-2.5 py-1 text-sm font-extrabold tabular-nums', sicak ? 'rounded-lg bg-[var(--site-accent)] text-[var(--site-on-accent)]' : 'rounded-full bg-[var(--site-mustard)] text-[#24180F]')}>{count} ürün</span>}
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto px-7 py-2">
-                            <ZoneCard zones={data.zones} zone={zone} onPick={() => setZonePickerOpen(true)} />
+                            {fulfillment({ onPick: () => setZonePickerOpen(true) })}
                         </div>
                         <div className="border-t border-dashed border-[var(--site-border-strong)] px-7 pb-7 pt-4">{cartTotals}</div>
                     </aside>
@@ -527,15 +538,16 @@ export default function DeliveryOrderPage() {
 
             {cartOpen && (
                 <Sheet title="Siparişiniz" onClose={() => setCartOpen(false)} footer={cartTotals}>
-                    <ZoneCard zones={data.zones} zone={zone} onPick={() => { setCartOpen(false); setZonePickerOpen(true); }} />
+                    {fulfillment({ onPick: () => { setCartOpen(false); setZonePickerOpen(true); } })}
                     <div className="mt-3">{lines.length === 0 ? <EmptyCart /> : cartLines}</div>
                 </Sheet>
             )}
 
-            {checkoutOpen && zone && currentQuote && (
+            {checkoutOpen && (zone || isPickup) && currentQuote && (
                 <DeliveryCheckout
                     data={data}
                     zone={zone}
+                    pickup={isPickup}
                     lines={lines}
                     quote={currentQuote}
                     clientRequestId={clientRequestId}
@@ -680,7 +692,31 @@ const zoneShellBox = 'rounded-[20px] bg-[var(--site-bg)] p-4 md:p-5';
  * Elit sipariş sayfasının sol üstündeki teslimat bilgi şeridi (yalnız masaüstü): ortalama teslimat, teslimat ücreti, en az
  * sipariş ve teslimat bölgesi. Mahalle seçilmemişse bölge hücresi seçim düğmesidir.
  */
-function DeliveryInfoStrip({ zone, hasZones, onPick }: { zone: DeliveryZone | null; hasZones: boolean; onPick: () => void }) {
+function DeliveryInfoStrip({ zone, hasZones, onPick, pickup }: {
+    zone: DeliveryZone | null; hasZones: boolean; onPick: () => void;
+    /** Gel al seçiliyse sayfanın verisi: süre, ücret yok, restoranın adresi. */
+    pickup: OnlineOrdering | null;
+}) {
+    if (pickup) {
+        const cells = [
+            { icon: <Clock className="h-5 w-5" aria-hidden="true" />, label: 'Hazır olma', value: pickupEtaText(pickup) },
+            { icon: <Store className="h-5 w-5" aria-hidden="true" />, label: 'Teslimat ücreti', value: 'Yok (gel al)' },
+            { icon: <MapPin className="h-5 w-5" aria-hidden="true" />, label: 'Alacağınız yer', value: pickup.pickupAddress || pickup.branchName },
+        ];
+        return (
+            <section aria-label="Gel al bilgileri" className="hidden grid-cols-[1fr_1fr_2fr] divide-x divide-[var(--site-border)] rounded-[20px] bg-[var(--site-bg)] py-3 lg:grid">
+                {cells.map(cell => (
+                    <div key={cell.label} className="flex min-w-0 items-center gap-3 px-4">
+                        <span className="shrink-0 text-[var(--site-sub)]">{cell.icon}</span>
+                        <span className="min-w-0">
+                            <span className="block text-xs text-[var(--site-sub)]">{cell.label}</span>
+                            <span className="block truncate text-[15px] font-semibold tabular-nums" title={cell.value}>{cell.value}</span>
+                        </span>
+                    </div>
+                ))}
+            </section>
+        );
+    }
     const facts = zone ? zoneFacts(zone) : null;
     const cells = [
         { icon: <Clock className="h-5 w-5" aria-hidden="true" />, label: 'Ortalama teslimat', value: facts?.time ?? '—' },
@@ -707,6 +743,67 @@ function DeliveryInfoStrip({ zone, hasZones, onPick }: { zone: DeliveryZone | nu
                             : <span className="block text-[15px] font-semibold">—</span>}
                 </span>
             </div>
+        </section>
+    );
+}
+
+function pickupEtaText(data: OnlineOrdering): string {
+    return data.pickupEtaMinutes ? `~${data.pickupEtaMinutes} dk` : '—';
+}
+
+/**
+ * Teslimat şekli: restoran gel al'ı açtıysa üstte "Adrese teslim / Gel al" seçimi, altında mahalle kartı ya da gel al kartı
+ * (restoranın adresi, yol tarifi, yaklaşık hazır olma süresi). Gel al kapalıysa yalnızca mahalle kartı.
+ */
+function FulfillmentCard({ data, pickup, onPickupChange, zone, onPick, flat = false, compact = false }: {
+    data: OnlineOrdering; pickup: boolean; onPickupChange: (pickup: boolean) => void;
+    zone: DeliveryZone | null; onPick: () => void; flat?: boolean; compact?: boolean;
+}) {
+    if (!data.pickupEnabled) return <ZoneCard zones={data.zones} zone={zone} onPick={onPick} flat={flat} compact={compact} />;
+    const options = [
+        { value: false, label: 'Adrese teslim', icon: Bike },
+        { value: true, label: 'Gel al', icon: Store },
+    ];
+    return (
+        <div className={cn('flex flex-col gap-4', !flat && zoneShellBox)}>
+            <div role="radiogroup" aria-label="Teslimat şekli" className="grid grid-cols-2 gap-1 rounded-full border border-[var(--site-border-strong)] p-1">
+                {options.map(option => {
+                    const checked = pickup === option.value;
+                    const Icon = option.icon;
+                    return (
+                        <button key={option.label} type="button" role="radio" aria-checked={checked} onClick={() => onPickupChange(option.value)}
+                            className={cn('flex min-h-11 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors',
+                                checked ? 'bg-[var(--site-paper)] text-[var(--site-on-paper)]' : 'text-[var(--site-text)] hover:bg-[var(--site-raised)]')}>
+                            <Icon className="h-4 w-4" aria-hidden="true" />{option.label}
+                        </button>
+                    );
+                })}
+            </div>
+            {pickup ? <PickupCard data={data} compact={compact} /> : <ZoneCard zones={data.zones} zone={zone} onPick={onPick} flat compact={compact} />}
+        </div>
+    );
+}
+
+/** Gel al kartı: siparişi alacağı yer (şube adı, adres, yol tarifi) ve yaklaşık hazır olma süresi. */
+function PickupCard({ data, compact }: { data: OnlineOrdering; compact: boolean }) {
+    const address = data.pickupAddress ?? '';
+    return (
+        <section aria-label="Gel al">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--site-sub)]">Gel al · restorandan teslim</p>
+            <p className={cn(serif, 'm-0 mt-0.5 break-words leading-[1.05]', compact ? 'text-[24px]' : 'text-[28px] md:text-[30px]')}>{data.branchName}</p>
+            {address && (
+                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer"
+                    className="mt-1.5 flex items-start gap-1.5 text-sm text-[var(--site-sub)] underline-offset-2 hover:underline">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span className="min-w-0 break-words">{address}</span>
+                </a>
+            )}
+            {data.pickupDirections && <p className="mt-1 text-sm text-[var(--site-sub)]">{data.pickupDirections}</p>}
+            <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold">
+                <Clock className="h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />
+                {data.pickupEtaMinutes ? `Onaydan sonra yaklaşık ${data.pickupEtaMinutes} dk'da hazır` : 'Hazır olunca takip sayfasında görürsünüz'}
+            </p>
+            <p className="mt-1 text-sm text-[var(--site-sub)]">Teslimat ücreti yok. Ödemeyi siparişi alırken restoranda yaparsınız.</p>
         </section>
     );
 }
@@ -1003,8 +1100,10 @@ function CartLines({ lines, quote, restaurant, imageOf, round = false, limit, on
     );
 }
 
-function CartTotals({ subtotal, fee, total, zoneName, minimum, hint, hintIsError, canCheckout, onCheckout, closedLabel }: {
+function CartTotals({ subtotal, fee, total, zoneName, pickup = false, minimum, hint, hintIsError, canCheckout, onCheckout, closedLabel }: {
     subtotal: number; fee: number; total: number; zoneName: string | null;
+    /** Gel al: teslimat satırında "Gel al · ücretsiz". */
+    pickup?: boolean;
     minimum: { subtotal: number; target: number; left: number } | null;
     hint: string | null; hintIsError: boolean; canCheckout: boolean; onCheckout: () => void;
     /** Restoran sipariş almıyorken soluk düğme yerine net durum ("Yarın 09:00'da açılıyor"). */
@@ -1014,7 +1113,9 @@ function CartTotals({ subtotal, fee, total, zoneName, minimum, hint, hintIsError
         <>
             <dl className="mb-3 space-y-1 text-[15px]">
                 <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Ara toplam</dt><dd className="tabular-nums">{formatPrice(subtotal)} ₺</dd></div>
-                <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Teslimat{zoneName ? ` (${zoneName})` : ''}</dt><dd className="tabular-nums">{zoneName ? `${formatPrice(fee)} ₺` : '—'}</dd></div>
+                {pickup
+                    ? <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Gel al</dt><dd>Teslimat ücreti yok</dd></div>
+                    : <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Teslimat{zoneName ? ` (${zoneName})` : ''}</dt><dd className="tabular-nums">{zoneName ? `${formatPrice(fee)} ₺` : '—'}</dd></div>}
                 <div className="flex items-baseline justify-between border-t border-dashed border-[var(--site-border-strong)] pt-3"><dt className="font-bold">Toplam</dt><dd className={cn(headingFont, 'text-[36px] font-semibold! leading-none tabular-nums')}>{formatPrice(total)} ₺</dd></div>
             </dl>
             {minimum && <MinimumProgress {...minimum} className="mb-3" />}

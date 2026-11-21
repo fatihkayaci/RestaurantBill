@@ -94,7 +94,9 @@ public class AcceptDeliveryOrderCommandHandler(
 
         int eta = request.EtaMinutes ?? await SuggestedEtaAsync(delivery, cancellationToken);
 
-        Order order = Order.CreateDelivery(delivery.BranchId, delivery.DeliveryFee, delivery.Note);
+        Order order = delivery.IsPickup
+            ? Order.CreatePickup(delivery.BranchId, delivery.Note)
+            : Order.CreateDelivery(delivery.BranchId, delivery.DeliveryFee, delivery.Note);
 
         List<Guid> productIds = delivery.Lines.Where(l => l.ProductId is not null).Select(l => l.ProductId!.Value).Distinct().ToList();
         Dictionary<Guid, Product> products = await db.Products
@@ -136,7 +138,8 @@ public class AcceptDeliveryOrderCommandHandler(
 
         db.Orders.Add(order);
         string actor = await db.ActorNameAsync(currentUser, cancellationToken);
-        db.AddAudit(delivery, actor, "DeliveryOrderAccepted", $"{actor} online paket sipariş #{delivery.Number}'i kabul etti ({eta} dk).");
+        db.AddAudit(delivery, actor, "DeliveryOrderAccepted",
+            $"{actor} online {(delivery.IsPickup ? "gel al" : "paket")} sipariş #{delivery.Number}'i kabul etti ({eta} dk).");
         await db.SaveChangesAsync(cancellationToken);
 
         // Masa siparişinin açılışındaki gibi: mutfak ve kasa listelerini yeniler; ayrıca online sipariş ekranları.
@@ -149,6 +152,12 @@ public class AcceptDeliveryOrderCommandHandler(
 
     private async Task<int> SuggestedEtaAsync(DeliveryOrder delivery, CancellationToken cancellationToken)
     {
+        if (delivery.IsPickup)
+        {
+            Branch pickupBranch = await db.Branches.AsNoTracking().FirstAsync(b => b.Id == delivery.BranchId, cancellationToken);
+            return pickupBranch.GetOnlineOrderSettings().PickupEtaMinutes;
+        }
+
         int? zoneEta = delivery.DeliveryZoneId is Guid zoneId
             ? await db.DeliveryZones.AsNoTracking().Where(z => z.Id == zoneId).Select(z => (int?)z.EstimatedMinutes).FirstOrDefaultAsync(cancellationToken)
             : null;

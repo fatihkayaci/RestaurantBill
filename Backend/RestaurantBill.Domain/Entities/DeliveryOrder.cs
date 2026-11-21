@@ -9,6 +9,8 @@ namespace RestaurantBill.Domain.Entities
     /// reddedilen sipariş Orders tablosuna hiç girmez.
     /// Durumlar: Received → Accepted → Preparing → Ready → OnTheWay → Delivered; Received → Rejected | Cancelled (müşteri);
     /// Accepted…OnTheWay → Cancelled (personel, nedenli). Kasada teslim alma durum değildir, yalnızca SettledAt yazar.
+    /// Gel al (<see cref="OrderType.Takeaway"/>): adres, bölge ve teslimat ücreti yoktur, kurye atanmaz. Akış
+    /// Received → Accepted → Preparing → Ready → Delivered ("Müşteri aldı"); ödeme o anda kasaya yazılır.
     /// </summary>
     public class DeliveryOrder : BaseEntity
     {
@@ -31,6 +33,9 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>İstemcinin ürettiği tekrar gönderim anahtarı; aynı istek iki sipariş açmaz.</summary>
         public Guid ClientRequestId { get; private set; }
         public DeliveryOrderStatus Status { get; private set; } = DeliveryOrderStatus.Received;
+        /// <summary>Delivery: adrese teslim (kurye). Takeaway: gel al (müşteri restorandan alır).</summary>
+        public OrderType OrderType { get; private set; } = OrderType.Delivery;
+        public bool IsPickup => OrderType == OrderType.Takeaway;
 
         public string CustomerName { get; private set; } = string.Empty;
         /// <summary>TurkishPhone biçiminde.</summary>
@@ -127,6 +132,43 @@ namespace RestaurantBill.Domain.Entities
             return order;
         }
 
+        /// <summary>Gel al: adres, bölge ve teslimat ücreti yoktur; ad ve telefon zorunludur.</summary>
+        public static DeliveryOrder CreatePickup(Guid branchId, int number, Guid clientRequestId, string customerName, string customerPhone,
+            string? note, PaymentMethod paymentPreference, string? clientIp)
+        {
+            if (branchId == Guid.Empty)
+                throw new DomainException("Geçersiz şube.");
+            if (number <= 0)
+                throw new DomainException("Geçersiz sipariş numarası.");
+            if (clientRequestId == Guid.Empty)
+                throw new DomainException("Geçersiz istek.");
+            if (paymentPreference is not (PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban))
+                throw new DomainException("Ödeme restoranda nakit, restoranda kart ya da IBAN olabilir.");
+
+            string name = Required(customerName, NameMaxLength, "Ad soyad");
+            string phone = TurkishPhone.Normalize(customerPhone);
+            if (phone.Length == 0)
+                throw new DomainException("Geçerli bir telefon numarası girin.");
+
+            DeliveryOrder order = new()
+            {
+                BranchId = branchId,
+                Number = number,
+                AccessToken = Shared.AccessToken.New(),
+                ClientRequestId = clientRequestId,
+                Status = DeliveryOrderStatus.Received,
+                OrderType = OrderType.Takeaway,
+                CustomerName = name,
+                CustomerPhone = phone,
+                Note = Optional(note, NoteMaxLength, "Sipariş notu"),
+                DeliveryFee = 0m,
+                PaymentPreference = paymentPreference,
+                ClientIp = clientIp?.Trim() ?? string.Empty
+            };
+            order.RecalculateTotals();
+            return order;
+        }
+
         /// <summary>Fiyatı sunucu hesaplar (sepet fiyatlandırma); satırlar sipariş alınırken eklenir, sonra değişmez.</summary>
         public DeliveryOrderLine AddProductLine(Product product, decimal unitPrice, decimal taxRate, int quantity, string? note)
         {
@@ -169,7 +211,7 @@ namespace RestaurantBill.Domain.Entities
         {
             EnsureStatus("Yalnızca yeni gelen sipariş kabul edilebilir.", DeliveryOrderStatus.Received);
 
-            if (order is null || order.OrderType != OrderType.Delivery || order.BranchId != BranchId)
+            if (order is null || order.OrderType != OrderType || order.BranchId != BranchId)
                 throw new DomainException("Geçersiz paket sipariş kaydı.");
             if (estimatedMinutes < DeliveryZone.EstimatedMinutesMin || estimatedMinutes > DeliveryZone.EstimatedMinutesMax)
                 throw new DomainException($"Tahmini süre {DeliveryZone.EstimatedMinutesMin}–{DeliveryZone.EstimatedMinutesMax} dakika arasında olmalı.");
@@ -247,9 +289,12 @@ namespace RestaurantBill.Domain.Entities
             return true;
         }
 
+        public const string PickupNoCourierMessage = "Gel al siparişine kurye atanmaz; müşteri siparişi restorandan alır.";
+
         /// <summary>Yola çıkmadan önce kurye atanır ya da değiştirilir.</summary>
         public void AssignCourier(Guid courierUserId)
         {
+            EnsureDelivery();
             EnsureStatus("Yola çıkmış ya da kapanmış siparişin kuryesi değiştirilemez.",
                 DeliveryOrderStatus.Accepted, DeliveryOrderStatus.Preparing, DeliveryOrderStatus.Ready);
             if (courierUserId == Guid.Empty)
@@ -261,6 +306,7 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Yola çıkmadan önce atanmış kurye kaldırılır.</summary>
         public void UnassignCourier()
         {
+            EnsureDelivery();
             EnsureStatus("Yola çıkmış ya da kapanmış siparişin kuryesi değiştirilemez.",
                 DeliveryOrderStatus.Accepted, DeliveryOrderStatus.Preparing, DeliveryOrderStatus.Ready);
             CourierUserId = null;
@@ -269,6 +315,7 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Ready → OnTheWay; kurye atanmış olmalı.</summary>
         public void Dispatch(DateTime utcNow)
         {
+            EnsureDelivery();
             EnsureStatus("Yalnızca hazır sipariş yola çıkabilir.", DeliveryOrderStatus.Ready);
             if (CourierUserId is null)
                 throw new DomainException("Önce kurye atayın.");
@@ -283,6 +330,7 @@ namespace RestaurantBill.Domain.Entities
         /// </summary>
         public void Deliver(PaymentMethod collectedMethod, DateTime utcNow)
         {
+            EnsureDelivery();
             EnsureStatus("Yalnızca yoldaki sipariş teslim edilebilir.", DeliveryOrderStatus.OnTheWay);
             if (collectedMethod == PaymentMethod.Iban && PaymentPreference != PaymentMethod.Iban)
                 throw new DomainException("IBAN yalnızca müşteri IBAN ile ödemeyi seçtiyse kaydedilebilir.");
@@ -293,6 +341,35 @@ namespace RestaurantBill.Domain.Entities
             CollectedMethod = collectedMethod;
             CollectedAmount = Total;
             CollectedAt = utcNow;
+            Status = DeliveryOrderStatus.Delivered;
+        }
+
+        /// <summary>
+        /// Gel al: müşteri siparişi restoranda aldı ve ödedi (Accepted…Ready → Delivered). Tahsilat kasaya o anda geçer:
+        /// teslim, tahsilat ve kasaya alma aynı anda yazılır. Mutfak "Hazır" demeden de verilebilir (müşteri erken geldi).
+        /// amount: kasada alınan tutar (hesap sonradan değiştiyse onaylanan toplamdan farklı olabilir).
+        /// </summary>
+        public void CompletePickup(PaymentMethod collectedMethod, decimal amount, Guid userId, DateTime utcNow)
+        {
+            if (!IsPickup)
+                throw new DomainException("Adrese teslim sipariş kurye teslimiyle kapanır.");
+            EnsureStatus("Yalnızca onaylanmış, henüz teslim edilmemiş gel al siparişi müşteriye verilebilir.",
+                DeliveryOrderStatus.Accepted, DeliveryOrderStatus.Preparing, DeliveryOrderStatus.Ready);
+            if (OrderId is null)
+                throw new DomainException("Bu siparişin hesabı yok.");
+            if (collectedMethod == PaymentMethod.Iban && PaymentPreference != PaymentMethod.Iban)
+                throw new DomainException("IBAN yalnızca müşteri IBAN ile ödemeyi seçtiyse kaydedilebilir.");
+            if (collectedMethod is not (PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban))
+                throw new DomainException("Tahsilat nakit, kart ya da IBAN olabilir.");
+            if (amount < 0)
+                throw new DomainException("Tahsil edilen tutar negatif olamaz.");
+
+            DeliveredAt = utcNow;
+            CollectedMethod = collectedMethod;
+            CollectedAmount = amount;
+            CollectedAt = utcNow;
+            SettledAt = utcNow;
+            SettledByUserId = userId;
             Status = DeliveryOrderStatus.Delivered;
         }
 
@@ -358,6 +435,12 @@ namespace RestaurantBill.Domain.Entities
         }
 
         public bool IsOpen => Status is not (DeliveryOrderStatus.Delivered or DeliveryOrderStatus.Rejected or DeliveryOrderStatus.Cancelled);
+
+        private void EnsureDelivery()
+        {
+            if (IsPickup)
+                throw new DomainException(PickupNoCourierMessage);
+        }
 
         private void EnsureStatus(string message, params DeliveryOrderStatus[] allowed)
         {

@@ -69,7 +69,7 @@ public class GetCourierOrdersQueryHandler(IAppDbContext db, ICurrentUserService 
                 Id = d.Id,
                 Number = d.Number,
                 Status = d.Status,
-                StatusLabel = DeliveryScope.StaffLabel(d.Status),
+                StatusLabel = DeliveryScope.StaffLabel(d.Status, d.IsPickup),
                 CustomerName = d.CustomerName,
                 CustomerPhone = d.CustomerPhone,
                 Address = d.Address,

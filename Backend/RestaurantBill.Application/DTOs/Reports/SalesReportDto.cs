@@ -11,6 +11,10 @@ public class SalesReportDto
     public decimal AvgBasket { get; set; }
     /// <summary>Ciroya dahil paket servis teslimat ücretleri (Payment.IsDeliveryFee).</summary>
     public decimal DeliveryFeeRevenue { get; set; }
+    /// <summary>Ciroya dahil online adrese teslim siparişlerin tahsilatı (teslimat ücreti dahil).</summary>
+    public decimal DeliveryOrderRevenue { get; set; }
+    /// <summary>Ciroya dahil online gel al siparişlerin tahsilatı.</summary>
+    public decimal PickupOrderRevenue { get; set; }
 
     /// <summary>Aralık tek günse saatlik (24 nokta), çok günse günlük (iş günü bazlı) noktalar.</summary>
     public List<SalesTrendPointDto> Trend { get; set; } = [];
