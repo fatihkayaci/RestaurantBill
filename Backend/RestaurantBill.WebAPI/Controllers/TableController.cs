@@ -6,6 +6,7 @@ using RestaurantBill.Application.Features.Tables.Commands.CancelReservationToTab
 using RestaurantBill.Application.Features.Tables.Commands.CreateTable;
 using RestaurantBill.Application.Features.Tables.Commands.DeleteTable;
 using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
+using RestaurantBill.Application.Features.Tables.Commands.ReorderTables;
 using RestaurantBill.Application.Features.Tables.Commands.ReservationTable;
 using RestaurantBill.Application.Features.Tables.Commands.UpdateTable;
 using RestaurantBill.Application.Features.Tables.Queries.GetAllTable;
@@ -90,6 +91,14 @@ namespace RestaurantBill.WebAPI.Controllers
         [Authorize(Roles = "Owner,Admin")]
         [HttpPost("bulk")]
         public async Task<IActionResult> BulkCreateTables([FromBody]BulkCreateTablesCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+        /// <summary>Sets the order of the tables in one region (first id is shown first).</summary>
+        [Authorize(Roles = "Owner,Admin")]
+        [HttpPost("reorder")]
+        public async Task<IActionResult> ReorderTables([FromBody]ReorderTablesCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);

@@ -33,11 +33,15 @@ public class CreateSetMenuCommandHandler(IAppDbContext db, ICurrentUserService c
         if (slots.IsFailure)
             return Result<Guid>.Failure(slots.Error!);
 
+        // Sıra verilmezse yeni menü listenin sonuna eklenir.
+        int sortOrder = request.SortOrder
+            ?? (await db.SetMenus.Where(s => s.BranchId == branchId).MaxAsync(s => (int?)s.SortOrder, cancellationToken) ?? -1) + 1;
+
         SetMenu setMenu;
         try
         {
             setMenu = SetMenu.Create(branchId, name);
-            setMenu.Update(name, request.Description, request.IsActive, request.SortOrder, request.CategoryId);
+            setMenu.Update(name, request.Description, request.IsActive, sortOrder, request.CategoryId);
             setMenu.SetContents(slots.Value!, request.DiscountType, request.DiscountValue);
             if (request.IsFeatured is bool isFeatured)
                 setMenu.SetFeatured(isFeatured);

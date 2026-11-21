@@ -77,6 +77,9 @@ public class SetMenu : BaseEntity
 
     public void SetFeatured(bool isFeatured) => IsFeatured = isFeatured;
 
+    /// <summary>Şubedeki menü listesindeki sıra (küçük önce); sürükle-bırak ile belirlenir.</summary>
+    public void SetSortOrder(int sortOrder) => SortOrder = sortOrder;
+
     public void UpdateImage(string imageUrl)
     {
         if (string.IsNullOrWhiteSpace(imageUrl))

@@ -27,22 +27,32 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
             // Bölge atanmış garson ve mutfak yalnızca kendi bölgelerinin masalarını görür.
             StaffAccess access = await _db.GetStaffAccessAsync(_currentUser, cancellationToken);
 
-            List<TableDto> tables = await _db.Tables
+            var rows = await _db.Tables
                 .AsNoTracking()
                 .Where(t => t.Region.BranchId == restaurantId)
                 .InStaffRegions(access)
-                .OrderBy(t => t.Name)
-                .Select(t => new TableDto
+                .Select(t => new
                 {
-                    Id = t.Id,
-                    Name = t.Name,
-                    Note = t.Note,
-                    Capacity = t.Capacity,
-                    Status = t.Status,
-                    RegionId = t.RegionId,
-                    RegionName = t.Region.Name
+                    RegionSortOrder = t.Region.SortOrder,
+                    Dto = new TableDto
+                    {
+                        Id = t.Id,
+                        Name = t.Name,
+                        Note = t.Note,
+                        Capacity = t.Capacity,
+                        SortOrder = t.SortOrder,
+                        Status = t.Status,
+                        RegionId = t.RegionId,
+                        RegionName = t.Region.Name
+                    }
                 })
                 .ToListAsync(cancellationToken);
+
+            // Bölge sırası → masa sırası → doğal ad sırası ("Masa 2", "Masa 10"dan önce). Ekranlar bu sırayı korur.
+            List<TableDto> tables = rows
+                .OrderForDisplay(r => r.RegionSortOrder, r => r.Dto.RegionName, r => r.Dto.SortOrder, r => r.Dto.Name)
+                .Select(r => r.Dto)
+                .ToList();
 
             List<Guid> tableIds = tables.Select(t => t.Id).ToList();
             var activeOrders = await _db.Orders

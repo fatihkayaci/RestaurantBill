@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import CustomerOrderRequests from './components/CustomerOrderRequests';
 import TableWorkspace, { type WorkspaceView } from './components/TableWorkspace';
 import WaiterTableCard from './components/WaiterTableCard';
+import { DraggableTable, TableDragTransferProvider } from '@/features/tables/components/TableDragTransfer';
 import WaiterReservations from './components/WaiterReservations';
 import WaiterAccount from './components/WaiterAccount';
 import { STATE_STYLE, tableState, useSplitLayout, type TableState } from './waiterUi';
@@ -334,9 +335,10 @@ export default function WaiterTablesPage() {
         </p>
     );
 
+    // Dolu masa başka masanın üstüne sürüklenince taşı / birleştir / yer değiştir sorulur (yetkisi olan garsona).
     const card = (t: Table) => (
+        <DraggableTable key={t.id} table={t} className="grid">
         <WaiterTableCard
-            key={t.id}
             table={t}
             now={now}
             large={split}
@@ -349,9 +351,10 @@ export default function WaiterTablesPage() {
             draft={hasDraft(t.id)}
             onClick={() => openTable(t)}
         />
+        </DraggableTable>
     );
 
-    const tablesBody = loading ? (
+    const tablesGrid = loading ? (
         <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] lg:gap-3">
             {[...Array(8)].map((_, i) => <div key={i} className="h-32 animate-pulse rounded-[18px] bg-muted" />)}
         </div>
@@ -370,6 +373,18 @@ export default function WaiterTablesPage() {
         </div>
     ) : (
         <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] lg:gap-3">{visible.map(card)}</div>
+    );
+
+    const canDragTransfer = permissions.canTransferAndReserve && tables.some(t => t.status === 2) && tables.length > 1;
+    const tablesBody = (
+        <TableDragTransferProvider tables={tables} enabled={canDragTransfer} onDone={loadTables}>
+            {tablesGrid}
+            {canDragTransfer && !loading && visible.length > 0 && (
+                <p className="mt-3 text-center text-xs text-rb-text-sub">
+                    İpucu: dolu masayı basılı tutup başka masanın üstüne bırakın; taşıma, birleştirme ya da yer değiştirme sorulur.
+                </p>
+            )}
+        </TableDragTransferProvider>
     );
 
     const otherTab = (

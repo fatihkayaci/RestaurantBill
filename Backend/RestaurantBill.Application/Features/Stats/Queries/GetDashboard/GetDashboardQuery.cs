@@ -1,6 +1,7 @@
 using System.Globalization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.Stats;
 using RestaurantBill.Application.Features.CustomerSite;
@@ -101,7 +102,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, Resul
         var tables = await _db.Tables
             .AsNoTracking()
             .Where(t => t.Region.BranchId == branchId && !t.IsDeleted && !t.Region.IsDeleted)
-            .Select(t => new { t.Id, t.Name, t.Status, t.RegionId, RegionName = t.Region.Name, RegionCreatedAt = t.Region.CreatedAt })
+            .Select(t => new { t.Id, t.Name, t.Status, t.RegionId, RegionName = t.Region.Name, RegionSortOrder = t.Region.SortOrder, t.SortOrder })
             .ToListAsync(cancellationToken);
         List<Guid> tableIds = tables.Select(t => t.Id).ToList();
 
@@ -163,14 +164,14 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, Resul
             .ToDictionary(g => g.Key, g => g.First());
 
         List<DashboardRegionDto> regions = tables
-            .GroupBy(t => new { t.RegionId, t.RegionName, t.RegionCreatedAt })
-            .OrderBy(g => g.Key.RegionCreatedAt)
+            .GroupBy(t => new { t.RegionId, t.RegionName, t.RegionSortOrder })
+            .OrderBy(g => g.Key.RegionSortOrder).ThenBy(g => g.Key.RegionName, NaturalStringComparer.Instance)
             .Select(g => new DashboardRegionDto
             {
                 Id = g.Key.RegionId,
                 Name = g.Key.RegionName,
                 Tables = g
-                    .OrderBy(t => t.Name.Length).ThenBy(t => t.Name, StringComparer.Create(Tr, true))
+                    .OrderInRegion(t => t.SortOrder, t => t.Name)
                     .Select(t =>
                     {
                         var order = orderByTable.GetValueOrDefault(t.Id);

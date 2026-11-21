@@ -56,7 +56,7 @@ const CASHIER_PERMISSIONS: { key: CashierPermissionKey; label: string; short: st
 // Kasiyer bugüne kadar hepsini yapabiliyordu; yeni kasiyer de aynı yetkilerle başlar, indirim sınırı yoktur (%100).
 const DEFAULT_CASHIER_PERMISSIONS = { canApplyDiscount: true, maxDiscountPercent: 100, canTransferTables: true, canViewDelivery: true };
 
-const byTableName = (a: Table, b: Table) => a.name.localeCompare(b.name, 'tr', { numeric: true });
+// Masalar sunucudan yöneticinin verdiği sırayla gelir (bölge → masa sırası → doğal ad); burada yeniden sıralanmaz.
 
 // "Masa 1", "Masa 2", "Masa 5" → "Masa 1, 2, 5". Adlar aynı ön ek + numara biçiminde değilse olduğu gibi yazılır.
 function compactTableNames(names: string[]): string {
@@ -77,7 +77,7 @@ function waiterCoverage(regionIds: string[], restrictedRegionIds: string[], tabl
     return regionIds.map(regionId => ({
         regionId,
         restricted: restrictedRegionIds.includes(regionId),
-        tables: tables.filter(t => t.regionId === regionId && picked.has(t.id)).sort(byTableName),
+        tables: tables.filter(t => t.regionId === regionId && picked.has(t.id)),
     }));
 }
 
@@ -779,7 +779,7 @@ export default function StaffPage() {
                                         ) : (
                                             <div className="space-y-2">
                                                 {waiterCoverage(form.regionIds ?? [], form.restrictedRegionIds ?? [], form.tableIds ?? [], tables).map(({ regionId, restricted, tables: picked }) => {
-                                                    const regionTables = tables.filter(t => t.regionId === regionId).sort(byTableName);
+                                                    const regionTables = tables.filter(t => t.regionId === regionId);
                                                     return (
                                                         <div key={regionId} className="rounded-lg border border-border p-3 space-y-2">
                                                             <div className="flex flex-wrap items-center justify-between gap-2">

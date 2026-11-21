@@ -27,8 +27,11 @@ namespace RestaurantBill.Application.Features.Regions.Commands.CreateRegion
             if (nameExists)
                 return Result.Failure("Bu isimde bir bölge zaten mevcut.");
 
-            int nextSortOrder = await _db.Regions.CountAsync(r => r.BranchId == restaurantId, cancellationToken);
-            Region region = Region.Create(command.Name, restaurantId, nextSortOrder);
+            // Yeni bölge sona eklenir. Sayı yerine en büyük sıra: silinen/yeniden sıralanan bölgelerden sonra çakışma olmaz.
+            int? lastSortOrder = await _db.Regions
+                .Where(r => r.BranchId == restaurantId)
+                .MaxAsync(r => (int?)r.SortOrder, cancellationToken);
+            Region region = Region.Create(command.Name, restaurantId, (lastSortOrder ?? -1) + 1);
             _db.Regions.Add(region);
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _userService.UserId, cancellationToken);

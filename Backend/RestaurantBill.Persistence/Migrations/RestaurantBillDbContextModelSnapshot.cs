@@ -356,6 +356,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
                     b.Property<decimal?>("TaxRate")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
@@ -1345,6 +1348,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
                     b.Property<decimal?>("TaxRate")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
@@ -1882,6 +1888,9 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<Guid>("RegionId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");

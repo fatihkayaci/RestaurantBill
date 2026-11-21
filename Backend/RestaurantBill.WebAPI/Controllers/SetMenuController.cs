@@ -91,6 +91,15 @@ namespace RestaurantBill.WebAPI.Controllers
 
         public sealed record StockImageBody(Guid StockImageId);
 
+        /// <summary> Sets the order of the branch's set menus (first id is shown first). </summary>
+        [Authorize(Roles = "Owner,Admin")]
+        [HttpPost("reorder")]
+        public async Task<IActionResult> Reorder([FromBody] ReorderSetMenusCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+
         /// <summary> Deletes a set menu that has never been ordered. </summary>
         [Authorize(Roles = "Owner,Admin")]
         [HttpDelete("{id:guid}")]

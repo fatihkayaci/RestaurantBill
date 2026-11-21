@@ -42,6 +42,10 @@ export const productService = {
             TaxRate: form.taxRate
         });
     },
+    /** Bir kategorideki ürünlerin sırası: ilk id menüde, garsonda ve sitede ilk görünür. */
+    reorderProducts: async (categoryId: string, orderedProductIds: string[]) => {
+        await api.post('/product/reorder', { CategoryId: categoryId, OrderedProductIds: orderedProductIds });
+    },
     /** "Tükendi" anahtarı: ürün masada satılmaya devam eder, online siparişte seçilemez. */
     setStock: async (id: string, isOutOfStock: boolean) => {
         await api.patch(`/product/${id}/stock`, { isOutOfStock });

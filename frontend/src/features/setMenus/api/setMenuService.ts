@@ -20,6 +20,10 @@ export const setMenuService = {
     updateSetMenu: async (id: string, input: SetMenuInput) => {
         await api.put(`/set-menu/${id}`, input);
     },
+    /** Menülerin sırası: ilk id sitede, QR menüde, online siparişte ve garsonda ilk görünür. */
+    reorderSetMenus: async (orderedSetMenuIds: string[]) => {
+        await api.post('/set-menu/reorder', { orderedSetMenuIds });
+    },
     deleteSetMenu: async (id: string) => {
         await api.delete(`/set-menu/${id}`);
     },
