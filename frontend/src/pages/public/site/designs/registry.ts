@@ -16,6 +16,12 @@ import MeyhaneAbout from './meyhane/MeyhaneAbout';
 import MeyhaneContact from './meyhane/MeyhaneContact';
 import MeyhaneReservation from './meyhane/MeyhaneReservation';
 import { MeyhaneFooter, MeyhaneHeader } from './meyhane/MeyhaneFrame';
+import BahceHome from './bahce/BahceHome';
+import BahceMenu from './bahce/BahceMenu';
+import BahceAbout from './bahce/BahceAbout';
+import BahceContact from './bahce/BahceContact';
+import BahceReservation from './bahce/BahceReservation';
+import { BahceFooter, BahceHeader } from './bahce/BahceFrame';
 
 // Tasarım kaydı: bir tasarımın KENDİ düzeni (sayfa bileşenleri, üst menü, alt bilgi, akış giydirmesi) tek yerde.
 // Yazılmayan her parça ortak bileşene düşer (Renkli/Sade/Sıcak'ın paylaştığı düzen): tasarım yalnız değiştirdiğini yazar.
@@ -60,6 +66,10 @@ const LAYOUTS: Partial<Record<SiteDesignKey, () => LayoutParts>> = {
     meyhane: () => ({
         Home: MeyhaneHome, Menu: MeyhaneMenu, About: MeyhaneAbout, Contact: MeyhaneContact, Reservation: MeyhaneReservation,
         Header: MeyhaneHeader, Footer: MeyhaneFooter,
+    }),
+    bahce: () => ({
+        Home: BahceHome, Menu: BahceMenu, About: BahceAbout, Contact: BahceContact, Reservation: BahceReservation,
+        Header: BahceHeader, Footer: BahceFooter,
     }),
 };
 

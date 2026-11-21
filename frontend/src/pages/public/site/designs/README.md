@@ -56,3 +56,12 @@ düzenlenir: yeni sayfada da bunları kullanın (ortak sayfalardaki örneklere b
 Henüz kayda taşınmayanlar (Elit'e özgü, dağınık kalan): `RestaurantReservationPage`, `ReservationLookupPage`,
 `DeliveryTrackingPage`, `TableOrderPage`, `DeliveryOrderPage`'deki `=== 'elit'` dalları (başka dallarda da değişen
 dosyalar; dokunmamak için bırakıldı).
+
+## Örnek: Bahçe Kahvaltısı (`designs/bahce/`)
+
+- `BahceFrame.tsx`: yüzen yuvarlak kapsül üst menü (güneş işareti, ad, bugünün saat çipi), çalı kenarlı yeşil alt bilgi.
+- `BahceHome.tsx`: yukarıdan bakılmış sofra kapağı (`Sofra.tsx`: kapak renginde masa, fotoğraflı ya da çizimli tabaklar),
+  "Sofranın yıldızı" hazır menü kartı, kareli örtüde "Bugün masada", damla fotoğraflı hikâye, notlar, hafta sonu kartı.
+- `BahceMenu.tsx`, `BahceAbout.tsx`, `BahceContact.tsx`, `BahceReservation.tsx`: kendi sayfaları (Mekân ortak).
+- `BahceMenuParts.tsx`: ortak menünün Bahçe dalı (tabak simgeli başlık, yuvarlak tabaklı kartlar; site, QR, paket sipariş).
+- `BahceBits.tsx`, `bahceParts.ts`: çizimli tabaklar, saat çipi, hafta sonu saatleri (rezervasyon ayarından), düğmeler.

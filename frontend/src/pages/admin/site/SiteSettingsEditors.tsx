@@ -247,38 +247,56 @@ function EsnafMock({ accentText, cover, menuBox }: { accentText: string; cover: 
 }
 
 /**
- * Bahçe Kahvaltısı maketi: açık yeşil zeminde sabah ışığı, adaçayı kapakta kalın ad ve tereyağı düğme, yanında yuvarlak
- * tabak; altında yuvarlak köşeli beyaz kartlar (domates fiyat), orman yeşili alt bilgi.
+ * Bahçe Kahvaltısı maketi (kendi düzeni): açık zeminde sabah güneşi, yüzen yuvarlak üst menü (güneş + ad + saat çipi),
+ * solda kalın ad ve vurgu düğmesi, sağda YUKARIDAN BAKILMIŞ SOFRA (kapak renginde yuvarlak masa, beyaz tabaklar, çay);
+ * altında vurgu renginde kareli masa örtüsü üstünde beyaz kart (yuvarlak tabaklı satır); çalı kenarlı yeşil alt bilgi.
  */
 function BahceMock({ accent, accentText, cover }: { accent: string; accentText: string; cover: string }) {
     const P = SITE_DESIGNS.bahce.palette;
     const font = SITE_FONTS[P.font];
+    const plates: [number, number, number][] = [[50, 50, 40], [22, 26, 22], [78, 24, 20], [84, 64, 18], [62, 86, 20], [26, 76, 20], [50, 12, 10]];
     return (
-        <span aria-hidden="true" className="flex h-[148px] flex-col gap-1.5 overflow-hidden rounded-lg p-2"
-            style={{ background: `radial-gradient(140px 80px at 0% 0%, ${P.mustard}66, transparent 70%), ${P.bg}` }}>
-            <span className="flex flex-[3] items-center gap-2 rounded-xl px-2.5" style={{ background: cover, color: P.onHero }}>
-                <span className="flex flex-1 flex-col gap-1.5">
-                    <span className="text-[18px] leading-[0.95]" style={{ fontFamily: font.heading, fontWeight: 700, letterSpacing: font.tracking }}>
-                        Ocak<br /><span style={{ color: P.heroAccent ?? accentText }}>Kadıköy</span>
+        <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg"
+            style={{ background: `radial-gradient(120px 80px at 0% 0%, ${P.mustard}88, transparent 70%), ${P.bg}` }}>
+            <span className="mx-1.5 mt-1.5 flex h-4 shrink-0 items-center gap-1 rounded-full px-1.5" style={{ background: P.card, boxShadow: `0 0 0 1px ${P.fg}14` }}>
+                <span className="h-2 w-2 rounded-full" style={{ background: P.mustard }} />
+                <span className="h-1 w-7 rounded-full" style={{ background: P.fg }} />
+                <span className="h-1.5 w-6 rounded-full" style={{ background: P.alt }} />
+                <span className="ml-auto h-2.5 w-7 rounded-full" style={{ background: accent }} />
+            </span>
+            <span className="flex min-h-0 flex-[3] items-center gap-1 px-2.5">
+                <span className="flex flex-1 flex-col gap-1">
+                    <span className="text-[15px] leading-[0.9]" style={{ fontFamily: font.heading, fontWeight: 700, letterSpacing: font.tracking, color: P.fg }}>
+                        Ocak<br />Kadıköy
                     </span>
-                    <span className="h-3.5 w-14 rounded-full" style={{ background: P.pop ?? accent }} />
+                    <span className="h-3 w-12 rounded-full" style={{ background: accent }} />
                 </span>
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: P.card }}>
-                    <span className="h-8 w-8 rounded-full" style={{ background: `radial-gradient(circle at 35% 35%, ${P.mustard}, ${accent})` }} />
+                <span className="relative h-[66px] w-[66px] shrink-0">
+                    <span className="absolute inset-[3%] rounded-full" style={{ background: cover, boxShadow: `inset 0 0 0 3px ${P.fg}22` }} />
+                    {plates.map(([x, y, sz], i) => (
+                        <span key={i} className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+                            style={{ left: `${x}%`, top: `${y}%`, width: `${sz}%`, height: `${sz}%`,
+                                background: i === 6 ? accentText : i === 0 ? `radial-gradient(circle, ${P.mustard} 0 26%, ${P.card} 28%)` : P.card,
+                                boxShadow: i === 6 ? `0 0 0 1.5px ${P.card}` : `inset 0 0 0 1.5px ${P.alt}` }} />
+                    ))}
                 </span>
             </span>
-            <span className="flex flex-[2] items-center gap-1.5">
-                {[0, 1].map(i => (
-                    <span key={i} className="flex flex-1 items-center gap-1 rounded-xl px-1.5 py-1.5" style={{ background: P.card }}>
-                        <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: P.placeholder }} />
-                        <span className="flex flex-1 flex-col gap-0.5">
-                            <span className="h-1 w-3/4 rounded-full" style={{ background: P.fg }} />
-                            <span className="h-1 w-1/3 rounded-full" style={{ background: accentText }} />
-                        </span>
+            <span className="flex flex-[2] items-center px-1.5 py-1"
+                style={{ backgroundColor: P.card, backgroundImage: `linear-gradient(90deg, ${accent}26 50%, transparent 50%), linear-gradient(${accent}26 50%, transparent 50%)`, backgroundSize: '10px 10px' }}>
+                <span className="flex flex-1 items-center gap-1 rounded-lg px-1.5 py-1" style={{ background: P.card }}>
+                    <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: P.alt, boxShadow: `inset 0 0 0 2px ${P.card}, 0 0 0 1px ${P.fg}1F` }} />
+                    <span className="flex flex-1 flex-col gap-0.5">
+                        <span className="h-1 w-3/4 rounded-full" style={{ background: P.fg }} />
+                        <span className="h-1 w-1/3 rounded-full" style={{ background: accentText }} />
                     </span>
-                ))}
+                    <span className="h-3 w-3 rounded-full" style={{ background: P.mustard }} />
+                </span>
             </span>
-            <span className="h-3 shrink-0 rounded-md" style={{ background: P.footer }} />
+            <span className="relative h-3.5 shrink-0" style={{ background: P.footer }}>
+                <span className="absolute -top-1 inset-x-0 flex justify-around">
+                    {[0, 1, 2, 3, 4, 5].map(i => <span key={i} className="h-2.5 w-6 rounded-full" style={{ background: P.footer }} />)}
+                </span>
+            </span>
         </span>
     );
 }

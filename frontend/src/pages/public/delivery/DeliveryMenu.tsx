@@ -10,6 +10,8 @@ import { scCard } from '../site/sicak/sicakParts';
 import { MezeTray } from '../site/designs/meyhane/MezeTray';
 import { MeyhaneCategoryHeader } from '../site/designs/meyhane/MeyhaneMenuParts';
 import { isMezeCategory, meyhaneTabClass } from '../site/designs/meyhane/meyhaneParts';
+import { BahceCategoryHeader, BahceItems } from '../site/designs/bahce/BahceMenuParts';
+import { bahceTabClass } from '../site/designs/bahce/bahceParts';
 
 /** Kartın ürünü: paket menüsünün ürünü; masa menüsü hazırlanma süresini de verir. */
 export type MenuCardProduct = OnlineMenuProduct & { prepMinutes?: number | null };
@@ -40,8 +42,9 @@ interface Props<P extends MenuCardProduct> {
     empty?: ReactNode;
     /** "sicak": Sıcak tasarımın kartları (üstten taşan yuvarlak tabak fotoğrafı, ortalı ad, küçük turuncu düğme).
      *  "meyhane" / "esnaf": ürünler satır satır (basılı menü kartı / pano; lineMenuVariant), menüler yine kart. Meyhane'de
-     *  ayrıca ortalı basılı bölüm başlığı, yazı sekmeli kategori şeridi ve meze kategorilerinde tepsi (designs/meyhane). */
-    variant?: 'default' | 'sicak' | 'meyhane' | 'esnaf';
+     *  ayrıca ortalı basılı bölüm başlığı, yazı sekmeli kategori şeridi ve meze kategorilerinde tepsi (designs/meyhane).
+     *  "bahce": tabak simgeli bölüm başlığı, yuvarlak çip şeridi, yuvarlak tabak fotoğraflı kartlar (designs/bahce). */
+    variant?: 'default' | 'sicak' | 'meyhane' | 'esnaf' | 'bahce';
 }
 
 const SET_MENU_SECTION = 'menuler';
@@ -134,6 +137,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
     const sicak = variant === 'sicak';
     const lines = variant === 'meyhane' || variant === 'esnaf';
     const meyhane = variant === 'meyhane';
+    const bahce = variant === 'bahce';
 
     return (
         <div>
@@ -148,7 +152,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                 <a key={section.id} href={`#${sectionDomId(section.id)}`} data-section={section.id}
                                     onClick={e => goTo(e, section.id)}
                                     aria-current={selected ? 'true' : undefined}
-                                    className={meyhane ? meyhaneTabClass(selected) : cn(
+                                    className={meyhane ? meyhaneTabClass(selected) : bahce ? bahceTabClass(selected) : cn(
                                         sicak
                                             ? 'flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-semibold no-underline transition-colors'
                                             : 'flex h-11 shrink-0 items-center rounded-full border px-4 text-[15px] font-semibold no-underline transition-colors',
@@ -176,6 +180,9 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                             {meyhane ? (
                                 <MeyhaneCategoryHeader id={`${sectionDomId(section.id)}-baslik`} name={section.name} total={total}
                                     note={featured ? 'Birkaç lezzet bir arada, seçimi size kalsın.' : chefPicks ? 'Mutfağın bugün önerdikleri.' : undefined} />
+                            ) : bahce ? (
+                                <BahceCategoryHeader id={`${sectionDomId(section.id)}-baslik`} name={section.name} total={total}
+                                    note={featured ? 'Birkaç lezzet bir arada, seçimi size kalsın.' : chefPicks ? 'Mutfağın bugün önerdikleri.' : undefined} />
                             ) : (
                                 <>
                                     {/* rb-menu-cat: tasarıma özgü kategori başlığı (Esnaf'ta tabela şeridi; siteThemes.css). */}
@@ -199,6 +206,31 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                         onAdd: () => onAddProduct(product), onRemove: () => onRemoveProduct(product),
                                     };
                                 })} />
+                            ) : bahce && !featured ? (
+                                // Bahçe: yuvarlak tabak fotoğraflı kartlar; kategorisi olan menüler yine menü kartı.
+                                <>
+                                    {section.menus.length > 0 && (
+                                        <ul className="mt-4 grid gap-3 md:grid-cols-2">
+                                            {section.menus.map(menu => (
+                                                <li key={menu.id}>
+                                                    <SetMenuRow menu={menu} restaurant={restaurant} quantity={setMenuQuantity(menu.id)} readOnly={readOnly || !canAddSetMenu(menu)} onOpen={() => onOpenSetMenu(menu)}
+                                                        onRemove={onRemoveSetMenu && !readOnly ? () => onRemoveSetMenu(menu) : undefined} />
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {section.products.length > 0 && (
+                                        <BahceItems className="mt-4" restaurant={restaurant} items={section.products.map(product => {
+                                            const qty = productQuantity(product.id);
+                                            return {
+                                                id: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl, isStockImage: product.isStockImage,
+                                                description: product.description, soldOut: product.isOutOfStock, featured: product.isFeatured, prepMinutes: product.prepMinutes,
+                                                quantity: qty, readOnly: readOnly || (qty === 0 && !canAddProduct(product)),
+                                                onAdd: () => onAddProduct(product), onRemove: () => onRemoveProduct(product),
+                                            };
+                                        })} />
+                                    )}
+                                </>
                             ) : sicak ? (
                                 <ul className="mt-4 grid list-none gap-x-4 gap-y-[72px] p-0 pt-14 sm:grid-cols-2 xl:grid-cols-3">
                                     {section.menus.map(menu => (
