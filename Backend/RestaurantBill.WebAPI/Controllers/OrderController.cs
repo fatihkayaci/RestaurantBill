@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestaurantBill.Application.Features.Orders.Commands.AddLinesToOrder;
 using RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder;
 using RestaurantBill.Application.Features.Orders.Commands.AddSetMenuToOrder;
 using RestaurantBill.Application.Features.Orders.Commands.CancelOrder;
@@ -81,6 +82,18 @@ namespace RestaurantBill.WebAPI.Controllers
         [Authorize(Roles = "Owner,Admin,Waiter")]
         [HttpPost("add-set-menu")]
         public async Task<IActionResult> AddSetMenu([FromBody] AddSetMenuToOrderCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return HandleResult(result);
+        }
+        /// <summary>
+        /// Adds products and set menus to an order in one request, all or nothing (waiter "send to kitchen").
+        /// Body: { orderId, note, products: [{ productId, quantity, note }], setMenus: [{ setMenuId, quantity, note, selections: [{ slotId, productId }] }] }.
+        /// If any line cannot be added nothing is saved and the error names the line.
+        /// </summary>
+        [Authorize(Roles = "Owner,Admin,Waiter")]
+        [HttpPost("add-lines")]
+        public async Task<IActionResult> AddLines([FromBody] AddLinesToOrderCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);

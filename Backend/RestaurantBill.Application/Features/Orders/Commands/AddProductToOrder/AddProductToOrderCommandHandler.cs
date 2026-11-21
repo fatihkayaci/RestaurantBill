@@ -1,9 +1,7 @@
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Application.Common;
-using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
@@ -27,43 +25,31 @@ namespace RestaurantBill.Application.Features.Orders.Commands.AddProductToOrder
         {
             List<Guid> branchIds = await _db.GetAccessibleBranchIdsAsync(_currentUserService, cancellationToken);
 
-            Order? order = await _db.Orders
-                .Include(o => o.OrderItems)
-                .InBranches(branchIds).FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
-            if (order is null)
-                return Result.Failure("Böyle bir sipariş bulunamadı.");
-
-            string? accessError = await _db.CheckOrderAccessAsync(_currentUserService, order, WaiterPermission.TakeOrders, cancellationToken);
-            if (accessError is not null)
-                return Result.Failure(accessError);
-
-            // Yola çıkmış paket siparişin hesabı büyürse kuryenin tahsilatı tutmaz ve kasada "Teslim al" durur.
-            if (await _db.CheckDeliveryAcceptsItemsAsync(order, cancellationToken) is { } dispatched)
-                return Result.Failure(dispatched);
-
-            foreach (var item in request.OrderItems)
+            // Aynı anda aynı siparişe ekleme yapılırsa (ör. iki garson) çakışan istek sipariş taze okunarak yeniden uygulanır.
+            Result<Order> saved = await ConcurrencyRetry.ExecuteAsync(_db, async ct =>
             {
-                Product? product = await _db.Products.InBranches(branchIds).FirstOrDefaultAsync(p => p.Id == item.ProductId, cancellationToken);
-                if (product is null)
-                    return Result.Failure("Böyle bir ürün bulunamadı.");
+                Result<Order> loaded = await OrderLineAdding.LoadOrderForAddingAsync(_db, _currentUserService, branchIds, request.OrderId, ct);
+                if (loaded.IsFailure)
+                    return loaded;
+                Order order = loaded.Value!;
 
-                // Kategori şubesiyle yüklenince ürünün Category gezinmesi de dolar.
-                await _db.Categories
-                    .Include(c => c.Branch)
-                    .FirstOrDefaultAsync(c => c.Id == product.CategoryId, cancellationToken);
+                foreach (var item in request.OrderItems)
+                {
+                    if (await OrderLineAdding.AddProductAsync(_db, order, branchIds, item, ct) is { } error)
+                        return Result<Order>.Failure(error);
+                }
 
-                // Ürüne özel oran > kategori oranı > şube oranı.
-                order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note);
-            }
+                if (!string.IsNullOrWhiteSpace(request.Note))
+                    order.UpdateNote(request.Note);
 
-            if (!string.IsNullOrWhiteSpace(request.Note))
-                order.UpdateNote(request.Note);
+                await _db.SaveChangesAsync(ct);
+                return loaded;
+            }, cancellationToken);
 
-            await _db.SaveChangesAsync(cancellationToken);
+            if (saved.IsFailure)
+                return Result.Failure(saved.Error!);
 
-            User? creator = await _db.Users.FirstOrDefaultAsync(u => u.Id == order.CreatedUser, cancellationToken);
-            await _tableNotificationService.SendOrderUpdatedAsync(_currentUserService.BranchId, order, creator?.FullName ?? string.Empty);
-            await _cashierNotificationService.SendOrdersChangedAsync(_currentUserService.BranchId);
+            await OrderLineAdding.NotifyOrderChangedAsync(_db, _tableNotificationService, _cashierNotificationService, _currentUserService, saved.Value!, cancellationToken);
             return Result.Success();
         }
     }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using RestaurantBill.Domain.Entities;
 
@@ -41,6 +42,9 @@ public interface IAppDbContext
 
     /// <summary>Toplu silme ve işlem (transaction) için; ilişkisel olmayan (InMemory test) sağlayıcıda da vardır.</summary>
     DatabaseFacade Database { get; }
+
+    /// <summary>Eşzamanlı güncelleme çakışmasında yeniden denemeden önce izlenen kayıtları atmak için (ConcurrencyRetry).</summary>
+    ChangeTracker ChangeTracker { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
