@@ -218,30 +218,61 @@ function MeyhaneMock({ accent, accentText, cover }: { accent: string; accentText
 }
 
 /**
- * Esnaf Tabelası maketi: krem zeminde kapak renginde tabela şeridi (dar kalın büyük harf ad, sarı düğme), altında kalın
- * çizgili pano satırları (fiyat sağda, vurgu renginde) ve menü kutusu renginde şerit; mürekkep alt bilgi.
+ * Esnaf Tabelası maketi (kendi düzeni): kapak renginde dükkân tabelası (dar kalın büyük harf ad, sağda telefon), çini
+ * şerit; tabela kapakta dev ad ve sarı düğme, yanında menü kutusu renginde "Bugün ne yesek?" panosu (sarı fiyatlar);
+ * altında kalın çerçeveli fiyat panoları (menü kutusu renginde başlık, fiyat vurgu renginde) ve çinili mürekkep tezgâh.
  */
 function EsnafMock({ accentText, cover, menuBox }: { accentText: string; cover: string; menuBox: string }) {
     const P = SITE_DESIGNS.esnaf.palette;
     const font = SITE_FONTS[P.font];
+    const yellow = P.pop ?? P.mustard;
+    // Çini şerit: krem zeminde menü kutusu renginde kafes, tabela renginde benek.
+    const tiles = {
+        background: `radial-gradient(circle, ${cover} 0 1px, transparent 1.5px) center / 6px 6px, `
+            + `linear-gradient(45deg, transparent 40%, ${menuBox} 40% 60%, transparent 60%) center / 6px 6px, `
+            + `linear-gradient(-45deg, transparent 40%, ${menuBox} 40% 60%, transparent 60%) center / 6px 6px, ${P.onHero}`,
+        borderBlock: `1px solid ${P.fg}`,
+    };
+    const heading = { fontFamily: font.heading, letterSpacing: font.tracking };
     return (
-        <span aria-hidden="true" className="flex h-[148px] flex-col gap-1.5 overflow-hidden rounded-lg p-2" style={{ background: P.bg }}>
-            <span className="flex flex-[3] items-center justify-between gap-2 rounded px-2.5" style={{ background: cover, color: P.onHero, boxShadow: 'inset 0 -3px 0 rgba(0,0,0,0.2)' }}>
-                <span className="text-[20px] uppercase leading-[0.95]" style={{ fontFamily: font.heading, letterSpacing: font.tracking }}>
-                    Ocak<br /><span style={{ color: P.heroAccent ?? accentText }}>Kadıköy</span>
-                </span>
-                <span className="h-4 w-12 rounded-sm" style={{ background: P.pop ?? P.mustard }} />
+        <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg" style={{ background: P.bg }}>
+            <span className="flex h-[20px] shrink-0 items-center justify-between gap-2 px-2" style={{ background: cover, color: P.onHero }}>
+                <span className="text-[11px] uppercase leading-none" style={heading}>Ocak Kebap</span>
+                <span className="h-1.5 w-9 rounded-sm" style={{ background: P.heroAccent ?? yellow }} />
             </span>
-            <span className="flex flex-[2] flex-col justify-center gap-1 px-0.5">
+            <span className="h-1.5 shrink-0" style={tiles} />
+            <span className="flex min-h-0 flex-[3] items-center gap-2 px-2 py-1.5" style={{ background: cover, color: P.onHero }}>
+                <span className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-[21px] uppercase leading-[0.85]" style={heading}>Ocak<br />Kebap</span>
+                    <span className="h-3 w-12 rounded-sm" style={{ background: yellow }} />
+                </span>
+                <span className="flex w-[46%] flex-col gap-1 rounded-sm px-1.5 py-1.5" style={{ background: menuBox, border: `2px solid ${P.onHero}` }}>
+                    {[0, 1, 2].map(i => (
+                        <span key={i} className="flex items-center justify-between gap-1">
+                            <span className="h-1 w-3/5 rounded-sm" style={{ background: P.onMenuBox }} />
+                            <span className="h-1.5 w-4 rounded-sm" style={{ background: yellow }} />
+                        </span>
+                    ))}
+                </span>
+            </span>
+            <span className="h-1.5 shrink-0" style={tiles} />
+            <span className="flex min-h-0 flex-[2] gap-1.5 px-2 py-1.5">
                 {[0, 1].map(i => (
-                    <span key={i} className="flex items-center justify-between gap-1 pb-1" style={{ borderBottom: `2px solid ${P.fg}99` }}>
-                        <span className="h-1.5 w-14 rounded-sm" style={{ background: P.fg }} />
-                        <span className="h-2 w-6 rounded-sm" style={{ background: accentText }} />
+                    <span key={i} className="flex flex-1 flex-col overflow-hidden rounded-sm" style={{ background: P.card, border: `1.5px solid ${P.fg}` }}>
+                        <span className="h-2 shrink-0" style={{ background: menuBox }} />
+                        <span className="flex flex-1 flex-col justify-center gap-1 px-1">
+                            {[0, 1].map(j => (
+                                <span key={j} className="flex items-center justify-between gap-1">
+                                    <span className="h-1 w-1/2 rounded-sm" style={{ background: P.fg }} />
+                                    <span className="h-1.5 w-3 rounded-sm" style={{ background: accentText }} />
+                                </span>
+                            ))}
+                        </span>
                     </span>
                 ))}
-                <span className="h-2.5 rounded-sm" style={{ background: menuBox }} />
             </span>
-            <span className="h-3 shrink-0 rounded-sm" style={{ background: P.footer, borderTop: `2px solid ${P.mustard}` }} />
+            <span className="h-1.5 shrink-0" style={tiles} />
+            <span className="h-2.5 shrink-0" style={{ background: P.footer }} />
         </span>
     );
 }

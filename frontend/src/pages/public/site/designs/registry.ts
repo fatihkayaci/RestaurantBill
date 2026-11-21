@@ -16,6 +16,12 @@ import MeyhaneAbout from './meyhane/MeyhaneAbout';
 import MeyhaneContact from './meyhane/MeyhaneContact';
 import MeyhaneReservation from './meyhane/MeyhaneReservation';
 import { MeyhaneFooter, MeyhaneHeader } from './meyhane/MeyhaneFrame';
+import EsnafHome from './esnaf/EsnafHome';
+import EsnafMenu from './esnaf/EsnafMenu';
+import EsnafAbout from './esnaf/EsnafAbout';
+import EsnafContact from './esnaf/EsnafContact';
+import EsnafReservation from './esnaf/EsnafReservation';
+import { EsnafFooter, EsnafHeader } from './esnaf/EsnafFrame';
 
 // Tasarım kaydı: bir tasarımın KENDİ düzeni (sayfa bileşenleri, üst menü, alt bilgi, akış giydirmesi) tek yerde.
 // Yazılmayan her parça ortak bileşene düşer (Renkli/Sade/Sıcak'ın paylaştığı düzen): tasarım yalnız değiştirdiğini yazar.
@@ -60,6 +66,10 @@ const LAYOUTS: Partial<Record<SiteDesignKey, () => LayoutParts>> = {
     meyhane: () => ({
         Home: MeyhaneHome, Menu: MeyhaneMenu, About: MeyhaneAbout, Contact: MeyhaneContact, Reservation: MeyhaneReservation,
         Header: MeyhaneHeader, Footer: MeyhaneFooter,
+    }),
+    esnaf: () => ({
+        Home: EsnafHome, Menu: EsnafMenu, About: EsnafAbout, Contact: EsnafContact, Reservation: EsnafReservation,
+        Header: EsnafHeader, Footer: EsnafFooter,
     }),
 };
 

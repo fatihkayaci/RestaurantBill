@@ -10,6 +10,8 @@ import { scCard } from '../site/sicak/sicakParts';
 import { MezeTray } from '../site/designs/meyhane/MezeTray';
 import { MeyhaneCategoryHeader } from '../site/designs/meyhane/MeyhaneMenuParts';
 import { isMezeCategory, meyhaneTabClass } from '../site/designs/meyhane/meyhaneParts';
+import { EsnafCategoryHeader } from '../site/designs/esnaf/EsnafMenuParts';
+import { ESNAF_BOARD_WALL, esnafPanelClass, esnafTabClass } from '../site/designs/esnaf/esnafParts';
 
 /** Kartın ürünü: paket menüsünün ürünü; masa menüsü hazırlanma süresini de verir. */
 export type MenuCardProduct = OnlineMenuProduct & { prepMinutes?: number | null };
@@ -40,7 +42,8 @@ interface Props<P extends MenuCardProduct> {
     empty?: ReactNode;
     /** "sicak": Sıcak tasarımın kartları (üstten taşan yuvarlak tabak fotoğrafı, ortalı ad, küçük turuncu düğme).
      *  "meyhane" / "esnaf": ürünler satır satır (basılı menü kartı / pano; lineMenuVariant), menüler yine kart. Meyhane'de
-     *  ayrıca ortalı basılı bölüm başlığı, yazı sekmeli kategori şeridi ve meze kategorilerinde tepsi (designs/meyhane). */
+     *  ayrıca ortalı basılı bölüm başlığı, yazı sekmeli kategori şeridi ve meze kategorilerinde tepsi (designs/meyhane).
+     *  Esnaf'ta her kategori çini kenarlı bir fiyat panosu, panolar duvar gibi sütunlara dizilir (designs/esnaf). */
     variant?: 'default' | 'sicak' | 'meyhane' | 'esnaf';
 }
 
@@ -134,9 +137,10 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
     const sicak = variant === 'sicak';
     const lines = variant === 'meyhane' || variant === 'esnaf';
     const meyhane = variant === 'meyhane';
+    const esnaf = variant === 'esnaf';
 
     return (
-        <div>
+        <div className={esnaf ? '@container' : undefined}>
             {sections.length > 1 && (
                 <nav aria-label="Menü kategorileri"
                     className={cn('sticky z-20 -mx-4 border-b backdrop-blur-[14px] md:-mx-6 lg:mx-0', stickyTopClass,
@@ -148,7 +152,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                 <a key={section.id} href={`#${sectionDomId(section.id)}`} data-section={section.id}
                                     onClick={e => goTo(e, section.id)}
                                     aria-current={selected ? 'true' : undefined}
-                                    className={meyhane ? meyhaneTabClass(selected) : cn(
+                                    className={meyhane ? meyhaneTabClass(selected) : esnaf ? esnafTabClass(selected) : cn(
                                         sicak
                                             ? 'flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-semibold no-underline transition-colors'
                                             : 'flex h-11 shrink-0 items-center rounded-full border px-4 text-[15px] font-semibold no-underline transition-colors',
@@ -166,15 +170,18 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                 </nav>
             )}
 
-            <div className="flex flex-col gap-10 pb-6 pt-6 md:pt-8">
+            <div className={esnaf ? ESNAF_BOARD_WALL : 'flex flex-col gap-10 pb-6 pt-6 md:pt-8'}>
                 {sections.map(section => {
                     const featured = section.id === SET_MENU_SECTION;
                     const chefPicks = section.id === FEATURED_SECTION;
                     const total = section.menus.length + section.products.length;
                     return (
-                        <section key={section.id} id={sectionDomId(section.id)} aria-labelledby={`${sectionDomId(section.id)}-baslik`} className="scroll-mt-20">
+                        <section key={section.id} id={sectionDomId(section.id)} aria-labelledby={`${sectionDomId(section.id)}-baslik`} className={cn('scroll-mt-20', esnaf && esnafPanelClass(featured || chefPicks))}>
                             {meyhane ? (
                                 <MeyhaneCategoryHeader id={`${sectionDomId(section.id)}-baslik`} name={section.name} total={total}
+                                    note={featured ? 'Birkaç lezzet bir arada, seçimi size kalsın.' : chefPicks ? 'Mutfağın bugün önerdikleri.' : undefined} />
+                            ) : esnaf ? (
+                                <EsnafCategoryHeader id={`${sectionDomId(section.id)}-baslik`} name={section.name} total={total}
                                     note={featured ? 'Birkaç lezzet bir arada, seçimi size kalsın.' : chefPicks ? 'Mutfağın bugün önerdikleri.' : undefined} />
                             ) : (
                                 <>
@@ -241,7 +248,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                         </ul>
                                     )}
                                     {section.products.length > 0 && (
-                                        <ul className={cn('m-0 mt-2 grid list-none p-0 md:grid-cols-2', variant === 'esnaf' ? 'md:gap-x-8' : 'md:gap-x-14')}>
+                                        <ul className={esnaf ? cn('m-0 list-none px-4 pb-1 pt-0 sm:px-5 [&>li:last-child_article]:border-b-0', chefPicks && '@3xl:grid @3xl:grid-cols-2 @3xl:gap-x-8') : 'm-0 mt-2 grid list-none p-0 md:grid-cols-2 md:gap-x-14'}>
                                             {section.products.map(product => (
                                                 <li key={product.id}>
                                                     <LineRow tone={variant === 'esnaf' ? 'esnaf' : 'meyhane'} product={product} restaurant={restaurant} quantity={productQuantity(product.id)}
@@ -253,6 +260,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                     )}
                                 </>
                             ) : featured ? (
+                                <div className={esnaf ? 'px-4 pb-4 sm:px-5' : undefined}>
                                 <ul className="relative -mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
                                     {section.menus.map(menu => (
                                         <li key={menu.id} className={cn('shrink-0 snap-start md:w-auto', section.menus.length > 1 ? 'w-[84%]' : 'w-full')}>
@@ -261,6 +269,7 @@ export default function DeliveryMenu<P extends MenuCardProduct>({
                                         </li>
                                     ))}
                                 </ul>
+                                </div>
                             ) : (
                                 <ul className="mt-4 grid gap-3 md:grid-cols-2">
                                     {section.menus.map(menu => (

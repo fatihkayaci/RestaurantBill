@@ -53,6 +53,19 @@ düzenlenir: yeni sayfada da bunları kullanın (ortak sayfalardaki örneklere b
 - `MezeTray.tsx`, `MeyhaneMenuParts.tsx`: ortak menünün Meyhane dalı (site, QR, paket sipariş).
 - `MeyhaneBits.tsx`, `meyhaneParts.ts`: lamba dizisi, gece zemini, şerit, süs, düğme sınıfları.
 
+## Örnek: Esnaf Tabelası (`designs/esnaf/`)
+
+- `EsnafFrame.tsx`: dükkân tabelası üst menü (dev ad, büyük telefon, sarı Sepet, çini şerit, altında sayfa plakaları),
+  çinili tezgâh alt bilgi (gün gün saat panosu, "Yine bekleriz").
+- `EsnafHome.tsx`: tabela kapak + "Bugün ne yesek?" panosu, "Nasıl istersiniz?" seçim kutuları (Eve gelsin yalnız online
+  sipariş açıkken), vitrin fotoğrafı, sarı ilan hazır menüler, fiyat panoları duvarı, Ustamız + kuruluş mührü, müşteri
+  defteri, "Buyurun" bandı.
+- `EsnafMenu.tsx`, `EsnafAbout.tsx`, `EsnafContact.tsx`, `EsnafReservation.tsx`: kendi sayfaları (Mekân ortak).
+- `EsnafMenuParts.tsx` + `esnafParts.ts` (`ESNAF_BOARD_WALL`, `esnafPanelClass`, `esnafTabClass`): ortak menünün Esnaf
+  dalı: her kategori çini kenarlı pano, panolar kapsayıcı genişliğine göre (container query) 1–3 sütun.
+- `EsnafBits.tsx`, `esnafActions.tsx`: çini şerit, "Şu an açık" satırı, pano satırı, mühür, "Buyurun" bandı; telefon
+  alt çubuğu (Ara · Sipariş ver). Desenler `siteThemes.css`'te `rb-es-*`.
+
 Henüz kayda taşınmayanlar (Elit'e özgü, dağınık kalan): `RestaurantReservationPage`, `ReservationLookupPage`,
 `DeliveryTrackingPage`, `TableOrderPage`, `DeliveryOrderPage`'deki `=== 'elit'` dalları (başka dallarda da değişen
 dosyalar; dokunmamak için bırakıldı).
