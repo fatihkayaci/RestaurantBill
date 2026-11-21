@@ -33,7 +33,7 @@ export default function SetMenuRow({ setMenu, lines, onAdd, onRemove, onEdit, on
                     type="button"
                     onClick={onAdd}
                     aria-label={inCart ? `${setMenu.name} bir tane daha ekle` : `${setMenu.name} ekle`}
-                    className="absolute inset-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-rb-gold active:bg-foreground/5"
+                    className="absolute inset-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-foreground/5"
                 />
                 {setMenu.imageUrl ? (
                     <img src={setMenu.imageUrl} alt="" loading="lazy" className="size-13 shrink-0 rounded-[14px] object-cover" />
@@ -45,7 +45,7 @@ export default function SetMenuRow({ setMenu, lines, onAdd, onRemove, onEdit, on
                 <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-base font-semibold text-foreground">{setMenu.name}</span>
                     <div className="flex h-8 min-w-0 items-center gap-2 text-sm text-rb-text-sub">
-                        <span className="shrink-0 font-bold text-foreground">₺{formatPrice(setMenu.price)}</span>
+                        <span className="shrink-0 font-bold text-foreground">{formatPrice(setMenu.price)} ₺</span>
                         <span className="truncate">· {contents}</span>
                     </div>
                 </div>

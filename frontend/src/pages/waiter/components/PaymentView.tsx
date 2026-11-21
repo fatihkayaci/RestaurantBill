@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Banknote, Check, ChevronLeft, ChevronRight, Copy, CreditCard, Landmark, Lock, Store } from 'lucide-react';
+import { Banknote, Check, ChevronLeft, ChevronRight, Copy, CreditCard, Landmark, Lock, Minus, Plus, Store } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { shiftService } from '@/features/cashier/api/shiftService';
@@ -204,11 +204,11 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                     : undefined,
                 split === 'amount' ? amountValue : undefined,
             );
-            const remainingNote = !fullyPaid && remaining > 0 ? ` · kalan ₺${formatPrice(remaining)}` : '';
+            const remainingNote = !fullyPaid && remaining > 0 ? ` · kalan ${formatPrice(remaining)} ₺` : '';
             if (net === 0) toast.success('İkram kaydedildi.');
             else toast.success(method === 'cash' && change > 0
-                ? `₺${formatPrice(net)} alındı · para üstü ₺${formatPrice(change)}${remainingNote}`
-                : `₺${formatPrice(net)} ödeme alındı${remainingNote}.`);
+                ? `${formatPrice(net)} ₺ alındı · para üstü ${formatPrice(change)} ₺${remainingNote}`
+                : `${formatPrice(net)} ₺ ödeme alındı${remainingNote}.`);
             if (fullyPaid) {
                 onPaid(true);
                 return;
@@ -295,9 +295,9 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
         : !register ? 'Önce kasa seçin'
             : amountTooHigh ? 'Tutar kalandan fazla'
             : base === 0 ? (split === 'amount' ? 'Tutar girin' : 'Ürün seçin')
-                : net === 0 ? 'İkram et · ₺0'
-                    : method === 'cash' ? `₺${formatPrice(net)} nakit al`
-                        : method === 'card' ? `Kart ödemesi alındı · ₺${formatPrice(net)}`
+                : net === 0 ? 'İkram et · 0 ₺'
+                    : method === 'cash' ? `${formatPrice(net)} ₺ nakit al`
+                        : method === 'card' ? `Kart ödemesi alındı · ${formatPrice(net)} ₺`
                             : 'Havale geldi, onayla';
 
     return (
@@ -332,12 +332,12 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                 {/* Tutar */}
                 <div className="flex flex-col items-center rounded-2xl bg-foreground px-4 py-3.5 text-background">
                     <span className="text-[13px] opacity-75">Bu ödemede</span>
-                    <span className="font-serif text-[40px] font-bold leading-tight tabular-nums">₺{formatPrice(net)}</span>
+                    <span className="font-serif text-[40px] font-bold leading-tight tabular-nums">{formatPrice(net)} ₺</span>
                     <span className="text-[13px] opacity-75">
-                        {discount > 0 && `₺${formatPrice(discount)} ${ikram && discountRaw >= 100 ? 'ikram' : 'indirim'} · `}
+                        {discount > 0 && `${formatPrice(discount)} ₺ ${ikram && discountRaw >= 100 ? 'ikram' : 'indirim'} · `}
                         {remaining > 0
-                            ? `Masada kalan ₺${formatPrice(remaining)} · ${paid > 0 ? `ödenen ₺${formatPrice(paid)}` : `toplam ₺${formatPrice(current.totalPrice)}`}`
-                            : paid > 0 ? `Kalanın tamamı · ödenen ₺${formatPrice(paid)} · masa kapanır` : 'Hesabın tamamı · masa kapanır'}
+                            ? `Masada kalan ${formatPrice(remaining)} ₺ · ${paid > 0 ? `ödenen ${formatPrice(paid)} ₺` : `toplam ${formatPrice(current.totalPrice)} ₺`}`
+                            : paid > 0 ? `Kalanın tamamı · ödenen ${formatPrice(paid)} ₺ · masa kapanır` : 'Hesabın tamamı · masa kapanır'}
                     </span>
                 </div>
 
@@ -362,7 +362,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                 </div>
                 {itemsLocked && (
                     <p className="-mt-1 text-[13px] text-rb-text-sub">
-                        Bu hesaptan ₺{formatPrice(paid)} tutar girilerek ödendi; kalan, tutar girerek ya da tamamıyla ödenir.
+                        Bu hesaptan {formatPrice(paid)} ₺ tutar girilerek ödendi; kalan, tutar girerek ya da tamamıyla ödenir.
                     </p>
                 )}
 
@@ -380,7 +380,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                     aria-label="Ödenecek tutar"
                                     aria-invalid={amountTooHigh}
                                     className={cn(
-                                        'h-13 w-full rounded-xl border bg-background pr-3 pl-9 text-xl font-bold tabular-nums outline-none focus:ring-2 focus:ring-rb-gold',
+                                        'h-13 w-full rounded-xl border bg-background pr-3 pl-9 text-xl font-bold tabular-nums outline-none focus:ring-2 focus:ring-ring',
                                         amountTooHigh ? 'border-rb-red' : 'border-border',
                                     )}
                                 />
@@ -395,7 +395,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                         key={label}
                                         type="button"
                                         aria-pressed={on}
-                                        aria-label={parts === 1 ? `Kalanın tamamı, ₺${formatPrice(value)}` : `Kalanın ${label} kadarı, ₺${formatPrice(value)}`}
+                                        aria-label={parts === 1 ? `Kalanın tamamı, ${formatPrice(value)} ₺` : `Kalanın ${label} kadarı, ${formatPrice(value)} ₺`}
                                         onClick={() => setAmountInput(String(value).replace('.', ','))}
                                         className={cn(
                                             'flex min-h-12 flex-col items-center justify-center rounded-xl border text-sm font-bold leading-tight',
@@ -403,14 +403,14 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                         )}
                                     >
                                         <span>{label}</span>
-                                        <span className={cn('text-[11px] font-semibold tabular-nums', on ? 'opacity-80' : 'text-rb-text-sub')}>₺{formatPrice(value)}</span>
+                                        <span className={cn('text-xs font-semibold tabular-nums', on ? 'opacity-80' : 'text-rb-text-sub')}>{formatPrice(value)} ₺</span>
                                     </button>
                                 );
                             })}
                         </div>
                         <p className={cn('text-[13px]', amountTooHigh ? 'font-semibold text-rb-red' : 'text-rb-text-sub')}>
                             {amountTooHigh
-                                ? `Kalan tutardan (₺${formatPrice(due)}) fazla olamaz.`
+                                ? `Kalan tutardan (${formatPrice(due)} ₺) fazla olamaz.`
                                 : 'Ürünler masada kalır, tutar kalandan düşer. Kalan 0 olunca masa kapanır.'}
                         </p>
                     </div>
@@ -439,13 +439,13 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                             {qty > 0 && <Check className="size-3.5" strokeWidth={3} />}
                                         </span>
                                         <span className="min-w-0 flex-1 truncate text-[15px] text-foreground">{item.quantity}× {item.productName}</span>
-                                        <span className="shrink-0 text-[15px] font-semibold tabular-nums">₺{formatPrice(item.unitPrice * item.quantity)}</span>
+                                        <span className="shrink-0 text-[15px] font-semibold tabular-nums">{formatPrice(item.unitPrice * item.quantity)} ₺</span>
                                     </button>
                                     {qty > 0 && item.quantity > 1 && (
                                         <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-muted p-0.5">
-                                            <button type="button" onClick={() => stepItem(item.key, item.quantity, -1)} aria-label={`${item.productName}: bu ödemede bir adet az`} className="flex size-9 items-center justify-center rounded-full text-lg font-bold">−</button>
+                                            <button type="button" onClick={() => stepItem(item.key, item.quantity, -1)} aria-label={`${item.productName}: bu ödemede bir adet az`} className="flex size-11 items-center justify-center rounded-full"><Minus className="size-4.5" strokeWidth={2.5} aria-hidden="true" /></button>
                                             <span className="w-5 text-center text-sm font-bold tabular-nums">{qty}</span>
-                                            <button type="button" onClick={() => stepItem(item.key, item.quantity, 1)} aria-label={`${item.productName}: bu ödemede bir adet fazla`} className="flex size-9 items-center justify-center rounded-full text-lg font-bold">+</button>
+                                            <button type="button" onClick={() => stepItem(item.key, item.quantity, 1)} aria-label={`${item.productName}: bu ödemede bir adet fazla`} className="flex size-11 items-center justify-center rounded-full"><Plus className="size-4.5" strokeWidth={2.5} aria-hidden="true" /></button>
                                         </div>
                                     )}
                                 </li>
@@ -498,8 +498,8 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                                             {off > 0 && <span className="ml-1.5 text-[13px] font-semibold text-rb-red">{describeLineDiscount(lineDiscounts[line.key], qty)}</span>}
                                                         </span>
                                                         <span className="shrink-0 font-semibold tabular-nums">
-                                                            {off > 0 && <span className="mr-1.5 text-[13px] font-medium text-rb-text-sub line-through">₺{formatPrice(line.unitPrice * qty)}</span>}
-                                                            ₺{formatPrice(line.unitPrice * qty - off)}
+                                                            {off > 0 && <span className="mr-1.5 text-[13px] font-medium text-rb-text-sub line-through">{formatPrice(line.unitPrice * qty)} ₺</span>}
+                                                            {formatPrice(line.unitPrice * qty - off)} ₺
                                                         </span>
                                                     </div>
                                                     <div className="flex gap-2">
@@ -522,7 +522,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                                             onChange={e => updateLineDiscount(line.key, { input: e.target.value.replace(/[^\d.,]/g, '') })}
                                                             placeholder={type === 'percent' ? 'Yüzde' : 'Toplam tutar'}
                                                             aria-label={`${line.productName}: indirim ${type === 'percent' ? 'yüzdesi' : 'tutarı'}`}
-                                                            className="h-11 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-rb-gold"
+                                                            className="h-11 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-ring"
                                                         />
                                                     </div>
                                                     {qty > 1 && (
@@ -566,7 +566,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                     onChange={e => setDiscountInput(e.target.value.replace(/[^\d.,]/g, ''))}
                                     placeholder={discountType === 'percent' ? 'Yüzde' : 'Tutar'}
                                     aria-label={discountType === 'percent' ? 'İndirim yüzdesi' : 'İndirim tutarı'}
-                                    className="h-12 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-rb-gold"
+                                    className="h-12 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-ring"
                                 />
                             </div>
                             )}
@@ -576,7 +576,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                 maxLength={300}
                                 placeholder="Açıklama (ör. müdavim, gecikme)"
                                 aria-label="İndirim açıklaması"
-                                className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-rb-gold"
+                                className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                             />
                         </div>
                     ) : (
@@ -639,7 +639,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                                     on ? 'border-foreground bg-foreground text-background' : 'border-border bg-background text-foreground',
                                                 )}
                                             >
-                                                {value === 'exact' ? 'Tam' : `₺${formatPrice(value)}`}
+                                                {value === 'exact' ? 'Tam' : `${formatPrice(value)} ₺`}
                                             </button>
                                         );
                                     })}
@@ -650,12 +650,12 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                                     onChange={e => setCustomReceived(e.target.value.replace(/[^\d.,]/g, ''))}
                                     placeholder="Başka tutar"
                                     aria-label="Müşteriden alınan tutar"
-                                    className="h-11 rounded-xl border border-border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-rb-gold"
+                                    className="h-11 rounded-xl border border-border bg-background px-3 text-base outline-none focus:ring-2 focus:ring-ring"
                                 />
                                 <div className="flex items-center justify-between border-t border-border pt-2.5">
                                     <span className="text-[15px] font-semibold text-foreground">Para üstü</span>
                                     <span className={cn('text-xl font-bold tabular-nums', cashShort ? 'text-rb-red' : 'text-rb-green')}>
-                                        {cashShort ? 'Tutar eksik' : `₺${formatPrice(change)}`}
+                                        {cashShort ? 'Tutar eksik' : `${formatPrice(change)} ₺`}
                                     </span>
                                 </div>
                             </div>
@@ -664,7 +664,7 @@ export default function PaymentView({ table, order, mode, canDiscount, onBack, o
                         {method === 'card' && (
                             <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-[15px] text-foreground">
                                 <CreditCard className="size-6 shrink-0 text-rb-accent" aria-hidden="true" />
-                                <span>POS cihazından <strong>₺{formatPrice(net)}</strong> çekin. Slip çıkınca aşağıdan onaylayın.</span>
+                                <span>POS cihazından <strong>{formatPrice(net)} ₺</strong> çekin. Slip çıkınca aşağıdan onaylayın.</span>
                             </div>
                         )}
 

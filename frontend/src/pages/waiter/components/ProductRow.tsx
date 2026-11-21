@@ -44,13 +44,13 @@ export default function ProductRow({ product, lines, quickNotes, notesOpen, onTo
                     onClick={onAdd}
                     disabled={soldOut}
                     aria-label={soldOut ? `${product.name} tükendi` : inCart ? `${product.name} bir tane daha ekle` : `${product.name} ekle`}
-                    className="absolute inset-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-rb-gold active:bg-foreground/5 disabled:cursor-not-allowed disabled:active:bg-transparent"
+                    className="absolute inset-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-foreground/5 disabled:cursor-not-allowed disabled:active:bg-transparent"
                 />
                 <ProductImage product={product} />
                 <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-base font-semibold text-foreground">{product.name}</span>
                     <div className="flex h-8 min-w-0 items-center gap-2 text-sm text-rb-text-sub">
-                        <span className="shrink-0 font-bold text-foreground">₺{formatPrice(product.price)}</span>
+                        <span className="shrink-0 font-bold text-foreground">{formatPrice(product.price)} ₺</span>
                         {inCart ? (
                             <button
                                 type="button"

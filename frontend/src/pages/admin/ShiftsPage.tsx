@@ -40,7 +40,7 @@ interface RegisterCard {
 
 type ReviewTarget = { shift: Shift; type: 'opening' | 'closing'; action: 'approve' | 'reject' };
 
-const formatTL = (amount: number) => `₺${formatAmount(amount)}`;
+const formatTL = (amount: number) => `${formatAmount(amount)} ₺`;
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 const dayTimeOf = (iso: string) => {
     const d = new Date(iso);
@@ -246,7 +246,7 @@ export default function ShiftsPage() {
                                         </p>
                                     </div>
                                     <span className={cn(
-                                        'inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[10px] font-bold tracking-widest uppercase shrink-0',
+                                        'inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-xs font-bold tracking-widest uppercase shrink-0',
                                         state === 'open' && 'bg-rb-green-bg text-rb-green',
                                         state === 'empty' && 'bg-muted text-muted-foreground',
                                         state === 'uncounted' && 'bg-rb-amber-bg text-rb-amber'
@@ -260,21 +260,21 @@ export default function ShiftsPage() {
                                     <>
                                         <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
                                             <div>
-                                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Açılış</p>
+                                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Açılış</p>
                                                 <p className="font-semibold text-foreground tabular-nums">{formatTL(shift.openingBalance)}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">İşlem</p>
+                                                <p className="text-xs uppercase tracking-wide text-muted-foreground">İşlem</p>
                                                 <p className="font-semibold text-foreground tabular-nums">{summary.transactionCount}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Nakit / Kart</p>
+                                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Nakit / Kart</p>
                                                 <p className="font-semibold text-foreground tabular-nums">
                                                     {formatTL(summary.breakdown.find(b => b.method === 2)?.amount ?? 0)} / {formatTL(summary.breakdown.find(b => b.method === 1)?.amount ?? 0)}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Kasada olması gereken</p>
+                                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Kasada olması gereken</p>
                                                 <p className="font-semibold text-foreground tabular-nums">{formatTL(summary.expectedCashInRegister ?? 0)}</p>
                                             </div>
                                         </div>
@@ -327,7 +327,7 @@ export default function ShiftsPage() {
             <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-border">
                     <div className="flex flex-wrap items-center gap-3">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Geçmiş vardiyalar</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Geçmiş vardiyalar</p>
                         <div className="inline-flex rounded-lg border border-border overflow-hidden text-xs font-semibold">
                             {PRESETS.map(p => (
                                 <button
@@ -342,7 +342,7 @@ export default function ShiftsPage() {
                     </div>
                     <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
                         <input type="checkbox" checked={onlyPending} onChange={e => setOnlyPending(e.target.checked)} className="rounded border-border accent-rb-gold" />
-                        Sadece inceleme bekleyenler{pendingCount > 0 && <span className="rounded-full bg-rb-amber-bg px-1.5 text-[11px] font-bold text-rb-amber">{pendingCount}</span>}
+                        Sadece inceleme bekleyenler{pendingCount > 0 && <span className="rounded-full bg-rb-amber-bg px-1.5 text-xs font-bold text-rb-amber">{pendingCount}</span>}
                     </label>
                 </div>
 
@@ -350,13 +350,13 @@ export default function ShiftsPage() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kasa</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Açan / Kapatan</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Açıldı / Kapandı</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Beklenen</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sayılan</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Fark</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kasa</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Açan / Kapatan</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Açıldı / Kapandı</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Beklenen</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sayılan</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Fark</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Durum</th>
                                 <th className="px-4 py-3" />
                             </tr>
                         </thead>
@@ -387,7 +387,7 @@ export default function ShiftsPage() {
                                         </td>
                                         <td className="px-4 py-3.5 text-right font-serif text-foreground whitespace-nowrap">
                                             {formatTL(expected)}<br />
-                                            <span className="text-[10px] font-sans uppercase tracking-wide text-muted-foreground">{isOpen ? 'açılış' : 'kapanış'}</span>
+                                            <span className="text-xs font-sans uppercase tracking-wide text-muted-foreground">{isOpen ? 'açılış' : 'kapanış'}</span>
                                         </td>
                                         <td className="px-4 py-3.5 text-right font-serif text-foreground whitespace-nowrap">{counted != null ? formatTL(counted) : '—'}</td>
                                         <td className={cn('px-4 py-3.5 text-right font-serif whitespace-nowrap', !hasDifference ? 'text-muted-foreground' : diff! < 0 ? 'text-rb-red' : 'text-rb-amber')}>

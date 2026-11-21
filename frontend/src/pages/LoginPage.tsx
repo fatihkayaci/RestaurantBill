@@ -132,7 +132,7 @@ export default function LoginPage() {
     return (
         <div className="flex min-h-screen">
             {/* ── Sol Sidebar ── */}
-            <aside className="hidden lg:flex w-100 shrink-0 flex-col items-center text-center bg-[#1c1510] text-white px-10 pt-12 pb-8">
+            <aside className="rb-on-dark hidden lg:flex w-100 shrink-0 flex-col items-center text-center bg-[#1c1510] text-white px-10 pt-12 pb-8">
                 <Link to="/" className="flex items-center gap-3 mb-6" aria-label="Sophram ana sayfa">
                     <img src={sophramLogo} alt="Sophram" className="h-44 w-auto" />
                 </Link>
@@ -140,8 +140,8 @@ export default function LoginPage() {
                 <ul className="space-y-1 flex-1">
                     {SIDEBAR_FEATURES.map((feature) => (
                         <li key={feature} className="flex items-center gap-2.5 py-1">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "rgba(200,169,110,0.6)" }} />
-                            <span className="text-[13px]" style={{ color: "rgba(242,237,228,0.6)" }}>{feature}</span>
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-rb-gold/60" />
+                            <span className="text-[13px] text-sidebar-foreground/70">{feature}</span>
                         </li>
                     ))}
                 </ul>
@@ -190,7 +190,7 @@ export default function LoginPage() {
                                 className={`flex-1 py-4 text-[13px] font-semibold transition-colors relative z-10 ${
                                     activeTab === tab
                                         ? "text-foreground"
-                                        : "text-[#a39080] dark:text-[#7a6e60] hover:text-gray-600 dark:hover:text-[#a89880]"
+                                        : "text-rb-text-muted hover:text-foreground"
                                 }`}
                             >
                                 {tab === "login" ? "Giriş Yap" : "Kayıt Ol"}
@@ -211,13 +211,13 @@ export default function LoginPage() {
                                     <h2 className="text-[26px] font-serif font-bold leading-[1.1] text-foreground">
                                         Tekrar Hoş Geldiniz
                                     </h2>
-                                    <p className="text-[13px] mt-1" style={{ color: "#a39080" }}>
+                                    <p className="text-[13px] mt-1 text-rb-text-sub">
                                         Devam etmek için giriş yapın
                                     </p>
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label htmlFor="login-field" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="login-field" className="text-[13px] font-semibold text-rb-text-sub">
                                         KULLANICI ADI VEYA E-POSTA
                                     </label>
                                     <Input
@@ -226,12 +226,12 @@ id="login-field"
                                                                                 value={loginField}
                                         onChange={(e) => setLoginField(e.target.value)}
                                         placeholder="kullanici_adi veya e-posta"
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 text-sm"
                                     />
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label htmlFor="login-password" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="login-password" className="text-[13px] font-semibold text-rb-text-sub">
                                         ŞİFRE
                                     </label>
                                     <div className="relative">
@@ -242,20 +242,20 @@ id="login-password"
                                             value={loginPassword}
                                             onChange={(e) => setLoginPassword(e.target.value)}
                                             placeholder="Şifreniz..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 pr-10 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 pr-10 text-sm"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowLoginPassword(!showLoginPassword)}
                                             aria-label={showLoginPassword ? "Şifreyi gizle" : "Şifreyi göster"}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a39080] hover:text-gray-600"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-rb-text-muted hover:text-foreground"
                                         >
                                             {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
                                     </div>
                                 </div>
 
-                                <label className="flex items-center gap-2 text-[13px] cursor-pointer select-none" style={{ color: "#a39080" }}>
+                                <label className="flex items-center gap-2 text-[13px] cursor-pointer select-none text-rb-text-sub">
                                     <input
                                         type="checkbox"
                                         checked={rememberMe}
@@ -273,12 +273,12 @@ id="login-password"
                                     {loginLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
                                 </Button>
 
-                                <p className="text-center text-[13px]" style={{ color: "#a39080" }}>
+                                <p className="text-center text-[13px] text-rb-text-sub">
                                     Hesabınız yok mu?{" "}
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("register")}
-                                        className="text-[#9A7B3F] dark:text-rb-gold font-semibold hover:underline"
+                                        className="text-rb-gold font-semibold hover:underline"
                                     >
                                         Kayıt olun
                                     </button>
@@ -293,14 +293,14 @@ id="login-password"
                                     <h2 className="text-[26px] font-serif font-bold leading-[1.1] text-foreground">
                                         Hesap Oluştur
                                     </h2>
-                                    <p className="text-[13px] mt-1" style={{ color: "#a39080" }}>
+                                    <p className="text-[13px] mt-1 text-rb-text-sub">
                                         Sisteme katılmak için kayıt olun
                                     </p>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
-                                        <label htmlFor="reg-first-name" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        <label htmlFor="reg-first-name" className="text-[13px] font-semibold text-rb-text-sub">
                                             AD
                                         </label>
                                         <Input
@@ -309,11 +309,11 @@ id="reg-first-name"
                                                                                     value={firstName}
                                             onChange={(e) => setFirstName(e.target.value)}
                                             placeholder="Adınız..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 text-sm"
                                         />
                                     </div>
                                     <div className="flex flex-col gap-1.5">
-                                        <label htmlFor="reg-last-name" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        <label htmlFor="reg-last-name" className="text-[13px] font-semibold text-rb-text-sub">
                                             SOYAD
                                         </label>
                                         <Input
@@ -322,13 +322,13 @@ id="reg-last-name"
                                                                                     value={lastName}
                                             onChange={(e) => setLastName(e.target.value)}
                                             placeholder="Soyadınız..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 text-sm"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label htmlFor="reg-restaurant" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="reg-restaurant" className="text-[13px] font-semibold text-rb-text-sub">
                                         RESTORAN ADI
                                     </label>
                                     <Input
@@ -337,12 +337,12 @@ id="reg-restaurant"
                                                                                 value={restaurantName}
                                         onChange={(e) => setRestaurantName(e.target.value)}
                                         placeholder="Restoranınızın adı..."
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 text-sm"
                                     />
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label htmlFor="reg-phone" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="reg-phone" className="text-[13px] font-semibold text-rb-text-sub">
                                         TELEFON NUMARASI
                                     </label>
                                     <Input
@@ -352,12 +352,12 @@ id="reg-phone"
                                         value={regPhoneNumber}
                                         onChange={(e) => setRegPhoneNumber(e.target.value)}
                                         placeholder="05XX XXX XX XX"
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 text-sm"
                                     />
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label htmlFor="reg-email" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                    <label htmlFor="reg-email" className="text-[13px] font-semibold text-rb-text-sub">
                                         E-POSTA
                                     </label>
                                     <Input
@@ -367,13 +367,13 @@ id="reg-email"
                                         value={regEmail}
                                         onChange={(e) => setRegEmail(e.target.value)}
                                         placeholder="ornek@restoran.com"
-                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
+                                        className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 text-sm"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
-                                        <label htmlFor="reg-password" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        <label htmlFor="reg-password" className="text-[13px] font-semibold text-rb-text-sub">
                                             ŞİFRE
                                         </label>
                                         <div className="relative">
@@ -384,20 +384,20 @@ id="reg-password"
                                                 value={regPassword}
                                                 onChange={(e) => setRegPassword(e.target.value)}
                                                 placeholder="Şifreniz..."
-                                                className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 pr-10 text-sm"
+                                                className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 pr-10 text-sm"
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowRegPassword(!showRegPassword)}
                                                 aria-label={showRegPassword ? "Şifreyi gizle" : "Şifreyi göster"}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a39080] hover:text-gray-600"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-rb-text-muted hover:text-foreground"
                                             >
                                                 {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                             </button>
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-1.5">
-                                        <label htmlFor="reg-password-confirm" className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                                        <label htmlFor="reg-password-confirm" className="text-[13px] font-semibold text-rb-text-sub">
                                             ŞİFRE TEKRAR
                                         </label>
                                         <Input
@@ -407,7 +407,7 @@ id="reg-password-confirm"
                                             value={regConfirm}
                                             onChange={(e) => setRegConfirm(e.target.value)}
                                             placeholder="Tekrar girin..."
-                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-[#C8A96E] rounded-[10px] h-11 text-sm"
+                                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 text-sm"
                                         />
                                     </div>
                                 </div>
@@ -420,12 +420,12 @@ id="reg-password-confirm"
                                     {regLoading ? "Hesap oluşturuluyor..." : "Hesap Oluştur"}
                                 </Button>
 
-                                <p className="text-center text-[13px]" style={{ color: "#a39080" }}>
+                                <p className="text-center text-[13px] text-rb-text-sub">
                                     Zaten hesabınız var mı?{" "}
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("login")}
-                                        className="text-[#9A7B3F] dark:text-rb-gold font-semibold hover:underline"
+                                        className="text-rb-gold font-semibold hover:underline"
                                     >
                                         Giriş yapın
                                     </button>

@@ -258,11 +258,11 @@ function PlateCard({ name, image, stock, restaurant, description, soldOut, featu
             </div>
             {(kind || featured || inCart || soldOut) && (
                 <span className="mb-1.5 flex flex-wrap items-center justify-center gap-1">
-                    {soldOut ? <span className="rounded-md bg-[#1E1915] px-2 py-0.5 text-[11px] font-semibold text-[#FFF3E6]">Tükendi</span> : (
+                    {soldOut ? <span className="rounded-md bg-[#1E1915] px-2 py-0.5 text-xs font-semibold text-[#FFF3E6]">Tükendi</span> : (
                         <>
-                            {kind && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-[11px] font-semibold text-[var(--site-accent-text)]">{kind}</span>}
-                            {featured && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-[11px] font-semibold text-[var(--site-accent-text)]"><span aria-hidden="true">★ </span>Ustanın seçimi</span>}
-                            {inCart && <span className="rounded-md bg-[var(--site-accent)] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--site-on-accent)]">Sepette {quantity}</span>}
+                            {kind && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-xs font-semibold text-[var(--site-accent-text)]">{kind}</span>}
+                            {featured && <span className="rounded-md bg-[#FDE4CB] px-2 py-0.5 text-xs font-semibold text-[var(--site-accent-text)]"><span aria-hidden="true">★ </span>Ustanın seçimi</span>}
+                            {inCart && <span className="rounded-md bg-[var(--site-accent)] px-2 py-0.5 text-xs font-bold tabular-nums text-[var(--site-on-accent)]">Sepette {quantity}</span>}
                         </>
                     )}
                 </span>
@@ -319,7 +319,7 @@ function Thumb({ src, alt, restaurant, soldOut, stock }: { src: string; alt: str
 
 function SoldOutBadge({ className }: { className?: string }) {
     return (
-        <span className={cn('rounded-full bg-[var(--site-paper)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--site-on-paper)]', className)}>
+        <span className={cn('rounded-full bg-[var(--site-paper)] px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-[var(--site-on-paper)]', className)}>
             Tükendi
         </span>
     );
@@ -371,7 +371,7 @@ function ProductCard({ product, restaurant, quantity, readOnly, onAdd, onRemove 
                     <span className="mb-1 flex flex-wrap items-center gap-1.5">
                         {quantity > 0 && <InCartBadge quantity={quantity} />}
                         {product.isFeatured && !soldOut && (
-                            <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Ustanın seçimi</span>
+                            <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-xs font-bold text-[var(--site-text)]">Ustanın seçimi</span>
                         )}
                     </span>
                 )}
@@ -417,7 +417,7 @@ export function SetMenuPrice({ menu, muted, className }: { menu: OnlineSetMenu; 
                         <span className="sr-only">Normal fiyatı </span>{formatPrice(regular)} ₺
                     </s>
                     {percent > 0 && (
-                        <span className="whitespace-nowrap rounded-full bg-[var(--site-ok-bg)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-ok)]">%{percent} avantajlı</span>
+                        <span className="whitespace-nowrap rounded-full bg-[var(--site-ok-bg)] px-2 py-0.5 text-xs font-bold text-[var(--site-ok)]">%{percent} avantajlı</span>
                     )}
                 </>
             )}
@@ -436,9 +436,9 @@ function SetMenuRow({ menu, restaurant, quantity, readOnly, onOpen, onRemove }: 
         <article className={cardClass(quantity > 0, soldOut)}>
             <div className="flex min-w-0 flex-1 flex-col">
                 <span className="mb-1 flex items-center gap-1.5">
-                    <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Menü</span>
+                    <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-xs font-bold text-[var(--site-text)]">Menü</span>
                     {menu.isFeatured && !soldOut && (
-                        <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Ustanın seçimi</span>
+                        <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-xs font-bold text-[var(--site-text)]">Ustanın seçimi</span>
                     )}
                     {quantity > 0 && <InCartBadge quantity={quantity} />}
                 </span>

@@ -92,7 +92,7 @@ const companyTop: NavItem[] = [
     { to: '/owner/data', icon: Trash2, label: 'Verileri sil' },
 ];
 
-const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-rb-gold/70';
+const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export default function AppShell() {
     const navigate = useNavigate();
@@ -179,7 +179,7 @@ export default function AppShell() {
         <span
             aria-label={`${count} okunmamış`}
             className={cn(
-                'ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums',
+                'ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-bold tabular-nums',
                 onGold ? 'bg-rb-gold-foreground text-rb-gold' : 'bg-rb-gold text-rb-gold-foreground'
             )}
         >
@@ -360,7 +360,7 @@ export default function AppShell() {
                     )}
 
                     {companyMode && (
-                        <p className={cn('mx-3 mt-4 rounded-lg bg-white/5 px-2.5 py-2 text-[11px] leading-relaxed text-sidebar-foreground/50', collapsed && 'md:hidden')}>
+                        <p className={cn('mx-3 mt-4 rounded-lg bg-white/5 px-2.5 py-2 text-xs leading-relaxed text-sidebar-foreground/60', collapsed && 'md:hidden')}>
                             Menü, masa, kasa ve personel için bir şube seçin.
                         </p>
                     )}
@@ -392,7 +392,7 @@ export default function AppShell() {
                                 isActive ? 'bg-white/10' : 'hover:bg-white/5'
                             )}
                         >
-                            <span aria-hidden="true" className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold', avatarColors)}>
+                            <span aria-hidden="true" className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold', avatarColors)}>
                                 {initials}
                             </span>
                             {!iconOnly && (
@@ -466,7 +466,7 @@ export default function AppShell() {
                             </div>
                             <div className="hidden lg:block min-w-0 max-w-44 text-left">
                                 <p className="text-sidebar-foreground text-sm font-medium leading-tight truncate">{displayName}</p>
-                                <p className="text-sidebar-foreground/40 text-xs leading-tight truncate">{roleLabel}</p>
+                                <p className="text-sidebar-foreground/60 text-xs leading-tight truncate">{roleLabel}</p>
                             </div>
                         </button>
 

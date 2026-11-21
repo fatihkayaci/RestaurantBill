@@ -18,16 +18,16 @@ export default function StaffTab({ data, loading }: Props) {
         <div className="space-y-4 mt-4">
             <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-border">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Garson Bazlı</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Garson Bazlı</p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Garson</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sipariş</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ort. Sepet</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Garson</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Sipariş</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ciro</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Ort. Sepet</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -48,16 +48,16 @@ export default function StaffTab({ data, loading }: Props) {
 
             <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-border">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Kasiyer Bazlı</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Kasiyer Bazlı</p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kasiyer</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İşlem</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Tahsilat</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Yöntem Kırılımı</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Kasiyer</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İşlem</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Tahsilat</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Yöntem Kırılımı</th>
                             </tr>
                         </thead>
                         <tbody>

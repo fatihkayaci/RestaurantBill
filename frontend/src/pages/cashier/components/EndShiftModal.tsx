@@ -184,7 +184,7 @@ export default function EndShiftModal({ onClose, onShiftClosed }: Props) {
                                 value={countedAmount}
                                 onChange={e => setCountedAmount(e.target.value)}
                                 placeholder="Sayım tutarı..."
-                                className="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                                className="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                             />
                         </div>
                     </>

@@ -76,11 +76,11 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, singleB
                 <Icon className="w-4 h-4 text-rb-gold" />
             </span>
             <span className={cn('flex-1 min-w-0 flex flex-col gap-0.5', collapsed && 'md:hidden')}>
-                <span className="text-[10px] font-semibold tracking-[0.15em] text-rb-gold leading-none">{caption}</span>
+                <span className="text-xs font-semibold tracking-[0.15em] text-rb-gold leading-none">{caption}</span>
                 <span className="font-serif font-bold text-base leading-none truncate">{title}</span>
             </span>
             {canSwitch && (
-                <ChevronsUpDown className={cn('w-3.5 h-3.5 text-sidebar-foreground/50 shrink-0', collapsed && 'md:hidden')} />
+                <ChevronsUpDown className={cn('w-3.5 h-3.5 text-sidebar-foreground/60 shrink-0', collapsed && 'md:hidden')} />
             )}
         </button>
     );
@@ -100,7 +100,7 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, singleB
             >
                 {isOwner && !singleBranch && (
                     <>
-                        <DropdownMenuLabel className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold tracking-[0.15em] text-sidebar-foreground/45">
+                        <DropdownMenuLabel className="px-2.5 pb-1 pt-1.5 text-xs font-semibold tracking-[0.15em] text-sidebar-foreground/60">
                             GÖRÜNÜM
                         </DropdownMenuLabel>
                         <DropdownMenuItem
@@ -110,7 +110,7 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, singleB
                             <Landmark className="w-4 h-4 text-rb-gold" />
                             <span className="flex-1 flex flex-col">
                                 <span>Tümü</span>
-                                <span className="text-[11px] text-sidebar-foreground/45">Şirket geneli · {branches.length} şube</span>
+                                <span className="text-xs text-sidebar-foreground/60">Şirket geneli · {branches.length} şube</span>
                             </span>
                             {companyMode && <Check className="w-4 h-4 text-rb-gold" />}
                         </DropdownMenuItem>
@@ -119,7 +119,7 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, singleB
                 )}
 
                 {!singleBranch && (
-                    <DropdownMenuLabel className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold tracking-[0.15em] text-sidebar-foreground/45">
+                    <DropdownMenuLabel className="px-2.5 pb-1 pt-1.5 text-xs font-semibold tracking-[0.15em] text-sidebar-foreground/60">
                         ŞUBELER
                     </DropdownMenuLabel>
                 )}
@@ -148,7 +148,7 @@ export default function BranchSwitcher({ branches, isOwner, companyMode, singleB
                             <Settings2 className="w-4 h-4" />
                             <span className="flex-1 flex flex-col">
                                 <span>Şubeleri yönet</span>
-                                <span className="text-[11px] text-sidebar-foreground/45">{singleBranch ? 'Yeni şube ekle veya düzenle' : 'Düzenle veya yeni şube ekle'}</span>
+                                <span className="text-xs text-sidebar-foreground/60">{singleBranch ? 'Yeni şube ekle veya düzenle' : 'Düzenle veya yeni şube ekle'}</span>
                             </span>
                         </DropdownMenuItem>
                     </>

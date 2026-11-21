@@ -207,7 +207,7 @@ function GalleryAndEvents({ site }: { site: PublicSite }) {
                         {shot(big, 0)}
                         {ig && (
                             <a href={ig} target="_blank" rel="noopener noreferrer" {...igT}
-                                className={cn('absolute left-3 top-3 inline-flex min-h-11 items-center bg-[color-mix(in_srgb,var(--site-paper)_80%,transparent)] px-4 text-[11px] uppercase tracking-[0.22em] text-[var(--site-on-paper)] no-underline backdrop-blur-[6px]', igT.className)}>
+                                className={cn('absolute left-3 top-3 inline-flex min-h-11 items-center bg-[color-mix(in_srgb,var(--site-paper)_80%,transparent)] px-4 text-xs uppercase tracking-[0.22em] text-[var(--site-on-paper)] no-underline backdrop-blur-[6px]', igT.className)}>
                                 {instagramHandle(ig)}
                             </a>
                         )}
@@ -245,11 +245,11 @@ function EventsTile({ site }: { site: PublicSite }) {
     const phone = site.phone;
     const maxParty = canReserveOnline(site) && site.reservation.maxPartySize > 0 ? site.reservation.maxPartySize : null;
     const waT = editTarget(edit, 'contact', 'WhatsApp');
-    const link = 'inline-flex min-h-11 items-center self-start text-[11px] uppercase tracking-[0.28em] text-[var(--site-accent-on-dark)] no-underline hover:opacity-80';
+    const link = 'inline-flex min-h-11 items-center self-start text-xs uppercase tracking-[0.28em] text-[var(--site-accent-on-dark)] no-underline hover:opacity-80';
     return (
         <section aria-labelledby="mk-ozel" className={cn(onDark, 'flex h-full min-h-[260px] flex-col justify-between gap-6 p-7 md:p-8')}>
             <div className="flex flex-col gap-3">
-                <span className={cn(elLabel, 'text-[11px] text-[var(--site-accent-on-dark)]')}>Özel geceler</span>
+                <span className={cn(elLabel, 'text-xs text-[var(--site-accent-on-dark)]')}>Özel geceler</span>
                 <h2 id="mk-ozel" className={cn(elItalic, 'm-0 text-[26px] leading-[1.15] md:text-[28px]')}>Doğum günü, nişan, iş yemeği…</h2>
                 <p className="m-0 text-sm leading-relaxed text-[var(--site-on-paper-sub)]">
                     {maxParty ? `Online rezervasyon ${maxParty} kişiye kadar; daha kalabalık gruplar için bize yazın ya da arayın.` : 'Kalabalık gruplar ve özel günler için bize yazın ya da arayın.'}
@@ -279,7 +279,7 @@ function Location({ site }: { site: PublicSite }) {
     // Bölüm yalnız adres ya da yol notu varsa (sayfanın asıl bilgisi); saat ve otopark tek başına bölüm açmaz.
     if (!(address || showNote || (edit && hours))) return null;
     const way = 'flex flex-col gap-1.5 border-b border-[color-mix(in_srgb,var(--site-text)_15%,transparent)] pb-5';
-    const wayLabel = 'text-[11px] uppercase tracking-[0.3em] text-[var(--site-muted)]';
+    const wayLabel = 'text-xs uppercase tracking-[0.3em] text-[var(--site-muted)]';
     const wayText = cn(elSerif, 'm-0 break-words text-[21px] leading-[1.35] md:text-[22px]');
 
     return (

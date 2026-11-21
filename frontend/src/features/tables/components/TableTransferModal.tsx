@@ -123,7 +123,7 @@ export default function TableTransferModal({ sourceTable, tables, onClose, onDon
                         <div className="mt-4 min-h-0 max-h-96 overflow-y-auto space-y-4">
                             {groupedByRegion.map(group => (
                                 <div key={group.regionName}>
-                                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                                         {group.regionName}
                                     </p>
                                     <div className="grid grid-cols-2 gap-2">
@@ -141,7 +141,7 @@ export default function TableTransferModal({ sourceTable, tables, onClose, onDon
                                                 >
                                                     <span className="text-sm font-medium text-foreground truncate">{table.name}</span>
                                                     {badge && (
-                                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${badge.cls}`}>
+                                                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ${badge.cls}`}>
                                                             {badge.label}
                                                         </span>
                                                     )}

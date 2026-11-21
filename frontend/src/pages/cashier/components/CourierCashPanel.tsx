@@ -40,7 +40,7 @@ function isToday(iso: string): boolean {
 /** Sayım farkı: eksi kırmızı (eksik), artı sarı (fazla), sıfır yeşil. */
 function differenceText(diff: number): string {
     if (diff === 0) return 'Fark yok';
-    return diff < 0 ? `₺${formatAmount(Math.abs(diff))} eksik` : `₺${formatAmount(diff)} fazla`;
+    return diff < 0 ? `${formatAmount(Math.abs(diff))} ₺ eksik` : `${formatAmount(diff)} ₺ fazla`;
 }
 
 function differenceClass(diff: number): string {
@@ -130,8 +130,8 @@ export default function CourierCashPanel({ initialCourierId }: { initialCourierI
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-2xl bg-sidebar px-4 py-3 text-sidebar-foreground">
                 <span className="text-sm">Kuryelerde toplam</span>
                 <span className="flex gap-4 text-sm">
-                    <b className="tabular-nums text-[#45C87A]">₺{formatAmount(totals.cash)} nakit</b>
-                    <b className="tabular-nums">₺{formatAmount(totals.card)} kart</b>
+                    <b className="tabular-nums text-[#45C87A]">{formatAmount(totals.cash)} ₺ nakit</b>
+                    <b className="tabular-nums">{formatAmount(totals.card)} ₺ kart</b>
                 </span>
             </div>
 
@@ -160,7 +160,7 @@ export default function CourierCashPanel({ initialCourierId }: { initialCourierI
             <div className="flex min-h-12 items-center gap-3 rounded-2xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
                 <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="flex-1">
-                    Bugün teslim alınanlar: {today.orders} sipariş · <span className="tabular-nums">₺{formatAmount(today.amount)}</span>
+                    Bugün teslim alınanlar: {today.orders} sipariş · <span className="tabular-nums">{formatAmount(today.amount)} ₺</span>
                 </span>
                 {history.length > 0 && (
                     <button
@@ -216,15 +216,15 @@ function CourierRow({ courier, now, open, onToggle, cashRegisterId, cashRegister
                 <span className="block truncate font-semibold text-foreground">{courier.fullName}</span>
                 {previous ? (
                     <span className="block text-xs font-semibold text-rb-red">
-                        Dünden kalan{courier.previousDayCash > 0 ? ` ₺${formatAmount(courier.previousDayCash)}` : ''} · {courier.previousDayOrderCount} sipariş
+                        Dünden kalan{courier.previousDayCash > 0 ? ` ${formatAmount(courier.previousDayCash)} ₺` : ''} · {courier.previousDayOrderCount} sipariş
                     </span>
                 ) : null}
                 <span className="block truncate text-xs text-muted-foreground">{sub}</span>
             </span>
             <span className="flex shrink-0 flex-col items-end">
-                <b className="font-serif text-lg tabular-nums text-foreground">₺{formatAmount(courier.outstandingCash)}</b>
+                <b className="font-serif text-lg tabular-nums text-foreground">{formatAmount(courier.outstandingCash)} ₺</b>
                 {courier.outstandingCard > 0 && (
-                    <span className="text-[11px] font-semibold tabular-nums text-rb-accent">+ ₺{formatAmount(courier.outstandingCard)} kart</span>
+                    <span className="text-xs font-semibold tabular-nums text-rb-accent">+ {formatAmount(courier.outstandingCard)} ₺ kart</span>
                 )}
             </span>
         </>
@@ -341,8 +341,8 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
         try {
             const result = await courierCashService.handover(courier.userId, cashRegisterId, selectedIds, hasCash ? countedValue : null);
             const parts = [
-                result.cashAmount > 0 ? `nakit ₺${formatAmount(result.cashAmount)}` : null,
-                result.cardAmount > 0 ? `${totals.iban > 0 ? 'kart/IBAN' : 'kart'} ₺${formatAmount(result.cardAmount)}` : null,
+                result.cashAmount > 0 ? `nakit ${formatAmount(result.cashAmount)} ₺` : null,
+                result.cardAmount > 0 ? `${totals.iban > 0 ? 'kart/IBAN' : 'kart'} ${formatAmount(result.cardAmount)} ₺` : null,
             ].filter(Boolean).join(', ');
             const diffNote = result.cashDifference ? ` Sayım farkı: ${differenceText(result.cashDifference)}.` : '';
             const message = `${courier.fullName}: ${result.settledCount} sipariş teslim alındı${parts ? ` (${parts})` : ''}.${diffNote}`;
@@ -359,9 +359,9 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
     const buttonLabel = submitting
         ? 'Teslim alınıyor…'
         : [
-            totals.cash > 0 ? `₺${formatAmount(countedValid && hasCash ? countedValue : totals.cash)} nakit` : null,
-            totals.card > 0 ? `₺${formatAmount(totals.card)} kart` : null,
-            totals.iban > 0 ? `₺${formatAmount(totals.iban)} IBAN` : null,
+            totals.cash > 0 ? `${formatAmount(countedValid && hasCash ? countedValue : totals.cash)} ₺ nakit` : null,
+            totals.card > 0 ? `${formatAmount(totals.card)} ₺ kart` : null,
+            totals.iban > 0 ? `${formatAmount(totals.iban)} ₺ IBAN` : null,
         ].filter(Boolean).join(' + ') + ' teslim al' + (difference ? ' · fark kaydedilir' : '');
 
     return (
@@ -435,7 +435,7 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
                                         ].filter(Boolean).join(' · ')}
                                     </span>
                                     {order.isFromPreviousDay && (
-                                        <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-rb-red-bg px-1.5 py-0.5 text-[10px] font-bold text-rb-red">
+                                        <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-rb-red-bg px-1.5 py-0.5 text-xs font-bold text-rb-red">
                                             <Clock className="h-3 w-3" aria-hidden="true" />ÖNCEKİ GÜN
                                         </span>
                                     )}
@@ -446,7 +446,7 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
                                         : order.collectedMethod === DoorPayment.Iban
                                             ? <Landmark className="h-4 w-4 text-rb-purple" aria-hidden="true" />
                                             : <CreditCard className="h-4 w-4 text-rb-accent" aria-hidden="true" />}
-                                    <span className="font-serif text-base font-bold tabular-nums text-foreground">₺{formatAmount(order.collectedAmount)}</span>
+                                    <span className="font-serif text-base font-bold tabular-nums text-foreground">{formatAmount(order.collectedAmount)} ₺</span>
                                 </span>
                             </button>
                         </li>
@@ -459,7 +459,7 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <div className="rounded-2xl border border-border bg-card p-3.5">
                         <p className="text-xs font-semibold text-muted-foreground">Beklenen nakit</p>
-                        <p className="font-serif text-2xl font-bold tabular-nums text-foreground">₺{formatAmount(totals.cash)}</p>
+                        <p className="font-serif text-2xl font-bold tabular-nums text-foreground">{formatAmount(totals.cash)} ₺</p>
                         <p className="text-xs text-muted-foreground">{cashCount} sipariş</p>
                     </div>
                     <label className={cn(
@@ -491,7 +491,7 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
                     )}>
                         <p className={cn('text-xs font-semibold', difference === null ? 'text-muted-foreground' : differenceClass(difference))}>Fark</p>
                         <p className={cn('font-serif text-2xl font-bold tabular-nums', difference === null ? 'text-muted-foreground' : differenceClass(difference))}>
-                            {difference === null ? '—' : difference === 0 ? '₺0' : `${difference < 0 ? '−' : '+'}₺${formatAmount(Math.abs(difference))}`}
+                            {difference === null ? '—' : difference === 0 ? '0 ₺' : `${difference < 0 ? '−' : '+'}${formatAmount(Math.abs(difference))} ₺`}
                         </p>
                         <p className={cn('text-xs', difference === null ? 'text-muted-foreground' : differenceClass(difference))}>
                             {difference === null ? 'Sayım bekleniyor' : difference === 0 ? 'Fark yok' : `${differenceText(difference)} · kayda yazılır`}
@@ -500,12 +500,12 @@ function HandoverForm({ courier, cashRegisterId: ownRegisterId, cashRegisterName
                 </div>
             ) : totals.card > 0 ? (
                 <p className="rounded-xl bg-rb-accent-bg px-3 py-2 text-sm text-rb-accent">
-                    Yalnızca kart: ₺{formatAmount(totals.card)}. POS slipleriyle karşılaştırın.
+                    Yalnızca kart: {formatAmount(totals.card)} ₺. POS slipleriyle karşılaştırın.
                 </p>
             ) : null}
             {totals.iban > 0 && (
                 <p className="rounded-xl bg-rb-purple-bg px-3 py-2 text-sm text-rb-purple">
-                    IBAN (havale): ₺{formatAmount(totals.iban)}. Kuryede para yok; paranın banka hesabına geçtiğini kontrol edin.
+                    IBAN (havale): {formatAmount(totals.iban)} ₺. Kuryede para yok; paranın banka hesabına geçtiğini kontrol edin.
                 </p>
             )}
 
@@ -537,21 +537,21 @@ function HandoverHistory({ items }: { items: CourierHandoverHistory[] }) {
                         </div>
                         <div className="flex shrink-0 items-center gap-4 text-right tabular-nums">
                             <div>
-                                <p className="text-[11px] text-muted-foreground">Beklenen</p>
-                                <p className="font-semibold text-foreground">₺{formatAmount(item.expectedCash)}</p>
+                                <p className="text-xs text-muted-foreground">Beklenen</p>
+                                <p className="font-semibold text-foreground">{formatAmount(item.expectedCash)} ₺</p>
                             </div>
                             <div>
-                                <p className="text-[11px] text-muted-foreground">Sayılan</p>
-                                <p className="font-semibold text-foreground">{item.countedCash !== null ? `₺${formatAmount(item.countedCash)}` : '—'}</p>
+                                <p className="text-xs text-muted-foreground">Sayılan</p>
+                                <p className="font-semibold text-foreground">{item.countedCash !== null ? `${formatAmount(item.countedCash)} ₺` : '—'}</p>
                             </div>
                             {item.cardAmount > 0 && (
                                 <div>
-                                    <p className="text-[11px] text-muted-foreground">Kart</p>
-                                    <p className="font-semibold text-foreground">₺{formatAmount(item.cardAmount)}</p>
+                                    <p className="text-xs text-muted-foreground">Kart</p>
+                                    <p className="font-semibold text-foreground">{formatAmount(item.cardAmount)} ₺</p>
                                 </div>
                             )}
                             <div className="min-w-20">
-                                <p className="text-[11px] text-muted-foreground">Fark</p>
+                                <p className="text-xs text-muted-foreground">Fark</p>
                                 <p className={cn('font-semibold', item.cashDifference !== null ? differenceClass(item.cashDifference) : 'text-muted-foreground')}>
                                     {item.cashDifference !== null ? differenceText(item.cashDifference) : '—'}
                                 </p>

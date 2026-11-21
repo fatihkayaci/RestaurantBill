@@ -37,7 +37,7 @@ const REFRESH_MS = 60_000;
 const TICK_MS = 30_000;
 
 const card = 'rounded-[24px] bg-[var(--site-card)] md:rounded-[32px]';
-const eyebrowClass = 'text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--site-sub)]';
+const eyebrowClass = 'text-xs font-medium uppercase tracking-[0.2em] text-[var(--site-sub)]';
 const primaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--site-accent)] px-6 text-[15px] font-semibold text-[var(--site-on-accent)] no-underline transition-opacity hover:opacity-90 disabled:opacity-50';
 const secondaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--site-border)] bg-[var(--site-card)] px-5 text-[15px] font-semibold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)] disabled:opacity-50';
 
@@ -544,7 +544,7 @@ function ReservationCard({ detail, now, address, onCalendar, children }: {
 function TicketField({ label, value, size }: { label: string; value: string; size?: 'lg' }) {
     return (
         <div className="flex min-w-0 flex-col gap-0.5">
-            <dt className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--site-muted)]">{label}</dt>
+            <dt className="text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--site-muted)]">{label}</dt>
             <dd className={cn(serif, 'm-0 truncate font-extrabold leading-tight tabular-nums', size === 'lg' ? 'text-[30px]' : 'text-[22px]')}>{value}</dd>
         </div>
     );

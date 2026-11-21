@@ -45,20 +45,20 @@ export default function SlugSetupPage() {
                 <h1 className="text-2xl font-serif font-bold text-foreground">
                     Restoran Adresinizi Belirleyin
                 </h1>
-                <p className="text-[13px] mt-1.5" style={{ color: "#a39080" }}>
+                <p className="text-[13px] mt-1.5 text-rb-text-sub">
                     Restoranınıza bu adresten erişilecek, dilediğiniz zaman kolayca hatırlayabileceğiniz bir adres seçin.
                 </p>
 
                 <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-bold uppercase tracking-[0.5px]" style={{ color: "#a39080" }}>
+                        <label className="text-[13px] font-semibold text-rb-text-sub">
                             Adres
                         </label>
                         <Input
                             value={slug}
                             onChange={(e) => setSlug(e.target.value)}
                             placeholder="restoran-adiniz"
-                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-rb-accent rounded-[10px] h-11 text-sm"
+                            className="border-border dark:bg-white/5 dark:text-[#f2ede4] focus:border-ring rounded-[10px] h-11 text-sm"
                         />
                         <p className="text-xs text-muted-foreground mt-1 truncate">
                             {cleanSlug ? `${cleanSlug}.${ROOT_DOMAIN}` : `—.${ROOT_DOMAIN}`}

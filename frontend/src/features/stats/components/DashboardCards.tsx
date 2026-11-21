@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 type Stats = DashboardStats;
 
-const sectionTitle = 'text-[11px] font-bold uppercase tracking-[0.08em] text-rb-text-sub';
+const sectionTitle = 'text-xs font-bold uppercase tracking-[0.08em] text-rb-text-sub';
 
 function Card({ title, aside, className, children }: { title: string; aside?: ReactNode; className?: string; children: ReactNode }) {
     return (
@@ -142,8 +142,8 @@ function HourlyCard({ stats }: { stats: Stats }) {
                 <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barGap={2}>
                         <CartesianGrid vertical={false} stroke="var(--border)" />
-                        <XAxis dataKey="saat" tick={{ fontSize: 11, fill: 'var(--rb-text-sub)' }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: 'var(--rb-text-sub)' }} tickLine={false} axisLine={false} width={56}
+                        <XAxis dataKey="saat" tick={{ fontSize: 12, fill: 'var(--rb-text-sub)' }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 12, fill: 'var(--rb-text-sub)' }} tickLine={false} axisLine={false} width={56}
                             tickFormatter={(v: number) => formatCurrency(v)} />
                         <Tooltip
                             {...chartTooltipProps}
@@ -184,7 +184,7 @@ function ReservationsCard({ stats }: { stats: Stats }) {
                                     <span className="truncate text-sm font-medium text-foreground">{r.guestName}</span>
                                     <span className="truncate text-xs text-rb-text-sub">{r.partySize > 0 ? `${r.partySize} kişi · ` : ''}{r.tableName}</span>
                                 </span>
-                                {status && <span className={cn('rounded-md px-2 py-1 text-[11px] font-bold', status.cls)}>{status.label}</span>}
+                                {status && <span className={cn('rounded-md px-2 py-1 text-xs font-bold', status.cls)}>{status.label}</span>}
                             </li>
                         );
                     })}

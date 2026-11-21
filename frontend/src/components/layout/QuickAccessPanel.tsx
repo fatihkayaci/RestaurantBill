@@ -407,16 +407,16 @@ export default function QuickAccessPanel() {
                             {allDone ? (
                                 <Zap className="h-4 w-4 text-rb-amber" aria-hidden="true" />
                             ) : (
-                                <span className="relative flex h-[26px] w-[26px] items-center justify-center">
-                                    <svg aria-hidden="true" width="26" height="26" viewBox="0 0 26 26" className="absolute inset-0 -rotate-90">
+                                <span className="relative flex h-8 w-8 items-center justify-center">
+                                    <svg aria-hidden="true" width="32" height="32" viewBox="0 0 26 26" className="absolute inset-0 -rotate-90">
                                         <circle cx="13" cy="13" r="11" fill="none" className="stroke-black/10 dark:stroke-white/10" strokeWidth="3" />
                                         <circle cx="13" cy="13" r="11" fill="none" className="stroke-rb-gold" strokeWidth="3" strokeLinecap="round"
                                             strokeDasharray={ringLength} strokeDashoffset={ringLength * (1 - doneCount / steps.length)} />
                                     </svg>
-                                    <span className="relative text-[9px] font-bold text-rb-amber">{doneCount}/{steps.length}</span>
+                                    <span className="relative text-xs font-bold text-rb-amber">{doneCount}/{steps.length}</span>
                                 </span>
                             )}
-                            <span className="rotate-180 text-[11px] font-bold uppercase tracking-[0.12em] text-rb-amber [writing-mode:vertical-rl]">Hızlı Erişim</span>
+                            <span className="rotate-180 text-xs font-bold uppercase tracking-[0.12em] text-rb-amber [writing-mode:vertical-rl]">Hızlı Erişim</span>
                         </button>
                     </div>
                 )}

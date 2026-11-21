@@ -38,7 +38,7 @@ export default function WaiterTableCard({ table, now, selected, qrCount, reserva
     const meta = busy
         ? (minutes !== null ? formatMinutes(minutes) : '')
         : state === 'res' ? (reservationLabel ?? 'Rezervasyon var') : 'Boş';
-    const amount = busy ? `₺${formatPrice(table.activeOrderTotal)}` : '';
+    const amount = busy ? `${formatPrice(table.activeOrderTotal)} ₺` : '';
     const glow: Glow | null = qrCount > 0 ? 'qr' : called ? 'call' : billAlert ? 'bill' : ready ? 'ready' : null;
 
     return (
@@ -79,17 +79,17 @@ export default function WaiterTableCard({ table, now, selected, qrCount, reserva
                         </span>
                     )}
                     {ready && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rb-green px-1.5 py-0.5 text-[11px] font-bold text-rb-green-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rb-green px-1.5 py-0.5 text-xs font-bold text-rb-green-foreground">
                             <BellRing className="size-3" strokeWidth={2.6} aria-hidden="true" />Hazır
                         </span>
                     )}
                     {overdue && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rb-red px-1.5 py-0.5 text-[11px] font-bold text-rb-red-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rb-red px-1.5 py-0.5 text-xs font-bold text-rb-red-foreground">
                             <AlertCircle className="size-3" strokeWidth={2.6} aria-hidden="true" />Gecikme
                         </span>
                     )}
                     {draft && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rb-gold-bg px-1.5 py-0.5 text-[11px] font-bold text-rb-gold">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rb-gold-bg px-1.5 py-0.5 text-xs font-bold text-rb-gold">
                             <NotebookPen className="size-3" strokeWidth={2.6} aria-hidden="true" />Taslak
                         </span>
                     )}

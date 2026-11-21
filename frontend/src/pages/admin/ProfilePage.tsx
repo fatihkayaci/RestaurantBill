@@ -185,7 +185,7 @@ export default function Profile() {
                         <p className="text-sidebar-foreground font-bold text-lg leading-tight">
                             {watchedFullName || "—"}
                         </p>
-                        <p className="text-rb-purple text-[10px] font-semibold tracking-widest uppercase mt-0.5">
+                        <p className="text-rb-purple text-xs font-semibold tracking-widest uppercase mt-0.5">
                             {roleLabel[role] ?? "Yönetici"}
                         </p>
                     </div>
@@ -214,7 +214,7 @@ export default function Profile() {
                                                     type="button"
                                                     onClick={handleSendEmailVerification}
                                                     disabled={emailVerifySending}
-                                                    className="text-[11px] font-semibold text-rb-accent hover:underline disabled:opacity-60"
+                                                    className="text-xs font-semibold text-rb-accent hover:underline disabled:opacity-60"
                                                 >
                                                     {emailVerifySending ? "Gönderiliyor..." : "Doğrula"}
                                                 </button>

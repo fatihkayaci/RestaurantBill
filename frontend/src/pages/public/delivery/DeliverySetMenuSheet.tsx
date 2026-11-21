@@ -83,7 +83,7 @@ export default function DeliverySetMenuSheet({ menu, restaurant, onClose, onAdd 
                         <fieldset key={slot.id}>
                             <legend className="flex w-full items-center justify-between gap-3">
                                 <span className="text-xs font-bold uppercase tracking-widest text-[var(--site-sub)]">{slot.name}</span>
-                                <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-[11px] font-bold text-[var(--site-text)]">Birini seçin</span>
+                                <span className="rounded-full bg-[var(--site-raised)] px-2 py-0.5 text-xs font-bold text-[var(--site-text)]">Birini seçin</span>
                             </legend>
                             <div className="mt-2 flex flex-col gap-2">
                                 {slot.options.map(option => {

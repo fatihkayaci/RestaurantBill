@@ -19,11 +19,11 @@ import { cn } from '@/lib/utils';
 import { SortableList, SortableRow } from '@/components/dnd/SortableList';
 import { SortModeBanner, SortModeButton } from '@/components/dnd/SortMode';
 
-// "İçecek: Ayran / Kola (+₺10)" — kartta menünün içeriği tek bakışta.
+// "İçecek: Ayran / Kola (+10 ₺)" — kartta menünün içeriği tek bakışta.
 function slotSummary(menu: SetMenu): string[] {
     return menu.slots.map(slot => {
         const options = slot.options
-            .map(o => `${o.productName}${o.isProductActive ? '' : ' (satış dışı)'}${o.surcharge > 0 ? ` (+₺${formatPrice(o.surcharge)})` : ''}`)
+            .map(o => `${o.productName}${o.isProductActive ? '' : ' (satış dışı)'}${o.surcharge > 0 ? ` (+${formatPrice(o.surcharge)} ₺)` : ''}`)
             .join(' / ');
         return slot.isFixed ? options : `${slot.name}: ${options}`;
     });
@@ -186,7 +186,7 @@ export default function SetMenusPage() {
                                     </div>
                                     <div className="flex shrink-0 items-center gap-1.5">
                                         <span className={cn(
-                                            'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                                            'rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide',
                                             menu.isActive ? 'bg-rb-green-bg text-rb-green' : 'bg-muted text-muted-foreground'
                                         )}>
                                             {menu.isActive ? 'Aktif' : 'Pasif'}
@@ -224,10 +224,10 @@ export default function SetMenusPage() {
 
                                 <div className="mt-auto space-y-3">
                                     <div className="flex items-baseline justify-between gap-2">
-                                        <p className="text-lg font-bold text-foreground">₺{formatPrice(menu.price)}</p>
+                                        <p className="text-lg font-bold text-foreground">{formatPrice(menu.price)} ₺</p>
                                         {margin && (
                                             <p className={cn('truncate text-xs', margin.isLoss ? 'text-destructive' : 'text-muted-foreground')}
-                                                title={`Tahmini maliyet ₺${formatPrice(menu.estimatedCost ?? 0)} (varsayılan seçeneklerle)`}>
+                                                title={`Tahmini maliyet ${formatPrice(menu.estimatedCost ?? 0)} ₺ (varsayılan seçeneklerle)`}>
                                                 {margin.text}
                                             </p>
                                         )}

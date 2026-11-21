@@ -23,7 +23,7 @@ export default function DiscountsTab({ data, loading }: Props) {
                         <div className="w-11 h-11 rounded-lg bg-rb-red-bg flex items-center justify-center shrink-0">
                             <TrendingDown className="w-5 h-5 text-rb-red" />
                         </div>
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Toplam İndirim</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Toplam İndirim</p>
                     </div>
                     <p className="text-2xl font-bold text-foreground mt-3">{formatCurrency(data?.totalDiscountAmount ?? 0, 2)}</p>
                     <p className="text-xs text-muted-foreground mt-1">{data?.discountedPaymentCount ?? 0} işlemde uygulandı</p>
@@ -33,7 +33,7 @@ export default function DiscountsTab({ data, loading }: Props) {
                         <div className="w-11 h-11 rounded-lg bg-rb-amber-bg flex items-center justify-center shrink-0">
                             <Percent className="w-5 h-5 text-rb-amber" />
                         </div>
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Ciroya Oranı</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Ciroya Oranı</p>
                     </div>
                     <p className="text-2xl font-bold text-foreground mt-3">%{data?.discountToRevenuePercent ?? 0}</p>
                     <p className="text-xs text-muted-foreground mt-1">Brüt ciro {formatCurrency(data?.grossRevenue ?? 0)}</p>
@@ -43,7 +43,7 @@ export default function DiscountsTab({ data, loading }: Props) {
                         <div className="w-11 h-11 rounded-lg bg-rb-accent-bg flex items-center justify-center shrink-0">
                             <FileText className="w-5 h-5 text-rb-accent" />
                         </div>
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Not Doldurulma Oranı</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Not Doldurulma Oranı</p>
                     </div>
                     <p className="text-2xl font-bold text-foreground mt-3">%{data?.noteFilledPercent ?? 0}</p>
                     <p className="text-xs text-muted-foreground mt-1">İndirimli işlemlerde açıklama girilme oranı</p>
@@ -53,15 +53,15 @@ export default function DiscountsTab({ data, loading }: Props) {
             <div className="grid lg:grid-cols-2 gap-4">
                 <div className="rounded-xl border border-border bg-card overflow-hidden">
                     <div className="px-5 py-3.5 border-b border-border">
-                        <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Çalışan Bazlı İndirim</p>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Çalışan Bazlı İndirim</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border">
-                                    <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Çalışan</th>
-                                    <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Adet</th>
-                                    <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Toplam</th>
+                                    <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Çalışan</th>
+                                    <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Adet</th>
+                                    <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Toplam</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -80,7 +80,7 @@ export default function DiscountsTab({ data, loading }: Props) {
                 </div>
 
                 <div className="rounded-xl border border-border bg-card p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-4">İndirim Oranı Dağılımı</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-4">İndirim Oranı Dağılımı</p>
                     <div className="space-y-3">
                         {(data?.percentDistribution ?? []).map(b => (
                             <div key={b.label} className="flex items-center gap-3">
@@ -101,16 +101,16 @@ export default function DiscountsTab({ data, loading }: Props) {
 
             <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-border">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">İptal Edilen Siparişler ({(data?.cancelledOrders ?? []).length})</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">İptal Edilen Siparişler ({(data?.cancelledOrders ?? []).length})</p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Masa</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İptal Eden</th>
-                                <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ne Zaman</th>
-                                <th className="text-right text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Tutar</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Masa</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">İptal Eden</th>
+                                <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Ne Zaman</th>
+                                <th className="text-right text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Tutar</th>
                             </tr>
                         </thead>
                         <tbody>

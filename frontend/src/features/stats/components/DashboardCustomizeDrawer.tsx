@@ -70,7 +70,7 @@ export default function DashboardCustomizeDrawer({ cards, onSaved, onClose }: Pr
 
                 <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
                     <section className="space-y-2">
-                        <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-rb-text-sub">Panelde · {draft.length}</h3>
+                        <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-rb-text-sub">Panelde · {draft.length}</h3>
                         {draft.length === 0 && (
                             <p className="rounded-xl border border-dashed border-border px-3 py-4 text-center text-sm text-rb-text-sub">Hiç kart seçili değil.</p>
                         )}
@@ -95,7 +95,7 @@ export default function DashboardCustomizeDrawer({ cards, onSaved, onClose }: Pr
 
                     {hidden.length > 0 && (
                         <section className="space-y-2">
-                            <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-rb-text-sub">Eklenebilir kartlar</h3>
+                            <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-rb-text-sub">Eklenebilir kartlar</h3>
                             {hidden.map(id => (
                                 <div key={id} className={cn('flex min-h-15 items-center gap-2 rounded-xl border border-dashed border-border py-2 pl-3 pr-2')}>
                                     <span className="flex min-w-0 flex-1 flex-col">

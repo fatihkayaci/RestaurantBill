@@ -71,7 +71,7 @@ export default function MoveTableView({ table, order, tables, onBack, onDone }: 
                         <ChevronLeft className="size-6" aria-hidden="true" />
                     </button>
                     <div className="flex min-w-0 flex-col">
-                        <span className="truncate text-[13px] font-medium text-rb-text-sub">{table.name} · {itemCount} ürün · ₺{formatPrice(order.totalPrice)}</span>
+                        <span className="truncate text-[13px] font-medium text-rb-text-sub">{table.name} · {itemCount} ürün · {formatPrice(order.totalPrice)} ₺</span>
                         <h2 className="font-serif text-[28px] font-bold leading-none text-foreground">Masayı taşı</h2>
                     </div>
                 </div>
@@ -104,7 +104,7 @@ export default function MoveTableView({ table, order, tables, onBack, onDone }: 
                                 const self = t.id === table.id;
                                 const can = eligible(t);
                                 const selected = target?.id === t.id;
-                                const sub = self ? 'Bu masa' : t.status === 1 ? 'Boş' : t.status === 2 ? `₺${formatPrice(t.activeOrderTotal)}` : t.status === 3 ? 'Rezerve' : 'Kapalı';
+                                const sub = self ? 'Bu masa' : t.status === 1 ? 'Boş' : t.status === 2 ? `${formatPrice(t.activeOrderTotal)} ₺` : t.status === 3 ? 'Rezerve' : 'Kapalı';
                                 return (
                                     <button
                                         key={t.id}

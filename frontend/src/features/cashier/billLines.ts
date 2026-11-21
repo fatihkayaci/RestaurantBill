@@ -168,9 +168,9 @@ export function lineDiscountAmount(unitPrice: number, paidQuantity: number, disc
         : Math.min(discount.value, discountedGross);
 }
 
-/** İndirimin kısa yazımı: "%50", "1 adede %50", "2 adede ₺20". Tümüne uygulanıyorsa adet yazılmaz. */
+/** İndirimin kısa yazımı: "%50", "1 adede %50", "2 adede 20 ₺". Tümüne uygulanıyorsa adet yazılmaz. */
 export function describeLineDiscount(discount: LineDiscount, paidQuantity: number): string {
-    const value = discount.type === 'percent' ? `%${discount.value}` : `₺${discount.value}`;
+    const value = discount.type === 'percent' ? `%${discount.value}` : `${discount.value} ₺`;
     const quantity = discountedQuantity(discount, paidQuantity);
     return paidQuantity > 1 && quantity < paidQuantity ? `${quantity} adede ${value}` : value;
 }

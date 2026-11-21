@@ -51,7 +51,7 @@ export default function TransactionDetailPanel({ transaction, onClose }: Props) 
                 </p>
                 <div className="flex items-center justify-between text-sm mb-6 pb-4 border-b border-dashed border-border">
                     <span className="font-medium text-foreground">Toplam KDV</span>
-                    <span className="font-medium text-foreground tabular-nums">₺{formatAmount(transaction.taxAmount)}</span>
+                    <span className="font-medium text-foreground tabular-nums">{formatAmount(transaction.taxAmount)} ₺</span>
                 </div>
 
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
@@ -72,11 +72,11 @@ export default function TransactionDetailPanel({ transaction, onClose }: Props) 
                                 <span className="flex-1 text-sm text-muted-foreground">
                                     {d.itemCount} ürün
                                 </span>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 ${PAYMENT_METHOD_COLORS[d.method]}`}>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded shrink-0 ${PAYMENT_METHOD_COLORS[d.method]}`}>
                                     {PAYMENT_METHOD_LABELS[d.method]}
                                 </span>
                                 <span className="text-sm font-serif font-bold text-foreground tabular-nums w-16 text-right">
-                                    ₺{formatPrice(d.amount)}
+                                    {formatPrice(d.amount)} ₺
                                 </span>
                             </div>
                         );
@@ -88,7 +88,7 @@ export default function TransactionDetailPanel({ transaction, onClose }: Props) 
                 <div className="flex items-center justify-between">
                     <span className="font-semibold text-foreground">Toplam</span>
                     <span className="font-serif text-2xl font-bold text-foreground tabular-nums">
-                        ₺{formatPrice(transaction.amount)}
+                        {formatPrice(transaction.amount)} ₺
                     </span>
                 </div>
             </div>

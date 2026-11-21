@@ -264,7 +264,7 @@ function AddItemsScreen({ table, order, onBack, backLabel, onReserve, onSent, on
                         value={query}
                         onChange={e => setQuery(e.target.value)}
                         placeholder="Ürün ara (ör. latte)"
-                        className="h-12 w-full rounded-2xl border border-border bg-card pr-3 pl-11 text-base text-foreground outline-none placeholder:text-rb-text-muted focus:ring-2 focus:ring-rb-gold"
+                        className="h-12 w-full rounded-2xl border border-border bg-card pr-3 pl-11 text-base text-foreground outline-none placeholder:text-rb-text-muted focus:ring-2 focus:ring-ring"
                     />
                 </label>
                 {!query && <CategoryChips options={categoryOptions} selectedId={categoryId} onSelect={setPickedCategory} />}
@@ -314,7 +314,7 @@ function AddItemsScreen({ table, order, onBack, backLabel, onReserve, onSent, on
                             rows={2}
                             maxLength={500}
                             placeholder="Tüm masa için, ör. çocuk sandalyesi"
-                            className="w-full resize-none rounded-2xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rb-gold"
+                            className="w-full resize-none rounded-2xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
                         />
                     </label>
                 )}

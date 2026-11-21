@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 export function StockImageLabel({ className }: { className?: string }) {
     return (
         <span className={cn(
-            'pointer-events-none absolute bottom-1.5 right-1.5 rounded bg-black/45 px-1.5 py-0.5 text-[10px] font-medium leading-tight text-white/90',
+            'pointer-events-none absolute bottom-1.5 right-1.5 rounded bg-black/45 px-1.5 py-0.5 text-xs font-medium leading-tight text-white/90',
             className,
         )}>
             Temsili görsel

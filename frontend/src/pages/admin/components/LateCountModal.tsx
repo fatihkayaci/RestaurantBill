@@ -71,7 +71,7 @@ export default function LateCountModal({ shift, onClose, onCounted }: Props) {
                         value={countedAmount}
                         onChange={e => setCountedAmount(e.target.value)}
                         placeholder="Sayım tutarı..."
-                        className="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                        className="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         autoFocus
                     />
                     {hasValidCounted && (
@@ -84,7 +84,7 @@ export default function LateCountModal({ shift, onClose, onCounted }: Props) {
                         value={note}
                         onChange={e => setNote(e.target.value)}
                         placeholder="Not (isteğe bağlı)"
-                        className="mt-2 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                        className="mt-2 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                 </div>
 

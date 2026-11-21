@@ -75,7 +75,7 @@ const labelClass = 'mb-2 block text-[13px] font-extrabold text-[var(--site-text)
 const primaryButton = 'flex h-[60px] w-full items-center justify-center gap-2 rounded-full bg-[var(--site-accent)] text-base font-extrabold text-[var(--site-on-accent)] no-underline transition-[opacity,transform] hover:-translate-y-px hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 motion-reduce:transition-none';
 const secondaryButton = 'flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(36,24,15,0.25)] bg-transparent px-5 text-[15px] font-bold text-[var(--site-text)] no-underline transition-colors hover:border-[var(--site-text)]';
 const alertClass = 'rounded-2xl border border-[var(--site-error-line)] bg-[var(--site-error-bg)] p-3.5 text-sm font-semibold text-[var(--site-error)]';
-const eyebrowClass = 'text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--site-muted)]';
+const eyebrowClass = 'text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--site-muted)]';
 /** Saat grubu ve bölüm adı: italik Fraunces, zeytin (krem üstünde ~9:1). */
 const groupLabel = cn(serif, 'text-xl font-semibold italic text-[var(--site-olive)]');
 /** Hızlı kişi seçimi. */
@@ -363,7 +363,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                 className={cn('flex h-[96px] w-[76px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-[20px] border-2 transition-colors', focusRing,
                                     !chip.open ? chipDisabled : on ? dayOn : dayOff)}
                             >
-                                <span className="text-[11px] font-extrabold uppercase tracking-[0.1em]">{chip.top}</span>
+                                <span className="text-xs font-extrabold uppercase tracking-[0.1em]">{chip.top}</span>
                                 <span className={cn(serif, 'text-[30px] font-extrabold leading-none tabular-nums', !chip.open && 'line-through decoration-1')}>{chip.num}</span>
                                 <span className="text-xs font-bold">{chip.month}</span>
                             </button>
@@ -458,7 +458,7 @@ export default function ReservationFlow({ site, restaurantName, mine, onSent, on
                                                 className={cn('flex h-16 flex-col items-center justify-center gap-0.5 rounded-2xl border-[1.5px] transition-colors', focusRing, option.full ? chipDisabled : on ? slotOn : chipOff)}
                                             >
                                                 <span className={cn('text-base font-extrabold leading-none tabular-nums', option.full && 'line-through decoration-1')}>{option.time}</span>
-                                                <span className="text-[11px] font-bold opacity-80">{option.full ? 'dolu' : on ? 'seçili' : 'müsait'}</span>
+                                                <span className="text-xs font-bold opacity-80">{option.full ? 'dolu' : on ? 'seçili' : 'müsait'}</span>
                                             </button>
                                         );
                                     })}
@@ -728,7 +728,7 @@ function EmptyNote({ children }: { children: ReactNode }) {
 function SummaryRow({ label, value, muted = false, small = false }: { label: string; value: string; muted?: boolean; small?: boolean }) {
     return (
         <div className="flex min-w-0 flex-col gap-0.5">
-            <dt className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--site-muted)]">{label}</dt>
+            <dt className="text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--site-muted)]">{label}</dt>
             <dd className={cn(serif, 'm-0 break-words font-extrabold tabular-nums', small ? 'text-xl leading-snug' : 'text-[28px] leading-tight', muted && 'text-base font-semibold text-[var(--site-muted)]')}>{value}</dd>
         </div>
     );
@@ -769,7 +769,7 @@ function ReservationTicket({ reservation, restaurantName }: { reservation: Reser
     return (
         <section aria-label="Rezervasyon özeti" className="relative overflow-hidden rounded-[24px] bg-[var(--site-card)] md:rounded-[32px]">
             <div className="flex flex-col items-center gap-2 bg-[var(--site-paper)] px-6 pb-7 pt-6 text-center text-[var(--site-on-paper)]">
-                <span className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/60">{restaurantName}</span>
+                <span className="text-xs font-medium uppercase tracking-[0.24em] text-white/60">{restaurantName}</span>
                 {code ? (
                     <>
                         <p className="m-0 mt-1 text-sm text-white/75">Rezervasyon kodunuz</p>
@@ -814,7 +814,7 @@ function ReservationTicket({ reservation, restaurantName }: { reservation: Reser
 function TicketField({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
     return (
         <div className={cn('min-w-0', wide && 'col-span-2')}>
-            <dt className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--site-muted)]">{label}</dt>
+            <dt className="text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--site-muted)]">{label}</dt>
             <dd className={cn(serif, 'm-0 mt-1 break-words text-[24px] leading-tight tabular-nums')}>{value}</dd>
         </div>
     );
