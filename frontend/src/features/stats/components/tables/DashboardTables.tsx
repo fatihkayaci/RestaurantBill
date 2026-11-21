@@ -16,7 +16,7 @@ export default function DashboardTables({ stats, onRefresh }: { stats: Dashboard
         <section className="flex flex-col gap-3.5 rounded-2xl border border-border bg-card p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-rb-text-sub">{CARD_META.tables.title}</h2>
+                    <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-rb-text-sub">{CARD_META.tables.title}</h2>
                     <span className="text-xs font-semibold text-rb-green">● Canlı</span>
                 </div>
                 <Link to="/admin/tables" className="text-[13px] font-semibold text-rb-amber hover:underline">Masalara git</Link>

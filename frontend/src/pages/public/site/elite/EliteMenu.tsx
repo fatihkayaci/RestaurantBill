@@ -57,7 +57,7 @@ export default function EliteMenu({ site }: { site: PublicSite }) {
         else if (address) mobileActions.push({ key: 'yol', label: 'Yol tarifi', icon: <DirectionsIcon className="h-[18px] w-[18px]" />, href: directionsUrl(address) });
     }
 
-    const toggle = (on: boolean) => cn('inline-flex min-h-11 items-center gap-2 border-b px-0.5 text-[11px] font-medium uppercase tracking-[0.24em] transition-colors',
+    const toggle = (on: boolean) => cn('inline-flex min-h-11 items-center gap-2 border-b px-0.5 text-xs font-medium uppercase tracking-[0.24em] transition-colors',
         on ? 'border-[var(--site-accent-text)] text-[var(--site-text)]' : 'border-transparent text-[var(--site-muted)] hover:text-[var(--site-text)]');
     const lead = c.tagline || edit?.showEmpty
         ? <EditableText as="p" field="tagline" value={c.tagline} placeholder="Alt başlık yazın" className={heroLead} />
@@ -127,7 +127,7 @@ export default function EliteMenu({ site }: { site: PublicSite }) {
                             <span className={cn(elLabel, 'whitespace-nowrap tracking-[0.22em]')}>{cart.count} ürün</span>
                             <span aria-hidden="true" className="h-[22px] w-px bg-[color-mix(in_srgb,var(--site-on-paper)_25%,transparent)]" />
                             <span className={cn(elSerif, 'whitespace-nowrap text-[22px] tabular-nums sm:text-2xl')}>{formatSitePrice(cart.subtotal)}</span>
-                            <span className="inline-flex h-12 items-center whitespace-nowrap bg-[var(--site-pop)] px-5 text-[11px] font-medium uppercase tracking-[0.26em] text-[var(--site-on-pop)] sm:px-6">Sepete git</span>
+                            <span className="inline-flex h-12 items-center whitespace-nowrap bg-[var(--site-pop)] px-5 text-xs font-medium uppercase tracking-[0.26em] text-[var(--site-on-pop)] sm:px-6">Sepete git</span>
                         </Link>
                     </div>
                 )}

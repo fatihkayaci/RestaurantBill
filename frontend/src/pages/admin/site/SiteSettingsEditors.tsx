@@ -17,7 +17,7 @@ export function Field({ id, label, hint, count, max, children }: { id: string; l
         <div>
             <div className="flex items-baseline justify-between gap-2">
                 <label htmlFor={id} className={labelClass}>{label}</label>
-                {max !== undefined && <span className="text-[11px] text-muted-foreground">{count}/{max}</span>}
+                {max !== undefined && <span className="text-xs text-muted-foreground">{count}/{max}</span>}
             </div>
             {children}
             {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
@@ -396,7 +396,7 @@ export function GalleryManager({ urls, max, busy, onAdd, onRemove, onMove }: {
                         <li key={url} className="space-y-1.5">
                             <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
                                 <img src={url} alt={`Mekân fotoğrafı ${i + 1}`} className="h-full w-full object-cover" />
-                                {i === 0 && <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">Büyük</span>}
+                                {i === 0 && <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-xs font-semibold text-white">Büyük</span>}
                             </div>
                             <div className="flex items-center justify-between gap-1">
                                 <button type="button" aria-label="Öne al" disabled={busy || i === 0} onClick={() => onMove(i, i - 1)} className={cn(smallButton, 'h-8 px-2')}>

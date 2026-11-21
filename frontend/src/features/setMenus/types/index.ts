@@ -2,7 +2,7 @@
 export const DiscountType = { None: 0, Percent: 1, Amount: 2 } as const;
 export type DiscountType = (typeof DiscountType)[keyof typeof DiscountType];
 
-/** Menü bölümündeki bir seçenek: ürün + isteğe bağlı indirim. Ek ücret fiyat farkından hesaplanır ("Kola +₺10"). */
+/** Menü bölümündeki bir seçenek: ürün + isteğe bağlı indirim. Ek ücret fiyat farkından hesaplanır ("Kola +10 ₺"). */
 export interface SetMenuOption {
     productId: string;
     productName: string;

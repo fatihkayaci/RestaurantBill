@@ -184,7 +184,7 @@ export default function BulkTableQrModal({ tables, regions, onClose }: Props) {
                                 return (
                                     <section key={group.key} className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-rb-text-sub">{group.name}</h3>
+                                            <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-rb-text-sub">{group.name}</h3>
                                             <button
                                                 type="button"
                                                 onClick={() => toggle(ids, !groupAll)}

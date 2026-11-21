@@ -94,9 +94,9 @@ export default function DergiReserve({ branchId, rules, onContinue }: {
                                 className={cn('flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-[14px] border',
                                     !d.open ? 'cursor-not-allowed border-dashed border-[var(--site-border-strong)] bg-transparent text-[var(--site-border-strong)]'
                                         : on ? 'border-[var(--site-terracotta)] bg-[var(--site-terracotta)] text-[var(--site-on-terracotta)]' : 'border-transparent bg-[var(--site-bg)] text-[var(--site-text)]')}>
-                                <span className="text-[11px] font-medium uppercase tracking-[0.12em] opacity-75">{d.top}</span>
+                                <span className="text-xs font-medium uppercase tracking-[0.12em] opacity-75">{d.top}</span>
                                 <span className={cn(serif, 'text-[30px] leading-none')}>{d.num}</span>
-                                <span className="text-[11px] opacity-70">{d.month}</span>
+                                <span className="text-xs opacity-70">{d.month}</span>
                             </button>
                         );
                     })}
@@ -134,7 +134,7 @@ export default function DergiReserve({ branchId, rules, onContinue }: {
                                                 : on ? 'border-[var(--site-paper)] bg-[var(--site-paper)] text-[var(--site-on-paper)]'
                                                     : 'border-[rgba(36,24,15,0.18)] bg-[var(--site-card)] text-[var(--site-text)]')}>
                                         <span className={cn(serif, 'text-[22px] leading-none sm:text-2xl')}>{s.time}</span>
-                                        <span className="text-[11px] opacity-75">{s.full ? 'dolu' : 'müsait'}</span>
+                                        <span className="text-xs opacity-75">{s.full ? 'dolu' : 'müsait'}</span>
                                     </button>
                                 );
                             })}

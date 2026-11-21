@@ -73,7 +73,7 @@ export default function StartShiftModal({ candidate, onClose, onStarted }: Props
                         <ModalTitle className="font-serif text-2xl font-bold text-foreground">Gün başlat</ModalTitle>
                         <p className="mt-0.5 text-sm text-muted-foreground">
                             {candidate.cashRegisterName}
-                            {candidate.expectedOpeningBalance != null && ` · açılış ₺${formatAmount(candidate.expectedOpeningBalance)} (kasa bakiyesi)`}
+                            {candidate.expectedOpeningBalance != null && ` · açılış ${formatAmount(candidate.expectedOpeningBalance)} ₺ (kasa bakiyesi)`}
                         </p>
                     </div>
                     <button type="button" onClick={onClose} aria-label="Kapat" className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
@@ -83,7 +83,7 @@ export default function StartShiftModal({ candidate, onClose, onStarted }: Props
 
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-5">
                     <fieldset className="space-y-2.5">
-                        <legend className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kasa kime atanacak?</legend>
+                        <legend className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">Kasa kime atanacak?</legend>
 
                         <label className={optionClass(mode === 'for')}>
                             <input type="radio" name="who" checked={mode === 'for'} onChange={() => setMode('for')} className="mt-1 accent-rb-gold" />
@@ -125,7 +125,7 @@ export default function StartShiftModal({ candidate, onClose, onStarted }: Props
                                 {candidate.lastClosedBySystem ? ' gün sonunda sistem tarafından' : ''} sayımsız kapandı.
                                 Kasadaki nakdi say; bu sayım önceki güne yazılır, yeni gün bu tutarla başlar.
                             </p>
-                            <label htmlFor="start-shift-count" className="block text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kasada sayılan nakit</label>
+                            <label htmlFor="start-shift-count" className="block text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">Kasada sayılan nakit</label>
                             <input
                                 id="start-shift-count"
                                 type="number"

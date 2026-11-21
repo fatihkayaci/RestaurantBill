@@ -72,7 +72,7 @@ function Channel({ href, external, label, value, note }: { href: string; externa
     return (
         <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}
             className="flex h-full min-w-0 flex-col gap-3 py-8 text-[var(--site-text)] no-underline transition-opacity hover:opacity-75 md:py-0 md:pt-9">
-            <span className={cn(elLabel, 'text-[11px] text-[var(--site-accent-text)]')}>{label}</span>
+            <span className={cn(elLabel, 'text-xs text-[var(--site-accent-text)]')}>{label}</span>
             <span className={cn(elSerif, 'break-words text-[26px] leading-[1.15] md:text-[28px]')}>{value}</span>
             {note && <span className="text-[13px] text-[var(--site-muted)]">{note}</span>}
         </a>
@@ -162,8 +162,8 @@ function Address({ site }: { site: PublicSite }) {
             )}
             {!edit && (
                 <div className="flex flex-wrap gap-x-6">
-                    {showAddress && <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center border-b border-[var(--site-text)] text-[11px] uppercase tracking-[0.28em] text-[var(--site-text)] no-underline">Yol tarifi →</a>}
-                    <Link to="/mekan#konum" className="inline-flex min-h-11 items-center border-b border-transparent text-[11px] uppercase tracking-[0.28em] text-[var(--site-text)] no-underline hover:border-[var(--site-text)]">Nasıl gelinir?</Link>
+                    {showAddress && <a href={directionsUrl(address)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center border-b border-[var(--site-text)] text-xs uppercase tracking-[0.28em] text-[var(--site-text)] no-underline">Yol tarifi →</a>}
+                    <Link to="/mekan#konum" className="inline-flex min-h-11 items-center border-b border-transparent text-xs uppercase tracking-[0.28em] text-[var(--site-text)] no-underline hover:border-[var(--site-text)]">Nasıl gelinir?</Link>
                 </div>
             )}
         </section>
@@ -172,7 +172,7 @@ function Address({ site }: { site: PublicSite }) {
 
 // ── Mesaj formu ──────────────────────────────────────────────────────────────────────────────────
 
-const fieldLabel = cn(elLabel, 'flex flex-col gap-2 text-[11px] text-[var(--site-muted)]');
+const fieldLabel = cn(elLabel, 'flex flex-col gap-2 text-xs text-[var(--site-muted)]');
 const input = cn(elSerif, 'w-full border-0 border-b border-[color-mix(in_srgb,var(--site-text)_35%,transparent)] bg-transparent p-0 text-[22px] normal-case tracking-normal text-[var(--site-text)] outline-none transition-colors placeholder:text-[var(--site-muted)] focus:border-[var(--site-text)]');
 
 function EliteContactForm({ branchId, phone }: { branchId: string; phone?: string }) {
@@ -205,7 +205,7 @@ function EliteContactForm({ branchId, phone }: { branchId: string; phone?: strin
                         const on = type === option.value;
                         return (
                             <label key={option.value}
-                                className={cn('flex min-h-12 cursor-pointer items-center border-b-2 text-[11px] font-medium uppercase tracking-[0.26em] transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--site-text)]',
+                                className={cn('flex min-h-12 cursor-pointer items-center border-b-2 text-xs font-medium uppercase tracking-[0.26em] transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--site-text)]',
                                     on ? 'border-[var(--site-accent-text)] text-[var(--site-text)]' : 'border-transparent text-[var(--site-muted)] hover:text-[var(--site-text)]')}>
                                 <input type="radio" name="ilt-tur" value={option.value} checked={on} onChange={() => setType(option.value)} className="sr-only" />
                                 {option.label}
@@ -226,7 +226,7 @@ function EliteContactForm({ branchId, phone }: { branchId: string; phone?: strin
             <label className={fieldLabel}>Mesajınız
                 <textarea value={message} onChange={e => setMessage(e.target.value)} required minLength={CONTACT_MESSAGE_MIN} maxLength={CONTACT_MESSAGE_MAX} rows={4}
                     placeholder="Önerinizi, şikâyetinizi ya da sorunuzu yazın" className={cn(input, 'resize-y py-3 text-xl leading-[1.5]')} />
-                <span className="self-end text-[11px] normal-case tracking-[0.04em] tabular-nums">{message.length} / {CONTACT_MESSAGE_MAX}</span>
+                <span className="self-end text-xs normal-case tracking-[0.04em] tabular-nums">{message.length} / {CONTACT_MESSAGE_MAX}</span>
             </label>
             {/* Bal küpü: ekranda ve okuyucuda görünmez, insan doldurmaz. */}
             <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">

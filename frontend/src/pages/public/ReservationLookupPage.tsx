@@ -228,7 +228,7 @@ function SavedReservations({ items }: { items: ReservationStatusInfo[] }) {
                                 <span aria-hidden="true" className="w-0 border-l-[3px] border-dashed border-[var(--site-card)]" />
                                 <span className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
                                     <span className="min-w-0 flex-1">
-                                        <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold', tone.badge)}>
+                                        <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold', tone.badge)}>
                                             <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', tone.dot)} />{badge.text}
                                         </span>
                                         <span className={cn(serif, 'mt-1 block text-[20px] leading-tight tabular-nums')}>{item.time} · {item.partySize} kişi</span>

@@ -39,7 +39,7 @@ export default function SendBar({ count, noteCount, total, sending, keyboardInse
                             {noteCount > 0 && <span className="text-[13px] opacity-75">{noteCount} notlu satır</span>}
                         </span>
                     )}
-                    <span className="text-xl font-bold">₺{formatPrice(total)}</span>
+                    <span className="text-xl font-bold">{formatPrice(total)} ₺</span>
                 </button>
             )}
         </div>

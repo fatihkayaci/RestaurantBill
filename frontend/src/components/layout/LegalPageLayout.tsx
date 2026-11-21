@@ -17,7 +17,7 @@ export default function LegalPageLayout({ title, updatedAt, children }: LegalPag
                 <div className="max-w-165 mx-auto flex flex-col gap-8">
                     <div className="flex flex-col gap-2 border-b border-border pb-6">
                         <h1 className="font-serif text-3xl md:text-[42px] font-bold leading-tight">{title}</h1>
-                        <p className="text-xs text-[#a39080] dark:text-[#7a6e60]">Son güncelleme: {updatedAt}</p>
+                        <p className="text-xs text-rb-text-muted">Son güncelleme: {updatedAt}</p>
                     </div>
                     <div className="flex flex-col gap-8 text-[14px] leading-relaxed text-[#4a3f33] dark:text-[#cfc4b4]">
                         {children}

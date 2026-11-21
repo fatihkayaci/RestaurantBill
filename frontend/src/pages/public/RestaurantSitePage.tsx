@@ -116,7 +116,7 @@ function HomeHero({ site, cart }: { site: PublicSite; cart: SiteCart }) {
     if (actions.length < 2 && site.phone) actions.push({ key: 'ara', label: 'Hemen ara', href: telHref(site.phone) });
 
     // Alt şerit: durum + bugünün saatleri · paket sipariş · hazırlık · en az sipariş. Verisi olmayan hücre çizilmez.
-    const cellLabel = cn('text-[11px] font-extrabold uppercase tracking-[0.16em]', mustard);
+    const cellLabel = cn('text-xs font-extrabold uppercase tracking-[0.16em]', mustard);
     const cellValue = cn(serif, 'text-2xl leading-[1.1]');
     const cells: StripCell[] = [];
     const today = weekSchedule(site)?.find(r => r.isToday) ?? null;

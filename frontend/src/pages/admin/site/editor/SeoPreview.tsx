@@ -70,7 +70,7 @@ export function SeoPreview({ name, siteUrl, draft, live, compact = false }: {
                                 </div>
                             </div>
                             <div className="px-1.5 pb-0.5 pt-1.5 text-sm text-[#027eb5]">{url}</div>
-                            <div className="px-1.5 pb-0.5 text-right text-[11px] text-[#667781]">19:42 ✓✓</div>
+                            <div className="px-1.5 pb-0.5 text-right text-xs text-[#667781]">19:42 ✓✓</div>
                         </div>
                     </div>
                     <span className="text-sm text-[#5C5046]">Instagram, Facebook ve Telegram da aynı görseli ve başlığı kullanır.</span>

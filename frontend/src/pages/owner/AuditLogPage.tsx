@@ -169,7 +169,7 @@ export default function AuditLogPage() {
                     <SlidersHorizontal className="h-4 w-4" />
                     Filtrele
                     {activeFilterCount > 0 && (
-                        <span className="flex items-center justify-center h-4 w-4 rounded-full bg-rb-accent text-rb-accent-foreground text-[10px] font-semibold">
+                        <span className="flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-rb-accent text-rb-accent-foreground text-xs font-semibold">
                             {activeFilterCount}
                         </span>
                     )}
@@ -189,7 +189,7 @@ export default function AuditLogPage() {
             {filtersOpen && (
                 <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Başlangıç</label>
+                        <label className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Başlangıç</label>
                         <input
                             type="date"
                             max={getToday()}
@@ -200,7 +200,7 @@ export default function AuditLogPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Bitiş</label>
+                        <label className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Bitiş</label>
                         <input
                             type="date"
                             max={getToday()}
@@ -211,7 +211,7 @@ export default function AuditLogPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Şube</label>
+                        <label className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Şube</label>
                         <select
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                             value={draftBranchFilter}
@@ -225,7 +225,7 @@ export default function AuditLogPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Kategori</label>
+                        <label className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Kategori</label>
                         <select
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                             value={draftCategoryFilter}
@@ -239,7 +239,7 @@ export default function AuditLogPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Önem</label>
+                        <label className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Önem</label>
                         <select
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                             value={draftSeverityFilter}
@@ -253,7 +253,7 @@ export default function AuditLogPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Kullanıcı</label>
+                        <label className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Kullanıcı</label>
                         <select
                             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                             value={draftUserFilter}
@@ -281,12 +281,12 @@ export default function AuditLogPage() {
                 <table className="w-full min-w-[720px] text-sm">
                     <thead>
                         <tr className="border-b border-border">
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Zaman</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Şube</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kategori</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Önem</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kullanıcı</th>
-                            <th className="text-left text-[11px] font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Detay</th>
+                            <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-5 py-3">Zaman</th>
+                            <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Şube</th>
+                            <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kategori</th>
+                            <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Önem</th>
+                            <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Kullanıcı</th>
+                            <th className="text-left text-xs font-semibold tracking-widest uppercase text-muted-foreground px-4 py-3">Detay</th>
                         </tr>
                     </thead>
                     <tbody>

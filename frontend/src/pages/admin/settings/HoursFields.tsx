@@ -38,7 +38,7 @@ interface TimeSelectProps {
 export function TimeSelect({ label, ariaLabel, value, options, onChange, isDisabled, error, errorId }: TimeSelectProps) {
     return (
         <label className="flex flex-col gap-1 sm:w-40">
-            <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
+            <span className="text-xs font-semibold text-muted-foreground">{label}</span>
             <select
                 aria-label={ariaLabel}
                 aria-invalid={error ? true : undefined}
@@ -59,7 +59,7 @@ export function CopyToAllButton({ onClick }: { onClick: () => void }) {
         <button
             type="button"
             onClick={onClick}
-            className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-rb-accent transition-opacity hover:opacity-80"
+            className="ml-auto flex items-center gap-1 text-xs font-semibold text-rb-accent transition-opacity hover:opacity-80"
         >
             <Copy className="h-3.5 w-3.5" aria-hidden="true" />
             Tüm günlere kopyala

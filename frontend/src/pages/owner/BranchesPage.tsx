@@ -228,15 +228,15 @@ export default function BranchesPage() {
                             <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-2 text-center">
                                 <div>
                                     <p className="text-lg font-serif font-bold text-foreground">{branch.tableCount ?? 0}</p>
-                                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Masa</p>
+                                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Masa</p>
                                 </div>
                                 <div>
                                     <p className="text-lg font-serif font-bold text-foreground">{branch.staffCount ?? 0}</p>
-                                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Çalışan</p>
+                                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Çalışan</p>
                                 </div>
                                 <div>
-                                    <p className="text-lg font-serif font-bold text-foreground">₺{formatPrice(branch.revenue ?? 0)}</p>
-                                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Toplam Ciro</p>
+                                    <p className="text-lg font-serif font-bold text-foreground">{formatPrice(branch.revenue ?? 0)} ₺</p>
+                                    <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Toplam Ciro</p>
                                 </div>
                             </div>
                             <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-sm">

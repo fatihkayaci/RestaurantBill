@@ -230,17 +230,17 @@ export default function CashRegisters() {
             {/* Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="rounded-xl border border-rb-green/30 bg-rb-green-bg p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-green">Toplam Bakiye</p>
-                    <p className="text-3xl font-bold text-foreground mt-2">₺{formatPrice(totalBalance)}</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-rb-green">Toplam Bakiye</p>
+                    <p className="text-3xl font-bold text-foreground mt-2">{formatPrice(totalBalance)} ₺</p>
                     <p className="text-xs text-muted-foreground mt-1">tüm kasalar</p>
                 </div>
                 <div className="rounded-xl border border-rb-accent/30 bg-rb-accent-bg p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-accent">Toplam Kasa</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-rb-accent">Toplam Kasa</p>
                     <p className="text-3xl font-bold text-foreground mt-2">{registers.length}</p>
                     <p className="text-xs text-muted-foreground mt-1">kayıtlı</p>
                 </div>
                 <div className="rounded-xl border border-rb-amber/30 bg-rb-amber-bg p-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-rb-amber">Kullanımda</p>
+                    <p className="text-xs font-semibold tracking-widest uppercase text-rb-amber">Kullanımda</p>
                     <p className="text-3xl font-bold text-foreground mt-2">{openCount}</p>
                     <p className="text-xs text-muted-foreground mt-1">kasiyer kapısında görünen</p>
                 </div>
@@ -286,15 +286,15 @@ export default function CashRegisters() {
 
                         {/* Balance */}
                         <div>
-                            <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">Bakiye</p>
-                            <p className="text-2xl font-bold text-foreground mt-1">₺{formatAmount(r.balance)}</p>
+                            <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Bakiye</p>
+                            <p className="text-2xl font-bold text-foreground mt-1">{formatAmount(r.balance)} ₺</p>
                         </div>
 
                         {/* Vardiya durumu + işlemler */}
                         <div className="flex items-start justify-between flex-wrap gap-2">
                             <div className="flex flex-col gap-1 min-w-0">
                                 <span className={cn(
-                                    "self-start inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full",
+                                    "self-start inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded-full",
                                     shiftState === 'open' && "bg-rb-green-bg text-rb-green",
                                     shiftState === 'uncounted' && "bg-rb-amber-bg text-rb-amber",
                                     shiftState === 'empty' && "bg-muted text-muted-foreground",
@@ -451,7 +451,7 @@ export default function CashRegisters() {
                             />
                             {txError && <p className="text-xs text-destructive mt-1">{txError}</p>}
                             <p className="text-xs text-muted-foreground mt-2">
-                                Mevcut bakiye: ₺{formatAmount(txTarget.balance)}
+                                Mevcut bakiye: {formatAmount(txTarget.balance)} ₺
                             </p>
                         </form>
 
@@ -507,7 +507,7 @@ export default function CashRegisters() {
                                     <button
                                         type="button"
                                         onClick={() => setTransferAmount(transferSource.balance.toString())}
-                                        className="text-[11px] font-semibold text-rb-accent hover:opacity-80 transition-colors"
+                                        className="text-xs font-semibold text-rb-accent hover:opacity-80 transition-colors"
                                     >
                                         Tümünü Yaz
                                     </button>
@@ -524,7 +524,7 @@ export default function CashRegisters() {
                                 />
                                 {transferError && <p className="text-xs text-destructive mt-1">{transferError}</p>}
                                 <p className="text-xs text-muted-foreground mt-2">
-                                    Mevcut bakiye: ₺{formatAmount(transferSource.balance)}
+                                    Mevcut bakiye: {formatAmount(transferSource.balance)} ₺
                                 </p>
                             </div>
                         </form>

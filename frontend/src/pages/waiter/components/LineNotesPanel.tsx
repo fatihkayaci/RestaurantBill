@@ -76,7 +76,7 @@ export default function LineNotesPanel({
                         maxLength={200}
                         placeholder="Not yaz (ör. az tuzlu)"
                         aria-label={multiple ? `${productName} ${index + 1}. satır notu` : `${productName} notu`}
-                        className="h-11 w-full rounded-full border border-border bg-background px-4 text-sm outline-none focus:ring-2 focus:ring-rb-gold"
+                        className="h-11 w-full rounded-full border border-border bg-background px-4 text-sm outline-none focus:ring-2 focus:ring-ring"
                     />
                 </div>
             ))}

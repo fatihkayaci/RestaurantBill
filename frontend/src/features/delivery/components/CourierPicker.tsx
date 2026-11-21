@@ -45,7 +45,7 @@ export default function CourierPicker({ couriers, selectedId, disabled, onPick }
                         </span>
                         <span className="flex shrink-0 items-center gap-1.5">
                             <span className={cn(
-                                'rounded px-1.5 py-0.5 text-[11px] font-bold',
+                                'rounded px-1.5 py-0.5 text-xs font-bold',
                                 free ? 'bg-rb-green-bg text-rb-green' : c.onTheWayCount > 0 ? 'bg-rb-accent-bg text-rb-accent' : 'bg-rb-amber-bg text-rb-amber'
                             )}>
                                 {courierLoadText(c)}

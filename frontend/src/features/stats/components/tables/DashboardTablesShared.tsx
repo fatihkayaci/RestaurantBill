@@ -91,7 +91,7 @@ export function TableFlags({ table, now }: { table: LiveTable; now: number }) {
             {flags.map(f => (
                 <li
                     key={f.key}
-                    className={cn('inline-flex max-w-full items-center gap-1 rounded-md border border-current/25 px-1.5 py-0.5 text-[11px] font-bold tabular-nums', f.cls)}
+                    className={cn('inline-flex max-w-full items-center gap-1 rounded-md border border-current/25 px-1.5 py-0.5 text-xs font-bold tabular-nums', f.cls)}
                 >
                     <f.icon className="h-3 w-3 shrink-0" aria-hidden="true" />
                     <span className="truncate">{f.text}</span>
@@ -114,9 +114,9 @@ function Stat({ icon: Icon, label, value, sub, tone, wrapSub }: {
         <div className={cn('flex min-w-0 items-center gap-2 rounded-xl bg-background px-3 py-2', tone)}>
             <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
             <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wide opacity-80">{label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide opacity-80">{label}</p>
                 <p className="truncate text-base font-bold leading-tight tabular-nums">{value}</p>
-                {sub && <div className={cn('text-[11px] tabular-nums opacity-80', !wrapSub && 'truncate')}>{sub}</div>}
+                {sub && <div className={cn('text-xs tabular-nums opacity-80', !wrapSub && 'truncate')}>{sub}</div>}
             </div>
         </div>
     );

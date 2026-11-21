@@ -23,7 +23,7 @@
   --destructive-foreground: #FFFFFF;
   --border: #E8E0D0;
   --input: #E8E0D0;
-  --ring: #2B7FFF;
+  --ring: #7A5A1E; /* odak halkası: koyu altın, zeminde 5,6:1 */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -59,7 +59,7 @@
   --destructive-foreground: #FFFFFF;
   --border: #3D3528;
   --input: #3D3528;
-  --ring: #5C9FFF;
+  --ring: #C8A96E; /* odak halkası: altın, zeminde 8,2:1 */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -77,7 +77,7 @@
 
 :root {
   --rb-text-sub: #6B5E52;
-  --rb-text-muted: #A39080;
+  --rb-text-muted: #73655A; /* 4,5:1 alt sınırı: zeminde 4,9, kartta 5,4, muted kutuda 4,6 */
   --rb-accent: #2B7FFF;
   --rb-accent-bg: rgba(43,127,255,0.09);
   --rb-accent-foreground: #FFFFFF;
@@ -103,11 +103,19 @@
   --rb-border: #E8E0D0;
   --rb-toggle-track-off: rgba(0,0,0,0.12);
   --rb-checkbox-off-bg: rgba(0,0,0,0.04);
+  /* Yazı tonları: açık zeminde ve kendi soluk dolgusunda (…-bg) en az 4,5:1. Dolgu, nokta ve çizgi renkleri
+     (bg-/border-rb-*) değişmez; text-rb-* sınıfları @theme'deki --text-color-* üzerinden bu tonları kullanır. */
+  --rb-accent-text: #1F5FD0;
+  --rb-green-text: #17703F;
+  --rb-amber-text: #7F5D07;
+  --rb-orange-text: #A3410B;
+  --rb-red-text: #B02525;
+  --rb-gold-text: #7A5A1E;
 }
 
 .dark {
   --rb-text-sub: #A89880;
-  --rb-text-muted: #7A6E60;
+  --rb-text-muted: #9A8D7B; /* kartta 5,1, surface2'de 4,8 */
   --rb-accent: #5C9FFF;
   --rb-accent-bg: rgba(92,159,255,0.14);
   --rb-accent-foreground: #0E0B08;
@@ -133,6 +141,38 @@
   --rb-border: #3D3528;
   --rb-toggle-track-off: rgba(255,255,255,0.15);
   --rb-checkbox-off-bg: rgba(255,255,255,0.05);
+  /* Koyu temada parlak tonlar zaten okunur; yazı tonu dolgu rengiyle aynı (kırmızı biraz açıldı: 4,3 → 5,2). */
+  --rb-accent-text: #5C9FFF;
+  --rb-green-text: #45C87A;
+  --rb-amber-text: #E8B835;
+  --rb-orange-text: #F07840;
+  --rb-red-text: #F47A7A;
+  --rb-gold-text: #C8A96E;
+}
+
+/* Koyu yüzeyler: kenar çubuğu, üst çubuklar (bg-sidebar), ters zemin (açık temada bg-foreground) ve elle işaretlenmiş
+   koyu bloklar (.rb-on-dark: tanıtım sayfası, giriş paneli, alt bilgi). Açık temanın koyu yazı tonları burada okunmaz
+   (altın 2,8:1); koyu temanın parlak tonlarına dönülür. Özel değişken miras kaldığı için içteki her text-rb-* doğru tonu alır. */
+.bg-sidebar,
+.bg-foreground,
+.rb-on-dark {
+  --rb-accent-text: #5C9FFF;
+  --rb-green-text: #45C87A;
+  --rb-amber-text: #E8B835;
+  --rb-orange-text: #F07840;
+  --rb-red-text: #F47A7A;
+  --rb-gold-text: #C8A96E;
+  --rb-text-muted: #9A8D7B;
+}
+/* Koyu temada bg-foreground açık renktir: orada açık temanın koyu tonları geçerli. */
+.dark .bg-foreground {
+  --rb-accent-text: #1F5FD0;
+  --rb-green-text: #17703F;
+  --rb-amber-text: #7F5D07;
+  --rb-orange-text: #A3410B;
+  --rb-red-text: #B02525;
+  --rb-gold-text: #7A5A1E;
+  --rb-text-muted: #73655A;
 }
 
 @theme inline {
@@ -197,13 +237,38 @@
   --color-rb-neutral-bg: var(--rb-neutral-bg);
   --color-rb-surface2: var(--rb-surface2);
   --color-rb-border: var(--rb-border);
+  /* Yalnızca yazı rengi (text-rb-*): Tailwind önce --text-color-* anahtarına bakar; bg-/border-/ring- yine --color-* kullanır. */
+  --text-color-rb-accent: var(--rb-accent-text);
+  --text-color-rb-green: var(--rb-green-text);
+  --text-color-rb-amber: var(--rb-amber-text);
+  --text-color-rb-orange: var(--rb-orange-text);
+  --text-color-rb-red: var(--rb-red-text);
+  --text-color-rb-gold: var(--rb-gold-text);
   --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Cormorant Garamond', ui-serif, Georgia, serif;
 }
 
+/* Yazı ölçeği (personel uygulaması). Alt sınır 12 px (text-xs): okunacak hiçbir yazı bunun altına inmez.
+   Basamaklar: 12 (xs, rozet/ipucu) · 13 label · 15 body · 17 title · 22 heading · 28 display · 40 hero.
+   Yeni kodda sabit text-[Npx] yerine bu adlar kullanılır; eski sabit boyutlar dosya dosya taşınacak. */
+@theme {
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.125rem;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.375rem;
+  --text-title: 1.0625rem;
+  --text-title--line-height: 1.5rem;
+  --text-heading: 1.375rem;
+  --text-heading--line-height: 1.75rem;
+  --text-display: 1.75rem;
+  --text-display--line-height: 2.125rem;
+  --text-hero: 2.5rem;
+  --text-hero--line-height: 1.1;
+}
+
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground font-sans;
@@ -282,7 +347,13 @@ html.theme-transition *::after {
   --muted-foreground: #6B5E52;
   --border: #E2D8C6;
   --rb-text-sub: #6B5E52;
-  --rb-text-muted: #A39080;
+  --rb-text-muted: #73655A;
+  --rb-accent-text: #1F5FD0;
+  --rb-green-text: #17703F;
+  --rb-amber-text: #7F5D07;
+  --rb-orange-text: #A3410B;
+  --rb-red-text: #B02525;
+  --rb-gold-text: #7A5A1E;
   --rb-green: #1F8A52;
   --rb-green-bg: rgba(31,138,82,0.09);
   --rb-green-foreground: #FFFFFF;
@@ -304,6 +375,16 @@ html.theme-transition *::after {
   --kitchen-late-line: rgba(158,68,48,0.55);
   background-color: var(--card);
   color: var(--foreground);
+}
+/* Kâğıdın üstündeki koyu etiket (bg-foreground = kâğıdın koyu mürekkebi): koyu temada da parlak tonlar. */
+.dark .kitchen-paper .bg-foreground {
+  --rb-accent-text: #5C9FFF;
+  --rb-green-text: #45C87A;
+  --rb-amber-text: #E8B835;
+  --rb-orange-text: #F07840;
+  --rb-red-text: #F47A7A;
+  --rb-gold-text: #C8A96E;
+  --rb-text-muted: #9A8D7B;
 }
 
 /* Bilet rayının yatay kaydırma çubuğu: ince, rayın tonunda. */

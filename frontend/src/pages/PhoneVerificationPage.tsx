@@ -134,7 +134,7 @@ export default function PhoneVerificationPage() {
                 <h1 className="text-2xl font-serif font-bold text-foreground">
                     Telefon Numaranızı Doğrulayın
                 </h1>
-                <p className="text-[13px] mt-1.5" style={{ color: "#a39080" }}>
+                <p className="text-[13px] mt-1.5 text-rb-text-sub">
                     Kayıtlı telefon numaranıza gönderilen 6 haneli kodu girin.
                 </p>
 
@@ -153,7 +153,7 @@ export default function PhoneVerificationPage() {
                                 onChange={e => handleChange(index, e.target.value)}
                                 onKeyDown={e => handleKeyDown(index, e)}
                                 onPaste={handlePaste}
-                                className="w-11 min-w-0 flex-1 max-w-11 h-13 text-center text-lg font-semibold rounded-xl border border-border bg-[rgb(245,240,232)] dark:bg-white/5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-rb-accent"
+                                className="w-11 min-w-0 flex-1 max-w-11 h-13 text-center text-lg font-semibold rounded-xl border border-border bg-[rgb(245,240,232)] dark:bg-white/5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
                             />
                         ))}
                     </div>

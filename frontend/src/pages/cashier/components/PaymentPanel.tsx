@@ -290,13 +290,13 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
             setSelectedQuantities({});
             resetDiscount();
             setAmountInput('');
-            const paidMessage = discountValue > 0 ? `Ödeme tamamlandı! (₺${formatPrice(netAmount)})` : 'Ödeme tamamlandı!';
+            const paidMessage = discountValue > 0 ? `Ödeme tamamlandı! (${formatPrice(netAmount)} ₺)` : 'Ödeme tamamlandı!';
             if (fullyPaid) {
                 toast.success(paidMessage);
                 onComplete(displayOrder.id);
             } else {
                 toast.success(split === 'amount'
-                    ? `₺${formatPrice(netAmount)} alındı, kalan ₺${formatPrice(remainingAfter)} için masa açık kalıyor.`
+                    ? `${formatPrice(netAmount)} ₺ alındı, kalan ${formatPrice(remainingAfter)} ₺ için masa açık kalıyor.`
                     : 'Kısmi ödeme alındı, kalan tutar için masa açık kalıyor.');
                 // Paket siparişin masası yok; tahsilatı bu panelden alınmaz (kurye teslim akışı).
                 const refreshed = displayOrder.tableId ? await orderService.getOrderByTableId(displayOrder.tableId) : null;
@@ -383,7 +383,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                         {line.components && line.components.length > 0 && (
                                             <p className="text-xs text-muted-foreground">{line.components.map(c => c.productName).join(' · ')}</p>
                                         )}
-                                        <p className="text-xs text-muted-foreground">₺{formatPrice(line.unitPrice)} / adet</p>
+                                        <p className="text-xs text-muted-foreground">{formatPrice(line.unitPrice)} ₺ / adet</p>
                                         {line.note && <p className="text-xs text-rb-amber mt-0.5">Not: {line.note}</p>}
                                         {discountAllowed && (
                                             <button
@@ -395,7 +395,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                             >
                                                 <Tag className="w-3.5 h-3.5" aria-hidden="true" />
                                                 {lineDiscount > 0
-                                                    ? `İndirim ${describeLineDiscount(lineDiscounts[line.key], paidQty)} · -₺${formatPrice(lineDiscount)}`
+                                                    ? `İndirim ${describeLineDiscount(lineDiscounts[line.key], paidQty)} · -${formatPrice(lineDiscount)} ₺`
                                                     : 'İndirim'}
                                             </button>
                                         )}
@@ -434,11 +434,11 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                     </div>
                                     <span className="w-16 text-right">
                                         <span className={`block text-sm font-semibold tabular-nums ${lineDiscount > 0 ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                                            ₺{formatPrice(line.unitPrice * line.quantity)}
+                                            {formatPrice(line.unitPrice * line.quantity)} ₺
                                         </span>
                                         {lineDiscount > 0 && (
                                             <span className="block text-sm font-semibold tabular-nums text-foreground">
-                                                ₺{formatPrice(line.unitPrice * line.quantity - lineDiscount)}
+                                                {formatPrice(line.unitPrice * line.quantity - lineDiscount)} ₺
                                             </span>
                                         )}
                                     </span>
@@ -469,7 +469,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                         onChange={e => updateLineDiscount(line.key, { input: e.target.value.replace(/[^\d.,]/g, '') })}
                                         placeholder={lineType === 'percent' ? 'Yüzde (%)' : 'Toplam tutar (₺)'}
                                         aria-label={`${line.productName}: indirim ${(lineInput?.type ?? 'percent') === 'percent' ? 'yüzdesi' : 'tutarı'}`}
-                                        className="h-9 w-28 rounded-lg border border-border bg-muted/50 px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                                        className="h-9 w-28 rounded-lg border border-border bg-muted/50 px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                     />
                                     {paidQty > 1 && (
                                         <div className="flex items-center gap-1 rounded-lg border border-border px-1 py-0.5" role="group" aria-label={`${line.productName}: indirim kaç adede`}>
@@ -523,20 +523,20 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                 {/* Sağ: Toplam + Ödeme */}
                 <div className="md:w-90 shrink-0 border-t md:border-t-0 md:border-l border-border md:overflow-y-auto flex flex-col">
                     <div className="px-6 py-6 text-center border-b border-border">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Tahsil edilecek</p>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tahsil edilecek</p>
                         <p className="mt-1 text-4xl font-serif font-bold tabular-nums text-foreground">
-                            ₺{formatPrice(netAmount)}
+                            {formatPrice(netAmount)} ₺
                         </p>
                         {(hasSelection || discountValue > 0 || split === 'amount' || paidOnAccount > 0) && (
                             <p className="mt-1 text-sm text-muted-foreground tabular-nums">
-                                Sipariş toplamı ₺{formatPrice(displayOrder.totalPrice)}
+                                Sipariş toplamı {formatPrice(displayOrder.totalPrice)} ₺
                             </p>
                         )}
                         {paidOnAccount > 0 && (
                             <p className="mt-0.5 text-sm font-semibold tabular-nums">
-                                <span className="text-rb-green">Ödenen ₺{formatPrice(paidOnAccount)}</span>
+                                <span className="text-rb-green">Ödenen {formatPrice(paidOnAccount)} ₺</span>
                                 <span className="text-muted-foreground"> · </span>
-                                <span className="text-foreground">Kalan ₺{formatPrice(due)}</span>
+                                <span className="text-foreground">Kalan {formatPrice(due)} ₺</span>
                             </p>
                         )}
                         {taxGroups.length > 1 ? (
@@ -555,20 +555,20 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                             const kdvTutari = group.total - matrah;
                                             return (
                                                 <div key={group.rate} className="px-3 py-2.5 space-y-1">
-                                                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                                                         {Array.from(group.categories).join(', ') || 'Diğer'} · KDV %{group.rate}
                                                     </p>
                                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                         <span>Matrah</span>
-                                                        <span className="tabular-nums">₺{formatAmount(matrah)}</span>
+                                                        <span className="tabular-nums">{formatAmount(matrah)} ₺</span>
                                                     </div>
                                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                         <span>KDV Tutarı</span>
-                                                        <span className="tabular-nums">₺{formatAmount(kdvTutari)}</span>
+                                                        <span className="tabular-nums">{formatAmount(kdvTutari)} ₺</span>
                                                     </div>
                                                     <div className="flex items-center justify-between text-xs font-medium text-foreground pt-0.5">
                                                         <span>Ara Toplam</span>
-                                                        <span className="tabular-nums">₺{formatAmount(group.total)}</span>
+                                                        <span className="tabular-nums">{formatAmount(group.total)} ₺</span>
                                                     </div>
                                                 </div>
                                             );
@@ -582,19 +582,19 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                         {hasSelection && (
                             <div className="mt-3 rounded-lg bg-rb-accent-bg border border-rb-accent px-3 py-2 flex items-center justify-between">
                                 <span className="text-xs font-medium text-rb-accent">Seçili Tutar</span>
-                                <span className="text-sm font-semibold text-rb-accent tabular-nums">₺{formatPrice(selectedTotal)}</span>
+                                <span className="text-sm font-semibold text-rb-accent tabular-nums">{formatPrice(selectedTotal)} ₺</span>
                             </div>
                         )}
                         {itemDiscountValue > 0 && (
                             <div className="mt-3 rounded-lg bg-rb-red-bg border border-rb-red px-3 py-2 flex items-center justify-between">
                                 <span className="text-xs font-medium text-rb-red">Ürün indirimi</span>
-                                <span className="text-sm font-semibold text-rb-red tabular-nums">-₺{formatPrice(itemDiscountValue)}</span>
+                                <span className="text-sm font-semibold text-rb-red tabular-nums">-{formatPrice(itemDiscountValue)} ₺</span>
                             </div>
                         )}
                         {billDiscountValue > 0 && (
                             <div className="mt-3 rounded-lg bg-rb-red-bg border border-rb-red px-3 py-2 flex items-center justify-between">
                                 <span className="text-xs font-medium text-rb-red">{itemDiscountValue > 0 ? 'Hesap indirimi' : 'İndirim'}</span>
-                                <span className="text-sm font-semibold text-rb-red tabular-nums">-₺{formatPrice(billDiscountValue)}</span>
+                                <span className="text-sm font-semibold text-rb-red tabular-nums">-{formatPrice(billDiscountValue)} ₺</span>
                             </div>
                         )}
                     </div>
@@ -620,7 +620,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                             </div>
                             {itemsLocked && (
                                 <p className="text-xs text-muted-foreground">
-                                    Bu hesaptan ₺{formatPrice(paidOnAccount)} tutar girilerek ödendi; kalan, tutar girerek ya da tamamıyla ödenir.
+                                    Bu hesaptan {formatPrice(paidOnAccount)} ₺ tutar girilerek ödendi; kalan, tutar girerek ya da tamamıyla ödenir.
                                 </p>
                             )}
                             {split === 'items' && !hasSelection && (
@@ -638,7 +638,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                             placeholder={formatPrice(due)}
                                             aria-label="Bu ödemede alınacak tutar"
                                             aria-invalid={amountTooHigh}
-                                            className={`w-full rounded-lg border bg-muted/50 py-2.5 pr-3 pl-8 text-lg font-semibold tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent ${amountTooHigh ? 'border-rb-red' : 'border-border'}`}
+                                            className={`w-full rounded-lg border bg-muted/50 py-2.5 pr-3 pl-8 text-lg font-semibold tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${amountTooHigh ? 'border-rb-red' : 'border-border'}`}
                                         />
                                     </div>
                                     <div className="grid grid-cols-4 gap-1.5">
@@ -650,21 +650,21 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                                     key={label}
                                                     type="button"
                                                     aria-pressed={on}
-                                                    aria-label={parts === 1 ? `Kalanın tamamı, ₺${formatPrice(value)}` : `Kalanın ${label} kadarı, ₺${formatPrice(value)}`}
+                                                    aria-label={parts === 1 ? `Kalanın tamamı, ${formatPrice(value)} ₺` : `Kalanın ${label} kadarı, ${formatPrice(value)} ₺`}
                                                     onClick={() => setAmountInput(String(value).replace('.', ','))}
                                                     className={`flex min-h-11 flex-col items-center justify-center rounded-lg border text-sm font-semibold leading-tight transition-colors ${
                                                         on ? 'border-rb-accent bg-rb-accent-bg text-rb-accent' : 'border-border text-foreground hover:bg-muted'
                                                     }`}
                                                 >
                                                     <span>{label}</span>
-                                                    <span className="text-[11px] font-medium tabular-nums text-muted-foreground">₺{formatPrice(value)}</span>
+                                                    <span className="text-xs font-medium tabular-nums text-muted-foreground">{formatPrice(value)} ₺</span>
                                                 </button>
                                             );
                                         })}
                                     </div>
                                     <p className={`text-xs ${amountTooHigh ? 'font-semibold text-rb-red' : 'text-muted-foreground'}`}>
                                         {amountTooHigh
-                                            ? `Kalan tutardan (₺${formatPrice(due)}) fazla olamaz.`
+                                            ? `Kalan tutardan (${formatPrice(due)} ₺) fazla olamaz.`
                                             : 'Ürünler masada kalır, tutar kalandan düşer. Kalan 0 olunca hesap kapanır. İndirim, kalanı kapatırken uygulanır.'}
                                     </p>
                                 </div>
@@ -704,7 +704,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 value={discountValueInput}
                                 onChange={e => setDiscountValueInput(e.target.value)}
                                 placeholder={discountType === 'percent' ? 'Yüzde girin (%)' : 'Tutar girin (₺)'}
-                                className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                                className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                             />
                             <p className="mt-1 text-xs text-muted-foreground">
                                 {itemDiscountValue > 0
@@ -722,7 +722,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                     value={discountNote}
                                     onChange={e => setDiscountNote(e.target.value)}
                                     placeholder="Not (isteğe bağlı)"
-                                    className="mt-2 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rb-accent"
+                                    className="mt-2 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                 />
                             )}
                         </div>
@@ -811,7 +811,7 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 <dl className="space-y-1 text-sm">
                                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">IBAN</dt><dd className="font-mono text-[13px] text-foreground text-right">{ibanSettings.ibanFormatted || ibanSettings.iban}</dd></div>
                                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Alıcı</dt><dd className="text-foreground text-right">{ibanSettings.accountHolderName}</dd></div>
-                                    <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Tutar</dt><dd className="font-semibold text-foreground tabular-nums">₺{formatAmount(netAmount)}</dd></div>
+                                    <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Tutar</dt><dd className="font-semibold text-foreground tabular-nums">{formatAmount(netAmount)} ₺</dd></div>
                                     <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Açıklama</dt><dd className="text-foreground text-right">{transferDescription}</dd></div>
                                 </dl>
                                 <button
@@ -840,14 +840,14 @@ export default function PaymentPanel({ order, onClose, onComplete, cashRegisterM
                                 {submitting
                                     ? 'İşleniyor...'
                                     : paymentMethod === 'iban'
-                                        ? `Havale geldi, onayla (₺${formatPrice(netAmount)})`
+                                        ? `Havale geldi, onayla (${formatPrice(netAmount)} ₺)`
                                         : split === 'amount'
-                                        ? (amountTooHigh ? 'Tutar kalandan fazla' : amountValue > 0 ? `Tutarı Öde (₺${formatPrice(netAmount)})` : 'Tutar girin')
+                                        ? (amountTooHigh ? 'Tutar kalandan fazla' : amountValue > 0 ? `Tutarı Öde (${formatPrice(netAmount)} ₺)` : 'Tutar girin')
                                         : split === 'items'
-                                        ? (hasSelection ? `Seçilenleri Öde (₺${formatPrice(netAmount)})` : 'Ürün seçin')
+                                        ? (hasSelection ? `Seçilenleri Öde (${formatPrice(netAmount)} ₺)` : 'Ürün seçin')
                                         : paidOnAccount > 0
-                                        ? `Kalanı Öde (₺${formatPrice(netAmount)})`
-                                        : `Tümünü Öde (₺${formatPrice(netAmount)})`}
+                                        ? `Kalanı Öde (${formatPrice(netAmount)} ₺)`
+                                        : `Tümünü Öde (${formatPrice(netAmount)} ₺)`}
                             </button>
                         </div>
                     </div>
