@@ -110,6 +110,9 @@ function etaChoicesFor(order: DeliveryOrder): number[] {
  * para almaz.
  */
 function paymentInfo(order: DeliveryOrder) {
+    // Gel al'da tercih yoksa müşteri restoranda öder; yöntem "Müşteri aldı"da seçilir.
+    if (order.paymentPreference == null)
+        return { Icon: Wallet, label: 'Restoranda ödeyecek', note: null, tone: 'text-muted-foreground' };
     const cash = order.paymentPreference === DoorPayment.Nakit;
     const iban = order.paymentPreference === DoorPayment.Iban;
     return {
@@ -1147,7 +1150,8 @@ function DeliveredSection({ unsettled, unsettledTotal, settled, now, onOpen, wid
 // Teslim edilmiş sipariş: tek satır; dokununca detay açılır.
 function DeliveredRow({ order, now, onOpen }: { order: DeliveryOrder; now: number; onOpen: () => void }) {
     const amount = order.collectedAmount ?? order.total;
-    const method = doorPaymentWord(order.collectedMethod ?? order.paymentPreference);
+    const paidWith = order.collectedMethod ?? order.paymentPreference;
+    const method = paidWith == null ? '' : doorPaymentWord(paidWith);
     return (
         <button
             type="button"
@@ -1355,9 +1359,13 @@ function ListRow({ order, now, couriers, pickerOpen, onTogglePicker, assigning, 
                 <span className="min-w-0">{isNew ? <span className="text-sm text-muted-foreground">—</span> : <LatenessBadge order={order} now={now} />}</span>
                 <span className="ml-auto text-right font-serif text-lg font-bold tabular-nums text-foreground lg:ml-0">
                     {formatPrice(order.total)} ₺{' '}
-                    <span className={cn('font-sans text-xs font-bold', cash ? 'text-rb-green' : order.paymentPreference === DoorPayment.Iban ? 'text-rb-purple' : 'text-rb-accent')}>
-                        {cash ? 'NAKİT' : order.paymentPreference === DoorPayment.Iban ? 'IBAN' : 'KART'}
-                    </span>
+                    {order.paymentPreference == null ? (
+                        <span className="font-sans text-xs font-bold text-muted-foreground">KASADA</span>
+                    ) : (
+                        <span className={cn('font-sans text-xs font-bold', cash ? 'text-rb-green' : order.paymentPreference === DoorPayment.Iban ? 'text-rb-purple' : 'text-rb-accent')}>
+                            {cash ? 'NAKİT' : order.paymentPreference === DoorPayment.Iban ? 'IBAN' : 'KART'}
+                        </span>
+                    )}
                 </span>
                 <span className="min-w-0">
                     {canAssign ? (

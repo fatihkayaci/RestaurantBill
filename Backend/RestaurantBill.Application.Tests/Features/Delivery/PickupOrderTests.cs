@@ -28,7 +28,8 @@ public class PickupOrderTests : DeliveryTestBase
         CustomerName = "Ahmet Yılmaz",
         Phone = Phone,
         Note = "Acısız olsun",
-        PaymentMethod = PaymentMethod.Nakit,
+        // Gel al'da nakit/kart sorulmaz: ödeme restoranda, yöntem teslimde belli olur.
+        PaymentMethod = null,
         ExpectedTotal = expectedTotal
     };
 
@@ -145,20 +146,116 @@ public class PickupOrderTests : DeliveryTestBase
         var pickup = new SubmitDeliveryOrderCommand
         {
             ClientRequestId = Guid.NewGuid(), Pickup = true, Lines = [ProductLine(Product.Create("Ayran", 30m, "", Guid.NewGuid()))],
-            CustomerName = "Ahmet", Phone = Phone, PaymentMethod = PaymentMethod.Kart
+            CustomerName = "Ahmet", Phone = Phone, PaymentMethod = null
         };
         pickup.Lines[0].ProductId = Guid.NewGuid();
         Assert.True(validator.Validate(pickup).IsValid);
 
+        pickup.PaymentMethod = PaymentMethod.Iban;
+        Assert.True(validator.Validate(pickup).IsValid);
+
+        // Gel al'da nakit/kart seçilmez.
+        pickup.PaymentMethod = PaymentMethod.Kart;
+        var cardPickup = validator.Validate(pickup);
+        Assert.False(cardPickup.IsValid);
+        Assert.Contains(cardPickup.Errors, e => e.ErrorMessage == SubmitDeliveryOrderCommandHandler.PickupPaymentMessage);
+
+        // Adrese teslimde ödeme yöntemi hâlâ zorunlu.
+        pickup.PaymentMethod = null;
         pickup.Pickup = false;
         var delivery = validator.Validate(pickup);
         Assert.False(delivery.IsValid);
         Assert.Contains(delivery.Errors, e => e.ErrorMessage == "Teslimat bölgenizi seçin.");
         Assert.Contains(delivery.Errors, e => e.ErrorMessage == "Adresinizi girin.");
+        Assert.Contains(delivery.Errors, e => e.ErrorMessage == "Ödeme yöntemini seçin.");
 
         pickup.Pickup = true;
         pickup.CustomerName = "";
         Assert.False(validator.Validate(pickup).IsValid);
+    }
+
+    // ── Gel al ödemesi ─────────────────────────────────────────────────────────────────────────
+
+    private const string ValidIban = "TR330006100519786457841326";
+
+    [Fact]
+    public async Task Submit_Pickup_WithoutPaymentMethod_PaysAtCounter()
+    {
+        await SeedPickupAsync();
+
+        DeliveryOrder delivery = await SubmitPickupOkAsync();
+
+        Assert.Null(delivery.PaymentPreference);
+        DeliveryTrackingDto tracking = await TrackingAsync(delivery);
+        Assert.Null(tracking.PaymentPreference);
+        Assert.Null(tracking.IbanPayment);
+        var staffDto = await new GetDeliveryOrderQueryHandler(Db, CurrentUser).Handle(new GetDeliveryOrderQuery { Id = delivery.Id }, CancellationToken.None);
+        Assert.Null(staffDto.Value!.PaymentPreference);
+    }
+
+    [Theory]
+    [InlineData(PaymentMethod.Nakit)]
+    [InlineData(PaymentMethod.Kart)]
+    public async Task Submit_Pickup_WithCashOrCard_IsRejected(PaymentMethod method)
+    {
+        await SeedPickupAsync();
+        SubmitDeliveryOrderCommand command = SubmitPickup(200m, ProductLine(Lahmacun, 2));
+        command.PaymentMethod = method;
+
+        var result = await SubmitAsync(command);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(SubmitDeliveryOrderCommandHandler.PickupPaymentMessage, result.Error);
+        Assert.Empty(DbContext.DeliveryOrders);
+    }
+
+    [Fact]
+    public async Task Submit_Pickup_WithIban_NeedsBranchIban_AndShowsIbanOnTracking()
+    {
+        await SeedPickupAsync();
+        SubmitDeliveryOrderCommand command = SubmitPickup(200m, ProductLine(Lahmacun, 2));
+        command.PaymentMethod = PaymentMethod.Iban;
+
+        // Şube IBAN almıyor.
+        var rejected = await SubmitAsync(command);
+        Assert.Equal(SubmitDeliveryOrderCommandHandler.IbanNotAcceptedMessage, rejected.Error);
+
+        Branch.SetIban(ValidIban, "Paket Restoran Ltd.", "Ziraat Bankası");
+        Branch.SetOnlineOrderSettings(Settings(acceptIban: true, pickupEnabled: true, pickupEtaMinutes: 15));
+        await DbContext.SaveChangesAsync();
+
+        var result = await SubmitAsync(command);
+        Assert.True(result.IsSuccess, result.Error);
+        DeliveryOrder delivery = DbContext.DeliveryOrders.Single();
+        Assert.Equal(PaymentMethod.Iban, delivery.PaymentPreference);
+        Assert.NotNull((await TrackingAsync(delivery)).IbanPayment);
+    }
+
+    [Fact]
+    public async Task Submit_Pickup_IsAccepted_EvenWhenDoorCashAndCardAreOff()
+    {
+        // Kapıda nakit/kart ayarları kurye içindir; gel al müşterisi kasada öder.
+        await SeedAsync(Settings(acceptCash: false, acceptCard: false, acceptIban: true, pickupEnabled: true, pickupEtaMinutes: 15));
+        Branch.SetIban(ValidIban, "Paket Restoran Ltd.", "Ziraat Bankası");
+        await DbContext.SaveChangesAsync();
+
+        DeliveryOrder delivery = await SubmitPickupOkAsync();
+        Assert.Null(delivery.PaymentPreference);
+    }
+
+    [Fact]
+    public async Task CompletePickup_WithoutPreference_CanBeSettledByIbanAtCounter()
+    {
+        await SeedPickupAsync();
+        DeliveryOrder delivery = await SubmitPickupOkAsync();
+        await AcceptOkAsync(delivery);
+        var (register, _) = await SeedRegisterAsync();
+
+        Result done = await CompleteAsync(delivery, register, PaymentMethod.Iban);
+
+        Assert.True(done.IsSuccess, done.Error);
+        Assert.Equal(PaymentMethod.Iban, delivery.CollectedMethod);
+        Assert.Empty(DbContext.CashTransactions);
     }
 
     // ── Personel ve mutfak ─────────────────────────────────────────────────────────────────────

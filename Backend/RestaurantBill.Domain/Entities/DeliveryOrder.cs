@@ -50,8 +50,11 @@ namespace RestaurantBill.Domain.Entities
         public decimal Subtotal { get; private set; }
         public decimal DeliveryFee { get; private set; }
         public decimal Total { get; private set; }
-        /// <summary>Müşterinin ödeme tercihi: kapıda Nakit ya da Kart, ya da Iban (havale/EFT; kurye para almaz).</summary>
-        public PaymentMethod PaymentPreference { get; private set; }
+        /// <summary>
+        /// Müşterinin ödeme tercihi: kapıda Nakit ya da Kart, ya da Iban (havale/EFT; kurye para almaz).
+        /// Gel al'da null olabilir: müşteri restoranda öder, yöntem teslimde belli olur (yalnızca Iban önceden seçilebilir).
+        /// </summary>
+        public PaymentMethod? PaymentPreference { get; private set; }
 
         public Guid? OrderId { get; private set; }
         public Order? Order { get; private set; }
@@ -134,7 +137,7 @@ namespace RestaurantBill.Domain.Entities
 
         /// <summary>Gel al: adres, bölge ve teslimat ücreti yoktur; ad ve telefon zorunludur.</summary>
         public static DeliveryOrder CreatePickup(Guid branchId, int number, Guid clientRequestId, string customerName, string customerPhone,
-            string? note, PaymentMethod paymentPreference, string? clientIp)
+            string? note, PaymentMethod? paymentPreference, string? clientIp)
         {
             if (branchId == Guid.Empty)
                 throw new DomainException("Geçersiz şube.");
@@ -142,8 +145,9 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException("Geçersiz sipariş numarası.");
             if (clientRequestId == Guid.Empty)
                 throw new DomainException("Geçersiz istek.");
-            if (paymentPreference is not (PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban))
-                throw new DomainException("Ödeme restoranda nakit, restoranda kart ya da IBAN olabilir.");
+            // Restoranda nakit/kart sorulmaz: kasada o an ne verirse o kaydedilir. Yalnızca IBAN ile önceden ödeme seçilebilir.
+            if (paymentPreference is not (null or PaymentMethod.Iban))
+                throw new DomainException("Gel al siparişinde ödeme restoranda yapılır; önceden yalnızca IBAN ile ödenebilir.");
 
             string name = Required(customerName, NameMaxLength, "Ad soyad");
             string phone = TurkishPhone.Normalize(customerPhone);
@@ -357,8 +361,7 @@ namespace RestaurantBill.Domain.Entities
                 DeliveryOrderStatus.Accepted, DeliveryOrderStatus.Preparing, DeliveryOrderStatus.Ready);
             if (OrderId is null)
                 throw new DomainException("Bu siparişin hesabı yok.");
-            if (collectedMethod == PaymentMethod.Iban && PaymentPreference != PaymentMethod.Iban)
-                throw new DomainException("IBAN yalnızca müşteri IBAN ile ödemeyi seçtiyse kaydedilebilir.");
+            // Kasada personel parayı (ya da havaleyi) görür: müşteri önceden ne seçtiyse seçsin her yöntem kaydedilebilir.
             if (collectedMethod is not (PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban))
                 throw new DomainException("Tahsilat nakit, kart ya da IBAN olabilir.");
             if (amount < 0)

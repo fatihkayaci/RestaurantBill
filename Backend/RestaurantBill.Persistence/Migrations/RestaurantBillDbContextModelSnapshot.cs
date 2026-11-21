@@ -664,7 +664,7 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(2);
 
-                    b.Property<int>("PaymentPreference")
+                    b.Property<int?>("PaymentPreference")
                         .HasColumnType("integer");
 
                     b.Property<string>("RejectReason")

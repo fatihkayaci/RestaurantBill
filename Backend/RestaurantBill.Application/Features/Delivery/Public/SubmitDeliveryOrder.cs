@@ -31,7 +31,11 @@ public class SubmitDeliveryOrderCommand : IRequest<Result<SubmitDeliveryOrderRes
     public string Address { get; set; } = string.Empty;
     public string? AddressDirections { get; set; }
     public string? Note { get; set; }
-    public PaymentMethod PaymentMethod { get; set; }
+    /// <summary>
+    /// Adrese teslimde zorunlu (Nakit/Kart/Iban). Gel al'da boş bırakılır (ödeme restoranda, yöntem teslimde belli olur)
+    /// ya da Iban (müşteri önceden havale eder).
+    /// </summary>
+    public PaymentMethod? PaymentMethod { get; set; }
     public decimal ExpectedTotal { get; set; }
     /// <summary>Bal küpü: formda gizli alan, insan doldurmaz. Doluysa istek botsa sayılır.</summary>
     public string? Website { get; set; }
@@ -59,7 +63,11 @@ public class SubmitDeliveryOrderCommandValidator : AbstractValidator<SubmitDeliv
         RuleFor(x => x.Note)
             .MaximumLength(DeliveryOrder.NoteMaxLength).WithMessage($"Sipariş notu en fazla {DeliveryOrder.NoteMaxLength} karakter olabilir.");
         RuleFor(x => x.PaymentMethod)
-            .Must(m => m is PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban).WithMessage("Ödeme yöntemini seçin.");
+            .Must(m => m is PaymentMethod.Nakit or PaymentMethod.Kart or PaymentMethod.Iban).When(x => !x.Pickup)
+            .WithMessage("Ödeme yöntemini seçin.");
+        RuleFor(x => x.PaymentMethod)
+            .Must(m => m is null or PaymentMethod.Iban).When(x => x.Pickup)
+            .WithMessage(SubmitDeliveryOrderCommandHandler.PickupPaymentMessage);
     }
 }
 
@@ -78,6 +86,7 @@ public class SubmitDeliveryOrderCommandHandler(
     public const string VerificationInvalidMessage = "Telefon doğrulaması geçersiz, tekrar doğrulayın.";
     public const string PendingPerIpMessage = "Onay bekleyen siparişleriniz var. Restoran yanıtladıktan sonra yeni sipariş verebilirsiniz.";
     public const string IbanNotAcceptedMessage = "Bu restoran şu an IBAN ile ödeme almıyor; başka bir ödeme yöntemi seçin.";
+    public const string PickupPaymentMessage = "Gel al siparişinde ödeme restoranda yapılır; önceden yalnızca IBAN ile ödenebilir.";
     public const string DailyLimitMessage = "Bu numarayla bugün verilebilecek online sipariş sınırına ulaşıldı. Lütfen restoranı arayın.";
 
     public async Task<Result<SubmitDeliveryOrderResultDto>> Handle(SubmitDeliveryOrderCommand request, CancellationToken cancellationToken)
@@ -114,9 +123,18 @@ public class SubmitDeliveryOrderCommandHandler(
             return Fail(availability.Message);
 
         OnlineOrderSettings settings = branch.GetOnlineOrderSettings();
-        if (!DeliveryScope.PaymentMethodsOf(branch).Contains(request.PaymentMethod))
+        // Gel al: kapıda nakit/kart ayarları kurye içindir; müşteri kasada öder. IBAN seçtiyse şubenin IBAN'ı açık olmalı.
+        if (request.Pickup)
+        {
+            if (request.PaymentMethod is not (null or PaymentMethod.Iban))
+                return Fail(PickupPaymentMessage);
+            if (request.PaymentMethod == PaymentMethod.Iban && !branch.AcceptsIbanForDelivery)
+                return Fail(IbanNotAcceptedMessage);
+        }
+        else if (request.PaymentMethod is not PaymentMethod method || !DeliveryScope.PaymentMethodsOf(branch).Contains(method))
             return Fail(request.PaymentMethod switch
             {
+                null => "Ödeme yöntemini seçin.",
                 PaymentMethod.Nakit => "Bu restoran kapıda nakit ödeme almıyor; başka bir ödeme yöntemi seçin.",
                 PaymentMethod.Iban => IbanNotAcceptedMessage,
                 _ => "Bu restoran kapıda kartla ödeme almıyor; başka bir ödeme yöntemi seçin."
@@ -209,7 +227,7 @@ public class SubmitDeliveryOrderCommandHandler(
             ? DeliveryOrder.CreatePickup(branchId, lastNumber + 1, request.ClientRequestId, request.CustomerName, phone,
                 request.Note, request.PaymentMethod, client.IpAddress)
             : DeliveryOrder.Create(branchId, lastNumber + 1, request.ClientRequestId, request.CustomerName, phone,
-                request.Address, request.AddressDirections, request.Note, zone, request.PaymentMethod, client.IpAddress);
+                request.Address, request.AddressDirections, request.Note, zone, request.PaymentMethod!.Value, client.IpAddress);
 
         foreach (PricedLine line in cart.Lines)
         {
