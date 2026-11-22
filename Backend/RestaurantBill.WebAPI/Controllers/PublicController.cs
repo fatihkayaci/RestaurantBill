@@ -81,21 +81,31 @@ public class PublicController : BaseController
         return HandleResult(result);
     }
 
-    /// <summary>Masaya bakan garsonlara canlı "garson çağırıyor" uyarısı. Sent=false: bu masadan az önce çağrılmış.</summary>
+    /// <summary>
+    /// Masaya bakan garsonlara canlı "garson çağırıyor" uyarısı. Gövde isteğe bağlı: { reason: 1 Su | 2 Peçete/çatal | 3 Diğer,
+    /// note: "Diğer" için kısa not }. Sent=false: bu masadan az önce çağrılmış (masa başına 60 sn).
+    /// </summary>
     [EnableRateLimiting("public-table-action")]
     [HttpPost("table/{tableId:guid}/call-waiter")]
-    public async Task<IActionResult> CallWaiter([FromRoute] Guid tableId, CancellationToken cancellationToken)
+    public async Task<IActionResult> CallWaiter([FromRoute] Guid tableId,
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] CallWaiterBody? body,
+        CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new CallWaiterCommand { TableId = tableId }, cancellationToken);
+        var result = await _mediator.Send(new CallWaiterCommand { TableId = tableId, Reason = body?.Reason, Note = body?.Note }, cancellationToken);
         return HandleResult(result);
     }
 
-    /// <summary>Masanın açık hesabı için hesap isteği (personelin "Hesap iste"siyle aynı bildirimler).</summary>
+    /// <summary>
+    /// Masanın açık hesabı için hesap isteği (personelin "Hesap iste"siyle aynı bildirimler). Gövde isteğe bağlı:
+    /// { paymentHint: 1 Nakit | 2 Kart | 3 IBAN, splitCount: 2–20 }.
+    /// </summary>
     [EnableRateLimiting("public-table-action")]
     [HttpPost("table/{tableId:guid}/request-bill")]
-    public async Task<IActionResult> RequestBill([FromRoute] Guid tableId, CancellationToken cancellationToken)
+    public async Task<IActionResult> RequestBill([FromRoute] Guid tableId,
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] RequestBillBody? body,
+        CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new RequestTableBillCommand { TableId = tableId }, cancellationToken);
+        var result = await _mediator.Send(new RequestTableBillCommand { TableId = tableId, PaymentHint = body?.PaymentHint, SplitCount = body?.SplitCount }, cancellationToken);
         return HandleResult(result);
     }
 
@@ -276,4 +286,16 @@ public class PublicController : BaseController
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }
+}
+
+public class CallWaiterBody
+{
+    public RestaurantBill.Domain.Enums.WaiterCallReason? Reason { get; set; }
+    public string? Note { get; set; }
+}
+
+public class RequestBillBody
+{
+    public RestaurantBill.Domain.Enums.BillPaymentHint? PaymentHint { get; set; }
+    public int? SplitCount { get; set; }
 }

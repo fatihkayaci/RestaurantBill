@@ -16,6 +16,10 @@ public class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategoryCo
             .InclusiveBetween(0, 100).WithMessage("KDV oranı 0 ile 100 arasında olmalıdır.")
             .When(x => x.TaxRate.HasValue);
 
+        RuleFor(x => x.Availability!)
+            .SetValidator(new RestaurantBill.Application.Features.Categories.CategoryAvailabilityInputValidator())
+            .When(x => x.Availability is not null);
+
         RuleFor(x => x.MenuDisplay)
             .IsInEnum().WithMessage("Geçersiz menü görünümü.")
             .When(x => x.MenuDisplay.HasValue);

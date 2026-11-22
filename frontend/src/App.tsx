@@ -65,6 +65,7 @@ import OnlineOrdersPage from './pages/admin/OnlineOrdersPage';
 import ContactMessagesPage from './pages/admin/ContactMessagesPage';
 import DeliveryOrderRoute from './pages/public/DeliveryOrderRoute';
 import DeliveryTrackingPage from './pages/public/DeliveryTrackingPage';
+import NotFoundPage from './pages/public/NotFoundPage';
 
 function App() {
     return (
@@ -162,6 +163,9 @@ function App() {
                 <Route path="/masa/:tableId" element={<ClosedRestaurantGate><TableOrderPage /></ClosedRestaurantGate>} />
                 <Route path="/siparis" element={<ClosedRestaurantGate><DeliveryOrderRoute /></ClosedRestaurantGate>} />
                 <Route path="/siparis/takip/:token" element={<ClosedRestaurantGate><DeliveryTrackingPage /></ClosedRestaurantGate>} />
+
+                {/* Bulunamayan adres (ör. /qr, eksik masa adresi): boş ekran yerine 404 ve "Ana sayfaya dön". */}
+                <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <Toaster position="top-right" richColors />
         </>

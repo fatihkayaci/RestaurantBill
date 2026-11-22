@@ -1,4 +1,5 @@
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { PublicCategory, PublicSite } from '@/features/customerSite/types';
 import { estimatedSubtotal, itemCount, type DeliveryCartLine } from '@/features/delivery/deliveryCart';
 import { listNames } from '@/features/delivery/deliveryText';
@@ -134,6 +135,29 @@ export default function SophraMenu({ site }: DesignPageProps) {
         el.scrollIntoView({ behavior: win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     };
     const startCheckout = () => { setCartOpen(false); setCheckoutOpen(true); };
+
+    // ?sepet=1 (başlıktaki sepet simgesi, "Sepete git"): sepet açılır. Telefonda/tablette alttan açılan sepet penceresi,
+    // geniş ekranda sağdaki sepet zaten görünür, odak oraya gider. Adres çubuğundan kalkar (geri tuşu sepeti yeniden açmaz).
+    const [params, setParams] = useSearchParams();
+    const asideRef = useRef<HTMLHeadingElement>(null);
+    const wantsCart = params.get('sepet') === '1';
+    const sessionLoaded = session.data !== null;
+    const wideCart = () => !!win.matchMedia?.('(min-width: 1280px)').matches;
+    // Pencere açma işlenirken (render sırasında, bir kez); adres temizliği ve odak effect'te.
+    const [cartParamDone, setCartParamDone] = useState(false);
+    if (wantsCart && sessionLoaded && !cartParamDone) {
+        setCartParamDone(true);
+        if (canAdd && !edit && !wideCart()) setCartOpen(true);
+    } else if (!wantsCart && cartParamDone) {
+        setCartParamDone(false);
+    }
+    useEffect(() => {
+        if (!wantsCart || !sessionLoaded) return;
+        if (canAdd && !edit && win.matchMedia?.('(min-width: 1280px)').matches) asideRef.current?.focus();
+        const next = new URLSearchParams(params);
+        next.delete('sepet');
+        setParams(next, { replace: true });
+    }, [wantsCart, sessionLoaded, canAdd, edit, win, params, setParams]);
     const showBar = canAdd && count > 0;
 
     const cartBody = (
@@ -308,7 +332,7 @@ export default function SophraMenu({ site }: DesignPageProps) {
                         <aside aria-label="Sepetim" className="hidden xl:block">
                             <div className={cn(spCard, 'sticky top-[100px] flex max-h-[calc(100dvh-120px)] flex-col overflow-hidden')}>
                                 <div className="flex items-center justify-between gap-3 border-b border-[var(--site-border)] px-5 py-4">
-                                    <h2 className={cn(serif, 'm-0 text-[24px] leading-none')}>Sepetim</h2>
+                                    <h2 ref={asideRef} tabIndex={-1} className={cn(serif, 'm-0 text-[24px] leading-none outline-none')}>Sepetim</h2>
                                     {count > 0 && <span className="rounded-full bg-[var(--site-alt)] px-2.5 py-1 text-[13px] font-bold tabular-nums">{count} ürün</span>}
                                 </div>
                                 <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">{cartBody}</div>

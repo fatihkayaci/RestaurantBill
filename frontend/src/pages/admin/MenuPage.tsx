@@ -23,12 +23,16 @@ import { inputClass, labelClass } from '@/lib/formStyles';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { SortModeButton } from '@/components/dnd/SortMode';
 import MenuOrderPanel from './components/MenuOrderPanel';
+import CategoryAvailabilityModal from './components/CategoryAvailabilityModal';
+import { ALLERGENS, DIET_TAGS, flagsToLabel, toggleFlag, type DietaryOption } from '@/features/products/dietaryTags';
 
 
 // Hazırlanma süresi ve KDV metin olarak tutulur: boş alan "yok / kategori varsayılanı" demektir.
 const EMPTY_FORM = {
     name: '', price: 0, cost: 0, categoryId: '', isActive: true, id: '', description: '', isFeatured: false, isNew: false,
     prepMinutes: '', useCategoryTax: true, taxRate: '',
+    // Alerjen ve diyet etiketleri (bayrak; features/products/dietaryTags).
+    allergens: 0, dietTags: 0,
 };
 const PREP_MINUTES_MAX = 240;
 
@@ -114,6 +118,7 @@ export default function Menu() {
 
     // Sitenin menü sayfasında kategorinin görünümü (otomatik / kart / liste): seçilince hemen kaydedilir.
     const [menuDisplaySaving, setMenuDisplaySaving] = useState(false);
+    const [availabilityCategory, setAvailabilityCategory] = useState<Category | null>(null);
     const saveMenuDisplay = async (cat: Category, menuDisplay: CategoryMenuDisplay) => {
         setMenuDisplaySaving(true);
         try {
@@ -181,6 +186,7 @@ export default function Menu() {
             prepMinutes: product.prepMinutes != null ? String(product.prepMinutes) : '',
             useCategoryTax: product.taxRate == null,
             taxRate: product.taxRate != null ? String(product.taxRate) : '',
+            allergens: product.allergens ?? 0, dietTags: product.dietTags ?? 0,
         });
         setFieldErrors({});
         clearPendingImage();
@@ -371,12 +377,14 @@ export default function Menu() {
                     // Yalnız değiştiyse gönderilir: açık kalan "Yeni" etiketinin 30 günü her kayıtta baştan başlamaz.
                     isNew: form.isNew !== (editProduct.isNew ?? false) ? form.isNew : undefined,
                     prepMinutes, taxRate,
+                    allergens: form.allergens, dietTags: form.dietTags,
                 });
             } else {
                 await productService.createProduct({
                     name: form.name, price: form.price, cost: form.cost, categoryId: form.categoryId, isActive: true,
                     description: form.description, isFeatured: form.isFeatured, isNew: form.isNew || undefined,
                     prepMinutes, taxRate,
+                    allergens: form.allergens, dietTags: form.dietTags,
                 });
                 const created = await productService.getProductsWithCost();
                 setProducts(created);
@@ -519,7 +527,18 @@ export default function Menu() {
                             </>
                         )}
                         {activeCat && (
-                            <label className="ml-auto flex items-center gap-2 text-sm text-foreground">
+                            <button type="button" onClick={() => setAvailabilityCategory(activeCat)}
+                                title="Bu kategorinin müşteri QR ve online siparişte seçilebileceği saatler"
+                                className="ml-auto flex min-h-8 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors">
+                                <span className="text-muted-foreground">Servis saatleri:</span>
+                                <span className="font-semibold">{activeCat.availabilityLabel || 'Her zaman'}</span>
+                                {activeCat.availableNow === false && (
+                                    <span className="rounded-full bg-rb-amber-bg px-1.5 py-0.5 text-[11px] font-bold text-rb-amber">Şu an kapalı</span>
+                                )}
+                            </button>
+                        )}
+                        {activeCat && (
+                            <label className="flex items-center gap-2 text-sm text-foreground">
                                 <span className="text-muted-foreground">Sitede görünüm</span>
                                 <select value={activeCat.menuDisplay === 2 ? 2 : 1} disabled={menuDisplaySaving}
                                     onChange={e => saveMenuDisplay(activeCat, Number(e.target.value) as CategoryMenuDisplay)}
@@ -533,6 +552,14 @@ export default function Menu() {
                     </div>
                 );
             })()}
+
+            {availabilityCategory && (
+                <CategoryAvailabilityModal
+                    category={availabilityCategory}
+                    onClose={() => setAvailabilityCategory(null)}
+                    onSaved={() => { categoryService.getCategories().then(setCategories).catch(() => {}); }}
+                />
+            )}
 
             {/* Category Pills */}
             <div className="flex gap-2 flex-wrap">
@@ -1021,6 +1048,23 @@ export default function Menu() {
                                     </span>
                                 </span>
                             </label>
+
+                            <DietaryChips
+                                legend="İçerir (alerjenler)"
+                                hint="Müşteri menüsünde uyarı olarak görünür. Emin olmadığınız alerjeni işaretleyin."
+                                options={ALLERGENS}
+                                value={form.allergens}
+                                tone="warn"
+                                onChange={allergens => setForm({ ...form, allergens })}
+                            />
+                            <DietaryChips
+                                legend="Uygun"
+                                hint="Yalnız gerçekten sağlıyorsa işaretleyin. Acılı bir bilgi etiketidir."
+                                options={DIET_TAGS}
+                                value={form.dietTags}
+                                tone="ok"
+                                onChange={dietTags => setForm({ ...form, dietTags })}
+                            />
                         </form>
 
                         <div className="shrink-0 px-6 py-4 border-t border-border flex items-center justify-end gap-3">
@@ -1098,5 +1142,39 @@ export default function Menu() {
                 </AlertDialogContent>
             </AlertDialog>
         </div>
+    );
+}
+
+// Ürün formunda sabit listeden çoklu seçim: "İçerir" (alerjen uyarısı) ve "Uygun" (iddia) iki ayrı grup.
+function DietaryChips({ legend, hint, options, value, tone, onChange }: {
+    legend: string;
+    hint: string;
+    options: readonly DietaryOption[];
+    value: number;
+    tone: 'warn' | 'ok';
+    onChange: (value: number) => void;
+}) {
+    const selected = flagsToLabel(value, options);
+    return (
+        <fieldset className="rounded-lg border border-border px-3 py-2.5">
+            <legend className="px-1 text-sm font-medium text-foreground">{legend}</legend>
+            <p className="text-xs text-muted-foreground">{hint}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+                {options.map(o => {
+                    const on = (value & o.value) !== 0;
+                    return (
+                        <button key={o.value} type="button" aria-pressed={on} title={o.hint}
+                            onClick={() => onChange(toggleFlag(value, o.value))}
+                            className={cn('min-h-9 rounded-full border px-3 text-xs font-semibold transition-colors',
+                                on
+                                    ? tone === 'warn' ? 'border-rb-amber bg-rb-amber-bg text-rb-amber' : 'border-rb-green bg-rb-green-bg text-rb-green'
+                                    : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground')}>
+                            {o.label}
+                        </button>
+                    );
+                })}
+            </div>
+            {selected && <p className="mt-2 text-xs text-muted-foreground">Seçili: {selected}</p>}
+        </fieldset>
     );
 }

@@ -19,6 +19,7 @@ import { createHubConnection } from '@/lib/signalrConnection';
 import { useActiveShift } from '@/features/cashier/context/activeShiftStore';
 import { formatAmount, formatElapsed } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import BillHintBadge from '@/features/tables/components/BillHintBadge';
 
 const OrderStatus = { Served: 5 } as const;
 
@@ -255,6 +256,9 @@ export default function CashierDashboardPage() {
                                         )}
                                     </div>
 
+                                    {order.billRequestedAt && (
+                                        <BillHintBadge paymentHint={order.billPaymentHint} splitCount={order.billSplitCount} className="-mt-1 self-start" />
+                                    )}
                                     <p className="text-2xl font-serif font-bold text-foreground">
                                         {formatAmount(order.totalPrice)} ₺
                                     </p>

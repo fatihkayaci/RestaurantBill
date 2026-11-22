@@ -63,12 +63,24 @@ export function getHubStatus(): HubStatus {
     return currentStatus;
 }
 
-export function createHubConnection(hubPath: string): ManagedHubConnection {
+export interface HubConnectionOptions {
+    /**
+     * Girişsiz bağlantı (müşterinin QR sayfası): token gönderilmez, rol ekranlarının canlı durum noktasına katılmaz ve
+     * kalıcı kopuşta girişe yönlendirmez; yeniden kurmayı çağıran üstlenir (onclose).
+     */
+    anonymous?: boolean;
+    /** Adrese eklenen sorgu parametreleri (ör. restoran slug'ı: tarayıcı WebSocket isteğine başlık ekleyemez). */
+    query?: Record<string, string>;
+}
+
+export function createHubConnection(hubPath: string, options: HubConnectionOptions = {}): ManagedHubConnection {
     let intentionallyStopped = false;
     const hubId = nextHubId++;
+    const anonymous = options.anonymous === true;
+    const search = options.query && Object.keys(options.query).length > 0 ? `?${new URLSearchParams(options.query)}` : '';
 
     const connection = new signalR.HubConnectionBuilder()
-        .withUrl(`${API_BASE_URL}${hubPath}`, {
+        .withUrl(`${API_BASE_URL}${hubPath}${search}`, anonymous ? {} : {
             accessTokenFactory: getHubAccessToken,
         })
         .withAutomaticReconnect()
@@ -79,6 +91,16 @@ export function createHubConnection(hubPath: string): ManagedHubConnection {
             },
         })
         .build();
+
+    if (anonymous) {
+        return {
+            connection,
+            stop: () => {
+                intentionallyStopped = true;
+                connection.stop();
+            },
+        };
+    }
 
     const originalStart = connection.start.bind(connection);
     connection.start = () => {

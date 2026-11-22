@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { HandPlatter, QrCode } from 'lucide-react';
 import { createHubConnection } from '@/lib/signalrConnection';
-import { playStaffTone, setStaffAlertCount } from '@/lib/staffAlerts';
+import { notifyStaff, playStaffTone, setStaffAlertCount } from '@/lib/staffAlerts';
 import { clearBlockingAlerts, pushBlockingAlert, useBlockingAlerts, type BlockingAlert, type BlockingAlertKind } from '@/lib/blockingAlerts';
 import { cn } from '@/lib/utils';
 import type { OrderRequestCreatedEvent } from '@/features/customerSite/types';
@@ -59,6 +59,19 @@ export default function OrderRequestAlerts({ variant }: Props) {
             else playStaffTone('request');
             const takeaway = event.takeawayCount ? ` (${event.takeawayCount} paket)` : '';
             const items = event.itemCount > 0 ? `${event.itemCount} ürün${takeaway}` : 'Sipariş';
+            // Yönetici panelinde ekranı kapatan pencere yerine sağ üstte bildirim (toast); garsonda pencere kalır.
+            if (variant === 'manager') {
+                notifyStaff({
+                    id: `order-request-${event.tableId}`,
+                    title: `${event.tableName} · yeni QR sipariş`,
+                    description: `${items}${event.regionName ? ` · ${event.regionName}` : ''} · onay bekliyor`,
+                    tone: 'gold',
+                    icon: <QrCode aria-hidden="true" />,
+                    durationMs: 60_000,
+                    action: { label: 'Siparişi gör', onClick: () => navigate(`/admin/tables?table=${event.tableId}`) },
+                });
+                return;
+            }
             pushBlockingAlert({
                 kind: 'order',
                 tableId: event.tableId,
@@ -70,7 +83,7 @@ export default function OrderRequestAlerts({ variant }: Props) {
         let cancelled = false;
         connection.start().catch(err => { if (!cancelled) console.error('OrderRequestCreated SignalR:', err); });
         return () => { cancelled = true; stop(); };
-    }, [variant]);
+    }, [variant, navigate]);
 
     useEffect(() => {
         setStaffAlertCount('blocking-alerts', alerts.length);
@@ -106,7 +119,7 @@ export default function OrderRequestAlerts({ variant }: Props) {
                 </span>
                 <h2 id="staff-blocking-alert-title" className="mt-5 text-3xl font-extrabold leading-tight">
                     {single ? single.tableName : `${alerts.length} yeni uyarı`}
-                    {single && <span className={cn('mt-1 block text-xl font-bold', ui.text)}>{ui.label}</span>}
+                    {single && <span className={cn('mt-1 block text-xl font-bold', ui.text)}>{single.label ?? ui.label}</span>}
                 </h2>
                 <div id="staff-blocking-alert-desc" className="mt-4">
                     {single ? (
@@ -127,7 +140,7 @@ export default function OrderRequestAlerts({ variant }: Props) {
                                         </span>
                                         <span className="min-w-0 flex-1">
                                             <span className="block text-lg font-bold">{a.tableName}</span>
-                                            <span className={cn('block text-sm font-semibold', KIND_UI[a.kind].text)}>{KIND_UI[a.kind].label}</span>
+                                            <span className={cn('block text-sm font-semibold', KIND_UI[a.kind].text)}>{a.label ?? KIND_UI[a.kind].label}</span>
                                             {a.warning && <span className="block text-sm font-bold text-rb-amber">{a.warning}</span>}
                                         </span>
                                     </button>

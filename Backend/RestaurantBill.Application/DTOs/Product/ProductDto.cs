@@ -22,4 +22,8 @@ public class ProductDto
     public DateTime? NewUntil { get; set; }
     /// <summary>Şu an "Yeni" etiketli mi.</summary>
     public bool IsNew { get; set; }
+    /// <summary>Alerjen bayrakları (ProductAllergen).</summary>
+    public int Allergens { get; set; }
+    /// <summary>Diyet / bilgi etiketleri (ProductDietTag).</summary>
+    public int DietTags { get; set; }
 }

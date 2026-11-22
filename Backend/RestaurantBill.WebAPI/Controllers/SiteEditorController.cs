@@ -130,6 +130,17 @@ public class SiteEditorController : BaseController
     public async Task<IActionResult> RemoveRegionImage([FromRoute] Guid regionId, CancellationToken cancellationToken)
         => HandleResult(await _mediator.Send(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Region, RegionId = regionId }, cancellationToken));
 
+    // ── "Ekibimiz" üyesinin portresi (hazır görsel yok: ekip fotoğrafı kişinin kendisidir) ───────────────
+    [HttpPost("draft/team/{memberId:guid}/image")]
+    [RequestSizeLimit(11_000_000)]
+    public async Task<IActionResult> UploadTeamImage([FromRoute] Guid memberId, IFormFile file, CancellationToken cancellationToken)
+        => await UploadAsync(file, stream => new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.TeamMember, TeamMemberId = memberId, Content = stream },
+            cancellationToken);
+
+    [HttpDelete("draft/team/{memberId:guid}/image")]
+    public async Task<IActionResult> RemoveTeamImage([FromRoute] Guid memberId, CancellationToken cancellationToken)
+        => HandleResult(await _mediator.Send(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.TeamMember, TeamMemberId = memberId }, cancellationToken));
+
     private async Task<IActionResult> UploadAsync(IFormFile file, Func<Stream, SetSiteDraftImageCommand> command, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0) return BadRequest(new { Error = "Dosya seçilmedi." });

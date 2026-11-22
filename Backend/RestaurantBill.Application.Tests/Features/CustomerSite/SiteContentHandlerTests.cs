@@ -99,7 +99,7 @@ public class SiteContentHandlerTests : ApplicationTestBase
     private async Task<Result<BranchSiteDto>> UpdateAsync(SaveSiteDraftCommand command)
     {
         command.Version = await VersionAsync();
-        var saved = await new SaveSiteDraftCommandHandler(Db, Owner, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
+        var saved = await new SaveSiteDraftCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
         if (!saved.IsSuccess) return Result<BranchSiteDto>.Failure(saved.Error!);
         var published = await new PublishSiteDraftCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
             .Handle(new PublishSiteDraftCommand { Version = saved.Value!.Editor.Version }, CancellationToken.None);
@@ -419,6 +419,36 @@ public class SiteContentHandlerTests : ApplicationTestBase
         Assert.Equal("Ocak başına bakan masalar.", region.Description);
         Assert.Equal("bordo", site.Value.Site.Theme);
         Assert.Empty(site.Value.Site.RegionDetails); // sitede bölüm bilgisi regions[] içinde
+    }
+
+    [Fact]
+    public async Task Team_ReachesPublicSite_DomainLimitsApply_NamelessDropped()
+    {
+        await SeedAsync();
+        Guid chef = Guid.NewGuid();
+        SaveSiteDraftCommand command = FullCommand(_salon.Id);
+        command.TeamTitle = "Sofranın arkasındakiler.";
+        command.TeamMembers =
+        [
+            new SiteTeamMemberDto { Id = chef, Name = " Ayşe Usta ", Role = "Mutfak şefi", Note = "Sabah altıda ocağı ilk o yakar." },
+            new SiteTeamMemberDto { Id = Guid.NewGuid(), Name = "", Role = "Salon şefi" },
+        ];
+
+        var saved = await UpdateAsync(command);
+
+        Assert.True(saved.IsSuccess, saved.Error);
+        var site = await new GetPublicSiteQueryHandler(Db, _tenant, Cdn).Handle(new GetPublicSiteQuery(), CancellationToken.None);
+        SiteTeamMemberDto member = Assert.Single(site.Value!.Site.TeamMembers);
+        Assert.Equal(chef, member.Id);
+        Assert.Equal("Ayşe Usta", member.Name);
+        Assert.Equal("Sofranın arkasındakiler.", site.Value.Site.TeamTitle);
+
+        // Doğrulayıcıyı atlayan istek de alan sınırına takılır (domain).
+        SaveSiteDraftCommand tooLong = FullCommand(_salon.Id);
+        tooLong.TeamMembers = [new SiteTeamMemberDto { Id = chef, Name = "Ayşe", Note = new string('n', SiteContent.TeamNoteMaxLength + 1) }];
+        var rejected = await UpdateAsync(tooLong);
+        Assert.False(rejected.IsSuccess);
+        Assert.Equal($"Ekip üyesinin notu en fazla {SiteContent.TeamNoteMaxLength} karakter olabilir.", rejected.Error);
     }
 
     [Fact]

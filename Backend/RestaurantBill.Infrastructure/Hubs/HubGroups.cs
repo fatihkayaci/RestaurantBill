@@ -105,4 +105,8 @@ public static class HubGroups
     // A new table QR order request: the same waiters as "items ready", each at most once.
     public static string[] OrderRequestTargets(Guid restaurantId, Guid regionId, Guid tableId) =>
         ItemsReadyTargets(restaurantId, regionId, tableId);
+
+    // Customer QR page (anonymous /public-table-hub): every phone watching one table. A table id belongs to exactly one
+    // branch, so the group needs no branch prefix; PublicTableHub only joins it after checking the table against the tenant.
+    public static string PublicTable(Guid tableId) => $"public-table:{tableId}";
 }

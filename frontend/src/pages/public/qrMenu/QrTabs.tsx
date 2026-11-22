@@ -46,13 +46,16 @@ interface AccountTabProps {
     callWaiter: TableAction | null;
     /** Ödeme yöntemleri (qrPayments.ts); boşsa "Öde" düğmesi yok. */
     paymentMethods: QrPaymentMethod[];
+    /** Sepette gönderilmemiş ürün adedi: Hesabım'ın başında "Sepetinizde gönderilmemiş n ürün var" ve sepete dönüş. */
+    unsentCount: number;
+    onOpenCart: () => void;
 }
 
 // Hesabım tek bir adisyon: (varsa) üstte onay bekleyen / onaylanmayan siparişlerin ince şeridi; masanın hesabı kâğıt
 // fiş olarak (masa ve durum, kalemler, kesik çizgi, toplam; kısmen ödendiyse Ödenen ve Kalan). İşlemler alt çubuğun
 // üstündeki yapışık panelde: kısa Toplam / Kalan satırı, "Hesap iste" ve "Öde" (yöntem penceresi); tek işlem varsa tam
 // genişlik, işlem yoksa (hesap ödendi, ya da hesap görünmüyor ve istenemiyor) panel yok. Hesap görünmüyorsa tek sade kart.
-export function AccountTab({ tableName, regionName, bill, requests, onOpenMenu, billRequest, callWaiter, paymentMethods }: AccountTabProps) {
+export function AccountTab({ tableName, regionName, bill, requests, onOpenMenu, billRequest, callWaiter, paymentMethods, unsentCount, onOpenCart }: AccountTabProps) {
     const paidAtMs = parsePaidAt(bill?.paidAt);
     const tableLabel = regionName ? `${tableName} · ${regionName}` : tableName;
     const paid = !!bill?.isPaid;
@@ -68,6 +71,9 @@ export function AccountTab({ tableName, regionName, bill, requests, onOpenMenu, 
         // Yapışık panel varken sütun en az ekran boyu; panel alt çubuğun arkasına kadar iner ve alt boşluğu kendi verir.
         <div className={cn(column, 'flex flex-col gap-4 px-4 pt-5', docked ? 'min-h-dvh' : 'pb-[calc(112px+env(safe-area-inset-bottom))]')}>
             <h1 className={cn(displayTitle, 'text-[28px]')}>Hesabım</h1>
+
+            {/* En sık karışıklık: sepete eklenen ürün gönderilmeden hesapta görünmez. */}
+            {unsentCount > 0 && <UnsentCartNotice count={unsentCount} onOpenCart={onOpenCart} />}
 
             <RequestBanner requests={requests} paidAtMs={paidAtMs} callWaiter={callWaiter} />
 
@@ -107,7 +113,7 @@ export function AccountTab({ tableName, regionName, bill, requests, onOpenMenu, 
 /** "Ödeme yöntemi" penceresi: qrPayments.ts'deki yöntemler; seçilince pencere kapanır, yöntemin kendi akışı açılır. */
 function PaySheet({ methods, onClose }: { methods: QrPaymentMethod[]; onClose: () => void }) {
     return (
-        <Sheet title="Ödeme yöntemi" onClose={onClose}>
+        <Sheet title="Ödeme yöntemi" onClose={onClose} bottom>
             <ul className="m-0 flex list-none flex-col gap-2 p-0 pb-[env(safe-area-inset-bottom)]">
                 {methods.map(method => (
                     <li key={method.id}>
@@ -230,6 +236,24 @@ function TotalRow({ label, value, big = false, ok = false }: { label: string; va
     );
 }
 
+/** Sepette garsona gönderilmemiş ürün var: hesapta görünmez, önce gönderilmeli. */
+function UnsentCartNotice({ count, onOpenCart }: { count: number; onOpenCart: () => void }) {
+    return (
+        <section aria-label="Gönderilmemiş sepet" role="status"
+            className="flex items-center gap-3 rounded-2xl border border-[var(--site-accent)] bg-[var(--site-accent-soft)] py-3 pl-4 pr-2">
+            <ShoppingBasket className="h-5 w-5 shrink-0 text-[var(--site-accent-text)]" aria-hidden="true" />
+            <p className="m-0 min-w-0 flex-1 text-[15px] leading-snug">
+                <b className="font-extrabold">Sepetinizde gönderilmemiş {count} ürün var.</b>{' '}
+                <span className="text-[var(--site-sub)]">Garsona gönderilince hesaba eklenir.</span>
+            </p>
+            <button type="button" onClick={onOpenCart}
+                className={cn('inline-flex min-h-11 shrink-0 items-center gap-1 rounded-xl bg-[var(--site-accent)] px-3.5 text-sm font-extrabold text-[var(--site-on-accent)]', focusRing)}>
+                Sepete git<ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+        </section>
+    );
+}
+
 /** Masada açık hesap yoksa tek sade kart. */
 function NoBill({ tableLabel, hasRequests, onOpenMenu }: { tableLabel: string; hasRequests: boolean; onOpenMenu: () => void }) {
     return (
@@ -254,11 +278,18 @@ function NoBill({ tableLabel, hasRequests, onOpenMenu }: { tableLabel: string; h
 
 // ── Alt çubuklar ─────────────────────────────────────────────────────────────────────────────
 
-/** Alt çubuğun üstündeki kısa bildirim. cart: "Sepete eklendi" (sepet çubuğu nabız atar); info: garson/hesap sonucu. */
+/**
+ * Alt çubuğun üstündeki kısa bildirim. cart: "Sepete eklendi" (sepet çubuğu nabız atar); info: garson/hesap sonucu;
+ * live: canlı bağlantıdan gelen sessiz haber ("Masanıza eklendi", "Siparişiniz onaylandı"), dokununca onTap.
+ */
 export interface BarToast {
     id: number;
     text: string;
-    kind?: 'cart' | 'info';
+    kind?: 'cart' | 'info' | 'live';
+    /** Şerit dokunulabilir (ör. Hesabım'ı açar). */
+    onTap?: () => void;
+    /** Dokunulabilir şeridin ekran okuyucu için ek açıklaması ("Hesabım'ı aç"). */
+    tapLabel?: string;
 }
 
 /**
@@ -278,7 +309,9 @@ export function BottomBar({ tab, onTab, cartCount, pendingCount, cart, toast, ca
     const [dismissed, setDismissed] = useState<TableActionState | null>(null);
     const failed = callWaiter && callWaiter.state.status === 'error' && callWaiter.state !== dismissed ? callWaiter : null;
     const errorMessage = failed?.state.status === 'error' ? failed.state.message : null;
-    const bump = toast && toast.kind !== 'info' ? toast : null;
+    const bump = toast && (toast.kind ?? 'cart') === 'cart' ? toast : null;
+    // Hesabım'dayken "Hesabım'ı aç" anlamsız: şerit düz bildirim olur, alttaki düğmelere dokunuşu engellemez.
+    const tappable = !!toast?.onTap && tab !== 'account';
     // Garson çağır geri sayımı (3 sn): sürerken üstte "Garson çağrılıyor… 3 · İptal" şeridi; iptal edilince kısa "İptal edildi".
     const counting = callWaiter && isCounting(callWaiter) ? callWaiter : null;
     const cancelledNote = !!callWaiter?.cancelled && !counting;
@@ -296,13 +329,25 @@ export function BottomBar({ tab, onTab, cartCount, pendingCount, cart, toast, ca
                         <span className="min-w-0 truncate">Garson çağrısı iptal edildi</span>
                     </p>
                 )}
-                {toast && !errorMessage && !counting && !cancelledNote && (
+                {toast && !errorMessage && !counting && !cancelledNote && !tappable && (
                     <p key={toast.id} className="qr-toast m-0 flex max-w-full items-center gap-2 rounded-full bg-[var(--site-text)] py-2 pl-2.5 pr-4 text-sm font-bold text-[var(--site-bg)] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.45)]">
                         <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--site-ok)] text-[var(--site-ok-bg)]">
                             <Check className="h-3.5 w-3.5" strokeWidth={3.25} />
                         </span>
                         <span className="min-w-0 truncate">{toast.text}</span>
                     </p>
+                )}
+                {/* Canlı haber: aynı şerit, dokununca Hesabım. Kap dokunuşları geçirir, yalnız şerit dokunulabilir. */}
+                {toast && !errorMessage && !counting && !cancelledNote && tappable && (
+                    <button key={toast.id} type="button" onClick={toast.onTap}
+                        className={cn('qr-toast pointer-events-auto flex min-h-11 max-w-full items-center gap-2 rounded-full bg-[var(--site-text)] py-2 pl-2.5 pr-3 text-left text-sm font-bold text-[var(--site-bg)] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.45)]', focusRing)}>
+                        <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--site-ok)] text-[var(--site-ok-bg)]">
+                            <Check className="h-3.5 w-3.5" strokeWidth={3.25} />
+                        </span>
+                        <span className="min-w-0 truncate">{toast.text}</span>
+                        {toast.tapLabel && <span className="sr-only">. {toast.tapLabel}</span>}
+                        <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 opacity-70" />
+                    </button>
                 )}
             </div>
             {counting && (
@@ -332,7 +377,7 @@ export function BottomBar({ tab, onTab, cartCount, pendingCount, cart, toast, ca
             )}
             {cart && (
                 <div className={cn(column, 'px-3 pb-2')}>
-                    <button type="button" onClick={cart.onOpen}
+                    <button type="button" onClick={cart.onOpen} aria-label={`Sepetim: ${cart.count} ürün, ${formatPrice(cart.total)} ₺. Sepeti aç`}
                         className={cn('flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-[var(--site-accent)] py-2 pl-4 pr-2 text-[var(--site-on-accent)] shadow-[0_14px_30px_-12px_rgba(0,0,0,0.45)] transition-opacity hover:opacity-95', focusRing,
                             bump && 'qr-cart-bump')}
                         key={bump?.id ?? 'cart'}>
@@ -355,7 +400,7 @@ export function BottomBar({ tab, onTab, cartCount, pendingCount, cart, toast, ca
                     </li>
                     <li>
                         <TabButton active={tab === 'cart'} onClick={() => onTab('cart')} icon={<ShoppingBasket className="h-[22px] w-[22px]" />} label="Sepetim"
-                            badge={cartCount > 0 ? cartCount : null} srExtra={cartCount > 0 ? `, ${cartCount} ürün` : undefined} />
+                            badge={cartCount > 0 ? cartCount : null} srExtra={cartCount > 0 ? `, sepette ${cartCount} ürün` : ', sepet boş'} />
                     </li>
                     {callWaiter && (
                         <li>
@@ -380,7 +425,7 @@ function TabButton({ active, onClick, icon, label, badge = null, srExtra }: {
     active: boolean; onClick: () => void; icon: ReactNode; label: string; badge?: number | null; srExtra?: string;
 }) {
     return (
-        <button type="button" onClick={onClick} aria-current={active ? 'page' : undefined}
+        <button type="button" onClick={onClick} aria-current={active ? 'page' : undefined} aria-label={`${label}${srExtra ?? ''}`}
             className={cn(barItem, active
                 ? 'bg-[var(--site-accent)] text-[var(--site-on-accent)] shadow-[0_8px_18px_-12px_var(--site-accent)]'
                 : 'text-[var(--site-sub)] hover:bg-[var(--site-alt)] hover:text-[var(--site-text)]')}>
@@ -391,8 +436,7 @@ function TabButton({ active, onClick, icon, label, badge = null, srExtra }: {
                         active ? 'bg-[var(--site-on-accent)] text-[var(--site-accent)]' : 'bg-[var(--site-accent)] text-[var(--site-on-accent)]')}>{badge}</span>
                 )}
             </span>
-            <span className="max-w-full truncate">{label}</span>
-            {srExtra && <span className="sr-only">{srExtra}</span>}
+            <span aria-hidden="true" className="max-w-full truncate">{label}</span>
         </button>
     );
 }

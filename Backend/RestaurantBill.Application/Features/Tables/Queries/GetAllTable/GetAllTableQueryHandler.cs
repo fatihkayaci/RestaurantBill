@@ -59,7 +59,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
             var activeOrders = await _db.Orders
                 .AsNoTracking()
                 .Where(o => o.TableId != null && tableIds.Contains(o.TableId.Value) && o.Status != OrderStatus.Paid && o.Status != OrderStatus.Cancelled)
-                .Select(o => new { o.Id, TableId = o.TableId!.Value, o.TotalPrice, o.PaidOnAccount, o.CreatedAt, o.CreatedUser, o.BillRequestedAt })
+                .Select(o => new { o.Id, TableId = o.TableId!.Value, o.TotalPrice, o.PaidOnAccount, o.CreatedAt, o.CreatedUser, o.BillRequestedAt, o.BillPaymentHint, o.BillSplitCount })
                 .ToListAsync(cancellationToken);
 
             var totalsByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.TotalPrice);
@@ -74,6 +74,7 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
             var creatorNameByTableId = activeOrders.ToDictionary(o => o.TableId, o => creatorNameById.GetValueOrDefault(o.CreatedUser, string.Empty));
 
             var billRequestedByTableId = activeOrders.ToDictionary(o => o.TableId, o => o.BillRequestedAt);
+            var billHintByTableId = activeOrders.ToDictionary(o => o.TableId, o => (o.BillPaymentHint, o.BillSplitCount));
 
             // Garson kartındaki "Gecikme" rozeti: süresi dolmuş, mutfakta bekleyen/hazırlanan kalemler.
             List<Guid> activeOrderIds = activeOrders.Select(o => o.Id).ToList();
@@ -89,10 +90,21 @@ namespace RestaurantBill.Application.Features.Tables.Queries.GetAllTable
                 .GroupBy(i => i.TableId)
                 .ToDictionary(g => g.Key, g => g.Count());
 
+            // "N hazır, servis bekliyor": Genel Bakış ile aynı sayım (menü satırı değil içindeki ürünler, adet bazında).
+            Dictionary<Guid, int> readyByTableId = (await _db.OrderItems
+                .AsNoTracking()
+                .Where(i => activeOrderIds.Contains(i.OrderId) && i.SetMenuId == null && i.Status == OrderItemStatus.Ready)
+                .Select(i => new { TableId = i.Order.TableId!.Value, i.Quantity })
+                .ToListAsync(cancellationToken))
+                .GroupBy(i => i.TableId)
+                .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+
             foreach (TableDto table in tables)
             {
                 table.BillRequestedAt = billRequestedByTableId.GetValueOrDefault(table.Id);
+                (table.BillPaymentHint, table.BillSplitCount) = billHintByTableId.GetValueOrDefault(table.Id);
                 table.OverdueItemCount = overdueByTableId.GetValueOrDefault(table.Id);
+                table.ReadyItemCount = readyByTableId.GetValueOrDefault(table.Id);
                 table.ActiveOrderTotal = totalsByTableId.GetValueOrDefault(table.Id);
                 table.PaidAmount = paidByTableId.GetValueOrDefault(table.Id);
                 table.RemainingAmount = table.ActiveOrderTotal - table.PaidAmount;

@@ -84,6 +84,7 @@ public static class ApplyRequestToTableOrder
             .Where(s => setMenuIds.Contains(s.Id))
             .ToListAsync(cancellationToken);
 
+        // Her kalem talebe bağlanır (OrderItem.OrderRequestId): müşterinin QR'da gördüğü aşama bu kalemlerden okunur.
         try
         {
             foreach (OrderRequestItem item in orderRequest.Items)
@@ -97,9 +98,9 @@ public static class ApplyRequestToTableOrder
                     decimal taxRate = setMenu.Category?.TaxRate ?? setMenu.Branch.TaxRate;
                     Dictionary<Guid, Guid> selections = DeliveryScope.ParseSelections(item.SelectionsJson);
                     if (item.UnitPrice is decimal menuPrice)
-                        order.AddSetMenuAtPrice(setMenu, selections, menuPrice, item.Quantity, taxRate, item.Note, item.IsTakeaway);
+                        order.AddSetMenuAtPrice(setMenu, selections, menuPrice, item.Quantity, taxRate, item.Note, item.IsTakeaway, orderRequest.Id);
                     else
-                        order.AddSetMenu(setMenu, selections, item.Quantity, taxRate, item.Note, item.IsTakeaway);
+                        order.AddSetMenu(setMenu, selections, item.Quantity, taxRate, item.Note, item.IsTakeaway, orderRequest.Id);
                     continue;
                 }
 
@@ -108,9 +109,9 @@ public static class ApplyRequestToTableOrder
                     return Result<TableOrderTarget>.Failure(ProductMissingMessage);
 
                 if (item.UnitPrice is decimal unitPrice)
-                    order.AddItemAtPrice(product, unitPrice, item.Quantity, product.GetEffectiveTaxRate(), item.Note, item.IsTakeaway);
+                    order.AddItemAtPrice(product, unitPrice, item.Quantity, product.GetEffectiveTaxRate(), item.Note, item.IsTakeaway, orderRequest.Id);
                 else
-                    order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note, item.IsTakeaway);
+                    order.AddItem(product, item.Quantity, product.GetEffectiveTaxRate(), item.Note, item.IsTakeaway, orderRequest.Id);
             }
         }
         catch (DomainException ex)

@@ -114,7 +114,8 @@ export function ItemRow({ item, quantity, canAdd, onOpen, onAdd, onRemove }: Omi
 
 /**
  * Sophra penceresi: telefonda alttan açılan tam genişlik sayfa, masaüstünde ortada geniş pencere. Portal yok (sitenin renk
- * değişkenleri kök kutuda). Escape ve arka plan kapatır; açıkken sayfa kaymaz; odak pencereye gider, kapanınca geri döner.
+ * değişkenleri kök kutuda). Escape, kapat düğmesi ve arka plan kapatır; açıkken sayfa kaymaz; odak pencereye gider, içinde
+ * döner (Tab), kapanınca geri döner. Alt kenar telefonun güvenli alanını bırakır.
  */
 export function SpModal({ title, onClose, wide = false, footer, children, locked = false }: {
     title: string; onClose: () => void; wide?: boolean; footer?: ReactNode; children: ReactNode; locked?: boolean;
@@ -122,7 +123,17 @@ export function SpModal({ title, onClose, wide = false, footer, children, locked
     const titleId = useId();
     const panel = useRef<HTMLDivElement>(null);
     useEffect(() => {
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !locked) onClose(); };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !locked) onClose();
+            // Odak pencerenin içinde döner (Tab / Shift+Tab).
+            if (e.key !== 'Tab' || !panel.current) return;
+            const focusable = [...panel.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])')];
+            if (focusable.length === 0) return;
+            const first = focusable[0], last = focusable[focusable.length - 1];
+            const active = document.activeElement;
+            if (e.shiftKey && (active === first || active === panel.current)) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && (active === last || !panel.current.contains(active))) { e.preventDefault(); first.focus(); }
+        };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose, locked]);
@@ -146,7 +157,7 @@ export function SpModal({ title, onClose, wide = false, footer, children, locked
                         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
                     </button>
                 </div>
-                <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+                <div className={cn('min-h-0 flex-1 overflow-y-auto overscroll-contain', !footer && 'pb-[env(safe-area-inset-bottom)]')}>{children}</div>
                 {footer && <div className="shrink-0 border-t border-[var(--site-border)] bg-[var(--site-card)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">{footer}</div>}
             </div>
         </div>
@@ -186,7 +197,7 @@ export function ItemDetail({ item, restaurant, draft, canAdd, closedNote, onDraf
         <SpModal title={item.name} onClose={onClose} wide footer={footer}>
             <div className="grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
                 <div className="relative bg-[var(--site-alt)] sm:min-h-full">
-                    <ImageSlot src={item.imageUrl} alt={item.name} restaurant={restaurant} className="aspect-[4/3] sm:aspect-auto sm:h-full sm:min-h-[340px]" />
+                    <ImageSlot src={item.imageUrl} alt={item.name} restaurant={restaurant} priority className="aspect-[4/3] sm:aspect-auto sm:h-full sm:min-h-[340px]" />
                     {item.isStockImage && item.imageUrl && <StockImageLabel />}
                     <Tags tags={item.tags} soldOut={item.soldOut} className="absolute left-4 top-4" />
                 </div>
@@ -283,12 +294,14 @@ export function CartLineList({ lines, quote, restaurant, imageOf, onChange, onRe
                 const img = imageOf(line);
                 return (
                     <li key={line.key} className="flex gap-3 py-3">
-                        <ImageSlot src={img.src} alt="" restaurant={restaurant} className="h-14 w-14 shrink-0 rounded-xl" logoTextClassName="text-[10px]" />
+                        <ImageSlot src={img.src} alt="" restaurant={restaurant} eager className="h-14 w-14 shrink-0 rounded-xl" logoTextClassName="text-[10px]" />
                         <div className="flex min-w-0 flex-1 flex-col gap-1">
                             <div className="flex items-start justify-between gap-2">
                                 <span className="text-[15px] font-bold leading-snug">{line.name}</span>
                                 <span className="shrink-0 text-[15px] font-bold tabular-nums">{formatSitePrice(total)}</span>
                             </div>
+                            {/* Her satırda aynı kural: "adet × birim fiyat" (birim fiyata menü seçim farkları dahil), sağda satır tutarı. */}
+                            <span className="text-[13px] tabular-nums text-[var(--site-sub)]">{line.quantity} × {formatSitePrice(unit)}</span>
                             {line.selectionNames.length > 0 && <span className="text-[13px] leading-snug text-[var(--site-sub)]">{line.selectionNames.join(', ')}</span>}
                             {line.note && <span className="text-[13px] italic text-[var(--site-sub)]">Not: {line.note}</span>}
                             <div className="mt-1 flex items-center justify-between gap-2">
@@ -298,7 +311,6 @@ export function CartLineList({ lines, quote, restaurant, imageOf, onChange, onRe
                                     <button type="button" onClick={() => onChange(line.key, 1)} aria-label={`${line.name}: bir artır`} className={cn(roundBtn, 'h-9 w-9')}><PlusGlyph className="h-3.5 w-3.5" /></button>
                                 </span>
                                 <span className="flex items-center gap-3">
-                                    {line.quantity > 1 && <span className="text-[12px] tabular-nums text-[var(--site-muted)]">Adet {formatSitePrice(unit)}</span>}
                                     <button type="button" onClick={() => onRemove(line.key)} className={cn('min-h-9 text-[13px] font-semibold text-[var(--site-sub)] underline underline-offset-2 hover:text-[var(--site-text)]', focusRing)}>Kaldır</button>
                                 </span>
                             </div>

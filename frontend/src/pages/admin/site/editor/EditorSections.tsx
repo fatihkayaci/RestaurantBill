@@ -59,9 +59,11 @@ export function PhotoMenu({ ctx, target, onDone }: { ctx: EditorCtx; target: Sit
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ImagePlus className="h-4 w-4" aria-hidden="true" />}
                     {busy ? 'Yükleniyor…' : p.multiple ? 'Yükle (birden fazla seçebilirsiniz)' : 'Yükle'}
                 </button>
-                <button type="button" disabled={busy} className={menuButton} onClick={() => ctx.openStock(target)}>
-                    <Images className="h-4 w-4" aria-hidden="true" />Hazır görsellerden seç
-                </button>
+                {p.stock && (
+                    <button type="button" disabled={busy} className={menuButton} onClick={() => ctx.openStock(target)}>
+                        <Images className="h-4 w-4" aria-hidden="true" />Hazır görsellerden seç
+                    </button>
+                )}
                 {p.move && p.canMove && (
                     <div className="flex gap-1">
                         <button type="button" disabled={busy || !p.canMove.left} className={menuButton} onClick={() => void p.move!(-1).then(done)}>

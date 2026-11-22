@@ -19,6 +19,23 @@ namespace RestaurantBill.Application.Features.CustomerSite.Public;
 public class CallWaiterCommand : IRequest<Result<TableActionResultDto>>
 {
     public Guid TableId { get; set; }
+    /// <summary>Su, peçete/çatal ya da diğer. null: nedensiz çağrı (eski istemciler).</summary>
+    public WaiterCallReason? Reason { get; set; }
+    /// <summary>Yalnız "Diğer"de: kısa not (en fazla 100 karakter; kırpılır, kontrol karakterleri atılır).</summary>
+    public string? Note { get; set; }
+}
+
+public static class WaiterCallNote
+{
+    public const int MaxLength = 100;
+
+    /// <summary>Kontrol karakterlerini (satır sonu dahil) atar, boşlukları kırpar. Boş not null döner.</summary>
+    public static string? Normalize(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note)) return null;
+        string cleaned = new string(note.Where(c => !char.IsControl(c)).ToArray()).Trim();
+        return cleaned.Length == 0 ? null : cleaned;
+    }
 }
 
 public class CallWaiterCommandValidator : AbstractValidator<CallWaiterCommand>
@@ -26,6 +43,11 @@ public class CallWaiterCommandValidator : AbstractValidator<CallWaiterCommand>
     public CallWaiterCommandValidator()
     {
         RuleFor(x => x.TableId).NotEqual(Guid.Empty).WithMessage("Geçerli bir masa seçilmelidir.");
+        RuleFor(x => x.Reason)
+            .IsInEnum().When(x => x.Reason.HasValue).WithMessage("Geçersiz çağırma nedeni.");
+        RuleFor(x => x.Note)
+            .Must(n => (WaiterCallNote.Normalize(n)?.Length ?? 0) <= WaiterCallNote.MaxLength)
+            .WithMessage($"Not en fazla {WaiterCallNote.MaxLength} karakter olabilir.");
     }
 }
 
@@ -60,6 +82,9 @@ public class CallWaiterCommandHandler(IAppDbContext db, ITenantResolver tenant, 
             RegionName = table.Region.Name,
             CalledAt = clock.GetUtcNow().UtcDateTime,
             TableLooksEmpty = tableLooksEmpty,
+            Reason = request.Reason,
+            // Not yalnız "Diğer" nedeninde garsona gider.
+            Note = request.Reason == WaiterCallReason.Other ? WaiterCallNote.Normalize(request.Note) : null,
         });
 
         return Result<TableActionResultDto>.Success(new TableActionResultDto { Sent = true, RetryAfterSeconds = TableActionCooldown.Seconds(TableActionCooldown.Window) });
@@ -73,6 +98,10 @@ public class CallWaiterCommandHandler(IAppDbContext db, ITenantResolver tenant, 
 public class RequestTableBillCommand : IRequest<Result<TableActionResultDto>>
 {
     public Guid TableId { get; set; }
+    /// <summary>Müşterinin ödeme tercihi (nakit / kart / IBAN); null: belirtilmedi.</summary>
+    public BillPaymentHint? PaymentHint { get; set; }
+    /// <summary>Hesap kaç kişiye bölünecek (2–20); null: bölünmeyecek.</summary>
+    public int? SplitCount { get; set; }
 }
 
 public class RequestTableBillCommandValidator : AbstractValidator<RequestTableBillCommand>
@@ -80,6 +109,11 @@ public class RequestTableBillCommandValidator : AbstractValidator<RequestTableBi
     public RequestTableBillCommandValidator()
     {
         RuleFor(x => x.TableId).NotEqual(Guid.Empty).WithMessage("Geçerli bir masa seçilmelidir.");
+        RuleFor(x => x.PaymentHint)
+            .IsInEnum().When(x => x.PaymentHint.HasValue).WithMessage("Geçersiz ödeme tercihi.");
+        RuleFor(x => x.SplitCount)
+            .InclusiveBetween(Order.BillSplitMin, Order.BillSplitMax).When(x => x.SplitCount.HasValue)
+            .WithMessage($"Hesap {Order.BillSplitMin} ile {Order.BillSplitMax} kişi arasında bölünebilir.");
     }
 }
 
@@ -116,7 +150,8 @@ public class RequestTableBillCommandHandler(IAppDbContext db, ITenantResolver te
 
         try
         {
-            order.RequestBill(clock.GetUtcNow().UtcDateTime);
+            // Son istek geçerli: ödeme tercihi ve bölme bilgisi her istekte yeniden yazılır.
+            order.RequestBill(clock.GetUtcNow().UtcDateTime, request.PaymentHint, request.SplitCount);
 
             db.AuditLogs.Add(AuditLog.Create(
                 order.BranchId,
@@ -143,7 +178,8 @@ public class RequestTableBillCommandHandler(IAppDbContext db, ITenantResolver te
 
         await tableNotifications.SendBillRequestChangedAsync(order.BranchId, table.Id, order.BillRequestedAt);
         await cashierNotifications.SendOrdersChangedAsync(order.BranchId);
-        await cashierNotifications.SendBillRequestedAsync(order.BranchId, table.RegionId, table.Id, table.Name, RequestedByName);
+        BillRequestHintDto hint = BillRequestHintDto.From(order);
+        await cashierNotifications.SendBillRequestedAsync(order.BranchId, table.RegionId, table.Id, table.Name, RequestedByName, hint);
         await tableNotifications.SendCustomerBillRequestedAsync(order.BranchId, new WaiterCalledDto
         {
             TableId = table.Id,
@@ -151,6 +187,9 @@ public class RequestTableBillCommandHandler(IAppDbContext db, ITenantResolver te
             RegionId = table.RegionId,
             RegionName = table.Region.Name,
             CalledAt = clock.GetUtcNow().UtcDateTime,
+            PaymentHint = hint.PaymentHint,
+            SplitCount = hint.SplitCount,
+            Remaining = order.RemainingAmount,
         });
 
         return Result<TableActionResultDto>.Success(new TableActionResultDto

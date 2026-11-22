@@ -24,5 +24,9 @@ public class OrderDto
     public string CreatedByUserName { get; set; } = string.Empty;
     /// <summary>Garson hesabı istediyse istek anı (UTC), yoksa null.</summary>
     public DateTime? BillRequestedAt { get; set; }
+    /// <summary>Müşterinin hesap isterken seçtiği ödeme tercihi; null: belirtilmedi.</summary>
+    public BillPaymentHint? BillPaymentHint { get; set; }
+    /// <summary>Müşteri hesabın kaç kişiye bölüneceğini söyledi; null: bölünmeyecek.</summary>
+    public int? BillSplitCount { get; set; }
     public ICollection<OrderItemDto> OrderItems { get; set; } = new List<OrderItemDto>();
 }

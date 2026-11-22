@@ -6,11 +6,14 @@ import type { PublicTableBill } from '@/features/customerSite/types';
 const BILL_POLL_MS = 10000;
 // Hesap yokken (yeni hesap açılabilir, personel QR kilidini değiştirebilir) ve ödenen hesap görünürken daha seyrek.
 const IDLE_POLL_MS = 30000;
+// Canlı bağlantı (useTableLiveUpdates) varken değişiklikler anında gelir; yoklama yalnız yedek.
+const LIVE_POLL_MS = 60000;
 
 // Masanın ortak hesabı ve personelin QR kilidi. Açık hesap masadaki her telefonda görünür. Hesap ödenince sunucu
 // "Ödendi" fişini yalnız o hesaba sipariş veren telefonlara bir süre döndürür; diğer telefonlar "açık hesap yok" görür.
 // Yoklama aynı zamanda QR kilidini (qrOrderingLocked) getirir: personel kilitleyince sepet bir sonraki turda kapanır.
-export function useTableBill(tableId: string, initialLocked: boolean | undefined, hasPending: boolean) {
+// live: canlı bağlantı kurulu; sunucu değişikliği bildirince sayfa refresh() çağırır, yoklama seyrekleşir.
+export function useTableBill(tableId: string, initialLocked: boolean | undefined, hasPending: boolean, live = false) {
     const [bill, setBill] = useState<PublicTableBill | null>(null);
     const [locked, setLocked] = useState(initialLocked === true);
     const [tick, setTick] = useState(0);
@@ -28,7 +31,7 @@ export function useTableBill(tableId: string, initialLocked: boolean | undefined
     useEffect(() => {
         let cancelled = false;
         let timer: ReturnType<typeof setTimeout> | undefined;
-        const interval = fast ? BILL_POLL_MS : IDLE_POLL_MS;
+        const interval = live ? LIVE_POLL_MS : fast ? BILL_POLL_MS : IDLE_POLL_MS;
 
         const load = async () => {
             if (typeof document === 'undefined' || !document.hidden) {
@@ -44,9 +47,9 @@ export function useTableBill(tableId: string, initialLocked: boolean | undefined
         void load();
 
         return () => { cancelled = true; if (timer) clearTimeout(timer); };
-    }, [tableId, tick, fast]);
+    }, [tableId, tick, fast, live]);
 
-    /** Hemen yeniden sor (talep gönderildi ya da sunucu kilit nedeniyle reddetti). */
+    /** Hemen yeniden sor (talep gönderildi, sunucu kilit nedeniyle reddetti ya da canlı bağlantı değişiklik bildirdi). */
     const refresh = useCallback(() => setTick(t => t + 1), []);
 
     return { bill, locked, refresh };

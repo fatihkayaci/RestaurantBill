@@ -23,6 +23,8 @@ export const productService = {
             IsNew: form.isNew,
             PrepMinutes: form.prepMinutes,
             TaxRate: form.taxRate,
+            Allergens: form.allergens,
+            DietTags: form.dietTags,
             IdempotencyKey: crypto.randomUUID()
         });
         return response.data;
@@ -41,7 +43,10 @@ export const productService = {
             IsNew: form.isNew,
             // Bu ikisi her zaman gönderilir; null "kaldır / kategori oranını kullan" demektir.
             PrepMinutes: form.prepMinutes,
-            TaxRate: form.taxRate
+            TaxRate: form.taxRate,
+            // Gönderilmezse etiketler değişmez.
+            Allergens: form.allergens,
+            DietTags: form.dietTags
         });
     },
     /** Bir kategorideki ürünlerin sırası: ilk id menüde, garsonda ve sitede ilk görünür. */

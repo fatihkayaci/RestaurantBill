@@ -87,6 +87,10 @@ public class PublicCategoryDto
     public string Name { get; set; } = string.Empty;
     /// <summary>Müşteri menüsündeki görünüm: "auto" (fotoğraf oranına göre), "cards", "list".</summary>
     public string MenuDisplay { get; set; } = "auto";
+    /// <summary>Servis penceresine göre şu an sipariş edilebilir mi (şubenin yerel saati; pencere yoksa true).</summary>
+    public bool AvailableNow { get; set; } = true;
+    /// <summary>"12:00'ye kadar", "18:00'den itibaren", "Hafta içi 08:00–12:00"; pencere yoksa boş.</summary>
+    public string AvailabilityLabel { get; set; } = string.Empty;
     public List<PublicProductDto> Products { get; set; } = [];
 }
 
@@ -106,6 +110,11 @@ public class PublicProductDto
     public int? PrepMinutes { get; set; }
     /// <summary>"Tükendi": menüde görünür, masadan sipariş edilemez.</summary>
     public bool IsOutOfStock { get; set; }
+    /// <summary>Alerjen bayrakları (ProductAllergen: 1 Gluten, 2 Süt, 4 Yumurta, 8 Yer fıstığı, 16 Sert kabuklu yemiş, 32 Susam,
+    /// 64 Soya, 128 Balık, 256 Kabuklu deniz ürünü, 512 Yumuşakça, 1024 Hardal, 2048 Kereviz, 4096 Sülfit, 8192 Acı bakla).</summary>
+    public int Allergens { get; set; }
+    /// <summary>Diyet / bilgi etiketleri (ProductDietTag: 1 Vegan, 2 Vejetaryen, 4 Glutensiz, 8 Helal, 16 Acılı).</summary>
+    public int DietTags { get; set; }
 }
 
 // BranchSiteDto (şubenin site içeriği) ve ek site alanlarının DTO'ları: SiteContentDtos.cs.
@@ -261,6 +270,19 @@ public class PublicTableBillDto
     public decimal Discount { get; set; }
     /// <summary>Personel masada QR siparişini kilitledi (PublicTableInfoDto.QrOrderingLocked ile aynı; sayfa yoklamada günceller).</summary>
     public bool QrOrderingLocked { get; set; }
+    /// <summary>
+    /// Masadan gönderilip garson onayı bekleyen QR siparişleri (yalnız bilgi: zaman ve adet, ürün adı yok). Masada açık
+    /// hesap varken ya da son 30 dakikada gönderildiyse listelenir; IsMine bu telefonun gönderdiği talep.
+    /// </summary>
+    public List<PublicPendingRequestDto> PendingRequests { get; set; } = [];
+}
+
+public class PublicPendingRequestDto
+{
+    public DateTime SentAt { get; set; }
+    /// <summary>Talepteki toplam adet.</summary>
+    public int ItemCount { get; set; }
+    public bool IsMine { get; set; }
 }
 
 public class PublicTableBillLineDto
@@ -287,6 +309,11 @@ public class OrderRequestStatusDto
     public int Status { get; set; }
     /// <summary>Reddedildiyse garsonun müşteriye yazdığı neden; boş olabilir.</summary>
     public string RejectReason { get; set; } = string.Empty;
+    /// <summary>
+    /// Müşterinin gördüğü aşama (OrderRequestStage adı): "Sent", "Approved", "Preparing", "OnTheWay" (Masanıza geliyor),
+    /// "Served", "Rejected", "Cancelled". Onaydan sonra kalemlerin mutfak durumundan türetilir.
+    /// </summary>
+    public string Stage { get; set; } = nameof(RestaurantBill.Domain.Enums.OrderRequestStage.Sent);
 }
 
 // Eski GET reservations/{id} ucu için; kimlik artık döndürülmez (rezervasyon bağlantısı token'la açılır).

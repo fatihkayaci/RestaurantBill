@@ -28,17 +28,20 @@ export function useSiteWindow(): Window {
 
 /**
  * Yerinde yazılan alanlar. `region:{id}` bölümün kısa açıklaması; liste kartları `value:{i}:title|text`,
- * `milestone:{i}:year|text`, `review:{i}:text|author|source`.
+ * `milestone:{i}:year|text`, `review:{i}:text|author|source`; ekip kartı kimliğiyle `team:{id}:name|role|note`
+ * (sıra değişse de yazı ve fotoğraf aynı kişide kalır).
  */
 export type SiteTextField =
     | 'headline' | 'tagline' | 'storyTitle' | 'about' | 'hoursNote' | 'directionsNote'
-    | 'founderName' | 'founderTitle' | 'founderQuote' | `region:${string}`
-    | `value:${number}:${'title' | 'text'}` | `milestone:${number}:${'year' | 'text'}` | `review:${number}:${'text' | 'author' | 'source'}`;
+    | 'founderName' | 'founderTitle' | 'founderQuote' | 'teamTitle' | 'teamIntro' | `region:${string}`
+    | `value:${number}:${'title' | 'text'}` | `milestone:${number}:${'year' | 'text'}` | `review:${number}:${'text' | 'author' | 'source'}`
+    | `team:${string}:${'name' | 'role' | 'note'}`;
 
 /**
  * Tıklanınca önizlemenin üstünde küçük bir pencere açan hedefler:
  * - `photo:cover|about|founder|share|hero-menu|hero-hakkimizda|hero-mekan|hero-iletisim|hero-rezervasyon`,
  *   `gallery:{i}`, `gallery:add`, `region:{id}` → fotoğraf menüsü (Yükle · Hazır görsellerden seç · Kaldır)
+ * - `photo:team:{id}` → ekip üyesinin portresi (Yükle · Kaldır; hazır görsel yok: fotoğraf kişinin kendisidir)
  * - `hours`, `rating`, `contact`, `year`, `amenities`, `homeSections` → küçük düzenleyici
  * - `external:{kaynak}` → "Bu bilgi … sayfasından değişir" (EXTERNAL_SOURCES)
  * - yazı düzenlenirken `text:{alan}` (pencere yok)
@@ -53,7 +56,7 @@ export interface EditAnchor {
     height: number;
 }
 
-export type SiteListName = 'values' | 'milestones' | 'reviews';
+export type SiteListName = 'values' | 'milestones' | 'reviews' | 'teamMembers';
 
 export interface SiteEditApi {
     /** Boş alanlar kesikli kart olarak görünsün mü ("Boş alanları göster"). */
@@ -89,6 +92,8 @@ export const SITE_LIMITS = {
     founderName: 60, founderTitle: 60, founderQuote: 240,
     value: { title: 40, text: 140, max: 3 },
     milestone: { text: 140, max: 5 },
+    teamMember: { name: 60, role: 60, note: 120, max: 6 },
+    teamTitle: 80, teamIntro: 200,
     regionDescription: 160,
     seoTitle: 100, seoDescription: 320,
 } as const;
@@ -99,6 +104,7 @@ export function textLimit(field: SiteTextField): number {
     if (kind === 'value') return part === 'title' ? SITE_LIMITS.value.title : SITE_LIMITS.value.text;
     if (kind === 'milestone') return part === 'year' ? 4 : SITE_LIMITS.milestone.text;
     if (kind === 'review') return SITE_LIMITS.review[part as 'text' | 'author' | 'source'];
+    if (kind === 'team') return SITE_LIMITS.teamMember[part as 'name' | 'role' | 'note'];
     return SITE_LIMITS[field as 'headline'];
 }
 

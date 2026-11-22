@@ -29,6 +29,13 @@ export interface QrItem {
     prepMinutes: number | null;
     categoryId: string;
     categoryName: string;
+    /**
+     * Seçim yapılacak bölümü var (hazır menüde kahve seçimi gibi): kartta adet seçici yok, "+" her zaman ayrıntıyı
+     * (seçim ekranını) açar; sepetteyse "Sepette n" yazar.
+     */
+    hasChoices: boolean;
+    /** Seçimlerden biri fiyatı artırıyor: kartta fiyat "… ₺'den" (taban fiyat; sepet seçime göre daha yüksek olabilir). */
+    priceFrom: boolean;
     product?: PublicProduct;
     menu?: OnlineSetMenu;
 }
@@ -52,12 +59,32 @@ export interface QrCategory {
 /** Hazır menünün içeriği: "Adana + İçecek seçimi + Patates" (seçimli bölüm "<bölüm> seçimi"). */
 export function menuContents(menu: OnlineSetMenu): string {
     return menu.slots
-        .map(slot => (slot.isFixed || slot.options.length === 1) ? (slot.options[0]?.productName ?? slot.name) : `${slot.name} seçimi`)
+        .map(slot => isChoiceSlot(slot) ? `${slot.name} seçimi` : (slot.options[0]?.productName ?? slot.name))
         .join(' + ');
 }
 
+/** Müşterinin seçim yaptığı bölüm (sabit ya da tek seçenekli değil). */
+export const isChoiceSlot = (slot: OnlineSetMenu['slots'][number]) => !slot.isFixed && slot.options.length > 1;
+
 /** Seçim yapılacak bölümü olan menü (tek seçenekli bölümler sayılmaz). */
-export const hasChoices = (menu: OnlineSetMenu) => menu.slots.some(slot => !slot.isFixed && slot.options.length > 1);
+export const hasChoices = (menu: OnlineSetMenu) => menu.slots.some(isChoiceSlot);
+
+/** Seçimlerden biri fiyat farkı taşıyor (sepetteki tutar seçime göre taban fiyattan yüksek olabilir). */
+export const hasSurcharge = (menu: OnlineSetMenu) => menu.slots.some(slot => isChoiceSlot(slot) && slot.options.some(o => o.surcharge > 0));
+
+/**
+ * Seçimsiz başlangıç: yalnız sabit ve tek seçenekli bölümler dolu; müşterinin seçeceği zorunlu bölümler boş kalır
+ * (önceden seçili gelmez, "Sepete ekle" seçim yapılana kadar kapalı).
+ */
+export function fixedSelections(menu: OnlineSetMenu): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const slot of menu.slots) {
+        if (isChoiceSlot(slot)) continue;
+        const option = slot.options.find(o => o.isAvailable) ?? slot.options[0];
+        if (option) result[slot.id] = option.productId;
+    }
+    return result;
+}
 
 export function buildCategories(site: PublicSite): QrCategory[] {
     const menus = site.setMenus ?? [];
@@ -70,6 +97,7 @@ export function buildCategories(site: PublicSite): QrCategory[] {
             price: menu.price, regularPrice: menu.regularPrice > menu.price ? menu.regularPrice : null,
             imageUrl: menu.imageUrl, isStockImage: menu.isStockImage, featured: menu.isFeatured, soldOut: !menu.isAvailable,
             prepMinutes: null, categoryId: SET_MENU_CATEGORY, categoryName: 'Menüler', menu,
+            hasChoices: hasChoices(menu), priceFrom: hasSurcharge(menu),
         })),
     }] : [];
     const productCategories: QrCategory[] = site.categories.map(c => ({
@@ -79,6 +107,8 @@ export function buildCategories(site: PublicSite): QrCategory[] {
             key: `p-${p.id}`, kind: 'product', id: p.id, name: p.name, description: p.description?.trim() ?? '',
             price: p.price, regularPrice: null, imageUrl: p.imageUrl, isStockImage: p.isStockImage, featured: p.isFeatured,
             soldOut: p.isOutOfStock, prepMinutes: p.prepMinutes, categoryId: c.id, categoryName: c.name, product: p,
+            hasChoices: false, priceFrom: false,
+
         })),
     }));
     return [...menuCategory, ...productCategories]

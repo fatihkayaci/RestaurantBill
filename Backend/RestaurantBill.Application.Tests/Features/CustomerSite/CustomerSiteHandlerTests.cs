@@ -221,6 +221,22 @@ public class CustomerSiteHandlerTests : ApplicationTestBase
         Assert.Empty(DbContext.Orders.ToList());
     }
 
+    // The customer QR page (public table hub) hears about the decision so the phone re-checks its requests at once.
+    [Fact]
+    public async Task ApproveAndRejectOrderRequest_SignalTheTablesQrPage()
+    {
+        var (table, product) = await SeedRestaurantAsync();
+        Guid approved = await SendOrderRequestAsync(table, product);
+        Guid rejected = await SendOrderRequestAsync(table, product);
+
+        await ApproveHandler().Handle(new ApproveOrderRequestCommand { Id = approved }, CancellationToken.None);
+        Assert.Equal([table.Id], _tableNotifications.OrderRequestDecidedTables);
+
+        await new RejectOrderRequestCommandHandler(Db, CurrentUser, _tableNotifications)
+            .Handle(new RejectOrderRequestCommand { Id = rejected }, CancellationToken.None);
+        Assert.Equal([table.Id, table.Id], _tableNotifications.OrderRequestDecidedTables);
+    }
+
     [Fact]
     public async Task CreateReservationRequest_IsPendingWithTwoHourSlotAndLeavesTableAvailable()
     {

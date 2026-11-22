@@ -327,7 +327,9 @@ export default function SiteEditorPage() {
 
 
     const popoverTarget = selection && popoverKind(selection.target) ? selection.target : null;
-    const stockInfo = ctx && stockTarget ? photoTarget(ctx, stockTarget) : null;
+    const stockTargetInfo = ctx && stockTarget ? photoTarget(ctx, stockTarget) : null;
+    // Hazır görseli olmayan hedefte (ekip portresi) katman açılmaz.
+    const stockInfo = stockTargetInfo?.stock ? { ...stockTargetInfo, stock: stockTargetInfo.stock } : null;
 
     const previewNode = site ? (
         <SitePreviewFrame width={frame.width} height={frame.height} scale={frame.scale} title="Site önizlemesi"

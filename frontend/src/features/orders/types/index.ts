@@ -54,6 +54,10 @@ export interface Order {
     createdByUserName: string;
     /** Garson hesabı istediyse istek anı; yoksa null. */
     billRequestedAt?: string | null;
+    /** Müşterinin QR'dan hesap isterken seçtiği ödeme tercihi (1 Nakit, 2 Kart, 3 IBAN; BillPaymentHint). Eski sunucu: yok. */
+    billPaymentHint?: number | null;
+    /** Müşteri hesabın kaç kişiye bölüneceğini söyledi (2–20). */
+    billSplitCount?: number | null;
     orderItems: OrderItem[];
 }
 

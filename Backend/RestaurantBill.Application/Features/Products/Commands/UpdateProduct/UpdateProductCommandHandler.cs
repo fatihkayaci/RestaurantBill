@@ -59,6 +59,10 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
             if (request.IsNew is bool isNew) product.SetNew(isNew, DateTime.UtcNow);
             product.SetPrepMinutes(request.PrepMinutes);
             product.SetTaxRate(request.TaxRate);
+            if (request.Allergens is not null || request.DietTags is not null)
+                product.SetDietaryInfo(
+                    request.Allergens is int allergens ? (ProductAllergen)allergens : product.Allergens,
+                    request.DietTags is int dietTags ? (ProductDietTag)dietTags : product.DietTags);
 
             if (!string.IsNullOrWhiteSpace(request.ImageUrl))
                 product.UpdateImage(request.ImageUrl);

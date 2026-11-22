@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-    AlertCircle, ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, Clock, CreditCard, Gift, MoreHorizontal, Percent, Plus,
-    ReceiptText, Undo2, X, XCircle,
+    AlertCircle, ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, Clock, CreditCard, MoreHorizontal, Plus,
+    ReceiptText, Tag, Undo2, X, XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -21,12 +21,13 @@ import { cn } from '@/lib/utils';
 import CancelOrderItemDialog from '@/features/orders/components/CancelOrderItemDialog';
 import { TakeawayBadge } from '@/features/orders/components/TakeawayBadge';
 import AddItemsView from './AddItemsView';
-import PaymentView, { type PaymentMode } from './PaymentView';
+import PaymentView from './PaymentView';
 import MoveTableView from './MoveTableView';
 import BottomSheet, { SheetItem } from './BottomSheet';
 import CustomerOrderRequests from './CustomerOrderRequests';
 import QrOrderingToggle from '@/features/tables/components/QrOrderingToggle';
 import { STATE_STYLE, clockTime, minutesSince, tableState } from '../waiterUi';
+import BillHintBadge from '@/features/tables/components/BillHintBadge';
 
 export type WorkspaceView = 'detail' | 'add' | 'pay' | 'move' | 'reserve';
 
@@ -90,7 +91,8 @@ export default function TableWorkspace({
     // Masa doğrudan ürün eklemeyle açıldıysa "geri" geldiği yere, masa listesine döner (telefonda
     // ızgara, tablette panel kapanır). Detaya bir kez geçilince "geri" artık detaya döner.
     const [openedOnAdd, setOpenedOnAdd] = useState(initialView === 'add');
-    const [payMode, setPayMode] = useState<PaymentMode>('normal');
+    // Ödeme ekranı tek: menüdeki "İndirim / İkram" aynı ekranı İndirim / İkram sayfası açık başlatır.
+    const [payWithDiscount, setPayWithDiscount] = useState(false);
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [reservation, setReservation] = useState<Reservation | null>(null);
@@ -227,7 +229,7 @@ export default function TableWorkspace({
         }, 'Rezervasyon kaydedilemedi.');
     };
 
-    const openPay = (mode: PaymentMode) => { setPayMode(mode); setSheetOpen(false); setView('pay'); };
+    const openPay = (withDiscount = false) => { setPayWithDiscount(withDiscount); setSheetOpen(false); setView('pay'); };
 
     const showDetail = () => { setOpenedOnAdd(false); setView('detail'); };
 
@@ -276,7 +278,7 @@ export default function TableWorkspace({
             <PaymentView
                 table={table}
                 order={order}
-                mode={payMode}
+                openDiscount={payWithDiscount}
                 canDiscount={canCancelAndDiscount}
                 onBack={() => setView('detail')}
                 onRequestBill={() => void requestBill(false)}
@@ -309,7 +311,6 @@ export default function TableWorkspace({
     const overdueItems = order?.orderItems.filter(i => (i.status === 1 || i.status === 2) && prepCountdown(i.createdAt, i.prepMinutes, now)?.overdue) ?? [];
     const canReserve = canTransferAndReserve && !order && table.status === 1;
     const moreItems = [
-        hasItems && canTakePayment && canCancelAndDiscount && 'ikram',
         hasItems && canTakePayment && canCancelAndDiscount && 'discount',
         hasItems && (canTakePayment || billRequested) && 'bill',
         canReserve && 'reserve',
@@ -533,6 +534,8 @@ export default function TableWorkspace({
                                 <span>{itemCount} ürün</span>
                                 {billRequested && order?.billRequestedAt && <span className="font-semibold text-rb-accent">Hesap istendi · {clockTime(order.billRequestedAt)}</span>}
                             </div>
+                            {/* Müşterinin QR'dan hesap isterken seçtiği tercih: "Kart · 3 kişiye bölünecek". */}
+                            {billRequested && <BillHintBadge paymentHint={order?.billPaymentHint} splitCount={order?.billSplitCount} className="self-end" />}
                             <div className="flex items-baseline justify-between">
                                 <span className="text-base font-semibold text-foreground">Toplam</span>
                                 <span className="text-[24px] font-bold tabular-nums text-foreground">{formatPrice(total)} ₺</span>
@@ -578,7 +581,7 @@ export default function TableWorkspace({
                                 </div>
                             )}
                             {hasItems && (canTakePayment ? (
-                                <button type="button" onClick={() => openPay('normal')} className="flex h-16 items-center justify-between rounded-2xl bg-foreground px-5 text-background">
+                                <button type="button" onClick={() => openPay()} className="flex h-16 items-center justify-between rounded-2xl bg-foreground px-5 text-background">
                                     <span className="flex items-center gap-2.5 text-[17px] font-bold"><CreditCard className="size-5.5 text-rb-gold" aria-hidden="true" />Ödeme al</span>
                                     <span className="text-xl font-bold tabular-nums">{paidOnAccount > 0 && <span className="mr-1 text-[13px] font-semibold opacity-70">kalan</span>}{formatPrice(due)} ₺</span>
                                 </button>
@@ -600,11 +603,8 @@ export default function TableWorkspace({
 
             {sheetOpen && (
                 <BottomSheet label="Diğer işlemler" onClose={() => setSheetOpen(false)}>
-                    {moreItems.includes('ikram') && (
-                        <SheetItem icon={<Gift className="size-5.5" />} title="İkram et" hint="Seçili ürünleri ücretsiz say" onClick={() => openPay('ikram')} />
-                    )}
                     {moreItems.includes('discount') && (
-                        <SheetItem icon={<Percent className="size-5.5" />} title="İndirim uygula" hint="Ödeme alırken yüzde ya da tutar" onClick={() => openPay('discount')} />
+                        <SheetItem icon={<Tag className="size-5.5" />} title="İndirim / İkram" hint="Ödeme ekranı indirim sayfası açık gelir" onClick={() => openPay(true)} />
                     )}
                     {moreItems.includes('bill') && (billRequested ? (
                         <SheetItem icon={<Undo2 className="size-5.5" />} title="Hesap isteğini geri al" hint="Masa yeniden 'Dolu' görünür" onClick={() => { setSheetOpen(false); void requestBill(true); }} />

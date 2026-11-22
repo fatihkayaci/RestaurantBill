@@ -11,18 +11,24 @@ const SORTS: { id: QrSort; label: string }[] = [
     { id: 'price-desc', label: 'Fiyat: yüksekten düşüğe' },
 ];
 
-// Süzgeç penceresi: tükenenleri gizle ve fiyat sıralaması. Seçimler hemen uygulanır.
-export default function QrFilterSheet({ filters, onChange, onClose }: {
+// Süzgeç penceresi (her genişlikte alttan açılır): tükenenleri gizle ve fiyat sıralaması. Seçimler hemen uygulanır;
+// "Göster" süzgece uyan ürün sayısını canlı yazar ("12 ürün göster"); hiç ürün kalmazsa "Ürün yok" ve kapalı.
+export default function QrFilterSheet({ filters, onChange, onClose, resultCount }: {
     filters: QrFilters; onChange: (filters: QrFilters) => void; onClose: () => void;
+    /** Şu anki görünümde (kategori / arama) süzgece uyan ürün sayısı. */
+    resultCount: number;
 }) {
     const footer = (
         <div className="grid grid-cols-2 gap-2.5">
             <button type="button" onClick={() => onChange(DEFAULT_FILTERS)} className={outlineButton}>Temizle</button>
-            <button type="button" onClick={onClose} className={primaryButton}>Göster</button>
+            <button type="button" onClick={onClose} disabled={resultCount === 0} aria-live="polite"
+                className={cn(primaryButton, 'px-3 tabular-nums disabled:cursor-not-allowed')}>
+                {resultCount === 0 ? 'Ürün yok' : `${resultCount} ürün göster`}
+            </button>
         </div>
     );
     return (
-        <Sheet title="Süzgeç ve sıralama" onClose={onClose} footer={footer}>
+        <Sheet title="Süzgeç ve sıralama" onClose={onClose} footer={footer} bottom>
             <Option type="checkbox" checked={filters.inStockOnly} onChange={() => onChange({ ...filters, inStockOnly: !filters.inStockOnly })}>
                 Tükenenleri gizle
             </Option>

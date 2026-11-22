@@ -35,10 +35,10 @@ public class CashierNotificationService : ICashierNotificationService
 
     // Kasiyer hub'ına yalnızca kasiyer ve yönetici ekranları bağlanır; garsonlar bu olayı almaz. Bölge/masa atanmış
     // kasiyer yalnızca kapsamındaki masaların isteğini alır (bkz. HubGroups.CashierTableTargets).
-    public async Task SendBillRequestedAsync(Guid restaurantId, Guid regionId, Guid tableId, string tableName, string requestedByName)
+    public async Task SendBillRequestedAsync(Guid restaurantId, Guid regionId, Guid tableId, string tableName, string requestedByName, BillRequestHintDto? hint = null)
     {
         await _hubContext.Clients.Groups(HubGroups.CashierTableTargets(restaurantId, regionId, tableId))
-            .SendAsync("BillRequested", tableId, tableName, requestedByName);
+            .SendAsync("BillRequested", tableId, tableName, requestedByName, hint);
     }
 
     // Garson, mutfak ve kurye ekranları OnlineOrders grubunda değildir.

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Info, Lock, Moon, UtensilsCrossed, WifiOff, X } from 'lucide-react';
+import { isAxiosError } from 'axios';
 import { publicService } from '@/features/customerSite/api/publicService';
+import { forgetTableVisit, rememberTableVisit } from '@/features/customerSite/tableVisit';
 import {
-    ORDER_REQUEST_PENDING, TABLE_QR_LOCKED_MESSAGE, type PublicProduct, type PublicSite, type PublicTableInfo, type TableActionResult,
+    ORDER_REQUEST_APPROVED, ORDER_REQUEST_PENDING, TABLE_QR_LOCKED_MESSAGE, type PublicProduct, type PublicSite, type PublicTableInfo, type TableActionResult,
 } from '@/features/customerSite/types';
 import {
     addLine, changeQuantity, defaultSelections, estimatedSubtotal, itemCount as countItems, pruneUnavailable,
@@ -15,6 +17,8 @@ import type { TableIbanPayment } from '@/features/customerSite/tableIbanPayment'
 import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
 import IbanPaySheet from './components/IbanPaySheet';
+import NotFoundPage from './NotFoundPage';
+import { useDocumentTitle } from './site/useSite';
 import { customerFontsHref, customerRootStyle, opensText } from './customerTheme';
 import { resolveDesign } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
@@ -25,7 +29,7 @@ import QrItemDetail from './qrMenu/QrItemDetail';
 import { QrBrandContext } from './qrMenu/qrBrand';
 import { clearTableCart, loadTableCart, saveTableCart, setLineTakeaway, tableLineKey } from './qrMenu/qrCartStore';
 import {
-    activeFilterCount, buildCategories, DEFAULT_FILTERS, featuredItems, popularItems, type BindItem, type QrFilters, type QrItem,
+    activeFilterCount, applyFilters, buildCategories, DEFAULT_FILTERS, featuredItems, popularItems, searchItems, type BindItem, type QrFilters, type QrItem,
 } from './qrMenu/qrModel';
 import { buildPaymentMethods } from './qrMenu/qrPayments';
 import { AccountTab, BottomBar, EmptyMenu, type BarToast, type QrTab } from './qrMenu/QrTabs';
@@ -35,6 +39,8 @@ import { useTableOrderRequests } from './useTableOrderRequests';
 import { useTableAction } from './useTableAction';
 import { useDelayedAction } from './qrMenu/tableAction';
 import { useTableBill } from './useTableBill';
+import { useTableLiveUpdates } from './useTableLiveUpdates';
+import { addedLines, addedText, snapshotBill, subtractOwnItems, type BillSnapshot } from './qrMenu/billDiff';
 
 // Adres çubuğundaki sekme adı (?sekme=sepet, ?sekme=hesap); menü sekmesinde parametre yok. Eski "Siparişlerim"
 // bağlantısı (?sekme=siparislerim) Hesabım'ı, eski sepet katmanı (?sepet=1) Sepetim'i, eski "Masa İşlemleri"
@@ -46,6 +52,24 @@ const parseTab = (value: string | null, legacyCart: boolean): QrTab =>
 
 /** "Sepete eklendi" şeridinin görünme süresi. */
 const TOAST_MS = 1800;
+/** Canlı haberin ("Masanıza eklendi", "Siparişiniz onaylandı") görünme süresi. */
+const LIVE_TOAST_MS = 4000;
+/** Onaylanan kendi talebinin kalemleri bu süre içinde hesaba düşerse "eklendi" denmez ("onaylandı" yeter). */
+const OWN_APPROVAL_CREDIT_MS = 2 * 60 * 1000;
+
+/** Masa QR'ındaki kimlik (GUID). Biçimi bozuk adres sunucuya hiç sorulmadan "Bu QR kod geçersiz" olur. */
+const TABLE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Sunucu masayı tanımadı (yanlış / eski / kaldırılmış masa: 400 "Bu masa bulunamadı", 404): QR geçersiz. Bağlantı
+ * kopması (yanıt yok), zaman aşımı, çok istek (429) ve sunucu hatası (5xx) geçersiz sayılmaz; onlarda "Tekrar dene".
+ */
+function isInvalidTable(err: unknown): boolean {
+    if (!isAxiosError(err) || !err.response) return false;
+    const status = err.response.status;
+    return status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+
 
 // Tarayıcının bağlantı durumu (çevrimdışı uyarısı ve bağlantı gelince menüyü tazelemek için).
 const subscribeOnline = (onChange: () => void) => {
@@ -103,6 +127,9 @@ export default function TableOrderPage() {
     const [table, setTable] = useState<(PublicTableInfo & { ibanPayment?: TableIbanPayment | null }) | null>(null);
     const [site, setSite] = useState<PublicSite | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
+    // Masa sunucuda yok ya da adres bozuk: "Bu QR kod geçersiz" (bağlantı hatasından ayrı).
+    const malformed = !TABLE_ID.test(tableId);
+    const [invalidTable, setInvalidTable] = useState(false);
     const [loadTick, setLoadTick] = useState(0);
     const [cart, setCart] = useState<DeliveryCartLine[]>([]);
     const [orderNote, setOrderNote] = useState('');
@@ -115,19 +142,77 @@ export default function TableOrderPage() {
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [toast, setToast] = useState<BarToast | null>(null);
     const toastTimer = useRef<number | undefined>(undefined);
-    const showToast = useCallback((text: string, kind: BarToast['kind'] = 'cart') => {
+    const showToast = useCallback((text: string, kind: BarToast['kind'] = 'cart', tap?: Pick<BarToast, 'onTap' | 'tapLabel'>) => {
         window.clearTimeout(toastTimer.current);
-        setToast(prev => ({ id: (prev?.id ?? 0) + 1, text, kind }));
-        toastTimer.current = window.setTimeout(() => setToast(null), kind === 'info' ? TOAST_MS * 2 : TOAST_MS);
+        setToast(prev => ({ id: (prev?.id ?? 0) + 1, text, kind, ...tap }));
+        toastTimer.current = window.setTimeout(() => setToast(null), kind === 'live' ? LIVE_TOAST_MS : kind === 'info' ? TOAST_MS * 2 : TOAST_MS);
     }, []);
+    // Canlı haber: sessiz (ses ve titreşim yok), alt çubuğun üstünde, dokununca Hesabım.
+    const openAccountRef = useRef<() => void>(() => {});
+    const showLiveToast = useCallback((text: string) => showToast(text, 'live', {
+        onTap: () => openAccountRef.current(),
+        tapLabel: 'Hesabım sekmesini aç',
+    }), [showToast]);
     // Saklanan sepetten düşen kalemler için bir kerelik not.
     const [cartNote, setCartNote] = useState<string | null>(null);
     // Saklanan sepet ilk yüklemede bir kez okunur; okunmadan önce boş sepet depoya yazılmaz.
     const cartRestored = useRef(false);
     const online = useOnline();
-    const { requests, addRequest } = useTableOrderRequests(tableId);
+    // Canlı bağlantı (/public-table-hub): personel masada bir şey değiştirince hesap ve talepler hemen yeniden okunur;
+    // bağlıyken yoklama seyrekleşir, bağlantı yokken normal yoklama sürer.
+    const refreshBillRef = useRef<() => void>(() => {});
+    const refreshRequestsRef = useRef<() => void>(() => {});
+    const live = useTableLiveUpdates(tableId, !!table, {
+        // Talebin aşaması (hazırlanıyor, masanıza geliyor) hesaptaki kalemlerden türer: hesapla birlikte sorulur.
+        onBillChanged: () => { refreshBillRef.current(); refreshRequestsRef.current(); },
+        onRequestsChanged: () => refreshRequestsRef.current(),
+    });
+    // Bu telefonun az önce onaylanan talepleri: kalemleri hesaba düşünce "Masanıza eklendi" denmez.
+    const recentlyApproved = useRef(new Map<string, number>());
+    const orderEvents = useMemo(() => ({
+        onApproved: (request: { id: string }) => {
+            recentlyApproved.current.set(request.id, Date.now());
+            showLiveToast('Siparişiniz onaylandı, mutfağa iletildi');
+        },
+        onStage: (_request: unknown, stage: string) => { if (stage === 'OnTheWay') showLiveToast('Siparişiniz masanıza geliyor'); },
+    }), [showLiveToast]);
+    const { requests, addRequest, refresh: refreshRequests } = useTableOrderRequests(tableId, orderEvents, live);
     const pendingRequests = requests.some(r => r.status === ORDER_REQUEST_PENDING);
-    const tableBill = useTableBill(tableId, table?.qrOrderingLocked, pendingRequests);
+    const tableBill = useTableBill(tableId, table?.qrOrderingLocked, pendingRequests, live);
+    useEffect(() => {
+        refreshBillRef.current = tableBill.refresh;
+        refreshRequestsRef.current = refreshRequests;
+    }, [tableBill.refresh, refreshRequests]);
+
+    // "Masanıza eklendi": yenilenen hesapta artan satırlar (garson, kasa ya da masadaki başka bir telefonun onaylanan
+    // siparişi). İlk yüklemede ve bu telefonun kendi talebinin kalemlerinde ("onaylandı" bildirimi var) gösterilmez.
+    const billBaseline = useRef<{ tableId: string; snapshot: BillSnapshot } | null>(null);
+    const creditedRequests = useRef(new Set<string>());
+    const requestsRef = useRef(requests);
+    useEffect(() => { requestsRef.current = requests; }, [requests]);
+    useEffect(() => {
+        const current = tableBill.bill;
+        if (!current) return;
+        const snapshot = snapshotBill(current);
+        const previous = billBaseline.current?.tableId === tableId ? billBaseline.current.snapshot : null;
+        billBaseline.current = { tableId, snapshot };
+        if (!previous) return;
+        const added = addedLines(previous, snapshot);
+        if (added.size === 0) return;
+        const now = Date.now();
+        for (const request of requestsRef.current) {
+            if (creditedRequests.current.has(request.id)) continue;
+            const approvedAt = recentlyApproved.current.get(request.id);
+            const own = request.status === ORDER_REQUEST_PENDING
+                || (request.status === ORDER_REQUEST_APPROVED && approvedAt !== undefined && now - approvedAt < OWN_APPROVAL_CREDIT_MS);
+            if (own && subtractOwnItems(added, request.items)) creditedRequests.current.add(request.id);
+        }
+        const text = addedText(added);
+        if (text) showLiveToast(text);
+    }, [tableBill.bill, tableId, showLiveToast]);
+    // Hesap ödendi: müşteri masadan kalkacak. Sitenin öteki sayfaları artık onu "masada" saymaz (paket sipariş açılır).
+    const billPaid = tableBill.bill?.hasBill === true && tableBill.bill.isPaid;
+    useEffect(() => { if (billPaid) forgetTableVisit(); }, [billPaid]);
 
     const callWaiterRun = useCallback(() => publicService.callWaiter(tableId), [tableId]);
     const billRequestRun = useCallback(() => publicService.requestBill(tableId), [tableId]);
@@ -148,14 +233,23 @@ export default function TableOrderPage() {
     if (reportedBillTotal != null && reportedBillTotal !== lastBillTotal) setLastBillTotal(reportedBillTotal);
 
     useEffect(() => {
+        if (malformed) return;
         let cancelled = false;
         publicService.getTable(tableId)
+            .catch(err => {
+                // Masa bulunamadı: geçersiz QR. Öteki hatalar aşağıdaki "Menü açılamadı / bağlantı yok" ekranına.
+                if (!cancelled && isInvalidTable(err)) setInvalidTable(true);
+                throw err;
+            })
             .then(async info => {
                 const siteData = await publicService.getSite(info.branchId);
                 if (cancelled) return;
                 setTable(info);
                 setSite(siteData);
                 setLoadError(null);
+                setInvalidTable(false);
+                // Bu sekme artık "masada": sitenin öteki sayfaları paket sepetini (teslimat) göstermez, masaya döner.
+                rememberTableVisit({ tableId, tableName: info.name, branchId: info.branchId });
                 if (cartRestored.current) {
                     // Tazeleme: menüden kalkan ya da tükenen kalemler sepetten düşer.
                     setCart(prev => pruneUnavailable(prev, siteData.categories, siteData.setMenus ?? []).lines);
@@ -178,7 +272,7 @@ export default function TableOrderPage() {
                 if (!cancelled) setLoadError(getApiErrorMessage(err, 'İnternet bağlantınızı kontrol edip tekrar deneyin. Sorun sürerse garsona haber verin.'));
             });
         return () => { cancelled = true; };
-    }, [tableId, loadTick]);
+    }, [tableId, loadTick, malformed]);
 
     // Sepet her değişince telefonda saklanır (boşalınca silinir).
     const branchId = table?.branchId;
@@ -187,6 +281,12 @@ export default function TableOrderPage() {
     }, [tableId, branchId, cart, orderNote]);
 
     useEffect(() => () => window.clearTimeout(toastTimer.current), []);
+
+    // Sekme başlığı: "Masa 5 · Demo Restoran" (Sepetim / Hesabım sekmesinde başına sekmenin adı). Veri gelene kadar sade.
+    const restaurantTitle = site ? site.companyName || site.branchName : '';
+    useDocumentTitle(malformed || invalidTable ? null
+        : table && site ? `${tab === 'cart' ? 'Sepetim · ' : tab === 'account' ? 'Hesabım · ' : ''}${table.name} · ${restaurantTitle}`
+            : loadError ? `Menü açılamadı${restaurantTitle ? ` · ${restaurantTitle}` : ''}` : 'Masa menüsü');
 
     const categories = useMemo(() => site ? buildCategories(site) : [], [site]);
     const itemsByKey = useMemo(() => new Map(categories.flatMap(c => c.items).map(item => [item.key, item])), [categories]);
@@ -242,6 +342,8 @@ export default function TableOrderPage() {
         else if (tab === 'menu') pushParams(patch, false, { menuBelow: true });
         else pushParams(patch, true, menuBelow ? { menuBelow: true } : undefined);
     };
+
+    useEffect(() => { openAccountRef.current = () => selectTab('account'); });
 
     // Başka sekmeye girince sayfa başı; "Tümü"ne dönünce kalınan yer. Kategori seçilince şerit üste yapışmışsa liste
     // şeridin hemen altından başlar, değilse sayfa yerinde kalır (başlık ve arama görünür).
@@ -304,8 +406,12 @@ export default function TableOrderPage() {
             return true;
         }
         if (!item.menu) return false;
-        // "+" her zaman doğrudan ekler: seçimli menüde her bölümün varsayılan seçeneğiyle. Başka seçim için ürüne dokunup
-        // detaydan eklenir (sepette de satır ayrı görünür).
+        // Seçimli menüde "+" seçim ekranını açar (hangi seçimin ekleneceği belirsiz kalmasın; zorunlu seçim önceden
+        // seçili gelmez). Seçimsiz menü doğrudan eklenir.
+        if (item.hasChoices) {
+            openItem(item);
+            return false;
+        }
         addSetMenu(item.menu, defaultSelections(item.menu), 1, '');
         return true;
     };
@@ -366,6 +472,9 @@ export default function TableOrderPage() {
             {children}
         </div>
     );
+
+    // Geçersiz QR (masa yok ya da adres bozuk): sitenin temasıyla "Bu QR kod geçersiz" ve "Ana sayfaya dön".
+    if (malformed || invalidTable) return <NotFoundPage kind="qr" />;
 
     if (loadError) {
         return root(
@@ -430,6 +539,10 @@ export default function TableOrderPage() {
     const detailItem = itemKey ? itemsByKey.get(itemKey) ?? null : null;
     const category = categoryId ? categories.find(c => c.id === categoryId) ?? null : null;
     const showCartBar = tab === 'menu' && canOrder && itemCount > 0;
+    // Süzgecin "N ürün göster"i: şu anki görünümün (kategori, arama) süzgece uyan ürün sayısı.
+    const viewItems = category ? category.items : categories.flatMap(c => c.items);
+    const filterResultCount = applyFilters(query.trim() ? searchItems(category ? [category] : categories, query) : viewItems, filters).length;
+
 
     const bind: BindItem = item => {
         const matches = (l: (typeof cart)[number]) => item.kind === 'product' ? l.productId === item.id : l.setMenuId === item.id;
@@ -439,7 +552,8 @@ export default function TableOrderPage() {
             onOpen: () => openItem(item),
             onAdd: canOrder && !item.soldOut ? () => quickAdd(item) : null,
             // Kartta "−": aynı ürünün birden çok satırı olabilir (not, paket, menü seçimi); en son eklenenden bir düşer.
-            onRemove: quantity > 0 ? () => setCart(prev => {
+            // Seçimli kalemde kartta adet seçici yok ("Sepette n" ve seçim ekranı); azaltma sepetten.
+            onRemove: quantity > 0 && !item.hasChoices ? () => setCart(prev => {
                 const last = [...prev].reverse().find(matches);
                 return last ? changeQuantity(prev, last.key, -1) : prev;
             }) : null,
@@ -470,7 +584,8 @@ export default function TableOrderPage() {
 
     const content: ReactNode = tab === 'account' ? (
         <AccountTab tableName={table.name} regionName={table.regionName} bill={bill} requests={requests}
-            onOpenMenu={() => selectTab('menu')} billRequest={billAction} callWaiter={waiterAction} paymentMethods={paymentMethods} />
+            onOpenMenu={() => selectTab('menu')} billRequest={billAction} callWaiter={waiterAction} paymentMethods={paymentMethods}
+            unsentCount={itemCount} onOpenCart={() => selectTab('cart')} />
     ) : tab === 'cart' ? (
         <QrCart
             tableLabel={tableLabel}
@@ -504,7 +619,9 @@ export default function TableOrderPage() {
     return root(
         <QrBrandContext.Provider value={{ name: restaurant, logoUrl: site.site.logoUrl ?? '' }}>
             {/* Sepetim ve Hesabım alt boşluğunu kendi verir (yapışık panel alt çubuğun arkasına kadar iner). */}
-            <main className={tab === 'cart' || tab === 'account' ? undefined : showCartBar ? 'pb-[calc(148px+env(safe-area-inset-bottom))]' : 'pb-[calc(96px+env(safe-area-inset-bottom))]'}>
+            {/* Alt boşluk alttaki çubukların boyu kadar (son ürünün "+"sı sepet çubuğunun altında kalmasın): sepet çubuğu
+                (56 + 8) + alt gezinme (77) + şerit payı (8) + nefes (24) + güvenli alan. */}
+            <main className={tab === 'cart' || tab === 'account' ? undefined : showCartBar ? 'pb-[calc(176px+env(safe-area-inset-bottom))]' : 'pb-[calc(104px+env(safe-area-inset-bottom))]'}>
                 {content}
             </main>
 
@@ -524,7 +641,7 @@ export default function TableOrderPage() {
             )}
 
             {filtersOpen && (
-                <QrFilterSheet filters={filters} onChange={setFilters} onClose={() => setFiltersOpen(false)} />
+                <QrFilterSheet filters={filters} onChange={setFilters} onClose={() => setFiltersOpen(false)} resultCount={filterResultCount} />
             )}
 
             {ibanOpen && ibanPayment && (

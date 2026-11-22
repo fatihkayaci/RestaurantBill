@@ -143,6 +143,11 @@ public abstract class SiteTextsInput
     public int? FoundedYear { get; set; }
     public List<SiteValueDto> Values { get; set; } = [];
     public List<SiteMilestoneDto> Milestones { get; set; } = [];
+    /// <summary>"Ekibimiz" üyeleri (yalnız Id, Name, Role, Note okunur; fotoğraf Id'ye göre korunur). null (eski form): değiştirme.</summary>
+    public List<SiteTeamMemberDto>? TeamMembers { get; set; }
+    /// <summary>"Ekibimiz" başlığı ve giriş cümlesi; boş = varsayılan, null: değiştirme.</summary>
+    public string? TeamTitle { get; set; }
+    public string? TeamIntro { get; set; }
     /// <summary>Bölüm açıklamaları (yalnız RegionId ve Description okunur).</summary>
     public List<SiteRegionDetailDto> RegionDetails { get; set; } = [];
 
@@ -192,6 +197,9 @@ public abstract class SiteTextsInput
             FoundedYear = FoundedYear,
             Values = (Values ?? []).Select(v => new SiteValue(v.Title, v.Text)).ToList(),
             Milestones = (Milestones ?? []).Select(m => new SiteMilestone(m.Year, m.Text)).ToList(),
+            TeamMembers = TeamMembers?.Where(m => m is not null).Select(m => new SiteTeamMemberText(m.Id, m.Name, m.Role, m.Note)).ToList(),
+            TeamTitle = TeamTitle,
+            TeamIntro = TeamIntro,
             RegionDescriptions = (RegionDetails ?? [])
                 .Where(r => regionIds.Contains(r.RegionId))
                 .GroupBy(r => r.RegionId)
@@ -296,6 +304,21 @@ public abstract class SiteTextsValidator<T> : AbstractValidator<T> where T : Sit
             m.RuleFor(v => v.Text).MaximumLength(SiteContent.MilestoneTextMaxLength)
                 .WithMessage($"Kilometre taşı en fazla {SiteContent.MilestoneTextMaxLength} karakter olabilir.");
         });
+        RuleFor(x => x.TeamMembers!.Count).LessThanOrEqualTo(SiteContent.TeamMembersMax)
+            .When(x => x.TeamMembers is not null).WithMessage($"En fazla {SiteContent.TeamMembersMax} ekip üyesi eklenebilir.");
+        RuleForEach(x => x.TeamMembers).ChildRules(m =>
+        {
+            m.RuleFor(v => v.Name).MaximumLength(SiteContent.TeamNameMaxLength)
+                .WithMessage($"Ekip üyesinin adı en fazla {SiteContent.TeamNameMaxLength} karakter olabilir.");
+            m.RuleFor(v => v.Role).MaximumLength(SiteContent.TeamRoleMaxLength)
+                .WithMessage($"Ekip üyesinin rolü en fazla {SiteContent.TeamRoleMaxLength} karakter olabilir.");
+            m.RuleFor(v => v.Note).MaximumLength(SiteContent.TeamNoteMaxLength)
+                .WithMessage($"Ekip üyesinin notu en fazla {SiteContent.TeamNoteMaxLength} karakter olabilir.");
+        }).When(x => x.TeamMembers is not null);
+        RuleFor(x => x.TeamTitle).MaximumLength(SiteContent.TeamTitleMaxLength)
+            .WithMessage($"Ekip başlığı en fazla {SiteContent.TeamTitleMaxLength} karakter olabilir.");
+        RuleFor(x => x.TeamIntro).MaximumLength(SiteContent.TeamIntroMaxLength)
+            .WithMessage($"Ekip giriş yazısı en fazla {SiteContent.TeamIntroMaxLength} karakter olabilir.");
         RuleForEach(x => x.RegionDetails).ChildRules(r =>
         {
             r.RuleFor(v => v.Description).MaximumLength(SiteContent.RegionDescriptionMaxLength)

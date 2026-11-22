@@ -53,6 +53,13 @@ public class BranchSiteDto
     public int? FoundedYear { get; set; }
     public List<SiteValueDto> Values { get; set; } = [];
     public List<SiteMilestoneDto> Milestones { get; set; } = [];
+    /// <summary>Hakkımızda'daki "Ekibimiz" üyeleri, sitedeki sırayla (en çok 6). Adı boş üye (fotoğrafı korunan) yalnız admin içindir;
+    /// sitede çizilmez.</summary>
+    public List<SiteTeamMemberDto> TeamMembers { get; set; } = [];
+    /// <summary>"Ekibimiz" başlığı; boş = tasarımın varsayılanı.</summary>
+    public string TeamTitle { get; set; } = string.Empty;
+    /// <summary>"Ekibimiz" giriş cümlesi; boş = tasarımın varsayılanı.</summary>
+    public string TeamIntro { get; set; } = string.Empty;
     /// <summary>Yalnız admin: şubenin bütün bölümleri, fotoğraf ve açıklamasıyla. Sitede bu bilgi regions[] içindedir.</summary>
     public List<SiteRegionDetailDto> RegionDetails { get; set; } = [];
     /// <summary>Girilen Google/paylaşım başlığı; boş = otomatik. Geçerli değer için PublicSiteDto.Seo / SiteEditorDto.Seo.</summary>
@@ -108,6 +115,12 @@ public class BranchSiteDto
             FoundedYear = content.FoundedYear,
             Values = content.Values.Select(v => new SiteValueDto { Title = v.Title, Text = v.Text }).ToList(),
             Milestones = content.Milestones.Select(m => new SiteMilestoneDto { Year = m.Year, Text = m.Text }).ToList(),
+            TeamMembers = content.TeamMembers.Select(m => new SiteTeamMemberDto
+            {
+                Id = m.Id, Name = m.Name, Role = m.Role, Note = m.Note, PhotoUrl = ImageUrl(cdnBaseUrl, m.PhotoKey),
+            }).ToList(),
+            TeamTitle = content.TeamTitle,
+            TeamIntro = content.TeamIntro,
             SeoTitle = content.SeoTitle,
             SeoDescription = content.SeoDescription,
             ShareImageUrl = ImageUrl(cdnBaseUrl, content.ShareImage),
@@ -129,7 +142,19 @@ public class SiteSeoDto
     public string ShareImageUrl { get; set; } = string.Empty;
 }
 
-/// <summary>Anasayfanın bir bölümü ("categories", "featured", "about", "features", "gallery", "reviews", "contact") ve görünürlüğü.</summary>
+/// <summary>"Ekibimiz" üyesi. Kayıtta yalnız Id, Name, Role, Note okunur; fotoğraf ayrı uçtan değişir ve Id'ye göre korunur.</summary>
+public class SiteTeamMemberDto
+{
+    /// <summary>İstemcinin verdiği kimlik (yeni üyede boş da olabilir: sunucu verir).</summary>
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    /// <summary>İsteğe bağlı tek satır not.</summary>
+    public string Note { get; set; } = string.Empty;
+    public string PhotoUrl { get; set; } = string.Empty;
+}
+
+/// <summary>Anasayfanın bir bölümü ("categories", "featured", "about", "team", "features", "gallery", "reviews", "contact") ve görünürlüğü.</summary>
 public class SiteHomeSectionDto
 {
     public string Key { get; set; } = string.Empty;

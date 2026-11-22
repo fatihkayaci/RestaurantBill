@@ -46,7 +46,9 @@ namespace RestaurantBill.Application.Features.Products.Queries.GetAllProduct
                     EffectiveTaxRate = p.TaxRate ?? p.Category.TaxRate ?? p.Category.Branch.TaxRate,
                     IsOutOfStock = p.IsOutOfStock,
                     NewUntil = p.NewUntil,
-                    IsNew = p.NewUntil != null && p.NewUntil > now
+                    IsNew = p.NewUntil != null && p.NewUntil > now,
+                    Allergens = (int)p.Allergens,
+                    DietTags = (int)p.DietTags
                 })
                 .ToListAsync(cancellationToken);
 

@@ -51,7 +51,9 @@ public class WaiterCalledNotificationTests
     private readonly List<Sent> _cashierHub = [];
 
     private TableNotificationService Service()
-        => new(new RecordingHubContext<TableHub>(_tableHub), new RecordingHubContext<CashierHub>(_cashierHub));
+        => new(new RecordingHubContext<TableHub>(_tableHub), new RecordingHubContext<CashierHub>(_cashierHub), new RecordingHubContext<PublicTableHub>(_publicHub));
+
+    private readonly List<Sent> _publicHub = [];
 
     private static WaiterCalledDto Call(Guid tableId, Guid regionId)
         => new() { TableId = tableId, TableName = "B1", RegionId = regionId, RegionName = "Bahçe", CalledAt = DateTime.UtcNow };
@@ -73,6 +75,8 @@ public class WaiterCalledNotificationTests
         Assert.Equal([HubGroups.BranchManagers(Branch)], managers.Groups);
         // Kasiyer ekranları (Restaurant grubu) bu olayı almaz.
         Assert.DoesNotContain(HubGroups.Restaurant(Branch), managers.Groups);
+        // The customer QR page is not told about waiter calls.
+        Assert.Empty(_publicHub);
     }
 
     // Her garson, her masa için: kapsamındaysa hedef gruplardan tam birinde, değilse hiçbirinde.

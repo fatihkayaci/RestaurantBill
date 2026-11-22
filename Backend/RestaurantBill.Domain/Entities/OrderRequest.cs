@@ -29,6 +29,9 @@ namespace RestaurantBill.Domain.Entities
         // Talebin yazıldığı hesap (onayda ya da ön siparişin masaya geçişinde). Hesap ödendikten sonra "Ödendi" fişi
         // yalnız bu hesaba talebi yazılan telefonlarda görünür. Bekleyen/reddedilen talepte ve eski kayıtlarda null.
         public Guid? OrderId { get; private set; }
+        // Onayda kalemler talebe bağlanarak (OrderItem.OrderRequestId) yazıldı. Bu alan eklenmeden önce onaylanan
+        // taleplerde false: onların kalemleri bilinmez, aşama hesabın durumundan tahmin edilir (OrderRequestStages).
+        public bool ItemsLinked { get; private set; }
 
         private readonly List<OrderRequestItem> _items = new();
         public IReadOnlyCollection<OrderRequestItem> Items => _items.AsReadOnly();
@@ -112,6 +115,7 @@ namespace RestaurantBill.Domain.Entities
 
             Status = OrderRequestStatus.Approved;
             OrderId = orderId;
+            ItemsLinked = true;
         }
 
         /// <summary>Hesap başka bir hesapla birleşti (masa birleştirme): talep artık birleşen hesabın parçasıdır.</summary>
@@ -172,6 +176,49 @@ namespace RestaurantBill.Domain.Entities
         {
             if (Status != OrderRequestStatus.Pending)
                 throw new DomainException("Bu talep zaten işlendi.");
+        }
+    }
+
+    /// <summary>Müşterinin QR'da gördüğü sipariş aşamasının türetilmesi (saklanmaz).</summary>
+    public static class OrderRequestStages
+    {
+        /// <param name="linkedItemStatuses">
+        /// Talebin hâlâ hesapta duran kalemlerinin durumları (menü satırı hariç, menü içerikleri dahil). Ödenen ya da
+        /// iptal edilen kalem hesaptan düştüğü için listede yoktur: bitmiş sayılır.
+        /// </param>
+        /// <param name="orderClosed">Talebin yazıldığı hesap ödendi / iptal edildi (eski talepler için tahmin).</param>
+        public static OrderRequestStage Derive(OrderRequestStatus status, bool itemsLinked, bool orderClosed,
+            IReadOnlyCollection<OrderItemStatus> linkedItemStatuses)
+        {
+            switch (status)
+            {
+                case OrderRequestStatus.Pending:
+                    return OrderRequestStage.Sent;
+                case OrderRequestStatus.Rejected:
+                    return OrderRequestStage.Rejected;
+                case OrderRequestStatus.Cancelled:
+                case OrderRequestStatus.Expired:
+                    return OrderRequestStage.Cancelled;
+            }
+
+            if (linkedItemStatuses.Count == 0)
+            {
+                // Bağlı kalemlerin hepsi ödendi / çıkarıldı; eski talepte kalem bilinmez, hesap kapandıysa servis edilmiştir.
+                if (itemsLinked || orderClosed)
+                    return OrderRequestStage.Served;
+                return OrderRequestStage.Approved;
+            }
+
+            // En geride kalan kalem belirler: hepsi servis edildiyse Servis edildi, hepsi hazır (ya da ötesi) ise
+            // "Masanıza geliyor". Mutfak herhangi bir kalemde başladıysa Hazırlanıyor.
+            OrderItemStatus least = linkedItemStatuses.Min();
+            if (least >= OrderItemStatus.Served)
+                return OrderRequestStage.Served;
+            if (least >= OrderItemStatus.Ready)
+                return OrderRequestStage.OnTheWay;
+            if (linkedItemStatuses.Any(s => s > OrderItemStatus.Pending))
+                return OrderRequestStage.Preparing;
+            return OrderRequestStage.Approved;
         }
     }
 

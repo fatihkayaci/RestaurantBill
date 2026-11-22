@@ -22,8 +22,14 @@ public class TableDto
     public string CreatedByUserName { get; set; } = string.Empty;
     /// <summary>Açık siparişte hesap istendiyse istek anı (UTC).</summary>
     public DateTime? BillRequestedAt { get; set; }
+    /// <summary>Müşterinin QR'dan hesap isterken seçtiği ödeme tercihi (1 Nakit, 2 Kart, 3 IBAN); null: belirtilmedi.</summary>
+    public BillPaymentHint? BillPaymentHint { get; set; }
+    /// <summary>Müşteri hesabın kaç kişiye bölüneceğini söyledi (2–20); null: bölünmeyecek.</summary>
+    public int? BillSplitCount { get; set; }
     /// <summary>Açık siparişte hazırlanma süresini aşmış (bekleyen/hazırlanan) kalem sayısı.</summary>
     public int OverdueItemCount { get; set; }
+    /// <summary>Açık siparişte mutfağın "hazır" dediği, servis bekleyen ürün adedi (Genel Bakış'taki ReadyItems ile aynı sayım).</summary>
+    public int ReadyItemCount { get; set; }
     public Guid RegionId { get; set; }
     public string RegionName { get; set; } = string.Empty;
 }

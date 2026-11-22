@@ -17,8 +17,14 @@ export interface Table {
     createdByUserName: string;
     /** Açık siparişte hesap istendiyse istek anı. */
     billRequestedAt?: string | null;
+    /** Müşterinin QR'dan hesap isterken seçtiği ödeme tercihi (1 Nakit, 2 Kart, 3 IBAN; BillPaymentHint). */
+    billPaymentHint?: number | null;
+    /** Müşteri hesabın kaç kişiye bölüneceğini söyledi (2–20). */
+    billSplitCount?: number | null;
     /** Hazırlanma süresini aşmış kalem sayısı (garson kartındaki "Gecikme"). */
     overdueItemCount?: number;
+    /** Mutfağın "hazır" dediği, servis bekleyen ürün adedi (Genel Bakış'taki readyItems ile aynı). Eski sunucu: yok. */
+    readyItemCount?: number;
     regionId: string;
     regionName: string;
 }

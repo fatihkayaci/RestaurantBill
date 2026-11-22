@@ -30,6 +30,7 @@ namespace RestaurantBill.Application.Features.Categories.Commands.UpdateCategory
             category.Rename(command.Name);
             category.SetTaxRate(command.TaxRate);
             if (command.MenuDisplay is CategoryMenuDisplay display) category.SetMenuDisplay(display);
+            command.Availability?.ApplyTo(category);
 
             User? actor = await _db.Users.FirstOrDefaultAsync(u => u.Id == _currentUser.UserId, cancellationToken);
             AuditLog log = AuditLog.Create(

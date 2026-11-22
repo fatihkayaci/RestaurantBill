@@ -49,11 +49,14 @@ export function toTexts(d: BranchSite): SiteDraftTexts {
         featuredReviews: d.featuredReviews ?? [], founderName: d.founderName ?? '', founderTitle: d.founderTitle ?? '',
         founderQuote: d.founderQuote ?? '', foundedYear: d.foundedYear ?? null, values: d.values ?? [], milestones: d.milestones ?? [],
         regionDetails: (d.regionDetails ?? []).map(r => ({ regionId: r.regionId, description: r.description ?? '' })),
+        teamMembers: (d.teamMembers ?? []).map(m => ({ id: m.id, name: m.name ?? '', role: m.role ?? '', note: m.note ?? '' })),
+        teamTitle: d.teamTitle ?? '', teamIntro: d.teamIntro ?? '',
         seoTitle: d.seoTitle ?? '', seoDescription: d.seoDescription ?? '',
     };
 }
 
-/** PUT gövdesi: boş saatler null, tamamen boş liste kartları (yeni eklenmiş, henüz yazılmamış) gönderilmez. */
+/** PUT gövdesi: boş saatler null, tamamen boş liste kartları (yeni eklenmiş, henüz yazılmamış) gönderilmez. Ekip üyeleri
+ * hepsi gider: adı boş üyeyi sunucu atar (fotoğrafı varsa tutar); yerelde kart, adı yazılana kadar durur. */
 export function toSaveBody(t: SiteDraftTexts): SiteDraftTexts {
     return {
         ...t,
@@ -78,6 +81,7 @@ export function getText(t: SiteDraftTexts, field: SiteTextField): string {
     const i = Number(key);
     if (kind === 'value') return t.values[i]?.[part as 'title' | 'text'] ?? '';
     if (kind === 'review') return t.featuredReviews[i]?.[part as 'text' | 'author' | 'source'] ?? '';
+    if (kind === 'team') return t.teamMembers.find(m => m.id === key)?.[part as 'name' | 'role' | 'note'] ?? '';
     if (kind === 'milestone') {
         const m = t.milestones[i];
         if (!m) return '';
@@ -100,6 +104,7 @@ export function withText(t: SiteDraftTexts, field: SiteTextField, value: string)
     const i = Number(key);
     if (kind === 'value') return { ...t, values: t.values.map((v, j) => (j === i ? { ...v, [part]: value } : v)) };
     if (kind === 'review') return { ...t, featuredReviews: t.featuredReviews.map((r, j) => (j === i ? { ...r, [part]: value } : r)) };
+    if (kind === 'team') return { ...t, teamMembers: t.teamMembers.map(m => (m.id === key ? { ...m, [part]: value } : m)) };
     if (kind === 'milestone') {
         return {
             ...t,
@@ -122,6 +127,15 @@ function applyOp<T>(items: T[], op: ListOp, empty: T): T[] {
     return next;
 }
 
+function newId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    // Güvenli olmayan bağlamda (http, eski tarayıcı) randomUUID yok: aynı biçimde rastgele bir kimlik.
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.floor(Math.random() * 16);
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+}
+
 /** Liste kartı ekle/sil/taşı; eklenince yazılacak ilk alan döner. */
 export function withListOp(t: SiteDraftTexts, list: SiteListName, op: ListOp): { texts: SiteDraftTexts; focus: SiteTextField | null } {
     switch (list) {
@@ -137,6 +151,14 @@ export function withListOp(t: SiteDraftTexts, list: SiteListName, op: ListOp): {
                 texts: { ...t, featuredReviews: applyOp(t.featuredReviews, op, { author: '', text: '', source: 'Google' }) },
                 focus: op.action === 'add' ? `review:${t.featuredReviews.length}:text` : null,
             };
+        case 'teamMembers': {
+            // Kimlik burada üretilir: fotoğraf bu kimliğe bağlanır, sıra değişse de kişide kalır.
+            const id = newId();
+            return {
+                texts: { ...t, teamMembers: applyOp(t.teamMembers, op, { id, name: '', role: '', note: '' }) },
+                focus: op.action === 'add' ? `team:${id}:name` : null,
+            };
+        }
     }
 }
 
@@ -145,9 +167,12 @@ export function buildPreviewSite(base: PublicSite, draft: BranchSite, texts: Sit
     const descriptions = new Map(texts.regionDetails.map(r => [r.regionId, r.description]));
     const regionDetails = draft.regionDetails.map(r => ({ ...r, description: descriptions.get(r.regionId) ?? r.description }));
     const byId = new Map(regionDetails.map(r => [r.regionId, r]));
+    // Ekip: yazılar yerelden, fotoğraflar taslaktan (kimliğe göre); yeni kartın fotoğrafı yok.
+    const photos = new Map((draft.teamMembers ?? []).map(m => [m.id, m.photoUrl]));
+    const teamMembers = texts.teamMembers.map(m => ({ ...m, photoUrl: photos.get(m.id) ?? '' }));
     return normalizeSite({
         ...base,
-        site: { ...draft, ...texts, regionDetails },
+        site: { ...draft, ...texts, regionDetails, teamMembers },
         regions: base.regions.map(r => {
             const d = byId.get(r.id);
             return d ? { ...r, photoUrl: d.photoUrl, description: d.description } : r;
@@ -239,6 +264,7 @@ const TEXT_LABELS: Record<string, string> = {
     headline: 'Büyük başlık', tagline: 'Alt başlık', storyTitle: 'Büyük slogan', about: 'Kısa hikâye', hoursNote: 'Saat notu',
     directionsNote: 'Nasıl gelinir', founderName: 'Ustanın adı', founderTitle: 'Ustanın unvanı', founderQuote: 'Ustanın sözü',
     region: 'Bölüm açıklaması', value: 'Değer', milestone: 'Kilometre taşı', review: 'Yorum',
+    teamTitle: 'Ekip başlığı', teamIntro: 'Ekip giriş yazısı', team: 'Ekip üyesi',
 };
 
 export function textFieldLabel(field: SiteTextField): string {

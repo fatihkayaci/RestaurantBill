@@ -48,3 +48,6 @@ export function primaryAction(site: PublicSite): { label: string; to: string; re
     if (canReserveOnline(site)) return { label: 'Rezervasyon', to: RESERVATION_PATH, reserve: true };
     return { label: 'Menüyü incele', to: '/menu', reserve: false };
 }
+
+/** Sophra'da sepet ayrı sayfa değil, Menü sayfasının sepet penceresi: bu adres Menü'yü sepet açık hâlde açar. */
+export const CART_PATH = '/menu?sepet=1';

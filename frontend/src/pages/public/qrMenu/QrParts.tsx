@@ -2,6 +2,7 @@ import { createElement, useEffect, useRef, useState, type ReactNode } from 'reac
 import { ArrowRight, Check, Minus, Package, Plus, Star } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { SkeletonImg } from '../components/SkeletonImg';
 import { StockImageLabel } from '../components/StockImageLabel';
 import { initials } from '../site/siteTheme';
 import { useQrBrand } from './qrBrand';
@@ -16,15 +17,29 @@ export function CategoryGlyph({ category, className }: { category: { id: string;
     return createElement(categoryIcon(category), { className, 'aria-hidden': true });
 }
 
-export function Price({ value, className }: { value: number; className?: string }) {
-    return <span className={cn(priceText, className)}>{formatPrice(value)} ₺</span>;
+/** Fiyat. from: seçime göre artabilir ("365 ₺'den"); kart sepetteki tutarla çelişmesin. */
+export function Price({ value, className, from = false }: { value: number; className?: string; from?: boolean }) {
+    return (
+        <span className={cn(priceText, 'whitespace-nowrap', className)}>
+            {formatPrice(value)} ₺{from && <span className="text-[0.8em] font-bold text-[var(--site-sub)]">'den<span className="sr-only">, seçime göre değişir</span></span>}
+        </span>
+    );
+}
+
+/** "Öneri" etiketi: restoranın öne çıkardığı kalem. Yıldız hiçbir yerde yazısız durmaz. */
+export function RecommendTag({ className }: { className?: string }) {
+    return (
+        <span className={cn('inline-flex items-center gap-1 rounded-full bg-[var(--site-accent-soft)] px-2 py-0.5 align-middle text-[11px] font-extrabold text-[var(--site-accent-text)]', className)}>
+            <Star className="h-3 w-3 fill-current" aria-hidden="true" />Öneri
+        </span>
+    );
 }
 
 /** Hazır menü indirimi: ayrı ayrı alınınca tutarı üstü çizili. */
 export function RegularPrice({ item }: { item: QrItem }) {
     if (item.regularPrice == null) return null;
     return (
-        <span className="text-[13px] font-semibold tabular-nums text-[var(--site-muted)] line-through">
+        <span className="whitespace-nowrap text-[13px] font-semibold tabular-nums text-[var(--site-muted)] line-through">
             <span className="sr-only">Ayrı ayrı </span>{formatPrice(item.regularPrice)} ₺
         </span>
     );
@@ -51,16 +66,14 @@ export function BrandMark({ className }: { className?: string }) {
  * Kalemin görseli. Fotoğraf yoksa ya da yüklenemezse aynı kutuda yer tutucu: restoranın logosu (soluk), logo da yoksa
  * kategorinin simgesi. Kutuya yazı konmaz; ad her zaman kutunun yanında/altında durur.
  */
-export function QrImage({ src, alt, category, className, eager = false }: {
-    src?: string | null; alt: string; category: { id: string; name: string }; className: string; eager?: boolean;
+export function QrImage({ src, alt, category, className, eager = false, priority = false }: {
+    src?: string | null; alt: string; category: { id: string; name: string }; className: string; eager?: boolean; priority?: boolean;
 }) {
     const { logoUrl } = useQrBrand();
     const [failed, setFailed] = useState<string[]>([]);
     if (src && !failed.includes(src)) {
-        return (
-            <img src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(f => [...f, src])}
-                className={cn('block w-full bg-[var(--site-placeholder)] object-cover', className)} />
-        );
+        // İnene kadar aynı boyutta iskelet (SkeletonImg); sepet ve menü aynı bileşeni kullanır.
+        return <SkeletonImg src={src} alt={alt} eager={eager} priority={priority} onError={() => setFailed(f => [...f, src])} className={className} />;
     }
     const logo = logoUrl && !failed.includes(logoUrl) ? logoUrl : null;
     return (
@@ -136,7 +149,7 @@ function ImageBadge({ children, tone = 'light' }: { children: ReactNode; tone?: 
 
 function itemBadge(item: QrItem, showFeatured: boolean) {
     if (item.soldOut) return <ImageBadge tone="muted">Tükendi</ImageBadge>;
-    if (item.featured && showFeatured) return <ImageBadge><Star className="h-3.5 w-3.5 fill-current text-[var(--site-accent-text)]" aria-hidden="true" />Öne çıkan</ImageBadge>;
+    if (item.featured && showFeatured) return <ImageBadge><Star className="h-3.5 w-3.5 fill-current text-[var(--site-accent-text)]" aria-hidden="true" />Öneri</ImageBadge>;
     if (item.kind === 'setMenu') return <ImageBadge>Menü</ImageBadge>;
     return null;
 }
@@ -156,11 +169,22 @@ interface ItemProps {
 
 /**
  * Kartın sağ altındaki ekleme alanı: sepette yoksa yalnız "+"; sepetteyse "− adet +" (sepete girmeden azaltılır).
- * Kartın ayrıntı açan katmanının üstünde durur (z-10).
+ * Seçimli kalemde (choices) adet seçici yok: hangi seçimin artacağı belirsiz olurdu. Sepetteyse "Sepette n" yazar, "+"
+ * her zaman seçim ekranını açar. Kartın ayrıntı açan katmanının üstünde durur (z-10).
  */
-function CardQuantityControl({ name, quantity, onAdd, onRemove, size = 'md' }: {
-    name: string; quantity: number; onAdd: (() => boolean | void) | null; onRemove?: (() => void) | null; size?: 'sm' | 'md';
+function CardQuantityControl({ name, quantity, onAdd, onRemove, size = 'md', choices = false, showInCart = true }: {
+    name: string; quantity: number; onAdd: (() => boolean | void) | null; onRemove?: (() => void) | null; size?: 'sm' | 'md'; choices?: boolean;
+    /** Seçimli kalemde "Sepette n" burada mı (dar kartta görselin üstünde durur). */
+    showInCart?: boolean;
 }) {
+    if (choices) {
+        return (
+            <span className="relative z-10 flex items-center gap-1.5">
+                {quantity > 0 && showInCart && <InCartTag quantity={quantity} />}
+                {onAdd && <AddButton label={`${name}: seçim yapıp sepete ekle`} onClick={onAdd} size={size} />}
+            </span>
+        );
+    }
     if (quantity > 0 && onRemove) {
         return (
             <span className="relative z-10 flex items-center rounded-full bg-[var(--site-accent-soft)]">
@@ -200,6 +224,7 @@ export function ItemCard({ item, quantity, onOpen, onAdd, onRemove, wide = false
                 <QrImage src={item.imageUrl} alt="" category={itemCategory(item)} eager={eager} className={wide ? 'aspect-[16/9]' : 'aspect-[4/3]'} />
                 {item.isStockImage && item.imageUrl && <StockImageLabel className="bottom-1.5 left-1.5 right-auto" />}
                 {badge && <span className="absolute left-2 top-2">{badge}</span>}
+                {item.hasChoices && quantity > 0 && <span className="absolute right-2 top-2"><InCartTag quantity={quantity} /></span>}
             </div>
             <div className="flex flex-1 flex-col gap-1 px-3 pb-2.5 pt-2.5">
                 <h3 className={cn('m-0 line-clamp-2 font-extrabold leading-snug', wide ? 'text-[17px]' : 'text-[15px]')}>
@@ -212,45 +237,54 @@ export function ItemCard({ item, quantity, onOpen, onAdd, onRemove, wide = false
                 <div className="mt-auto flex items-end justify-between gap-2 pt-1">
                     <span className="flex min-w-0 flex-col">
                         <RegularPrice item={item} />
-                        <Price value={item.price} className="text-[16px]" />
+                        <Price value={item.price} from={item.priceFrom} className="text-[16px]" />
                     </span>
-                    <CardQuantityControl name={item.name} quantity={quantity} onAdd={onAdd} onRemove={onRemove} />
+                    <CardQuantityControl name={item.name} quantity={quantity} onAdd={onAdd} onRemove={onRemove} choices={item.hasChoices} showInCart={false} />
                 </div>
             </div>
         </article>
     );
 }
 
-/** Liste satırı (menünün tamamı): küçük görsel, ad, açıklama, fiyat, "+". */
+/**
+ * Liste satırı (menünün tamamı): küçük görsel, ad, açıklama; altta kartla aynı düzen: fiyat solda, "+" / adet sağda.
+ */
 export function ItemRow({ item, quantity, onOpen, onAdd, onRemove }: ItemProps) {
     return (
-        <article className={cn('relative flex items-center gap-3 py-2.5', item.soldOut && 'opacity-70')}>
+        <article className={cn('relative flex items-stretch gap-3 py-2.5', item.soldOut && 'opacity-70')}>
             <div className="relative shrink-0">
                 <QrImage src={item.imageUrl} alt="" category={itemCategory(item)} className="h-[68px] w-[76px] rounded-xl" />
                 {item.soldOut && (
                     <span className="absolute inset-x-1 bottom-1 rounded-md bg-[var(--site-text)] py-0.5 text-center text-[11px] font-bold text-[var(--site-bg)]">Tükendi</span>
                 )}
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-1 flex-col">
                 <h3 className="m-0 text-[15px] font-extrabold leading-snug">
                     <button type="button" onClick={onOpen} className={cn('text-left after:absolute after:inset-0 after:content-[""]', focusRing, 'focus-visible:ring-offset-0')}>
                         {item.name}
                     </button>
-                    {item.featured && !item.soldOut && (
-                        <Star className="mb-0.5 ml-1.5 inline h-3.5 w-3.5 fill-current text-[var(--site-accent-text)]" aria-label="Öne çıkan" />
-                    )}
+                    {item.featured && !item.soldOut && <RecommendTag className="mb-0.5 ml-1.5" />}
                 </h3>
                 {item.description && <p className="m-0 mt-0.5 line-clamp-2 text-[13px] leading-snug text-[var(--site-sub)]">{item.description}</p>}
-            </div>
-            {/* Fiyat üstte, ekleme/adet seçici altında: dar ekranda adın yeri daralmasın. */}
-            <div className="relative z-10 flex shrink-0 flex-col items-end gap-1">
-                <span className="flex flex-col items-end">
-                    <RegularPrice item={item} />
-                    <Price value={item.price} className="text-[15px]" />
-                </span>
-                <CardQuantityControl name={item.name} quantity={quantity} onAdd={onAdd} onRemove={onRemove} size="sm" />
+                {/* Kartla aynı yer: fiyat solda altta, ekleme/adet sağda altta. */}
+                <div className="mt-auto flex items-end justify-between gap-2 pt-1">
+                    <span className="flex min-w-0 flex-col">
+                        <RegularPrice item={item} />
+                        <Price value={item.price} from={item.priceFrom} className="text-[15px]" />
+                    </span>
+                    <CardQuantityControl name={item.name} quantity={quantity} onAdd={onAdd} onRemove={onRemove} size="sm" choices={item.hasChoices} />
+                </div>
             </div>
         </article>
+    );
+}
+
+/** Seçimli kalemin sepetteki adedi: "Sepette 2". */
+function InCartTag({ quantity }: { quantity: number }) {
+    return (
+        <span className="flex h-7 items-center whitespace-nowrap rounded-full bg-[var(--site-accent-soft)] px-2.5 text-xs font-extrabold tabular-nums text-[var(--site-accent-text)] shadow-[0_2px_8px_rgba(0,0,0,0.12)]">
+            Sepette {quantity}
+        </span>
     );
 }
 
@@ -262,7 +296,8 @@ function QuantityTag({ quantity }: { quantity: number }) {
     );
 }
 
-/** Bölüm başlığı: simge, ad, sağda "Tümünü gör". */
+/** Bölüm başlığı: simge, ad, (varsa) sağda "Tümünü gör". */
+
 export function SectionHeader({ id, icon, title, onSeeAll, seeAllLabel = 'Tümünü Gör' }: {
     id: string; icon?: ReactNode; title: string; onSeeAll?: () => void; seeAllLabel?: string;
 }) {

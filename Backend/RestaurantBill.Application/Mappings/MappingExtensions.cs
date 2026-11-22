@@ -107,6 +107,8 @@ public static class MappingExtensions
         Status = o.Status,
         CreatedAt = o.CreatedAt,
         BillRequestedAt = o.BillRequestedAt,
+        BillPaymentHint = o.BillPaymentHint,
+        BillSplitCount = o.BillSplitCount,
         OrderItems = o.OrderItems.Where(i => !i.IsSetMenuComponent).Select(i => i.ToLineDto(o)).ToList()
     };
 

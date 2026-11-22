@@ -15,6 +15,10 @@ export interface PublicProduct {
     prepMinutes: number | null;
     /** "Tükendi": menüde görünür, masadan sipariş edilemez. */
     isOutOfStock: boolean;
+    /** Alerjen bayrakları (features/products/dietaryTags: ALLERGENS); eski sunucu: yok. */
+    allergens?: number;
+    /** Diyet / bilgi etiketleri (DIET_TAGS: vegan, vejetaryen, glutensiz, helal, acılı); eski sunucu: yok. */
+    dietTags?: number;
 }
 
 /** Şubenin site içeriği; admin "Restoran sitesi" sayfası da aynı şekli kullanır. Boş alanın bölümü çizilmez. */
@@ -67,6 +71,12 @@ export interface BranchSite {
     foundedYear: number | null;
     values: SiteValue[];
     milestones: SiteMilestone[];
+    /** Hakkımızda'daki "Ekibimiz" üyeleri, sitedeki sırayla (en çok 6). Adı boş üye (fotoğrafı korunmuş) sitede çizilmez. */
+    teamMembers: SiteTeamMember[];
+    /** "Ekibimiz" başlığı; boş = tasarımın varsayılanı. */
+    teamTitle: string;
+    /** "Ekibimiz" giriş cümlesi; boş = tasarımın varsayılanı. */
+    teamIntro: string;
     /** Yalnız admin: şubenin bütün bölümleri (sitede bu bilgi regions[] içinde). */
     regionDetails: SiteRegionDetail[];
     /** Google/paylaşım başlığı; boş = otomatik ("Ad · ilçe"). */
@@ -134,7 +144,19 @@ export interface SiteDayHours {
     closes: string;
 }
 
-/** Anasayfanın bir bölümü: "categories" | "featured" | "about" | "features" | "gallery" | "reviews" | "contact". */
+/** "Ekibimiz" üyesi: ustayla birlikte çalışan biri. Fotoğraf kimliğe bağlıdır (sıra değişse de kişide kalır). */
+export interface SiteTeamMember {
+    id: string;
+    name: string;
+    /** "Mutfak şefi"; boş olabilir. */
+    role: string;
+    /** İsteğe bağlı tek satır not. */
+    note: string;
+    /** Kendi yüklenmiş portre (hazır görsel yok); boş = baş harfler. */
+    photoUrl: string;
+}
+
+/** Anasayfanın bir bölümü: "categories" | "featured" | "about" | "team" | "features" | "gallery" | "reviews" | "contact". */
 export interface SiteHomeSection {
     key: string;
     enabled: boolean;
@@ -190,6 +212,10 @@ export interface PublicCategory {
     name: string;
     /** Müşteri menüsündeki görünüm ("auto" | "cards" | "list"); eski sunucuda yok: otomatik. */
     menuDisplay?: 'auto' | 'cards' | 'list';
+    /** Kategorinin servis penceresine göre şu an sipariş edilebilir mi (şubenin saatiyle); eski sunucu: yok, açık say. */
+    availableNow?: boolean;
+    /** "12:00'ye kadar", "18:00'den itibaren", "Hafta içi 08:00–12:00"; pencere yoksa boş. */
+    availabilityLabel?: string;
     products: PublicProduct[];
 }
 
@@ -317,6 +343,17 @@ export interface PublicTableBill {
     discount: number;
     /** Personel masada QR siparişini kilitledi (yoklamada güncellenir); eski sunucu göndermez. */
     qrOrderingLocked?: boolean;
+    /**
+     * Masadan gönderilip garson onayı bekleyen QR siparişleri (yalnız bilgi: zaman ve adet, ürün adı yok). Açık hesap
+     * varken ya da son 30 dakikada gönderildiyse gelir; isMine bu telefonunki. Eski sunucu: yok.
+     */
+    pendingRequests?: PublicPendingRequest[];
+}
+
+export interface PublicPendingRequest {
+    sentAt: string;
+    itemCount: number;
+    isMine: boolean;
 }
 
 export interface PublicTableBillLine {
@@ -369,11 +406,58 @@ export const ORDER_REQUEST_REJECTED = 3;
 export const ORDER_REQUEST_CANCELLED = 4;
 export const ORDER_REQUEST_EXPIRED = 5;
 
+/**
+ * Müşterinin gördüğü sipariş aşaması (zaman çizelgesi). Onaydan sonra talebin kalemlerinin mutfak durumundan türetilir:
+ * hepsi bekliyorsa Approved, mutfak başladıysa Preparing, hepsi hazırsa OnTheWay ("Masanıza geliyor"), hepsi servis
+ * edildiyse Served.
+ */
+export type OrderRequestStage = 'Sent' | 'Approved' | 'Preparing' | 'OnTheWay' | 'Served' | 'Rejected' | 'Cancelled';
+
+export const ORDER_REQUEST_STAGE_LABELS: Record<OrderRequestStage, string> = {
+    Sent: 'Gönderildi',
+    Approved: 'Onaylandı',
+    Preparing: 'Hazırlanıyor',
+    OnTheWay: 'Masanıza geliyor',
+    Served: 'Servis edildi',
+    Rejected: 'Reddedildi',
+    Cancelled: 'İptal edildi',
+};
+
+/** Aşama bu noktada son buldu mu (yoklama durdurulabilir). */
+export function isFinalOrderRequestStage(stage: OrderRequestStage | undefined): boolean {
+    return stage === 'Served' || stage === 'Rejected' || stage === 'Cancelled';
+}
+
 export interface OrderRequestStatus {
     id: string;
     status: number;
     /** Reddedildiyse garsonun yazdığı neden; boş olabilir. */
     rejectReason?: string;
+    /** Müşteri aşaması; eski sunucu: yok (status'a bakılır). */
+    stage?: OrderRequestStage;
+}
+
+/** Kasiyer hub'ının "BillRequested" olayının dördüncü argümanı: müşterinin hesap isteğindeki tercihi. */
+export interface BillRequestHint {
+    paymentHint?: number | null;
+    splitCount?: number | null;
+    remaining?: number;
+}
+
+/** "Garson çağır" gövdesi; reason verilmezse nedensiz çağrı (eski davranış). */
+export interface CallWaiterInput {
+    /** WaiterCallReason (features/customerSite/tableActions). */
+    reason?: number;
+    /** Yalnız "Diğer"de; en fazla 100 karakter. */
+    note?: string;
+}
+
+/** "Hesap iste" gövdesi. "Hesap" garson çağırma nedeni değildir; bu uçtan gider. */
+export interface RequestBillInput {
+    /** BillPaymentHint: 1 Nakit, 2 Kart, 3 IBAN. */
+    paymentHint?: number;
+    /** Hesap kaç kişiye bölünecek (2–20). */
+    splitCount?: number;
 }
 
 // Backend ReservationStatus: 2 iptal, 3 bekliyor, 4 onaylandı, 5 reddedildi, 6 geldi, 7 gelmedi (1: personelin açtığı eski tip).

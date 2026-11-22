@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Check, ChevronLeft, Clock, Layers, ShoppingCart, SquarePen, Star, Tag } from 'lucide-react';
-import { defaultSelections, setMenuUnitPrice } from '@/features/delivery/deliveryCart';
+import { setMenuUnitPrice } from '@/features/delivery/deliveryCart';
 import type { OnlineSetMenu } from '@/features/delivery/types';
 import type { PublicProduct } from '@/features/customerSite/types';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from '../components/StockImageLabel';
-import type { QrItem } from './qrModel';
+import { fixedSelections, isChoiceSlot, type QrItem } from './qrModel';
 import { CategoryGlyph, QrImage, Stepper, TakeawayToggle } from './QrParts';
 import { column, displayTitle, fieldClass, focusRing, overlayPage, primaryButton } from './qrUi';
 
@@ -23,9 +23,11 @@ interface Props {
 // Ürün / hazır menü ayrıntısı (tam ekran): fotoğraf, ad ve fiyat, açıklama, gerçek veriden rozetler (hazırlanma süresi,
 // öne çıkan, kategori, menü avantajı), hazır menüde bölüm seçimleri (radyo; seçim farkı fiyat olarak), not, adet ve
 // "Paket olsun" anahtarı ve "Sepete Ekle". Ürünlerin porsiyon/ekstra seçeneği veri modelinde yok: o bölümler yalnız hazır menüde çizilir.
+// Zorunlu seçimler önceden seçili gelmez: seçilene kadar düğme kapalı ve "Kahve seçin" yazar. "Menüde olanlar" menünün
+// bütün parçalarını sayar (rozetteki "3 parça" ile aynı): seçimli parça "Kahve: Flat white" (seçilmediyse "seçiminiz").
 export default function QrItemDetail({ item, onClose, blockedReason, onAddProduct, onAddSetMenu }: Props) {
     const menu = item.menu;
-    const [selections, setSelections] = useState<Record<string, string>>(() => menu ? defaultSelections(menu) : {});
+    const [selections, setSelections] = useState<Record<string, string>>(() => menu ? fixedSelections(menu) : {});
     const [quantity, setQuantity] = useState(1);
     const [note, setNote] = useState('');
     const [takeaway, setTakeaway] = useState(false);
@@ -49,8 +51,11 @@ export default function QrItemDetail({ item, onClose, blockedReason, onAddProduc
 
     const unitPrice = menu ? setMenuUnitPrice(menu, selections) : item.price;
     const complete = !menu || menu.slots.every(slot => selections[slot.id]);
-    const choiceSlots = menu?.slots.filter(slot => !slot.isFixed && slot.options.length > 1) ?? [];
-    const fixedSlots = menu?.slots.filter(slot => slot.isFixed || slot.options.length <= 1) ?? [];
+    const choiceSlots = menu?.slots.filter(isChoiceSlot) ?? [];
+    const allSlots = menu?.slots ?? [];
+    // İlk seçilmemiş zorunlu bölüm: düğmede "Kahve seçin".
+    const missing = menu?.slots.find(slot => !selections[slot.id]) ?? null;
+    const optionName = (slotId: string) => menu?.slots.find(s => s.id === slotId)?.options.find(o => o.productId === selections[slotId])?.productName ?? null;
 
     const add = () => {
         if (blockedReason || item.soldOut || !complete) return;
@@ -60,7 +65,7 @@ export default function QrItemDetail({ item, onClose, blockedReason, onAddProduc
 
     const badges: { key: string; icon: ReactNode; text: string }[] = [
         ...(item.prepMinutes ? [{ key: 'prep', icon: <Clock className="h-[18px] w-[18px]" />, text: `${item.prepMinutes} dk'da hazır` }] : []),
-        ...(item.featured ? [{ key: 'chef', icon: <Star className="h-[18px] w-[18px]" />, text: 'Öne çıkan' }] : []),
+        ...(item.featured ? [{ key: 'chef', icon: <Star className="h-[18px] w-[18px] fill-current" />, text: 'Öneri' }] : []),
         ...(menu ? [{ key: 'parts', icon: <Layers className="h-[18px] w-[18px]" />, text: `${menu.slots.length} parça` }] : []),
         ...(item.regularPrice != null ? [{ key: 'save', icon: <Tag className="h-[18px] w-[18px]" />, text: `${formatPrice(item.regularPrice - item.price)} ₺ avantajlı` }] : []),
         ...(!menu && item.categoryName ? [{ key: 'cat', icon: <CategoryGlyph category={{ id: item.categoryId, name: item.categoryName }} className="h-[18px] w-[18px]" />, text: item.categoryName }] : []),
@@ -70,7 +75,7 @@ export default function QrItemDetail({ item, onClose, blockedReason, onAddProduc
         <div role="dialog" aria-modal="true" aria-labelledby="urun-baslik" className={overlayPage}>
             <div className={cn(column, 'flex min-h-full flex-col')}>
                 <div className="relative">
-                    <QrImage src={item.imageUrl} alt={item.name} category={{ id: item.categoryId, name: item.categoryName }} eager className="aspect-[4/3] max-h-[52vh] sm:rounded-b-[28px]" />
+                    <QrImage src={item.imageUrl} alt={item.name} category={{ id: item.categoryId, name: item.categoryName }} priority className="aspect-[4/3] max-h-[52vh] sm:rounded-b-[28px]" />
                     {item.isStockImage && item.imageUrl && <StockImageLabel className="bottom-9 right-3" />}
                     <button type="button" onClick={onClose} aria-label="Geri"
                         className={cn('absolute left-2 top-[max(0.5rem,env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--site-card)_92%,transparent)] text-[var(--site-text)] shadow-[0_2px_10px_rgba(0,0,0,0.2)]', focusRing)}>
@@ -106,9 +111,15 @@ export default function QrItemDetail({ item, onClose, blockedReason, onAddProduc
 
                     {choiceSlots.map(slot => (
                         <fieldset key={slot.id} className="m-0 mt-6 border-0 p-0">
-                            <legend className="flex items-baseline gap-2 p-0">
-                                <span className="text-[17px] font-extrabold">{slot.name}</span>
-                                <span className="text-sm font-semibold text-[var(--site-accent-text)]">(Zorunlu)</span>
+                            <legend className="flex w-full items-center justify-between gap-2 p-0">
+                                <span className="text-[17px] font-extrabold">{slot.name} <span className="text-[15px] font-semibold text-[var(--site-sub)]">· birini seçin</span></span>
+                                {selections[slot.id] ? (
+                                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--site-ok-bg)] px-2.5 py-1 text-xs font-extrabold text-[var(--site-ok)]">
+                                        <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />Seçildi
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--site-accent)] px-2.5 py-1 text-xs font-extrabold uppercase tracking-[0.04em] text-[var(--site-on-accent)]">Zorunlu</span>
+                                )}
                             </legend>
                             <div className={cn('mt-2.5 overflow-hidden rounded-2xl border border-[var(--site-border-mid)] bg-[var(--site-card)]')}>
                                 {slot.options.map((option, i) => {
@@ -136,19 +147,29 @@ export default function QrItemDetail({ item, onClose, blockedReason, onAddProduc
                         </fieldset>
                     ))}
 
-                    {fixedSlots.length > 0 && (
+                    {allSlots.length > 0 && (
                         <section aria-labelledby="menude-olanlar" className="mt-6">
                             <h3 id="menude-olanlar" className="m-0 text-[17px] font-extrabold">Menüde olanlar</h3>
                             <ul className="m-0 mt-2.5 list-none overflow-hidden rounded-2xl border border-[var(--site-border)] bg-[var(--site-card)] p-0">
-                                {fixedSlots.map((slot, i) => (
-                                    <li key={slot.id} className={cn('flex min-h-12 items-center justify-between gap-3 px-4 py-2.5', i > 0 && 'border-t border-[var(--site-border)]')}>
-                                        <span className="min-w-0">
-                                            <span className="block text-[15px] font-semibold">{slot.options[0]?.productName ?? slot.name}</span>
-                                            <span className="block text-[13px] text-[var(--site-sub)]">{slot.name}</span>
-                                        </span>
-                                        <Check className="h-[18px] w-[18px] shrink-0 text-[var(--site-accent-text)]" strokeWidth={2.75} aria-label="Dahil" />
-                                    </li>
-                                ))}
+                                {allSlots.map((slot, i) => {
+                                    const choice = isChoiceSlot(slot);
+                                    const picked = choice ? optionName(slot.id) : null;
+                                    return (
+                                        <li key={slot.id} className={cn('flex min-h-12 items-center justify-between gap-3 px-4 py-2.5', i > 0 && 'border-t border-[var(--site-border)]')}>
+                                            <span className="min-w-0">
+                                                {choice ? (
+                                                    <span className="block text-[15px] font-semibold">{slot.name}: <span className={picked ? '' : 'font-medium italic text-[var(--site-sub)]'}>{picked ?? 'seçiminiz'}</span></span>
+                                                ) : (
+                                                    <>
+                                                        <span className="block text-[15px] font-semibold">{slot.options[0]?.productName ?? slot.name}</span>
+                                                        <span className="block text-[13px] text-[var(--site-sub)]">{slot.name}</span>
+                                                    </>
+                                                )}
+                                            </span>
+                                            {(!choice || picked) && <Check className="h-[18px] w-[18px] shrink-0 text-[var(--site-accent-text)]" strokeWidth={2.75} aria-label="Dahil" />}
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         </section>
                     )}
@@ -162,8 +183,8 @@ export default function QrItemDetail({ item, onClose, blockedReason, onAddProduc
                     {!blockedReason && !item.soldOut && (
                         <div className="mt-6">
                             <label htmlFor="urun-notu" className="flex items-baseline gap-2">
-                                <span className="text-[17px] font-extrabold">Notunuz</span>
-                                <span className="text-sm font-semibold text-[var(--site-sub)]">(Opsiyonel)</span>
+                                <span className="text-[17px] font-extrabold">Bu ürün için not</span>
+                                <span className="text-sm font-semibold text-[var(--site-sub)]">(isteğe bağlı)</span>
                             </label>
                             <div className="relative mt-2.5">
                                 <SquarePen className="pointer-events-none absolute left-3.5 top-3.5 h-[18px] w-[18px] text-[var(--site-muted)]" aria-hidden="true" />
@@ -183,9 +204,10 @@ export default function QrItemDetail({ item, onClose, blockedReason, onAddProduc
                             <button type="button" onClick={add} disabled={item.soldOut || !complete} className={cn(primaryButton, 'min-w-0 flex-1 justify-between')}>
                                 <span className="flex items-center gap-2">
                                     <ShoppingCart className="h-5 w-5 shrink-0" aria-hidden="true" />
-                                    {item.soldOut ? 'Tükendi' : 'Sepete Ekle'}
+                                    {item.soldOut ? 'Tükendi' : missing ? `${missing.name} seçin` : 'Sepete Ekle'}
                                 </span>
-                                {!item.soldOut && <span className="tabular-nums">{formatPrice(unitPrice * quantity)} ₺</span>}
+                                {!item.soldOut && !missing && <span className="tabular-nums">{formatPrice(unitPrice * quantity)} ₺</span>}
+
                             </button>
                         </div>
                     )}

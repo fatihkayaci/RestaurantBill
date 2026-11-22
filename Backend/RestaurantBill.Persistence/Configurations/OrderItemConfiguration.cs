@@ -38,6 +38,11 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
             "CK_OrderItems_ProductOrSetMenu",
             "(\"ProductId\" IS NULL) <> (\"SetMenuId\" IS NULL)"));
 
+        // Müşterinin sipariş aşaması talebe göre okunur. Yabancı anahtar yok: kalem talepten bağımsız yaşar (talep
+        // silinse de hesap kalemi kalır).
+        builder.HasIndex(oi => oi.OrderRequestId)
+            .HasFilter("\"OrderRequestId\" IS NOT NULL");
+
         builder.Ignore(oi => oi.IsSetMenu);
         builder.Ignore(oi => oi.IsSetMenuComponent);
     }

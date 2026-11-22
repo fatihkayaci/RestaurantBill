@@ -101,7 +101,7 @@ public class SiteContentTests
         });
 
         Assert.Equal(
-            [new("gallery", false), new("featured", true), new("contact", false), new("categories", true), new("about", true),
+            [new("gallery", false), new("featured", true), new("contact", false), new("categories", true), new("about", true), new("team", false),
              new("features", true), new("reviews", true)],
             c.HomeSections);
 

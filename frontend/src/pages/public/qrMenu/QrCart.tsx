@@ -138,10 +138,10 @@ function CheckoutPanel({ count, total, orderNote, onOrderNote, onSend, sending, 
         <DockedPanel label="Sipariş özeti">
             {noteOpen ? (
                 <div className="flex items-center gap-2 py-0.5">
-                    <label htmlFor="siparis-notu" className="sr-only">Garsona not (isteğe bağlı)</label>
+                    <label htmlFor="siparis-notu" className="sr-only">Masa için not (isteğe bağlı, bütün sipariş için)</label>
                     <Pencil className="h-[18px] w-[18px] shrink-0 text-[var(--site-accent-text)]" aria-hidden="true" />
                     <input id="siparis-notu" value={orderNote} onChange={e => onOrderNote(e.target.value)} maxLength={500} autoFocus
-                        placeholder="Örn: Şekersiz olsun, yanında su…" enterKeyHint="done"
+                        placeholder="Örn. hepsi birlikte gelsin, yanında su…" enterKeyHint="done"
                         onKeyDown={e => { if (e.key === 'Enter') setNoteOpen(false); }}
                         className={cn(fieldClass, 'h-11 min-w-0 flex-1')} />
                     <button type="button" onClick={() => setNoteOpen(false)}
@@ -151,17 +151,17 @@ function CheckoutPanel({ count, total, orderNote, onOrderNote, onSend, sending, 
                 </div>
             ) : (
                 <button type="button" onClick={() => setNoteOpen(true)} aria-expanded="false"
-                    aria-label={note ? `Garsona notu düzenle: ${note}` : 'Garsona not ekle, isteğe bağlı'}
+                    aria-label={note ? `Masa için notu düzenle: ${note}` : 'Masa için not ekle, isteğe bağlı'}
                     className={cn('flex min-h-11 w-full items-center gap-2.5 rounded-xl text-left text-[14px]', focusRing)}>
                     <Pencil className="h-[18px] w-[18px] shrink-0 text-[var(--site-accent-text)]" aria-hidden="true" />
                     {note ? (
                         <>
-                            <span className="min-w-0 flex-1 truncate"><span className="font-bold">Not:</span> {note}</span>
+                            <span className="min-w-0 flex-1 truncate"><span className="font-bold">Masa için not:</span> {note}</span>
                             <span className="shrink-0 font-bold text-[var(--site-accent-text)]">Düzenle</span>
                         </>
                     ) : (
                         <span className="min-w-0 flex-1 truncate font-bold text-[var(--site-accent-text)]">
-                            Garsona not ekle <span className="font-medium text-[var(--site-sub)]">(isteğe bağlı)</span>
+                            Masa için not <span className="font-medium text-[var(--site-sub)]">(bütün sipariş, isteğe bağlı)</span>
                         </span>
                     )}
                 </button>
@@ -217,14 +217,17 @@ function CartLine({ line, item, editing, onEdit, onChange, onRemove, onNote, onT
     return (
         <li className={cn(card, 'p-2.5')}>
             <div className="flex items-start gap-3">
-                <QrImage src={item?.imageUrl} alt="" category={{ id: item?.categoryId ?? '', name: item?.categoryName ?? '' }}
+                <QrImage src={item?.imageUrl} alt="" category={{ id: item?.categoryId ?? '', name: item?.categoryName ?? '' }} eager
                     className="h-16 w-16 shrink-0 rounded-xl" />
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
                     <div className="min-w-[7rem] flex-1 py-0.5">
                         <p className="m-0 break-words text-[16px] font-extrabold leading-snug">{line.name}</p>
+                        {/* Her satırda aynı kural: satır tutarı ve altında "adet × birim fiyat" (birim fiyata menü seçim farkları dahil). */}
                         <p className="m-0 mt-0.5 text-[15px] font-bold tabular-nums">{formatPrice(line.unitPrice * line.quantity)} ₺</p>
+                        <p className="m-0 text-[13px] tabular-nums text-[var(--site-sub)]">{line.quantity} × {formatPrice(line.unitPrice)} ₺</p>
                         {extras && <p className="m-0 mt-0.5 break-words text-[13px] leading-snug text-[var(--site-sub)]">{extras}</p>}
-                        {note && !editing && <p className="m-0 mt-0.5 break-words text-[13px] leading-snug text-[var(--site-sub)]">Not: {note}</p>}
+                        {note && !editing && <p className="m-0 mt-0.5 break-words text-[13px] leading-snug text-[var(--site-sub)]">Ürün notu: {note}</p>}
+
                     </div>
                     <div className="ml-auto flex shrink-0 items-center gap-1">
                         <div className="flex items-center rounded-full border border-[var(--site-border-mid)] bg-[var(--site-card)]">
@@ -259,20 +262,20 @@ function CartLine({ line, item, editing, onEdit, onChange, onRemove, onNote, onT
                 </label>
                 {!editing && (
                     <button type="button" onClick={() => onEdit(true)} aria-expanded="false" aria-controls={panelId}
-                        aria-label={note ? `${line.name} notunu düzenle: ${note}` : `${line.name} için not ekle`}
+                        aria-label={note ? `${line.name} için notu düzenle: ${note}` : `${line.name} için not ekle`}
                         className={cn('inline-flex min-h-11 items-center gap-1 rounded-xl px-1.5 text-[13px] font-bold text-[var(--site-accent-text)]', focusRing)}>
-                        {note ? <><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Notu düzenle</>
-                            : <><Plus className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden="true" />Not ekle</>}
+                        {note ? <><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Bu ürün için notu düzenle</>
+                            : <><Plus className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden="true" />Bu ürün için not</>}
                     </button>
                 )}
             </div>
 
             {editing && (
                 <div id={panelId} className="mt-1 flex flex-col gap-1 rounded-xl bg-[var(--site-alt)] px-3 py-2.5">
-                    <label className="text-[13px] font-bold" htmlFor={`not-${line.key}`}>{line.name} için not</label>
+                    <label className="text-[13px] font-bold" htmlFor={`not-${line.key}`}>Bu ürün için not · {line.name}</label>
                     <div className="flex items-center gap-2">
                         <input id={`not-${line.key}`} value={line.note} onChange={e => onNote(e.target.value)} maxLength={300}
-                            autoFocus={!line.note} placeholder="Örn. az pişmiş, soğansız"
+                            autoFocus={!line.note} placeholder="Örn. soğansız, az şekerli"
                             onKeyDown={e => { if (e.key === 'Enter') onEdit(false); }}
                             className={cn(fieldClass, 'h-11 min-w-0 flex-1')} />
                         <button type="button" onClick={() => onEdit(false)}

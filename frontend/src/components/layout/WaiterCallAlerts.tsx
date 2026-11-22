@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Receipt } from 'lucide-react';
+import { HandPlatter, Receipt } from 'lucide-react';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { dismissStaffAlert, notifyStaff, playStaffTone } from '@/lib/staffAlerts';
 import { pushBlockingAlert } from '@/lib/blockingAlerts';
 import { playWaiterCallSound } from '@/pages/waiter/waiterSound';
 import { emitOpenTable, emitTableAlert } from '@/pages/waiter/waiterEvents';
+import { billHintText, waiterCallText, WaiterCallReason } from '@/features/customerSite/tableActions';
 
 /** Sunucunun "WaiterCalled" olayı: müşteri masadaki QR'dan "Garson çağır"a bastı. */
 export interface WaiterCalledEvent {
@@ -16,6 +17,15 @@ export interface WaiterCalledEvent {
     calledAt: string;
     /** Çağrı anında masada açık hesap yoktu: QR masa dışından (fotoğraftan) kullanılmış olabilir. */
     tableLooksEmpty?: boolean;
+    /** Çağırma nedeni (WaiterCallReason: 1 Su, 2 Peçete/çatal, 3 Diğer); eski sunucu/istemci: yok. */
+    reason?: number | null;
+    /** Yalnız "Diğer"de müşterinin kısa notu. */
+    note?: string | null;
+    /** Yalnız CustomerBillRequested'da: müşterinin ödeme tercihi (BillPaymentHint) ve bölme bilgisi. */
+    paymentHint?: number | null;
+    splitCount?: number | null;
+    /** Yalnız CustomerBillRequested'da: istek anında ödenecek kalan. */
+    remaining?: number | null;
 }
 
 interface Props {
@@ -41,11 +51,29 @@ export default function WaiterCallAlerts({ variant }: Props) {
             // Ekranın ortasında, "Tamam"a basılmadan kapanmayan pencere (OrderRequestAlerts çizer).
             if (variant === 'waiter') playWaiterCallSound();
             else playStaffTone('call');
+            // "Masa 7 · Su istiyor"; "Diğer"de müşterinin notu ayrıntıda tırnak içinde.
+            const note = event.reason === WaiterCallReason.Other && event.note ? `“${event.note}”` : '';
+            const origin = event.regionName ? `${event.regionName} · müşteri QR menüden çağırdı` : 'Müşteri QR menüden çağırdı';
+            // Yönetici panelinde ekranı kapatan pencere yerine sağ üstte bildirim (toast); garsonda pencere kalır.
+            if (variant === 'manager') {
+                const title = `${event.tableName} · ${waiterCallText(event.reason)}`;
+                notifyStaff({
+                    id: `waiter-call-${event.tableId}`,
+                    title,
+                    description: [event.tableLooksEmpty ? 'Masa boş görünüyor' : '', note, origin].filter(Boolean).join(' · '),
+                    tone: 'red',
+                    icon: <HandPlatter aria-hidden="true" />,
+                    durationMs: 60_000,
+                    action: { label: 'Masayı aç', onClick: () => navigate(`/admin/tables?table=${event.tableId}`) },
+                });
+                return;
+            }
             pushBlockingAlert({
                 kind: 'call',
                 tableId: event.tableId,
                 tableName: event.tableName,
-                detail: event.regionName ? `${event.regionName} · müşteri QR menüden çağırdı` : 'Müşteri QR menüden çağırdı',
+                label: waiterCallText(event.reason),
+                detail: note ? `${note} · ${origin}` : origin,
                 warning: event.tableLooksEmpty ? 'Masa boş görünüyor' : undefined,
             });
         });
@@ -56,10 +84,13 @@ export default function WaiterCallAlerts({ variant }: Props) {
             connection.on('CustomerBillRequested', (event: WaiterCalledEvent) => {
                 if (!event?.tableId) return;
                 emitTableAlert(event.tableId, 'bill');
+                // "Kart · 3 kişiye bölünecek": müşterinin tercihi garsonun bildirimine de yazılır.
+                const hintText = billHintText(event.paymentHint, event.splitCount);
+                const origin = event.regionName ? `${event.regionName} · müşteri QR menüden istedi` : 'Müşteri QR menüden istedi';
                 notifyStaff({
                     id: `bill-request-${event.tableId}`,
                     title: `${event.tableName} · hesap istiyor`,
-                    description: event.regionName ? `${event.regionName} · müşteri QR menüden istedi` : 'Müşteri QR menüden istedi',
+                    description: hintText ? `${hintText} · ${origin}` : origin,
                     tone: 'accent',
                     icon: <Receipt aria-hidden="true" />,
                     persistent: true,

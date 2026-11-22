@@ -40,6 +40,10 @@ public class GetTableBillQueryHandler(IAppDbContext db, ITenantResolver tenant, 
     /// <summary>Kapanan hesap, kapandıktan sonra bu süre boyunca katılan telefonlarda "Ödendi" olarak görünür.</summary>
     public static readonly TimeSpan PaidBillVisibleFor = TimeSpan.FromHours(3);
 
+    /// <summary>Açık hesap yokken bekleyen talepler gönderildikten sonra bu süre boyunca listelenir (önceki misafirin
+    /// bekleyen talebi yeni oturana sonsuza kadar görünmesin).</summary>
+    public static readonly TimeSpan PendingRequestsVisibleFor = TimeSpan.FromMinutes(30);
+
     public async Task<Result<PublicTableBillDto>> Handle(GetTableBillQuery request, CancellationToken cancellationToken)
     {
         Table? table = await CustomerSiteScope.ResolveTableAsync(db, tenant, request.TableId, cancellationToken);
@@ -64,7 +68,28 @@ public class GetTableBillQueryHandler(IAppDbContext db, ITenantResolver tenant, 
 
         // Sayfa hesabı yoklarken personelin QR kilidini de buradan öğrenir (ayrı yoklama yok).
         bill.QrOrderingLocked = table.QrOrderingLocked;
+        bill.PendingRequests = await PendingRequestsAsync(table.Id, hasOpenBill: order is not null, tokenHash, cancellationToken);
         return Result<PublicTableBillDto>.Success(bill);
+    }
+
+    // Masadaki diğer telefonların bekleyen siparişleri yalnız bilgi olarak: zaman ve adet (ürün adı yok). Aynı ürünü iki
+    // kişinin sipariş etmesi engellenmez. Açık hesap yoksa yalnız son 30 dakikadakiler (gizlilik).
+    private async Task<List<PublicPendingRequestDto>> PendingRequestsAsync(Guid tableId, bool hasOpenBill, string? tokenHash, CancellationToken cancellationToken)
+    {
+        DateTime since = clock.GetUtcNow().UtcDateTime - PendingRequestsVisibleFor;
+        var rows = await db.OrderRequests.AsNoTracking()
+            .Where(r => r.TableId == tableId && r.Status == OrderRequestStatus.Pending && r.Kind == OrderRequestKind.TableQr
+                && (hasOpenBill || r.CreatedAt >= since))
+            .OrderBy(r => r.CreatedAt)
+            .Select(r => new { r.CreatedAt, ItemCount = r.Items.Sum(i => i.Quantity), r.DeviceTokenHash })
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(r => new PublicPendingRequestDto
+        {
+            SentAt = r.CreatedAt,
+            ItemCount = r.ItemCount,
+            IsMine = tokenHash is not null && r.DeviceTokenHash == tokenHash,
+        }).ToList();
     }
 
     private static IQueryable<Order> WithItems(IQueryable<Order> query)

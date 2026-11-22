@@ -62,6 +62,7 @@ namespace RestaurantBill.Domain.Entities
             "gallery", "amenities", "hiddenFaqs", "homeSections",
             "rating", "reviewCount", "reviewsUrl", "featuredReviews",
             "founderPhoto", "founderName", "founderTitle", "founderQuote", "foundedYear", "values", "milestones",
+            "teamTitle", "teamIntro", "teamMembers",
             "seoTitle", "seoDescription", "shareImage",
             "heroMenu", "heroAbout", "heroVenue", "heroContact", "heroReservation",
         ];
@@ -149,11 +150,13 @@ namespace RestaurantBill.Domain.Entities
 
         public SiteSnapshot WithRegionPhoto(Guid regionId, string key) => this with { Content = Content.WithRegionPhoto(regionId, key, out _) };
 
+        public SiteSnapshot WithTeamPhoto(Guid memberId, string key) => this with { Content = Content.WithTeamPhoto(memberId, key, out _) };
+
         /// <summary>Bu hâlin kullandığı bütün depo anahtarları (paylaşılan hazır görseller dahil).</summary>
         public IReadOnlySet<string> ImageKeys()
         {
             HashSet<string> keys = [CoverImage, AboutImage, LogoImage, Content.FounderPhoto, Content.ShareImage, .. Content.GalleryImages,
-                .. Content.RegionDetails.Select(r => r.PhotoKey),
+                .. Content.RegionDetails.Select(r => r.PhotoKey), .. Content.TeamMembers.Select(m => m.PhotoKey),
                 Content.MenuHero, Content.AboutHero, Content.VenueHero, Content.ContactHero, Content.ReservationHero];
             keys.RemoveWhere(string.IsNullOrWhiteSpace);
             return keys;
@@ -219,6 +222,9 @@ namespace RestaurantBill.Domain.Entities
                 "foundedYear" => this with { Content = c with { FoundedYear = s.FoundedYear } },
                 "values" => this with { Content = c with { Values = s.Values } },
                 "milestones" => this with { Content = c with { Milestones = s.Milestones } },
+                "teamTitle" => this with { Content = c with { TeamTitle = s.TeamTitle } },
+                "teamIntro" => this with { Content = c with { TeamIntro = s.TeamIntro } },
+                "teamMembers" => this with { Content = c with { TeamMembers = s.TeamMembers } },
                 "seoTitle" => this with { Content = c with { SeoTitle = s.SeoTitle } },
                 "seoDescription" => this with { Content = c with { SeoDescription = s.SeoDescription } },
                 "shareImage" => this with { Content = c with { ShareImage = s.ShareImage } },
@@ -265,6 +271,9 @@ namespace RestaurantBill.Domain.Entities
                 "foundedYear" => x.FoundedYear == y.FoundedYear,
                 "values" => x.Values.SequenceEqual(y.Values),
                 "milestones" => x.Milestones.SequenceEqual(y.Milestones),
+                "teamTitle" => x.TeamTitle == y.TeamTitle,
+                "teamIntro" => x.TeamIntro == y.TeamIntro,
+                "teamMembers" => x.TeamMembers.SequenceEqual(y.TeamMembers),
                 "seoTitle" => x.SeoTitle == y.SeoTitle,
                 "seoDescription" => x.SeoDescription == y.SeoDescription,
                 "shareImage" => x.ShareImage == y.ShareImage,

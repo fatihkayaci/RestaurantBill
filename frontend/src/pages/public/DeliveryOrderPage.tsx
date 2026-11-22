@@ -886,7 +886,7 @@ function CartLines({ lines, quote, restaurant, imageOf, round = false, limit, on
                         <div className="flex items-center gap-3">
                             <span className={cn('relative h-16 w-16 shrink-0 md:h-[72px] md:w-[72px]', round && 'rounded-full bg-[#1E1915] p-[3px]')}
                                 title={image.src && image.stock ? 'Temsili görsel' : undefined}>
-                                <ImageSlot src={image.src} alt={line.name} restaurant={restaurant} logoTextClassName="text-[min(11px,14cqw)]"
+                                <ImageSlot src={image.src} alt={line.name} restaurant={restaurant} logoTextClassName="text-[min(11px,14cqw)]" eager
                                     className={cn('h-full', round ? 'rounded-full' : 'rounded-2xl')} />
                                 {image.src && image.stock && <span className="sr-only"> (temsili görsel)</span>}
                             </span>
@@ -894,6 +894,8 @@ function CartLines({ lines, quote, restaurant, imageOf, round = false, limit, on
                                 <p className={cn(serif, 'm-0 text-[19px] font-semibold leading-tight')}>{line.name}</p>
                                 {line.selectionNames.length > 0 && <p className="text-sm text-[var(--site-sub)]">{line.selectionNames.join(', ')}</p>}
                                 <p className="text-sm font-extrabold tabular-nums">{formatPrice(quoted?.lineTotal ?? line.unitPrice * line.quantity)} ₺</p>
+                                {/* Bütün sepetlerde aynı kural: "adet × birim fiyat" (seçim farkları dahil). */}
+                                <p className="text-[13px] tabular-nums text-[var(--site-sub)]">{line.quantity} × {formatPrice(quoted?.unitPrice ?? line.unitPrice)} ₺</p>
                             </div>
                             <div className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--site-qty-bg,var(--site-bg))] p-1">
                                 <button type="button" onClick={() => onChange(line.key, -1)} aria-label={`${line.name} bir azalt`}

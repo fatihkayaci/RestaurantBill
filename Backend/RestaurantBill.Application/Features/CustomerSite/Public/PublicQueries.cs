@@ -39,17 +39,26 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
         // Site şirket genelidir; saatler, WhatsApp ve nasıl gelinir seçilen şubeden eklenir.
         SiteSnapshot site = branch.SiteFor(company.GetPublishedSite());
 
-        var categories = await db.Categories.AsNoTracking()
+        DateTime localNow = LocalNow(branch);
+        List<Category> categoryRows = await db.Categories.AsNoTracking()
             .Where(c => c.BranchId == branch.Id)
             .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
-            .Select(c => new PublicCategoryDto { Id = c.Id, Name = c.Name, MenuDisplay = c.MenuDisplay == CategoryMenuDisplay.Cards ? "cards" : c.MenuDisplay == CategoryMenuDisplay.List ? "list" : "auto" })
             .ToListAsync(cancellationToken);
+        // Servis penceresi (ör. pide fırını 22:00'de kapanır) şubenin yerel saatiyle değerlendirilir.
+        List<PublicCategoryDto> categories = categoryRows.Select(c => new PublicCategoryDto
+        {
+            Id = c.Id,
+            Name = c.Name,
+            MenuDisplay = c.MenuDisplay == CategoryMenuDisplay.Cards ? "cards" : c.MenuDisplay == CategoryMenuDisplay.List ? "list" : "auto",
+            AvailableNow = c.IsAvailableAt(localNow),
+            AvailabilityLabel = c.AvailabilityLabel(),
+        }).ToList();
 
         DateTime now = DateTime.UtcNow;
         var products = await db.Products.AsNoTracking()
             .Where(p => p.Category.BranchId == branch.Id && p.IsActive)
             .OrderBy(p => p.SortOrder).ThenBy(p => p.Name)
-            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.PrepMinutes, p.IsOutOfStock, p.NewUntil })
+            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.PrepMinutes, p.IsOutOfStock, p.NewUntil, p.Allergens, p.DietTags })
             .ToListAsync(cancellationToken);
 
         foreach (PublicCategoryDto category in categories)
@@ -67,7 +76,9 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
                     IsFeatured = p.IsFeatured,
                     IsNew = p.NewUntil is DateTime until && until > now,
                     PrepMinutes = p.PrepMinutes,
-                    IsOutOfStock = p.IsOutOfStock
+                    IsOutOfStock = p.IsOutOfStock,
+                    Allergens = (int)p.Allergens,
+                    DietTags = (int)p.DietTags
                 })
                 .ToList();
         }
@@ -96,7 +107,7 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
             region.Description = detail?.Description ?? string.Empty;
         }
 
-        List<OnlineSetMenuDto> setMenus = await PublicSetMenus.LoadAsync(db, branch.Id, cdnBaseUrl, listedOnly: true, cancellationToken);
+        List<OnlineSetMenuDto> setMenus = await PublicSetMenus.LoadAsync(db, branch.Id, cdnBaseUrl, listedOnly: true, localNow, cancellationToken);
 
         var branches = await db.Branches.AsNoTracking()
             .Where(b => b.CompanyId == company.Id && !b.IsDeleted)
@@ -118,8 +129,8 @@ public class GetPublicSiteQueryHandler(IAppDbContext db, ITenantResolver tenant,
             SetMenus = setMenus,
             Regions = regions.Where(r => r.Tables.Count > 0).ToList(),
             Site = BranchSiteDto.From(site, cdnBaseUrl),
-            IsOpenNow = branch.IsOpenAt(LocalNow(branch)),
-            Today = (int)LocalNow(branch).DayOfWeek,
+            IsOpenNow = branch.IsOpenAt(localNow),
+            Today = (int)localNow.DayOfWeek,
             Reservation = ReservationRulesDto.From(branch),
             Seo = SiteSeo.ToDto(SiteSeo.Resolve(site, company.Name, branch.BranchName, branch.District), cdnBaseUrl),
         });
@@ -287,17 +298,23 @@ public class GetOrderRequestStatusQueryHandler(IAppDbContext db, ITenantResolver
 
         var row = await db.OrderRequests.AsNoTracking()
             .Where(r => r.Id == request.Id && r.Table.Region.Branch.CompanyId == company.Id)
-            .Select(r => new { r.Id, r.Status, r.RejectReason })
+            .Select(r => new { r.Id, r.Status, r.RejectReason, r.ItemsLinked, r.OrderId })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return row is null
-            ? Result<OrderRequestStatusDto>.Failure("Sipariş talebi bulunamadı.")
-            : Result<OrderRequestStatusDto>.Success(new OrderRequestStatusDto
-            {
-                Id = row.Id,
-                Status = (int)row.Status,
-                RejectReason = row.Status == OrderRequestStatus.Rejected ? row.RejectReason : string.Empty
-            });
+        if (row is null)
+            return Result<OrderRequestStatusDto>.Failure("Sipariş talebi bulunamadı.");
+
+        // Onaydan sonra aşama, talebin hesaba yazılan kalemlerinin mutfak durumundan okunur (sayfa yoklayarak izler).
+        Dictionary<Guid, OrderRequestStage> stages = await OrderRequestStageReader.LoadAsync(
+            db, [new OrderRequestStageReader.RequestRow(row.Id, row.Status, row.ItemsLinked, row.OrderId)], cancellationToken);
+
+        return Result<OrderRequestStatusDto>.Success(new OrderRequestStatusDto
+        {
+            Id = row.Id,
+            Status = (int)row.Status,
+            RejectReason = row.Status == OrderRequestStatus.Rejected ? row.RejectReason : string.Empty,
+            Stage = stages[row.Id].ToString(),
+        });
     }
 }
 

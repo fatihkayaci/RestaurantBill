@@ -11,12 +11,13 @@ import { useSiteWindow } from '../../siteEditContext';
 import { useScrolled } from '../../useScrolled';
 import type { DesignFooterProps, DesignHeaderProps } from '../registry';
 import { BagGlyph, CalendarGlyph, InstagramGlyph, PhoneGlyph, WhatsAppGlyph } from './SophraIcons';
-import { primaryAction, spWrap } from './sophraParts';
+import { CART_PATH, primaryAction, spWrap } from './sophraParts';
+import { tableCartCount, tableCartPath, useTableVisit } from '@/features/customerSite/tableVisit';
 
 // Sophra'nın üst menüsü ve alt bilgisi. Üst menü koyu bant (--site-paper): solda logo (yoksa baş harfler) + ad + konum,
 // ortada sayfalar, sağda telefon ve "Rezervasyon". Ana sayfada kapağın üstünde saydam başlar (`overlay`), kaydırınca koyu
-// zemin alır. Ana düğme "Rezervasyon" (rezervasyon kapalıysa "Menüyü incele"); sepette ürün varsa yanında küçük sepet
-// bağlantısı (Menü.deki sepete). Alt bilgi koyu (--site-footer-*): marka + kısa tanım + sosyal, sayfalar,
+// zemin alır. Ana düğme "Rezervasyon" (rezervasyon kapalıysa "Menüyü incele"); sepette ürün varsa yanında küçük sepet düğmesi
+// (Menü'nün sepet penceresini açar; masadaki müşteride masanın sepeti). Alt bilgi koyu (--site-footer-*): marka + kısa tanım + sosyal, sayfalar,
 // iletişim, saatler; altta telif, gizlilik ve kullanım koşulları. Verisi olmayan sütun çizilmez.
 
 /** Restoranın logosu (varsa) ya da baş harfleri altın halkada. */
@@ -39,8 +40,13 @@ export function SophraHeader({ site, current, sticky, overlay }: DesignHeaderPro
     const [open, setOpen] = useState(false);
     const panelId = useId();
     const cart = useSiteCart();
+    const visit = useTableVisit();
     const [trackPath] = useState(lastOrderTrackingPath);
     const name = restaurantName(site);
+    // Sepet simgesi sepetin kendisini açar: paket siparişte Menü'deki sepet penceresi, masadaki müşteride masanın sepeti.
+    const tableCount = visit ? tableCartCount(visit) : 0;
+    const cartLink = visit ? (tableCount > 0 ? { to: tableCartPath(visit), count: tableCount, label: `${visit.tableName} sepeti, ${tableCount} ürün` } : null)
+        : cart.enabled && cart.count > 0 ? { to: CART_PATH, count: cart.count, label: `Sepeti aç, ${cart.count} ürün` } : null;
     const nav = siteNav(site);
     const place = [site.district, site.city].filter(Boolean).join(', ');
     const canReserve = canReserveOnline(site);
@@ -93,12 +99,12 @@ export function SophraHeader({ site, current, sticky, overlay }: DesignHeaderPro
                         </a>
                     )}
                     {/* Sepette ürün varsa küçük sepet bağlantısı (Menü'deki sepete); ana düğme rezervasyon. */}
-                    {cart.enabled && cart.count > 0 && (
-                        <Link to="/menu" aria-label={`Sepet, ${cart.count} ürün`}
+                    {cartLink && (
+                        <Link to={cartLink.to} aria-label={cartLink.label}
                             className="relative inline-flex h-11 w-11 items-center justify-center rounded-full text-[var(--site-on-paper)] no-underline hover:text-[var(--site-mustard-text)]">
                             <BagGlyph className="h-[20px] w-[20px]" />
                             <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--site-mustard)] px-1 text-[11px] font-extrabold tabular-nums text-[var(--site-paper)]">
-                                {cart.count}
+                                {cartLink.count}
                             </span>
                         </Link>
                     )}
@@ -187,7 +193,7 @@ export function SophraFooter({ site, bottomBar, visit }: DesignFooterProps) {
                     <h2 className={cn(label, 'mb-2')}>Sayfalar</h2>
                     <Link to="/" className={link}>Ana sayfa</Link>
                     {nav.map(item => <Link key={item.key} to={item.to} className={link}>{item.label}</Link>)}
-                    {cart.enabled && cart.count > 0 && <Link to="/menu" className={link}>Sepetim ({cart.count})</Link>}
+                    {cart.enabled && cart.count > 0 && <Link to={CART_PATH} className={link}>Sepetim ({cart.count})</Link>}
                     {trackPath && <Link to={trackPath} className={link}>Siparişim nerede?</Link>}
                     {canReserve && <Link to={RESERVATION_PATH} className={link}>Rezervasyon</Link>}
                     {canReserve && <Link to={RESERVATION_LOOKUP_PATH} className={link}>Rezervasyon sorgula</Link>}

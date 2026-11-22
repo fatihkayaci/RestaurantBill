@@ -63,7 +63,7 @@ public class DeliveryNotificationTests
     [Fact]
     public async Task DeliveryItemsReady_GoesToOnlineOrders_NotToWaiters()
     {
-        var service = new TableNotificationService(new RecordingHubContext<TableHub>(_tableHub), new RecordingHubContext<CashierHub>(_cashierHub));
+        var service = new TableNotificationService(new RecordingHubContext<TableHub>(_tableHub), new RecordingHubContext<CashierHub>(_cashierHub), new RecordingHubContext<PublicTableHub>([]));
         var payload = new ItemsReadyDto { OrderId = Guid.NewGuid(), TableName = "PAKET #7 · Moda", DeliveryNumber = 7, ReadyAt = DateTime.UtcNow };
 
         await service.SendDeliveryItemsReadyAsync(Branch, payload);

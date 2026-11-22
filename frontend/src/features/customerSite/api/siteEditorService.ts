@@ -13,10 +13,20 @@ export type SiteDraftImageSlot = 'cover' | 'about' | 'founder' | 'share' | 'logo
 /** Taslağın metin alanları: PUT tam yazımdır, hepsi gönderilir. Fotoğraflar ayrı uçlardan değişir. */
 export type SiteDraftTexts = Omit<BranchSite,
     'coverImageUrl' | 'aboutImageUrl' | 'logoUrl' | 'founderPhotoUrl' | 'galleryImageUrls' | 'shareImageUrl' | 'regionDetails'
-    | 'menuHeroUrl' | 'aboutHeroUrl' | 'venueHeroUrl' | 'contactHeroUrl' | 'reservationHeroUrl'> & {
+    | 'menuHeroUrl' | 'aboutHeroUrl' | 'venueHeroUrl' | 'contactHeroUrl' | 'reservationHeroUrl' | 'teamMembers'> & {
     /** Yalnız regionId + description okunur. */
     regionDetails: { regionId: string; description: string }[];
+    /** Ekip üyelerinin yazıları; fotoğraf sunucuda kimliğe göre korunur (ayrı uçtan değişir). */
+    teamMembers: SiteTeamMemberText[];
 };
+
+/** Ekip üyesinin metin kısmı: kimlik istemcide üretilir (yeni kart), fotoğraf bu kimliğe bağlanır. */
+export interface SiteTeamMemberText {
+    id: string;
+    name: string;
+    role: string;
+    note: string;
+}
 
 export class SiteDraftConflictError extends Error {
     readonly editor: SiteEditor;
@@ -76,4 +86,9 @@ export const siteEditorService = {
     selectRegionStockImage: async (regionId: string, stockImageId: string) =>
         (await api.post<SiteEditor>(`${BASE}/regions/${regionId}/image/stock`, { stockImageId })).data,
     removeRegionImage: async (regionId: string) => (await api.delete<SiteEditor>(`${BASE}/regions/${regionId}/image`)).data,
+
+    /** Ekip üyesinin portresi: üye taslakta olmalı (önce adı yazılıp kaydedilir). Hazır görsel yok. */
+    uploadTeamImage: async (memberId: string, file: File) =>
+        (await api.post<SiteEditor>(`${BASE}/team/${memberId}/image`, fileForm(file), multipart)).data,
+    removeTeamImage: async (memberId: string) => (await api.delete<SiteEditor>(`${BASE}/team/${memberId}/image`)).data,
 };

@@ -1,3 +1,4 @@
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Domain.Entities
@@ -28,6 +29,9 @@ namespace RestaurantBill.Domain.Entities
         // "Yeni" etiketinin bitişi (UTC). Admin işaretler, NewDays gün sonra kendiliğinden düşer; null: yeni değil.
         // Oluşturma tarihinden türetilmez (ilk kurulumda bütün menü "yeni" görünmesin).
         public DateTime? NewUntil { get; private set; }
+        // Sabit listeden alerjenler ("İçerir") ve uygunluk / bilgi etiketleri ("Uygun", "Acılı"); bayrak olarak saklanır.
+        public ProductAllergen Allergens { get; private set; }
+        public ProductDietTag DietTags { get; private set; }
 
         public const int DescriptionMaxLength = 160;
         public const int NewDays = 30;
@@ -66,6 +70,25 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"Hazırlanma süresi 1 ile {PrepMinutesMax} dakika arasında olmalıdır.");
 
             PrepMinutes = prepMinutes;
+        }
+
+        /// <summary>Alerjen ve diyet etiketlerini tümüyle değiştirir; listede olmayan bir bayrak reddedilir.</summary>
+        public void SetDietaryInfo(ProductAllergen allergens, ProductDietTag dietTags)
+        {
+            if (((int)allergens & ~ProductAllergens.All) != 0)
+                throw new DomainException("Geçersiz alerjen seçimi.");
+
+            if (((int)dietTags & ~ProductDietTags.All) != 0)
+                throw new DomainException("Geçersiz diyet etiketi.");
+
+            if (dietTags.HasFlag(ProductDietTag.Vegan) && (allergens & (ProductAllergen.Milk | ProductAllergen.Eggs | ProductAllergen.Fish | ProductAllergen.Crustaceans | ProductAllergen.Molluscs)) != 0)
+                throw new DomainException("Süt, yumurta ya da deniz ürünü içeren ürün vegan olarak işaretlenemez.");
+
+            if (dietTags.HasFlag(ProductDietTag.GlutenFree) && allergens.HasFlag(ProductAllergen.Gluten))
+                throw new DomainException("Gluten içeren ürün glutensiz olarak işaretlenemez.");
+
+            Allergens = allergens;
+            DietTags = dietTags;
         }
 
         public void SetSortOrder(int sortOrder)

@@ -26,6 +26,12 @@ public class FakeTableNotificationService : ITableNotificationService
         QrLockChanges.Add((tableId, locked));
         return Task.CompletedTask;
     }
+    public List<Guid> OrderRequestDecidedTables { get; } = [];
+    public Task SendOrderRequestDecidedAsync(Guid restaurantId, Guid tableId)
+    {
+        OrderRequestDecidedTables.Add(tableId);
+        return Task.CompletedTask;
+    }
     public List<(Guid BranchId, ItemsReadyDto Payload)> ItemsReadySent { get; } = [];
     public Task SendItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload)
     {
@@ -86,9 +92,11 @@ public class FakeCashierNotificationService : ICashierNotificationService
         return Task.CompletedTask;
     }
     public List<(Guid BranchId, Guid TableId, string TableName, string RequestedBy)> BillRequestsSent { get; } = [];
-    public Task SendBillRequestedAsync(Guid restaurantId, Guid regionId, Guid tableId, string tableName, string requestedByName)
+    public List<BillRequestHintDto?> BillRequestHints { get; } = [];
+    public Task SendBillRequestedAsync(Guid restaurantId, Guid regionId, Guid tableId, string tableName, string requestedByName, BillRequestHintDto? hint = null)
     {
         BillRequestsSent.Add((restaurantId, tableId, tableName, requestedByName));
+        BillRequestHints.Add(hint);
         return Task.CompletedTask;
     }
     public List<(Guid BranchId, DeliveryOrdersChangedDto Payload)> DeliveryOrdersChanged { get; } = [];

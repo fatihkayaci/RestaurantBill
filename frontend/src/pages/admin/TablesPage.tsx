@@ -1,4 +1,5 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
+import BillHintBadge from '@/features/tables/components/BillHintBadge';
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import type { Table, Reservation } from "@/features/tables/types";
@@ -12,8 +13,8 @@ import { productService } from "@/features/products/api/productService";
 import { categoryService } from "@/features/categories/api/categoryService";
 import { regionService } from "@/features/regions/api/regionService";
 import { Button } from '@/components/ui/button';
-import { Check, X, Pencil, QrCode, Image as ImageIcon, LayoutGrid, Trash2, Layers, Lock, Minus, Plus, MoreHorizontal } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Check, X, Pencil, QrCode, Image as ImageIcon, LayoutGrid, Trash2, Layers, Lock, Minus, Plus, MoreHorizontal, Receipt, BellRing, Clock, Search, Unlock, Ban } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SortModeButton } from '@/components/dnd/SortMode';
 import { DraggableTable, TableDragTransferProvider } from '@/features/tables/components/TableDragTransfer';
 import TableOrderPanel from './components/TableOrderPanel';
@@ -34,11 +35,12 @@ import { REGION_SUGGESTIONS } from '@/features/regions/constants';
 import { SuggestedChips } from '@/components/ui/suggested-chips';
 import CustomerOrderRequests from '../waiter/components/CustomerOrderRequests';
 import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
-import QrOrderingToggle from '@/features/tables/components/QrOrderingToggle';
 import type { OrderRequest } from '@/features/customerSite/types';
 import { countRequestsByTable, useOrderRequestSignals } from '@/features/customerSite/useOrderRequestSignals';
 import { TABLE_ALERT_EVENT, type TableAlertDetail, type TableAlertKind } from '../waiter/waiterEvents';
 import { formatPrice, formatElapsed } from '@/lib/format';
+import { foldSearch } from '@/features/delivery/deliveryText';
+import { getApiErrorMessage } from '@/lib/apiError';
 import { inputClass, labelClass } from '@/lib/formStyles';
 
 type PanelTab = 'orders' | 'new-order' | 'reservation';
@@ -84,6 +86,46 @@ const PANEL_STATUS_CONFIG: Record<number, { label: string; cls: string }> = {
     3: { label: 'REZERVE', cls: 'bg-rb-amber-bg text-rb-amber' },
 };
 
+
+const clockTime = (iso: string) => new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+/**
+ * "Hesap istendi" şeridi: kartta ve masa panelinin üstünde. Dolu amber zemin + fiş simgesi + yazı + süre; renk tek
+ * işaret değil. Amber, Genel Bakış'taki hesap etiketiyle aynı ton (açık temada koyu yazı 5,7:1, koyu temada 10:1).
+ * `hint`: ödeme tercihi rozeti (BillHintBadge) gelince buraya, yazının yanına konur.
+ */
+function BillRequestedBar({ since, now, variant = 'card', hint, action }: {
+    since: string;
+    now: number;
+    variant?: 'card' | 'panel';
+    hint?: ReactNode;
+    action?: ReactNode;
+}) {
+    const elapsed = formatElapsed(since, now);
+    if (variant === 'card') {
+        return (
+            <div className="flex items-center gap-1.5 rounded-lg bg-rb-amber px-2.5 py-1.5 text-rb-amber-foreground shadow-sm" title={`Hesap istendi: ${clockTime(since)}`}>
+                <Receipt className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate text-xs font-extrabold uppercase tracking-[0.6px]">Hesap istendi</span>
+                {hint}
+                <span className="shrink-0 text-xs font-bold tabular-nums">{elapsed}</span>
+            </div>
+        );
+    }
+    return (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-rb-amber px-4 py-3 text-rb-amber-foreground">
+            <Receipt className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+                <p className="text-sm font-extrabold">
+                    Hesap istendi · <span className="tabular-nums">{elapsed} önce</span>
+                </p>
+                <p className="text-xs font-medium opacity-90">İstek saati {clockTime(since)}</p>
+            </div>
+            {hint}
+            {action}
+        </div>
+    );
+}
 
 function formatTimeDigits(rawValue: string): string {
     let digits = rawValue.replace(/\D/g, '').slice(0, 4);
@@ -172,12 +214,16 @@ export default function Tables() {
     const [cartNoteEditorFor, setCartNoteEditorFor] = useState<string | null>(null);
     const [editingItemNoteId, setEditingItemNoteId] = useState<number | null>(null);
     const [itemNoteDraft, setItemNoteDraft] = useState('');
+    const noteFromMenuRef = useRef<number | null>(null);
 
     const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
     const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
     // Ürün bazlı iptal penceresinin satırı (3 ayrandan 1'i ya da tamamı).
     const [cancelItem, setCancelItem] = useState<OrderItem | null>(null);
     const [transferModalOpen, setTransferModalOpen] = useState(false);
+    const [savingQrLock, setSavingQrLock] = useState(false);
+    // Yeni Sipariş ürün araması: kategorilerin hepsinde arar (Türkçe harf/aksan duyarsız).
+    const [productQuery, setProductQuery] = useState('');
 
     const [reservationName, setReservationName] = useState('');
     const [reservationContact, setReservationContact] = useState('');
@@ -258,7 +304,23 @@ export default function Tables() {
         connection.start().catch((err: Error) => {
             if (!err.message.includes("stopped during negotiation")) console.error("SignalR Connection Error:", err);
         });
-        return () => { stop(); };
+
+        // Mutfak ürünü "hazır" ya da garson "servis edildi" deyince masa hub'ı yönetici paneline olay atmaz; Genel Bakış
+        // gibi kasiyer hub'ının OrdersChanged olayıyla liste (ve açık masanın siparişi) yenilenir. Art arda olaylar tek isteğe düşer.
+        let refreshTimer: number | undefined;
+        const cashierHub = createHubConnection('/cashier-hub');
+        cashierHub.connection.on('OrdersChanged', () => {
+            window.clearTimeout(refreshTimer);
+            refreshTimer = window.setTimeout(() => {
+                refreshTables().catch(() => {});
+                const openTableId = selectedTableIdRef.current;
+                if (openTableId) orderService.getOrderByTableId(openTableId).then(data => { if (data) setTableOrder(data); }).catch(() => {});
+            }, 600);
+        });
+        cashierHub.connection.start().catch((err: Error) => {
+            if (!err.message.includes("stopped during negotiation")) console.error("SignalR Connection Error:", err);
+        });
+        return () => { stop(); window.clearTimeout(refreshTimer); cashierHub.stop(); };
     }, []);
 
     const openCreateModal = () => {
@@ -423,6 +485,7 @@ export default function Tables() {
             setNewItems([]);
             setOrderNote('');
             setTableOrder(null);
+            setProductQuery('');
             setActiveTab(selectedTable.status === 3 ? 'reservation' : 'new-order');
             setReservationName('');
             setReservationContact('');
@@ -490,6 +553,7 @@ export default function Tables() {
         setActiveReservation(null);
         setCartNoteEditorFor(null);
         setEditingItemNoteId(null);
+        setProductQuery('');
     };
 
     const increaseNewItem = (product: Product) => {
@@ -557,6 +621,23 @@ export default function Tables() {
             toast.error('Sipariş gönderilemedi.');
         } finally {
             setIsSendingOrder(false);
+        }
+    };
+
+    // Masa panelindeki "⋯ > QR siparişini kilitle / aç" (bu sayfa yalnız Owner/Admin'e açık; sunucu da denetler).
+    const toggleQrLock = async () => {
+        if (!selectedTable || savingQrLock) return;
+        const { id, name } = selectedTable;
+        const next = !selectedTable.qrOrderingLocked;
+        setSavingQrLock(true);
+        try {
+            await tableService.setQrLock(id, next);
+            setTables(prev => prev.map(t => t.id === id ? { ...t, qrOrderingLocked: next } : t));
+            toast.success(next ? `${name}: QR siparişi kilitlendi.` : `${name}: QR siparişi açıldı.`);
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'QR siparişi değiştirilemedi.'));
+        } finally {
+            setSavingQrLock(false);
         }
     };
 
@@ -643,7 +724,13 @@ export default function Tables() {
         });
     };
 
-    const filteredProducts = selectedCategoryId ? products.filter(p => p.categoryId === selectedCategoryId) : products;
+    // Ürün seçici: içinde aktif ürün olmayan kategori çip olarak gösterilmez (ör. boş "Tatlı" kategorisi "Tatlılar"ın
+    // yanında ikinci bir tatlı çipi gibi duruyordu). Arama yazılıysa kategori seçimi yok sayılır, tüm menüde aranır.
+    const pickerCategories = categories.filter(c => products.some(p => p.categoryId === c.id));
+    const foldedProductQuery = foldSearch(productQuery);
+    const filteredProducts = foldedProductQuery
+        ? products.filter(p => foldSearch(p.name).includes(foldedProductQuery) || foldSearch(p.categoryName ?? '').includes(foldedProductQuery))
+        : selectedCategoryId ? products.filter(p => p.categoryId === selectedCategoryId) : products;
 
     const regionCounts = regions.map(region => ({
         region,
@@ -892,6 +979,8 @@ export default function Tables() {
                             const alertKind = tableAlertOf(table.id);
                             // Kartın "yanması" (index.css: .table-alert-glow): QR sipariş altın, çağrı kırmızı, hesap mavi.
                             const glow = qrCount > 0 ? 'qr' : alertKind;
+                            const billRequested = table.status === 2 && !!table.billRequestedAt;
+                            const readyCount = table.status === 2 ? table.readyItemCount ?? 0 : 0;
                             return (
                                 <DraggableTable key={table.id} table={table} className="grid min-w-0 rounded-2xl">
                                 <div
@@ -902,11 +991,14 @@ export default function Tables() {
                                         "transition-all duration-150 hover:-translate-y-0.75 hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]",
                                         "dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-[0.98]",
                                         cfg.bg, cfg.border,
+                                        // Hesap istenen masa ızgarada uzaktan seçilsin: kalın amber çerçeve (yanıp sönen halka varsa o öndedir).
+                                        billRequested && 'border-2 border-rb-amber dark:border-rb-amber',
                                         glow && 'table-alert-glow'
                                     )}
                                 >
-                                    {/* 1. satır: ad (gerekirse iki satıra sarar) + durum rozeti. 2. satır: bölge + QR/düzenle/sil.
-                                        Böylece dar kartta da ikonlar ve rozet adın üstüne binmez. */}
+                                    {/* 1. satır: ad (gerekirse iki satıra sarar) + durum rozeti. 2. satır: QR kilidi + QR/düzenle/sil.
+                                        Böylece dar kartta da ikonlar ve rozet adın üstüne binmez. Bölge adı yazılmaz: kartlar zaten
+                                        bölge başlığı ya da seçili bölge sekmesi altında. */}
                                     <div className="flex items-start justify-between gap-2">
                                         <span className="min-w-0 font-serif text-[21px] font-bold text-foreground leading-[1.15] line-clamp-2 wrap-anywhere" title={table.name}>
                                             {table.name}
@@ -916,10 +1008,20 @@ export default function Tables() {
                                         </span>
                                     </div>
 
+                                    {/* Hesap istendi: kartın en baskın öğesi (dolu şerit + simge + süre + kalın çerçeve). */}
+                                    {billRequested && (
+                                        <BillRequestedBar since={table.billRequestedAt!} now={now}
+                                            hint={<BillHintBadge paymentHint={table.billPaymentHint} splitCount={table.billSplitCount} />} />
+                                    )}
+
                                     <div className="flex items-center justify-between gap-2">
-                                        <span className="min-w-0 truncate text-xs font-medium px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                                            {table.regionName}
-                                        </span>
+                                        <div className="flex min-w-0 flex-wrap gap-1">
+                                            {table.qrOrderingLocked && (
+                                                <span title="QR siparişi kilitli" className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-bold text-foreground">
+                                                    <Lock className="h-3 w-3" aria-hidden="true" />QR kilitli
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="-mr-2 flex shrink-0 items-center">
                                             <button
                                                 onClick={e => { e.stopPropagation(); setQrTable(table); }}
@@ -948,13 +1050,8 @@ export default function Tables() {
                                         </div>
                                     </div>
 
-                                    {(qrCount > 0 || alertKind || table.qrOrderingLocked) && (
+                                    {(qrCount > 0 || alertKind === 'call' || readyCount > 0) && (
                                         <div className="flex flex-wrap gap-1">
-                                            {table.qrOrderingLocked && (
-                                                <span title="QR siparişi kilitli" className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-bold text-foreground">
-                                                    <Lock className="h-3 w-3" aria-hidden="true" />QR kilitli
-                                                </span>
-                                            )}
                                             {qrCount > 0 && (
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-rb-gold px-2 py-0.5 text-xs font-bold text-rb-gold-foreground shadow-sm">
                                                     <QrCode className="h-3.5 w-3.5" aria-hidden="true" />
@@ -964,6 +1061,13 @@ export default function Tables() {
                                             {alertKind === 'call' && (
                                                 <span className="inline-flex items-center rounded-full bg-rb-red px-2 py-0.5 text-xs font-bold text-rb-red-foreground">
                                                     Garson çağırıyor
+                                                </span>
+                                            )}
+                                            {/* Genel Bakış'taki "Masa durumu" etiketiyle aynı metin, simge ve renk (TableFlags). */}
+                                            {readyCount > 0 && (
+                                                <span className="inline-flex max-w-full items-center gap-1 rounded-md border border-current/25 bg-rb-accent-bg px-1.5 py-0.5 text-xs font-bold tabular-nums text-rb-accent">
+                                                    <BellRing className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                                    <span className="truncate">{readyCount} hazır, servis bekliyor</span>
                                                 </span>
                                             )}
                                         </div>
@@ -977,11 +1081,6 @@ export default function Tables() {
                                         )}
                                         {table.status === 2 && (
                                             <>
-                                                {table.billRequestedAt && (
-                                                    <span className="self-start mt-1 rounded-md bg-rb-accent-bg px-2 py-0.5 text-xs font-bold uppercase tracking-[0.6px] text-rb-accent">
-                                                        Hesap istendi · {formatElapsed(table.billRequestedAt, now)}
-                                                    </span>
-                                                )}
                                                 <div className="flex flex-wrap items-center justify-between gap-x-2 mt-1">
                                                     <span className={cn("text-xs", cfg.hint)}>Aktif sipariş</span>
                                                     <span className="text-sm font-bold text-foreground">{formatPrice(table.activeOrderTotal)} ₺</span>
@@ -992,15 +1091,22 @@ export default function Tables() {
                                                         <span className="text-foreground">Kalan {formatPrice(table.activeOrderTotal - (table.paidAmount ?? 0))} ₺</span>
                                                     </div>
                                                 )}
-                                                {table.occupiedSince && (
-                                                    <div className="flex flex-wrap items-center justify-between gap-x-2 text-xs text-muted-foreground/80">
-                                                        <span>Açılış: {new Date(table.occupiedSince).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                        <span>{formatElapsed(table.occupiedSince, now)}</span>
-                                                    </div>
-                                                )}
-                                                {table.createdByUserName && (
-                                                    <div className="truncate text-xs text-muted-foreground/80">
-                                                        Alan: {table.createdByUserName}
+                                                {/* Tek süre: masanın açık kaldığı süre; açılış saati üzerine gelince (title) görünür. */}
+                                                {(table.createdByUserName || table.occupiedSince) && (
+                                                    <div className="flex items-center justify-between gap-x-2 text-xs text-muted-foreground">
+                                                        <span className="min-w-0 truncate">
+                                                            {table.createdByUserName && <>Garson: {table.createdByUserName}</>}
+                                                        </span>
+                                                        {table.occupiedSince && (
+                                                            <span
+                                                                className="inline-flex shrink-0 items-center gap-1 tabular-nums"
+                                                                title={`Açılış: ${clockTime(table.occupiedSince)}`}
+                                                            >
+                                                                <Clock className="h-3 w-3" aria-hidden="true" />
+                                                                <span className="sr-only">Açık kalma süresi </span>
+                                                                {formatElapsed(table.occupiedSince, now)}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 )}
                                             </>
@@ -1213,23 +1319,94 @@ export default function Tables() {
                     <div className="fixed top-0 right-0 bottom-0 z-70 w-full md:w-190 shadow-2xl animate-in slide-in-from-right duration-300 bg-background flex flex-col">
                         {/* Header */}
                         <div className="px-6 pt-5 pb-4 border-b shrink-0">
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <h2 className="text-2xl font-serif font-bold text-foreground">{selectedTable.name}</h2>
-                                    <div className="mt-1.5">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <h2 className="text-2xl font-serif font-bold text-foreground wrap-anywhere">{selectedTable.name}</h2>
+                                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                         <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${(PANEL_STATUS_CONFIG[selectedTable.status] ?? PANEL_STATUS_CONFIG[1]).cls}`}>
                                             {(PANEL_STATUS_CONFIG[selectedTable.status] ?? PANEL_STATUS_CONFIG[1]).label}
                                         </span>
+                                        {selectedTable.qrOrderingLocked && (
+                                            <span className="inline-flex items-center gap-1 rounded-md bg-foreground/10 px-2 py-0.5 text-xs font-bold text-foreground">
+                                                <Lock className="h-3 w-3" aria-hidden="true" />QR siparişi kilitli
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-                                <button onClick={closePanel} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <div className="-mr-1.5 flex shrink-0 items-center gap-1">
+                                    {/* Seyrek ve geri alınamayan işlemler: QR kilidi, siparişi iptal. Ana işlemlerin (Ödeme Al) yanında değil. */}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button
+                                                type="button"
+                                                aria-label="Masa işlemleri"
+                                                title="Masa işlemleri"
+                                                className="flex h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            >
+                                                <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        {/* Panel z-70'te; menü onun üstünde açılmalı. */}
+                                        <DropdownMenuContent align="end" sideOffset={6} className="z-90 w-64">
+                                            <DropdownMenuItem
+                                                disabled={savingQrLock}
+                                                onSelect={() => void toggleQrLock()}
+                                                className="min-h-11 cursor-pointer items-start gap-2.5 py-2"
+                                            >
+                                                {selectedTable.qrOrderingLocked
+                                                    ? <Unlock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                                                    : <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}
+                                                <span className="flex flex-col">
+                                                    <span className="font-medium">{selectedTable.qrOrderingLocked ? 'QR siparişini aç' : 'QR siparişini kilitle'}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {selectedTable.qrOrderingLocked
+                                                            ? 'Masadaki her telefon QR ile sipariş gönderebilir.'
+                                                            : 'Müşteri menüye bakar, hesabı görür; QR ile sipariş gönderemez.'}
+                                                    </span>
+                                                </span>
+                                            </DropdownMenuItem>
+                                            {tableOrder && (
+                                                <>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        onSelect={() => setCancelConfirmOpen(true)}
+                                                        className="min-h-11 cursor-pointer gap-2.5"
+                                                    >
+                                                        <Ban className="h-4 w-4" aria-hidden="true" />
+                                                        Siparişi iptal et…
+                                                    </DropdownMenuItem>
+                                                </>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                    <button onClick={closePanel} aria-label="Paneli kapat" className="flex h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
-                            {/* "QR siparişi: Açık / Kilitli" (bu sayfa yalnız Owner/Admin'e açık). */}
-                            <QrOrderingToggle className="mt-3" tableId={selectedTable.id} tableName={selectedTable.name} locked={!!selectedTable.qrOrderingLocked}
-                                onChanged={locked => setTables(prev => prev.map(t => t.id === selectedTable.id ? { ...t, qrOrderingLocked: locked } : t))} />
                         </div>
+
+                        {/* Hesap istendi: panelin en üstünde, hangi sekme açık olursa olsun. */}
+                        {selectedTable.status === 2 && (selectedTable.billRequestedAt ?? tableOrder?.billRequestedAt) && (
+                            <div className="shrink-0 border-b px-6 py-3">
+                                <BillRequestedBar
+                                    variant="panel"
+                                    since={(selectedTable.billRequestedAt ?? tableOrder?.billRequestedAt)!}
+                                    now={now}
+                                    hint={<BillHintBadge paymentHint={selectedTable.billPaymentHint ?? tableOrder?.billPaymentHint} splitCount={selectedTable.billSplitCount ?? tableOrder?.billSplitCount} />}
+                                    action={tableOrder && tableOrder.orderItems.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentOrder(tableOrder)}
+                                            className="min-h-10 shrink-0 rounded-lg bg-background px-3.5 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        >
+                                            Ödeme Al
+                                        </button>
+                                    )}
+                                />
+                            </div>
+                        )}
 
                         {/* Bu masanın onay bekleyen QR siparişleri: panelin en üstünde Onayla/Reddet. */}
                         {(qrByTable.get(selectedTable.id) ?? 0) > 0 && (
@@ -1275,28 +1452,63 @@ export default function Tables() {
                             <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
                                 {/* Sol: Kategori pilleri + Ürün listesi */}
                                 <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
+                                    {/* Ürün araması: tüm kategorilerde, Türkçe harf/aksan duyarsız ("cay" → "Çay"); Esc temizler. */}
+                                    <div className="shrink-0 px-4 pt-3">
+                                        <div className="relative">
+                                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                                            <input
+                                                type="search"
+                                                value={productQuery}
+                                                onChange={e => setProductQuery(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Escape' && productQuery) {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        setProductQuery('');
+                                                    }
+                                                }}
+                                                placeholder="Ürün ara…"
+                                                aria-label="Ürün ara (tüm kategorilerde)"
+                                                enterKeyHint="search"
+                                                autoComplete="off"
+                                                className="h-11 w-full rounded-xl border bg-background pl-9 pr-11 text-sm outline-none focus:ring-2 focus:ring-ring md:h-10 [&::-webkit-search-cancel-button]:hidden"
+                                            />
+                                            {productQuery && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setProductQuery('')}
+                                                    aria-label="Aramayı temizle"
+                                                    className="absolute right-0.5 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-9 md:w-9"
+                                                >
+                                                    <X className="h-4 w-4" aria-hidden="true" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                     {/* Kategori pilleri: sığmayan alt satıra geçer (yatay kaydırma tekerlekle yapılamıyordu); çok kategoride
-                                        alan sınırlı kalır ve dikey kayar. */}
+                                        alan sınırlı kalır ve dikey kayar. Arama yazılıyken seçim yok sayılır; bir pile basmak aramayı temizler. */}
                                     <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto px-4 py-3 shrink-0 border-b">
                                         {/* Tümü: kategori filtresi yok (selectedCategoryId null). */}
                                         <button
                                             type="button"
-                                            onClick={() => setSelectedCategoryId(null)}
-                                            aria-pressed={selectedCategoryId === null}
+                                            onClick={() => { setSelectedCategoryId(null); setProductQuery(''); }}
+                                            aria-pressed={!foldedProductQuery && selectedCategoryId === null}
                                             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
-                                                selectedCategoryId === null
+                                                !foldedProductQuery && selectedCategoryId === null
                                                     ? 'bg-rb-accent text-rb-accent-foreground'
                                                     : 'bg-muted text-muted-foreground hover:bg-muted/70'
                                             }`}
                                         >
                                             Tümü
                                         </button>
-                                        {categories.map(cat => (
+                                        {pickerCategories.map(cat => (
                                             <button
                                                 key={cat.id}
-                                                onClick={() => setSelectedCategoryId(cat.id)}
+                                                type="button"
+                                                onClick={() => { setSelectedCategoryId(cat.id); setProductQuery(''); }}
+                                                aria-pressed={!foldedProductQuery && selectedCategoryId === cat.id}
                                                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
-                                                    selectedCategoryId === cat.id
+                                                    !foldedProductQuery && selectedCategoryId === cat.id
                                                         ? 'bg-rb-accent text-rb-accent-foreground'
                                                         : 'bg-muted text-muted-foreground hover:bg-muted/70'
                                                 }`}
@@ -1308,8 +1520,15 @@ export default function Tables() {
 
                                     {/* Ürün listesi */}
                                     <div className="flex-1 overflow-y-auto px-4">
+                                        {foldedProductQuery && (
+                                            <p className="pt-3 text-xs text-muted-foreground" aria-live="polite">
+                                                Tüm kategorilerde “{productQuery.trim()}”: {filteredProducts.length} ürün
+                                            </p>
+                                        )}
                                         {filteredProducts.length === 0 ? (
-                                            <p className="text-center text-muted-foreground text-sm py-8">Ürün bulunamadı</p>
+                                            <p className="text-center text-muted-foreground text-sm py-8">
+                                                {foldedProductQuery ? 'Aramaya uyan ürün yok' : 'Ürün bulunamadı'}
+                                            </p>
                                         ) : (
                                             filteredProducts.map(product => {
                                                 const cartItem = newItems.find(i => i.productId === product.id);
@@ -1563,6 +1782,7 @@ export default function Tables() {
                                                         </p>
                                                         {editingItemNoteId === item.id ? (
                                                             <input
+                                                                id={`order-item-note-${item.id}`}
                                                                 autoFocus
                                                                 value={itemNoteDraft}
                                                                 onChange={e => setItemNoteDraft(e.target.value)}
@@ -1579,14 +1799,49 @@ export default function Tables() {
                                                         )}
                                                     </div>
                                                     <span className="text-sm font-semibold text-foreground shrink-0">{formatPrice(item.unitPrice * item.quantity)} ₺</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setCancelItem(item)}
-                                                        aria-label={`${item.productName} iptal et`}
-                                                        className="shrink-0 min-h-9 px-2.5 rounded-lg border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/10 transition-colors"
-                                                    >
-                                                        İptal
-                                                    </button>
+                                                    {/* Satır işlemleri "⋯" menüsünde: tek dokunuşla iptal yok; "İptal et…" adet/sebep soran onay penceresini açar. */}
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <button
+                                                                type="button"
+                                                                aria-label={`${item.productName} işlemleri`}
+                                                                title="Ürün işlemleri"
+                                                                className="-mr-2 flex h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-muted"
+                                                            >
+                                                                <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+                                                            </button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent
+                                                            align="end"
+                                                            sideOffset={4}
+                                                            className="z-90 w-48"
+                                                            // "Not ekle" seçilince odak tetikleyiciye değil yeni açılan not alanına geçer.
+                                                            onCloseAutoFocus={e => {
+                                                                const noteItemId = noteFromMenuRef.current;
+                                                                if (noteItemId === null) return;
+                                                                noteFromMenuRef.current = null;
+                                                                e.preventDefault();
+                                                                document.getElementById(`order-item-note-${noteItemId}`)?.focus();
+                                                            }}
+                                                        >
+                                                            <DropdownMenuItem
+                                                                onSelect={() => { noteFromMenuRef.current = item.id; startEditingItemNote(item.id, item.note); }}
+                                                                className="min-h-11 cursor-pointer gap-2.5"
+                                                            >
+                                                                <Pencil className="h-4 w-4" aria-hidden="true" />
+                                                                {item.note ? 'Notu düzenle' : 'Not ekle'}
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                variant="destructive"
+                                                                onSelect={() => setCancelItem(item)}
+                                                                className="min-h-11 cursor-pointer gap-2.5"
+                                                            >
+                                                                <Ban className="h-4 w-4" aria-hidden="true" />
+                                                                İptal et…
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             ))}
                                         </div>
@@ -1603,8 +1858,9 @@ export default function Tables() {
                                     </>
                                 )}
 
-                                {/* Masayı Taşı · Ödeme Al · Siparişi İptal Et — tek satır, panelin altına yapışık.
-                                    Masa durumu ne olursa olsun, aktif bir sipariş varsa görünür. */}
+                                {/* Masayı Taşı · Ödeme Al — panelin altına yapışık; Ödeme Al ana işlem (geniş, dolu).
+                                    "Siparişi iptal et" burada değil: başlıktaki "⋯ Masa işlemleri" menüsünde, onay penceresiyle.
+                                    Siparişte ürün yoksa (yanlış açılmış masa) Ödeme Al da yoktur; o zaman iptal burada küçük ve sade durur. */}
                                 {tableOrder && (
                                     <div className="sticky bottom-0 mt-auto -mx-4 px-4 pt-3 pb-1 bg-background border-t">
                                         <div className="flex gap-2">
@@ -1614,20 +1870,21 @@ export default function Tables() {
                                             >
                                                 Masayı Taşı
                                             </button>
-                                            {tableOrder.orderItems.length > 0 && (
+                                            {tableOrder.orderItems.length > 0 ? (
                                                 <button
                                                     onClick={() => setPaymentOrder(tableOrder)}
-                                                    className="flex-1 basis-0 min-w-0 min-h-12 px-2 rounded-xl bg-rb-gold text-rb-gold-foreground font-semibold text-sm leading-tight hover:bg-rb-gold/85 transition-colors"
+                                                    className="flex-[2] basis-0 min-w-0 min-h-12 px-3 rounded-xl bg-rb-gold text-rb-gold-foreground font-bold text-[15px] leading-tight shadow-sm hover:bg-rb-gold/85 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                 >
-                                                    Ödeme Al
+                                                    Ödeme Al · <span className="tabular-nums">{formatPrice(tableOrder.remainingAmount ?? tableOrder.totalPrice)} ₺</span>
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setCancelConfirmOpen(true)}
+                                                    className="shrink-0 min-h-12 px-3 rounded-xl text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
+                                                >
+                                                    Siparişi iptal et
                                                 </button>
                                             )}
-                                            <button
-                                                onClick={() => setCancelConfirmOpen(true)}
-                                                className="flex-1 basis-0 min-w-0 min-h-12 px-2 rounded-xl border border-destructive/30 text-destructive font-semibold text-sm leading-tight hover:bg-destructive/10 transition-colors"
-                                            >
-                                                Siparişi İptal Et
-                                            </button>
                                         </div>
                                     </div>
                                 )}
@@ -1698,7 +1955,7 @@ export default function Tables() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Siparişi İptal Et</AlertDialogAction>
+                        <AlertDialogAction onClick={handleCancelOrder} variant="destructive">Siparişi İptal Et</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

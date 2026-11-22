@@ -16,7 +16,7 @@ import {
     WhatsAppGlyph, CalendarGlyph,
 } from './SophraIcons';
 import { AMENITY_ICON, categoryIcon, valueIcon } from './iconKinds';
-import { spButton, spCard, spEyebrow, spLink, spRail, spTitle, spWrap } from './sophraParts';
+import { CART_PATH, spButton, spCard, spEyebrow, spLink, spRail, spTitle, spWrap } from './sophraParts';
 
 // Sophra ana sayfasının sıralanabilen bölümleri (sıra ve görünürlük: homeSections). Her bölüm verisi yoksa hiç çizilmez
 // (null): kapatılan ya da boş bölüm boşluk bırakmaz; aralıklar bölümün kendi iç boşluğundadır. Düzenleyicide (useSiteEdit)
@@ -112,7 +112,7 @@ export function FeaturedSection({ site }: { site: PublicSite }) {
                     ))}
                 </ul>
                 {cart.enabled && cart.count > 0 && (
-                    <Link to="/menu" className={cn(spButton.accent, 'self-start')}>Sepete git ({cart.count})</Link>
+                    <Link to={CART_PATH} className={cn(spButton.accent, 'self-start')}>Sepete git ({cart.count})</Link>
                 )}
                 <p className="sr-only" aria-live="polite">{announce}</p>
             </div>

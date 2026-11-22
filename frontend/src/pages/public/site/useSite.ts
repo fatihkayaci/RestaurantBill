@@ -123,6 +123,9 @@ export function normalizeSite(site: PublicSite): PublicSite {
             foundedYear: c.foundedYear ?? null,
             values: c.values ?? [],
             milestones: c.milestones ?? [],
+            teamMembers: c.teamMembers ?? [],
+            teamTitle: c.teamTitle ?? '',
+            teamIntro: c.teamIntro ?? '',
             regionDetails: c.regionDetails ?? [],
             seoTitle: c.seoTitle ?? '',
             seoDescription: c.seoDescription ?? '',
@@ -233,7 +236,7 @@ export function restaurantName(site: PublicSite): string {
 
 const PAGE_TITLES: Partial<Record<string, string>> = {
     menu: 'Menü', hakkimizda: 'Hakkımızda', mekan: 'Mekân', iletisim: 'İletişim', rezervasyon: 'Rezervasyon',
-    'rezervasyon-sorgula': 'Rezervasyon sorgula', siparis: 'Paket sipariş',
+    'rezervasyon-sorgula': 'Rezervasyon sorgula', siparis: 'Paket sipariş', bulunamadi: 'Sayfa bulunamadı', 'qr-gecersiz': 'Bu QR kod geçersiz',
 };
 
 /** Ana sayfa sitenin başlığını alır (yayındaki SEO başlığı); alt sayfalar "Menü · Ocak". */
@@ -246,10 +249,17 @@ export function sitePageTitle(site: PublicSite, page: string): string {
 
 /** Tarayıcı sekmesinin başlığı (müşteri sitesi). Düzenleyicinin önizlemesinde admin'in başlığına dokunulmaz. */
 export function useSiteDocumentTitle(site: PublicSite, page: string) {
+    useDocumentTitle(sitePageTitle(site, page));
+}
+
+/**
+ * Müşteri sayfasının sekme başlığı ("Masa 5 · Demo Restoran", "Sayfa bulunamadı · Ocak"). null: dokunulmaz (veri
+ * yüklenene kadar). Sayfadan çıkınca önceki başlık geri gelir. Düzenleyicinin önizlemesinde admin'in başlığına dokunulmaz.
+ */
+export function useDocumentTitle(title: string | null) {
     const inPreview = useSitePreview() !== null;
-    const title = sitePageTitle(site, page);
     useEffect(() => {
-        if (inPreview) return;
+        if (inPreview || !title) return;
         const previous = document.title;
         document.title = title;
         return () => { document.title = previous; };

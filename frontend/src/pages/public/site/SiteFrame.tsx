@@ -16,6 +16,9 @@ import type { MobileAction } from './siteActions';
 import { useMobileActions } from './siteActions';
 import { directionsUrl, resolveDesign, splitAccent, telHref, whatsappHref } from './siteTheme';
 import { fullAddress, restaurantName, useSiteDocumentTitle, weekSchedule } from './useSite';
+import { forgetTableVisit, tableMenuPath, useTableVisit, VISIT_GRACE_MS } from '@/features/customerSite/tableVisit';
+import { publicService } from '@/features/customerSite/api/publicService';
+import { X } from 'lucide-react';
 import { EditableBlock, EmptySlot, ExternalHint } from './siteEdit';
 import { editExternal, useSiteEdit, useSiteWindow } from './siteEditContext';
 import { useSiteDesign } from './siteDesign';
@@ -520,12 +523,49 @@ export function SitePage({ site, current, className, stickyHeader = true, overla
             {layout.flowCss && <style>{layout.flowCss}</style>}
             <div className={cn('rb-site relative flex min-h-screen flex-col overflow-x-clip', layout.flowClass, className ?? cn(sans, 'bg-[var(--site-bg)] text-base leading-[1.6] text-[var(--site-text)]'))}>
                 {/* Düzenleyicide yalnız burada değişen bölümler çizilir: başlık, alt bilgi ve alt çubuk yok. */}
+                {!edit && <TableVisitStrip />}
                 {!edit && <SiteHeader site={site} current={current} sticky={stickyHeader} overlay={overlayHeader} />}
                 {children}
                 {!edit && <SiteFooter site={site} bottomBar={actions.length > 0} visit={footerVisit} />}
                 {!edit && <MobileActionBar actions={actions} />}
             </div>
         </SiteShell>
+    );
+}
+
+/**
+ * Bu sekmede masa QR'ı okutulduysa (müşteri masada) sitenin en üstünde ince şerit: masanın adı ve masa menüsüne dönüş.
+ * Masadaki müşteriye paket siparişin sepeti, teslimat ücreti ve mahallesi gösterilmez (useSiteCart kapanır); siparişi
+ * masanın menüsünden verir.
+ */
+function TableVisitStrip() {
+    const visit = useTableVisit();
+    const tableId = visit?.tableId;
+    const savedAt = visit?.savedAt ?? 0;
+    // Müşteri masadan kalkıp gitmiş olabilir (sekme telefonda açık kalır): masada açık hesap yoksa ve QR yeni
+    // okutulmadıysa masa bilgisi düşer, site normal (paket sipariş) davranır.
+    useEffect(() => {
+        if (!tableId || Date.now() - savedAt < VISIT_GRACE_MS) return;
+        let cancelled = false;
+        publicService.getTableBill(tableId)
+            .then(bill => { if (!cancelled && (!bill.hasBill || bill.isPaid)) forgetTableVisit(); })
+            .catch(() => { /* bağlantı yoksa şerit kalır; 2 saat sonra kendiliğinden düşer */ });
+        return () => { cancelled = true; };
+    }, [tableId, savedAt]);
+    if (!visit) return null;
+    return (
+        <div role="region" aria-label="Masanız" className="relative z-40 bg-[var(--site-accent)] text-[var(--site-on-accent)]">
+            <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-1.5 text-[14px] sm:px-6">
+                <span className="min-w-0 font-semibold">{visit.tableName} · Siparişinizi masanın menüsünden verebilirsiniz.</span>
+                <span className="flex shrink-0 items-center gap-1">
+                    <Link to={tableMenuPath(visit)} className="inline-flex min-h-10 items-center font-bold text-inherit underline underline-offset-4">Masa menüsüne dön</Link>
+                    <button type="button" onClick={forgetTableVisit} aria-label="Masada değilim, şeridi kapat" title="Masada değilim"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-inherit hover:bg-black/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current">
+                        <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                </span>
+            </div>
+        </div>
     );
 }
 

@@ -1,4 +1,5 @@
 using RestaurantBill.Application.Features.Stats.Queries.GetDashboard;
+using RestaurantBill.Application.Features.Tables.Queries.GetAllTable;
 using RestaurantBill.Application.Tests.Infrastructure;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -74,5 +75,34 @@ public class DashboardTablesTests : ApplicationTestBase
         Assert.Null(idleDto.BillRequestedAt);
 
         Assert.Equal([idle.Id], result.Value.Pending.OrderRequestTableIds);
+    }
+
+    // Masalar sayfası /table listesini okur; "N hazır, servis bekliyor" Genel Bakış'la aynı sayıyı göstermeli.
+    [Fact]
+    public async Task TableList_ReadyItemCount_MatchesDashboardReadyItems()
+    {
+        await SeedBranchAsync();
+        Table busy = await SeedTableAsync();
+        busy.Occupy();
+        Table idle = await SeedTableAsync();
+
+        Order order = Order.Create(busy.Id, CurrentUser.BranchId);
+        order.AddItem(await SeedProductAsync("Çay", 20m), 2);
+        order.AddItem(await SeedProductAsync("Kebap", 300m), 1);
+        order.AddItem(await SeedProductAsync("Ayran", 30m), 3);
+        SetStatus(order, "Çay", OrderItemStatus.Ready);
+        SetStatus(order, "Ayran", OrderItemStatus.Served);
+        DbContext.Orders.Add(order);
+        await DbContext.SaveChangesAsync();
+
+        var dashboard = await new GetDashboardQueryHandler(Db, CurrentUser).Handle(new GetDashboardQuery(), CancellationToken.None);
+        var list = await new GetAllTableQueryHandler(Db, CurrentUser).Handle(new GetAllTableQuery(), CancellationToken.None);
+
+        Assert.True(list.IsSuccess, list.Error);
+        var listed = list.Value!.ToDictionary(t => t.Id);
+        int dashboardReady = dashboard.Value!.Regions.SelectMany(r => r.Tables).Single(t => t.Id == busy.Id).ReadyItems;
+        Assert.Equal(2, listed[busy.Id].ReadyItemCount);
+        Assert.Equal(dashboardReady, listed[busy.Id].ReadyItemCount);
+        Assert.Equal(0, listed[idle.Id].ReadyItemCount);
     }
 }

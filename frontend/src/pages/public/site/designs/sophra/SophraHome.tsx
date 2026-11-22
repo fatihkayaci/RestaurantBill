@@ -13,10 +13,11 @@ import { SophraHero } from './SophraHero';
 import { CalendarGlyph, MenuGlyph, PhoneGlyph } from './SophraIcons';
 import { AboutSection, CategoriesSection, ContactSection, FeaturedSection, FeaturesSection, GallerySection, ReviewsSection } from './SophraSections';
 import { SOPHRA_CSS, spWrap } from './sophraParts';
+import { TeamSection } from './SophraTeam';
 import { telHref } from '../../siteTheme';
 
 // Sophra ana sayfası (varsayılan tasarım). Kapak sabit en üstte; ardından restoranın sıraladığı ve açtığı bölümler
-// (homeSections: kategoriler, öne çıkanlar, hakkımızda, değerler ve olanaklar, galeri + Instagram, puan ve yorumlar,
+// (homeSections: kategoriler, öne çıkanlar, hakkımızda, ekip (varsayılanı kapalı), değerler ve olanaklar, galeri + Instagram, puan ve yorumlar,
 // iletişim). Kapalı ya da içeriği olmayan bölüm çizilmez, boşluk bırakmaz. Kategoriler kapağın hemen ardındaysa dalgaya
 // biner. Telefonda alt çubuk: Ara · Menü · (Rezervasyon). Düzenleyicide gizli bölümler ve menüden gelen
 // bölümler ince bir şeritle görünür; tıklanınca "Anasayfa bölümleri" penceresi açılır.
@@ -32,6 +33,7 @@ export default function SophraHome({ site, mine }: DesignHomeProps) {
             case 'categories': return <CategoriesSection site={site} overlap={first && overlap} />;
             case 'featured': return <FeaturedSection site={site} />;
             case 'about': return <AboutSection site={site} />;
+            case 'team': return <TeamSection site={site} />;
             case 'features': return <FeaturesSection site={site} />;
             case 'gallery': return <GallerySection site={site} />;
             case 'reviews': return <ReviewsSection site={site} />;
@@ -76,10 +78,13 @@ function EditorSlot({ site, sectionKey, enabled, children }: { site: PublicSite;
     const edit = useSiteEdit();
     const info = HOME_SECTION_INFO[sectionKey];
     const has = homeSectionHasContent(site, sectionKey);
-    if (enabled && !MENU_SECTIONS.includes(sectionKey) && (has || edit?.showEmpty)) return <>{children}</>;
+    // Ekip Hakkımızda'da yazılır: burada boşken yer tutucu çizilmez, şerit nereden ekleneceğini söyler.
+    const derived = sectionKey === 'team' && !has;
+    if (enabled && !MENU_SECTIONS.includes(sectionKey) && !derived && (has || edit?.showEmpty)) return <>{children}</>;
 
     let note: string;
-    if (!enabled) note = 'Gizli: sitede görünmez.';
+    if (!enabled) note = sectionKey === 'team' ? "Gizli: açarsanız Hakkımızda'daki ekip burada kısaca görünür." : 'Gizli: sitede görünmez.';
+    else if (derived) note = "Ekip üyesi yok (Hakkımızda'da ekleyin): sitede görünmez.";
     else if (sectionKey === 'categories') note = has ? `${filledCategories(site).length} kategori, menüden gelir.` : 'Menüde ürünlü kategori yok: sitede görünmez.';
     else if (sectionKey === 'featured') note = has ? `${featuredProducts(site).length} öne çıkan ürün, Yemeklerimiz'den gelir.` : "Öne çıkan ürün yok (Yemeklerimiz'de işaretleyin): sitede görünmez.";
     else note = 'İçerik yok: sitede görünmez.';

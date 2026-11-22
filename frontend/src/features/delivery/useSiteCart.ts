@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useTableVisit } from '@/features/customerSite/tableVisit';
 import { publicDeliveryService } from './api/publicDeliveryService';
 import {
     addLine, changeQuantity, defaultSelections, estimatedSubtotal, itemCount, loadCart, loadRecentOrders, newClientRequestId,
@@ -62,7 +63,9 @@ export interface SiteCart {
 
 export function useSiteCart(): SiteCart {
     const ordering = useOnlineOrdering();
-    const enabled = isOnlineOrderingAvailable(ordering) && ordering?.state !== 'disabled';
+    // Bu sekmede masa QR'ı okutulduysa müşteri masada: paket sepeti (teslimat ücreti, mahalle) hiç görünmez.
+    const atTable = useTableVisit() !== null;
+    const enabled = !atTable && isOnlineOrderingAvailable(ordering) && ordering?.state !== 'disabled';
     const branchId = enabled ? ordering!.branchId : null;
     const tick = useSyncExternalStore(subscribe, () => version);
 

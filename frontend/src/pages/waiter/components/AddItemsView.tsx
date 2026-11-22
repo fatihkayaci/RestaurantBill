@@ -88,6 +88,11 @@ function AddItemsScreen({ table, order, onBack, backLabel, onReserve, onSent, on
     const productById = useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
     const setMenuById = useMemo(() => new Map(setMenus.map(s => [s.id, s])), [setMenus]);
     const categoryName = useMemo(() => new Map(categories.map(c => [c.id, c.name])), [categories]);
+    // Servis penceresi dışındaki kategoriler (ör. pide fırını kapandı): yalnız uyarı, ekleme engellenmez.
+    const closedCategories = useMemo(
+        () => new Map(categories.filter(c => c.availableNow === false).map(c => [c.id, c.availabilityLabel ?? ''])),
+        [categories],
+    );
     const quickNotesOf = (product: Product) => quickNotesFor(categoryName.get(product.categoryId) ?? product.categoryName ?? '');
 
     const productEntries = useMemo(() => products.map((p): MenuEntry => ({ kind: 'product', id: p.id, product: p })), [products]);
@@ -265,6 +270,12 @@ function AddItemsScreen({ table, order, onBack, backLabel, onReserve, onSent, on
                 ) : visible.length === 0 ? (
                     <p className="py-10 text-center text-sm text-rb-text-sub">{query ? `"${query}" için ürün bulunamadı.` : 'Bu kategoride ürün yok.'}</p>
                 ) : (
+                    <>
+                    {closedCategories.has(categoryId) && (
+                        <p role="status" className="mb-2 rounded-2xl bg-rb-amber-bg px-3.5 py-2.5 text-sm font-semibold text-rb-amber">
+                            {categoryName.get(categoryId)} şu an servis saati dışında{closedCategories.get(categoryId) ? ` (${closedCategories.get(categoryId)})` : ''}. Müşteri QR'dan sipariş edemez; siz yine ekleyebilirsiniz.
+                        </p>
+                    )}
                     <ul className="flex flex-col gap-2">
                         {visible.map(entry => entry.kind === 'set' ? (
                             <SetMenuRow
@@ -286,11 +297,13 @@ function AddItemsScreen({ table, order, onBack, backLabel, onReserve, onSent, on
                                 onToggleNotes={() => setNotesFor(current => (current === entry.id ? null : entry.id))}
                                 onAdd={() => setLines(prev => addOne(prev, entry.id))}
                                 onRemove={() => setLines(prev => removeOne(prev, entry.id))}
+                                outsideWindowLabel={closedCategories.get(entry.product.categoryId)}
                                 {...lineActions}
                                 onAddSeparate={() => setLines(prev => addSeparateLine(prev, entry.id))}
                             />
                         ))}
                     </ul>
+                    </>
                 )}
                 {cartCount > 0 && (
                     <label className="mt-4 block">

@@ -25,6 +25,13 @@ namespace RestaurantBill.Domain.Entities
         // Garson "Hesap iste" dediğinde dolar; kasiyer ve yöneticiler masayı "hesap istendi" görür.
         // Sipariş ödenince ya da iptal edilince temizlenir.
         public DateTime? BillRequestedAt { get; private set; }
+        // Hesabı QR'dan isteyen müşterinin ödeme tercihi ve "N kişiye bölünecek" bilgisi (kasaya ön bilgi). Son istek
+        // geçerlidir; hesap isteği geri alınınca, hesap kapanınca ya da iptal edilince temizlenir.
+        public BillPaymentHint? BillPaymentHint { get; private set; }
+        public int? BillSplitCount { get; private set; }
+
+        public const int BillSplitMin = 2;
+        public const int BillSplitMax = 20;
         // "Tutar gir" ile alınan, henüz ürünlere mahsup edilmemiş ödemelerin toplamı (hesaba ödeme).
         // Ürünler masada kalır; kalan tutar = TotalPrice - PaidOnAccount. Hesap kapanırken sıfırlanır.
         public decimal PaidOnAccount { get; private set; }
@@ -103,21 +110,22 @@ namespace RestaurantBill.Domain.Entities
         }
 
         /// <param name="isTakeaway">Kalem paket (QR'da "Paket olsun"); paket satırı masadaki aynı ürünle birleşmez.</param>
-        public void AddItem(Product product, int quantity, decimal taxRate = 0m, string? note = null, bool isTakeaway = false)
+        /// <param name="orderRequestId">Kalemi yazan müşteri talebi (QR / ön sipariş); garsonun eklediği kalemde null.</param>
+        public void AddItem(Product product, int quantity, decimal taxRate = 0m, string? note = null, bool isTakeaway = false, Guid? orderRequestId = null)
         {
-            AddProductLine(product, product.Price, quantity, taxRate, note, isTakeaway);
+            AddProductLine(product, product.Price, quantity, taxRate, note, isTakeaway, orderRequestId);
         }
 
         /// <summary>
         /// Ürünü verilen birim fiyatla ekler (paket siparişte müşterinin onayladığı fiyat). Ürünün güncel fiyatı
         /// sonradan değişmiş olsa da satır bu fiyatla yazılır.
         /// </summary>
-        public void AddItemAtPrice(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note = null, bool isTakeaway = false)
+        public void AddItemAtPrice(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note = null, bool isTakeaway = false, Guid? orderRequestId = null)
         {
-            AddProductLine(product, unitPrice, quantity, taxRate, note, isTakeaway);
+            AddProductLine(product, unitPrice, quantity, taxRate, note, isTakeaway, orderRequestId);
         }
 
-        private void AddProductLine(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note, bool isTakeaway)
+        private void AddProductLine(Product product, decimal unitPrice, int quantity, decimal taxRate, string? note, bool isTakeaway, Guid? orderRequestId)
         {
             if (quantity <= 0)
                 throw new DomainException("Miktar 0'dan büyük olmalı.");
@@ -126,10 +134,11 @@ namespace RestaurantBill.Domain.Entities
 
             // Menü satırlarının ProductId'si yoktur; menü içeriği ise kendi menüsüne aittir, tek ürünle birleşmez.
             // Fiyatı farklı satırla birleşmez; aksi halde yeni adetler eski fiyattan yazılırdı. Paket satırı masadakiyle
-            // birleşmez; aksi halde mutfak hangisinin paket olduğunu bilemezdi.
+            // birleşmez; aksi halde mutfak hangisinin paket olduğunu bilemezdi. Başka bir talebin (ya da garsonun) satırıyla
+            // da birleşmez; aksi halde müşterinin sipariş aşaması (OrderRequestId) kaybolurdu.
             OrderItem? existing = _orderItems.FirstOrDefault(x =>
                 x.ProductId == product.Id && !x.IsSetMenuComponent && x.Status == OrderItemStatus.Pending && x.Note == normalizedNote
-                && x.UnitPrice == unitPrice && x.IsTakeaway == isTakeaway);
+                && x.UnitPrice == unitPrice && x.IsTakeaway == isTakeaway && x.OrderRequestId == orderRequestId);
 
             if (existing != null)
             {
@@ -138,7 +147,7 @@ namespace RestaurantBill.Domain.Entities
             }
             else
             {
-                _orderItems.Add(OrderItem.Create(unitPrice, quantity, product, taxRate, normalizedNote, isTakeaway));
+                _orderItems.Add(OrderItem.Create(unitPrice, quantity, product, taxRate, normalizedNote, isTakeaway, orderRequestId));
             }
 
             RecalculateTotal();
@@ -153,15 +162,15 @@ namespace RestaurantBill.Domain.Entities
         /// birleştirilmez: aynı menü iki kez eklenirse iki ayrı satır olur.
         /// </summary>
         /// <param name="selections">Bölüm Id → seçilen ürün Id; seçilmeyen bölümde varsayılan seçenek kullanılır.</param>
-        public OrderItem AddSetMenu(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, int quantity, decimal taxRate, string? note = null, bool isTakeaway = false)
-            => AddSetMenuLine(setMenu, selections, unitPrice: null, quantity, taxRate, note, isTakeaway);
+        public OrderItem AddSetMenu(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, int quantity, decimal taxRate, string? note = null, bool isTakeaway = false, Guid? orderRequestId = null)
+            => AddSetMenuLine(setMenu, selections, unitPrice: null, quantity, taxRate, note, isTakeaway, orderRequestId);
 
         /// <summary>Menüyü verilen birim fiyatla ekler (paket siparişte müşterinin onayladığı, ek ücretler dahil fiyat).</summary>
-        public OrderItem AddSetMenuAtPrice(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal unitPrice, int quantity, decimal taxRate, string? note = null, bool isTakeaway = false)
-            => AddSetMenuLine(setMenu, selections, unitPrice, quantity, taxRate, note, isTakeaway);
+        public OrderItem AddSetMenuAtPrice(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal unitPrice, int quantity, decimal taxRate, string? note = null, bool isTakeaway = false, Guid? orderRequestId = null)
+            => AddSetMenuLine(setMenu, selections, unitPrice, quantity, taxRate, note, isTakeaway, orderRequestId);
 
         // unitPrice null: menünün güncel fiyatı + seçilen seçeneklerin ek ücreti. Paket menüde içindeki ürünler de pakettir.
-        private OrderItem AddSetMenuLine(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal? unitPrice, int quantity, decimal taxRate, string? note, bool isTakeaway)
+        private OrderItem AddSetMenuLine(SetMenu setMenu, IReadOnlyDictionary<Guid, Guid> selections, decimal? unitPrice, int quantity, decimal taxRate, string? note, bool isTakeaway, Guid? orderRequestId)
         {
             if (setMenu is null)
                 throw new DomainException("Geçersiz menü.");
@@ -182,7 +191,7 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"{inactive.Product.Name} şu an satışta değil, {setMenu.Name} için başka bir seçim yapın.");
 
             decimal linePrice = unitPrice ?? setMenu.Price + chosen.Sum(o => o.Surcharge);
-            OrderItem parent = OrderItem.CreateSetMenu(setMenu, linePrice, quantity, taxRate, note?.Trim() ?? string.Empty, isTakeaway);
+            OrderItem parent = OrderItem.CreateSetMenu(setMenu, linePrice, quantity, taxRate, note?.Trim() ?? string.Empty, isTakeaway, orderRequestId);
             _orderItems.Add(parent);
             foreach (SetMenuSlotOption option in chosen)
                 _orderItems.Add(OrderItem.CreateSetMenuComponent(parent, option.Product));
@@ -465,7 +474,7 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException("Teslimat ücreti tahsil edilmeden paket sipariş kapatılamaz.");
 
             Status = OrderStatus.Paid;
-            BillRequestedAt = null;
+            ClearBillRequest();
             // Kapanış ödemesi hesaba alınanları ürünlere mahsup eder; bekleyen hesaba ödeme kalmaz.
             PaidOnAccount = 0m;
         }
@@ -476,7 +485,7 @@ namespace RestaurantBill.Domain.Entities
                 throw new DomainException($"Bu siparişten ₺{PaidOnAccount:0.##} ödeme alınmış, sipariş iptal edilemez. Kalan tutarı tahsil edip hesabı kapatın.");
 
             Status = OrderStatus.Cancelled;
-            BillRequestedAt = null;
+            ClearBillRequest();
         }
 
         public bool IsClosed() => Status is OrderStatus.Paid or OrderStatus.Cancelled;
@@ -492,9 +501,29 @@ namespace RestaurantBill.Domain.Entities
             BillRequestedAt ??= utcNow;
         }
 
+        /// <summary>
+        /// Müşterinin QR'dan hesap isteği: ödeme tercihi ve "kaç kişiye bölünecek" bilgisiyle. Son istek geçerlidir
+        /// (önceki tercih silinir); bekleme süresi ilk istekten sayılır.
+        /// </summary>
+        public void RequestBill(DateTime utcNow, BillPaymentHint? paymentHint, int? splitCount)
+        {
+            if (paymentHint is BillPaymentHint hint && !Enum.IsDefined(hint))
+                throw new DomainException("Geçersiz ödeme tercihi.");
+
+            if (splitCount is int count && (count < BillSplitMin || count > BillSplitMax))
+                throw new DomainException($"Hesap {BillSplitMin} ile {BillSplitMax} kişi arasında bölünebilir.");
+
+            RequestBill(utcNow);
+            BillPaymentHint = paymentHint;
+            BillSplitCount = splitCount;
+        }
+
+        /// <summary>Hesap isteğini geri alır; müşterinin ödeme tercihi ve bölme bilgisi de silinir.</summary>
         public void ClearBillRequest()
         {
             BillRequestedAt = null;
+            BillPaymentHint = null;
+            BillSplitCount = null;
         }
 
         public void MoveToTable(Guid newTableId)
@@ -522,7 +551,9 @@ namespace RestaurantBill.Domain.Entities
                 OrderItem? existing = isSetMenuLine ? null : _orderItems.FirstOrDefault(x =>
                     !x.IsSetMenu && !x.IsSetMenuComponent &&
                     x.ProductId == item.ProductId && x.Status == item.Status &&
-                    x.UnitPrice == item.UnitPrice && x.TaxRate == item.TaxRate && x.Note == item.Note && x.IsTakeaway == item.IsTakeaway);
+                    x.UnitPrice == item.UnitPrice && x.TaxRate == item.TaxRate && x.Note == item.Note && x.IsTakeaway == item.IsTakeaway &&
+                    // Farklı talebin satırıyla birleşmez: müşterinin sipariş aşaması kalemin talep bağından okunur.
+                    x.OrderRequestId == item.OrderRequestId);
 
                 if (existing != null)
                 {

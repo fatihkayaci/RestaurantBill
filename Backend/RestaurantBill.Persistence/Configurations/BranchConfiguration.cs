@@ -91,6 +91,7 @@ internal static class SiteContentJson
     internal sealed record StoredMilestone(int Year, string? Text);
     internal sealed record StoredRegion(Guid Id, string? Photo, string? Text);
     internal sealed record StoredHomeSection(string? Key, bool On);
+    internal sealed record StoredTeamMember(Guid Id, string? Name, string? Role, string? Note, string? Photo);
 
     internal sealed record Stored(
         string? Theme, List<string>? Gallery, List<StoredDay>? Week, string? Directions, string? Whatsapp, List<string>? Amenities,
@@ -99,7 +100,8 @@ internal static class SiteContentJson
         List<StoredValue>? Values, List<StoredMilestone>? Milestones, List<StoredRegion>? Regions,
         string? SeoTitle = null, string? SeoDescription = null, string? ShareImage = null,
         string? MenuHero = null, string? AboutHero = null, string? VenueHero = null, string? ContactHero = null, string? ReservationHero = null,
-        List<string>? HiddenFaqs = null, string? Design = null, string? Font = null, List<StoredHomeSection>? HomeSections = null);
+        List<string>? HiddenFaqs = null, string? Design = null, string? Font = null, List<StoredHomeSection>? HomeSections = null,
+        List<StoredTeamMember>? Team = null, string? TeamTitle = null, string? TeamIntro = null);
 
     private const string TimeFormat = "HH:mm";
 
@@ -124,7 +126,9 @@ internal static class SiteContentJson
             c.SeoTitle, c.SeoDescription, c.ShareImage,
             c.MenuHero, c.AboutHero, c.VenueHero, c.ContactHero, c.ReservationHero,
             [.. c.HiddenFaqs], c.Design, c.Font,
-            c.HomeSections.Select(h => new StoredHomeSection(h.Key, h.Enabled)).ToList());
+            c.HomeSections.Select(h => new StoredHomeSection(h.Key, h.Enabled)).ToList(),
+            c.TeamMembers.Select(m => new StoredTeamMember(m.Id, m.Name, m.Role, m.Note, m.PhotoKey)).ToList(),
+            c.TeamTitle, c.TeamIntro);
 
     public static SiteContent Deserialize(string json) => FromStored(JsonSerializer.Deserialize<Stored>(json)!);
 
@@ -159,6 +163,10 @@ internal static class SiteContentJson
             Values = (s.Values ?? []).Select(v => new SiteValue(v.Title ?? string.Empty, v.Text ?? string.Empty)).ToList(),
             Milestones = (s.Milestones ?? []).Select(m => new SiteMilestone(m.Year, m.Text ?? string.Empty)).ToList(),
             RegionDetails = (s.Regions ?? []).Select(r => new SiteRegionDetail(r.Id, r.Photo ?? string.Empty, r.Text ?? string.Empty)).ToList(),
+            TeamMembers = (s.Team ?? []).Select(m => new SiteTeamMember(m.Id, m.Name ?? string.Empty, m.Role ?? string.Empty, m.Note ?? string.Empty,
+                m.Photo ?? string.Empty)).ToList(),
+            TeamTitle = s.TeamTitle ?? string.Empty,
+            TeamIntro = s.TeamIntro ?? string.Empty,
             SeoTitle = s.SeoTitle ?? string.Empty,
             SeoDescription = s.SeoDescription ?? string.Empty,
             ShareImage = s.ShareImage ?? string.Empty,

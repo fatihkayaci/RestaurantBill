@@ -45,6 +45,10 @@ export interface OnlineMenuProduct {
     isNew?: boolean;
     /** "Tükendi": listede görünür, sepete eklenemez. */
     isOutOfStock: boolean;
+    /** Alerjen bayrakları (features/products/dietaryTags: ALLERGENS); eski sunucu: yok. */
+    allergens?: number;
+    /** Diyet / bilgi etiketleri (DIET_TAGS: vegan, vejetaryen, glutensiz, helal, acılı); eski sunucu: yok. */
+    dietTags?: number;
 }
 
 /** Kategorinin müşteri menüsündeki görünümü: "auto" (fotoğraflı ürün yarıdan azsa liste), "cards", "list". */
@@ -55,6 +59,10 @@ export interface OnlineMenuCategory {
     name: string;
     /** Eski sunucuda yok: otomatik. */
     menuDisplay?: MenuDisplay;
+    /** Kategorinin servis penceresine göre şu an sipariş edilebilir mi (şubenin saatiyle); eski sunucu: yok, açık say. */
+    availableNow?: boolean;
+    /** "12:00'ye kadar", "18:00'den itibaren", "Hafta içi 08:00–12:00"; pencere yoksa boş. */
+    availabilityLabel?: string;
     products: OnlineMenuProduct[];
 }
 
@@ -63,8 +71,12 @@ export interface OnlineSetMenuOption {
     productName: string;
     surcharge: number;
     isDefault: boolean;
-    /** Ürün pasif ya da tükendiyse seçilemez. */
+    /** Ürün pasif ya da tükendiyse (ya da kategorisi şu an servis dışıysa) seçilemez. */
     isAvailable: boolean;
+    /** Alerjen bayrakları (features/products/dietaryTags: ALLERGENS); eski sunucu: yok. */
+    allergens?: number;
+    /** Diyet / bilgi etiketleri (DIET_TAGS: vegan, vejetaryen, glutensiz, helal, acılı); eski sunucu: yok. */
+    dietTags?: number;
 }
 
 export interface OnlineSetMenuSlot {
@@ -89,6 +101,13 @@ export interface OnlineSetMenu {
     isAvailable: boolean;
     /** "Şefin tavsiyesi" bölümünde öne çıkan ürünlerin yanında gösterilir. */
     isFeatured: boolean;
+    /** Seçeneklerin alerjenlerinin birleşimi. Etiketler: "Acılı" birinde varsa; uygunluk (vegan…) yalnız hepsinde varsa. */
+    allergens?: number;
+    dietTags?: number;
+    /** Kategorinin servis penceresine göre şu an sipariş edilebilir mi (şubenin saatiyle); eski sunucu: yok, açık say. */
+    availableNow?: boolean;
+    /** "12:00'ye kadar", "18:00'den itibaren", "Hafta içi 08:00–12:00"; pencere yoksa boş. */
+    availabilityLabel?: string;
     slots: OnlineSetMenuSlot[];
 }
 

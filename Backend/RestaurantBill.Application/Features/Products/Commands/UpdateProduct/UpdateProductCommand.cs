@@ -24,6 +24,10 @@ namespace RestaurantBill.Application.Features.Products.Commands.UpdateProduct
         public int? PrepMinutes { get; set; }
         /// <summary>Ürüne özel KDV. null: kategorinin oranı kullanılır. Her istekte tam değer gönderilir.</summary>
         public decimal? TaxRate { get; set; }
+        /// <summary>Alerjen bayrakları (ProductAllergen). null: değiştirme (eski istemciler).</summary>
+        public int? Allergens { get; set; }
+        /// <summary>Diyet / bilgi etiketleri (ProductDietTag). null: değiştirme.</summary>
+        public int? DietTags { get; set; }
 
         public string[] CacheKeysToInvalidate => ["products:all"];
     }

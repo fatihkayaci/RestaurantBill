@@ -30,14 +30,16 @@ namespace RestaurantBill.Domain.Entities
         // Paket: müşteri QR'da "Paket olsun" dedi; mutfak paketler, garson masaya değil pakete koyar. Menü içeriği
         // menü satırınınkini taşır (mutfak menü satırını görmez).
         public bool IsTakeaway { get; private set; }
-
+        // Kalemi hesaba yazan müşteri talebi (QR siparişi / ön sipariş); garsonun eklediği kalemde null. Müşterinin
+        // sipariş aşaması (OrderRequestStages) bu bağdan okunur; masa taşıma ve birleştirmede kalemle birlikte kalır.
+        public Guid? OrderRequestId { get; private set; }
 
         public bool IsSetMenu => SetMenuId is not null;
         public bool IsSetMenuComponent => ParentOrderItemId is not null || ParentOrderItem is not null;
 
         protected OrderItem() { }
 
-        internal static OrderItem Create(decimal unitPrice, int quantity, Product product, decimal taxRate, string note = "", bool isTakeaway = false)
+        internal static OrderItem Create(decimal unitPrice, int quantity, Product product, decimal taxRate, string note = "", bool isTakeaway = false, Guid? orderRequestId = null)
         {
             if (product == null)
                 throw new DomainException("Geçersiz ürün ID'si.");
@@ -58,11 +60,12 @@ namespace RestaurantBill.Domain.Entities
                 Note = note ?? string.Empty,
                 Status = OrderItemStatus.Pending,
                 PrepMinutes = product.PrepMinutes,
-                IsTakeaway = isTakeaway
+                IsTakeaway = isTakeaway,
+                OrderRequestId = orderRequestId
             };
         }
 
-        internal static OrderItem CreateSetMenu(SetMenu setMenu, decimal unitPrice, int quantity, decimal taxRate, string note, bool isTakeaway = false)
+        internal static OrderItem CreateSetMenu(SetMenu setMenu, decimal unitPrice, int quantity, decimal taxRate, string note, bool isTakeaway = false, Guid? orderRequestId = null)
         {
             if (setMenu == null)
                 throw new DomainException("Geçersiz menü.");
@@ -79,7 +82,8 @@ namespace RestaurantBill.Domain.Entities
                 TaxRate = taxRate,
                 Note = note ?? string.Empty,
                 Status = OrderItemStatus.Pending,
-                IsTakeaway = isTakeaway
+                IsTakeaway = isTakeaway,
+                OrderRequestId = orderRequestId
             };
         }
 
@@ -99,7 +103,9 @@ namespace RestaurantBill.Domain.Entities
                 TaxRate = parent.TaxRate,
                 Status = OrderItemStatus.Pending,
                 PrepMinutes = product.PrepMinutes,
-                IsTakeaway = parent.IsTakeaway
+                IsTakeaway = parent.IsTakeaway,
+                // Menü içeriği menü satırının talebine aittir (aşama içeriğin mutfak durumundan okunur).
+                OrderRequestId = parent.OrderRequestId
             };
         }
 

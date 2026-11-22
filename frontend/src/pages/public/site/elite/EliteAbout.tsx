@@ -12,11 +12,15 @@ import { SITE_LIMITS, editTarget, useSiteEdit } from '../siteEditContext';
 import { EliteEmpty, EliteHero, EliteKicker } from './EliteBits';
 import { elButton, elItalic, elSection, elSerif, elTitle, elWrap, heroLead, onDark, roman } from './eliteParts';
 import { StockImageLabel } from '../../components/StockImageLabel';
+import type { SiteTeamMember } from '@/features/customerSite/types';
+import { TEAM_LIST, TEAM_SAMPLES, useTeam } from '../team';
+import { TeamEditorNote, TeamIntro, TeamName, TeamNote, TeamPhoto, TeamRole, TeamSample, TeamTitle } from '../teamParts';
 
 // /hakkimizda, Elit (tasarım: EliteHakkimizda). (1) Tam genişlik kapak: "Hikâyemiz", slogan (yoksa ad + kuruluş yılı),
 // kısa giriş. (2) "Nasıl başladı": altın çerçeveli hikâye fotoğrafı, ad, büyük ilk harfli hikâye ve gerçek rakamlar.
-// (3) Koyu bant: ustanın sözü, portresi, adı ve unvanı. (4) "Değişmeyenlerimiz" (değerler). (5) "Yolculuğumuz"
-// (kilometre taşları; yıl sekmeleri). (6) Davet. Verisi olmayan bölüm çizilmez; restoranın girmediği bilgi uydurulmaz.
+// (3) Koyu bant: ustanın sözü, portresi, adı ve unvanı. (4) "Ekibimiz": altın halkalı yuvarlak portreler, Romen
+// rakamı, ince dikey ayırıcılar. (5) "Değişmeyenlerimiz" (değerler). (6) "Yolculuğumuz" (kilometre taşları; yıl
+// sekmeleri). (7) Davet. Verisi olmayan bölüm çizilmez; restoranın girmediği bilgi uydurulmaz.
 
 export default function EliteAbout({ site }: { site: PublicSite }) {
     const edit = useSiteEdit();
@@ -30,6 +34,7 @@ export default function EliteAbout({ site }: { site: PublicSite }) {
                     <>
                         <Story site={site} />
                         <Founder site={site} />
+                        <Team site={site} />
                         <Values site={site} />
                         <Journey site={site} />
                         <Invitation site={site} />
@@ -176,6 +181,64 @@ function Founder({ site }: { site: PublicSite }) {
                 </h2>
             </div>
         </section>
+    );
+}
+
+// ── Ekibimiz ─────────────────────────────────────────────────────────────────────────────────────
+
+function Team({ site }: { site: PublicSite }) {
+    const team = useTeam(site);
+    if (!team) return null;
+    const { members, empty, canAdd } = team;
+    // Satırdaki ilk kartta ayırıcı yok: telefonda 2'li, geniş ekranda 4'lü sıralar (flex: eksik sıra ortalanır).
+    const cell = 'flex min-w-0 basis-1/2 flex-col items-center gap-3.5 px-2 text-center md:basis-1/4 md:px-7';
+    const rule = 'md:border-l md:border-[color-mix(in_srgb,var(--site-accent-text)_25%,transparent)] md:[&:nth-child(4n+1)]:border-l-0';
+    return (
+        <section aria-labelledby="hk-ekip" className="bg-[var(--site-bg)]">
+            <div className={cn(elWrap, elSection, 'flex max-w-[1240px] flex-col gap-14 md:gap-16')}>
+                <div className="flex flex-col items-center gap-[18px] text-center">
+                    <EliteKicker centered>Ekibimiz</EliteKicker>
+                    <TeamTitle site={site} id="hk-ekip" fallback="Mutfağın ustaları" className={elTitle} />
+                    <TeamIntro site={site} className="m-0 max-w-[52ch] text-base leading-[1.8] text-[var(--site-sub)]" />
+                    <TeamEditorNote team={team} />
+                </div>
+                <ul className="m-0 flex list-none flex-wrap justify-center gap-y-11 p-0">
+                    {members.map((m, i) => (
+                        <li key={m.id} className={cn(cell, rule)}>
+                            <ListCard list={TEAM_LIST} index={i} count={members.length} label="Ekip üyesi" className="flex w-full flex-col items-center rounded-none">
+                                <EliteMember member={m} index={i} />
+                            </ListCard>
+                        </li>
+                    ))}
+                    {canAdd && (
+                        <li className={cell}>
+                            <AddCard list={TEAM_LIST} label="Ekip üyesi ekle" count={members.length} max={SITE_LIMITS.teamMember.max}
+                                hint={empty ? 'Ad, rol, fotoğraf' : `en fazla ${SITE_LIMITS.teamMember.max}`} className="aspect-square max-w-[200px] rounded-full" />
+                        </li>
+                    )}
+                    {empty && TEAM_SAMPLES.map((m, i) => (
+                        <li key={m.id} className={cn(cell, 'hidden md:flex')}>
+                            <TeamSample index={i} className="flex flex-col items-center"><EliteMember member={m} index={i} /></TeamSample>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </section>
+    );
+}
+
+function EliteMember({ member, index }: { member: SiteTeamMember; index: number }) {
+    return (
+        <div className="flex w-full flex-col items-center gap-3.5">
+            <span className="block h-[132px] w-[132px] rounded-full border border-[var(--site-accent)] p-[5px] md:h-[168px] md:w-[168px]">
+                <TeamPhoto member={member} className="h-full w-full rounded-full"
+                    initialsClassName={cn(elSerif, 'bg-[var(--site-alt)] text-[44px] text-[var(--site-accent-text)] md:text-[56px]')} />
+            </span>
+            <span aria-hidden="true" className={cn(elItalic, 'text-lg text-[var(--site-accent-text)]')}>{roman(index + 1).toLowerCase()}.</span>
+            <TeamName member={member} className={cn(elSerif, 'm-0 break-words text-[26px] leading-[1.1] md:text-[30px]')} />
+            <TeamRole member={member} className="text-[11px] uppercase tracking-[0.32em] text-[var(--site-sub)]" />
+            <TeamNote member={member} className="m-0 max-w-[28ch] text-sm leading-[1.75] text-[var(--site-sub)]" />
+        </div>
     );
 }
 

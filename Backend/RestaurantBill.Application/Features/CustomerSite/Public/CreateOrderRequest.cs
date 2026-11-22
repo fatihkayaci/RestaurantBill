@@ -5,6 +5,7 @@ using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.DTOs.Delivery;
+using RestaurantBill.Application.Features.Categories;
 using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -85,7 +86,7 @@ public class CreateOrderRequestCommandValidator : AbstractValidator<CreateOrderR
 }
 
 public class CreateOrderRequestCommandHandler(
-    IAppDbContext db, ITenantResolver tenant, IOrderPricingService pricing, ITableNotificationService tableNotifications)
+    IAppDbContext db, ITenantResolver tenant, IOrderPricingService pricing, ITableNotificationService tableNotifications, TimeProvider? clock = null)
     : IRequestHandler<CreateOrderRequestCommand, Result<OrderRequestStatusDto>>
 {
     public static string OutOfStockMessage(string productName)
@@ -154,6 +155,14 @@ public class CreateOrderRequestCommandHandler(
             pricedMenus = priced.Value!.Lines;
         }
 
+        // Servis penceresi dışındaki kategori (ör. pide fırını kapandı) gönderim anında reddedilir. Garson bekleyen talebi
+        // pencere geçtikten sonra da onaylayabilir; kontrol yalnız burada yapılır.
+        IEnumerable<(Guid CategoryId, string ItemName)> windowItems = products.Select(p => (p.CategoryId, p.Name))
+            .Concat(CategoryAvailability.ItemsOf(pricedMenus));
+        string? windowError = await CategoryAvailability.FindUnavailableAsync(db, branchId, windowItems, (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime, cancellationToken);
+        if (windowError is not null)
+            return Result<OrderRequestStatusDto>.Failure(windowError);
+
         // Talep hesaba garson onaylayınca yazılır (OrderRequest.OrderId); telefon o zaman hesabın katılımcısı olur.
         OrderRequest orderRequest = OrderRequest.Create(table.Id, request.Note, tokenHash);
         int menuIndex = 0;
@@ -194,6 +203,6 @@ public class CreateOrderRequestCommandHandler(
             CreatedAt = orderRequest.CreatedAt,
         });
 
-        return Result<OrderRequestStatusDto>.Success(new OrderRequestStatusDto { Id = orderRequest.Id, Status = (int)orderRequest.Status });
+        return Result<OrderRequestStatusDto>.Success(new OrderRequestStatusDto { Id = orderRequest.Id, Status = (int)orderRequest.Status, Stage = nameof(OrderRequestStage.Sent) });
     }
 }

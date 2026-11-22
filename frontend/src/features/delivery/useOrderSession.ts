@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTableVisit } from '@/features/customerSite/tableVisit';
 import { publicDeliveryService } from './api/publicDeliveryService';
 import {
     addLine, changeQuantity, clearCart, defaultSelections, loadBranchChoice, loadCart, loadOrderSnapshot, moveLineToEnd, newClientRequestId,
@@ -141,7 +142,9 @@ export function useOrderSession(): OrderSession {
         notifyCartChanged();
     }, [data, ready, lines, zoneId, pickup, clientRequestId]);
 
-    const enabled = !!data && isOnlineOrderingAvailable(data) && data.state !== 'disabled';
+    // Masadaki müşteri (bu sekmede masa QR'ı okutuldu) paket sipariş vermez: sepet, teslimat ve ödeme adımı kapalı.
+    const atTable = useTableVisit() !== null;
+    const enabled = !atTable && !!data && isOnlineOrderingAvailable(data) && data.state !== 'disabled';
     const isPickup = pickup && !!data?.pickupEnabled;
     const quote = useDeliveryQuote(enabled ? data!.branchId : null, lines, zoneId, isPickup);
 

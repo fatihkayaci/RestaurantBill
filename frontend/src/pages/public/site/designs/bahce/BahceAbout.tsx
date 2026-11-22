@@ -1,4 +1,4 @@
-import type { PublicSite } from '@/features/customerSite/types';
+import type { PublicSite, SiteTeamMember } from '@/features/customerSite/types';
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from '../../../components/StockImageLabel';
 import { PageEmpty, SitePage } from '../../SiteFrame';
@@ -11,11 +11,14 @@ import { SITE_LIMITS, editTarget, useSiteEdit } from '../../siteEditContext';
 import type { DesignPageProps } from '../registry';
 import { BhHeading, DrawnPlate, Sprig, WeekendCard } from './BahceBits';
 import { DISH_CYCLE, bhDisplay, bhNarrow, bhWrap, nameStyle } from './bahceParts';
+import { TEAM_LIST, TEAM_SAMPLES, isSoloLast, useTeam } from '../../team';
+import { TeamEditorNote, TeamIntro, TeamName, TeamNote, TeamPhoto, TeamRole, TeamSample, TeamTitle } from '../../teamParts';
 
 // Bahçe Kahvaltısı Hakkımızda: bahçede geçen bir sabah hikâyesi.
 // (1) Kapak: solda kalın başlık (hikâye başlığı ya da ad), "… yılından beri" ve kısa giriş; sağda organik (damla)
 //     biçimli kapak fotoğrafı, yanında tereyağı güneş ve yaprak dalı. (2) Hikâye: dar sütun, ilk paragraf iri.
 // (3) Ustanın sözü: tereyağı damla zeminde büyük alıntı. (4) Usta: tabak kenarlı yuvarlak portre.
+// (4b) "Sofrayı kuranlar" (ekip): krem kartlarda tabak kenarlı yuvarlak portreler (fotoğraf yoksa baş harfler).
 // (5) "Sofranın ritüeli" (değerler): çizimli tabak simgeli yuvarlak kartlar. (6) "Bahçenin yılları": yapraklı dal
 //     zaman çizgisi (gövde ortada, duraklar iki yana; telefonda tek yana). (7) Rakamlar tabaklarda. (8) Hafta sonu kartı.
 
@@ -39,6 +42,7 @@ export default function BahceAbout({ site }: DesignPageProps) {
                 <StoryText site={site} />
                 <Quote site={site} />
                 <Founder site={site} />
+                <Team site={site} />
                 <Values site={site} />
                 <Journey site={site} />
                 <Facts site={site} />
@@ -160,6 +164,56 @@ function Founder({ site }: { site: PublicSite }) {
                 )}
             </div>
         </section>
+    );
+}
+
+function Team({ site }: { site: PublicSite }) {
+    const team = useTeam(site);
+    if (!team) return null;
+    const { members, empty, canAdd } = team;
+    // Telefonda iki sütun: ekle kartı da ızgaranın bir hücresidir; tek kalan son kart iki sütunu kaplar.
+    const cells = members.length + (canAdd ? 1 : 0);
+    const addHint = empty ? 'Ad, rol, fotoğraf' : `en fazla ${SITE_LIMITS.teamMember.max}`;
+    return (
+        <section aria-labelledby="bh-ekip" className={cn(bhWrap, 'flex flex-col gap-8 pb-16 sm:pb-24')}>
+            <BhHeading id="bh-ekip" title={<TeamTitle site={site} as="span" fallback="Sofrayı kuranlar" accentClassName="not-italic" />}
+                note={<TeamIntro site={site} as="span" fallback="Mutfaktan bahçeye, her sabah sizi ağırlayanlar." />}
+                aside={<TeamEditorNote team={team} />} />
+            <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:gap-4 md:grid-cols-[repeat(auto-fill,minmax(210px,1fr))]">
+                {members.map((m, i) => (
+                    <li key={m.id} className={cn('min-w-0', isSoloLast(i, cells) && 'max-md:col-span-2')}>
+                        <ListCard list={TEAM_LIST} index={i} count={members.length} label="Ekip üyesi" className="h-full rounded-[30px]">
+                            <BahceMember member={m} solo={isSoloLast(i, cells)} />
+                        </ListCard>
+                    </li>
+                ))}
+                {canAdd && (
+                    <li className={cn('min-w-0', isSoloLast(members.length, cells) && 'max-md:col-span-2')}>
+                        <AddCard list={TEAM_LIST} label="Ekip üyesi ekle" count={members.length} max={SITE_LIMITS.teamMember.max}
+                            hint={addHint} className="h-full min-h-[220px] rounded-[30px] bg-[var(--site-card)]" />
+                    </li>
+                )}
+                {empty && TEAM_SAMPLES.map((m, i) => (
+                    <li key={m.id} className="hidden min-w-0 md:block">
+                        <TeamSample index={i}><BahceMember member={m} solo={false} /></TeamSample>
+                    </li>
+                ))}
+            </ul>
+        </section>
+    );
+}
+
+function BahceMember({ member, solo }: { member: SiteTeamMember; solo: boolean }) {
+    return (
+        <div className="flex h-full flex-col items-center gap-2 rounded-[30px] bg-[var(--site-card)] p-4 text-center sm:gap-2.5 sm:p-6">
+            <span className={cn('rb-bh-plate relative mb-2 block aspect-square overflow-hidden rounded-full p-[5%]', solo ? 'w-1/2 md:w-[84%]' : 'w-[84%]')}>
+                <TeamPhoto member={member} className="h-full w-full rounded-full"
+                    initialsClassName={cn(serif, 'text-[44px] tracking-[-0.04em] text-[var(--site-accent-text)] sm:text-[60px]')} />
+            </span>
+            <TeamName member={member} className={cn(serif, 'm-0 break-words text-[22px] leading-[1.1] tracking-[-0.02em] sm:text-[26px]')} />
+            <TeamRole member={member} className="text-[14px] font-semibold text-[var(--site-accent-text)] sm:text-[15px]" />
+            <TeamNote member={member} className="m-0 text-[14px] leading-relaxed text-[var(--site-sub)] sm:text-[15px]" />
+        </div>
     );
 }
 

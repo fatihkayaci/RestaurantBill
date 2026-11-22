@@ -107,6 +107,7 @@ public class ApproveOrderRequestCommandHandler(
             await tableNotifications.SendTableStatusChangedAsync(branchId, table.Id, (int)table.Status);
         await tableNotifications.SendOrderUpdatedAsync(branchId, order, actorName);
         await tableNotifications.SendCustomerRequestsChangedAsync(branchId);
+        await tableNotifications.SendOrderRequestDecidedAsync(branchId, table.Id);
         await cashierNotifications.SendOrdersChangedAsync(branchId);
 
         return Result.Success();
@@ -177,6 +178,7 @@ public class RejectOrderRequestCommandHandler(IAppDbContext db, ICurrentUserServ
         await db.SaveChangesAsync(cancellationToken);
 
         await tableNotifications.SendCustomerRequestsChangedAsync(orderRequest.Table.Region.BranchId);
+        await tableNotifications.SendOrderRequestDecidedAsync(orderRequest.Table.Region.BranchId, orderRequest.TableId);
         return Result.Success();
     }
 }

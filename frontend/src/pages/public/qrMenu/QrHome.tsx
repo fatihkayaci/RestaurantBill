@@ -1,14 +1,19 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import { Armchair, Flame, LayoutGrid, List, Search, SlidersHorizontal, Star, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { Armchair, Flame, Globe, LayoutGrid, List, Search, SlidersHorizontal, Star, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { applyFilters, searchItems, SET_MENU_CATEGORY, POPULAR_MIN, type BindItem, type QrCategory, type QrFilters, type QrItem } from './qrModel';
 import { BrandMark, CategoryGlyph, ItemCard, ItemRow, SectionHeader } from './QrParts';
 import { useViewPreference } from './useQrPrefs';
 import { column, displayTitle, focusRing } from './qrUi';
 
-/** Ana sayfada kategori başına en fazla bu kadar satır; fazlası "Tümünü Gör" ile o kategorinin görünümünde. */
-const ROWS_PER_SECTION = 4;
-const MENUS_ON_HOME = 4;
+/** "Tümü"de bölümün kimliği (şeritteki çip bu bölüme kaydırır, kaydırınca çip seçilir). */
+const sectionId = (categoryId: string) => `bolum-${categoryId}`;
+
+/** Yapışık kategori şeridinin altı (px): bölüm başlığı şeridin altında kalmasın, kaydırma gözcüsü buradan bakar. */
+const STRIP_OFFSET = 104;
+
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 /** Kategori şeridinin yeri: kategori değişince sayfa şeridin altından başlasın diye (TableOrderPage ölçer). */
 export const CATEGORY_STRIP_ANCHOR = 'qr-kategori-seridi';
@@ -41,9 +46,10 @@ interface Props {
 }
 
 // Menü sekmesi: başlık (logo, restoran, masa), arama + süzgeç ve kategori şeridi her zaman yerinde; şerit kaydırınca
-// üstte yapışık kalır. "Tümü" seçiliyken "Öne Çıkanlar", "Popüler Lezzetler", hazır menüler ve kategoriler (kısa
-// liste); bir kategori seçilince aynı sayfada yalnız o kategorinin kalemleri (ızgara/liste). Arama seçili kategori
-// içinde (ya da "Tümü"nde bütün menüde) yapılır; yazılınca bölümlerin yerine sonuçlar gelir.
+// üstte yapışık kalır. "Tümü": "Öneriler" ve "Popüler Lezzetler" (yatay kaydırılan tek sıra), hazır menüler ve bütün
+// kategoriler tam liste. Şeritteki çip bölümüne kaydırır; sayfa kaydıkça o anki bölümün çipi seçilir (kaydırma gözcüsü,
+// IntersectionObserver) ve şerit çipi görünür tutar. Eski ?kategori= adresi yalnız o kategoriyi gösterir (ızgara/liste).
+// Arama seçili kategori içinde (ya da bütün menüde) yapılır; yazılınca bölümlerin yerine sonuçlar gelir.
 export default function QrHome({
     restaurant, subtitle, tableName, regionName, categories, categoryId, onSelectCategory, featured, popular, query, onQuery,
     filters, filterCount, onOpenFilters, onClearFilters, bind, notice, empty,
@@ -53,12 +59,76 @@ export default function QrHome({
     const category = categoryId ? categories.find(c => c.id === categoryId) ?? null : null;
     const searching = query.trim().length > 0;
     const results = searching ? applyFilters(searchItems(category ? [category] : categories, query), filters) : [];
+    const homeView = !category && !searching;
 
-    // Seçili çip şeritte görünür kalır (uzun şeritte sağda kalan kategori).
+    // ── Kaydırma gözcüsü ("Tümü"): şeridin hemen altındaki bölümün çipi seçilir. Çipe dokununca kaydırma bitene kadar
+    // gözcü susar (çip seçimi kaydırmayla çekişmez). null: ilk bölümden yukarıda ("Tümü").
+    const [spyId, setSpyId] = useState<string | null>(null);
+    const spyPaused = useRef(false);
+    const pauseTimer = useRef<number | undefined>(undefined);
     useEffect(() => {
-        const chip = stripRef.current?.querySelector<HTMLElement>('[aria-current="true"]');
-        chip?.scrollIntoView({ block: 'nearest', inline: 'center' });
-    }, [category?.id]);
+        if (!homeView) return;
+        const sections = [...document.querySelectorAll<HTMLElement>('[data-category]')];
+        if (sections.length === 0) return;
+        const pick = () => {
+            if (spyPaused.current) return;
+            // Şeridin altını geçmiş son bölüm; hiçbiri geçmediyse "Tümü".
+            let current: string | null = null;
+            for (const el of sections) {
+                if (el.getBoundingClientRect().top - STRIP_OFFSET <= 8) current = el.dataset.category ?? null;
+                else break;
+            }
+            // Sayfanın sonuna gelindiyse son bölüm (kısa son bölüm şeridin altına hiç çıkamaz).
+            const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+            if (atEnd && sections[sections.length - 1].getBoundingClientRect().top < window.innerHeight) current = sections[sections.length - 1].dataset.category ?? current;
+            setSpyId(current);
+        };
+        const observer = typeof IntersectionObserver === 'undefined' ? null
+            : new IntersectionObserver(pick, { rootMargin: `-${STRIP_OFFSET}px 0px 0px 0px`, threshold: [0, 1] });
+        sections.forEach(el => observer?.observe(el));
+        // Uzun bölümün ortasında eşik değişmez: kaydırma da (kare başına bir kez) bakar.
+        let frame = 0;
+        const onScroll = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(pick); };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        pick();
+        return () => { observer?.disconnect(); window.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame); };
+    }, [homeView, categories, filters]);
+    useEffect(() => () => window.clearTimeout(pauseTimer.current), []);
+
+    const activeChip = category ? category.id : homeView ? spyId : null;
+
+    // Seçili çip şeritte görünür kalır: yalnız şerit yatay kayar (sayfanın dikey kaydırması bozulmaz).
+    useEffect(() => {
+        const strip = stripRef.current;
+        const chip = strip?.querySelector<HTMLElement>('[aria-pressed="true"]');
+        if (!strip || !chip) return;
+        const left = chip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2;
+        strip.scrollTo({ left: Math.max(0, left), behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    }, [activeChip]);
+
+    // "Tümü"de çip bölüme kaydırır ("Tümü" şeridin yerine); kaydırma bitene kadar gözcü susar.
+    const scrollToSection = useCallback((id: string | null) => {
+        spyPaused.current = true;
+        setSpyId(id);
+        window.clearTimeout(pauseTimer.current);
+        const behavior: ScrollBehavior = prefersReducedMotion() ? 'auto' : 'smooth';
+        const target = id ? document.getElementById(sectionId(id)) : null;
+        if (target) {
+            window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - STRIP_OFFSET + 4, behavior });
+        } else {
+            const anchor = document.getElementById(CATEGORY_STRIP_ANCHOR);
+            const stripTop = anchor ? anchor.getBoundingClientRect().top + window.scrollY : 0;
+            if (window.scrollY > stripTop) window.scrollTo({ top: stripTop, behavior });
+        }
+        const resume = () => { spyPaused.current = false; window.removeEventListener('scrollend', resume); };
+        window.addEventListener('scrollend', resume, { once: true });
+        // scrollend olmayan tarayıcılarda (ve kaydırma gerekmediyse) kısa süre sonra.
+        pauseTimer.current = window.setTimeout(resume, 900);
+    }, []);
+    const chipClick = (id: string | null) => {
+        if (homeView) scrollToSection(id);
+        else if (id !== (category?.id ?? null)) onSelectCategory(id);
+    };
 
     return (
         <div className={cn(column, 'px-4')}>
@@ -68,6 +138,12 @@ export default function QrHome({
                     <h1 className={cn(displayTitle, 'truncate text-[21px]')}>{restaurant}</h1>
                     {subtitle && <p className="m-0 mt-0.5 truncate text-[13px] text-[var(--site-sub)]">{subtitle}</p>}
                 </div>
+                {/* Restoranın sitesi (hakkımızda, saatler, iletişim): aynı sekmede açılır; site müşteriyi masada bilir
+                    (üstte "Masa menüsüne dön" şeridi, paket sepeti kapalı). */}
+                <Link to="/" aria-label={`${restaurant} sitesine git`} title="Restoranın sitesi"
+                    className={cn('flex h-9 shrink-0 items-center gap-1 rounded-full border border-[var(--site-border-mid)] bg-[var(--site-card)] px-3 text-[13px] font-bold text-[var(--site-text)] no-underline', focusRing)}>
+                    <Globe className="h-4 w-4" aria-hidden="true" />Site
+                </Link>
                 <p className="m-0 flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--site-accent-soft)] px-3 text-[13px] font-extrabold text-[var(--site-accent-text)]">
                     <Armchair className="h-4 w-4" aria-hidden="true" />
                     <span className="sr-only">Masanız: </span>{tableName}
@@ -113,13 +189,13 @@ export default function QrHome({
                         className="sticky top-0 z-20 -mx-4 mt-2 bg-[color-mix(in_srgb,var(--site-bg)_94%,transparent)] pb-2 pt-2 backdrop-blur-[10px]">
                         <ul ref={stripRef} className="m-0 flex list-none gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             <li className="shrink-0">
-                                <CategoryTile active={!category} label="Tümü" icon={<LayoutGrid className="h-[22px] w-[22px]" />}
-                                    onClick={() => { if (category) onSelectCategory(null); }} />
+                                <CategoryTile active={activeChip === null} label="Tümü" icon={<LayoutGrid className="h-[22px] w-[22px]" />}
+                                    onClick={() => chipClick(null)} />
                             </li>
                             {categories.map(c => (
                                 <li key={c.id} className="shrink-0">
-                                    <CategoryTile active={c.id === category?.id} label={c.name} icon={<CategoryGlyph category={c} className="h-[22px] w-[22px]" />}
-                                        onClick={() => { if (c.id !== category?.id) onSelectCategory(c.id); }} />
+                                    <CategoryTile active={c.id === activeChip} label={c.name} icon={<CategoryGlyph category={c} className="h-[22px] w-[22px]" />}
+                                        onClick={() => chipClick(c.id)} />
                                 </li>
                             ))}
                         </ul>
@@ -148,7 +224,7 @@ export default function QrHome({
                             bind={bind} view={view} onView={setView} />
                     ) : (
                         <HomeSections categories={categories} featured={featured} popular={popular} filters={filters} filterCount={filterCount}
-                            onClearFilters={onClearFilters} bind={bind} onSelectCategory={onSelectCategory} />
+                            onClearFilters={onClearFilters} bind={bind} />
                     )}
                 </>
             )}
@@ -156,10 +232,13 @@ export default function QrHome({
     );
 }
 
-/** "Tümü": vitrinler (süzgeç yokken), hazır menüler ve her kategoriden kısa liste. */
-function HomeSections({ categories, featured, popular, filters, filterCount, onClearFilters, bind, onSelectCategory }: {
+/**
+ * "Tümü": vitrinler (süzgeç yokken; yatay tek sıra), hazır menüler ve her kategorinin tam listesi. Her şey zaten burada
+ * olduğu için bölümlerde "Tümünü Gör" yok; bölümler kategori şeridinin hedefi (data-category, kaydırma gözcüsü).
+ */
+function HomeSections({ categories, featured, popular, filters, filterCount, onClearFilters, bind }: {
     categories: QrCategory[]; featured: QrItem[]; popular: QrItem[]; filters: QrFilters; filterCount: number;
-    onClearFilters: () => void; bind: BindItem; onSelectCategory: (id: string) => void;
+    onClearFilters: () => void; bind: BindItem;
 }) {
     const filtered = categories
         .map(c => ({ ...c, items: applyFilters(c.items, filters) }))
@@ -175,7 +254,7 @@ function HomeSections({ categories, featured, popular, filters, filterCount, onC
     return (
         <>
             {showcases && featured.length > 0 && (
-                <Showcase id="bolum-one-cikanlar" title="Öne Çıkanlar" icon={<Star className="h-5 w-5" />} items={featured} bind={bind} eager />
+                <Showcase id="bolum-oneriler" title="Öneriler" icon={<Star className="h-5 w-5 fill-current" />} items={featured} bind={bind} eager />
             )}
             {showcases && popularShown.length > 0 && (
                 <Showcase id="bolum-populer" title="Popüler Lezzetler" icon={<Flame className="h-5 w-5" />} items={popularShown} bind={bind} />
@@ -186,31 +265,24 @@ function HomeSections({ categories, featured, popular, filters, filterCount, onC
             )}
 
             {menuSection && (
-                <section aria-labelledby="bolum-menuler" className="mt-6">
-                    <SectionHeader id="bolum-menuler" title="Menüler" icon={<CategoryGlyph category={menuSection} className="h-5 w-5" />}
-                        onSeeAll={menuSection.items.length > MENUS_ON_HOME ? () => onSelectCategory(SET_MENU_CATEGORY) : undefined} />
+                <section id={sectionId(menuSection.id)} data-category={menuSection.id} aria-labelledby="baslik-menuler" className="mt-6">
+                    <SectionHeader id="baslik-menuler" title="Menüler" icon={<CategoryGlyph category={menuSection} className="h-5 w-5" />} />
                     <ul className="m-0 mt-3 grid list-none grid-cols-2 gap-3 p-0">
-                        {menuSection.items.slice(0, MENUS_ON_HOME).map(item => (
+                        {menuSection.items.map(item => (
                             <li key={item.key} className="flex [&>article]:w-full"><ItemCard item={item} {...bind(item)} /></li>
                         ))}
                     </ul>
                 </section>
             )}
 
-            {productSections.map(section => {
-                const more = section.items.length > ROWS_PER_SECTION + 1;
-                const shown = more ? section.items.slice(0, ROWS_PER_SECTION) : section.items;
-                return (
-                    <section key={section.id} aria-labelledby={`bolum-${section.id}`} className="mt-7">
-                        <SectionHeader id={`bolum-${section.id}`} title={section.name} icon={<CategoryGlyph category={section} className="h-5 w-5" />}
-                            onSeeAll={() => onSelectCategory(section.id)}
-                            seeAllLabel={more ? `Tümünü Gör (${section.items.length})` : 'Tümünü Gör'} />
-                        <ul className="m-0 mt-1 list-none divide-y divide-[var(--site-border)] p-0">
-                            {shown.map(item => <li key={item.key}><ItemRow item={item} {...bind(item)} /></li>)}
-                        </ul>
-                    </section>
-                );
-            })}
+            {productSections.map(section => (
+                <section key={section.id} id={sectionId(section.id)} data-category={section.id} aria-labelledby={`baslik-${section.id}`} className="mt-7">
+                    <SectionHeader id={`baslik-${section.id}`} title={section.name} icon={<CategoryGlyph category={section} className="h-5 w-5" />} />
+                    <ul className="m-0 mt-1 list-none divide-y divide-[var(--site-border)] p-0">
+                        {section.items.map(item => <li key={item.key}><ItemRow item={item} {...bind(item)} /></li>)}
+                    </ul>
+                </section>
+            ))}
         </>
     );
 }
@@ -256,7 +328,9 @@ function CategoryTile({ label, icon, active = false, onClick }: { label: string;
         <button
             type="button"
             onClick={onClick}
-            aria-current={active ? 'true' : undefined}
+            aria-pressed={active}
+            // Görünen yazı erişilebilir ad (bazı araçlar iç içe span'daki yazıyı ad saymıyor).
+            aria-label={label}
             className={cn('flex h-[68px] min-w-[72px] max-w-[112px] flex-col items-center justify-center gap-1 rounded-2xl border px-2.5 text-[12px] font-bold leading-tight transition-colors', focusRing,
                 active ? 'border-[var(--site-accent)] bg-[var(--site-accent)] text-[var(--site-on-accent)]'
                     : 'border-[var(--site-border)] bg-[var(--site-card)] text-[var(--site-text)] hover:border-[var(--site-border-strong)]')}
@@ -290,26 +364,24 @@ function EmptyHint({ text, action }: { text: string; action: { label: string; on
 }
 
 /**
- * Büyük fotoğraflı vitrin (Öne Çıkanlar, Popüler): iki sütunlu kart ızgarası. Tek sayıda kalem varsa ilki iki sütunu
- * kaplar, ızgarada boşluk kalmaz. İlk bölümün görselleri hemen yüklenir (ekranın üstünde).
+ * Büyük fotoğraflı vitrin (Öneriler, Popüler): yatay kaydırılan tek sıra (kartlar yaslanarak durur, scroll-snap); liste
+ * uzamaz. Sıra klavyeyle de kaydırılır (odaklanabilir bölge). İlk bölümün ilk görselleri hemen yüklenir (ekranın üstünde).
  */
 function Showcase({ id, title, icon, items, bind, eager = false }: {
     id: string; title: string; icon: ReactNode; items: QrItem[]; bind: BindItem; eager?: boolean;
 }) {
-    const odd = items.length % 2 === 1;
     return (
         <section aria-labelledby={id} className="mt-4">
             <SectionHeader id={id} title={title} icon={icon} />
-            <ul className="m-0 mt-3 grid list-none grid-cols-2 gap-3 p-0">
-                {items.map((item, i) => {
-                    const wide = odd && i === 0;
-                    return (
-                        <li key={item.key} className={cn('flex [&>article]:w-full', wide && 'col-span-2')}>
-                            <ItemCard item={item} wide={wide} showFeaturedBadge={false} eager={eager && i < 3} {...bind(item)} />
-                        </li>
-                    );
-                })}
+            <ul tabIndex={0} aria-labelledby={id}
+                className={cn('-mx-4 m-0 mt-3 flex list-none snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden', focusRing, 'focus-visible:ring-offset-0')}>
+                {items.map((item, i) => (
+                    <li key={item.key} className="flex w-[46%] min-w-[156px] max-w-[220px] shrink-0 snap-start [&>article]:w-full">
+                        <ItemCard item={item} showFeaturedBadge={false} eager={eager && i < 3} {...bind(item)} />
+                    </li>
+                ))}
             </ul>
         </section>
     );
 }
+
