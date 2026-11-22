@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getTenantSlug } from '@/lib/tenant';
 import type {
     Availability, DaySlot, OrderRequestStatus, PublicSite, PublicTableBill, PublicTableInfo, ReservationDetail, ReservationStatusInfo,
-    TableActionResult,
+    TableActionResult, CallWaiterInput, RequestBillInput,
 } from '../types';
 import type { TableIbanPayment } from '../tableIbanPayment';
 import { deviceTokenHeader } from '../deviceToken';
@@ -32,6 +32,8 @@ export interface OrderRequestItemInput {
     setMenuId?: string;
     quantity: number;
     note: string;
+    /** "Paket olsun": kalem paketlenip verilir. */
+    isTakeaway?: boolean;
     /** Menü: bölüm → ürün (varsayılanlar dahil); üründe boş. */
     selections?: { slotId: string; productId: string }[];
 }
@@ -56,12 +58,14 @@ export const publicService = {
         return response.data;
     },
     getTable: async (tableId: string) => {
-        // ibanPayment: restoran "IBAN ile öde"yi açmadıysa null.
-        // orderLock: bu telefonun masadaki durumu (cihaz anahtarına göre); sayfayı açmak masayı kilitlemez.
-        const response = await publicApi.get<PublicTableInfo & { ibanPayment?: TableIbanPayment | null }>(`/table/${tableId}`, { headers: deviceTokenHeader() });
+        // ibanPayment: restoran "IBAN ile öde"yi açmadıysa null. qrOrderingLocked: personel QR siparişini kilitledi.
+        const response = await publicApi.get<PublicTableInfo & { ibanPayment?: TableIbanPayment | null }>(`/table/${tableId}`);
         return response.data;
     },
-    /** "Masanın hesabı": yalnız masanın bağlı olduğu telefonda döner; diğerlerinde 403. */
+    /**
+     * "Masanın hesabı": açık hesap masadaki her telefona döner. Cihaz anahtarı gider ki hesap ödendikten sonra ona
+     * sipariş veren telefon "Ödendi" fişini görsün; diğer telefonlara hasBill=false.
+     */
     getTableBill: async (tableId: string) => {
         const response = await publicApi.get<PublicTableBill>(`/table/${tableId}/bill`, { headers: deviceTokenHeader() });
         return response.data;
@@ -75,18 +79,24 @@ export const publicService = {
         return response.data;
     },
     createOrderRequest: async (tableId: string, items: OrderRequestItemInput[], note: string) => {
-        // İlk talebi gönderen telefon masayı tutar; masa başka telefona bağlıysa sunucu talebi garsona hiç iletmez.
+        // Cihaz anahtarı telefonun kendi taleplerini tanıtır. Personel masada QR'ı kilitlediyse sunucu talebi garsona iletmez.
         const response = await publicApi.post<OrderRequestStatus>('/order-requests', { tableId, items, note }, { headers: deviceTokenHeader() });
         return response.data;
     },
-    /** Masaya bakan garsonlara canlı uyarı; aynı masadan 60 sn içinde tekrar bildirilmez. */
-    callWaiter: async (tableId: string) => {
-        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/call-waiter`);
+    /**
+     * Masaya bakan garsonlara canlı uyarı; aynı masadan 60 sn içinde tekrar bildirilmez (neden fark etmez). Neden: Su,
+     * Peçete/çatal, Diğer (+ kısa not). "Hesap" için requestBill kullanılır.
+     */
+    callWaiter: async (tableId: string, input?: CallWaiterInput) => {
+        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/call-waiter`, input ?? {});
         return response.data;
     },
-    /** Masanın açık hesabı için hesap isteği; açık hesap yoksa hata döner. Tutar yalnız masanın telefonuna döner. */
-    requestBill: async (tableId: string) => {
-        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/request-bill`, undefined, { headers: deviceTokenHeader() });
+    /**
+     * Masanın açık hesabı için hesap isteği; açık hesap yoksa hata döner. Ödenecek kalan da döner. İsteğe bağlı ödeme
+     * tercihi ve "kaç kişiye bölünecek" kasaya ve garsona iletilir (son istek geçerli).
+     */
+    requestBill: async (tableId: string, input?: RequestBillInput) => {
+        const response = await publicApi.post<TableActionResult>(`/table/${tableId}/request-bill`, input ?? {});
         return response.data;
     },
     getOrderRequestStatus: async (id: string) => {

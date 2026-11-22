@@ -172,7 +172,9 @@ public class CourierFlowTests : DeliveryTestBase
         CourierOrderDto card = orders.Value![0];
         Assert.True(card.CanDispatch);
         Assert.False(card.CanDeliver);
-        Assert.Equal("Moda Cad. No:1 D:3, Moda, İstanbul", card.MapsQuery);
+        // Daire (D:3) haritaya gitmez, şubenin ilçesi eklenir; kurye ekranında adres tam kalır.
+        Assert.Equal("Moda Cad. No:1, Moda, Kadıköy, İstanbul", card.MapsQuery);
+        Assert.Equal("Moda Cad. No:1 D:3", card.Address);
         Assert.Equal("+905320000001", card.CustomerPhone);
         Assert.Equal(220m, card.Total);
         Assert.Equal(PaymentMethod.Nakit, card.PaymentPreference);

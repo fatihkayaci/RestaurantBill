@@ -36,6 +36,9 @@ public class UpdateBranchQrFeaturesCommand : IRequest<Result<QrFeaturesDto>>
     public bool BillRequestEnabled { get; set; }
     public bool DeliveryLinkEnabled { get; set; }
     public bool ReservationLinkEnabled { get; set; }
+    /// <summary>Göndermeyen eski istemcide açık kalır.</summary>
+    public bool FeaturedSectionEnabled { get; set; } = true;
+    public bool PopularSectionEnabled { get; set; }
 }
 
 public class UpdateBranchQrFeaturesCommandHandler(IAppDbContext db, ICurrentUserService currentUser)
@@ -49,7 +52,8 @@ public class UpdateBranchQrFeaturesCommandHandler(IAppDbContext db, ICurrentUser
 
         QrFeatures features = QrFeatures.Create(
             request.OrderingEnabled, request.CallWaiterEnabled, request.BillRequestEnabled,
-            request.DeliveryLinkEnabled, request.ReservationLinkEnabled);
+            request.DeliveryLinkEnabled, request.ReservationLinkEnabled,
+            request.FeaturedSectionEnabled, request.PopularSectionEnabled);
         branch.SetQrFeatures(features);
 
         User? actor = await db.Users.FirstOrDefaultAsync(u => u.Id == currentUser.UserId, cancellationToken);
@@ -62,7 +66,8 @@ public class UpdateBranchQrFeaturesCommandHandler(IAppDbContext db, ICurrentUser
             $"{actor?.FullName} {branch.BranchName} şubesinin QR menü özelliklerini güncelledi " +
             $"(sipariş {OnOff(features.OrderingEnabled)}, garson çağır {OnOff(features.CallWaiterEnabled)}, " +
             $"hesap iste {OnOff(features.BillRequestEnabled)}, paket servis bağlantısı {OnOff(features.DeliveryLinkEnabled)}, " +
-            $"rezervasyon bağlantısı {OnOff(features.ReservationLinkEnabled)}).",
+            $"rezervasyon bağlantısı {OnOff(features.ReservationLinkEnabled)}, öne çıkanlar {OnOff(features.FeaturedSectionEnabled)}, " +
+            $"popüler ürünler {OnOff(features.PopularSectionEnabled)}).",
             nameof(Branch),
             branch.Id));
 

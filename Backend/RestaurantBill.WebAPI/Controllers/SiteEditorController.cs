@@ -66,7 +66,7 @@ public class SiteEditorController : BaseController
     public async Task<IActionResult> Discard([FromBody] VersionBody body, CancellationToken cancellationToken)
         => DraftResult(await _mediator.Send(new DiscardSiteDraftCommand { Version = body.Version }, cancellationToken));
 
-    // ── Tek fotoğraflık alanlar: cover, about, founder, share ───────────────────────────────────
+    // ── Tek fotoğraflık alanlar: cover, about, founder, share, logo ───────────────────────────────────
     [HttpPost("draft/image/{slot}")]
     [RequestSizeLimit(11_000_000)]
     public async Task<IActionResult> UploadImage([FromRoute] string slot, IFormFile file, CancellationToken cancellationToken)
@@ -130,6 +130,17 @@ public class SiteEditorController : BaseController
     public async Task<IActionResult> RemoveRegionImage([FromRoute] Guid regionId, CancellationToken cancellationToken)
         => HandleResult(await _mediator.Send(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Region, RegionId = regionId }, cancellationToken));
 
+    // ── "Ekibimiz" üyesinin portresi (hazır görsel yok: ekip fotoğrafı kişinin kendisidir) ───────────────
+    [HttpPost("draft/team/{memberId:guid}/image")]
+    [RequestSizeLimit(11_000_000)]
+    public async Task<IActionResult> UploadTeamImage([FromRoute] Guid memberId, IFormFile file, CancellationToken cancellationToken)
+        => await UploadAsync(file, stream => new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.TeamMember, TeamMemberId = memberId, Content = stream },
+            cancellationToken);
+
+    [HttpDelete("draft/team/{memberId:guid}/image")]
+    public async Task<IActionResult> RemoveTeamImage([FromRoute] Guid memberId, CancellationToken cancellationToken)
+        => HandleResult(await _mediator.Send(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.TeamMember, TeamMemberId = memberId }, cancellationToken));
+
     private async Task<IActionResult> UploadAsync(IFormFile file, Func<Stream, SetSiteDraftImageCommand> command, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0) return BadRequest(new { Error = "Dosya seçilmedi." });
@@ -156,6 +167,7 @@ public class SiteEditorController : BaseController
             "about" => SiteDraftImageTarget.About,
             "founder" => SiteDraftImageTarget.Founder,
             "share" => SiteDraftImageTarget.Share,
+            "logo" => SiteDraftImageTarget.Logo,
             "hero-menu" => SiteDraftImageTarget.MenuHero,
             "hero-hakkimizda" => SiteDraftImageTarget.AboutHero,
             "hero-mekan" => SiteDraftImageTarget.VenueHero,

@@ -16,6 +16,7 @@ public interface IStaffAssignmentRequest
     bool? CanTakePayment { get; }
     bool? CanCancelAndDiscount { get; }
     bool? CanTransferAndReserve { get; }
+    bool? CanLockQr { get; }
     bool? CanApplyDiscount { get; }
     int? MaxDiscountPercent { get; }
     bool? CanTransferTables { get; }
@@ -78,7 +79,8 @@ public static class StaffAssignment
                 request.CanTakeOrders ?? membership.CanTakeOrders,
                 request.CanTakePayment ?? membership.CanTakePayment,
                 request.CanCancelAndDiscount ?? membership.CanCancelAndDiscount,
-                request.CanTransferAndReserve ?? membership.CanTransferAndReserve);
+                request.CanTransferAndReserve ?? membership.CanTransferAndReserve,
+                request.CanLockQr ?? membership.CanLockQr);
         }
 
         if (role == UserRole.Cashier)

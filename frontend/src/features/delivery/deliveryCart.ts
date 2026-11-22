@@ -21,10 +21,24 @@ export interface DeliveryCartLine {
     selections: Record<string, string>;
     /** Menü: seçilen ürünlerin adları (sepette gösterilir). */
     selectionNames: string[];
+    /** Yalnız masa QR sepeti: müşteri "Paket olsun" dedi (paket siparişte kullanılmaz). */
+    takeaway?: boolean;
 }
 
 export function productKey(productId: string): string {
     return `p:${productId}`;
+}
+
+/** Notlu ürün satırı: aynı ürün farklı notla ayrı satırdır (masa QR'ındaki tableLineKey gibi). Notsuz = productKey. */
+export function productLineKey(productId: string, note: string): string {
+    const trimmed = note.trim();
+    return trimmed ? `${productKey(productId)}:${trimmed}` : productKey(productId);
+}
+
+/** Notlu hazır menü satırı (seçimler + not). */
+export function setMenuLineKey(setMenuId: string, selections: Record<string, string>, note: string): string {
+    const trimmed = note.trim();
+    return setMenuKey(setMenuId, selections) + (trimmed ? `:${trimmed}` : '');
 }
 
 export function setMenuKey(setMenuId: string, selections: Record<string, string>): string {

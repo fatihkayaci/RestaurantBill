@@ -5,10 +5,12 @@ using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.DTOs.Delivery;
+using RestaurantBill.Application.Features.Categories;
 using RestaurantBill.Application.Features.CustomerSite;
 using RestaurantBill.Application.Features.SetMenus;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Shared;
 
 namespace RestaurantBill.Application.Features.Delivery.Public;
@@ -90,16 +92,26 @@ public class GetOnlineOrderingQueryHandler(
             })
             .ToListAsync(cancellationToken);
 
-        List<OnlineMenuCategoryDto> categories = await db.Categories.AsNoTracking()
+        DateTime nowUtc = clock.GetUtcNow().UtcDateTime;
+        DateTime localNow = CategoryAvailability.LocalNow(branch.TimeZoneId, nowUtc);
+        List<Category> categoryRows = await db.Categories.AsNoTracking()
             .Where(c => c.BranchId == branch.Id && !c.IsDeleted)
             .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
-            .Select(c => new OnlineMenuCategoryDto { Id = c.Id, Name = c.Name })
             .ToListAsync(cancellationToken);
+        // Servis penceresi dışındaki kategori menüde görünür ama sepete eklenemez (gönderimde de reddedilir).
+        List<OnlineMenuCategoryDto> categories = categoryRows.Select(c => new OnlineMenuCategoryDto
+        {
+            Id = c.Id,
+            Name = c.Name,
+            MenuDisplay = c.MenuDisplay == CategoryMenuDisplay.Cards ? "cards" : c.MenuDisplay == CategoryMenuDisplay.List ? "list" : "auto",
+            AvailableNow = c.IsAvailableAt(localNow),
+            AvailabilityLabel = c.AvailabilityLabel(),
+        }).ToList();
 
         var products = await db.Products.AsNoTracking()
             .Where(p => p.Category.BranchId == branch.Id && p.IsActive && !p.IsDeleted)
             .OrderBy(p => p.SortOrder).ThenBy(p => p.Name)
-            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.IsOutOfStock })
+            .Select(p => new { p.Id, p.Name, p.Price, p.ImageUrl, p.CategoryId, p.Description, p.IsFeatured, p.IsOutOfStock, p.NewUntil, p.Allergens, p.DietTags })
             .ToListAsync(cancellationToken);
 
         foreach (OnlineMenuCategoryDto category in categories)
@@ -115,13 +127,16 @@ public class GetOnlineOrderingQueryHandler(
                     IsStockImage = StorageKeys.IsShared(p.ImageUrl),
                     Description = p.Description,
                     IsFeatured = p.IsFeatured,
-                    IsOutOfStock = p.IsOutOfStock
+                    IsNew = p.NewUntil is DateTime until && until > nowUtc,
+                    IsOutOfStock = p.IsOutOfStock,
+                    Allergens = (int)p.Allergens,
+                    DietTags = (int)p.DietTags
                 })
                 .ToList();
         }
         dto.Categories = categories.Where(c => c.Products.Count > 0).ToList();
 
-        dto.SetMenus = await PublicSetMenus.LoadAsync(db, branch.Id, cdnBaseUrl, listedOnly: false, cancellationToken);
+        dto.SetMenus = await PublicSetMenus.LoadAsync(db, branch.Id, cdnBaseUrl, listedOnly: false, localNow, cancellationToken);
 
         return Result<OnlineOrderingDto>.Success(dto);
     }

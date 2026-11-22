@@ -14,6 +14,11 @@ interface Props extends LineNoteActions {
     onToggleNotes: () => void;
     onAdd: () => void;
     onRemove: () => void;
+    /**
+     * Ürünün kategorisi şu an servis penceresi dışında: pencerenin açıklaması ("22:00'ye kadar"). Yalnız uyarıdır;
+     * garson yine ekleyebilir (müşteri QR'da ekleyemez).
+     */
+    outsideWindowLabel?: string | null;
 }
 
 /** "Acısız" veya birden çok satırda "1× Acılı / 1× Acısız". */
@@ -29,7 +34,7 @@ function noteSummary(lines: CartLine[]): string {
 // bir adet eklenir. Ayrı düğmeler yalnızca ürün sepetteyken çıkar: adın altında "Not" çipi ve sağda −/+.
 // İkinci satırın yüksekliği sabit (h-8) olduğu için çip çıkınca satırlar kaymaz.
 // "Tükendi" işaretli ürün soluk görünür ve eklenemez; sepete önceden girdiyse yalnızca azaltılabilir.
-export default function ProductRow({ product, lines, quickNotes, notesOpen, onToggleNotes, onAdd, onRemove, ...noteActions }: Props) {
+export default function ProductRow({ product, lines, quickNotes, notesOpen, onToggleNotes, onAdd, onRemove, outsideWindowLabel, ...noteActions }: Props) {
     const qty = lines.reduce((sum, l) => sum + l.quantity, 0);
     const inCart = qty > 0;
     const summary = noteSummary(lines);
@@ -67,6 +72,10 @@ export default function ProductRow({ product, lines, quickNotes, notesOpen, onTo
                                 <NotebookPen className="size-4 shrink-0" aria-hidden="true" />
                                 <span className="truncate">{summary || 'Not'}</span>
                             </button>
+                        ) : outsideWindowLabel != null ? (
+                            <span className="truncate rounded-full bg-rb-amber-bg px-2 py-0.5 text-xs font-bold text-rb-amber" title="Müşteri QR'dan şu an sipariş edemez; siz ekleyebilirsiniz.">
+                                Servis saati dışı{outsideWindowLabel ? ` · ${outsideWindowLabel}` : ''}
+                            </span>
                         ) : (
                             product.prepMinutes != null && <span className="truncate">· ~{product.prepMinutes} dk</span>
                         )}

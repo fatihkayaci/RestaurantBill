@@ -49,6 +49,8 @@ app.MapHub<KitchenHub>("/kitchen-hub");
 app.MapHub<TableHub>("/table-hub");
 app.MapHub<CashierHub>("/cashier-hub");
 app.MapHub<CourierHub>("/courier-hub");
+// Anonymous customer QR page hub: content-free "your table changed" signals (see PublicTableHub).
+app.MapHub<PublicTableHub>("/public-table-hub");
 app.MapHealthCheck();
 
 await app.MigrateAndSeedAsync();

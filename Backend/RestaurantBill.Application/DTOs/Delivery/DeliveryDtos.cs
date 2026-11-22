@@ -138,6 +138,12 @@ namespace RestaurantBill.Application.DTOs.Delivery
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        /// <summary>Müşteri menüsündeki görünüm: "auto", "cards", "list".</summary>
+        public string MenuDisplay { get; set; } = "auto";
+        /// <summary>Servis penceresine göre şu an sipariş edilebilir mi (şubenin yerel saati; pencere yoksa true).</summary>
+        public bool AvailableNow { get; set; } = true;
+        /// <summary>"12:00'ye kadar", "18:00'den itibaren", "Hafta içi 08:00–12:00"; pencere yoksa boş.</summary>
+        public string AvailabilityLabel { get; set; } = string.Empty;
         public List<OnlineMenuProductDto> Products { get; set; } = [];
     }
 
@@ -151,8 +157,14 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public bool IsStockImage { get; set; }
         public string Description { get; set; } = string.Empty;
         public bool IsFeatured { get; set; }
+        /// <summary>Admin'in "Yeni" işareti hâlâ geçerli (30 gün).</summary>
+        public bool IsNew { get; set; }
         /// <summary>"Tükendi": listede görünür ama sepete eklenemez.</summary>
         public bool IsOutOfStock { get; set; }
+        /// <summary>Alerjen bayrakları (ProductAllergen).</summary>
+        public int Allergens { get; set; }
+        /// <summary>Diyet / bilgi etiketleri (ProductDietTag).</summary>
+        public int DietTags { get; set; }
     }
 
     public class OnlineSetMenuDto
@@ -171,6 +183,16 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public bool IsAvailable { get; set; }
         /// <summary>Listed under "Chef's recommendation" alongside featured products.</summary>
         public bool IsFeatured { get; set; }
+        /// <summary>Seçeneklerin alerjenlerinin birleşimi (menüde hangi seçenek seçilirse seçilsin olabilecekler).</summary>
+        public int Allergens { get; set; }
+        /// <summary>
+        /// Etiketler: "Acılı" seçeneklerden birinde varsa; uygunluk iddiaları (vegan, vejetaryen, glutensiz, helal) yalnız
+        /// bütün seçenekler taşıyorsa.
+        /// </summary>
+        public int DietTags { get; set; }
+        /// <summary>Menünün kategorisinin servis penceresine göre şu an sipariş edilebilir mi.</summary>
+        public bool AvailableNow { get; set; } = true;
+        public string AvailabilityLabel { get; set; } = string.Empty;
         public List<OnlineSetMenuSlotDto> Slots { get; set; } = [];
     }
 
@@ -190,6 +212,8 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public bool IsDefault { get; set; }
         /// <summary>Ürün pasif ya da tükendi ise seçilemez.</summary>
         public bool IsAvailable { get; set; }
+        public int Allergens { get; set; }
+        public int DietTags { get; set; }
     }
 
     // ── Müşteri: takip sayfası ──────────────────────────────────────────────────────────────────────
@@ -237,7 +261,7 @@ namespace RestaurantBill.Application.DTOs.Delivery
         public string AccentColor { get; set; } = string.Empty;
         /// <summary>Sitenin hazır renk teması (SiteContent.ThemeKeys); boş = varsayılan.</summary>
         public string Theme { get; set; } = string.Empty;
-        /// <summary>Sitenin tasarımı (SiteContent.DesignKeys: "renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"); boş = varsayılan (renkli).</summary>
+        /// <summary>Sitenin tasarımı (SiteContent.DesignKeys); boş = varsayılan (sophra).</summary>
         public string Design { get; set; } = string.Empty;
         /// <summary>Sitenin yazı tipi çifti (SiteContent.FontKeys); boş = tasarımın kendi yazı tipi.</summary>
         public string Font { get; set; } = string.Empty;

@@ -340,6 +340,15 @@ namespace RestaurantBill.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("AvailableDays")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeOnly?>("AvailableFrom")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<TimeOnly?>("AvailableUntil")
+                        .HasColumnType("time without time zone");
+
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uuid");
 
@@ -351,6 +360,9 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("MenuDisplay")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -889,8 +901,14 @@ namespace RestaurantBill.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("BillPaymentHint")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("BillRequestedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("BillSplitCount")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uuid");
@@ -923,10 +941,6 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<decimal>("PaidOnAccount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("QrOwnerTokenHash")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -970,6 +984,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsTakeaway")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Note")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -978,6 +995,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasDefaultValue("");
 
                     b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OrderRequestId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("OverdueNotifiedAt")
@@ -1017,6 +1037,9 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasIndex("OrderId");
 
+                    b.HasIndex("OrderRequestId")
+                        .HasFilter("\"OrderRequestId\" IS NOT NULL");
+
                     b.HasIndex("ParentOrderItemId");
 
                     b.HasIndex("ProductId");
@@ -1048,6 +1071,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("ItemsLinked")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Kind")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -1059,6 +1085,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasDefaultValue("");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("RejectReason")
                         .IsRequired()
@@ -1081,6 +1110,8 @@ namespace RestaurantBill.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OrderId");
+
                     b.HasIndex("ReservationId", "Status");
 
                     b.HasIndex("TableId", "Status");
@@ -1101,6 +1132,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTakeaway")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Note")
@@ -1301,6 +1335,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Allergens")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
 
@@ -1317,6 +1354,9 @@ namespace RestaurantBill.Persistence.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("DietTags")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
@@ -1340,6 +1380,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("NewUntil")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("PrepMinutes")
                         .HasColumnType("integer");
@@ -1886,6 +1929,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("QrOrderingLocked")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("RegionId")
                         .HasColumnType("uuid");
 
@@ -1978,6 +2024,9 @@ namespace RestaurantBill.Persistence.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("CanCancelAndDiscount")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanLockQr")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("CanTakeOrders")

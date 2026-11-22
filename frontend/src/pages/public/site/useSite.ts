@@ -16,12 +16,24 @@ export function useSite() {
         if (preview) return;
         let cancelled = false;
         publicService.getSite()
-            .then(data => { if (!cancelled) setSite(normalizeSite(data)); })
+            .then(data => { if (!cancelled) setSite(normalizeSite(withDevDesign(data))); })
             .catch(err => { if (!cancelled) setError(getApiErrorMessage(err, 'Sayfa yüklenemedi. İnternet bağlantınızı kontrol edip yenileyin.')); });
         return () => { cancelled = true; };
     }, [preview]);
 
     return preview ? { site: preview.site, error: null } : { site, error };
+}
+
+/** Yalnız geliştirme sunucusunda: `?tasarim=sophra` sitenin tasarımını bu sekmede değiştirir (veritabanına dokunmadan
+ *  tasarım denemek için; sekme kapanana kadar sürer); production derlemesinde hiç okunmaz. */
+function withDevDesign(data: PublicSite): PublicSite {
+    if (!import.meta.env.DEV) return data;
+    let design = new URLSearchParams(window.location.search).get('tasarim');
+    try {
+        if (design) sessionStorage.setItem('rb:dev-design', design);
+        else design = sessionStorage.getItem('rb:dev-design');
+    } catch { /* özel pencere */ }
+    return design && data.site ? { ...data, site: { ...data.site, design } } : data;
 }
 
 // ── Bu cihazdan gönderilen rezervasyon talepleri (yalnız bağlantı anahtarları, tarayıcıda) ─────────
@@ -99,6 +111,7 @@ export function normalizeSite(site: PublicSite): PublicSite {
             whatsappPhone: c.whatsappPhone ?? '',
             amenities: c.amenities ?? [],
             hiddenFaqs: c.hiddenFaqs ?? [],
+            homeSections: c.homeSections ?? [],
             rating: c.rating ?? null,
             reviewCount: c.reviewCount ?? null,
             reviewsUrl: c.reviewsUrl ?? '',
@@ -110,6 +123,9 @@ export function normalizeSite(site: PublicSite): PublicSite {
             foundedYear: c.foundedYear ?? null,
             values: c.values ?? [],
             milestones: c.milestones ?? [],
+            teamMembers: c.teamMembers ?? [],
+            teamTitle: c.teamTitle ?? '',
+            teamIntro: c.teamIntro ?? '',
             regionDetails: c.regionDetails ?? [],
             seoTitle: c.seoTitle ?? '',
             seoDescription: c.seoDescription ?? '',
@@ -220,7 +236,7 @@ export function restaurantName(site: PublicSite): string {
 
 const PAGE_TITLES: Partial<Record<string, string>> = {
     menu: 'Menü', hakkimizda: 'Hakkımızda', mekan: 'Mekân', iletisim: 'İletişim', rezervasyon: 'Rezervasyon',
-    'rezervasyon-sorgula': 'Rezervasyon sorgula', siparis: 'Paket sipariş',
+    'rezervasyon-sorgula': 'Rezervasyon sorgula', siparis: 'Paket sipariş', bulunamadi: 'Sayfa bulunamadı', 'qr-gecersiz': 'Bu QR kod geçersiz',
 };
 
 /** Ana sayfa sitenin başlığını alır (yayındaki SEO başlığı); alt sayfalar "Menü · Ocak". */
@@ -233,10 +249,17 @@ export function sitePageTitle(site: PublicSite, page: string): string {
 
 /** Tarayıcı sekmesinin başlığı (müşteri sitesi). Düzenleyicinin önizlemesinde admin'in başlığına dokunulmaz. */
 export function useSiteDocumentTitle(site: PublicSite, page: string) {
+    useDocumentTitle(sitePageTitle(site, page));
+}
+
+/**
+ * Müşteri sayfasının sekme başlığı ("Masa 5 · Demo Restoran", "Sayfa bulunamadı · Ocak"). null: dokunulmaz (veri
+ * yüklenene kadar). Sayfadan çıkınca önceki başlık geri gelir. Düzenleyicinin önizlemesinde admin'in başlığına dokunulmaz.
+ */
+export function useDocumentTitle(title: string | null) {
     const inPreview = useSitePreview() !== null;
-    const title = sitePageTitle(site, page);
     useEffect(() => {
-        if (inPreview) return;
+        if (inPreview || !title) return;
         const previous = document.title;
         document.title = title;
         return () => { document.title = previous; };

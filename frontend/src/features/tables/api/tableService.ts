@@ -69,6 +69,10 @@ export const tableService = {
         });
         return response.data;
     },
+    /** "QR siparişi: Açık / Kilitli". Owner/Admin; garson yalnız "QR siparişini kilitleme" yetkisiyle. */
+    setQrLock: async (tableId: string, locked: boolean) => {
+        await api.post(`/table/${tableId}/qr-lock`, { locked });
+    },
     getActiveReservation: async (tableId: string) => {
         const response = await api.get<Reservation | null>(`/table/${tableId}/reservation`);
         return response.data;

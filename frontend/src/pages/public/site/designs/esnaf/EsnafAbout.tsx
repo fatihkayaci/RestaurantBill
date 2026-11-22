@@ -1,4 +1,4 @@
-import type { PublicSite } from '@/features/customerSite/types';
+import type { PublicSite, SiteTeamMember } from '@/features/customerSite/types';
 import { cn } from '@/lib/utils';
 import { StockImageLabel } from '../../../components/StockImageLabel';
 import { PageEmpty, SitePage } from '../../SiteFrame';
@@ -12,6 +12,8 @@ import type { DesignPageProps } from '../registry';
 import { CallBand, EsHeading, TileStrip, YearStamp } from './EsnafBits';
 import { useEsnafMobileActions } from './esnafActions';
 import { esNarrow, esSign, esWrap } from './esnafParts';
+import { TEAM_LIST, TEAM_SAMPLES, isSoloLast, useTeam } from '../../team';
+import { TeamEditorNote, TeamIntro, TeamName, TeamNote, TeamPhoto, TeamRole, TeamSample, TeamTitle } from '../../teamParts';
 
 // Esnaf Tabelası Hakkımızda: "USTAMIZ". Dergi kutuları ya da gece hikâyesi yerine dükkânın duvarındaki çerçeveler.
 // (1) Tabela: dev büyük harf hikâye başlığı (yoksa ad), kısa giriş; yanında kuruluş yılı mührü. Çini şerit.
@@ -39,6 +41,7 @@ export default function EsnafAbout({ site }: DesignPageProps) {
             <main className="flex flex-1 flex-col">
                 <Hero site={site} />
                 <Founder site={site} />
+                <Team site={site} />
                 <StoryText site={site} />
                 <Facts site={site} />
                 <Values site={site} />
@@ -134,6 +137,59 @@ function Founder({ site }: { site: PublicSite }) {
                 )}
             </div>
         </section>
+    );
+}
+
+/** "Tezgâhın ustaları": ustanınki gibi kalın çerçeveli portreler (fotoğraf yoksa çini zeminde baş harfler). */
+function Team({ site }: { site: PublicSite }) {
+    const team = useTeam(site);
+    if (!team) return null;
+    const { members, empty, canAdd } = team;
+    // Telefonda iki sütun: ekle kartı da ızgaranın bir hücresidir; tek kalan son kart iki sütunu kaplar, portre yatay olur.
+    const cells = members.length + (canAdd ? 1 : 0);
+    const addSolo = isSoloLast(members.length, cells);
+    const addHint = empty ? 'Ad, rol, fotoğraf' : `en fazla ${SITE_LIMITS.teamMember.max}`;
+    return (
+        <section aria-labelledby="es-ekip" className={cn(esWrap, 'flex flex-col gap-8 pb-14 sm:pb-20')}>
+            <EsHeading id="es-ekip" title={<TeamTitle site={site} as="span" fallback="Tezgâhın ustaları" accentClassName="not-italic" />}
+                note={<TeamIntro site={site} as="span" fallback="Ocaktan tezgâha, her gün sizi karşılayanlar." />}
+                aside={<TeamEditorNote team={team} />} />
+            <ul className="m-0 grid list-none grid-cols-2 gap-x-3 gap-y-6 p-0 sm:gap-x-4 md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] md:gap-y-8">
+                {members.map((m, i) => {
+                    const solo = isSoloLast(i, cells);
+                    return (
+                        <li key={m.id} className={cn('min-w-0', solo && 'max-md:col-span-2')}>
+                            <ListCard list={TEAM_LIST} index={i} count={members.length} label="Ekip üyesi" className="h-full rounded-md">
+                                <EsnafMember member={m} solo={solo} />
+                            </ListCard>
+                        </li>
+                    );
+                })}
+                {canAdd && (
+                    <li className={cn('min-w-0', addSolo && 'max-md:col-span-2')}>
+                        <AddCard list={TEAM_LIST} label="Ekip üyesi ekle" count={members.length} max={SITE_LIMITS.teamMember.max} hint={addHint}
+                            className={cn('h-auto rounded-md', addSolo ? 'aspect-[16/11] md:aspect-[4/5]' : 'aspect-[4/5]')} />
+                    </li>
+                )}
+                {empty && TEAM_SAMPLES.map((m, i) => (
+                    <li key={m.id} className="hidden min-w-0 md:block">
+                        <TeamSample index={i}><EsnafMember member={m} solo={false} /></TeamSample>
+                    </li>
+                ))}
+            </ul>
+        </section>
+    );
+}
+
+function EsnafMember({ member, solo }: { member: SiteTeamMember; solo: boolean }) {
+    return (
+        <div className="flex h-full flex-col gap-2.5 sm:gap-3">
+            <TeamPhoto member={member} className={cn('rounded-md border-[4px] border-[var(--site-text)]', solo ? 'aspect-[16/11] md:aspect-[4/5]' : 'aspect-[4/5]')}
+                initialsClassName={cn(serif, 'rb-es-tilesoft text-[56px] leading-none text-[var(--site-text)] sm:text-[88px]')} />
+            <TeamRole member={member} className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--site-accent-text)] sm:text-[13px]" />
+            <TeamName member={member} className={cn(serif, 'm-0 break-words text-[26px] leading-[0.95] sm:text-[34px]')} />
+            <TeamNote member={member} className="m-0 text-[14px] font-medium leading-relaxed text-[var(--site-sub)] sm:text-[15px]" />
+        </div>
     );
 }
 

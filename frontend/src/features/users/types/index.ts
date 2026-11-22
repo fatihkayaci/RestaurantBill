@@ -31,6 +31,8 @@ export interface User {
     canTakePayment?: boolean;
     canCancelAndDiscount?: boolean;
     canTransferAndReserve?: boolean;
+    /** Masada QR siparişini kilitleme: yöneticilerde true, garsonda yetkiye göre, diğer rollerde false. */
+    canLockQr?: boolean;
     /** Kasiyer yetkileri ve indirim sınırı (100 = sınırsız). Kasiyer dışındaki rollerde hep true / 100 döner. */
     canApplyDiscount?: boolean;
     maxDiscountPercent?: number;
@@ -49,6 +51,7 @@ export interface StaffAssignment {
     canTakePayment?: boolean;
     canCancelAndDiscount?: boolean;
     canTransferAndReserve?: boolean;
+    canLockQr?: boolean;
     canApplyDiscount?: boolean;
     maxDiscountPercent?: number;
     canTransferTables?: boolean;
@@ -91,10 +94,12 @@ export interface WaiterPermissions {
     canTakePayment: boolean;
     canCancelAndDiscount: boolean;
     canTransferAndReserve: boolean;
+    /** "QR siparişi: Açık / Kilitli" anahtarı. */
+    canLockQr: boolean;
 }
 
 export const ALL_WAITER_PERMISSIONS: WaiterPermissions = {
-    canTakeOrders: true, canTakePayment: true, canCancelAndDiscount: true, canTransferAndReserve: true,
+    canTakeOrders: true, canTakePayment: true, canCancelAndDiscount: true, canTransferAndReserve: true, canLockQr: true,
 };
 
 export function waiterPermissionsOf(user: User): WaiterPermissions {
@@ -103,6 +108,8 @@ export function waiterPermissionsOf(user: User): WaiterPermissions {
         canTakePayment: user.canTakePayment ?? true,
         canCancelAndDiscount: user.canCancelAndDiscount ?? true,
         canTransferAndReserve: user.canTransferAndReserve ?? true,
+        // Eski sunucu göndermez: anahtar gösterilmez (sunucu yine de yetkiyi denetler).
+        canLockQr: user.canLockQr ?? false,
     };
 }
 

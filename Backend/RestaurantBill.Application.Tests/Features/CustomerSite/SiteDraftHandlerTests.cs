@@ -1,3 +1,4 @@
+using FluentValidation.TestHelper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RestaurantBill.Application.Common;
@@ -68,7 +69,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         => new GetSiteEditorQueryHandler(Db, Owner, Cdn, Seo).Handle(new GetSiteEditorQuery(), CancellationToken.None);
 
     private Task<Result<SiteDraftResultDto>> SaveAsync(SaveSiteDraftCommand command)
-        => new SaveSiteDraftCommandHandler(Db, Owner, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
+        => new SaveSiteDraftCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System).Handle(command, CancellationToken.None);
 
     private Task<Result<SiteEditorDto>> ImageAsync(SetSiteDraftImageCommand command, string? nextKey = null)
     {
@@ -122,6 +123,9 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Values = site.Values,
         Milestones = site.Milestones,
         RegionDetails = site.RegionDetails,
+        TeamMembers = site.TeamMembers,
+        TeamTitle = site.TeamTitle,
+        TeamIntro = site.TeamIntro,
         SeoTitle = site.SeoTitle,
         SeoDescription = site.SeoDescription,
     };
@@ -152,7 +156,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
     {
         await SeedAsync();
         SiteEditorDto editor = (await GetAsync()).Value!;
-        Assert.Equal(string.Empty, editor.Draft.Design); // boş = renkli (ön yüz)
+        Assert.Equal(string.Empty, editor.Draft.Design); // boş = varsayılan tasarım (ön yüz: sophra)
 
         SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
         command.Design = " Sade ";
@@ -198,6 +202,61 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         Assert.True(keep.IsSuccess, keep.Error);
         Assert.Equal("sade", keep.Value!.Editor.Draft.Design);
         Assert.DoesNotContain(keep.Value.Editor.Changes, c => c.Field == "design");
+    }
+
+    [Fact]
+    public async Task HomeSections_DraftThenPublish_ReachPublicSite_AndNullKeepsThem()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        Assert.Empty(editor.Draft.HomeSections); // boş = varsayılan sıra (ekip kapalı, diğerleri açık)
+
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.Design = "sophra";
+        command.HomeSections = [new SiteHomeSectionDto { Key = "reviews", Enabled = false }, new SiteHomeSectionDto { Key = "featured", Enabled = true }];
+        var saved = await SaveAsync(command);
+
+        Assert.True(saved.IsSuccess, saved.Error);
+        SiteEditorDto after = saved.Value!.Editor;
+        Assert.Equal(["design", "homeSections"], after.Changes.Select(c => c.Field));
+        SiteChangeDto change = after.Changes[1];
+        Assert.Equal("Anasayfa bölümleri", change.Label);
+        Assert.Equal("Anasayfa", change.Page);
+        Assert.Equal(["reviews", "featured", "categories", "about", "team", "features", "gallery", "contact"], after.Draft.HomeSections.Select(h => h.Key));
+        Assert.False(after.Draft.HomeSections[0].Enabled);
+        Assert.False(after.Draft.HomeSections.Single(h => h.Key == "team").Enabled); // ekip varsayılanı kapalı
+        Assert.Empty((await PublicSiteAsync()).Site.HomeSections);
+
+        var published = await PublishAsync(after.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        BranchSiteDto live = (await PublicSiteAsync()).Site;
+        Assert.Equal("sophra", live.Design);
+        Assert.Equal("reviews", live.HomeSections[0].Key);
+        Assert.False(live.HomeSections[0].Enabled);
+
+        // Bölümleri göndermeyen kayıt (eski form, null) düzeni değiştirmez.
+        command = TextsFrom(published.Value!.Editor.Draft, published.Value.Editor.Version);
+        command.HomeSections = null;
+        command.Headline = "Yeni başlık";
+        var keep = await SaveAsync(command);
+        Assert.True(keep.IsSuccess, keep.Error);
+        Assert.Equal(SiteContent.HomeSectionKeys.Count, keep.Value!.Editor.Draft.HomeSections.Count);
+        Assert.DoesNotContain(keep.Value.Editor.Changes, c => c.Field == "homeSections");
+    }
+
+    [Fact]
+    public void Validator_HomeSections_RejectsUnknownAndDuplicateKeys()
+    {
+        var validator = new SaveSiteDraftCommandValidator();
+        validator.TestValidate(new SaveSiteDraftCommand { HomeSections = [new SiteHomeSectionDto { Key = "hero" }] })
+            .ShouldHaveValidationErrorFor(x => x.HomeSections);
+        validator.TestValidate(new SaveSiteDraftCommand
+        {
+            HomeSections = [new SiteHomeSectionDto { Key = "about" }, new SiteHomeSectionDto { Key = " About ", Enabled = false }],
+        }).ShouldHaveValidationErrorFor(x => x.HomeSections);
+        validator.TestValidate(new SaveSiteDraftCommand { HomeSections = [new SiteHomeSectionDto { Key = " Gallery ", Enabled = false }] })
+            .ShouldNotHaveAnyValidationErrors();
+        validator.TestValidate(new SaveSiteDraftCommand { HomeSections = null }).ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
@@ -597,7 +656,7 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         await SeedAsync();
         // Varsayılan test kullanıcısı şube yöneticisi (Admin).
         var get = await new GetSiteEditorQueryHandler(Db, CurrentUser, Cdn, Seo).Handle(new GetSiteEditorQuery(), CancellationToken.None);
-        var save = await new SaveSiteDraftCommandHandler(Db, CurrentUser, Cdn, Seo, TimeProvider.System)
+        var save = await new SaveSiteDraftCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
             .Handle(new SaveSiteDraftCommand { Headline = "Yönetici" }, CancellationToken.None);
         var image = await new SetSiteDraftImageCommandHandler(Db, CurrentUser, _storage, Cdn, Seo, TimeProvider.System)
             .Handle(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, StockImageId = _stock.Id }, CancellationToken.None);
@@ -706,5 +765,225 @@ public class SiteDraftHandlerTests : ApplicationTestBase
         await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Cover, Content = new MemoryStream([1]) }, "site/kapak-yeni.webp");
 
         Assert.Equal(_company.Id, _storage.LastBranchId);
+    }
+
+    [Fact]
+    public async Task Logo_UploadsSmall_ReachesPublicSiteOnPublish_StockRejected()
+    {
+        await SeedAsync();
+
+        var stock = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Logo, StockImageId = _stock.Id });
+        Assert.False(stock.IsSuccess);
+
+        var editor = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.Logo, Content = new MemoryStream([1]) }, "site/logo.webp");
+        Assert.True(editor.IsSuccess, editor.Error);
+        Assert.Equal(512, _storage.LastMaxSize);
+        SiteChangeDto change = Assert.Single(editor.Value!.Changes);
+        Assert.Equal("logo", change.Field);
+        Assert.Equal("Logo", change.Label);
+        Assert.Equal(string.Empty, (await PublicSiteAsync()).Site.LogoUrl);
+
+        // jsonb dönüştürücüsünden geçen taslak logoyu taşır.
+        Company stored = await DbContext.Companies.AsNoTracking().FirstAsync(c => c.Id == _company.Id);
+        Assert.Equal("site/logo.webp", stored.SiteDraft!.LogoImage);
+
+        var published = await PublishAsync(editor.Value.Version);
+        Assert.True(published.IsSuccess, published.Error);
+        Assert.EndsWith("/site/logo.webp", (await PublicSiteAsync()).Site.LogoUrl);
+    }
+
+    // ── Ekibimiz ────────────────────────────────────────────────────────────────────────────────────
+
+    private static readonly Guid Ayse = Guid.Parse("a1111111-1111-1111-1111-111111111111");
+    private static readonly Guid Mehmet = Guid.Parse("b2222222-2222-2222-2222-222222222222");
+
+    private static SiteTeamMemberDto Member(Guid id, string name, string role = "", string note = "")
+        => new() { Id = id, Name = name, Role = role, Note = note };
+
+    /// <summary>Taslağın son hâlinden metin kaydı: ekibi <paramref name="team"/> ile değiştirir.</summary>
+    private async Task<SiteEditorDto> SaveTeamAsync(params SiteTeamMemberDto[] team)
+    {
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.TeamMembers = [.. team];
+        var saved = await SaveAsync(command);
+        Assert.True(saved.IsSuccess, saved.Error);
+        return saved.Value!.Editor;
+    }
+
+    private Task<Result<SiteEditorDto>> TeamPhotoAsync(Guid memberId, string? nextKey)
+        => ImageAsync(new SetSiteDraftImageCommand
+        {
+            Target = SiteDraftImageTarget.TeamMember, TeamMemberId = memberId, Content = nextKey is null ? null : new MemoryStream([1]),
+        }, nextKey);
+
+    [Fact]
+    public async Task Team_TextSave_KeepsPhotoById_WhenEditedAndReordered()
+    {
+        await SeedAsync();
+        await SaveTeamAsync(Member(Ayse, "Ayşe Usta", "Mutfak şefi"), Member(Mehmet, "Mehmet Kaya", "Ocakbaşı ustası"));
+
+        var photo = await TeamPhotoAsync(Mehmet, "site/mehmet.webp");
+        Assert.True(photo.IsSuccess, photo.Error);
+        Assert.Equal(1000, _storage.LastMaxSize);
+
+        // Sıra değişir, yazılar düzenlenir: fotoğraf Mehmet'te kalır, Ayşe'ye geçmez.
+        SiteEditorDto after = await SaveTeamAsync(Member(Mehmet, "  Mehmet Kaya ", "Usta", "Kömürü kendi seçer."), Member(Ayse, "Ayşe Usta", "Mutfak şefi"));
+
+        Assert.Equal([Mehmet, Ayse], after.Draft.TeamMembers.Select(m => m.Id));
+        Assert.Equal("Mehmet Kaya", after.Draft.TeamMembers[0].Name);
+        Assert.Equal("Kömürü kendi seçer.", after.Draft.TeamMembers[0].Note);
+        Assert.Equal("https://cdn.test/site/mehmet.webp", after.Draft.TeamMembers[0].PhotoUrl);
+        Assert.Equal(string.Empty, after.Draft.TeamMembers[1].PhotoUrl);
+        Assert.Empty(_storage.DeletedKeys);
+        Assert.Contains(after.Changes, c => c.Field == "teamMembers" && c.Label == "Ekibimiz" && c.Page == "Hakkımızda");
+
+        // Eski form ekibi göndermez (null): ekip olduğu gibi kalır.
+        SaveSiteDraftCommand legacy = TextsFrom(after.Draft, after.Version);
+        legacy.TeamMembers = null;
+        legacy.TeamTitle = null;
+        SiteEditorDto kept = (await SaveAsync(legacy)).Value!.Editor;
+        Assert.Equal(2, kept.Draft.TeamMembers.Count);
+        Assert.Equal("https://cdn.test/site/mehmet.webp", kept.Draft.TeamMembers[0].PhotoUrl);
+    }
+
+    [Fact]
+    public async Task Team_NamelessEntriesDropped_UnlessTheyHavePhoto_NewIdAssigned()
+    {
+        await SeedAsync();
+        SiteEditorDto first = await SaveTeamAsync(Member(Ayse, "Ayşe Usta"), Member(Guid.NewGuid(), "   ", "Salon şefi", "Adı yok"), Member(Guid.Empty, "Zeynep Arslan"));
+
+        Assert.Equal(["Ayşe Usta", "Zeynep Arslan"], first.Draft.TeamMembers.Select(m => m.Name));
+        Assert.NotEqual(Guid.Empty, first.Draft.TeamMembers[1].Id);
+
+        // Fotoğraflı üyenin adı silinirken (yeniden yazılacak) üye fotoğrafıyla kalır; sitede çizilmez (ön yüz).
+        Assert.True((await TeamPhotoAsync(Ayse, "site/ayse.webp")).IsSuccess);
+        SiteEditorDto cleared = await SaveTeamAsync(Member(Ayse, ""));
+        SiteTeamMemberDto kept = Assert.Single(cleared.Draft.TeamMembers);
+        Assert.Equal(string.Empty, kept.Name);
+        Assert.Equal("https://cdn.test/site/ayse.webp", kept.PhotoUrl);
+    }
+
+    [Fact]
+    public async Task Team_PhotoReplaceRemoveAndMemberDelete_DeleteUnusedFiles_PublishedKeptUntilPublish()
+    {
+        await SeedAsync();
+        await SaveTeamAsync(Member(Ayse, "Ayşe Usta"), Member(Mehmet, "Mehmet Kaya"));
+        await TeamPhotoAsync(Ayse, "site/ayse-1.webp");
+
+        // Taslakta değişen fotoğrafın eski dosyası (yayında değil) silinir.
+        await TeamPhotoAsync(Ayse, "site/ayse-2.webp");
+        Assert.Equal(["site/ayse-1.webp"], _storage.DeletedKeys);
+
+        // Fotoğrafı kaldır: dosya silinir, üye kalır.
+        var removed = await TeamPhotoAsync(Ayse, null);
+        Assert.True(removed.IsSuccess, removed.Error);
+        Assert.Equal(string.Empty, removed.Value!.Draft.TeamMembers[0].PhotoUrl);
+        Assert.Equal(["site/ayse-1.webp", "site/ayse-2.webp"], _storage.DeletedKeys.Order());
+
+        // Yayındaki fotoğraf: üye taslaktan silinince dosya kalır (yayında), Yayınla'dan sonra silinir.
+        SiteEditorDto withPhoto = (await TeamPhotoAsync(Mehmet, "site/mehmet.webp")).Value!;
+        Assert.True((await PublishAsync(withPhoto.Version)).IsSuccess);
+        Assert.Equal("https://cdn.test/site/mehmet.webp", (await PublicSiteAsync()).Site.TeamMembers.Single(m => m.Id == Mehmet).PhotoUrl);
+
+        SiteEditorDto withoutMehmet = await SaveTeamAsync(Member(Ayse, "Ayşe Usta"));
+        Assert.DoesNotContain("site/mehmet.webp", _storage.DeletedKeys);
+        Assert.True((await PublishAsync(withoutMehmet.Version)).IsSuccess);
+        Assert.Contains("site/mehmet.webp", _storage.DeletedKeys);
+        Assert.Equal(["Ayşe Usta"], (await PublicSiteAsync()).Site.TeamMembers.Select(m => m.Name));
+    }
+
+    [Fact]
+    public async Task Team_DeletingDraftOnlyMember_DeletesPhotoOnSave()
+    {
+        await SeedAsync();
+        await SaveTeamAsync(Member(Ayse, "Ayşe Usta"), Member(Mehmet, "Mehmet Kaya"));
+        await TeamPhotoAsync(Mehmet, "site/mehmet.webp");
+
+        await SaveTeamAsync(Member(Ayse, "Ayşe Usta"));
+
+        Assert.Equal(["site/mehmet.webp"], _storage.DeletedKeys);
+    }
+
+    [Fact]
+    public async Task Team_Photo_UnknownMemberOrStock_RejectedWithoutUpload()
+    {
+        await SeedAsync();
+        await SaveTeamAsync(Member(Ayse, "Ayşe Usta"));
+
+        var unknown = await TeamPhotoAsync(Mehmet, "site/x.webp");
+        Assert.False(unknown.IsSuccess);
+        Assert.Equal("Ekip üyesi bulunamadı. Önce üyenin adını yazın.", unknown.Error);
+
+        var stock = await ImageAsync(new SetSiteDraftImageCommand { Target = SiteDraftImageTarget.TeamMember, TeamMemberId = Ayse, StockImageId = _stock.Id });
+        Assert.False(stock.IsSuccess);
+        Assert.Empty(_storage.UploadedKeys);
+    }
+
+    [Fact]
+    public async Task Team_TitleIntro_DraftThenPublish_AndRevert()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.TeamTitle = "  Mutfağın ustaları ";
+        command.TeamIntro = "Her akşam sizi ağırlayanlar.";
+        command.TeamMembers = [Member(Ayse, "Ayşe Usta")];
+        SiteEditorDto saved = (await SaveAsync(command)).Value!.Editor;
+
+        Assert.Equal("Mutfağın ustaları", saved.Draft.TeamTitle);
+        Assert.Equal(["teamTitle", "teamIntro", "teamMembers"], saved.Changes.Select(c => c.Field).Where(f => f.StartsWith("team", StringComparison.Ordinal)));
+        Assert.Empty((await PublicSiteAsync()).Site.TeamMembers);
+
+        var reverted = await new RevertSiteDraftFieldsCommandHandler(Db, Owner, _storage, Cdn, Seo, TimeProvider.System)
+            .Handle(new RevertSiteDraftFieldsCommand { Version = saved.Version, Fields = ["teamIntro"] }, CancellationToken.None);
+        Assert.True(reverted.IsSuccess, reverted.Error);
+        Assert.Equal(string.Empty, reverted.Value!.Editor.Draft.TeamIntro);
+
+        Assert.True((await PublishAsync(reverted.Value.Editor.Version)).IsSuccess);
+        BranchSiteDto live = (await PublicSiteAsync()).Site;
+        Assert.Equal("Mutfağın ustaları", live.TeamTitle);
+        Assert.Equal("Ayşe Usta", Assert.Single(live.TeamMembers).Name);
+
+        // jsonb dönüştürücüsünden geçen yayın ekibi taşır.
+        Company stored = await DbContext.Companies.AsNoTracking().FirstAsync(c => c.Id == _company.Id);
+        Assert.Equal(Ayse, Assert.Single(stored.GetPublishedSite().Content.TeamMembers).Id);
+    }
+
+    [Fact]
+    public async Task Team_TooManyMembers_IsRejected()
+    {
+        await SeedAsync();
+        SiteEditorDto editor = (await GetAsync()).Value!;
+        SaveSiteDraftCommand command = TextsFrom(editor.Draft, editor.Version);
+        command.TeamMembers = [.. Enumerable.Range(1, SiteContent.TeamMembersMax + 1).Select(i => Member(Guid.NewGuid(), "Üye " + i))];
+
+        var result = await SaveAsync(command);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("En fazla 6 ekip üyesi eklenebilir.", result.Error);
+    }
+
+    [Fact]
+    public void Validator_Team_LimitsAndCount()
+    {
+        var validator = new SaveSiteDraftCommandValidator();
+        Assert.False(validator.TestValidate(new SaveSiteDraftCommand { TeamMembers = [Member(Ayse, new string('a', SiteContent.TeamNameMaxLength + 1))] }).IsValid);
+        Assert.False(validator.TestValidate(new SaveSiteDraftCommand { TeamMembers = [Member(Ayse, "Ayşe", new string('r', SiteContent.TeamRoleMaxLength + 1))] }).IsValid);
+        Assert.False(validator.TestValidate(new SaveSiteDraftCommand { TeamMembers = [Member(Ayse, "Ayşe", "Şef", new string('n', SiteContent.TeamNoteMaxLength + 1))] }).IsValid);
+        validator.TestValidate(new SaveSiteDraftCommand { TeamTitle = new string('t', SiteContent.TeamTitleMaxLength + 1) })
+            .ShouldHaveValidationErrorFor(x => x.TeamTitle);
+        validator.TestValidate(new SaveSiteDraftCommand { TeamIntro = new string('i', SiteContent.TeamIntroMaxLength + 1) })
+            .ShouldHaveValidationErrorFor(x => x.TeamIntro);
+        Assert.False(validator.TestValidate(new SaveSiteDraftCommand
+        {
+            TeamMembers = [.. Enumerable.Range(0, SiteContent.TeamMembersMax + 1).Select(_ => Member(Guid.NewGuid(), "Üye"))],
+        }).IsValid);
+        validator.TestValidate(new SaveSiteDraftCommand
+        {
+            TeamMembers = [Member(Ayse, new string('a', SiteContent.TeamNameMaxLength), "Şef", new string('n', SiteContent.TeamNoteMaxLength))],
+            TeamTitle = new string('t', SiteContent.TeamTitleMaxLength),
+        }).ShouldNotHaveAnyValidationErrors();
+        validator.TestValidate(new SaveSiteDraftCommand { TeamMembers = null, TeamTitle = null }).ShouldNotHaveAnyValidationErrors();
     }
 }

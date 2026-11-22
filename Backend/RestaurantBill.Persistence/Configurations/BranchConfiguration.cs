@@ -90,6 +90,8 @@ internal static class SiteContentJson
     internal sealed record StoredValue(string? Title, string? Text);
     internal sealed record StoredMilestone(int Year, string? Text);
     internal sealed record StoredRegion(Guid Id, string? Photo, string? Text);
+    internal sealed record StoredHomeSection(string? Key, bool On);
+    internal sealed record StoredTeamMember(Guid Id, string? Name, string? Role, string? Note, string? Photo);
 
     internal sealed record Stored(
         string? Theme, List<string>? Gallery, List<StoredDay>? Week, string? Directions, string? Whatsapp, List<string>? Amenities,
@@ -98,7 +100,8 @@ internal static class SiteContentJson
         List<StoredValue>? Values, List<StoredMilestone>? Milestones, List<StoredRegion>? Regions,
         string? SeoTitle = null, string? SeoDescription = null, string? ShareImage = null,
         string? MenuHero = null, string? AboutHero = null, string? VenueHero = null, string? ContactHero = null, string? ReservationHero = null,
-        List<string>? HiddenFaqs = null, string? Design = null, string? Font = null);
+        List<string>? HiddenFaqs = null, string? Design = null, string? Font = null, List<StoredHomeSection>? HomeSections = null,
+        List<StoredTeamMember>? Team = null, string? TeamTitle = null, string? TeamIntro = null);
 
     private const string TimeFormat = "HH:mm";
 
@@ -122,7 +125,10 @@ internal static class SiteContentJson
             c.RegionDetails.Select(r => new StoredRegion(r.RegionId, r.PhotoKey, r.Description)).ToList(),
             c.SeoTitle, c.SeoDescription, c.ShareImage,
             c.MenuHero, c.AboutHero, c.VenueHero, c.ContactHero, c.ReservationHero,
-            [.. c.HiddenFaqs], c.Design, c.Font);
+            [.. c.HiddenFaqs], c.Design, c.Font,
+            c.HomeSections.Select(h => new StoredHomeSection(h.Key, h.Enabled)).ToList(),
+            c.TeamMembers.Select(m => new StoredTeamMember(m.Id, m.Name, m.Role, m.Note, m.PhotoKey)).ToList(),
+            c.TeamTitle, c.TeamIntro);
 
     public static SiteContent Deserialize(string json) => FromStored(JsonSerializer.Deserialize<Stored>(json)!);
 
@@ -141,6 +147,10 @@ internal static class SiteContentJson
             WhatsappPhone = s.Whatsapp ?? string.Empty,
             Amenities = s.Amenities ?? [],
             HiddenFaqs = s.HiddenFaqs ?? [],
+            // Bilinmeyen anahtar (kaldırılmış bölüm) atlanır; eksik anahtarları ön yüz varsayılan sırayla ekler.
+            HomeSections = (s.HomeSections ?? [])
+                .Where(h => h.Key is not null && SiteContent.HomeSectionKeys.Contains(h.Key))
+                .Select(h => new SiteHomeSection(h.Key!, h.On)).ToList(),
             Rating = s.Rating,
             ReviewCount = s.ReviewCount,
             ReviewsUrl = s.ReviewsUrl ?? string.Empty,
@@ -153,6 +163,10 @@ internal static class SiteContentJson
             Values = (s.Values ?? []).Select(v => new SiteValue(v.Title ?? string.Empty, v.Text ?? string.Empty)).ToList(),
             Milestones = (s.Milestones ?? []).Select(m => new SiteMilestone(m.Year, m.Text ?? string.Empty)).ToList(),
             RegionDetails = (s.Regions ?? []).Select(r => new SiteRegionDetail(r.Id, r.Photo ?? string.Empty, r.Text ?? string.Empty)).ToList(),
+            TeamMembers = (s.Team ?? []).Select(m => new SiteTeamMember(m.Id, m.Name ?? string.Empty, m.Role ?? string.Empty, m.Note ?? string.Empty,
+                m.Photo ?? string.Empty)).ToList(),
+            TeamTitle = s.TeamTitle ?? string.Empty,
+            TeamIntro = s.TeamIntro ?? string.Empty,
             SeoTitle = s.SeoTitle ?? string.Empty,
             SeoDescription = s.SeoDescription ?? string.Empty,
             ShareImage = s.ShareImage ?? string.Empty,
@@ -171,7 +185,7 @@ internal static class SiteDraftJson
 {
     private sealed record Stored(
         string? Headline, string? Tagline, string? StoryTitle, string? About, string? Cover, string? AboutImage,
-        string? Opens, string? Closes, string? HoursNote, string? Instagram, string? Accent, SiteContentJson.Stored? Content);
+        string? Opens, string? Closes, string? HoursNote, string? Instagram, string? Accent, SiteContentJson.Stored? Content, string? Logo = null);
 
     private const string TimeFormat = "HH:mm";
 
@@ -181,7 +195,7 @@ internal static class SiteDraftJson
         => JsonSerializer.Serialize(new Stored(
             d.Headline, d.Tagline, d.StoryTitle, d.About, d.CoverImage, d.AboutImage,
             d.OpensAt?.ToString(TimeFormat, CultureInfo.InvariantCulture), d.ClosesAt?.ToString(TimeFormat, CultureInfo.InvariantCulture),
-            d.HoursNote, d.InstagramUrl, d.AccentColor, SiteContentJson.ToStored(d.Content)));
+            d.HoursNote, d.InstagramUrl, d.AccentColor, SiteContentJson.ToStored(d.Content), d.LogoImage));
 
     public static SiteSnapshot Deserialize(string json)
     {
@@ -194,6 +208,7 @@ internal static class SiteDraftJson
             About = s.About ?? string.Empty,
             CoverImage = s.Cover ?? string.Empty,
             AboutImage = s.AboutImage ?? string.Empty,
+            LogoImage = s.Logo ?? string.Empty,
             OpensAt = string.IsNullOrEmpty(s.Opens) ? null : TimeOnly.ParseExact(s.Opens, TimeFormat, CultureInfo.InvariantCulture),
             ClosesAt = string.IsNullOrEmpty(s.Closes) ? null : TimeOnly.ParseExact(s.Closes, TimeFormat, CultureInfo.InvariantCulture),
             HoursNote = s.HoursNote ?? string.Empty,
@@ -276,20 +291,23 @@ internal static class OnlineOrderSettingsJson
 // Saklanan şekil alan adlarıyla sabittir. Eksik alan (sonradan eklenen bir anahtar) açık sayılır.
 internal static class QrFeaturesJson
 {
-    private sealed record Stored(bool? Ordering, bool? CallWaiter, bool? BillRequest, bool? DeliveryLink, bool? ReservationLink);
+    // Featured ve Popular sonradan eklendi: eski kayıtta yok, varsayılan (öne çıkanlar açık, popüler kapalı).
+    private sealed record Stored(bool? Ordering, bool? CallWaiter, bool? BillRequest, bool? DeliveryLink, bool? ReservationLink,
+        bool? Featured = null, bool? Popular = null);
 
     public static string? SerializeOrNull(QrFeatures? features) => features is null ? null : Serialize(features);
 
     public static string Serialize(QrFeatures features)
         => JsonSerializer.Serialize(new Stored(
             features.OrderingEnabled, features.CallWaiterEnabled, features.BillRequestEnabled,
-            features.DeliveryLinkEnabled, features.ReservationLinkEnabled));
+            features.DeliveryLinkEnabled, features.ReservationLinkEnabled, features.FeaturedSectionEnabled, features.PopularSectionEnabled));
 
     public static QrFeatures Deserialize(string json)
     {
         Stored stored = JsonSerializer.Deserialize<Stored>(json)!;
         return QrFeatures.Create(
             stored.Ordering ?? true, stored.CallWaiter ?? true, stored.BillRequest ?? true,
-            stored.DeliveryLink ?? true, stored.ReservationLink ?? true);
+            stored.DeliveryLink ?? true, stored.ReservationLink ?? true,
+            stored.Featured ?? QrFeatures.Default.FeaturedSectionEnabled, stored.Popular ?? QrFeatures.Default.PopularSectionEnabled);
     }
 }

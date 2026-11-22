@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using RestaurantBill.Application.Features.Categories;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
@@ -163,6 +164,11 @@ public class SubmitDeliveryOrderCommandHandler(
         if (pricedResult.IsFailure)
             return Fail(pricedResult.Error!);
         PricedCart cart = pricedResult.Value!;
+
+        // Servis penceresi dışındaki kategori (ör. pide fırını kapandı) gönderim anında reddedilir.
+        string? windowError = await CategoryAvailability.FindUnavailableAsync(db, branch.Id, CategoryAvailability.ItemsOf(cart.Lines), now, cancellationToken);
+        if (windowError is not null)
+            return Fail(windowError);
 
         if (cart.Total != request.ExpectedTotal)
         {

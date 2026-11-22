@@ -87,7 +87,7 @@ public class StaffAccessTests : ApplicationTestBase
     public async Task Waiter_WithoutTakeOrdersPermission_CannotOpenOrder()
     {
         Table table = await SeedTableAsync();
-        FakeCurrentUserService waiter = await SeedStaffAsync(UserRole.Waiter, m => m.SetWaiterPermissions(false, false, false, false));
+        FakeCurrentUserService waiter = await SeedStaffAsync(UserRole.Waiter, m => m.SetWaiterPermissions(false, false, false, false, false));
 
         var result = await new CreateOrderCommandHandler(Db, waiter).Handle(new CreateOrderCommand { TableId = table.Id }, CancellationToken.None);
 

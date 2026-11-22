@@ -460,3 +460,31 @@ html.theme-transition *::after {
 @media (prefers-reduced-motion: reduce) {
   .online-order-pulse { animation: none; }
 }
+
+/* Masa QR menüsü (pages/public/qrMenu): sepete ekleme geri bildirimi. "+" kısa süre "✓" olur (qr-pop), sepet çubuğu
+   bir kez "nabız" atar (qr-cart-bump), "Sepete eklendi" şeridi alttan belirir (qr-toast). Hareket azaltılmışsa
+   animasyon yok; şerit ve renk değişimi yine görünür. */
+@keyframes qr-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.qr-pop { animation: qr-pop 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes qr-cart-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.035); box-shadow: 0 0 0 4px color-mix(in srgb, var(--site-accent) 28%, transparent), 0 14px 30px -12px rgba(0, 0, 0, 0.45); }
+  100% { transform: scale(1); }
+}
+.qr-cart-bump { animation: qr-cart-bump 420ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+@keyframes qr-toast-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.qr-toast { animation: qr-toast-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .qr-pop, .qr-toast { animation: none; }
+  .qr-cart-bump { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--site-accent) 28%, transparent), 0 14px 30px -12px rgba(0, 0, 0, 0.45); }
+}

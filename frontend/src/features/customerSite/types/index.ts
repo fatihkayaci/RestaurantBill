@@ -9,10 +9,16 @@ export interface PublicProduct {
     isStockImage: boolean;
     description: string;
     isFeatured: boolean;
+    /** Admin'in "Yeni" etiketi (30 gün); eski sunucuda yok. */
+    isNew?: boolean;
     /** Tahmini hazırlanma süresi (dk); null ise gösterilmez. */
     prepMinutes: number | null;
     /** "Tükendi": menüde görünür, masadan sipariş edilemez. */
     isOutOfStock: boolean;
+    /** Alerjen bayrakları (features/products/dietaryTags: ALLERGENS); eski sunucu: yok. */
+    allergens?: number;
+    /** Diyet / bilgi etiketleri (DIET_TAGS: vegan, vejetaryen, glutensiz, helal, acılı); eski sunucu: yok. */
+    dietTags?: number;
 }
 
 /** Şubenin site içeriği; admin "Restoran sitesi" sayfası da aynı şekli kullanır. Boş alanın bölümü çizilmez. */
@@ -24,6 +30,8 @@ export interface BranchSite {
     about: string;
     coverImageUrl: string;
     aboutImageUrl: string;
+    /** Restoran logosu (QR menü başlığı, fotoğrafsız ürünlerin yer tutucusu); boş = yok. Eski sunucu göndermezse de boş. */
+    logoUrl?: string;
     /** "HH:mm" ya da null */
     opensAt: string | null;
     closesAt: string | null;
@@ -33,8 +41,11 @@ export interface BranchSite {
     accentColor: string;
     /** Hazır renk teması (tasarımın temalarından biri; Renkli'de vurgu + kapak, Sade'de yalnız vurgu); boş = varsayılan. */
     theme: string;
-    /** Sitenin tasarımı ("renkli" | "sade"); boş = renkli. Eski API yanıtında yoksa da renkli. */
+    /** Sitenin tasarımı (SITE_DESIGN_KEYS); boş = varsayılan (Sophra). */
     design?: string;
+    /** Anasayfa bölümlerinin sırası ve görünürlüğü (HOME_SECTION_KEYS); boş = varsayılan sıra, hepsi açık. Yalnız bölüm
+     *  düzenini kullanan tasarım (Sophra) okur. */
+    homeSections: SiteHomeSection[];
     /** Yazı tipi çifti (SITE_FONTS anahtarı, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi. */
     font?: string;
     /** Mekân fotoğrafları, sitedeki sırayla (en çok 12). */
@@ -60,6 +71,12 @@ export interface BranchSite {
     foundedYear: number | null;
     values: SiteValue[];
     milestones: SiteMilestone[];
+    /** Hakkımızda'daki "Ekibimiz" üyeleri, sitedeki sırayla (en çok 6). Adı boş üye (fotoğrafı korunmuş) sitede çizilmez. */
+    teamMembers: SiteTeamMember[];
+    /** "Ekibimiz" başlığı; boş = tasarımın varsayılanı. */
+    teamTitle: string;
+    /** "Ekibimiz" giriş cümlesi; boş = tasarımın varsayılanı. */
+    teamIntro: string;
     /** Yalnız admin: şubenin bütün bölümleri (sitede bu bilgi regions[] içinde). */
     regionDetails: SiteRegionDetail[];
     /** Google/paylaşım başlığı; boş = otomatik ("Ad · ilçe"). */
@@ -127,6 +144,24 @@ export interface SiteDayHours {
     closes: string;
 }
 
+/** "Ekibimiz" üyesi: ustayla birlikte çalışan biri. Fotoğraf kimliğe bağlıdır (sıra değişse de kişide kalır). */
+export interface SiteTeamMember {
+    id: string;
+    name: string;
+    /** "Mutfak şefi"; boş olabilir. */
+    role: string;
+    /** İsteğe bağlı tek satır not. */
+    note: string;
+    /** Kendi yüklenmiş portre (hazır görsel yok); boş = baş harfler. */
+    photoUrl: string;
+}
+
+/** Anasayfanın bir bölümü: "categories" | "featured" | "about" | "team" | "features" | "gallery" | "reviews" | "contact". */
+export interface SiteHomeSection {
+    key: string;
+    enabled: boolean;
+}
+
 export interface SiteReview {
     author: string;
     text: string;
@@ -175,6 +210,12 @@ export interface SiteChecklistItem {
 export interface PublicCategory {
     id: string;
     name: string;
+    /** Müşteri menüsündeki görünüm ("auto" | "cards" | "list"); eski sunucuda yok: otomatik. */
+    menuDisplay?: 'auto' | 'cards' | 'list';
+    /** Kategorinin servis penceresine göre şu an sipariş edilebilir mi (şubenin saatiyle); eski sunucu: yok, açık say. */
+    availableNow?: boolean;
+    /** "12:00'ye kadar", "18:00'den itibaren", "Hafta içi 08:00–12:00"; pencere yoksa boş. */
+    availabilityLabel?: string;
     products: PublicProduct[];
 }
 
@@ -268,32 +309,51 @@ export interface PublicTableInfo {
     /** Şube şu an online paket sipariş alıyor mu (ayarda açık ve durdurulmamış). */
     acceptsOnlineOrders: boolean;
     /**
-     * Bu telefonun masadaki durumu: none masa kimseye bağlı değil, mine bu telefondan sipariş veriliyor, other başka bir
-     * telefondan veriliyor (sepet kapalı). Eski sunucu göndermezse none sayılır.
+     * Personel bu masada QR'dan siparişi kilitledi: menü, garson çağırma, hesap isteme ve hesap açık; sepet ve gönderim
+     * kapalı (sunucu da reddeder). Eski sunucu göndermezse açık sayılır.
      */
-    orderLock?: TableOrderLock;
+    qrOrderingLocked?: boolean;
+    /**
+     * "Popüler" bölümünün ürün kimlikleri, çok satandan aza (en çok 8). Bölüm kapalıysa ya da yeterli satış yoksa boş;
+     * eski sunucu göndermez.
+     */
+    popularProductIds?: string[];
 }
 
-export type TableOrderLock = 'none' | 'mine' | 'other';
+/** Personel masada QR siparişini kilitlediğinde gösterilen mesaj (sunucunun reddiyle aynı metin). */
+export const TABLE_QR_LOCKED_MESSAGE = 'Bu masada QR ile sipariş şu an kapalı. Siparişinizi garsonumuza verebilirsiniz.';
 
-/** Masa başka telefona bağlıyken gösterilen mesaj (sunucunun reddiyle aynı metin). */
-export const TABLE_LOCKED_MESSAGE = 'Bu masanın siparişleri başka bir telefondan veriliyor. Siparişinizi garsonumuza verebilirsiniz.';
-
-/** "Masanın hesabı": açık hesabın kalemleri (garsonun ekledikleri ve menüler dahil). */
+/**
+ * "Masanın hesabı": açık hesabın kalemleri (garsonun ekledikleri ve menüler dahil). Açık hesap masadaki her telefonda
+ * görünür; ödenen hesap yalnız ona sipariş veren telefonlarda bir süre.
+ */
 export interface PublicTableBill {
-    /** false: ilk sipariş henüz garson onayında; hesap gösterilmez. */
+    /** false: masada açık hesap yok (ya da bu telefonun görebileceği ödenen hesap yok). */
     hasBill: boolean;
     items: PublicTableBillLine[];
     total: number;
     paid: number;
     remaining: number;
     billRequestedAt: string | null;
-    /** true: hesap ödenip kapandı; kalemler ödenenlerdir, kalan 0. Sunucu bunu yalnız hesabın telefonuna bir süre gösterir. */
+    /** true: hesap ödenip kapandı; kalemler ödenenlerdir, kalan 0. Sunucu bunu yalnız hesaba sipariş veren telefonlara bir süre gösterir. */
     isPaid: boolean;
     /** Bu telefonun masadaki son ödenen hesabının kapanış anı; açık hesapta önceki hesabınki olabilir, yoksa null. */
     paidAt: string | null;
     /** Ödenen hesapta uygulanan iskonto. */
     discount: number;
+    /** Personel masada QR siparişini kilitledi (yoklamada güncellenir); eski sunucu göndermez. */
+    qrOrderingLocked?: boolean;
+    /**
+     * Masadan gönderilip garson onayı bekleyen QR siparişleri (yalnız bilgi: zaman ve adet, ürün adı yok). Açık hesap
+     * varken ya da son 30 dakikada gönderildiyse gelir; isMine bu telefonunki. Eski sunucu: yok.
+     */
+    pendingRequests?: PublicPendingRequest[];
+}
+
+export interface PublicPendingRequest {
+    sentAt: string;
+    itemCount: number;
+    isMine: boolean;
 }
 
 export interface PublicTableBillLine {
@@ -304,6 +364,8 @@ export interface PublicTableBillLine {
     /** Menü satırının içindeki ürünler. */
     details: string[];
     note: string;
+    /** "Paket olsun" denen kalem (eski sunucu: yok). */
+    isTakeaway?: boolean;
 }
 
 /** Masa QR karşılama ekranının anahtarları; admin "QR menü özellikleri" de aynı şekli kullanır. */
@@ -313,13 +375,17 @@ export interface QrFeatures {
     billRequestEnabled: boolean;
     deliveryLinkEnabled: boolean;
     reservationLinkEnabled: boolean;
+    /** Menü başındaki "Öne Çıkanlar" bölümü; eski sunucu göndermezse açık sayılır. */
+    featuredSectionEnabled?: boolean;
+    /** "Popüler" bölümü (son 30 günün en çok satanları); eski sunucu göndermezse kapalı. */
+    popularSectionEnabled?: boolean;
 }
 
 /** "Garson çağır" / "Hesap iste" sonucu. sent=false: bu masadan az önce yapılmış, yeniden bildirilmedi. */
 export interface TableActionResult {
     sent: boolean;
     retryAfterSeconds: number;
-    /** Yalnız "Hesap iste" ve yalnız masanın bağlı olduğu telefonda: ödenecek kalan. */
+    /** Yalnız "Hesap iste"de: masanın açık hesabında ödenecek kalan. */
     billTotal?: number | null;
 }
 
@@ -340,11 +406,58 @@ export const ORDER_REQUEST_REJECTED = 3;
 export const ORDER_REQUEST_CANCELLED = 4;
 export const ORDER_REQUEST_EXPIRED = 5;
 
+/**
+ * Müşterinin gördüğü sipariş aşaması (zaman çizelgesi). Onaydan sonra talebin kalemlerinin mutfak durumundan türetilir:
+ * hepsi bekliyorsa Approved, mutfak başladıysa Preparing, hepsi hazırsa OnTheWay ("Masanıza geliyor"), hepsi servis
+ * edildiyse Served.
+ */
+export type OrderRequestStage = 'Sent' | 'Approved' | 'Preparing' | 'OnTheWay' | 'Served' | 'Rejected' | 'Cancelled';
+
+export const ORDER_REQUEST_STAGE_LABELS: Record<OrderRequestStage, string> = {
+    Sent: 'Gönderildi',
+    Approved: 'Onaylandı',
+    Preparing: 'Hazırlanıyor',
+    OnTheWay: 'Masanıza geliyor',
+    Served: 'Servis edildi',
+    Rejected: 'Reddedildi',
+    Cancelled: 'İptal edildi',
+};
+
+/** Aşama bu noktada son buldu mu (yoklama durdurulabilir). */
+export function isFinalOrderRequestStage(stage: OrderRequestStage | undefined): boolean {
+    return stage === 'Served' || stage === 'Rejected' || stage === 'Cancelled';
+}
+
 export interface OrderRequestStatus {
     id: string;
     status: number;
     /** Reddedildiyse garsonun yazdığı neden; boş olabilir. */
     rejectReason?: string;
+    /** Müşteri aşaması; eski sunucu: yok (status'a bakılır). */
+    stage?: OrderRequestStage;
+}
+
+/** Kasiyer hub'ının "BillRequested" olayının dördüncü argümanı: müşterinin hesap isteğindeki tercihi. */
+export interface BillRequestHint {
+    paymentHint?: number | null;
+    splitCount?: number | null;
+    remaining?: number;
+}
+
+/** "Garson çağır" gövdesi; reason verilmezse nedensiz çağrı (eski davranış). */
+export interface CallWaiterInput {
+    /** WaiterCallReason (features/customerSite/tableActions). */
+    reason?: number;
+    /** Yalnız "Diğer"de; en fazla 100 karakter. */
+    note?: string;
+}
+
+/** "Hesap iste" gövdesi. "Hesap" garson çağırma nedeni değildir; bu uçtan gider. */
+export interface RequestBillInput {
+    /** BillPaymentHint: 1 Nakit, 2 Kart, 3 IBAN. */
+    paymentHint?: number;
+    /** Hesap kaç kişiye bölünecek (2–20). */
+    splitCount?: number;
 }
 
 // Backend ReservationStatus: 2 iptal, 3 bekliyor, 4 onaylandı, 5 reddedildi, 6 geldi, 7 gelmedi (1: personelin açtığı eski tip).
@@ -433,6 +546,8 @@ export interface OrderRequestItem {
     quantity: number;
     unitPrice: number;
     note: string;
+    /** Müşteri QR'da "Paket olsun" dedi (eski sunucu: yok). */
+    isTakeaway?: boolean;
 }
 
 export interface OrderRequest {
@@ -455,6 +570,8 @@ export interface OrderRequestCreatedEvent {
     regionName: string;
     /** Taleplerdeki toplam adet (2× çay + 1× menü = 3). */
     itemCount: number;
+    /** Bunlardan müşterinin "Paket olsun" dediği adet (eski sunucu: yok). */
+    takeawayCount?: number;
     createdAt: string;
 }
 

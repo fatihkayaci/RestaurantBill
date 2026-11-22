@@ -5,6 +5,7 @@ using RestaurantBill.Application.Common;
 using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.DTOs.CustomerSite;
 using RestaurantBill.Application.DTOs.Delivery;
+using RestaurantBill.Application.Features.Categories;
 using RestaurantBill.Application.Features.Delivery;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
@@ -21,7 +22,7 @@ public class CreateOrderRequestCommand : IRequest<Result<OrderRequestStatusDto>>
     public List<OrderRequestItemInput> Items { get; set; } = [];
     public string? Note { get; set; }
     /// <summary>
-    /// Telefonun cihaz anahtarının özeti (QrTableLock.HashToken). Gövdeden değil X-Device-Token başlığından gelir; controller
+    /// Telefonun cihaz anahtarının özeti (QrTableAccess.HashToken). Gövdeden değil X-Device-Token başlığından gelir; controller
     /// özetler ki anahtarın kendisi hiçbir yere (yavaş istek logu dahil) düşmesin.
     /// </summary>
     [System.Text.Json.Serialization.JsonIgnore]
@@ -39,6 +40,8 @@ public class OrderRequestItemInput
     public Guid? SetMenuId { get; set; }
     public int Quantity { get; set; }
     public string? Note { get; set; }
+    /// <summary>Müşteri bu kalem için "Paket olsun" dedi (masada değil, paketlenip verilir). Eski istemcilerde false.</summary>
+    public bool IsTakeaway { get; set; }
     /// <summary>Menü: bölüm → ürün; gönderilmeyen bölümde varsayılan seçenek alınır.</summary>
     public List<CartSelectionInput> Selections { get; set; } = [];
 
@@ -83,7 +86,7 @@ public class CreateOrderRequestCommandValidator : AbstractValidator<CreateOrderR
 }
 
 public class CreateOrderRequestCommandHandler(
-    IAppDbContext db, ITenantResolver tenant, IOrderPricingService pricing, ITableNotificationService tableNotifications)
+    IAppDbContext db, ITenantResolver tenant, IOrderPricingService pricing, ITableNotificationService tableNotifications, TimeProvider? clock = null)
     : IRequestHandler<CreateOrderRequestCommand, Result<OrderRequestStatusDto>>
 {
     public static string OutOfStockMessage(string productName)
@@ -108,15 +111,14 @@ public class CreateOrderRequestCommandHandler(
         if (!features.OrderingEnabled)
             return Result<OrderRequestStatusDto>.Failure(CustomerSiteScope.OrderingDisabledMessage);
 
-        // Masa sahibi telefon kuralı (QrTableLock): masa başka bir telefona bağlıysa talep garsona hiç düşmez.
+        // Personel masada QR siparişini kilitlediyse talep garsona hiç düşmez.
+        if (table.QrOrderingLocked)
+            return Result<OrderRequestStatusDto>.Failure(QrTableAccess.OrderingLockedMessage);
+
+        // Masadaki her telefon sipariş verebilir; cihaz anahtarı telefonun kendi taleplerini ve katıldığı hesabı tanıtır.
         string? tokenHash = request.DeviceTokenHash;
         if (tokenHash is null)
-            return Result<OrderRequestStatusDto>.Failure(QrTableLock.MissingTokenMessage);
-
-        Order? openOrder = await QrTableLock.FindOpenOrderAsync(db, table.Id, track: false, cancellationToken);
-        string? ownerHash = await QrTableLock.OwnerHashAsync(db, table.Id, openOrder, cancellationToken);
-        if (QrTableLock.StateOf(ownerHash, tokenHash) == QrLockState.Other)
-            return Result<OrderRequestStatusDto>.Failure(QrTableLock.OtherDeviceMessage);
+            return Result<OrderRequestStatusDto>.Failure(QrTableAccess.MissingTokenMessage);
 
         int pendingCount = await db.OrderRequests
             .CountAsync(r => r.TableId == table.Id && r.Status == OrderRequestStatus.Pending && r.Kind == OrderRequestKind.TableQr, cancellationToken);
@@ -153,7 +155,15 @@ public class CreateOrderRequestCommandHandler(
             pricedMenus = priced.Value!.Lines;
         }
 
-        // Masa kimseye bağlı değilse bu talep masayı bu telefona bağlar; hesaba bağlanma garson onaylayınca olur.
+        // Servis penceresi dışındaki kategori (ör. pide fırını kapandı) gönderim anında reddedilir. Garson bekleyen talebi
+        // pencere geçtikten sonra da onaylayabilir; kontrol yalnız burada yapılır.
+        IEnumerable<(Guid CategoryId, string ItemName)> windowItems = products.Select(p => (p.CategoryId, p.Name))
+            .Concat(CategoryAvailability.ItemsOf(pricedMenus));
+        string? windowError = await CategoryAvailability.FindUnavailableAsync(db, branchId, windowItems, (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime, cancellationToken);
+        if (windowError is not null)
+            return Result<OrderRequestStatusDto>.Failure(windowError);
+
+        // Talep hesaba garson onaylayınca yazılır (OrderRequest.OrderId); telefon o zaman hesabın katılımcısı olur.
         OrderRequest orderRequest = OrderRequest.Create(table.Id, request.Note, tokenHash);
         int menuIndex = 0;
         try
@@ -164,11 +174,11 @@ public class CreateOrderRequestCommandHandler(
                 if (item.IsSetMenu)
                 {
                     PricedLine line = pricedMenus[menuIndex++];
-                    orderRequest.AddSetMenuItem(line.SetMenu!, line.Quantity, DeliveryScope.SerializeSelections(line.Selections), line.Note);
+                    orderRequest.AddSetMenuItem(line.SetMenu!, line.Quantity, DeliveryScope.SerializeSelections(line.Selections), line.Note, isTakeaway: item.IsTakeaway);
                 }
                 else
                 {
-                    orderRequest.AddItem(products.First(p => p.Id == item.ProductId), item.Quantity, item.Note);
+                    orderRequest.AddItem(products.First(p => p.Id == item.ProductId), item.Quantity, item.Note, isTakeaway: item.IsTakeaway);
                 }
             }
         }
@@ -189,9 +199,10 @@ public class CreateOrderRequestCommandHandler(
             RegionId = table.RegionId,
             RegionName = table.Region.Name,
             ItemCount = orderRequest.Items.Sum(i => i.Quantity),
+            TakeawayCount = orderRequest.Items.Where(i => i.IsTakeaway).Sum(i => i.Quantity),
             CreatedAt = orderRequest.CreatedAt,
         });
 
-        return Result<OrderRequestStatusDto>.Success(new OrderRequestStatusDto { Id = orderRequest.Id, Status = (int)orderRequest.Status });
+        return Result<OrderRequestStatusDto>.Success(new OrderRequestStatusDto { Id = orderRequest.Id, Status = (int)orderRequest.Status, Stage = nameof(OrderRequestStage.Sent) });
     }
 }

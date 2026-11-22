@@ -12,6 +12,8 @@ public class BranchSiteDto
     public string About { get; set; } = string.Empty;
     public string CoverImageUrl { get; set; } = string.Empty;
     public string AboutImageUrl { get; set; } = string.Empty;
+    /// <summary>Restoran logosu (tam adres); yoksa boş. QR menü başlığı ve fotoğrafsız ürünlerin yer tutucusu.</summary>
+    public string LogoUrl { get; set; } = string.Empty;
     /// <summary>"HH:mm" ya da null. Haftalık saat girildiyse en sık görülen aralık (eski istemciler ve varsayılanlar için).</summary>
     public string? OpensAt { get; set; }
     public string? ClosesAt { get; set; }
@@ -22,7 +24,7 @@ public class BranchSiteDto
 
     /// <summary>Hazır renk teması ("terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"); boş = terracotta.</summary>
     public string Theme { get; set; } = string.Empty;
-    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"); boş = renkli. Renk teması her tasarımda ayrı çizilir.</summary>
+    /// <summary>Sitenin tasarımı (SiteContent.DesignKeys); boş = varsayılan (sophra). Renk teması her tasarımda ayrı çizilir.</summary>
     public string Design { get; set; } = string.Empty;
     /// <summary>Yazı tipi çifti (SiteContent.FontKeys, ör. "playfair-inter"); boş = tasarımın kendi yazı tipi.</summary>
     public string Font { get; set; } = string.Empty;
@@ -37,6 +39,8 @@ public class BranchSiteDto
     public List<string> Amenities { get; set; } = [];
     /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları ("rezervasyon", "otopark"...); boş = hepsi görünür.</summary>
     public List<string> HiddenFaqs { get; set; } = [];
+    /// <summary>Anasayfa bölümlerinin sırası ve görünürlüğü (SiteContent.HomeSectionKeys); boş = varsayılan sıra, hepsi açık.</summary>
+    public List<SiteHomeSectionDto> HomeSections { get; set; } = [];
     public decimal? Rating { get; set; }
     public int? ReviewCount { get; set; }
     /// <summary>Google Haritalar (ya da başka) yorum sayfası.</summary>
@@ -49,6 +53,13 @@ public class BranchSiteDto
     public int? FoundedYear { get; set; }
     public List<SiteValueDto> Values { get; set; } = [];
     public List<SiteMilestoneDto> Milestones { get; set; } = [];
+    /// <summary>Hakkımızda'daki "Ekibimiz" üyeleri, sitedeki sırayla (en çok 6). Adı boş üye (fotoğrafı korunan) yalnız admin içindir;
+    /// sitede çizilmez.</summary>
+    public List<SiteTeamMemberDto> TeamMembers { get; set; } = [];
+    /// <summary>"Ekibimiz" başlığı; boş = tasarımın varsayılanı.</summary>
+    public string TeamTitle { get; set; } = string.Empty;
+    /// <summary>"Ekibimiz" giriş cümlesi; boş = tasarımın varsayılanı.</summary>
+    public string TeamIntro { get; set; } = string.Empty;
     /// <summary>Yalnız admin: şubenin bütün bölümleri, fotoğraf ve açıklamasıyla. Sitede bu bilgi regions[] içindedir.</summary>
     public List<SiteRegionDetailDto> RegionDetails { get; set; } = [];
     /// <summary>Girilen Google/paylaşım başlığı; boş = otomatik. Geçerli değer için PublicSiteDto.Seo / SiteEditorDto.Seo.</summary>
@@ -77,6 +88,7 @@ public class BranchSiteDto
             About = site.About,
             CoverImageUrl = ImageUrl(cdnBaseUrl, site.CoverImage),
             AboutImageUrl = ImageUrl(cdnBaseUrl, site.AboutImage),
+            LogoUrl = ImageUrl(cdnBaseUrl, site.LogoImage),
             OpensAt = site.OpensAt?.ToString("HH:mm", CultureInfo.InvariantCulture),
             ClosesAt = site.ClosesAt?.ToString("HH:mm", CultureInfo.InvariantCulture),
             HoursNote = site.HoursNote,
@@ -91,6 +103,7 @@ public class BranchSiteDto
             WhatsappPhone = content.WhatsappPhone,
             Amenities = [.. content.Amenities],
             HiddenFaqs = [.. content.HiddenFaqs],
+            HomeSections = content.HomeSections.Select(h => new SiteHomeSectionDto { Key = h.Key, Enabled = h.Enabled }).ToList(),
             Rating = content.Rating,
             ReviewCount = content.ReviewCount,
             ReviewsUrl = content.ReviewsUrl,
@@ -102,6 +115,12 @@ public class BranchSiteDto
             FoundedYear = content.FoundedYear,
             Values = content.Values.Select(v => new SiteValueDto { Title = v.Title, Text = v.Text }).ToList(),
             Milestones = content.Milestones.Select(m => new SiteMilestoneDto { Year = m.Year, Text = m.Text }).ToList(),
+            TeamMembers = content.TeamMembers.Select(m => new SiteTeamMemberDto
+            {
+                Id = m.Id, Name = m.Name, Role = m.Role, Note = m.Note, PhotoUrl = ImageUrl(cdnBaseUrl, m.PhotoKey),
+            }).ToList(),
+            TeamTitle = content.TeamTitle,
+            TeamIntro = content.TeamIntro,
             SeoTitle = content.SeoTitle,
             SeoDescription = content.SeoDescription,
             ShareImageUrl = ImageUrl(cdnBaseUrl, content.ShareImage),
@@ -121,6 +140,25 @@ public class SiteSeoDto
     public string Description { get; set; } = string.Empty;
     /// <summary>Tam adres; hiç fotoğraf yoksa boş.</summary>
     public string ShareImageUrl { get; set; } = string.Empty;
+}
+
+/// <summary>"Ekibimiz" üyesi. Kayıtta yalnız Id, Name, Role, Note okunur; fotoğraf ayrı uçtan değişir ve Id'ye göre korunur.</summary>
+public class SiteTeamMemberDto
+{
+    /// <summary>İstemcinin verdiği kimlik (yeni üyede boş da olabilir: sunucu verir).</summary>
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    /// <summary>İsteğe bağlı tek satır not.</summary>
+    public string Note { get; set; } = string.Empty;
+    public string PhotoUrl { get; set; } = string.Empty;
+}
+
+/// <summary>Anasayfanın bir bölümü ("categories", "featured", "about", "team", "features", "gallery", "reviews", "contact") ve görünürlüğü.</summary>
+public class SiteHomeSectionDto
+{
+    public string Key { get; set; } = string.Empty;
+    public bool Enabled { get; set; } = true;
 }
 
 public class SiteDayHoursDto

@@ -85,6 +85,12 @@ public class PublicCategoryDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    /// <summary>Müşteri menüsündeki görünüm: "auto" (fotoğraf oranına göre), "cards", "list".</summary>
+    public string MenuDisplay { get; set; } = "auto";
+    /// <summary>Servis penceresine göre şu an sipariş edilebilir mi (şubenin yerel saati; pencere yoksa true).</summary>
+    public bool AvailableNow { get; set; } = true;
+    /// <summary>"12:00'ye kadar", "18:00'den itibaren", "Hafta içi 08:00–12:00"; pencere yoksa boş.</summary>
+    public string AvailabilityLabel { get; set; } = string.Empty;
     public List<PublicProductDto> Products { get; set; } = [];
 }
 
@@ -98,10 +104,17 @@ public class PublicProductDto
     public bool IsStockImage { get; set; }
     public string Description { get; set; } = string.Empty;
     public bool IsFeatured { get; set; }
+    /// <summary>Admin'in "Yeni" işareti hâlâ geçerli (30 gün).</summary>
+    public bool IsNew { get; set; }
     /// <summary>Tahmini hazırlanma süresi (dk); null ise gösterilmez.</summary>
     public int? PrepMinutes { get; set; }
     /// <summary>"Tükendi": menüde görünür, masadan sipariş edilemez.</summary>
     public bool IsOutOfStock { get; set; }
+    /// <summary>Alerjen bayrakları (ProductAllergen: 1 Gluten, 2 Süt, 4 Yumurta, 8 Yer fıstığı, 16 Sert kabuklu yemiş, 32 Susam,
+    /// 64 Soya, 128 Balık, 256 Kabuklu deniz ürünü, 512 Yumuşakça, 1024 Hardal, 2048 Kereviz, 4096 Sülfit, 8192 Acı bakla).</summary>
+    public int Allergens { get; set; }
+    /// <summary>Diyet / bilgi etiketleri (ProductDietTag: 1 Vegan, 2 Vejetaryen, 4 Glutensiz, 8 Helal, 16 Acılı).</summary>
+    public int DietTags { get; set; }
 }
 
 // BranchSiteDto (şubenin site içeriği) ve ek site alanlarının DTO'ları: SiteContentDtos.cs.
@@ -137,10 +150,15 @@ public class PublicTableInfoDto
     /// <summary>"IBAN ile öde" penceresinin bilgileri; restoran açmadıysa ya da IBAN geçerli değilse null (hiç gönderilmez).</summary>
     public TableIbanPaymentDto? IbanPayment { get; set; }
     /// <summary>
-    /// Masa QR'ında bu telefonun durumu (X-Device-Token): "none" masa kimseye bağlı değil, "mine" bu telefona bağlı,
-    /// "other" başka bir telefondan sipariş veriliyor (sepet kapalı). Sayfayı açmak masayı kilitlemez.
+    /// Personel bu masada QR'dan siparişi kilitledi: menü, garson çağırma, hesap isteme ve hesap açık; sepet ve sipariş
+    /// gönderme kapalı (sunucu da reddeder).
     /// </summary>
-    public string OrderLock { get; set; } = "none";
+    public bool QrOrderingLocked { get; set; }
+    /// <summary>
+    /// "Popüler" bölümünün ürünleri, çok satandan aza (en çok 8). Bölüm kapalıysa ya da son 30 günde yeterli satış yoksa
+    /// (3 üründen az) boş: bölüm gösterilmez.
+    /// </summary>
+    public List<Guid> PopularProductIds { get; set; } = [];
 }
 
 // "IBAN ile öde" bilgileri: masa QR sayfası ve online paket sipariş (ödeme adımı ve takip sayfası). Misafir IBAN'ı
@@ -200,6 +218,10 @@ public class QrFeaturesDto
     public bool BillRequestEnabled { get; set; } = true;
     public bool DeliveryLinkEnabled { get; set; } = true;
     public bool ReservationLinkEnabled { get; set; } = true;
+    /// <summary>Menü başındaki "Öne Çıkanlar" bölümü.</summary>
+    public bool FeaturedSectionEnabled { get; set; } = true;
+    /// <summary>"Popüler" bölümü (son 30 günün en çok satanları); varsayılan kapalı.</summary>
+    public bool PopularSectionEnabled { get; set; }
 
     public static QrFeaturesDto From(QrFeatures features) => new()
     {
@@ -208,6 +230,8 @@ public class QrFeaturesDto
         BillRequestEnabled = features.BillRequestEnabled,
         DeliveryLinkEnabled = features.DeliveryLinkEnabled,
         ReservationLinkEnabled = features.ReservationLinkEnabled,
+        FeaturedSectionEnabled = features.FeaturedSectionEnabled,
+        PopularSectionEnabled = features.PopularSectionEnabled,
     };
 }
 
@@ -217,14 +241,17 @@ public class TableActionResultDto
     public bool Sent { get; set; }
     /// <summary>Bu masadan aynı istek kaç saniye sonra tekrar yapılabilir.</summary>
     public int RetryAfterSeconds { get; set; }
-    /// <summary>Yalnız "Hesap iste" ve yalnız hesabın bağlı olduğu telefonda: ödenecek kalan; diğer durumlarda null.</summary>
+    /// <summary>Yalnız "Hesap iste"de: masanın açık hesabında ödenecek kalan; diğer durumlarda null.</summary>
     public decimal? BillTotal { get; set; }
 }
 
-/// <summary>Masanın açık hesabı; yalnız hesabın bağlı olduğu telefona (QrTableLock) döner.</summary>
+/// <summary>
+/// Masanın hesabı. Açık hesap masanın QR'ını açan her telefona döner; ödenen hesap yalnız o hesaba talebi yazılan
+/// telefonlara (GetTableBillQuery).
+/// </summary>
 public class PublicTableBillDto
 {
-    /// <summary>false: telefon masayı ilk talebiyle tuttu ama garson henüz onaylamadı; hesap yok ya da gösterilmez.</summary>
+    /// <summary>false: masada açık hesap yok (ya da bu telefonun görebileceği ödenen hesap yok).</summary>
     public bool HasBill { get; set; }
     public List<PublicTableBillLineDto> Items { get; set; } = [];
     public decimal Total { get; set; }
@@ -241,6 +268,21 @@ public class PublicTableBillDto
     public DateTime? PaidAt { get; set; }
     /// <summary>Ödenen hesapta uygulanan iskonto toplamı.</summary>
     public decimal Discount { get; set; }
+    /// <summary>Personel masada QR siparişini kilitledi (PublicTableInfoDto.QrOrderingLocked ile aynı; sayfa yoklamada günceller).</summary>
+    public bool QrOrderingLocked { get; set; }
+    /// <summary>
+    /// Masadan gönderilip garson onayı bekleyen QR siparişleri (yalnız bilgi: zaman ve adet, ürün adı yok). Masada açık
+    /// hesap varken ya da son 30 dakikada gönderildiyse listelenir; IsMine bu telefonun gönderdiği talep.
+    /// </summary>
+    public List<PublicPendingRequestDto> PendingRequests { get; set; } = [];
+}
+
+public class PublicPendingRequestDto
+{
+    public DateTime SentAt { get; set; }
+    /// <summary>Talepteki toplam adet.</summary>
+    public int ItemCount { get; set; }
+    public bool IsMine { get; set; }
 }
 
 public class PublicTableBillLineDto
@@ -252,6 +294,8 @@ public class PublicTableBillLineDto
     /// <summary>Menü satırının içindeki ürünler ("Adana", "Ayran").</summary>
     public List<string> Details { get; set; } = [];
     public string Note { get; set; } = string.Empty;
+    /// <summary>Paket kalem ("Paket olsun").</summary>
+    public bool IsTakeaway { get; set; }
 }
 
 public class AvailabilityDto
@@ -265,6 +309,11 @@ public class OrderRequestStatusDto
     public int Status { get; set; }
     /// <summary>Reddedildiyse garsonun müşteriye yazdığı neden; boş olabilir.</summary>
     public string RejectReason { get; set; } = string.Empty;
+    /// <summary>
+    /// Müşterinin gördüğü aşama (OrderRequestStage adı): "Sent", "Approved", "Preparing", "OnTheWay" (Masanıza geliyor),
+    /// "Served", "Rejected", "Cancelled". Onaydan sonra kalemlerin mutfak durumundan türetilir.
+    /// </summary>
+    public string Stage { get; set; } = nameof(RestaurantBill.Domain.Enums.OrderRequestStage.Sent);
 }
 
 // Eski GET reservations/{id} ucu için; kimlik artık döndürülmez (rezervasyon bağlantısı token'la açılır).
@@ -304,6 +353,8 @@ public class OrderRequestItemDto
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public string Note { get; set; } = string.Empty;
+    /// <summary>Müşteri QR'da "Paket olsun" dedi.</summary>
+    public bool IsTakeaway { get; set; }
 }
 
 public class StaffReservationDto

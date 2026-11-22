@@ -13,8 +13,8 @@ public abstract class ApplicationTestBase : IDisposable
     protected readonly IAppDbContext Db;
     protected readonly FakeCurrentUserService CurrentUser;
 
-    // Masa QR'ından sipariş veren test telefonunun cihaz anahtarı özeti (QrTableLock).
-    protected static readonly string DeviceHash = QrTableLock.HashToken("test-device-0000000001")!;
+    // Masa QR'ından sipariş veren test telefonunun cihaz anahtarı özeti (QrTableAccess).
+    protected static readonly string DeviceHash = QrTableAccess.HashToken("test-device-0000000001")!;
 
     protected ApplicationTestBase()
     {

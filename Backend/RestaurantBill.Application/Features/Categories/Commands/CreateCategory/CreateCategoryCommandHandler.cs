@@ -28,6 +28,7 @@ namespace RestaurantBill.Application.Features.Categories.Commands.CreateCategory
                 return Result.Failure("Bu isimde bir kategori zaten mevcut.");
 
             Category category = Category.Create(command.Name, restaurantId, command.TaxRate);
+            command.Availability?.ApplyTo(category);
             // Yeni kategori sona eklenir; yönetici sonra yerini değiştirir.
             int? lastSortOrder = await _db.Categories
                 .Where(c => c.BranchId == restaurantId)

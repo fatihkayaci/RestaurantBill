@@ -236,13 +236,12 @@ public class CustomerFlowTests : ApplicationTestBase
         await SeedAsync();
         Order order = Order.Create(_table.Id, CurrentUser.BranchId);
         order.AddItem(_product, 2);
-        // Tutar yalnız hesabın bağlı olduğu telefona döner (QrTableLock).
-        order.SetQrOwner(DeviceHash);
+        // Masadaki her telefon (cihaz anahtarı olmasa da) açık hesabın kalanını görür.
         DbContext.Orders.Add(order);
         await DbContext.SaveChangesAsync();
 
         var result = await new RequestTableBillCommandHandler(Db, _tenant, _tableNotifications, _cashierNotifications, new TableActionCooldown(_clock), _clock)
-            .Handle(new RequestTableBillCommand { TableId = _table.Id, DeviceTokenHash = DeviceHash }, CancellationToken.None);
+            .Handle(new RequestTableBillCommand { TableId = _table.Id }, CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
         Assert.Equal(440m, result.Value!.BillTotal);

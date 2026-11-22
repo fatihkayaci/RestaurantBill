@@ -9,7 +9,10 @@ public enum WaiterPermission
     TakeOrders,
     TakePayment,
     CancelAndDiscount,
-    TransferAndReserve
+    TransferAndReserve,
+    // Masada QR'dan siparişi kilitleme/açma. Diğer yetkilerden farklı olarak kasiyer, mutfak ve kurye bunu hiç
+    // yapamaz; yalnız Owner/Admin ve bu yetkisi verilmiş garson (bkz. CanLockQrOrdering).
+    LockQr
 }
 
 public enum CashierPermission
@@ -26,9 +29,10 @@ public sealed class StaffAccess
     public const string RegionDeniedMessage = "Bu masa size atanan bölge ve masaların dışında.";
     public const string CategoryDeniedMessage = "Bu ürün size atanan kategorilerin dışında.";
     public const string DeliveryDeniedMessage = "Paket siparişler garson ekranından yönetilemez.";
+    public const string QrLockDeniedMessage = "QR siparişini kilitleme yetkiniz yok. Yöneticinizden yetki isteyin.";
     public const string CashierDeliveryDeniedMessage = "Paket siparişleri görme yetkiniz yok. Yöneticinizden yetki isteyin.";
 
-    public static readonly StaffAccess Unrestricted = new(null, null, isWaiter: false, true, true, true, true, cashier: null);
+    public static readonly StaffAccess Unrestricted = new(null, null, isWaiter: false, true, true, true, true, true, cashier: null);
 
     // Kasiyer yetkileri; kasiyer olmayan rollerde null.
     private sealed record CashierRights(bool CanApplyDiscount, int MaxDiscountPercent, bool CanTransferTables, bool CanViewDelivery);
@@ -40,10 +44,11 @@ public sealed class StaffAccess
     private readonly bool _canTakePayment;
     private readonly bool _canCancelAndDiscount;
     private readonly bool _canTransferAndReserve;
+    private readonly bool _canLockQr;
     private readonly CashierRights? _cashier;
 
     private StaffAccess(WaiterScope? waiterScope, HashSet<Guid>? categoryIds, bool isWaiter, bool canTakeOrders, bool canTakePayment, bool canCancelAndDiscount, bool canTransferAndReserve,
-        CashierRights? cashier)
+        bool canLockQr, CashierRights? cashier)
     {
         _waiterScope = waiterScope;
         _categoryIds = categoryIds;
@@ -52,6 +57,7 @@ public sealed class StaffAccess
         _canTakePayment = canTakePayment;
         _canCancelAndDiscount = canCancelAndDiscount;
         _canTransferAndReserve = canTransferAndReserve;
+        _canLockQr = canLockQr;
         _cashier = cashier;
     }
 
@@ -83,6 +89,7 @@ public sealed class StaffAccess
         WaiterPermission.TakePayment => _canTakePayment,
         WaiterPermission.CancelAndDiscount => _canCancelAndDiscount,
         WaiterPermission.TransferAndReserve => _canTransferAndReserve,
+        WaiterPermission.LockQr => _canLockQr,
         _ => false
     };
 
@@ -95,6 +102,7 @@ public sealed class StaffAccess
         WaiterPermission.TakePayment => "Hesap alma (ödeme) yetkiniz yok. Yöneticinizden yetki isteyin.",
         WaiterPermission.CancelAndDiscount => "İptal ve indirim yetkiniz yok. Yöneticinizden yetki isteyin.",
         WaiterPermission.TransferAndReserve => "Masa taşıma ve rezervasyon yetkiniz yok. Yöneticinizden yetki isteyin.",
+        WaiterPermission.LockQr => QrLockDeniedMessage,
         _ => "Bu işlem için yetkiniz yok."
     };
 
@@ -131,11 +139,12 @@ public sealed class StaffAccess
         membership.CanTakePayment,
         membership.CanCancelAndDiscount,
         membership.CanTransferAndReserve,
+        membership.CanLockQr,
         isCashier ? new CashierRights(membership.CanApplyDiscount, membership.MaxDiscountPercent, membership.CanTransferTables, membership.CanViewDelivery) : null);
 
     // Üyelik bulunamazsa (silinmiş/taşınmış kullanıcı) hiçbir masaya ve ürüne erişemez.
     public static StaffAccess Denied(bool isWaiter, bool isCashier) =>
-        new(WaiterScope.Empty, [], isWaiter, false, false, false, false, isCashier ? new CashierRights(false, 100, false, false) : null);
+        new(WaiterScope.Empty, [], isWaiter, false, false, false, false, false, isCashier ? new CashierRights(false, 100, false, false) : null);
 }
 
 public static class StaffAccessExtensions

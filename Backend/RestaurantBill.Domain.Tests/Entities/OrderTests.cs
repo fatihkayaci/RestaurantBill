@@ -83,6 +83,37 @@ public class OrderTests
             Assert.Single(order.OrderItems);
             Assert.Equal(40m, order.TotalPrice);
         }
+
+        [Fact]
+        public void TakeawayAndDineInOfSameProduct_StayOnSeparateLines()
+        {
+            Order order = Order.Create(Guid.NewGuid(), Guid.NewGuid());
+            Product product = OrderTests.CreateProduct(price: 10m);
+
+            order.AddItem(product, 1);
+            order.AddItem(product, 2, isTakeaway: true);
+            order.AddItem(product, 1, isTakeaway: true);
+
+            Assert.Equal(2, order.OrderItems.Count);
+            Assert.Equal(1, order.OrderItems.Single(i => !i.IsTakeaway).Quantity);
+            Assert.Equal(3, order.OrderItems.Single(i => i.IsTakeaway).Quantity);
+            Assert.Equal(40m, order.TotalPrice);
+        }
+
+        [Fact]
+        public void MergeFrom_KeepsTakeawayLinesApart()
+        {
+            Product product = OrderTests.CreateProduct(price: 10m);
+            Order target = Order.Create(Guid.NewGuid(), Guid.NewGuid());
+            target.AddItem(product, 1);
+            Order source = Order.Create(Guid.NewGuid(), Guid.NewGuid());
+            source.AddItem(product, 2, isTakeaway: true);
+
+            target.MergeFrom(source);
+
+            Assert.Equal(2, target.OrderItems.Count);
+            Assert.Equal(2, target.OrderItems.Single(i => i.IsTakeaway).Quantity);
+        }
     }
 
     public class RemoveItem

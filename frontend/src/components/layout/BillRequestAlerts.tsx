@@ -4,6 +4,8 @@ import { Receipt } from 'lucide-react';
 import { createHubConnection } from '@/lib/signalrConnection';
 import { dismissStaffAlert, notifyStaff, playStaffTone } from '@/lib/staffAlerts';
 import { emitTableAlert } from '@/pages/waiter/waiterEvents';
+import { billHintText } from '@/features/customerSite/tableActions';
+import type { BillRequestHint } from '@/features/customerSite/types';
 
 interface Props {
     /** Toast'taki "Masayı aç" düğmesinin gideceği masalar sayfası (?table=<id> eklenir); verilmezse düğme çıkmaz. */
@@ -21,12 +23,14 @@ export default function BillRequestAlerts({ actionPath }: Props) {
 
     useEffect(() => {
         const cashierHub = createHubConnection('/cashier-hub');
-        cashierHub.connection.on('BillRequested', (tableId: string, tableName: string, requestedByName: string) => {
+        // Dördüncü argüman: müşterinin ödeme tercihi / bölme bilgisi (eski sunucu göndermez).
+        cashierHub.connection.on('BillRequested', (tableId: string, tableName: string, requestedByName: string, hint?: BillRequestHint | null) => {
             emitTableAlert(tableId, 'bill');
+            const hintText = billHintText(hint?.paymentHint, hint?.splitCount);
             notifyStaff({
                 id: billAlertId(tableId),
                 title: `${tableName} · hesap istendi`,
-                description: requestedByName ? `${requestedByName} istedi` : undefined,
+                description: [requestedByName ? `${requestedByName} istedi` : '', hintText].filter(Boolean).join(' · ') || undefined,
                 tone: 'accent',
                 icon: <Receipt aria-hidden="true" />,
                 persistent: true,

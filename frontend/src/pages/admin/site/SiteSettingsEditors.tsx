@@ -1,12 +1,15 @@
 import { useRef, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Check, ImagePlus, Plus, Trash2 } from 'lucide-react';
-import type { SiteDayHours, SiteMilestone, SiteReview, SiteValue } from '@/features/customerSite/types';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ImagePlus, Plus, Trash2 } from 'lucide-react';
+import type { PublicSite, SiteDayHours, SiteHomeSection, SiteMilestone, SiteReview, SiteValue } from '@/features/customerSite/types';
+import { SortableList, SortableRow } from '@/components/dnd/SortableList';
+import { Switch } from '@/components/ui/switch';
 import { inputClass, labelClass } from '@/lib/formStyles';
 import { cn } from '@/lib/utils';
 import {
     ALL_SITE_FONTS_HREF, DEFAULT_DESIGN, DEFAULT_THEME, SITE_DESIGNS, SITE_DESIGN_KEYS, SITE_FONTS, SITE_FONTS_HREF, SITE_FONT_KEYS,
     designFontKey, designThemes, resolveDesign, resolveSiteColors, resolveTheme, type SiteDesignKey, type SiteFontPair,
 } from '@/pages/public/site/siteTheme';
+import { HOME_SECTION_INFO, homeSectionHasContent, resolveHomeSections } from '@/pages/public/site/homeSections';
 
 // "Restoran sitesi" ayar sayfasının düzenleyicileri: tasarım, tema, haftalık saat, mekân galerisi ve kısa liste alanları.
 
@@ -63,7 +66,8 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
                         onClick={() => onDesign(key === DEFAULT_DESIGN ? '' : key)}
                         className={cn('flex flex-col gap-2.5 rounded-xl border-2 p-2.5 text-left transition-colors',
                             on ? 'border-foreground' : 'border-border hover:border-foreground/40')}>
-                        {key === 'elit' ? <EliteMock accent={c.pop} accentText={c.accentText} />
+                        {key === 'sophra' ? <SophraMock accent={c.accent} cover={t.hero} />
+                            : key === 'elit' ? <EliteMock accent={c.pop} accentText={c.accentText} />
                             : key === 'sicak' ? <SicakMock accent={c.accent} onAccent={c.onAccent} accentText={c.accentText} />
                             : key === 'meyhane' ? <MeyhaneMock accent={c.accent} accentText={c.accentText} cover={t.hero} />
                             : key === 'esnaf' ? <EsnafMock accentText={c.accentText} cover={t.hero} menuBox={t.menuBox} />
@@ -104,6 +108,54 @@ export function DesignPicker({ design, theme, accent, onDesign }: {
                 );
             })}
         </div>
+    );
+}
+
+/**
+ * Sophra maketi (varsayılan): koyu üst menü, tam genişlik fotoğraf hissi veren koyu kapak (başlık, altın çizgi, iki düğme),
+ * dalgalı alt kenar, kapağa binen kategori kartları, dört ürün kartı ve koyu alt bilgi.
+ */
+function SophraMock({ accent, cover }: { accent: string; cover: string }) {
+    const P = SITE_DESIGNS.sophra.palette;
+    const font = SITE_FONTS[P.font];
+    return (
+        <span aria-hidden="true" className="flex h-[148px] flex-col overflow-hidden rounded-lg" style={{ background: P.bg }}>
+            <span className="relative flex h-[78px] shrink-0 flex-col gap-1 px-2.5 pt-1.5"
+                style={{ background: `linear-gradient(90deg, ${cover} 30%, ${cover}99 60%, ${P.mustard}55), ${cover}`, color: P.onPaper }}>
+                <span className="flex items-center gap-1">
+                    <span className="h-2.5 w-2.5 rounded-full border" style={{ borderColor: P.mustard }} />
+                    <span className="h-1 w-8 rounded-full" style={{ background: P.onPaper }} />
+                    <span className="ml-auto h-2.5 w-7 rounded-full" style={{ background: accent }} />
+                </span>
+                <span className="mt-1 text-[13px] leading-[0.95]" style={{ fontFamily: font.heading, letterSpacing: font.tracking }}>Ocak<br />Kadıköy</span>
+                <span className="h-[2px] w-8 rounded-full" style={{ background: P.mustard }} />
+                <span className="flex gap-1">
+                    <span className="h-2.5 w-9 rounded-full" style={{ background: accent, boxShadow: `0 0 0 1px ${P.onPaper}33` }} />
+                    <span className="h-2.5 w-9 rounded-full" style={{ background: P.onPaper }} />
+                </span>
+                <svg viewBox="0 0 100 10" preserveAspectRatio="none" className="absolute inset-x-0 -bottom-px h-3 w-full"><path d="M0 7C20 11 40 11 55 7S85 1 100 3V10H0Z" fill={P.bg} /></svg>
+            </span>
+            <span className="relative -mt-2 flex gap-1 px-2.5">
+                {[0, 1, 2, 3, 4].map(i => (
+                    <span key={i} className="flex h-5 flex-1 items-end justify-center rounded-[3px] pb-0.5" style={{ background: P.card, boxShadow: `0 2px 4px -2px ${P.fg}55` }}>
+                        <span className="h-1 w-3/5 rounded-full" style={{ background: P.fg }} />
+                    </span>
+                ))}
+            </span>
+            <span className="flex flex-1 gap-1 px-2.5 py-1.5">
+                {[0, 1, 2, 3].map(i => (
+                    <span key={i} className="flex flex-1 flex-col overflow-hidden rounded-[3px]" style={{ background: P.card, border: `1px solid ${P.fg}14` }}>
+                        <span className="h-3" style={{ background: P.placeholder }} />
+                        <span className="mx-1 mt-1 h-1 w-3/4 rounded-full" style={{ background: P.fg }} />
+                        <span className="mx-1 mt-auto mb-1 flex items-center justify-between">
+                            <span className="h-1 w-3 rounded-full" style={{ background: P.fg }} />
+                            <span className="h-1.5 w-1.5 rounded-full" style={{ background: accent }} />
+                        </span>
+                    </span>
+                ))}
+            </span>
+            <span className="h-3 shrink-0" style={{ background: P.footer }} />
+        </span>
     );
 }
 
@@ -375,6 +427,7 @@ function FontCard({ pair, label, on, onClick }: { pair: SiteFontPair; label: str
 
 // Vurgu seçenekleri (zemin her temada aynı; özel renk yalnız vurguyu değiştirir).
 const ACCENT_OPTIONS: Record<SiteDesignKey, string[]> = {
+    sophra: ['#24513A', '#A3402A', '#26446B', '#74243A', '#3B342D', '#545C2C', '#B7791F', '#0F766E'],
     renkli: ['#DC5B2F', '#EBB03F', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#24180F', '#9AA5B1'],
     sade: ['#E8B04B', '#E2683C', '#9DBF8E', '#E79A9A', '#2F4F8F', '#A8354A', '#2A2622', '#9AA5B1'],
     elit: ['#C8A35F', '#D4A0A0', '#B9BD8E', '#A9B8D0', '#CFC6B8', '#E79A9A', '#2F4F8F', '#A8354A'],
@@ -386,7 +439,7 @@ const ACCENT_OPTIONS: Record<SiteDesignKey, string[]> = {
 };
 
 // Temanın kapak rengini / menü kutusu rengini de değiştirdiği tasarımlar (diğerlerinde yalnız vurgu değişir).
-const THEME_SETS_COVER: SiteDesignKey[] = ['renkli', 'meyhane', 'esnaf', 'bahce'];
+const THEME_SETS_COVER: SiteDesignKey[] = ['sophra', 'renkli', 'meyhane', 'esnaf', 'bahce'];
 const THEME_SETS_MENU_BOX: SiteDesignKey[] = ['esnaf', 'bahce'];
 
 /** Tema kartında "Kapak ■" gibi küçük renk etiketi. */
@@ -692,5 +745,69 @@ export function MilestonesEditor({ items, onChange, limits }: {
                     <input aria-label="Ne oldu" className={inputClass} maxLength={limits.text} placeholder="Taş fırın geldi, pideler başladı." value={m.text} onChange={e => set(i, { text: e.target.value })} />
                 </div>
             )} />
+    );
+}
+
+// ── Anasayfa bölümleri ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Anasayfa bölümlerinin sırası ve görünürlüğü (Sophra tasarımı). Satır sürüklenir (fare, dokunmatik, klavye) ya da
+ * oklarla taşınır; anahtar bölümü açar/kapatır. İçeriği olmayan bölüm açık olsa da sitede görünmez: satırda yazılır.
+ * Değişiklik tam listeyle döner (kaydedilen biçim: SiteContent.HomeSections).
+ */
+export function HomeSectionsEditor({ site, design, sections, onChange }: {
+    site: PublicSite | null; design: string; sections: SiteHomeSection[]; onChange: (next: SiteHomeSection[]) => void;
+}) {
+    const rows = resolveHomeSections(sections).map(s => ({ ...s, id: s.key }));
+    const save = (next: typeof rows) => onChange(next.map(({ key, enabled }) => ({ key, enabled })));
+    const move = (index: number, to: number) => {
+        if (to < 0 || to >= rows.length) return;
+        const next = [...rows];
+        [next[index], next[to]] = [next[to], next[index]];
+        save(next);
+    };
+    const usesSections = resolveDesign(design) === 'sophra';
+    return (
+        <div className="flex flex-col gap-3">
+            {!usesSections && (
+                <p className="m-0 rounded-lg bg-muted px-3 py-2 text-[13px] text-muted-foreground">
+                    Bu sıra Sophra tasarımında geçerlidir; seçili tasarımın anasayfası kendi düzeniyle çizilir.
+                </p>
+            )}
+            <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2.5 text-[13px] text-muted-foreground">
+                <span className="font-semibold text-foreground">Kapak</span> her zaman en üstte, <span className="font-semibold text-foreground">alt bilgi</span> en altta.
+            </div>
+            <SortableList items={rows} onReorder={save} getName={r => HOME_SECTION_INFO[r.key].label} className="flex flex-col gap-2"
+                renderItem={(row, state) => {
+                    const index = rows.findIndex(r => r.key === row.key);
+                    const info = HOME_SECTION_INFO[row.key];
+                    const empty = site ? !homeSectionHasContent(site, row.key) : false;
+                    return (
+                        <SortableRow state={state} label={`${info.label}: taşı`} className={cn(!row.enabled && 'bg-muted/40')}>
+                            <div className="flex min-w-0 flex-1 flex-col">
+                                <span className={cn('text-sm font-semibold', row.enabled ? 'text-foreground' : 'text-muted-foreground')}>{info.label}</span>
+                                <span className="truncate text-xs text-muted-foreground">
+                                    {!row.enabled ? 'Gizli' : empty ? 'İçerik yok: sitede görünmez' : info.hint}
+                                </span>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-0.5">
+                                <button type="button" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+                                    aria-label={`${info.label}: yukarı taşı`} disabled={index === 0} onClick={() => move(index, index - 1)}>
+                                    <ArrowUp className="h-4 w-4" aria-hidden="true" />
+                                </button>
+                                <button type="button" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+                                    aria-label={`${info.label}: aşağı taşı`} disabled={index === rows.length - 1} onClick={() => move(index, index + 1)}>
+                                    <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                                </button>
+                                <Switch checked={row.enabled} aria-label={`${info.label}: ${row.enabled ? 'gizle' : 'göster'}`} buttonClassName="ml-1.5 h-9 px-1"
+                                    onCheckedChange={on => save(rows.map(r => (r.key === row.key ? { ...r, enabled: on } : r)))} />
+                            </div>
+                        </SortableRow>
+                    );
+                }} />
+            {sections.length > 0 && (
+                <button type="button" className={cn(smallButton, 'self-start')} onClick={() => onChange([])}>Varsayılan sıraya dön</button>
+            )}
+        </div>
     );
 }

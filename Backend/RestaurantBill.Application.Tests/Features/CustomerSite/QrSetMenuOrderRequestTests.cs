@@ -251,6 +251,45 @@ public class QrSetMenuOrderRequestTests : ApplicationTestBase
         Assert.Equal(OrderRequestStatus.Pending, DbContext.OrderRequests.Single().Status);
     }
 
+    // "Paket olsun": müşterinin işareti talepten onayla siparişin kalemine geçer; aynı ürünün masadaki adedi ayrı satırda kalır.
+    [Fact]
+    public async Task TakeawayFlag_FlowsFromRequestThroughApprovalIntoOrderItems()
+    {
+        await SeedAsync();
+        OrderRequestItemInput takeawayMenu = MenuLine(_adanaMenu, _kola.Id);
+        takeawayMenu.IsTakeaway = true;
+        var sent = await SendAsync(
+            new OrderRequestItemInput { ProductId = _corba.Id, Quantity = 1 },
+            new OrderRequestItemInput { ProductId = _corba.Id, Quantity = 2, IsTakeaway = true },
+            takeawayMenu);
+        Assert.True(sent.IsSuccess, sent.Error);
+
+        List<OrderRequestItem> requestItems = await DbContext.OrderRequestItems.ToListAsync();
+        Assert.Equal(2, requestItems.Count(i => i.IsTakeaway));
+
+        var pending = await new GetPendingOrderRequestsQueryHandler(Db, CurrentUser).Handle(new GetPendingOrderRequestsQuery(), CancellationToken.None);
+        Assert.True(pending.IsSuccess, pending.Error);
+        var pendingItems = Assert.Single(pending.Value!).Items;
+        Assert.False(pendingItems.Single(i => i.ProductId == _corba.Id && i.Quantity == 1).IsTakeaway);
+        Assert.True(pendingItems.Single(i => i.ProductId == _corba.Id && i.Quantity == 2).IsTakeaway);
+        Assert.True(pendingItems.Single(i => i.SetMenuId == _adanaMenu.Id).IsTakeaway);
+
+        var result = await ApproveAsync(sent.Value!.Id);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Order order = await DbContext.Orders.Include(o => o.OrderItems).SingleAsync();
+        List<OrderItem> soups = order.OrderItems.Where(i => i.ProductId == _corba.Id && i.ParentOrderItemId == null).ToList();
+        Assert.Equal(2, soups.Count); // paket ve masadaki çorba birleşmez
+        Assert.Equal(1, soups.Single(i => !i.IsTakeaway).Quantity);
+        Assert.Equal(2, soups.Single(i => i.IsTakeaway).Quantity);
+
+        OrderItem menuLine = order.OrderItems.Single(i => i.SetMenuId == _adanaMenu.Id);
+        Assert.True(menuLine.IsTakeaway);
+        // Mutfak menü satırını değil içindekileri görür: içerik de paket.
+        Assert.All(order.OrderItems.Where(i => i.ParentOrderItemId == menuLine.Id), c => Assert.True(c.IsTakeaway));
+        Assert.Equal(120m + 2 * 120m + 160m, order.TotalPrice);
+    }
+
     [Fact]
     public async Task ProductOnlyRequest_IsUnchanged()
     {

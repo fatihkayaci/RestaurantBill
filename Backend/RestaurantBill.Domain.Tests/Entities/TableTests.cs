@@ -174,4 +174,27 @@ public class TableTests
                 table.EnsureCanBeDeleted(orders));
         }
     }
+
+    public class QrOrderingLock
+    {
+        [Fact]
+        public void NewTable_IsUnlocked()
+        {
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
+
+            Assert.False(table.QrOrderingLocked);
+        }
+
+        [Fact]
+        public void LockAndUnlock_ToggleTheFlag()
+        {
+            Table table = Table.Create("Masa 1", "", Guid.NewGuid());
+
+            table.LockQrOrdering();
+            Assert.True(table.QrOrderingLocked);
+
+            table.UnlockQrOrdering();
+            Assert.False(table.QrOrderingLocked);
+        }
+    }
 }

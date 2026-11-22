@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantBill.Application.Common;
+using RestaurantBill.Application.DTOs;
 using RestaurantBill.Application.Interfaces;
 using RestaurantBill.Domain.Entities;
 using RestaurantBill.Domain.Enums;
@@ -68,7 +69,7 @@ public class RequestBillCommandHandler : IRequestHandler<RequestBillCommand, Res
         await _tableNotifications.SendBillRequestChangedAsync(branchId, table.Id, order.BillRequestedAt);
         await _cashierNotifications.SendOrdersChangedAsync(branchId);
         if (!request.Cancel)
-            await _cashierNotifications.SendBillRequestedAsync(branchId, table.RegionId, table.Id, table.Name, actorName);
+            await _cashierNotifications.SendBillRequestedAsync(branchId, table.RegionId, table.Id, table.Name, actorName, BillRequestHintDto.From(order));
 
         return Result.Success();
     }

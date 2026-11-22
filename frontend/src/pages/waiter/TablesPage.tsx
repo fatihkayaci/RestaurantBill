@@ -141,6 +141,9 @@ export default function WaiterTablesPage() {
             patchTable(tableId, { billRequestedAt });
         });
         connection.on('CustomerRequestsChanged', () => { loadRequests(); loadReservations(); });
+        connection.on('TableQrLockChanged', (tableId: string, locked: boolean) => {
+            patchTable(tableId, { qrOrderingLocked: locked });
+        });
         let cancelled = false;
         connection.start().catch(err => { if (!cancelled) console.error('SignalR:', err); });
         return () => {

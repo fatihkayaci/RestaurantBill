@@ -11,13 +11,17 @@ import { designLayout } from './site/designs/registry';
 import { hoursLine, restaurantName, useSite } from './site/useSite';
 import { AddCard, EditableBlock, EditableText, EmptySlot, ExternalHint, ListCard } from './site/siteEdit';
 import { SITE_LIMITS, editTarget, useSiteEdit } from './site/siteEditContext';
+import { TEAM_LIST, TEAM_SAMPLES, isSoloLast, useTeam } from './site/team';
+import { TeamEditorNote, TeamIntro, TeamName, TeamNote, TeamPhoto, TeamRole, TeamSample, TeamTitle } from './site/teamParts';
+import type { SiteTeamMember } from '@/features/customerSite/types';
 
 // /hakkimizda (tasarım: "Renkli · Hakkımızda", Dergi düzeni). Kapak kapak renginde (krem yazı, hardal italik), hikâye
 // kâğıdı krem (hardal alıntı kutusu), usta kutusu zeytin, davet koyu kiremit. Krem sayfada beyaz yuvarlak kutular: (1) kapak: "Hikâyemiz", dev
 // serif başlık (slogan; yoksa ad ve kuruluş yılı), kısa giriş; fotoğraf varsa soldan beyaz geçiş, yoksa dev soluk tırnak
 // ve halkalar. (2) Hikâye "kâğıdı": solda etiket ve ad, sağda büyük ilk harfle başlayan hikâye; altında ustanın sözü ve
 // yalnız gerçek verili rakamlar (yıl, ürün sayısı, salon kapasitesi, Google puanı). (3) Koyu "Mutfağın başında" kutusu
-// (usta) + "Değişmeyenlerimiz" (değerler). (4) "Yolculuğumuz" (kilometre taşları). (5) Vurgu renginde davet kutusu.
+// (usta) + "Değişmeyenlerimiz" (değerler). (4) "Ekibimiz": ustayla çalışanlar, 4:5 portre kartları (fotoğraf yoksa
+// renkli kutuda baş harfler). (5) "Yolculuğumuz" (kilometre taşları). (6) Vurgu renginde davet kutusu.
 // Verisi olmayan kutu çizilmez; restoranın girmediği bilgi uydurulmaz.
 
 const box = 'rounded-[24px] bg-[var(--site-card)] text-[var(--site-text)] md:rounded-[32px]';
@@ -53,6 +57,7 @@ export default function RestaurantAboutPage() {
                 <AboutHero site={site} />
                 <StoryPaper site={site} />
                 <FounderAndValues site={site} />
+                <Team site={site} />
                 <Journey site={site} />
                 <Invitation site={site} />
             </main>
@@ -269,7 +274,80 @@ function FounderAndValues({ site }: { site: PublicSite }) {
     );
 }
 
-// ── 4. Yolculuk ──────────────────────────────────────────────────────────────────────────────────
+// ── 4. Ekibimiz ──────────────────────────────────────────────────────────────────────────────────
+
+/** Fotoğrafı olmayan üyenin baş harf kutusu: Renkli'nin renkli kutularından biri, sırayla (zeytin, kiremit, hardal). */
+const TEAM_TILES = [
+    'bg-[var(--site-menu-box)] text-[var(--site-cover-accent)]',
+    'bg-[var(--site-story)] text-[var(--site-cover-accent)]',
+    'bg-[var(--site-mustard)] text-[var(--site-story)]',
+];
+
+function Team({ site }: { site: PublicSite }) {
+    const team = useTeam(site);
+    if (!team) return null;
+    const { members, empty, canAdd } = team;
+    // Telefonda iki sütun: ekle kartı da ızgaranın bir hücresidir.
+    const cells = members.length + (canAdd ? 1 : 0);
+    return (
+        <section aria-labelledby="hk-ekip" className={cn(box, 'px-5 py-10 sm:px-10 md:px-[72px] md:pb-20 md:pt-[72px]')}>
+            <div className="mb-7 flex flex-wrap items-end justify-between gap-x-10 gap-y-4 md:mb-11">
+                <div className="flex max-w-[620px] flex-col gap-3.5">
+                    <span className={label}>Ekibimiz</span>
+                    <TeamTitle site={site} id="hk-ekip" fallback="Sofranın arkasındakiler." accentClassName="rb-accent italic"
+                        className={cn(serif, 'm-0 break-words text-[40px] leading-none md:text-[52px]')} />
+                </div>
+                <div className="flex max-w-[420px] flex-col gap-2">
+                    <TeamEditorNote team={team} />
+                    <TeamIntro site={site} fallback="Mutfaktan salona, her akşam sizi ağırlayanlar." className="m-0 text-base leading-[1.7] text-[var(--site-sub)]" />
+                </div>
+            </div>
+            <ul className="m-0 grid list-none grid-cols-2 gap-x-3 gap-y-[22px] p-0 md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] md:gap-x-6 md:gap-y-7">
+                {members.map((m, i) => {
+                    const solo = isSoloLast(i, cells);
+                    return (
+                        <li key={m.id} className={cn('min-w-0', solo && 'col-span-2 md:col-span-1')}>
+                            <ListCard list={TEAM_LIST} index={i} count={members.length} label="Ekip üyesi" className="h-full rounded-[18px] md:rounded-[24px]">
+                                <TeamCard member={m} index={i} solo={solo} />
+                            </ListCard>
+                        </li>
+                    );
+                })}
+                {canAdd && (
+                    <li className={cn('min-w-0', isSoloLast(members.length, cells) && 'col-span-2 md:col-span-1')}>
+                        <AddCard list={TEAM_LIST} label="Ekip üyesi ekle" count={members.length} max={SITE_LIMITS.teamMember.max}
+                            hint={empty ? 'Ad, rol, fotoğraf' : `en fazla ${SITE_LIMITS.teamMember.max}`}
+                            className={cn('h-full rounded-[18px] md:rounded-[24px]', isSoloLast(members.length, cells) ? 'aspect-[16/11] md:aspect-[4/5]' : 'aspect-[4/5]')} />
+                    </li>
+                )}
+                {empty && TEAM_SAMPLES.map((m, i) => (
+                    <li key={m.id} className="hidden min-w-0 md:block">
+                        <TeamSample index={i}><TeamCard member={m} index={i} solo={false} /></TeamSample>
+                    </li>
+                ))}
+            </ul>
+        </section>
+    );
+}
+
+function TeamCard({ member, index, solo }: { member: SiteTeamMember; index: number; solo: boolean }) {
+    return (
+        <div className="flex h-full flex-col gap-2.5 md:gap-3.5">
+            <TeamPhoto member={member}
+                className={cn('rounded-[18px] md:rounded-[24px]', solo ? 'aspect-[16/11] md:aspect-[4/5]' : 'aspect-[4/5]')}
+                initialsClassName={cn(serif, 'text-[52px] font-semibold md:text-[88px]', TEAM_TILES[index % TEAM_TILES.length])}>
+                <span aria-hidden="true" className="absolute -right-[70%] -top-[40%] aspect-square w-[150%] rounded-full border border-[rgba(243,231,211,0.14)]" />
+            </TeamPhoto>
+            <div className="flex min-w-0 flex-col gap-1.5">
+                <TeamRole member={member} className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--site-accent-text)] md:text-xs md:tracking-[0.2em]" />
+                <TeamName member={member} className={cn(serif, 'm-0 break-words text-xl leading-[1.05] md:text-[28px]')} />
+                <TeamNote member={member} className="m-0 text-[13px] leading-[1.5] text-[var(--site-sub)] md:text-[15px] md:leading-[1.6]" />
+            </div>
+        </div>
+    );
+}
+
+// ── 5. Yolculuk ──────────────────────────────────────────────────────────────────────────────────
 
 function Journey({ site }: { site: PublicSite }) {
     const edit = useSiteEdit();
@@ -311,7 +389,7 @@ function Journey({ site }: { site: PublicSite }) {
     );
 }
 
-// ── 5. Davet ─────────────────────────────────────────────────────────────────────────────────────
+// ── 6. Davet ─────────────────────────────────────────────────────────────────────────────────────
 
 function Invitation({ site }: { site: PublicSite }) {
     const edit = useSiteEdit();

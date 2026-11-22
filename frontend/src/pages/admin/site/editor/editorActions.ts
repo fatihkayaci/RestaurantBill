@@ -31,7 +31,8 @@ export interface PhotoTarget {
     markLabel: string;
     multiple?: boolean;
     upload: (files: File[]) => Promise<unknown>;
-    stock: (image: StockImage) => Promise<unknown>;
+    /** Hazır görsel seçimi; yoksa (ekip portresi) "Hazır görsellerden seç" gösterilmez. */
+    stock?: (image: StockImage) => Promise<unknown>;
     remove?: () => Promise<unknown>;
     move?: (dir: -1 | 1) => Promise<unknown>;
     canMove?: { left: boolean; right: boolean };
@@ -41,6 +42,20 @@ export interface PhotoTarget {
 export function photoTarget(ctx: EditorCtx, target: SiteEditTarget): PhotoTarget | null {
     const d = ctx.editor.draft;
     const run = ctx.state.runPhoto;
+    if (target.startsWith('photo:team:')) {
+        // Ekip portresi: yalnız kendi fotoğrafı (hazır görsel yok). Üye önce adıyla kaydedilmiş olmalı (runPhoto önce yazıları kaydeder).
+        const id = target.slice(11);
+        const member = ctx.texts.teamMembers.find(m => m.id === id);
+        if (!member) return null;
+        const own = d.teamMembers?.find(m => m.id === id)?.photoUrl ?? '';
+        return {
+            title: member.name ? `Ekip portresi · ${member.name}` : 'Ekip portresi',
+            hint: member.name ? 'Dikey, yüzü net bir fotoğraf. Kişinin kendi fotoğrafı olmalı.' : 'Önce kartın üstünde adını yazın, sonra fotoğrafını yükleyin.',
+            current: own, hasOwn: Boolean(own), removeLabel: 'Fotoğrafı kaldır', busyKey: target, markLabel: 'Kullanılıyor',
+            upload: files => run(target, () => siteEditorService.uploadTeamImage(id, files[0]), 'Fotoğraf yüklenemedi.'),
+            remove: () => run(target, () => siteEditorService.removeTeamImage(id), 'Fotoğraf kaldırılamadı.'),
+        };
+    }
     if (target.startsWith('photo:')) {
         const slot = target.slice(6) as SiteDraftImageSlot;
         const meta = PHOTO_META[slot];

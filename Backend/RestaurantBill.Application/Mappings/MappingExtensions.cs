@@ -82,7 +82,8 @@ public static class MappingExtensions
         Id = c.Id,
         Name = c.Name,
         TaxRate = c.TaxRate,
-        EffectiveTaxRate = c.GetEffectiveTaxRate()
+        EffectiveTaxRate = c.GetEffectiveTaxRate(),
+        MenuDisplay = c.MenuDisplay
     };
 
     public static RegionDto ToDto(this Region r) => new()
@@ -106,7 +107,8 @@ public static class MappingExtensions
         Status = o.Status,
         CreatedAt = o.CreatedAt,
         BillRequestedAt = o.BillRequestedAt,
-        QrLocked = o.QrOwnerTokenHash != null,
+        BillPaymentHint = o.BillPaymentHint,
+        BillSplitCount = o.BillSplitCount,
         OrderItems = o.OrderItems.Where(i => !i.IsSetMenuComponent).Select(i => i.ToLineDto(o)).ToList()
     };
 
@@ -150,6 +152,7 @@ public static class MappingExtensions
         Note = i.Note,
         CreatedAt = i.CreatedAt,
         PrepMinutes = i.PrepMinutes,
+        IsTakeaway = i.IsTakeaway,
         SetMenuId = i.SetMenuId
     };
 
@@ -166,7 +169,9 @@ public static class MappingExtensions
         IsFeatured = p.IsFeatured,
         PrepMinutes = p.PrepMinutes,
         TaxRate = p.TaxRate,
-        IsOutOfStock = p.IsOutOfStock
+        IsOutOfStock = p.IsOutOfStock,
+        NewUntil = p.NewUntil,
+        IsNew = p.IsNewAt(DateTime.UtcNow)
     };
 
     public static MembershipDto ToDto(this Membership m) => new()
@@ -222,6 +227,7 @@ public static class MappingExtensions
         Name = t.Name,
         Note = t.Note,
         Status = t.Status,
+        QrOrderingLocked = t.QrOrderingLocked,
         RegionId = t.RegionId,
         RegionName = t.Region.Name
     };
@@ -264,6 +270,8 @@ public static class MappingExtensions
         CanTakePayment = ub.Role != UserRole.Waiter || ub.CanTakePayment,
         CanCancelAndDiscount = ub.Role != UserRole.Waiter || ub.CanCancelAndDiscount,
         CanTransferAndReserve = ub.Role != UserRole.Waiter || ub.CanTransferAndReserve,
+        // QR siparişini kilitleme: yöneticiler her zaman, garson yetkisi varsa; kasiyer, mutfak ve kurye hiç.
+        CanLockQr = ub.Role is UserRole.Owner or UserRole.Admin || (ub.Role == UserRole.Waiter && ub.CanLockQr),
         CanApplyDiscount = ub.Role != UserRole.Cashier || ub.CanApplyDiscount,
         MaxDiscountPercent = ub.Role == UserRole.Cashier ? ub.MaxDiscountPercent : 100,
         CanTransferTables = ub.Role != UserRole.Cashier || ub.CanTransferTables,

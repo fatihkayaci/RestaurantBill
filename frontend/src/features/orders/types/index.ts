@@ -12,6 +12,8 @@ export interface OrderItem {
     createdAt: string;
     /** Sipariş anındaki hazırlanma süresi (dk); null ise geri sayım yok. */
     prepMinutes: number | null;
+    /** Paket kalem: müşteri QR'da "Paket olsun" dedi (eski sunucu: yok). */
+    isTakeaway?: boolean;
     /**
      * Menü satırıysa menünün Id'si. Menü satırında productId boş Guid'dir, productName menünün adıdır,
      * fiyat menü fiyatı + ek ücretlerdir. Silme/adet için orderItemId kullanılır.
@@ -52,8 +54,10 @@ export interface Order {
     createdByUserName: string;
     /** Garson hesabı istediyse istek anı; yoksa null. */
     billRequestedAt?: string | null;
-    /** Hesap masa QR'ında bir telefona bağlı: yalnız o telefon QR'dan sipariş verir ve hesabı görür. */
-    qrLocked?: boolean;
+    /** Müşterinin QR'dan hesap isterken seçtiği ödeme tercihi (1 Nakit, 2 Kart, 3 IBAN; BillPaymentHint). Eski sunucu: yok. */
+    billPaymentHint?: number | null;
+    /** Müşteri hesabın kaç kişiye bölüneceğini söyledi (2–20). */
+    billSplitCount?: number | null;
     orderItems: OrderItem[];
 }
 

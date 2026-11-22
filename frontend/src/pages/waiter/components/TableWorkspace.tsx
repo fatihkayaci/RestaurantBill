@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-    AlertCircle, ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, Clock, CreditCard, Gift, MoreHorizontal, Percent, Plus,
-    QrCode, ReceiptText, Undo2, X, XCircle,
+    AlertCircle, ArrowRightLeft, CalendarDays, ChevronLeft, ChevronRight, Clock, CreditCard, MoreHorizontal, Plus,
+    ReceiptText, Tag, Undo2, X, XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -9,7 +9,6 @@ import {
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { orderService } from '@/features/orders/api/orderService';
-import { customerRequestService } from '@/features/customerSite/api/customerRequestService';
 import { tableService } from '@/features/tables/api/tableService';
 import type { Order, OrderItem } from '@/features/orders/types';
 import type { Reservation, Table } from '@/features/tables/types';
@@ -20,12 +19,15 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { formatMinutes, formatPrice, prepCountdown } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import CancelOrderItemDialog from '@/features/orders/components/CancelOrderItemDialog';
+import { TakeawayBadge } from '@/features/orders/components/TakeawayBadge';
 import AddItemsView from './AddItemsView';
-import PaymentView, { type PaymentMode } from './PaymentView';
+import PaymentView from './PaymentView';
 import MoveTableView from './MoveTableView';
 import BottomSheet, { SheetItem } from './BottomSheet';
 import CustomerOrderRequests from './CustomerOrderRequests';
+import QrOrderingToggle from '@/features/tables/components/QrOrderingToggle';
 import { STATE_STYLE, clockTime, minutesSince, tableState } from '../waiterUi';
+import BillHintBadge from '@/features/tables/components/BillHintBadge';
 
 export type WorkspaceView = 'detail' | 'add' | 'pay' | 'move' | 'reserve';
 
@@ -84,12 +86,13 @@ export default function TableWorkspace({
     table, tables, permissions, variant, initialView = 'detail', now, onClose, onTablePatch, onRefreshTables,
     orderRequests = [], onOrderRequestsChanged,
 }: Props) {
-    const { canTakeOrders, canTakePayment, canCancelAndDiscount, canTransferAndReserve } = permissions;
+    const { canTakeOrders, canTakePayment, canCancelAndDiscount, canTransferAndReserve, canLockQr } = permissions;
     const [view, setView] = useState<WorkspaceView>(initialView);
     // Masa doğrudan ürün eklemeyle açıldıysa "geri" geldiği yere, masa listesine döner (telefonda
     // ızgara, tablette panel kapanır). Detaya bir kez geçilince "geri" artık detaya döner.
     const [openedOnAdd, setOpenedOnAdd] = useState(initialView === 'add');
-    const [payMode, setPayMode] = useState<PaymentMode>('normal');
+    // Ödeme ekranı tek: menüdeki "İndirim / İkram" aynı ekranı İndirim / İkram sayfası açık başlatır.
+    const [payWithDiscount, setPayWithDiscount] = useState(false);
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [reservation, setReservation] = useState<Reservation | null>(null);
@@ -165,13 +168,6 @@ export default function TableWorkspace({
         toast.success(cancel ? 'Hesap isteği geri alındı.' : 'Hesap istendi, kasaya bildirildi.');
     }, 'Hesap istenemedi.');
 
-    // Hesap QR'da bir telefona bağlıyken bağı kaldırır (müşteri telefon değiştirdi ya da masayı dışarıdan biri tuttu).
-    const unlockQr = () => run('qr-unlock', async () => {
-        await customerRequestService.unlockQrTable(String(table.id));
-        setOrder(prev => prev ? { ...prev, qrLocked: false } : prev);
-        toast.success('QR kilidi açıldı. Masadan ilk sipariş veren telefon yeni sahibi olur.');
-    }, 'QR kilidi açılamadı.');
-
     const serveItem = (item: OrderItem) => run(`serve-${item.id}`, async () => {
         if (!order) return;
         // Menü satırında üst satırın id'si gider; sunucu içindeki ürünleri de servis edildi yapar.
@@ -233,7 +229,7 @@ export default function TableWorkspace({
         }, 'Rezervasyon kaydedilemedi.');
     };
 
-    const openPay = (mode: PaymentMode) => { setPayMode(mode); setSheetOpen(false); setView('pay'); };
+    const openPay = (withDiscount = false) => { setPayWithDiscount(withDiscount); setSheetOpen(false); setView('pay'); };
 
     const showDetail = () => { setOpenedOnAdd(false); setView('detail'); };
 
@@ -282,7 +278,7 @@ export default function TableWorkspace({
             <PaymentView
                 table={table}
                 order={order}
-                mode={payMode}
+                openDiscount={payWithDiscount}
                 canDiscount={canCancelAndDiscount}
                 onBack={() => setView('detail')}
                 onRequestBill={() => void requestBill(false)}
@@ -315,11 +311,9 @@ export default function TableWorkspace({
     const overdueItems = order?.orderItems.filter(i => (i.status === 1 || i.status === 2) && prepCountdown(i.createdAt, i.prepMinutes, now)?.overdue) ?? [];
     const canReserve = canTransferAndReserve && !order && table.status === 1;
     const moreItems = [
-        hasItems && canTakePayment && canCancelAndDiscount && 'ikram',
         hasItems && canTakePayment && canCancelAndDiscount && 'discount',
         hasItems && (canTakePayment || billRequested) && 'bill',
         canReserve && 'reserve',
-        !!order?.qrLocked && 'qr-unlock',
         // Tutar girerek ödeme alınmış hesap iptal edilemez (sunucu da reddeder).
         !!order && canCancelAndDiscount && paidOnAccount === 0 && 'cancel',
     ].filter(Boolean) as string[];
@@ -375,6 +369,11 @@ export default function TableWorkspace({
                         onChanged={() => { onOrderRequestsChanged?.(); void loadOrder(); }}
                         canDecide={canTransferAndReserve}
                     />
+                )}
+                {/* "QR siparişi: Açık / Kilitli": yalnız yetkili kullanıcıda (Owner/Admin, yetkili garson). */}
+                {view === 'detail' && canLockQr && (
+                    <QrOrderingToggle tableId={String(table.id)} tableName={table.name} locked={!!table.qrOrderingLocked}
+                        onChanged={locked => onTablePatch(table.id, { qrOrderingLocked: locked })} />
                 )}
                 {loading ? (
                     <div className="flex flex-col gap-2">{[...Array(4)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted" />)}</div>
@@ -480,7 +479,10 @@ export default function TableWorkspace({
                                                         className={cn('flex min-w-0 flex-1 flex-col', canTakeOrders && 'cursor-text')}
                                                         onClick={() => { if (canTakeOrders && editingNoteId !== item.id) { setEditingNoteId(item.id); setNoteDraft(item.note); } }}
                                                     >
-                                                        <span className="truncate text-base font-semibold text-foreground">{item.productName}</span>
+                                                        <span className="flex min-w-0 items-center gap-1.5">
+                                                            <span className="truncate text-base font-semibold text-foreground">{item.productName}</span>
+                                                            {item.isTakeaway && <TakeawayBadge />}
+                                                        </span>
                                                         {editingNoteId === item.id ? (
                                                             <input
                                                                 autoFocus
@@ -529,16 +531,11 @@ export default function TableWorkspace({
                         })}
                         <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-3">
                             <div className="flex justify-between text-[13px] text-rb-text-sub">
-                                <span className="flex items-center gap-2">
-                                    {itemCount} ürün
-                                    {order?.qrLocked && (
-                                        <span className="inline-flex items-center gap-1 font-semibold text-foreground" title="QR'dan yalnız bu masanın telefonu sipariş verir">
-                                            <QrCode className="size-3.5" aria-hidden="true" />QR: telefona bağlı
-                                        </span>
-                                    )}
-                                </span>
+                                <span>{itemCount} ürün</span>
                                 {billRequested && order?.billRequestedAt && <span className="font-semibold text-rb-accent">Hesap istendi · {clockTime(order.billRequestedAt)}</span>}
                             </div>
+                            {/* Müşterinin QR'dan hesap isterken seçtiği tercih: "Kart · 3 kişiye bölünecek". */}
+                            {billRequested && <BillHintBadge paymentHint={order?.billPaymentHint} splitCount={order?.billSplitCount} className="self-end" />}
                             <div className="flex items-baseline justify-between">
                                 <span className="text-base font-semibold text-foreground">Toplam</span>
                                 <span className="text-[24px] font-bold tabular-nums text-foreground">{formatPrice(total)} ₺</span>
@@ -584,7 +581,7 @@ export default function TableWorkspace({
                                 </div>
                             )}
                             {hasItems && (canTakePayment ? (
-                                <button type="button" onClick={() => openPay('normal')} className="flex h-16 items-center justify-between rounded-2xl bg-foreground px-5 text-background">
+                                <button type="button" onClick={() => openPay()} className="flex h-16 items-center justify-between rounded-2xl bg-foreground px-5 text-background">
                                     <span className="flex items-center gap-2.5 text-[17px] font-bold"><CreditCard className="size-5.5 text-rb-gold" aria-hidden="true" />Ödeme al</span>
                                     <span className="text-xl font-bold tabular-nums">{paidOnAccount > 0 && <span className="mr-1 text-[13px] font-semibold opacity-70">kalan</span>}{formatPrice(due)} ₺</span>
                                 </button>
@@ -606,20 +603,14 @@ export default function TableWorkspace({
 
             {sheetOpen && (
                 <BottomSheet label="Diğer işlemler" onClose={() => setSheetOpen(false)}>
-                    {moreItems.includes('ikram') && (
-                        <SheetItem icon={<Gift className="size-5.5" />} title="İkram et" hint="Seçili ürünleri ücretsiz say" onClick={() => openPay('ikram')} />
-                    )}
                     {moreItems.includes('discount') && (
-                        <SheetItem icon={<Percent className="size-5.5" />} title="İndirim uygula" hint="Ödeme alırken yüzde ya da tutar" onClick={() => openPay('discount')} />
+                        <SheetItem icon={<Tag className="size-5.5" />} title="İndirim / İkram" hint="Ödeme ekranı indirim sayfası açık gelir" onClick={() => openPay(true)} />
                     )}
                     {moreItems.includes('bill') && (billRequested ? (
                         <SheetItem icon={<Undo2 className="size-5.5" />} title="Hesap isteğini geri al" hint="Masa yeniden 'Dolu' görünür" onClick={() => { setSheetOpen(false); void requestBill(true); }} />
                     ) : (
                         <SheetItem icon={<ReceiptText className="size-5.5" />} title="Hesap iste" hint='Masayı "hesap istendi" işaretle, kasaya bildir' onClick={() => { setSheetOpen(false); void requestBill(false); }} />
                     ))}
-                    {moreItems.includes('qr-unlock') && (
-                        <SheetItem icon={<QrCode className="size-5.5" />} title="QR kilidini aç" hint="Masanın QR'ından başka bir telefon sipariş verebilsin" onClick={() => { setSheetOpen(false); void unlockQr(); }} />
-                    )}
                     {moreItems.includes('reserve') && (
                         <SheetItem icon={<CalendarDays className="size-5.5" />} title="Rezervasyon" hint="Masayı bir saat için ayır" onClick={() => { setSheetOpen(false); setView('reserve'); }} />
                     )}

@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    AlertCircle, ArrowLeft, Bike, ChevronRight, Clock, MapPin, Minus, Phone, Plus, Receipt, Search, ShoppingBag, Store, Wallet,
+    AlertCircle, ArrowLeft, Bike, ChevronRight, Clock, MapPin, Minus, Phone, Plus, Receipt, ShoppingBag, Store, Wallet,
 } from 'lucide-react';
 import { publicService } from '@/features/customerSite/api/publicService';
 import { publicDeliveryService } from '@/features/delivery/api/publicDeliveryService';
 import {
     addLine, changeQuantity, clearCart, moveLineToEnd, removeOneSetMenu, estimatedSubtotal, itemCount, loadBranchChoice, loadCart, loadOrderSnapshot, loadRecentOrders,
     newClientRequestId, productKey, pruneUnavailable, quantityOf, rememberOrder, saveBranchChoice, saveCart, saveOrderSnapshot,
-    selectionNames, setLineNote, setMenuKey, setMenuUnitPrice, toCartInput, type DeliveryCartLine, type OrderSnapshot,
+    selectionNames, setLineNote, setMenuKey, setMenuUnitPrice, type DeliveryCartLine, type OrderSnapshot,
     type RecentDeliveryOrder,
 } from '@/features/delivery/deliveryCart';
 import type {
-    CartLineInput, DeliveryQuote, DeliveryZone, OnlineMenuProduct, OnlineOrdering, OnlineSetMenu, SubmittedDeliveryOrder,
+    DeliveryQuote, DeliveryZone, OnlineMenuProduct, OnlineOrdering, OnlineSetMenu, SubmittedDeliveryOrder,
 } from '@/features/delivery/types';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatPrice } from '@/lib/format';
@@ -21,38 +21,25 @@ import DeliveryMenu from './delivery/DeliveryMenu';
 import DeliverySetMenuSheet from './delivery/DeliverySetMenuSheet';
 import DeliveryCheckout from './delivery/DeliveryCheckout';
 import Sheet from './delivery/Sheet';
+import { CartTotals, MinimumProgress, ZonePicker } from './delivery/DeliveryOrderParts';
+import { listNames, opensText, pickupEtaText, zoneFacts } from '@/features/delivery/deliveryText';
 import { customerFontsHref, customerRootStyle } from './customerTheme';
 import type { PublicSite } from '@/features/customerSite/types';
 import { GlassStatusPill } from './site/SiteCards';
 import { ImageSlot } from './site/SiteChrome';
 import { FlowSiteHeader } from './site/SiteFrame';
+import { useDeliveryQuote } from '@/features/delivery/useDeliveryQuote';
 import { serif, siteCardDark } from './site/siteParts';
 import { headingFont, lineMenuVariant, resolveDesign, telHref } from './site/siteTheme';
 import { EliteFlowStyle } from './site/elite/EliteFlowStyle';
 import { isSicak, scCard, scDarkTone, scLine, scPageBg, scQtyTone } from './site/sicak/sicakParts';
 import { normalizeSite } from './site/useSite';
 
-const QUOTE_DEBOUNCE_MS = 400;
-
 /** Sağdaki zeytin "Sepetiniz" özeti: içindeki ortak parçalar (satırlar, toplamlar) krem yazıyla okunsun diye yerel renkler. */
 const summaryTone = '[--site-text:#FBF4E8] [--site-sub:#D4CBB6] [--site-muted:#D4CBB6] [--site-border:rgba(243,231,211,0.15)] [--site-border-strong:rgba(243,231,211,0.3)] [--site-raised:rgba(243,231,211,0.1)] [--site-bg:rgba(243,231,211,0.1)] [--site-qty-bg:rgba(243,231,211,0.12)] [--site-qty-minus:#FBF4E8] [--site-qty-plus:var(--site-mustard)] [--site-qty-plus-text:#24180F]';
 
 function timeOfDay(iso: string): string {
     return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-}
-
-/** "Bugün 11:00", "Yarın 08:00", "Cuma 11:00" (tarayıcının saatiyle; şube ile aynı saat diliminde kabul edilir). */
-function opensText(iso: string): string {
-    const at = new Date(iso);
-    const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-    const days = Math.round((startOf(at) - startOf(new Date())) / 86_400_000);
-    const day = days <= 0 ? 'Bugün' : days === 1 ? 'Yarın' : at.toLocaleDateString('tr-TR', { weekday: 'long' });
-    return `${day} ${timeOfDay(iso)}`;
-}
-
-/** Arama için: küçük harf, aksanlar ve Türkçe harfler sadeleşir ("Kadıköy" → "kadikoy"). */
-function fold(text: string): string {
-    return text.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
 const MENU_ANCHOR = 'paket-menu';
@@ -105,10 +92,6 @@ export default function DeliveryOrderPage() {
     const [prunedNames, setPrunedNames] = useState<string[]>([]);
     const [zonePickerOpen, setZonePickerOpen] = useState(false);
 
-    const [quote, setQuote] = useState<{ key: string; value: DeliveryQuote } | null>(null);
-    const [quoteError, setQuoteError] = useState<string | null>(null);
-    const [quoting, setQuoting] = useState(false);
-    const quoteSeq = useRef(0);
 
     const [cartOpen, setCartOpen] = useState(false);
     const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -145,7 +128,6 @@ export default function DeliveryOrderPage() {
                 // Gel al kapalıysa hep adrese teslim; açıksa son seçim, teslimat bölgesi yoksa gel al.
                 const wantsPickup = snapshot?.pickup ?? stored?.pickup ?? zones.length === 0;
                 setPickup(!!result.pickupEnabled && wantsPickup);
-                setQuote(null);
                 setCartReady(true);
             })
             .catch(err => setLoadError(getApiErrorMessage(err, 'Sipariş sayfası yüklenemedi. İnternet bağlantınızı kontrol edip yenileyin.')));
@@ -173,37 +155,8 @@ export default function DeliveryOrderPage() {
         saveCart(data.branchId, { lines, zoneId, pickup, clientRequestId });
     }, [data, cartReady, lines, zoneId, pickup, clientRequestId]);
 
-    // ── Sunucu teklifi (fiyat, ücret, en az tutar) ──
-    // Notlar fiyatı değiştirmez: not yazarken teklif yeniden istenmez.
-    const quoteKey = useMemo(
-        () => JSON.stringify({ zoneId: pickup ? null : zoneId, pickup, lines: toCartInput(lines).map(l => ({ ...l, note: undefined })) }),
-        [zoneId, pickup, lines],
-    );
-    const hasLines = lines.length > 0;
-
-    useEffect(() => {
-        if (!data || !hasLines) return;
-        const seq = ++quoteSeq.current;
-        const request = JSON.parse(quoteKey) as { zoneId: string | null; pickup: boolean; lines: CartLineInput[] };
-        const timer = setTimeout(() => {
-            setQuoting(true);
-            publicDeliveryService.quote(data.branchId, request.zoneId, request.lines, request.pickup)
-                .then(value => {
-                    if (seq !== quoteSeq.current) return;
-                    setQuote({ key: quoteKey, value });
-                    setQuoteError(null);
-                })
-                .catch(err => {
-                    if (seq !== quoteSeq.current) return;
-                    setQuote(null);
-                    setQuoteError(getApiErrorMessage(err, 'Sepet tutarı hesaplanamadı. Bağlantınızı kontrol edin.'));
-                })
-                .finally(() => { if (seq === quoteSeq.current) setQuoting(false); });
-        }, QUOTE_DEBOUNCE_MS);
-        return () => clearTimeout(timer);
-    }, [data, quoteKey, hasLines]);
-
-    const currentQuote = quote && quote.key === quoteKey && lines.length > 0 ? quote.value : null;
+    // ── Sunucu teklifi (fiyat, ücret, en az tutar; useDeliveryQuote) ──
+    const { quote: currentQuote, error: quoteError, quoting, setQuote } = useDeliveryQuote(data?.branchId ?? null, lines, zoneId, pickup);
 
     // ── Sepet işlemleri ──
     // Menüden eklenen satır listenin sonuna taşınır: "Siparişiniz" panelinde son eklenen en üstte görünür.
@@ -551,7 +504,7 @@ export default function DeliveryOrderPage() {
                     lines={lines}
                     quote={currentQuote}
                     clientRequestId={clientRequestId}
-                    onQuoteChanged={value => setQuote({ key: quoteKey, value })}
+                    onQuoteChanged={setQuote}
                     onSubmitted={onSubmitted}
                     onClose={() => setCheckoutOpen(false)}
                 />
@@ -670,19 +623,6 @@ const STATE_PILL: Record<OnlineOrdering['state'], string> = {
     disabled: 'Online sipariş kapalı',
 };
 
-/** "Künefe", "Künefe ve Ayran", "Künefe, Ayran ve Sütlaç". */
-function listNames(names: string[]): string {
-    return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} ve ${names[names.length - 1]}`;
-}
-
-function zoneFacts(zone: DeliveryZone) {
-    return {
-        time: zone.estimatedMinutes > 0 ? `~${zone.estimatedMinutes} dk` : '—',
-        fee: zone.fee > 0 ? `${formatPrice(zone.fee)} ₺` : 'Ücretsiz',
-        minimum: zone.minOrderAmount > 0 ? `${formatPrice(zone.minOrderAmount)} ₺` : 'Yok',
-    };
-}
-
 /** Elit "Siparişiniz" panelinde ilk görünen sepet satırı sayısı (son eklenenler); kalanı "Tüm siparişleri gör". */
 const CART_PANEL_LIMIT = 2;
 
@@ -745,10 +685,6 @@ function DeliveryInfoStrip({ zone, hasZones, onPick, pickup }: {
             </div>
         </section>
     );
-}
-
-function pickupEtaText(data: OnlineOrdering): string {
-    return data.pickupEtaMinutes ? `~${data.pickupEtaMinutes} dk` : '—';
 }
 
 /**
@@ -876,106 +812,6 @@ function ZoneCard({ zones, zone, onPick, flat = false, compact = false }: {
     );
 }
 
-/** Mahalle seçimi: arama + karşılaştırmalı liste. Eşleşme yoksa "henüz gelemiyoruz" ve sonraki adımlar. */
-function ZonePicker({ zones, selectedId, phone, onSelect, onBrowse, onClose }: {
-    zones: DeliveryZone[]; selectedId: string | null; phone: string;
-    onSelect: (id: string) => void; onBrowse: () => void; onClose: () => void;
-}) {
-    const [query, setQuery] = useState('');
-    const q = fold(query);
-    const matches = q ? zones.filter(z => fold(z.name).includes(q)) : zones;
-    // Yazım hatası için: ilk üç harfi tutan mahalleler önerilir.
-    const head = q.slice(0, 3);
-    const similar = q && matches.length === 0 ? zones.filter(z => fold(z.name).startsWith(head) || q.startsWith(fold(z.name).slice(0, 3))) : [];
-    const typed = query.trim();
-
-    return (
-        <Sheet title="Nereye gelsin?" onClose={onClose}>
-            <div className="pb-3 pt-1">
-                <label htmlFor="mahalle-ara" className="sr-only">Mahallenizi arayın</label>
-                <div className="relative">
-                    <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--site-sub)]" aria-hidden="true" />
-                    <input id="mahalle-ara" value={query} onChange={e => setQuery(e.target.value)} placeholder="Mahallenizi arayın"
-                        autoComplete="off" enterKeyHint="search"
-                        className="h-12 w-full rounded-xl border border-[var(--site-border-strong)] bg-[var(--site-bg)] pl-10 pr-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-[var(--site-accent)]" />
-                </div>
-            </div>
-
-            {matches.length > 0 ? (
-                <ul className="flex flex-col gap-2 pb-4">
-                    {matches.map(z => {
-                        const facts = zoneFacts(z);
-                        const on = z.id === selectedId;
-                        return (
-                            <li key={z.id}>
-                                <button type="button" onClick={() => onSelect(z.id)} aria-pressed={on}
-                                    className={cn('flex min-h-16 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors hover:border-[var(--site-accent)]',
-                                        on ? 'border-[var(--site-accent)] shadow-[0_0_0_1px_var(--site-accent)]' : 'border-[var(--site-border)]')}>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block text-base font-semibold">{z.name}</span>
-                                        <span className="block text-sm text-[var(--site-sub)]">En az {facts.minimum}</span>
-                                    </span>
-                                    <span className="shrink-0 text-right">
-                                        <span className="block text-sm font-semibold tabular-nums">{facts.time}</span>
-                                        <span className="block text-sm tabular-nums text-[var(--site-sub)]">{facts.fee}</span>
-                                    </span>
-                                </button>
-                            </li>
-                        );
-                    })}
-                </ul>
-            ) : (
-                <div role="status" className="flex flex-col gap-3 pb-5">
-                    <p className={cn(serif, 'm-0 text-[30px] leading-[1.05]')}>{typed}&apos;ya henüz gelemiyoruz.</p>
-                    {similar.length > 0 && (
-                        <div>
-                            <p className="text-sm text-[var(--site-sub)]">Bunu mu demek istediniz?</p>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                                {similar.map(z => (
-                                    <button key={z.id} type="button" onClick={() => onSelect(z.id)}
-                                        className="flex h-11 items-center rounded-full border border-[var(--site-border-strong)] px-4 text-sm font-semibold hover:border-[var(--site-accent)]">
-                                        {z.name}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    <p className="text-[15px] leading-relaxed text-[var(--site-sub)]">
-                        {listNames(zones.map(z => z.name))} mahallelerine teslimat yapıyoruz. Yakınsanız telefonla sorun, belki yolumuzun üstündesiniz.
-                    </p>
-                    {phone && (
-                        <a href={telHref(phone)}
-                            className="flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--site-paper)] text-[15px] font-semibold text-[var(--site-on-paper)] no-underline">
-                            <Phone className="h-4 w-4" aria-hidden="true" />{phone}
-                        </a>
-                    )}
-                    <button type="button" onClick={onBrowse}
-                        className="flex h-12 items-center justify-center rounded-full border border-[var(--site-border-strong)] text-[15px] font-semibold">
-                        Menüye yine de göz at
-                    </button>
-                </div>
-            )}
-        </Sheet>
-    );
-}
-
-/** En az sepet tutarı çubuğu: "En az sepete 80 ₺ kaldı · 220 / 300 ₺". */
-function MinimumProgress({ subtotal, target, left, className }: { subtotal: number; target: number; left: number; className?: string }) {
-    const percent = Math.min(100, Math.max(0, (subtotal / target) * 100));
-    return (
-        <div className={className}>
-            <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                <span className="font-semibold">En az sepete {formatPrice(left)} ₺ kaldı</span>
-                <span className="tabular-nums text-[var(--site-sub)]">{formatPrice(subtotal)} / {formatPrice(target)} ₺</span>
-            </div>
-            <div role="progressbar" aria-label="En az sepet tutarı" aria-valuemin={0} aria-valuemax={target} aria-valuenow={Math.round(subtotal)}
-                className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--site-raised)]">
-                <div className="h-full rounded-full bg-[var(--site-accent)] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${percent}%` }} />
-            </div>
-        </div>
-    );
-}
-
 function EmptyCart({ suggestions = [], restaurant = '', onAdd }: {
     /** Boş sepette önerilen ürünler (ustanın seçimi; yoksa ilk ürünler), tek dokunuşla eklenir. */
     suggestions?: OnlineMenuProduct[]; restaurant?: string; onAdd?: (product: OnlineMenuProduct) => void;
@@ -1050,7 +886,7 @@ function CartLines({ lines, quote, restaurant, imageOf, round = false, limit, on
                         <div className="flex items-center gap-3">
                             <span className={cn('relative h-16 w-16 shrink-0 md:h-[72px] md:w-[72px]', round && 'rounded-full bg-[#1E1915] p-[3px]')}
                                 title={image.src && image.stock ? 'Temsili görsel' : undefined}>
-                                <ImageSlot src={image.src} alt={line.name} restaurant={restaurant} logoTextClassName="text-[min(11px,14cqw)]"
+                                <ImageSlot src={image.src} alt={line.name} restaurant={restaurant} logoTextClassName="text-[min(11px,14cqw)]" eager
                                     className={cn('h-full', round ? 'rounded-full' : 'rounded-2xl')} />
                                 {image.src && image.stock && <span className="sr-only"> (temsili görsel)</span>}
                             </span>
@@ -1058,6 +894,8 @@ function CartLines({ lines, quote, restaurant, imageOf, round = false, limit, on
                                 <p className={cn(serif, 'm-0 text-[19px] font-semibold leading-tight')}>{line.name}</p>
                                 {line.selectionNames.length > 0 && <p className="text-sm text-[var(--site-sub)]">{line.selectionNames.join(', ')}</p>}
                                 <p className="text-sm font-extrabold tabular-nums">{formatPrice(quoted?.lineTotal ?? line.unitPrice * line.quantity)} ₺</p>
+                                {/* Bütün sepetlerde aynı kural: "adet × birim fiyat" (seçim farkları dahil). */}
+                                <p className="text-[13px] tabular-nums text-[var(--site-sub)]">{line.quantity} × {formatPrice(quoted?.unitPrice ?? line.unitPrice)} ₺</p>
                             </div>
                             <div className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--site-qty-bg,var(--site-bg))] p-1">
                                 <button type="button" onClick={() => onChange(line.key, -1)} aria-label={`${line.name} bir azalt`}
@@ -1096,45 +934,6 @@ function CartLines({ lines, quote, restaurant, imageOf, round = false, limit, on
                 <ChevronRight className={cn('h-4 w-4 transition-transform', expanded ? '-rotate-90' : 'rotate-90')} aria-hidden="true" />
             </button>
         )}
-        </>
-    );
-}
-
-function CartTotals({ subtotal, fee, total, zoneName, pickup = false, minimum, hint, hintIsError, canCheckout, onCheckout, closedLabel }: {
-    subtotal: number; fee: number; total: number; zoneName: string | null;
-    /** Gel al: teslimat satırında "Gel al · ücretsiz". */
-    pickup?: boolean;
-    minimum: { subtotal: number; target: number; left: number } | null;
-    hint: string | null; hintIsError: boolean; canCheckout: boolean; onCheckout: () => void;
-    /** Restoran sipariş almıyorken soluk düğme yerine net durum ("Yarın 09:00'da açılıyor"). */
-    closedLabel?: string | null;
-}) {
-    return (
-        <>
-            <dl className="mb-3 space-y-1 text-[15px]">
-                <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Ara toplam</dt><dd className="tabular-nums">{formatPrice(subtotal)} ₺</dd></div>
-                {pickup
-                    ? <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Gel al</dt><dd>Teslimat ücreti yok</dd></div>
-                    : <div className="flex justify-between"><dt className="text-[var(--site-sub)]">Teslimat{zoneName ? ` (${zoneName})` : ''}</dt><dd className="tabular-nums">{zoneName ? `${formatPrice(fee)} ₺` : '—'}</dd></div>}
-                <div className="flex items-baseline justify-between border-t border-dashed border-[var(--site-border-strong)] pt-3"><dt className="font-bold">Toplam</dt><dd className={cn(headingFont, 'text-[36px] font-semibold! leading-none tabular-nums')}>{formatPrice(total)} ₺</dd></div>
-            </dl>
-            {minimum && <MinimumProgress {...minimum} className="mb-3" />}
-            {hint && !closedLabel && (
-                <p className={cn('mb-3 rounded-xl px-3 py-2.5 text-sm font-medium',
-                    hintIsError ? 'border border-[var(--site-error-line)] bg-[var(--site-error-bg)] text-[var(--site-error)]' : 'bg-[var(--site-raised)]')}>
-                    {hint}
-                </p>
-            )}
-            {closedLabel ? (
-                <div role="status" className="flex min-h-[60px] w-full items-center justify-center gap-2 rounded-full border border-dashed border-[var(--site-border-strong)] px-4 text-center text-[15px] font-semibold">
-                    <Clock className="h-4 w-4 shrink-0 text-[var(--site-sub)]" aria-hidden="true" />{closedLabel}
-                </div>
-            ) : (
-                <button type="button" disabled={!canCheckout} onClick={onCheckout}
-                    className="flex h-[60px] w-full items-center justify-center rounded-full bg-[var(--site-accent)] text-base font-extrabold text-[var(--site-on-accent)] transition-opacity hover:opacity-90 disabled:opacity-50">
-                    Devam et
-                </button>
-            )}
         </>
     );
 }

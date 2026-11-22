@@ -19,7 +19,7 @@ import {
     COMPLETENESS_TARGETS, EDIT_TABS, buildPreviewSite, getText, popoverKind, relativeTime, tabByPath, tabPath, textFieldLabel,
     withListOp, withText, type EditorTab, type ListOp,
 } from './editorModel';
-import { ContactFields, DesignFields, ExternalList, FontFields, HoursFields, PopoverBody, RatingFields, SeoFields, ThemeFields } from './EditorSections';
+import { ContactFields, DesignFields, ExternalList, FontFields, HomeSectionsFields, HoursFields, LogoFields, PopoverBody, RatingFields, SeoFields, ThemeFields } from './EditorSections';
 import { ed } from './editorStyles';
 import { StockGrid, UploadDrop } from './PhotoPicker';
 import { PreviewApp } from './PreviewApp';
@@ -327,7 +327,9 @@ export default function SiteEditorPage() {
 
 
     const popoverTarget = selection && popoverKind(selection.target) ? selection.target : null;
-    const stockInfo = ctx && stockTarget ? photoTarget(ctx, stockTarget) : null;
+    const stockTargetInfo = ctx && stockTarget ? photoTarget(ctx, stockTarget) : null;
+    // Hazır görseli olmayan hedefte (ekip portresi) katman açılmaz.
+    const stockInfo = stockTargetInfo?.stock ? { ...stockTargetInfo, stock: stockTargetInfo.stock } : null;
 
     const previewNode = site ? (
         <SitePreviewFrame width={frame.width} height={frame.height} scale={frame.scale} title="Site önizlemesi"
@@ -633,7 +635,9 @@ function AnchoredPopover({ stage, frame, scale, anchor, photo, wide, onClose, ch
 const SETTINGS_SECTIONS = [
     { id: 'genel-saat', label: 'Çalışma saatleri' },
     { id: 'genel-iletisim', label: 'İletişim ve sosyal' },
+    { id: 'genel-logo', label: 'Logo' },
     { id: 'genel-tasarim', label: 'Tasarımlar' },
+    { id: 'genel-anasayfa', label: 'Anasayfa bölümleri' },
     { id: 'genel-yazi', label: 'Yazı tipi' },
     { id: 'genel-tema', label: 'Tema ve renk' },
     { id: 'genel-google', label: 'Google ve paylaşım' },
@@ -677,7 +681,9 @@ function GeneralSettingsDialog({ open, ctx, base, onClose }: { open: boolean; ct
                             <RatingFields ctx={ctx} idPrefix="g-" />
                         </div>
                     ))}
+                    {section('genel-logo', 'Logo', <LogoFields ctx={ctx} />)}
                     {section('genel-tasarim', 'Tasarımlar', <DesignFields ctx={ctx} />)}
+                    {section('genel-anasayfa', 'Anasayfa bölümleri', <HomeSectionsFields ctx={ctx} />)}
                     {section('genel-yazi', 'Yazı tipi', <FontFields ctx={ctx} />)}
                     {section('genel-tema', 'Tema ve renk', <ThemeFields ctx={ctx} />)}
                     {section('genel-google', 'Google ve paylaşım', <SeoFields ctx={ctx} live={live} />)}

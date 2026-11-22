@@ -10,6 +10,10 @@ public interface ITableNotificationService
     Task SendCustomerRequestsChangedAsync(Guid restaurantId);
     // Masanın "hesap istendi" durumu değişti (billRequestedAt null = istek kalktı); masa ekranları rozeti günceller.
     Task SendBillRequestChangedAsync(Guid restaurantId, Guid tableId, DateTime? billRequestedAt);
+    // Personel masada QR siparişini kilitledi ya da açtı; masa ekranları kilit işaretini günceller.
+    Task SendTableQrLockChangedAsync(Guid restaurantId, Guid tableId, bool locked);
+    // Staff approved or rejected a QR order request of this table; the customer QR page re-checks its own requests.
+    Task SendOrderRequestDecidedAsync(Guid restaurantId, Guid tableId);
     // Mutfak ürünleri hazır (pasada) işaretledi; yalnızca masanın bölgesine bakan garsonlara gider.
     Task SendItemsReadyAsync(Guid restaurantId, ItemsReadyDto payload);
     // Paket siparişin ürünleri hazır: garsona değil, şubenin online sipariş ekranlarına (OnlineOrders) gider.

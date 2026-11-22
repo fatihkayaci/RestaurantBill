@@ -6,6 +6,7 @@ import {
 } from '@/features/customerSite/types';
 import { RESERVATION_LOOKUP_PATH } from '@/features/customerSite/reservationCode';
 import { cn } from '@/lib/utils';
+import { SkeletonImg } from '../components/SkeletonImg';
 import {
     container, formatDay, formatSitePrice, headingFont, resolveDesign, resolveFont, siteFontsHref, siteRootStyle, wordmarkParts,
 } from './siteTheme';
@@ -68,11 +69,15 @@ export function SiteLogo({ name, logoUrl, className, imageClassName }: { name: s
  * Kutuya ürün adı yazılmaz; ad her zaman kutunun altında durur. Yazı logosu 22px, dar kutuda (telefonda iki sütun menü)
  * kelime ortasından bölünmesin diye kutu genişliğine göre küçülür.
  */
-export function ImageSlot({ src, alt, restaurant, className, logoTextClassName = 'text-[min(22px,14cqw)]' }: {
+export function ImageSlot({ src, alt, restaurant, className, logoTextClassName = 'text-[min(22px,14cqw)]', eager = false, priority = false }: {
     src?: string | null; alt: string; restaurant: string; className: string; logoTextClassName?: string;
+    /** Ekranın üstünde (sepet satırı, ayrıntı fotoğrafı): beklemeden indir. */
+    eager?: boolean;
+    /** En önemli görsel (ayrıntı fotoğrafı): öncelikli indir. */
+    priority?: boolean;
 }) {
     return src ? (
-        <img src={src} alt={alt} loading="lazy" className={cn('block w-full bg-[var(--site-placeholder)] object-cover', className)} />
+        <SkeletonImg src={src} alt={alt} eager={eager} priority={priority} className={className} />
     ) : (
         <div role="img" aria-label={alt} className={cn('@container flex w-full items-center justify-center bg-[var(--site-placeholder)] px-3 text-center', className)}>
             <SiteLogo

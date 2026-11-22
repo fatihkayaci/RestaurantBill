@@ -35,8 +35,10 @@ namespace RestaurantBill.Application.Features.Products.Commands.CreateProduct
             Product product = Product.Create(request.Name, request.Price, request.ImageUrl, request.CategoryId);
             product.SetCost(request.Cost);
             product.UpdateSiteDetails(request.Description, request.IsFeatured);
+            if (request.IsNew is bool isNew) product.SetNew(isNew, DateTime.UtcNow);
             product.SetPrepMinutes(request.PrepMinutes);
             product.SetTaxRate(request.TaxRate);
+            product.SetDietaryInfo((ProductAllergen)(request.Allergens ?? 0), (ProductDietTag)(request.DietTags ?? 0));
             // Yeni ürün kategorisinin sonuna eklenir; yönetici sonra yerini değiştirir.
             product.SetSortOrder(await ProductSortOrder.EndOfCategoryAsync(_db, request.CategoryId, cancellationToken));
             _db.Products.Add(product);

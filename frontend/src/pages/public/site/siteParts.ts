@@ -74,7 +74,7 @@ export const MOTION_CSS = `
 `;
 
 /** `siparis`: paket sipariş akışı (/siparis ve sipariş takibi); menü listesinde değil, başlığın "Paket sipariş" düğmesi. */
-export type SitePageKey = 'home' | 'menu' | 'hakkimizda' | 'mekan' | 'iletisim' | 'rezervasyon' | 'rezervasyon-sorgula' | 'siparis';
+export type SitePageKey = 'home' | 'menu' | 'hakkimizda' | 'mekan' | 'iletisim' | 'rezervasyon' | 'rezervasyon-sorgula' | 'siparis' | 'bulunamadi' | 'qr-gecersiz';
 
 export function productCount(site: PublicSite): number {
     return site.categories.reduce((sum, c) => sum + c.products.length, 0);
@@ -82,11 +82,16 @@ export function productCount(site: PublicSite): number {
 
 /**
  * Hakkımızda her zaman gösterilebilir: yazı yoksa "Bizi menümüzden tanıyın" (menüden tanıtım), usta bilgisi varsa
- * usta kartı. Yalnız hiçbir şey yoksa (yazı, usta, ürün) bağlantı gizlenir.
+ * usta kartı, ekip varsa ekip. Yalnız hiçbir şey yoksa (yazı, usta, ekip, ürün) bağlantı gizlenir.
  */
 export function hasAboutPage(site: PublicSite): boolean {
     const c = site.site;
-    return Boolean(c.storyTitle || c.about || c.founderName || productCount(site) > 0);
+    return Boolean(c.storyTitle || c.about || c.founderName || teamOnSite(site).length > 0 || productCount(site) > 0);
+}
+
+/** Sitede çizilen ekip üyeleri: adı olanlar (adı silinmiş, fotoğrafı korunan üye yalnız düzenleyicide görünür). */
+export function teamOnSite(site: PublicSite) {
+    return (site.site.teamMembers ?? []).filter(m => m.name.trim());
 }
 
 /** Mekân: fotoğraf, başlık, olanak, nasıl gelinir ya da masalı bölüm varsa; fotoğraf yoksa harita ve sözle anlatılır. */

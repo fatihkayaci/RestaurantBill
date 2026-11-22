@@ -17,6 +17,17 @@ public class QrFeaturesTests
         Assert.True(features.BillRequestEnabled);
         Assert.True(features.DeliveryLinkEnabled);
         Assert.True(features.ReservationLinkEnabled);
+        Assert.True(features.FeaturedSectionEnabled);
+        Assert.False(features.PopularSectionEnabled);
+    }
+
+    [Fact]
+    public void Create_KeepsSectionFlags()
+    {
+        QrFeatures features = QrFeatures.Create(true, true, true, true, true, featuredSectionEnabled: false, popularSectionEnabled: true);
+
+        Assert.False(features.FeaturedSectionEnabled);
+        Assert.True(features.PopularSectionEnabled);
     }
 
     [Fact]

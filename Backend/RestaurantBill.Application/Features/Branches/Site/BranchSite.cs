@@ -120,7 +120,7 @@ public abstract class SiteTextsInput
 
     // Ek içerik (fotoğraflar ayrı uçlardan değişir).
     public string Theme { get; set; } = string.Empty;
-    /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"; boş = renkli). null (eski form göndermez): değiştirme.</summary>
+    /// <summary>Sitenin tasarımı (SiteContent.DesignKeys; boş = varsayılan, sophra). null (eski form göndermez): değiştirme.</summary>
     public string? Design { get; set; }
     /// <summary>Yazı tipi çifti (SiteContent.FontKeys; boş = tasarımın kendi yazı tipi). null: değiştirme.</summary>
     public string? Font { get; set; }
@@ -131,6 +131,8 @@ public abstract class SiteTextsInput
     public List<string> Amenities { get; set; } = [];
     /// <summary>Gizlenen hazır soru anahtarları; null (eski form göndermez): değiştirme.</summary>
     public List<string>? HiddenFaqs { get; set; }
+    /// <summary>Anasayfa bölümlerinin sırası ve görünürlüğü; null (eski form göndermez): değiştirme. Boş: varsayılan.</summary>
+    public List<SiteHomeSectionDto>? HomeSections { get; set; }
     public decimal? Rating { get; set; }
     public int? ReviewCount { get; set; }
     public string ReviewsUrl { get; set; } = string.Empty;
@@ -141,6 +143,11 @@ public abstract class SiteTextsInput
     public int? FoundedYear { get; set; }
     public List<SiteValueDto> Values { get; set; } = [];
     public List<SiteMilestoneDto> Milestones { get; set; } = [];
+    /// <summary>"Ekibimiz" üyeleri (yalnız Id, Name, Role, Note okunur; fotoğraf Id'ye göre korunur). null (eski form): değiştirme.</summary>
+    public List<SiteTeamMemberDto>? TeamMembers { get; set; }
+    /// <summary>"Ekibimiz" başlığı ve giriş cümlesi; boş = varsayılan, null: değiştirme.</summary>
+    public string? TeamTitle { get; set; }
+    public string? TeamIntro { get; set; }
     /// <summary>Bölüm açıklamaları (yalnız RegionId ve Description okunur).</summary>
     public List<SiteRegionDetailDto> RegionDetails { get; set; } = [];
 
@@ -179,6 +186,7 @@ public abstract class SiteTextsInput
             WhatsappPhone = WhatsappPhone ?? string.Empty,
             Amenities = Amenities ?? [],
             HiddenFaqs = HiddenFaqs,
+            HomeSections = HomeSections?.Select(h => new SiteHomeSection(h?.Key ?? string.Empty, h?.Enabled ?? true)).ToList(),
             Rating = Rating,
             ReviewCount = ReviewCount,
             ReviewsUrl = ReviewsUrl ?? string.Empty,
@@ -189,6 +197,9 @@ public abstract class SiteTextsInput
             FoundedYear = FoundedYear,
             Values = (Values ?? []).Select(v => new SiteValue(v.Title, v.Text)).ToList(),
             Milestones = (Milestones ?? []).Select(m => new SiteMilestone(m.Year, m.Text)).ToList(),
+            TeamMembers = TeamMembers?.Where(m => m is not null).Select(m => new SiteTeamMemberText(m.Id, m.Name, m.Role, m.Note)).ToList(),
+            TeamTitle = TeamTitle,
+            TeamIntro = TeamIntro,
             RegionDescriptions = (RegionDetails ?? [])
                 .Where(r => regionIds.Contains(r.RegionId))
                 .GroupBy(r => r.RegionId)
@@ -246,6 +257,12 @@ public abstract class SiteTextsValidator<T> : AbstractValidator<T> where T : Sit
             .When(x => x.HiddenFaqs is not null).WithMessage($"En fazla {SiteContent.HiddenFaqsMax} soru gizlenebilir.");
         RuleForEach(x => x.HiddenFaqs).Must(k => k is not null && SiteContent.FaqKeyPattern.IsMatch(k.Trim().ToLowerInvariant()))
             .When(x => x.HiddenFaqs is not null).WithMessage("Geçersiz soru anahtarı.");
+        RuleFor(x => x.HomeSections!.Count).LessThanOrEqualTo(SiteContent.HomeSectionKeys.Count)
+            .When(x => x.HomeSections is not null).WithMessage("Anasayfa bölümleri geçersiz.");
+        RuleForEach(x => x.HomeSections).Must(h => h is not null && SiteContent.HomeSectionKeys.Contains((h.Key ?? string.Empty).Trim().ToLowerInvariant()))
+            .When(x => x.HomeSections is not null).WithMessage("Geçersiz anasayfa bölümü.");
+        RuleFor(x => x.HomeSections).Must(list => list!.Select(h => (h?.Key ?? string.Empty).Trim().ToLowerInvariant()).Distinct().Count() == list!.Count)
+            .When(x => x.HomeSections is not null).WithMessage("Her anasayfa bölümü listede bir kez yer almalıdır.");
         RuleFor(x => x.Rating).InclusiveBetween(SiteContent.RatingMin, SiteContent.RatingMax)
             .When(x => x.Rating.HasValue).WithMessage("Puan 1 ile 5 arasında olmalıdır.");
         RuleFor(x => x.ReviewCount).InclusiveBetween(0, SiteContent.ReviewCountMax)
@@ -287,6 +304,21 @@ public abstract class SiteTextsValidator<T> : AbstractValidator<T> where T : Sit
             m.RuleFor(v => v.Text).MaximumLength(SiteContent.MilestoneTextMaxLength)
                 .WithMessage($"Kilometre taşı en fazla {SiteContent.MilestoneTextMaxLength} karakter olabilir.");
         });
+        RuleFor(x => x.TeamMembers!.Count).LessThanOrEqualTo(SiteContent.TeamMembersMax)
+            .When(x => x.TeamMembers is not null).WithMessage($"En fazla {SiteContent.TeamMembersMax} ekip üyesi eklenebilir.");
+        RuleForEach(x => x.TeamMembers).ChildRules(m =>
+        {
+            m.RuleFor(v => v.Name).MaximumLength(SiteContent.TeamNameMaxLength)
+                .WithMessage($"Ekip üyesinin adı en fazla {SiteContent.TeamNameMaxLength} karakter olabilir.");
+            m.RuleFor(v => v.Role).MaximumLength(SiteContent.TeamRoleMaxLength)
+                .WithMessage($"Ekip üyesinin rolü en fazla {SiteContent.TeamRoleMaxLength} karakter olabilir.");
+            m.RuleFor(v => v.Note).MaximumLength(SiteContent.TeamNoteMaxLength)
+                .WithMessage($"Ekip üyesinin notu en fazla {SiteContent.TeamNoteMaxLength} karakter olabilir.");
+        }).When(x => x.TeamMembers is not null);
+        RuleFor(x => x.TeamTitle).MaximumLength(SiteContent.TeamTitleMaxLength)
+            .WithMessage($"Ekip başlığı en fazla {SiteContent.TeamTitleMaxLength} karakter olabilir.");
+        RuleFor(x => x.TeamIntro).MaximumLength(SiteContent.TeamIntroMaxLength)
+            .WithMessage($"Ekip giriş yazısı en fazla {SiteContent.TeamIntroMaxLength} karakter olabilir.");
         RuleForEach(x => x.RegionDetails).ChildRules(r =>
         {
             r.RuleFor(v => v.Description).MaximumLength(SiteContent.RegionDescriptionMaxLength)

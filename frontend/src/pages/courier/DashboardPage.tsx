@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Modal, ModalTitle } from '@/components/ui/modal';
 import { courierService } from '@/features/courier/api/courierService';
 import {
-    DoorPayment, doorPaymentLabel, doorPaymentWord, mapsUrl, telUrl,
+    DoorPayment, directionsUrl, doorPaymentLabel, doorPaymentWord, telUrl,
     type CourierDaySummary, type CourierOrder, type DoorPaymentMethod,
 } from '@/features/courier/types';
 import { createHubConnection } from '@/lib/signalrConnection';
@@ -383,7 +383,7 @@ function NextJobCard({ order, now }: { order: CourierOrder; now: number }) {
 
             <div className="grid grid-cols-2 gap-2 p-4">
                 <a
-                    href={mapsUrl(order.mapsQuery)}
+                    href={directionsUrl(order.mapsQuery)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex h-[72px] flex-col items-center justify-center gap-1 rounded-2xl bg-foreground text-[15px] font-bold text-background active:opacity-80"

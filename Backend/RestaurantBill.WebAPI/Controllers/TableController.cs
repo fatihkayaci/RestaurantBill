@@ -8,6 +8,7 @@ using RestaurantBill.Application.Features.Tables.Commands.DeleteTable;
 using RestaurantBill.Application.Features.Tables.Commands.OpenTable;
 using RestaurantBill.Application.Features.Tables.Commands.ReorderTables;
 using RestaurantBill.Application.Features.Tables.Commands.ReservationTable;
+using RestaurantBill.Application.Features.Tables.Commands.SetTableQrLock;
 using RestaurantBill.Application.Features.Tables.Commands.UpdateTable;
 using RestaurantBill.Application.Features.Tables.Queries.GetAllTable;
 using RestaurantBill.Application.Features.Tables.Queries.GetTableById;
@@ -152,6 +153,22 @@ namespace RestaurantBill.WebAPI.Controllers
             var result = await _mediator.Send(command, cancellationToken);
             return HandleResult(result);
         }      
+        /// <summary>
+        /// "QR siparişi: Açık / Kilitli". Kilitliyken masanın QR'ından sipariş talebi gönderilemez (menü, garson çağırma,
+        /// hesap isteme ve hesap açık kalır). Owner/Admin; garson yalnız "QR siparişini kilitleme" yetkisiyle.
+        /// </summary>
+        /// <param name="id">TableId</param>
+        /// <param name="body">{ locked }</param>
+        /// <param name="cancellationToken"></param>
+        [Authorize(Roles = "Owner,Admin,Waiter")]
+        [HttpPost("{id:guid}/qr-lock")]
+        public async Task<IActionResult> SetQrLock([FromRoute] Guid id, [FromBody] SetQrLockBody body, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new SetTableQrLockCommand { TableId = id, Locked = body.Locked }, cancellationToken);
+            return HandleResult(result);
+        }
+
+        public sealed record SetQrLockBody(bool Locked);
         #endregion
 
         #region delete methods

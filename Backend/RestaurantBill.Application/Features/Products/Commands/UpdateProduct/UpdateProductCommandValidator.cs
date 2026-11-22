@@ -34,5 +34,13 @@ public class UpdateProductCommandValidator : AbstractValidator<UpdateProductComm
         RuleFor(x => x.TaxRate)
             .InclusiveBetween(0, 100).WithMessage("KDV oranı 0 ile 100 arasında olmalıdır.")
             .When(x => x.TaxRate.HasValue);
+
+        RuleFor(x => x.Allergens)
+            .Must(a => a is null || (a >= 0 && (a & ~RestaurantBill.Domain.Enums.ProductAllergens.All) == 0))
+            .WithMessage("Geçersiz alerjen seçimi.");
+
+        RuleFor(x => x.DietTags)
+            .Must(d => d is null || (d >= 0 && (d & ~RestaurantBill.Domain.Enums.ProductDietTags.All) == 0))
+            .WithMessage("Geçersiz diyet etiketi.");
     }
 }

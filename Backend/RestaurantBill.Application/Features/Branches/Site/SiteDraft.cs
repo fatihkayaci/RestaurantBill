@@ -31,6 +31,7 @@ internal static class SiteEditor
 
     private static readonly Dictionary<string, (string Label, string Page)> Fields = new()
     {
+        ["logo"] = ("Logo", "Tema"),
         ["headline"] = ("Başlık", "Anasayfa"),
         ["tagline"] = ("Alt başlık", "Anasayfa"),
         ["coverImage"] = ("Kapak fotoğrafı", "Anasayfa"),
@@ -49,6 +50,7 @@ internal static class SiteEditor
         ["gallery"] = ("Mekân fotoğrafları", "Mekân"),
         ["amenities"] = ("Olanaklar", "Mekân"),
         ["hiddenFaqs"] = ("Sık sorulanlar", "İletişim"),
+        ["homeSections"] = ("Anasayfa bölümleri", "Anasayfa"),
         ["rating"] = ("Google puanı", "Anasayfa"),
         ["reviewCount"] = ("Yorum sayısı", "Anasayfa"),
         ["reviewsUrl"] = ("Yorum bağlantısı", "Anasayfa"),
@@ -60,6 +62,9 @@ internal static class SiteEditor
         ["foundedYear"] = ("Kuruluş yılı", "Hakkımızda"),
         ["values"] = ("Değerlerimiz", "Hakkımızda"),
         ["milestones"] = ("Kilometre taşları", "Hakkımızda"),
+        ["teamTitle"] = ("Ekip başlığı", "Hakkımızda"),
+        ["teamIntro"] = ("Ekip giriş yazısı", "Hakkımızda"),
+        ["teamMembers"] = ("Ekibimiz", "Hakkımızda"),
         ["seoTitle"] = ("Sayfa başlığı", "Google ve paylaşım"),
         ["seoDescription"] = ("Açıklama", "Google ve paylaşım"),
         ["shareImage"] = ("Paylaşım görseli", "Google ve paylaşım"),
@@ -202,8 +207,8 @@ public class SaveSiteDraftCommandValidator : SiteTextsValidator<SaveSiteDraftCom
 }
 
 public class SaveSiteDraftCommandHandler(
-    IAppDbContext db, ICurrentUserService currentUser, IOptions<BunnyStorageOptions> storageOptions, IOptions<SeoOptions> seoOptions,
-    TimeProvider clock)
+    IAppDbContext db, ICurrentUserService currentUser, IImageStorageService imageStorage, IOptions<BunnyStorageOptions> storageOptions,
+    IOptions<SeoOptions> seoOptions, TimeProvider clock)
     : IRequestHandler<SaveSiteDraftCommand, Result<SiteDraftResultDto>>
 {
     public async Task<Result<SiteDraftResultDto>> Handle(SaveSiteDraftCommand request, CancellationToken cancellationToken)
@@ -217,6 +222,8 @@ public class SaveSiteDraftCommandHandler(
         DateTime now = clock.GetUtcNow().UtcDateTime;
         // Saatler, WhatsApp ve nasıl gelinir şubenindir: gövdede gelse de taslağa yazılmaz.
         request.ClearBranchInfo();
+        // Silinen ekip üyesinin fotoğrafı yayında da yoksa dosyası silinir.
+        IReadOnlySet<string> before = company.SiteImageKeysInUse();
         try
         {
             SiteSnapshot next = company.GetSiteDraft().WithTexts(request.ToSiteTexts(regionIds, request.SeoTitle, request.SeoDescription), now.Year);
@@ -228,6 +235,7 @@ public class SaveSiteDraftCommandHandler(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await CompanySiteLoader.DeleteUnusedImagesAsync(imageStorage, company, before, cancellationToken);
         return await SiteEditor.OkAsync(db, company, cdn, seoOptions.Value, cancellationToken);
     }
 }
@@ -362,6 +370,9 @@ public enum SiteDraftImageTarget
     VenueHero = 9,
     ContactHero = 10,
     ReservationHero = 11,
+    Logo = 12,
+    /// <summary>"Ekibimiz" üyesinin portresi (TeamMemberId). Hazır görsel seçilemez: ekip fotoğrafı gerçek kişinindir.</summary>
+    TeamMember = 13,
 }
 
 /// <summary>
@@ -373,6 +384,7 @@ public class SetSiteDraftImageCommand : IRequest<Result<SiteEditorDto>>
 {
     public SiteDraftImageTarget Target { get; set; }
     public Guid? RegionId { get; set; }
+    public Guid? TeamMemberId { get; set; }
     public int? GalleryIndex { get; set; }
     public Stream? Content { get; set; }
     public Guid? StockImageId { get; set; }
@@ -389,8 +401,10 @@ public class SetSiteDraftImageCommandHandler(
         SiteDraftImageTarget.Cover => 2000,
         SiteDraftImageTarget.MenuHero or SiteDraftImageTarget.AboutHero or SiteDraftImageTarget.VenueHero
             or SiteDraftImageTarget.ContactHero or SiteDraftImageTarget.ReservationHero => 2000,
-        SiteDraftImageTarget.Founder => 1000,
+        SiteDraftImageTarget.Founder or SiteDraftImageTarget.TeamMember => 1000,
         SiteDraftImageTarget.Share => 1200,
+        // Logo QR menünün başlığında ve ürün yer tutucusunda küçük çizilir; WebP saydamlığı korur.
+        SiteDraftImageTarget.Logo => 512,
         SiteDraftImageTarget.Gallery => 1600,
         _ => 1400,
     };
@@ -399,6 +413,12 @@ public class SetSiteDraftImageCommandHandler(
     {
         if (!Enum.IsDefined(request.Target)) return Result<SiteEditorDto>.Failure("Geçersiz görsel alanı.");
         if (request.Content is not null && request.StockImageId is not null) return Result<SiteEditorDto>.Failure("Tek bir görsel seçin.");
+        // Hazır görsel kütüphanesinde logo yok: logo restoranın kendi dosyasıdır.
+        if (request.Target == SiteDraftImageTarget.Logo && request.StockImageId is not null)
+            return Result<SiteEditorDto>.Failure("Logo için kendi görselinizi yükleyin.");
+        // Ekip fotoğrafı gerçek bir kişinindir: hazır görsel kullanılmaz.
+        if (request.Target == SiteDraftImageTarget.TeamMember && request.StockImageId is not null)
+            return Result<SiteEditorDto>.Failure("Ekip fotoğrafı için kişinin kendi fotoğrafını yükleyin.");
 
         Company? company = await SiteEditor.LoadAsync(db, currentUser, cancellationToken);
         if (company is null) return Result<SiteEditorDto>.Failure(CompanySiteLoader.NotFoundMessage);
@@ -412,6 +432,10 @@ public class SetSiteDraftImageCommandHandler(
                 && await db.Regions.AnyAsync(r => r.Id == regionId && r.Branch.CompanyId == company.Id && !r.Branch.IsDeleted, cancellationToken);
             if (!regionExists) return Result<SiteEditorDto>.Failure("Bölüm bulunamadı.");
         }
+        // Üye yüklemeden önce denetlenir: taslakta olmayan üyeye boşuna dosya yüklenmesin.
+        if (request.Target == SiteDraftImageTarget.TeamMember
+            && !(request.TeamMemberId is Guid memberId && draft.Content.TeamMembers.Any(m => m.Id == memberId)))
+            return Result<SiteEditorDto>.Failure("Ekip üyesi bulunamadı. Önce üyenin adını yazın.");
         if (request.Target == SiteDraftImageTarget.Gallery)
         {
             if (removing && request.GalleryIndex is null) return Result<SiteEditorDto>.Failure("Fotoğraf bulunamadı.");
@@ -446,6 +470,7 @@ public class SetSiteDraftImageCommandHandler(
             {
                 SiteDraftImageTarget.Cover => draft.WithImage(SiteImageSlot.Cover, key),
                 SiteDraftImageTarget.About => draft.WithImage(SiteImageSlot.About, key),
+                SiteDraftImageTarget.Logo => draft.WithImage(SiteImageSlot.Logo, key),
                 SiteDraftImageTarget.Founder => draft.WithImage(SiteImageSlot.Founder, key),
                 SiteDraftImageTarget.Share => draft.WithImage(SiteImageSlot.Share, key),
                 SiteDraftImageTarget.MenuHero => draft.WithImage(SiteImageSlot.MenuHero, key),
@@ -455,6 +480,7 @@ public class SetSiteDraftImageCommandHandler(
                 SiteDraftImageTarget.ReservationHero => draft.WithImage(SiteImageSlot.ReservationHero, key),
                 SiteDraftImageTarget.Gallery when removing => draft.WithoutGalleryImage(request.GalleryIndex!.Value),
                 SiteDraftImageTarget.Gallery => draft.WithGalleryImage(key, request.GalleryIndex),
+                SiteDraftImageTarget.TeamMember => draft.WithTeamPhoto(request.TeamMemberId!.Value, key),
                 _ => draft.WithRegionPhoto(request.RegionId!.Value, key),
             };
             company.SaveSiteDraft(next, clock.GetUtcNow().UtcDateTime);

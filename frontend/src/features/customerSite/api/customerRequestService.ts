@@ -14,10 +14,6 @@ export const customerRequestService = {
     rejectOrderRequest: async (id: string, reason?: string) => {
         await api.post(`/order-request/${id}/reject`, reason ? { reason } : {});
     },
-    /** "QR kilidini aç": masa artık bir telefona bağlı değil; sonraki ilk talebi gönderen telefon sahip olur. */
-    unlockQrTable: async (tableId: string) => {
-        await api.post(`/order-request/table/${tableId}/qr-unlock`);
-    },
     getReservations: async () => {
         const response = await api.get<StaffReservation[]>('/reservation');
         return response.data;

@@ -91,6 +91,13 @@ public class TransferOrderCommandHandler : IRequestHandler<TransferOrderCommand,
                         payment.MoveToOrder(mergeTarget.Id);
                 }
 
+                // Kaynak hesaba QR'dan sipariş veren telefonlar birleşen hesabın katılımcısı olur ("Ödendi" fişini görür).
+                List<OrderRequest> sourceRequests = await _db.OrderRequests
+                    .Where(r => r.OrderId == sourceOrder.Id && r.Status == OrderRequestStatus.Approved)
+                    .ToListAsync(cancellationToken);
+                foreach (OrderRequest orderRequest in sourceRequests)
+                    orderRequest.MoveToOrder(mergeTarget.Id);
+
                 mergeTarget.MergeFrom(sourceOrder);
                 sourceOrder.Cancel();
                 source.Release();

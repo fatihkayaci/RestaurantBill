@@ -17,8 +17,18 @@ namespace RestaurantBill.Domain.Entities
     /// <summary>Hakkımızda'daki zaman çizelgesinin bir satırı.</summary>
     public sealed record SiteMilestone(int Year, string Text);
 
+    /// <summary>Anasayfanın bir bölümü ve görünürlüğü (<see cref="SiteContent.HomeSectionKeys"/>); listedeki sıra sitedeki sıradır.</summary>
+    public sealed record SiteHomeSection(string Key, bool Enabled);
+
     /// <summary>Oturma bölümünün sitedeki fotoğrafı (depo anahtarı) ve kısa açıklaması.</summary>
     public sealed record SiteRegionDetail(Guid RegionId, string PhotoKey, string Description);
+
+    /// <summary>Hakkımızda'daki "Ekibimiz" kartı: ustayla birlikte çalışan bir kişi. Kimlik, metin kayıtlarında fotoğrafın
+    /// (depo anahtarı) doğru kişide kalmasını sağlar (sıra değişse de). Rol ve not isteğe bağlıdır; ad zorunludur.</summary>
+    public sealed record SiteTeamMember(Guid Id, string Name, string Role, string Note, string PhotoKey);
+
+    /// <summary>Ekip üyesinin metin kısmı (admin formu); fotoğraf ayrı uçtan değişir ve kimliğe göre korunur.</summary>
+    public sealed record SiteTeamMemberText(Guid Id, string Name, string Role, string Note);
 
     /// <summary>Admin formunun metin kısmı: fotoğraflar (galeri, usta, bölüm) ayrı uçlardan değişir ve burada korunur.</summary>
     public sealed class SiteContentTexts
@@ -39,6 +49,13 @@ namespace RestaurantBill.Domain.Entities
         public int? FoundedYear { get; init; }
         public IReadOnlyList<SiteValue> Values { get; init; } = [];
         public IReadOnlyList<SiteMilestone> Milestones { get; init; } = [];
+        /// <summary>"Ekibimiz" üyeleri, sitedeki sırayla. null: değiştirme (eski form göndermez). Adı boş üye atılır
+        /// (fotoğrafı varsa, ad yeniden yazılırken fotoğraf kaybolmasın diye kalır; sitede adı olmayan üye çizilmez).</summary>
+        public IReadOnlyList<SiteTeamMemberText>? TeamMembers { get; init; }
+        /// <summary>"Ekibimiz" bölümünün başlığı; boş = tasarımın varsayılanı. null: değiştirme.</summary>
+        public string? TeamTitle { get; init; }
+        /// <summary>"Ekibimiz" bölümünün giriş cümlesi; boş = tasarımın varsayılanı. null: değiştirme.</summary>
+        public string? TeamIntro { get; init; }
         /// <summary>Bölüm kimliği → açıklama. Listede olmayan bölümün açıklaması silinir, fotoğrafı korunur.</summary>
         public IReadOnlyDictionary<Guid, string> RegionDescriptions { get; init; } = new Dictionary<Guid, string>();
         /// <summary>Google/paylaşım başlığı; boş = otomatik. null: değiştirme (eski form bu alanı göndermez).</summary>
@@ -47,10 +64,12 @@ namespace RestaurantBill.Domain.Entities
         public string? SeoDescription { get; init; }
         /// <summary>Sitede gizlenen hazır "Sık sorulanlar" anahtarları; null: değiştirme (eski form bu alanı göndermez).</summary>
         public IReadOnlyList<string>? HiddenFaqs { get; init; }
-        /// <summary>Sitenin tasarımı ("renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"); boş = varsayılan (renkli). null: değiştirme (eski form göndermez).</summary>
+        /// <summary>Sitenin tasarımı (<see cref="SiteContent.DesignKeys"/>); boş = varsayılan (sophra). null: değiştirme (eski form göndermez).</summary>
         public string? Design { get; init; }
         /// <summary>Yazı tipi çifti (<see cref="SiteContent.FontKeys"/>); boş = tasarımın kendi yazı tipi. null: değiştirme.</summary>
         public string? Font { get; init; }
+        /// <summary>Anasayfa bölümlerinin sırası ve görünürlüğü; boş = varsayılan sıra, hepsi açık. null: değiştirme (eski form göndermez).</summary>
+        public IReadOnlyList<SiteHomeSection>? HomeSections { get; init; }
     }
 
     /// <summary>
@@ -76,6 +95,12 @@ namespace RestaurantBill.Domain.Entities
         public const int MilestonesMax = 5;
         public const int MilestoneTextMaxLength = 140;
         public const int RegionDescriptionMaxLength = 160;
+        public const int TeamMembersMax = 6;
+        public const int TeamNameMaxLength = 60;
+        public const int TeamRoleMaxLength = 60;
+        public const int TeamNoteMaxLength = 120;
+        public const int TeamTitleMaxLength = 80;
+        public const int TeamIntroMaxLength = 200;
         public const int MinYear = 1800;
         public const decimal RatingMin = 1m;
         public const decimal RatingMax = 5m;
@@ -91,9 +116,17 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Sitenin hazır renk temaları; boş = varsayılan (terracotta). Ön yüzdeki SITE_THEMES ile aynı anahtarlar.</summary>
         public static readonly IReadOnlyList<string> ThemeKeys = ["terracotta", "zeytin", "lacivert", "bordo", "komur", "beyaz"];
 
-        /// <summary>Sitenin tasarımları; boş = varsayılan ("renkli"). Ön yüzdeki SITE_DESIGNS ile aynı anahtarlar.
-        /// Tasarım ve renk teması ayrıdır: her tasarım bütün temaları (ve özel vurgu rengini) kendi paletiyle çizer.</summary>
-        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce"];
+        /// <summary>Sitenin tasarımları; boş = varsayılan ("sophra"; BackfillExplicitSiteDesign göçünden önce kaydedilmiş boş
+        /// değerler "renkli"ye çevrildi). Ön yüzdeki SITE_DESIGNS ile aynı anahtarlar. Tasarım ve renk teması ayrıdır: her
+        /// tasarım bütün temaları (ve özel vurgu rengini) kendi paletiyle çizer.</summary>
+        public static readonly IReadOnlyList<string> DesignKeys = ["renkli", "sade", "elit", "sicak", "meyhane", "esnaf", "bahce", "sophra"];
+
+        /// <summary>Anasayfanın sıralanıp gizlenebilen bölümleri (ön yüzde HOME_SECTION_KEYS; kapak ve alt bilgi sabittir).
+        /// Varsayılan sıra budur. Yalnız bölüm düzenini kullanan tasarımlar (Sophra) okur.</summary>
+        public static readonly IReadOnlyList<string> HomeSectionKeys = ["categories", "featured", "about", "team", "features", "gallery", "reviews", "contact"];
+
+        /// <summary>Varsayılanı kapalı bölümler (restoran açarsa görünür): kayıtlı listede yoksa kapalı eklenir.</summary>
+        public static readonly IReadOnlyList<string> HomeSectionsOffByDefault = ["team"];
 
         /// <summary>Başlık + gövde yazı tipi çiftleri; boş = tasarımın kendi çifti. Ön yüzdeki SITE_FONTS ile aynı anahtarlar.</summary>
         public static readonly IReadOnlyList<string> FontKeys =
@@ -108,8 +141,12 @@ namespace RestaurantBill.Domain.Entities
         public static SiteContent Empty { get; } = new();
 
         public string Theme { get; init; } = string.Empty;
-        /// <summary>Sitenin tasarımı (<see cref="DesignKeys"/>); boş = varsayılan (renkli).</summary>
+        /// <summary>Sitenin tasarımı (<see cref="DesignKeys"/>); boş = varsayılan (sophra).</summary>
         public string Design { get; init; } = string.Empty;
+        /// <summary>Anasayfa bölümlerinin sırası ve görünürlüğü; boş = varsayılan (<see cref="HomeSectionKeys"/> sırası; "team" kapalı, diğerleri açık).
+        /// Doluysa her anahtar bir kez; sonradan eklenen anahtar sona eklenir: açık, varsayılanı kapalıysa
+        /// (<see cref="HomeSectionsOffByDefault"/>) kapalı.</summary>
+        public IReadOnlyList<SiteHomeSection> HomeSections { get; init; } = [];
         /// <summary>Yazı tipi çifti (<see cref="FontKeys"/>); boş = tasarımın kendi yazı tipi.</summary>
         public string Font { get; init; } = string.Empty;
         /// <summary>Mekân fotoğraflarının depo anahtarları, sitedeki sırayla.</summary>
@@ -131,6 +168,12 @@ namespace RestaurantBill.Domain.Entities
         public IReadOnlyList<SiteValue> Values { get; init; } = [];
         public IReadOnlyList<SiteMilestone> Milestones { get; init; } = [];
         public IReadOnlyList<SiteRegionDetail> RegionDetails { get; init; } = [];
+        /// <summary>Hakkımızda'daki "Ekibimiz" üyeleri, sitedeki sırayla (en çok <see cref="TeamMembersMax"/>).</summary>
+        public IReadOnlyList<SiteTeamMember> TeamMembers { get; init; } = [];
+        /// <summary>"Ekibimiz" başlığı; boş = tasarımın varsayılanı ("Sofranın arkasındakiler.").</summary>
+        public string TeamTitle { get; init; } = string.Empty;
+        /// <summary>"Ekibimiz" giriş cümlesi; boş = tasarımın varsayılanı.</summary>
+        public string TeamIntro { get; init; } = string.Empty;
         /// <summary>Google'da ve WhatsApp/Instagram önizlemesinde görünen başlık; boş = otomatik (restoran adı · ilçe).</summary>
         public string SeoTitle { get; init; } = string.Empty;
         /// <summary>Arama sonucu / paylaşım açıklaması; boş = otomatik (alt başlık · ilçe · saatler). Sunucuda kırpılmaz.</summary>
@@ -245,7 +288,10 @@ namespace RestaurantBill.Domain.Entities
             if (milestones.Any(m => m.Text.Length == 0)) throw new DomainException("Her kilometre taşına bir cümle yazın.");
             milestones = milestones.OrderBy(m => m.Year).ToList();
 
+            IReadOnlyList<SiteTeamMember> team = texts.TeamMembers is null ? TeamMembers : NormalizeTeam(texts.TeamMembers);
+
             IReadOnlyList<string> hiddenFaqs = texts.HiddenFaqs is null ? HiddenFaqs : NormalizeFaqKeys(texts.HiddenFaqs);
+            IReadOnlyList<SiteHomeSection> homeSections = texts.HomeSections is null ? HomeSections : NormalizeHomeSections(texts.HomeSections);
 
             List<SiteRegionDetail> regions = [];
             foreach ((Guid regionId, string rawDescription) in texts.RegionDescriptions)
@@ -279,9 +325,13 @@ namespace RestaurantBill.Domain.Entities
                 Values = values,
                 Milestones = milestones,
                 RegionDetails = regions,
+                TeamMembers = team,
+                TeamTitle = texts.TeamTitle is null ? TeamTitle : Limit(texts.TeamTitle, TeamTitleMaxLength, "Ekip başlığı"),
+                TeamIntro = texts.TeamIntro is null ? TeamIntro : Limit(texts.TeamIntro, TeamIntroMaxLength, "Ekip giriş yazısı"),
                 SeoTitle = texts.SeoTitle is null ? SeoTitle : Limit(texts.SeoTitle, SeoTitleMaxLength, "Sayfa başlığı"),
                 SeoDescription = texts.SeoDescription is null ? SeoDescription : Limit(texts.SeoDescription, SeoDescriptionMaxLength, "Açıklama"),
                 HiddenFaqs = hiddenFaqs,
+                HomeSections = homeSections,
             };
         }
 
@@ -292,6 +342,31 @@ namespace RestaurantBill.Domain.Entities
             DirectionsNote = Limit(directionsNote, DirectionsNoteMaxLength, "Nasıl gelinir notu"),
             WhatsappPhone = NormalizePhone(whatsappPhone ?? string.Empty),
         };
+
+        /// <summary>
+        /// Ekip üyeleri: metinler kırpılıp sınırlanır; fotoğraf aynı kimlikli mevcut üyeden alınır (metin kaydı fotoğrafı
+        /// silmez, sıra değişince fotoğraflar karışmaz). Boş kimliğe yeni kimlik verilir; iki kez geçen kimlik hata verir.
+        /// Adı boş üye atılır; fotoğrafı varsa kalır (ad yeniden yazılırken fotoğraf kaybolmasın). Listede olmayan üyenin
+        /// fotoğrafı içerikten çıkar (dosyayı, kaydeden işlem artık kullanılmıyorsa siler).
+        /// </summary>
+        private List<SiteTeamMember> NormalizeTeam(IReadOnlyList<SiteTeamMemberText> members)
+        {
+            List<SiteTeamMember> result = [];
+            foreach (SiteTeamMemberText? raw in members)
+            {
+                if (raw is null) continue;
+                Guid id = raw.Id == Guid.Empty ? Guid.NewGuid() : raw.Id;
+                if (result.Any(m => m.Id == id)) throw new DomainException("Her ekip üyesi listede bir kez yer almalıdır.");
+                string name = Limit(raw.Name, TeamNameMaxLength, "Ekip üyesinin adı");
+                string role = Limit(raw.Role, TeamRoleMaxLength, "Ekip üyesinin rolü");
+                string note = Limit(raw.Note, TeamNoteMaxLength, "Ekip üyesinin notu");
+                string photo = TeamMembers.FirstOrDefault(m => m.Id == id)?.PhotoKey ?? string.Empty;
+                if (name.Length == 0 && photo.Length == 0) continue;
+                result.Add(new SiteTeamMember(id, name, role, note, photo));
+            }
+            if (result.Count > TeamMembersMax) throw new DomainException($"En fazla {TeamMembersMax} ekip üyesi eklenebilir.");
+            return result;
+        }
 
         /// <summary>Gizlenen soru anahtarları: kırpılır, küçük harfe çevrilir, tekrarlar atılır (sıra korunur); en çok 30.</summary>
         private static List<string> NormalizeFaqKeys(IReadOnlyList<string> keys)
@@ -304,6 +379,27 @@ namespace RestaurantBill.Domain.Entities
                 if (!result.Contains(key)) result.Add(key);
             }
             if (result.Count > HiddenFaqsMax) throw new DomainException($"En fazla {HiddenFaqsMax} soru gizlenebilir.");
+            return result;
+        }
+
+        /// <summary>
+        /// Anasayfa bölümleri: anahtar kırpılır ve küçük harfe çevrilir; bilinmeyen ya da iki kez geçen anahtar hata verir.
+        /// Boş liste varsayılandır (boş döner); doluysa listede olmayan anahtarlar varsayılan sırayla sona eklenir: açık olarak,
+        /// <see cref="HomeSectionsOffByDefault"/> içindekiler kapalı. Ön yüzün resolveHomeSections'ı aynı kuralı uygular.
+        /// </summary>
+        public static IReadOnlyList<SiteHomeSection> NormalizeHomeSections(IReadOnlyList<SiteHomeSection> sections)
+        {
+            if (sections.Count == 0) return [];
+            List<SiteHomeSection> result = [];
+            foreach (SiteHomeSection? section in sections)
+            {
+                string key = (section?.Key ?? string.Empty).Trim().ToLowerInvariant();
+                if (!HomeSectionKeys.Contains(key)) throw new DomainException("Geçersiz anasayfa bölümü.");
+                if (result.Any(r => r.Key == key)) throw new DomainException("Her anasayfa bölümü listede bir kez yer almalıdır.");
+                result.Add(new SiteHomeSection(key, section!.Enabled));
+            }
+            result.AddRange(HomeSectionKeys.Where(k => result.All(r => r.Key != k))
+                .Select(k => new SiteHomeSection(k, !HomeSectionsOffByDefault.Contains(k))));
             return result;
         }
 
@@ -357,6 +453,18 @@ namespace RestaurantBill.Domain.Entities
             SiteRegionDetail next = new(regionId, key, current?.Description ?? string.Empty);
             if (next.PhotoKey.Length > 0 || next.Description.Length > 0) rest.Add(next);
             return this with { RegionDetails = rest };
+        }
+
+        /// <summary>Ekip üyesinin fotoğrafını yazar; boş anahtar fotoğrafı kaldırır. Üye yoksa hata (önce adı yazılıp kaydedilmeli).</summary>
+        public SiteContent WithTeamPhoto(Guid memberId, string key, out string previousKey)
+        {
+            SiteTeamMember current = TeamMembers.FirstOrDefault(m => m.Id == memberId)
+                ?? throw new DomainException("Ekip üyesi bulunamadı. Önce üyenin adını yazın.");
+            previousKey = current.PhotoKey;
+            // Adı boş, fotoğrafı da kaldırılan üye artık hiçbir şey taşımıyor: listeden çıkar.
+            if (key.Length == 0 && current.Name.Length == 0)
+                return this with { TeamMembers = TeamMembers.Where(m => m.Id != memberId).ToList() };
+            return this with { TeamMembers = TeamMembers.Select(m => m.Id == memberId ? m with { PhotoKey = key } : m).ToList() };
         }
 
         /// <summary>Haftalık saatlere göre verilen yerel anda açık mı; haftalık saat girilmemişse null.</summary>

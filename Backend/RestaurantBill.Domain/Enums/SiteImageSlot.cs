@@ -22,5 +22,7 @@ public enum SiteImageSlot
     /// <summary>İletişim sayfasının kapağı.</summary>
     ContactHero = 8,
     /// <summary>Rezervasyon sayfasının kapağı.</summary>
-    ReservationHero = 9
+    ReservationHero = 9,
+    /// <summary>Restoran logosu: QR menünün başlığında ve fotoğrafı olmayan ürünlerde gösterilir.</summary>
+    Logo = 10
 }

@@ -345,7 +345,7 @@ location /api/ {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 
-location ~ ^/(kitchen-hub|table-hub|cashier-hub|courier-hub)(/|$) {
+location ~ ^/(kitchen-hub|table-hub|cashier-hub|courier-hub|public-table-hub)(/|$) {
     proxy_pass http://127.0.0.1:8080;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
@@ -520,6 +520,7 @@ The frontend dev server runs on `http://localhost:5173`.
 | **KitchenHub** | `/kitchen-hub` | New orders & item status updates to the kitchen |
 | **TableHub** | `/table-hub` | Table status changes; order-updated events include the acting staff member's name |
 | **CashierHub** | `/cashier-hub` | Order/payment updates to the cashier |
+| **PublicTableHub** | `/public-table-hub` | Anonymous, for the customer QR table page: `JoinTable(tableId)` (checked against the tenant slug, max 2 tables per connection), then content-free `TableBillChanged` / `OrderRequestChanged` signals; the page re-reads the public endpoints |
 
 > Clients join a `restaurant-{id}` SignalR group based on the `RestaurantId` claim in their JWT (`Company.Id` for an Owner, `Branch.Id` for staff), keeping real-time updates isolated per branch.
 

@@ -94,14 +94,17 @@ export function ListCard({ list, index, count, label, className, children }: {
     );
 }
 
-/** Listenin sonundaki "+ Ekle" kartı: yalnız düzenleyicide, sınıra ulaşılmadıysa. */
-export function AddCard({ list, label, count, max, className }: { list: SiteListName; label: string; count: number; max: number; className?: string }) {
+/** Listenin sonundaki "+ Ekle" kartı: yalnız düzenleyicide, sınıra ulaşılmadıysa. `hint`: altında küçük satır ("en fazla 6"). */
+export function AddCard({ list, label, count, max, hint, className }: {
+    list: SiteListName; label: string; count: number; max: number; hint?: string; className?: string;
+}) {
     const edit = useSiteEdit();
     if (!edit || count >= max) return null;
     return (
         <button type="button" data-edit-ui="" data-edit-reveal={`list:${list}`} onClick={() => edit.listOp(list, { action: 'add' })}
-            className={cn("flex min-h-[88px] w-full items-center justify-center rounded-[20px] border border-dashed border-[#CFC5B4] p-4 text-center font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[#8A7D6E] transition-colors hover:border-[#2B7FFF] hover:text-[#1E4FA0]", className)}>
-            + {label}
+            className={cn("flex min-h-[88px] w-full flex-col items-center justify-center gap-1.5 rounded-[20px] border border-dashed border-[#CFC5B4] p-4 text-center font-[family-name:'DM_Sans',system-ui,sans-serif] text-[15px] font-semibold text-[#8A7D6E] transition-colors hover:border-[#2B7FFF] hover:text-[#1E4FA0]", className)}>
+            <span>+ {label}</span>
+            {hint && <small className="text-[13px] font-medium">{hint}</small>}
         </button>
     );
 }

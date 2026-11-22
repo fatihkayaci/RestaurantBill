@@ -41,6 +41,8 @@ namespace RestaurantBill.Domain.Entities
         public string About { get; init; } = string.Empty;
         public string CoverImage { get; init; } = string.Empty;
         public string AboutImage { get; init; } = string.Empty;
+        /// <summary>Restoran logosu (depo anahtarı); boşsa QR menü baş harfleri gösterir.</summary>
+        public string LogoImage { get; init; } = string.Empty;
         public TimeOnly? OpensAt { get; init; }
         public TimeOnly? ClosesAt { get; init; }
         public string HoursNote { get; init; } = string.Empty;
@@ -54,12 +56,13 @@ namespace RestaurantBill.Domain.Entities
         /// <summary>Bölüm dışındaki alanların anahtarları, ekrandaki sırayla. Bölümler "region:{id}" olarak eklenir.</summary>
         public static readonly IReadOnlyList<string> FieldKeys =
         [
-            "headline", "tagline", "coverImage", "storyTitle", "about", "aboutImage",
+            "logo", "headline", "tagline", "coverImage", "storyTitle", "about", "aboutImage",
             "hours", "hoursNote", "instagramUrl", "directionsNote", "whatsappPhone",
             "design", "font", "theme", "accentColor",
-            "gallery", "amenities", "hiddenFaqs",
+            "gallery", "amenities", "hiddenFaqs", "homeSections",
             "rating", "reviewCount", "reviewsUrl", "featuredReviews",
             "founderPhoto", "founderName", "founderTitle", "founderQuote", "foundedYear", "values", "milestones",
+            "teamTitle", "teamIntro", "teamMembers",
             "seoTitle", "seoDescription", "shareImage",
             "heroMenu", "heroAbout", "heroVenue", "heroContact", "heroReservation",
         ];
@@ -129,6 +132,7 @@ namespace RestaurantBill.Domain.Entities
         {
             SiteImageSlot.Cover => this with { CoverImage = key },
             SiteImageSlot.About => this with { AboutImage = key },
+            SiteImageSlot.Logo => this with { LogoImage = key },
             SiteImageSlot.Founder => this with { Content = Content.WithFounderPhoto(key, out _) },
             SiteImageSlot.Share => this with { Content = Content.WithShareImage(key, out _) },
             _ when SiteContent.IsHeroSlot(slot) => this with { Content = Content.WithHeroImage(slot, key, out _) },
@@ -146,11 +150,13 @@ namespace RestaurantBill.Domain.Entities
 
         public SiteSnapshot WithRegionPhoto(Guid regionId, string key) => this with { Content = Content.WithRegionPhoto(regionId, key, out _) };
 
+        public SiteSnapshot WithTeamPhoto(Guid memberId, string key) => this with { Content = Content.WithTeamPhoto(memberId, key, out _) };
+
         /// <summary>Bu hâlin kullandığı bütün depo anahtarları (paylaşılan hazır görseller dahil).</summary>
         public IReadOnlySet<string> ImageKeys()
         {
-            HashSet<string> keys = [CoverImage, AboutImage, Content.FounderPhoto, Content.ShareImage, .. Content.GalleryImages,
-                .. Content.RegionDetails.Select(r => r.PhotoKey),
+            HashSet<string> keys = [CoverImage, AboutImage, LogoImage, Content.FounderPhoto, Content.ShareImage, .. Content.GalleryImages,
+                .. Content.RegionDetails.Select(r => r.PhotoKey), .. Content.TeamMembers.Select(m => m.PhotoKey),
                 Content.MenuHero, Content.AboutHero, Content.VenueHero, Content.ContactHero, Content.ReservationHero];
             keys.RemoveWhere(string.IsNullOrWhiteSpace);
             return keys;
@@ -185,6 +191,7 @@ namespace RestaurantBill.Domain.Entities
 
             return field switch
             {
+                "logo" => this with { LogoImage = source.LogoImage },
                 "headline" => this with { Headline = source.Headline },
                 "tagline" => this with { Tagline = source.Tagline },
                 "coverImage" => this with { CoverImage = source.CoverImage },
@@ -203,6 +210,7 @@ namespace RestaurantBill.Domain.Entities
                 "gallery" => this with { Content = c with { GalleryImages = s.GalleryImages } },
                 "amenities" => this with { Content = c with { Amenities = s.Amenities } },
                 "hiddenFaqs" => this with { Content = c with { HiddenFaqs = s.HiddenFaqs } },
+                "homeSections" => this with { Content = c with { HomeSections = s.HomeSections } },
                 "rating" => this with { Content = c with { Rating = s.Rating } },
                 "reviewCount" => this with { Content = c with { ReviewCount = s.ReviewCount } },
                 "reviewsUrl" => this with { Content = c with { ReviewsUrl = s.ReviewsUrl } },
@@ -214,6 +222,9 @@ namespace RestaurantBill.Domain.Entities
                 "foundedYear" => this with { Content = c with { FoundedYear = s.FoundedYear } },
                 "values" => this with { Content = c with { Values = s.Values } },
                 "milestones" => this with { Content = c with { Milestones = s.Milestones } },
+                "teamTitle" => this with { Content = c with { TeamTitle = s.TeamTitle } },
+                "teamIntro" => this with { Content = c with { TeamIntro = s.TeamIntro } },
+                "teamMembers" => this with { Content = c with { TeamMembers = s.TeamMembers } },
                 "seoTitle" => this with { Content = c with { SeoTitle = s.SeoTitle } },
                 "seoDescription" => this with { Content = c with { SeoDescription = s.SeoDescription } },
                 "shareImage" => this with { Content = c with { ShareImage = s.ShareImage } },
@@ -229,6 +240,7 @@ namespace RestaurantBill.Domain.Entities
             if (HeroFields.TryGetValue(field, out SiteImageSlot heroSlot)) return x.HeroImage(heroSlot) == y.HeroImage(heroSlot);
             return field switch
             {
+                "logo" => a.LogoImage == b.LogoImage,
                 "headline" => a.Headline == b.Headline,
                 "tagline" => a.Tagline == b.Tagline,
                 "coverImage" => a.CoverImage == b.CoverImage,
@@ -247,6 +259,7 @@ namespace RestaurantBill.Domain.Entities
                 "gallery" => x.GalleryImages.SequenceEqual(y.GalleryImages),
                 "amenities" => x.Amenities.SequenceEqual(y.Amenities),
                 "hiddenFaqs" => x.HiddenFaqs.SequenceEqual(y.HiddenFaqs),
+                "homeSections" => x.HomeSections.SequenceEqual(y.HomeSections),
                 "rating" => x.Rating == y.Rating,
                 "reviewCount" => x.ReviewCount == y.ReviewCount,
                 "reviewsUrl" => x.ReviewsUrl == y.ReviewsUrl,
@@ -258,6 +271,9 @@ namespace RestaurantBill.Domain.Entities
                 "foundedYear" => x.FoundedYear == y.FoundedYear,
                 "values" => x.Values.SequenceEqual(y.Values),
                 "milestones" => x.Milestones.SequenceEqual(y.Milestones),
+                "teamTitle" => x.TeamTitle == y.TeamTitle,
+                "teamIntro" => x.TeamIntro == y.TeamIntro,
+                "teamMembers" => x.TeamMembers.SequenceEqual(y.TeamMembers),
                 "seoTitle" => x.SeoTitle == y.SeoTitle,
                 "seoDescription" => x.SeoDescription == y.SeoDescription,
                 "shareImage" => x.ShareImage == y.ShareImage,

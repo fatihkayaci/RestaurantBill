@@ -1,3 +1,4 @@
+using RestaurantBill.Domain.Enums;
 using RestaurantBill.Domain.Exceptions;
 
 namespace RestaurantBill.Domain.Entities
@@ -25,8 +26,15 @@ namespace RestaurantBill.Domain.Entities
         public bool IsOutOfStock { get; private set; }
         // Kategori içindeki sıra (küçük önce). Menüde, garsonda ve sitede bu sırayla listelenir; yeni ürün sona eklenir.
         public int SortOrder { get; private set; }
+        // "Yeni" etiketinin bitişi (UTC). Admin işaretler, NewDays gün sonra kendiliğinden düşer; null: yeni değil.
+        // Oluşturma tarihinden türetilmez (ilk kurulumda bütün menü "yeni" görünmesin).
+        public DateTime? NewUntil { get; private set; }
+        // Sabit listeden alerjenler ("İçerir") ve uygunluk / bilgi etiketleri ("Uygun", "Acılı"); bayrak olarak saklanır.
+        public ProductAllergen Allergens { get; private set; }
+        public ProductDietTag DietTags { get; private set; }
 
         public const int DescriptionMaxLength = 160;
+        public const int NewDays = 30;
         public const int PrepMinutesMax = 240;
 
         protected Product() { }
@@ -46,12 +54,41 @@ namespace RestaurantBill.Domain.Entities
                 IsFeatured = isFeatured.Value;
         }
 
+        /// <summary>"Yeni" etiketi: açılınca bugünden <see cref="NewDays"/> gün sürer (zaten yeniyse bitişi değişmez); kapatılınca düşer.</summary>
+        public void SetNew(bool isNew, DateTime nowUtc)
+        {
+            if (!isNew) { NewUntil = null; return; }
+            if (IsNewAt(nowUtc)) return;
+            NewUntil = nowUtc.AddDays(NewDays);
+        }
+
+        public bool IsNewAt(DateTime nowUtc) => NewUntil is DateTime until && until > nowUtc;
+
         public void SetPrepMinutes(int? prepMinutes)
         {
             if (prepMinutes is not null && (prepMinutes < 1 || prepMinutes > PrepMinutesMax))
                 throw new DomainException($"Hazırlanma süresi 1 ile {PrepMinutesMax} dakika arasında olmalıdır.");
 
             PrepMinutes = prepMinutes;
+        }
+
+        /// <summary>Alerjen ve diyet etiketlerini tümüyle değiştirir; listede olmayan bir bayrak reddedilir.</summary>
+        public void SetDietaryInfo(ProductAllergen allergens, ProductDietTag dietTags)
+        {
+            if (((int)allergens & ~ProductAllergens.All) != 0)
+                throw new DomainException("Geçersiz alerjen seçimi.");
+
+            if (((int)dietTags & ~ProductDietTags.All) != 0)
+                throw new DomainException("Geçersiz diyet etiketi.");
+
+            if (dietTags.HasFlag(ProductDietTag.Vegan) && (allergens & (ProductAllergen.Milk | ProductAllergen.Eggs | ProductAllergen.Fish | ProductAllergen.Crustaceans | ProductAllergen.Molluscs)) != 0)
+                throw new DomainException("Süt, yumurta ya da deniz ürünü içeren ürün vegan olarak işaretlenemez.");
+
+            if (dietTags.HasFlag(ProductDietTag.GlutenFree) && allergens.HasFlag(ProductAllergen.Gluten))
+                throw new DomainException("Gluten içeren ürün glutensiz olarak işaretlenemez.");
+
+            Allergens = allergens;
+            DietTags = dietTags;
         }
 
         public void SetSortOrder(int sortOrder)

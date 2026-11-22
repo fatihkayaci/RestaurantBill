@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { EXTERNAL_SOURCES, SITE_LIMITS, type SiteEditTarget } from '@/pages/public/site/siteEditContext';
 import { SITE_AMENITIES } from '@/pages/public/site/siteParts';
 import { restaurantName } from '@/pages/public/site/useSite';
-import { DesignPicker, FontPicker, ThemePicker } from '../SiteSettingsEditors';
+import { DesignPicker, FontPicker, HomeSectionsEditor, ThemePicker } from '../SiteSettingsEditors';
 import { photoTarget, type EditorCtx } from './editorActions';
 import { isStockUrl, tooBig } from './editorModel';
 import { ed } from './editorStyles';
@@ -59,9 +59,11 @@ export function PhotoMenu({ ctx, target, onDone }: { ctx: EditorCtx; target: Sit
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ImagePlus className="h-4 w-4" aria-hidden="true" />}
                     {busy ? 'Yükleniyor…' : p.multiple ? 'Yükle (birden fazla seçebilirsiniz)' : 'Yükle'}
                 </button>
-                <button type="button" disabled={busy} className={menuButton} onClick={() => ctx.openStock(target)}>
-                    <Images className="h-4 w-4" aria-hidden="true" />Hazır görsellerden seç
-                </button>
+                {p.stock && (
+                    <button type="button" disabled={busy} className={menuButton} onClick={() => ctx.openStock(target)}>
+                        <Images className="h-4 w-4" aria-hidden="true" />Hazır görsellerden seç
+                    </button>
+                )}
                 {p.move && p.canMove && (
                     <div className="flex gap-1">
                         <button type="button" disabled={busy || !p.canMove.left} className={menuButton} onClick={() => void p.move!(-1).then(done)}>
@@ -221,11 +223,56 @@ export function PopoverBody({ ctx, target, onDone }: { ctx: EditorCtx; target: S
         case 'contact': return <><Head title="Instagram" /><ContactFields ctx={ctx} /></>;
         case 'year': return <YearField ctx={ctx} />;
         case 'amenities': return <><Head title="Olanaklar" /><AmenitiesFields ctx={ctx} /></>;
+        case 'homeSections': return <><Head title="Anasayfa bölümleri" hint="Sırayı sürükleyerek ya da oklarla değiştirin; kapatılan ya da içeriği olmayan bölüm sitede görünmez." /><HomeSectionsFields ctx={ctx} /></>;
     }
     return <PhotoMenu ctx={ctx} target={target} onDone={onDone} />;
 }
 
 // ── "Genel ayarlar" bölümleri ───────────────────────────────────────────────────────────────────
+
+/** Restoran logosu: QR menünün başlığında ve fotoğrafı olmayan ürünlerde. Hazır görsel yok; yalnız kendi dosyası. */
+export function LogoFields({ ctx }: { ctx: EditorCtx }) {
+    const fileRef = useRef<HTMLInputElement>(null);
+    const logoUrl = ctx.editor.draft.logoUrl ?? '';
+    const busy = ctx.state.busy === 'photo:logo';
+    return (
+        <div className="flex items-center gap-4">
+            <span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-muted">
+                {logoUrl
+                    ? <img src={logoUrl} alt="Restoran logosu" className="h-full w-full object-contain p-1.5" />
+                    : <span className="text-xl font-bold text-muted-foreground" aria-hidden="true">{initials(restaurantName(ctx.site))}</span>}
+            </span>
+            <div className="flex flex-col gap-1.5">
+                <span className="text-[13px] leading-snug text-muted-foreground">
+                    QR menünün başında ve fotoğrafı olmayan ürünlerde görünür. Kare, şeffaf arka planlı PNG önerilir.
+                    {!logoUrl && ' Logo yokken adınızın baş harfleri görünür.'}
+                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                    <button type="button" disabled={busy} className={cn(ed.link, 'inline-flex items-center gap-1')} onClick={() => fileRef.current?.click()}>
+                        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />}
+                        {busy ? 'Yükleniyor…' : logoUrl ? 'Değiştir' : 'Logo yükle'}
+                    </button>
+                    {logoUrl && (
+                        <button type="button" disabled={busy} className={cn(ed.link, 'inline-flex items-center gap-1')}
+                            onClick={() => void ctx.state.runPhoto('photo:logo', () => siteEditorService.removeImage('logo'))}>
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />Kaldır
+                        </button>
+                    )}
+                </div>
+            </div>
+            <input ref={fileRef} type="file" accept="image/png,image/webp,image/jpeg" className="hidden" aria-label="Logo dosyası"
+                onChange={e => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (file && !tooBig(file)) void ctx.state.runPhoto('photo:logo', () => siteEditorService.uploadImage('logo', file), 'Logo yüklenemedi.');
+                }} />
+        </div>
+    );
+}
+
+function initials(name: string): string {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toLocaleUpperCase('tr-TR')).join('') || '?';
+}
 
 /** "Tasarımlar": önce tasarım; renk (tema) altında, seçilen tasarımın temalarıyla. Seçim taslağa ve önizlemeye hemen gider. */
 export function DesignFields({ ctx }: { ctx: EditorCtx }) {
@@ -233,6 +280,14 @@ export function DesignFields({ ctx }: { ctx: EditorCtx }) {
     return (
         <DesignPicker design={t.design ?? ''} theme={t.theme} accent={t.accentColor}
             onDesign={design => ctx.state.updateTexts(x => ({ ...x, design }))} />
+    );
+}
+
+/** "Anasayfa bölümleri": sıra ve aç/kapa; taslağa ve önizlemeye hemen gider. */
+export function HomeSectionsFields({ ctx }: { ctx: EditorCtx }) {
+    return (
+        <HomeSectionsEditor site={ctx.site} design={ctx.texts.design ?? ''} sections={ctx.texts.homeSections}
+            onChange={homeSections => ctx.state.updateTexts(x => ({ ...x, homeSections }))} />
     );
 }
 
